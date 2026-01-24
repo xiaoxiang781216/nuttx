@@ -36,6 +36,12 @@
 #include <nuttx/mm/kasan.h>
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define MEMPOOL_HEADSIZE sizeof(FAR struct mempool_s *)
+
+/****************************************************************************
  * Private Types
  ****************************************************************************/
 
@@ -69,7 +75,11 @@ mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
 
   if (mpool != NULL)
     {
-      size = size + mpool->headsize;
+      if (mpool->minpoolsize == 0u)
+        {
+          size += MEMPOOL_HEADSIZE;
+        }
+
       right = mpool->npools;
       if (mpool->delta != 0u)
         {
@@ -386,11 +396,11 @@ mempool_multiple_get_pool_with_dict(FAR struct mempool_multiple_s *mpool,
     {
       pool = ret->pool;
     }
-  else if (mpool != NULL && blk != NULL && mpool->headsize != 0u)
+  else if (mpool != NULL && blk != NULL && mpool->minpoolsize == 0u)
     {
       bypass = kasan_bypass(true);
       pool = *(FAR struct mempool_s **)((FAR char *)blk -
-                                        mpool->headsize);
+                                        MEMPOOL_HEADSIZE);
       if (!mempool_multiple_pool_check(mpool, pool))
         {
           pool = NULL;
@@ -488,7 +498,6 @@ mempool_multiple_init(FAR const char *name,
   FAR struct mempool_s *pools;
   size_t minpoolsize;
   size_t mempoolsize;
-  size_t headsize = 0;
   size_t i;
 
   if (!(config->expandsize & (config->expandsize - 1u)))
@@ -498,7 +507,10 @@ mempool_multiple_init(FAR const char *name,
         {
           if (config->poolcount && config->poolcount[i])
             {
-              headsize = sizeof(FAR struct mempool_s *);
+              /* Pool pointer mode: no need for minpoolsize */
+
+              minpoolsize = 0;
+              break;
             }
 
           if (minpoolsize > config->poolsize[i])
@@ -529,13 +541,16 @@ mempool_multiple_init(FAR const char *name,
           mpool->pools = pools;
           mpool->npools = config->npools;
           mpool->minpoolsize = minpoolsize;
-          mpool->headsize = headsize;
           nxrmutex_init(&mpool->lock);
 
           for (i = 0; i < config->npools; i++)
             {
-              pools[i].blocksize = config->poolsize[i] +
-                                   mpool->headsize;
+              pools[i].blocksize = config->poolsize[i];
+              if (mpool->minpoolsize == 0u)
+                {
+                  pools[i].blocksize += MEMPOOL_HEADSIZE;
+                }
+
               pools[i].throttle = config->throttle;
               pools[i].priv = mpool;
               if (config->poolcount && config->poolcount[i] != 0u)
@@ -598,7 +613,7 @@ mempool_multiple_init(FAR const char *name,
               free(arg, mpool);
               mpool = NULL;
             }
-          else if (mpool->headsize == 0u)
+          else if (mpool->minpoolsize != 0u)
             {
               mpool->dict_col_num_log2 = fls(config->dict_expandsize /
                                             sizeof(struct mpool_dict_s));
@@ -671,10 +686,10 @@ mempool_multiple_alloc_throttled(FAR struct mempool_multiple_s *mpool,
 
           if (blk)
             {
-              if (mpool->headsize)
+              if (mpool->minpoolsize == 0u)
                 {
                   *(struct mempool_s **)blk = pool;
-                  blk = (FAR char *)blk + mpool->headsize;
+                  blk = (FAR char *)blk + MEMPOOL_HEADSIZE;
                 }
 
               break;
@@ -861,13 +876,19 @@ FAR void *mempool_multiple_memalign(FAR struct mempool_multiple_s *mpool,
               FAR char *blk = mempool_allocate(pool, UINT_MAX);
               if (blk != NULL)
                 {
+                  int headsize = 0;
+                  if (mpool->minpoolsize == 0u)
+                    {
+                      headsize = MEMPOOL_HEADSIZE;
+                    }
+
                   ret = (FAR char *)ALIGN_UP((uintptr_t)blk +
-                                              mpool->headsize,
+                                              headsize,
                                               alignment);
-                  if (mpool->headsize)
+                  if (headsize)
                     {
                       *(struct mempool_s **)((uintptr_t)ret -
-                                             mpool->headsize) = pool;
+                                             headsize) = pool;
                     }
 
                   break;

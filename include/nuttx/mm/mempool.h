@@ -200,7 +200,6 @@ struct mempool_multiple_s
 {
   FAR struct mempool_s         *pools;       /* The memory pool array */
   size_t                        npools;      /* The number of memory pool array elements */
-  size_t                        headsize;    /* The header size for pool with fix blkcnt */
   size_t                        expandsize;  /* The number not will use it to init erery
                                               * pool expandsize
                                               */
