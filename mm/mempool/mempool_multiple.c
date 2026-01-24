@@ -125,7 +125,7 @@ mempool_multiple_alloc_chunk(FAR struct mempool_multiple_s *mpool,
 {
   FAR char *ret = NULL;
 
-  if (mpool->chunksize < mpool->expandsize)
+  if (mpool->chunksize <= mpool->expandsize)
     {
       ret = mpool->alloc(mpool->arg, align, size);
       if (ret)
@@ -190,7 +190,7 @@ mempool_multiple_free_chunk(FAR struct mempool_multiple_s *mpool,
   FAR struct mpool_chunk_s *chunk;
   FAR sq_entry_t *entry;
 
-  if (mpool->chunksize < mpool->expandsize)
+  if (mpool->chunksize <= mpool->expandsize)
     {
       mpool->free(mpool->arg, ptr);
     }
@@ -933,7 +933,7 @@ mempool_multiple_mallinfo(FAR struct mempool_multiple_s *mpool)
         {
           info.arena = mpool->alloced;
 
-          if (mpool->chunksize >= mpool->expandsize)
+          if (mpool->chunksize > mpool->expandsize)
             {
               FAR struct mpool_chunk_s *chunk;
 
