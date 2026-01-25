@@ -179,13 +179,13 @@ int nxtask_terminate(pid_t pid)
 
           nxtask_exithook(dtcb, EXIT_SUCCESS);
 
+          leave_critical_section(flags);
+
           /* Release the task's PID sequence should align with
            * nx_pthread_exit, with in critical_section and after exit hook.
            */
 
           nxsched_release_pid(pid);
-
-          leave_critical_section(flags);
 
           /* Since all tasks pass through this function as the final step
            * in their exit sequence, this is an appropriate place to inform

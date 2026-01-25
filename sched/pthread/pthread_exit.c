@@ -66,6 +66,7 @@
 void nx_pthread_exit(FAR void *exit_value)
 {
   FAR struct tcb_s *tcb = this_task();
+  irqstate_t flags;
   sigset_t set;
   int status;
 
@@ -118,9 +119,13 @@ void nx_pthread_exit(FAR void *exit_value)
         }
     }
 
-  enter_critical_section();
+  flags = enter_critical_section();
 
   nxtask_exithook(tcb, status);
+
+  /* Enable interrupts to reduce irq latency */
+
+  leave_critical_section(flags);
 
   /* In nxtask_exithook, nxmutex_lock is used, and nxmutex_lock depends
    * on nxsched_get_tcb. Therefore, we move nxsched_release_pid
@@ -128,5 +133,8 @@ void nx_pthread_exit(FAR void *exit_value)
    */
 
   nxsched_release_pid(tcb->pid);
+
+  enter_critical_section();
+
   up_exit(EXIT_SUCCESS);
 }

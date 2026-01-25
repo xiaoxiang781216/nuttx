@@ -56,6 +56,7 @@
 void _exit(int status)
 {
   FAR struct tcb_s *tcb = this_task();
+  irqstate_t flags;
 
   /* Only the lower 8-bits of status are used */
 
@@ -101,9 +102,13 @@ void _exit(int status)
         }
     }
 
-  enter_critical_section();
+  flags = enter_critical_section();
 
   nxtask_exithook(tcb, status);
+
+  /* Enable interrupts to reduce irq latency */
+
+  leave_critical_section(flags);
 
   /* In nxtask_exithook, nxmutex_lock is used, and nxmutex_lock depends
    * on nxsched_get_tcb. Therefore, we move nxsched_release_pid
@@ -111,5 +116,8 @@ void _exit(int status)
    */
 
   nxsched_release_pid(tcb->pid);
+
+  enter_critical_section();
+
   up_exit(status);
 }
