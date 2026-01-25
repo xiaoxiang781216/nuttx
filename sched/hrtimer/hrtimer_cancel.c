@@ -68,8 +68,8 @@
  *   > 0 on if the timer callback is running.
  *
  * Assumptions/Notes:
- *   - This function acquires the global hrtimer spinlock to protect both
- *     the red-black tree and the timer state.
+ *   - This function acquires the global hrtimer spinlock to protect
+ *     the container.
  *   - The caller must ensure that the timer structure is not freed until
  *     it is guaranteed that any running callback has returned.
  *
@@ -83,7 +83,7 @@ int hrtimer_cancel(FAR hrtimer_t *hrtimer)
 
   DEBUGASSERT(hrtimer != NULL);
 
-  /* Enter critical section to protect the hrtimer tree and state */
+  /* Enter critical section to protect the hrtimer container */
 
   flags = write_seqlock_irqsave(&g_hrtimer_lock);
 
@@ -124,6 +124,8 @@ int hrtimer_cancel(FAR hrtimer_t *hrtimer)
  *   cancelled state and wait for all all references to be released.
  *   The caller will then acquire full ownership of the hrtimer. After the
  *   function returns, the caller can safely deallocate the hrtimer.
+ *   - Calls hrtimer_cancel() to request timer cancellation.
+ *   - If the timer callback is running, waits until it completes.
  *   - If sleeping is allowed (normal task context), yields CPU briefly
  *     to avoid busy-waiting.
  *   - Otherwise (interrupt or idle task context), spins until completion.
