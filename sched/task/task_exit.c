@@ -108,8 +108,6 @@ int nxtask_exit(void)
 
   rtcb->lockcount++;
 
-  rtcb->task_state = TSTATE_TASK_READYTORUN;
-
   dtcb->task_state = TSTATE_TASK_INACTIVE;
 
   /* Update scheduler parameters. */
@@ -127,7 +125,6 @@ int nxtask_exit(void)
 
   sched_note_stop(dtcb);
 
-  rtcb->task_state = TSTATE_TASK_RUNNING;
   ret = nxsched_release_tcb(dtcb, atomic_read(&dtcb->flags) &
                             TCB_FLAG_TTYPE_MASK);
 
