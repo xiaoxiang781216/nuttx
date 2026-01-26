@@ -480,6 +480,38 @@ function(nuttx_cpp_compile_options_ifndef cond)
   endif()
 endfunction()
 
+# Function: nuttx_target_compile_definitions_with_include
+#
+# According to the CMake documentation CMake does not allow macro definitions
+# containing function declarations as they are considered unsafe.
+#
+# For example: -DFUNC(str)=WRAP_FUNC(COND, str) It is not allowed.
+#
+# Therefore, we encapsulate a macro to add function declarations as temporary
+# header files resolving this through compiler include.
+#
+# Usage: set(FUNCTION_DEF "#define FUNC(str)=WRAP_FUNC(COND, str)")
+# nuttx_target_compile_definitions_with_include(my_target FUNCTION_DEF)
+#
+macro(nuttx_target_compile_definitions_with_include target defvar)
+  string(RANDOM LENGTH 8 RANDOM_STR)
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${target}_defs_${RANDOM_STR}.h
+       "${${defvar}}")
+  if(CONFIG_ARCH_TOOLCHAIN_TASKING)
+    target_compile_options(
+      ${target}
+      PRIVATE
+        "SHELL:--include-file ${CMAKE_CURRENT_BINARY_DIR}/${target}_defs_${RANDOM_STR}.h"
+    )
+  else()
+    target_compile_options(
+      ${target}
+      PRIVATE
+        "SHELL:-include ${CMAKE_CURRENT_BINARY_DIR}/${target}_defs_${RANDOM_STR}.h"
+    )
+  endif()
+endmacro()
+
 # Genarate host tools CMake binary directory
 execute_process(COMMAND ${CMAKE_COMMAND} -B ${CMAKE_BINARY_DIR}/bin_host -S
                         ${CMAKE_SOURCE_DIR}/tools)
