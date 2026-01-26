@@ -463,6 +463,9 @@ static int fakesensor_thread(int argc, char** argv)
           return ret;
         }
 
+      snerr("fakesensor_thread  Waiting to be woken up [%d, %s]\n",
+          sensor->type, sensor->file_path);
+
       fakesensor_read_csv_header(sensor);
 
       while (sensor->running)
@@ -569,7 +572,8 @@ int fakesensor_init(int type, FAR const char *file_name,
   snprintf(arg1, 32, "%p", sensor);
   argv[0] = arg1;
   argv[1] = NULL;
-  ret = kthread_create("fakesensor_thread", SCHED_PRIORITY_DEFAULT,
+  ret = kthread_create("fakesensor_thread",
+                       CONFIG_FAKESENSOR_SCHED_PRIORITY,
                        CONFIG_DEFAULT_TASK_STACKSIZE,
                        fakesensor_thread, argv);
   if (ret < 0)
@@ -584,7 +588,11 @@ int fakesensor_init(int type, FAR const char *file_name,
     {
 #ifdef CONFIG_SENSORS_GNSS
       sensor->gnss.ops = &g_fakegnss_ops;
-      gnss_register(&sensor->gnss, devno, nbuffer, nitems(nbuffer));
+      ret = gnss_register(&sensor->gnss, devno, nbuffer, nitems(nbuffer));
+      if (ret < 0)
+        {
+          snerr("fakesensor_init: gnss_register failed: %d\n", ret);
+        }
 #else
       snerr("fakesensor undefine gnss config");
 #endif
@@ -594,7 +602,11 @@ int fakesensor_init(int type, FAR const char *file_name,
       sensor->lower.type = type;
       sensor->lower.ops = &g_fakesensor_ops;
       sensor->lower.nbuffer = batch_number;
-      sensor_register(&sensor->lower, devno);
+      ret = sensor_register(&sensor->lower, devno);
+      if (ret < 0)
+        {
+          snerr("fakesensor_init: sensor_register failed: %d\n", ret);
+        }
     }
 
   return OK;
