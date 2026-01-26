@@ -224,6 +224,7 @@ static int cryptof_ioctl(FAR struct file *filep,
             case CRYPTO_AES_CMAC:
             case CRYPTO_AES_CTR:
             case CRYPTO_AES_XTS:
+            case CRYPTO_AES_GCM_16:
             case CRYPTO_AES_OFB:
             case CRYPTO_AES_CFB_8:
             case CRYPTO_AES_CFB_128:
@@ -245,6 +246,8 @@ static int cryptof_ioctl(FAR struct file *filep,
             case CRYPTO_SHA2_384_HMAC:
             case CRYPTO_SHA2_512_HMAC:
             case CRYPTO_AES_128_GMAC:
+            case CRYPTO_AES_192_GMAC:
+            case CRYPTO_AES_256_GMAC:
             case CRYPTO_AES_128_CMAC:
             case CRYPTO_MD5:
             case CRYPTO_POLY1305:
@@ -418,6 +421,11 @@ static int cryptodev_op(FAR struct csession *cse,
         {
           crda.crd_flags &= ~CRD_F_UPDATE;
         }
+
+      if (cop->flags & COP_FLAG_UPDATE_AAD)
+        {
+          crda.crd_flags |= CRD_F_UPDATE_AAD;
+        }
     }
 
   if (cse->txform)
@@ -472,6 +480,12 @@ static int cryptodev_op(FAR struct csession *cse,
   if (cop->mac)
     {
       crp.crp_mac = cop->mac;
+    }
+
+  if (cop->aad && cop->aadlen > 0)
+    {
+      crp.crp_aad = cop->aad;
+      crp.crp_aadlen = cop->aadlen;
     }
 
   /* try the fast path first */

@@ -43,6 +43,8 @@ typedef struct _AES_GMAC_CTX
   GHASH_CTX ghash;
   AES_CTX K;
   uint8_t J[GMAC_BLOCK_LEN]; /* counter block */
+  uint8_t buf[GMAC_BLOCK_LEN];
+  uint8_t buflen;
 }
 AES_GMAC_CTX;
 

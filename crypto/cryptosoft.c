@@ -1197,7 +1197,6 @@ int swcr_authenc(FAR struct cryptop *crp)
   uint32_t blkbuf[div_round_up(EALG_MAX_BLOCK_LEN, sizeof(uint32_t))];
   FAR u_char *blk = (u_char *)blkbuf;
   u_char aalg[AALG_MAX_RESULT_LEN];
-  u_char iv[EALG_MAX_BLOCK_LEN];
   union authctx ctx;
   FAR struct cryptodesc *crd;
   FAR struct cryptodesc *crda = NULL;
@@ -1214,7 +1213,6 @@ int swcr_authenc(FAR struct cryptop *crp)
   int ivlen = 0;
   int iskip = 0;
   int oskip = 0;
-  int aadlen;
   int len;
   int i;
 
@@ -1261,56 +1259,28 @@ int swcr_authenc(FAR struct cryptop *crp)
       return -EINVAL;
     }
 
-  /* Initialize the IV */
+  /* Supply MAC/cipher with IV */
 
-  if (crde->crd_flags & CRD_F_ENCRYPT)
+  if (crp->crp_iv)
     {
-      /* IV explicitly provided ? */
-
-      if (crde->crd_flags & CRD_F_IV_EXPLICIT)
+      if (axf->reinit)
         {
-          bcopy(crde->crd_iv, iv, ivlen);
-        }
-      else
-        {
-          arc4random_buf(iv, ivlen);
+          swa->sw_aadlen = 0;
+          axf->reinit(&ctx, (FAR uint8_t *)crp->crp_iv, ivlen);
         }
 
-      if (!((crde->crd_flags) & CRD_F_IV_PRESENT))
+      if (exf->reinit)
         {
-          bcopy(iv, buf + crde->crd_inject, ivlen);
+          swe->sw_enclen = 0;
+          exf->reinit((caddr_t)swe->sw_kschedule,
+                      (FAR uint8_t *)crp->crp_iv);
         }
-    }
-  else
-    {
-        /* Decryption */
-
-        /* IV explicitly provided ? */
-
-      if (crde->crd_flags & CRD_F_IV_EXPLICIT)
-        {
-          bcopy(crde->crd_iv, iv, ivlen);
-        }
-      else
-        {
-          /* Get IV off buf */
-
-          bcopy(iv, buf + crde->crd_inject, ivlen);
-        }
-    }
-
-  /* Supply MAC with IV */
-
-  if (axf->reinit)
-    {
-      axf->reinit(&ctx, iv, ivlen);
     }
 
   /* Supply MAC with AAD */
 
   if (aad)
     {
-      aadlen = crda->crd_len;
       /* Section 5 of RFC 4106 specifies that AAD construction consists of
       * {SPI, ESN, SN} whereas the real packet contains only {SPI, SN}.
       * Unfortunately it doesn't follow a good example set in the Section
@@ -1322,8 +1292,6 @@ int swcr_authenc(FAR struct cryptop *crp)
 
       if (crda->crd_flags & CRD_F_ESN)
         {
-          aadlen += 4;
-
           /* SPI */
 
           bcopy(buf + crda->crd_skip, blk, 4);
@@ -1335,25 +1303,23 @@ int swcr_authenc(FAR struct cryptop *crp)
           oskip = iskip + 4; /* offset output buffer blk by 8 */
         }
 
-      for (i = iskip; i < crda->crd_len; i += axf->hashsize)
+      for (i = iskip; i < crp->crp_aadlen; i += axf->hashsize)
         {
-          len = MIN(crda->crd_len - i, axf->hashsize - oskip);
-          bcopy(buf + crda->crd_skip + i, blk + oskip, len);
+          len = MIN(crp->crp_aadlen - i, axf->hashsize - oskip);
+          bcopy(aad + i, blk + oskip, len);
           bzero(blk + len + oskip, axf->hashsize - len - oskip);
           axf->update(&ctx, blk, axf->hashsize);
           oskip = 0; /* reset initial output offset */
         }
-    }
 
-  if (exf->reinit)
-    {
-      exf->reinit((caddr_t)swe->sw_kschedule, iv);
+      swa->sw_aadlen += crp->crp_aadlen;
     }
 
   /* Do encryption/decryption with MAC */
 
   if (buf)
     {
+      swe->sw_enclen += crde->crd_len;
       for (i = 0; i < crde->crd_len; i += blksz)
         {
           len = MIN(crde->crd_len - i, blksz);
@@ -1379,9 +1345,11 @@ int swcr_authenc(FAR struct cryptop *crp)
               bcopy(blk, crp->crp_dst + i, len);
             }
         }
-
-      bcopy(&ctx, &swa->sw_ctx, axf->ctxsize);
     }
+
+  /* Persist authentication context even for AAD-only updates. */
+
+  bcopy(&ctx, &swa->sw_ctx, axf->ctxsize);
 
   /* Do any required special finalization */
 
@@ -1393,13 +1361,17 @@ int swcr_authenc(FAR struct cryptop *crp)
           case CRYPTO_AES_192_GMAC:
           case CRYPTO_AES_256_GMAC:
 
+            /* Flush partial block if necessary */
+
+            axf->update(&ctx, NULL, 0);
+
             /* length block */
 
             bzero(blk, axf->hashsize);
             blkp = (uint32_t *)blk + 1;
-            *blkp = htobe32(aadlen * 8);
+            *blkp = htobe32((uint32_t)(swa->sw_aadlen * 8));
             blkp = (uint32_t *)blk + 3;
-            *blkp = htobe32(crde->crd_len * 8);
+            *blkp = htobe32((uint32_t)(swe->sw_enclen * 8));
             axf->update(&ctx, blk, axf->hashsize);
             break;
 
@@ -1409,9 +1381,9 @@ int swcr_authenc(FAR struct cryptop *crp)
 
             bzero(blk, axf->hashsize);
             blkp = (uint32_t *)blk;
-            *blkp = htole32(aadlen);
+            *blkp = htole32(swa->sw_aadlen);
             blkp = (uint32_t *)blk + 2;
-            *blkp = htole32(crde->crd_len);
+            *blkp = htole32(swe->sw_enclen);
             axf->update(&ctx, blk, axf->hashsize);
             break;
         }

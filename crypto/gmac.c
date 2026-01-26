@@ -30,6 +30,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <assert.h>
 #include <endian.h>
 #include <strings.h>
 #include <sys/param.h>
@@ -128,17 +129,17 @@ void aes_gmac_init(FAR void *xctx)
   bzero(ctx->ghash.S, GMAC_BLOCK_LEN);
   bzero(ctx->ghash.Z, GMAC_BLOCK_LEN);
   bzero(ctx->J, GMAC_BLOCK_LEN);
+  ctx->buflen = 0;
 }
 
 void aes_gmac_setkey(FAR void *xctx, FAR const uint8_t *key, uint16_t klen)
 {
   FAR AES_GMAC_CTX *ctx = xctx;
 
-  aes_setkey(&ctx->K, key, klen - AESCTR_NONCESIZE);
+  /* Standard GCM/GMAC key (no salt) */
 
-  /* copy out salt to the counter block */
-
-  bcopy(key + klen - AESCTR_NONCESIZE, ctx->J, AESCTR_NONCESIZE);
+  aes_setkey(&ctx->K, key, klen);
+  bzero(ctx->J, AESCTR_NONCESIZE);
 
   /* prepare a hash subkey */
 
@@ -149,40 +150,46 @@ void aes_gmac_reinit(FAR void *xctx, FAR const uint8_t *iv, uint16_t ivlen)
 {
   FAR AES_GMAC_CTX *ctx = xctx;
 
-  /* copy out IV to the counter block */
+  /* Standard GCM uses 12-byte IV */
 
-  bcopy(iv, ctx->J + AESCTR_NONCESIZE, ivlen);
+  DEBUGASSERT(ivlen <= GMAC_BLOCK_LEN);
+  bcopy(iv, ctx->J, MIN(ivlen, GMAC_BLOCK_LEN));
+  ctx->J[12] = 0;
+  ctx->J[13] = 0;
+  ctx->J[14] = 0;
+  ctx->J[15] = 1;
 }
 
 int aes_gmac_update(FAR void *xctx, FAR const uint8_t *data, size_t len)
 {
   FAR AES_GMAC_CTX *ctx = xctx;
-  uint32_t blk[4] =
-  {
-    0, 0, 0, 0
-  };
+  size_t processing;
 
-  int plen;
-
-  if (len > 0)
+  if (data)
     {
-      plen = len % GMAC_BLOCK_LEN;
-      if (len >= GMAC_BLOCK_LEN)
+      while (len > 0)
         {
-          (*ghash_update)(&ctx->ghash, (FAR uint8_t *)data,
-            len - plen);
-        }
+          processing = MIN(len, GMAC_BLOCK_LEN - ctx->buflen);
+          memcpy(ctx->buf + ctx->buflen, data, processing);
+          ctx->buflen += processing;
+          data += processing;
+          len -= processing;
 
-      if (plen)
-        {
-          memcpy((FAR uint8_t *)blk, (FAR uint8_t *)data + (len - plen),
-              plen);
-          (*ghash_update)(&ctx->ghash, (FAR uint8_t *)blk,
-              GMAC_BLOCK_LEN);
+          if (ctx->buflen == GMAC_BLOCK_LEN)
+            {
+              (*ghash_update)(&ctx->ghash, ctx->buf, GMAC_BLOCK_LEN);
+              ctx->buflen = 0;
+            }
         }
     }
+  else if (ctx->buflen > 0)
+    {
+      bzero(ctx->buf + ctx->buflen, GMAC_BLOCK_LEN - ctx->buflen);
+      (*ghash_update)(&ctx->ghash, ctx->buf, GMAC_BLOCK_LEN);
+      ctx->buflen = 0;
+    }
 
-  return (0);
+  return 0;
 }
 
 void aes_gmac_final(FAR uint8_t *digest, FAR void *xctx)
@@ -190,6 +197,15 @@ void aes_gmac_final(FAR uint8_t *digest, FAR void *xctx)
   FAR AES_GMAC_CTX *ctx = xctx;
   uint8_t keystream[GMAC_BLOCK_LEN];
   int i;
+
+  /* flush any remaining buffered data (padding with zeros) */
+
+  if (ctx->buflen > 0)
+    {
+      bzero(ctx->buf + ctx->buflen, GMAC_BLOCK_LEN - ctx->buflen);
+      (*ghash_update)(&ctx->ghash, ctx->buf, GMAC_BLOCK_LEN);
+      ctx->buflen = 0;
+    }
 
   /* do one round of GCTR */
 

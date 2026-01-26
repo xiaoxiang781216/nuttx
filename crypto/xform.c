@@ -263,7 +263,7 @@ const struct enc_xform enc_xform_aes_ctr =
 const struct enc_xform enc_xform_aes_gcm =
 {
   CRYPTO_AES_GCM_16, "AES-GCM",
-  1, 8, 16 + 4, 32 + 4,
+  1, 12, 16, 32,
   sizeof(struct aes_ctr_ctx),
   aes_ctr_crypt,
   aes_ctr_crypt,
@@ -415,7 +415,7 @@ const struct auth_hash auth_hash_hmac_sha2_512_256 =
 const struct auth_hash auth_hash_gmac_aes_128 =
 {
   CRYPTO_AES_128_GMAC, "GMAC-AES-128",
-  16 + 4, GMAC_BLOCK_LEN, GMAC_DIGEST_LEN, sizeof(AES_GMAC_CTX),
+  16, GMAC_BLOCK_LEN, GMAC_DIGEST_LEN, sizeof(AES_GMAC_CTX),
   AESCTR_BLOCKSIZE, aes_gmac_init, aes_gmac_setkey, aes_gmac_reinit,
   aes_gmac_update, aes_gmac_final
 };
@@ -423,7 +423,7 @@ const struct auth_hash auth_hash_gmac_aes_128 =
 const struct auth_hash auth_hash_gmac_aes_192 =
 {
   CRYPTO_AES_192_GMAC, "GMAC-AES-192",
-  24 + 4, GMAC_BLOCK_LEN, GMAC_DIGEST_LEN, sizeof(AES_GMAC_CTX),
+  24, GMAC_BLOCK_LEN, GMAC_DIGEST_LEN, sizeof(AES_GMAC_CTX),
   AESCTR_BLOCKSIZE, aes_gmac_init, aes_gmac_setkey, aes_gmac_reinit,
   aes_gmac_update, aes_gmac_final
 };
@@ -431,7 +431,7 @@ const struct auth_hash auth_hash_gmac_aes_192 =
 const struct auth_hash auth_hash_gmac_aes_256 =
 {
   CRYPTO_AES_256_GMAC, "GMAC-AES-256",
-  32 + 4, GMAC_BLOCK_LEN, GMAC_DIGEST_LEN, sizeof(AES_GMAC_CTX),
+  32, GMAC_BLOCK_LEN, GMAC_DIGEST_LEN, sizeof(AES_GMAC_CTX),
   AESCTR_BLOCKSIZE, aes_gmac_init, aes_gmac_setkey, aes_gmac_reinit,
   aes_gmac_update, aes_gmac_final
 };
@@ -678,12 +678,17 @@ void aes_gcm_reinit(caddr_t key, FAR uint8_t *iv)
   FAR struct aes_ctr_ctx *ctx;
 
   ctx = (FAR struct aes_ctr_ctx *)key;
-  bcopy(iv, ctx->ac_block + AESCTR_NONCESIZE, AESCTR_IVSIZE);
+  bcopy(iv, ctx->ac_block, AESCTR_NONCESIZE + AESCTR_IVSIZE);
 
   /* reset counter */
 
   bzero(ctx->ac_block + AESCTR_NONCESIZE + AESCTR_IVSIZE, 4);
-  ctx->ac_block[AESCTR_BLOCKSIZE - 1] = 1; /* GCM starts with 1 */
+
+  /* In standard GCM, the tag uses J0 = ...||1, while payload GCTR uses
+   * counter after generating the keystream, we must start the counter at 2.
+   */
+
+  ctx->ac_block[AESCTR_BLOCKSIZE - 1] = 2;
 }
 
 void aes_ctr_crypt(caddr_t key, FAR uint8_t *data)
