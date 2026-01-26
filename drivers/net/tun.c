@@ -759,7 +759,7 @@ static void tun_txavail_work(FAR void *arg)
       return;
     }
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Poll the network for new XMIT data */
@@ -767,7 +767,7 @@ static void tun_txavail_work(FAR void *arg)
       devif_poll(&priv->dev, tun_txpoll);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
   nxmutex_unlock(&priv->lock);
 }
 
@@ -1018,13 +1018,13 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
 
       if (priv->write_d_len == 0)
         {
-          net_lock();
+          netdev_lock(&priv->dev);
           netdev_iob_release(&priv->dev);
           ret = netdev_iob_prepare(&priv->dev, false, 0);
           priv->dev.d_buf = NULL;
           if (ret < 0)
             {
-              net_unlock();
+              netdev_unlock(&priv->dev);
               break;
             }
 
@@ -1032,14 +1032,14 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
                               buflen, -llhdrlen, false);
           if (ret < 0)
             {
-              net_unlock();
+              netdev_unlock(&priv->dev);
               break;
             }
 
           priv->dev.d_len = buflen;
 
           tun_net_receive(priv);
-          net_unlock();
+          netdev_unlock(&priv->dev);
 
           ret = buflen;
           break;
@@ -1139,9 +1139,9 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
           priv->read_buf   = NULL;
           priv->read_d_len = 0;
 
-          net_lock();
+          netdev_lock(&priv->dev);
           tun_txdone(priv);
-          net_unlock();
+          netdev_unlock(&priv->dev);
           break;
         }
 

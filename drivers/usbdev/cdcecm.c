@@ -529,7 +529,7 @@ static void cdcecm_interrupt_work(FAR void *arg)
    * thread has been configured.
    */
 
-  net_lock();
+  netdev_lock(&self->dev);
 
   /* Check if we received an incoming packet, if so, call cdcecm_receive() */
 
@@ -553,7 +553,7 @@ static void cdcecm_interrupt_work(FAR void *arg)
       cdcecm_txdone(self);
     }
 
-  net_unlock();
+  netdev_unlock(&self->dev);
 }
 
 /****************************************************************************
@@ -656,7 +656,7 @@ static void cdcecm_txavail_work(FAR void *arg)
    * thread has been configured.
    */
 
-  net_lock();
+  netdev_lock(&self->dev);
 
   /* Ignore the notification if the interface is not yet up */
 
@@ -665,7 +665,7 @@ static void cdcecm_txavail_work(FAR void *arg)
       devif_poll(&self->dev, cdcecm_txpoll);
     }
 
-  net_unlock();
+  netdev_unlock(&self->dev);
 }
 
 /****************************************************************************

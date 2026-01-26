@@ -438,7 +438,7 @@ static void bcmf_tx_poll_work(FAR void *arg)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)arg;
 
-  net_lock();
+  netdev_lock(&priv->bc_dev);
 
   /* Ignore the notification if the interface is not yet up */
 
@@ -463,7 +463,7 @@ static void bcmf_tx_poll_work(FAR void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->bc_dev);
 }
 
 /****************************************************************************
@@ -493,7 +493,7 @@ static void bcmf_rxpoll_work(FAR void *arg)
    * thread has been configured.
    */
 
-  net_lock();
+  netdev_lock(&priv->bc_dev);
 
   /* Tx work will hold the d_buf until there is data to send,
    * replace and cache the d_buf temporarily
@@ -513,7 +513,7 @@ static void bcmf_rxpoll_work(FAR void *arg)
 #if 0
   bcmf_txdone(priv);
 #endif
-  net_unlock();
+  netdev_unlock(&priv->bc_dev);
 }
 
 /****************************************************************************

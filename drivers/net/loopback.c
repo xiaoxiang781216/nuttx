@@ -40,6 +40,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/mutex.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
@@ -195,7 +196,7 @@ static void lo_txavail_work(FAR void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->lo_dev);
   if (priv->lo_bifup)
     {
       /* Reuse the devif_loopback() logic, Polling all pending events until
@@ -205,7 +206,7 @@ static void lo_txavail_work(FAR void *arg)
       while (devif_poll(&priv->lo_dev, NULL));
     }
 
-  net_unlock();
+  netdev_unlock(&priv->lo_dev);
 }
 
 /****************************************************************************
