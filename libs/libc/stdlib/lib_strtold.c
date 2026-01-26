@@ -608,7 +608,7 @@ static long_double hexfloat(FAR char *ptr, FAR char **endptr, int bits,
 
   while (x < 0x80000000)
     {
-      if (fabs(y) >= 0.5)
+      if (fabsl(y) >= 0.5)
         {
           x += x + 1;
           y += y + (negative ? 1 : -1);
