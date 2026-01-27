@@ -75,7 +75,7 @@
     { \
       CONCATENATE(name, _buffer), \
       MEMPOOL_REALBLOCKSIZE(blksize) * (prealloc) + MEMPOOL_HEADER_SIZE, \
-      (blksize), \
+      ALIGN_UP((blksize), MM_ALIGN), \
       MEMPOOL_REALBLOCKSIZE(blksize) * (dynalloc) + MEMPOOL_HEADER_SIZE, \
       (maxalloc), \
       (throttle), \
@@ -110,7 +110,7 @@
     { \
       CONCATENATE(name, _buffer), \
       MEMPOOL_REALBLOCKSIZE(blksize) * (prealloc) + MEMPOOL_HEADER_SIZE, \
-      (blksize), \
+      ALIGN_UP((blksize), MM_ALIGN), \
       MEMPOOL_REALBLOCKSIZE(blksize) * (dynalloc) + MEMPOOL_HEADER_SIZE, \
       (maxalloc), \
       (throttle), \
