@@ -869,16 +869,15 @@ int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
       ret = rpmsg_init_wqueues(&priv->rpmsg, priority);
       if (ret >= 0)
         {
-          rpmsg_queue_work(&priv->rpmsg, RPMSG_PRIO_DEFAULT,
-                           &priv->startwork, rpmsg_virtio_start_worker,
-                           &priv->rpmsg);
-
 #ifdef CONFIG_RPMSG_VIRTIO_PM
           spin_lock_init(&priv->lock);
           snprintf(name, sizeof(name), "rpmsg-virtio-%s",
                    priv->rpmsg.cpuname);
           pm_wakelock_init(&priv->wakelock, name, PM_IDLE_DOMAIN, PM_IDLE);
 #endif
+          rpmsg_queue_work(&priv->rpmsg, RPMSG_PRIO_DEFAULT,
+                           &priv->startwork, rpmsg_virtio_start_worker,
+                           &priv->rpmsg);
         }
       else
         {
