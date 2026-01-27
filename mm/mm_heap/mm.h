@@ -301,6 +301,10 @@ struct mm_heap_s
   FAR struct procfs_meminfo_entry_s *mm_procfs;
 #endif
 
+#ifdef CONFIG_MM_HEAP_FREE_FORBID
+  atomic_t mm_freeforbid;
+#endif
+
   /* Kasan is disable or enable for this heap */
 
   bool mm_nokasan;

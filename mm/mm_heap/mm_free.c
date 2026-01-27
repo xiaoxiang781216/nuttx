@@ -43,6 +43,20 @@
  * Private Functions
  ****************************************************************************/
 
+static inline bool mm_skip_free(FAR struct mm_heap_s *heap)
+{
+#if defined(CONFIG_MM_HEAP_FREE_PANIC)
+  PANIC();
+  return true;
+#elif defined(CONFIG_MM_HEAP_FREE_IGNORE)
+  return true;
+#elif defined(CONFIG_MM_HEAP_FREE_FORBID)
+  return atomic_read(&heap->mm_freeforbid) != 0;
+#else /* CONFIG_MM_HEAP_FREE_NORMAL */
+  return false;
+#endif
+}
+
 static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
                           bool asan_check)
 {
@@ -288,6 +302,11 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
       return;
     }
 
+  if (mm_skip_free(heap))
+    {
+      return;
+    }
+
   DEBUGASSERT(mm_heapmember(heap, mem));
   add_delaylist(heap, mem, false);
 }
@@ -312,6 +331,11 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
       return;
     }
 
+  if (mm_skip_free(heap))
+    {
+      return;
+    }
+
   DEBUGASSERT(mm_heapmember(heap, mem));
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
@@ -321,3 +345,28 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
   mm_forcefree(heap, mem);
 #endif
 }
+
+/****************************************************************************
+ * Name: mm_free_forbid
+ *
+ * Description:
+ *   Forbid free mem, forbid == true means forbid free mem, forbid == false
+ *   means allow free mem.
+ *
+ * Parameters:
+ *   heap - The heap to be queried.
+ *   forbid - true means forbid free mem, false means allow free mem.
+ *
+ * Return:
+ *   The previous forbid status.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_MM_HEAP_FREE_FORBID
+bool mm_free_forbid(FAR struct mm_heap_s *heap, bool forbid)
+{
+  DEBUGASSERT(heap != NULL);
+
+  return atomic_xchg(&heap->mm_freeforbid, forbid) != 0;
+}
+#endif

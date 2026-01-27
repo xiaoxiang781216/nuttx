@@ -227,6 +227,33 @@ config MM_HEAP_BIGGEST_COUNT
 		If too big, should take care of stack usage.
 		Define 0 to disable largest allocated element dump feature.
 
+choice
+	prompt "Heap free action"
+	default MM_HEAP_FREE_NORMAL
+
+config MM_HEAP_FREE_NORMAL
+	bool "Do free() operation"
+	---help---
+		The free operation is still executed.
+
+config MM_HEAP_FREE_IGNORE
+	bool "Ignore free() operation"
+	---help---
+		The free operation is not executed.
+
+config MM_HEAP_FREE_PANIC
+	bool "Panic when free() is called"
+	---help---
+		Trigger an panic when free() is called.
+
+config MM_HEAP_FREE_FORBID
+	bool "Enable or disable free() by mm_free_forbid()"
+	---help---
+		The user can dynamically control whether
+		the free operation is forbidden or not.
+
+endchoice
+
 config MM_HEAP_MEMPOOL_THRESHOLD
 	int "Threshold for malloc size to use multi-level mempool"
 	default -1

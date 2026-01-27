@@ -351,6 +351,10 @@ size_t kmm_malloc_size(FAR void *mem);
 void mm_free(FAR struct mm_heap_s *heap, FAR void *mem);
 void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem);
 
+#ifdef CONFIG_MM_HEAP_FREE_FORBID
+bool mm_free_forbid(FAR struct mm_heap_s *heap, bool forbid);
+#endif
+
 /* Functions contained in kmm_free.c ****************************************/
 
 #ifdef CONFIG_MM_KERNEL_HEAP
