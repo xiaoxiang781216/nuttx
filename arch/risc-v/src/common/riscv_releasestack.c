@@ -63,7 +63,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
 static void release_shadow_stack(struct tcb_s *dtcb)
 {
   /* Is there a shadow stack allocated? */
@@ -80,7 +80,7 @@ static void release_shadow_stack(struct tcb_s *dtcb)
       dtcb->xcp.sstack_top_ptr = NULL;
     }
 }
-#endif /* CONFIG_ARCH_RV_SHADOW_STACK */
+#endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
 /****************************************************************************
  * Public Functions
@@ -145,7 +145,7 @@ void up_release_stack(struct tcb_s *dtcb, int ttype)
 
   /* Release shadow stack */
 
-#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
   release_shadow_stack(dtcb);
-#endif /* CONFIG_ARCH_RV_SHADOW_STACK */
+#endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 }

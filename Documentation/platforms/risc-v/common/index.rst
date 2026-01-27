@@ -349,20 +349,19 @@ and the shadow stack functionality:
    config ARCH_RV_ISA_ZICFISS
        bool
        default n
+       select ARCH_HAVE_HW_SHADOWSTACK
        ---help---
          Enable support for the RISC-V Zicfiss (Control Flow Integrity Shadow Stack)
          extension. This extension provides hardware support for control flow integrity
          by implementing shadow stack mechanisms to protect against return-oriented
          programming (ROP) attacks.
 
-   config ARCH_RV_SHADOW_STACK
-       bool "Enable RISC-V Shadow Stack support"
+   config ARCH_HW_SHADOW_STACK
+       bool "Enable Hardware Shadow Stack support"
        default n
-       depends on ARCH_RV_ISA_ZICFISS
+       depends on ARCH_HAVE_HW_SHADOWSTACK
        ---help---
-         Enable shadow stack support for RISC-V systems that have the Zicfiss
-         extension. This provides additional security by maintaining a separate
-         stack for return addresses.
+         Enable hardware assisted shadow stack support.
 
 Compiler Support
 ^^^^^^^^^^^^^^^^

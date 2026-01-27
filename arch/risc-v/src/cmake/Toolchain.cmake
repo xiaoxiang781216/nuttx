@@ -422,6 +422,6 @@ endif()
 
 # Shadow Stack Protection
 
-if(CONFIG_ARCH_RV_SHADOW_STACK_ALL)
+if(CONFIG_ARCH_HW_SHADOW_STACK)
   add_compile_options(-fcf-protection=return)
 endif()

@@ -340,7 +340,7 @@ endif
 
 # Shadow Stack Protection
 
-ifeq ($(CONFIG_ARCH_RV_SHADOW_STACK_ALL),y)
+ifeq ($(CONFIG_ARCH_HW_SHADOW_STACK),y)
   ARCHOPTIMIZATION += -fcf-protection=return
 endif
 

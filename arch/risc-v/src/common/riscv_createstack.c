@@ -62,7 +62,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
 static int create_shadow_stack(struct tcb_s *tcb, size_t stack_size)
 {
   /* Allocate shadow stack for all thread types */
@@ -108,7 +108,7 @@ static int create_shadow_stack(struct tcb_s *tcb, size_t stack_size)
 
   return ERROR;
 }
-#endif /* CONFIG_ARCH_RV_SHADOW_STACK */
+#endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
 /****************************************************************************
  * Public Functions
@@ -241,7 +241,7 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
 #endif /* CONFIG_STACK_COLORATION */
       atomic_or(&tcb->flags, TCB_FLAG_FREE_STACK);
 
-#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
       /* Create shadow stack for this thread.
        * Shadow stack only needs to store link registers, so use half
        * the size of the main stack.
@@ -252,7 +252,7 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
           serr("ERROR: Failed to create shadow stack\n");
           return ERROR;
         }
-#endif /* CONFIG_ARCH_RV_SHADOW_STACK */
+#endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
       board_autoled_on(LED_STACKCREATED);
       return OK;

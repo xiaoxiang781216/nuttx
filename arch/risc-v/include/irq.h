@@ -207,7 +207,7 @@
 /* Shadow Stack register
  * SS = Shadow Stack - used for Control Flow Integrity (CFI)
  * This register stores the shadow stack pointer when shadow stack
- * support is enabled via CONFIG_ARCH_RV_SHADOW_STACK.
+ * support is enabled via CONFIG_ARCH_HW_SHADOW_STACK.
  */
 
 /* Interrupt Context register
@@ -242,14 +242,14 @@
 
 #ifdef CONFIG_ARCH_RV_HAVE_CLIC
 #  define REG_INT_THRESH_NDX  32
-#  ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#  ifdef CONFIG_ARCH_HW_SHADOW_STACK
 #    define REG_SSP_NDX       33
 #    define REG_INT_CTX_NDX   34
 #  else
 #    define REG_INT_CTX_NDX   33
 #  endif
 #else
-#  ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#  ifdef CONFIG_ARCH_HW_SHADOW_STACK
 #    define REG_SSP_NDX       32
 #    define REG_INT_CTX_NDX   33
 #  else
@@ -405,7 +405,7 @@
 #  ifdef CONFIG_ARCH_RV_HAVE_CLIC
 #    define REG_INT_THRESH  (INT_REG_SIZE*REG_INT_THRESH_NDX)
 #  endif
-#  ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#  ifdef CONFIG_ARCH_HW_SHADOW_STACK
 #    define REG_SSP         (INT_REG_SIZE*REG_SSP_NDX)
 #  endif
 #  define REG_INT_CTX       (INT_REG_SIZE*REG_INT_CTX_NDX)
@@ -490,7 +490,7 @@
 #  ifdef CONFIG_ARCH_RV_HAVE_CLIC
 #    define REG_INT_THRESH  REG_INT_THRESH_NDX
 #  endif
-#  ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#  ifdef CONFIG_ARCH_HW_SHADOW_STACK
 #    define REG_SSP         REG_SSP_NDX
 #  endif
 #  define REG_INT_CTX       REG_INT_CTX_NDX
@@ -708,7 +708,7 @@ struct xcptcontext
 #  endif
 #endif
 
-#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
   /* Shadow stack for control flow integrity */
 
   uintreg_t *sstack_alloc_ptr;           /* Pointer to allocated shadow stack */

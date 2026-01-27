@@ -45,7 +45,7 @@
 #define _START_TBSS  _stbss
 #define _END_TBSS    _etbss
 
-#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
 #  define SMP_SHADOW_STACK_SIZE (CONFIG_IDLETHREAD_STACKSIZE / 2)
 #else
 #  define SMP_SHADOW_STACK_SIZE (0)
@@ -100,7 +100,7 @@ extern "C"
  * Each CPU gets SMP_STACK_SIZE bytes total (aligned to 16-byte boundary):
  * - CONFIG_IDLETHREAD_STACKSIZE bytes for normal stack
  * - SMP_SHADOW_STACK_SIZE bytes for shadow stack
- *     (if CONFIG_ARCH_RV_SHADOW_STACK enabled)
+ *     (if CONFIG_ARCH_HW_SHADOW_STACK enabled)
  */
 
 EXTERN uintptr_t g_idle_topstack;

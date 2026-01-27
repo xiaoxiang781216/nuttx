@@ -59,7 +59,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
 static int create_shadow_stack(struct tcb_s *tcb, size_t stack_size)
 {
   /* Allocate shadow stack for all thread types */
@@ -105,7 +105,7 @@ static int create_shadow_stack(struct tcb_s *tcb, size_t stack_size)
 
   return ERROR;
 }
-#endif /* CONFIG_ARCH_RV_SHADOW_STACK */
+#endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
 /****************************************************************************
  * Public Functions
@@ -212,7 +212,7 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
   riscv_stack_color(tcb->stack_base_ptr, tcb->adj_stack_size);
 #endif
 
-#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
   /* Create shadow stack for this thread.
    * Shadow stack only needs to store link registers, so use half
    * the size of the main stack.
@@ -223,7 +223,7 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
       serr("ERROR: Failed to create shadow stack\n");
       return ERROR;
     }
-#endif /* CONFIG_ARCH_RV_SHADOW_STACK */
+#endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
   return OK;
 }
