@@ -55,7 +55,8 @@ DEFINE_PER_CPU_BSS_BMP(int, crypto_drivers_num);
  * Private Data
  ****************************************************************************/
 
-static mutex_t g_crypto_lock = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(mutex_t, g_crypto_lock) = NXMUTEX_INITIALIZER;
+#define g_crypto_lock this_cpu_var_bmp(g_crypto_lock)
 
 /****************************************************************************
  * Public Functions
