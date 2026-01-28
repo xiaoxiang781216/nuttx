@@ -329,7 +329,7 @@ static int audio_fake_sin_data_init(FAR struct audio_lowerhalf_s *dev)
         {
           float t = (float)i / priv->sample_rate;
           float sample = sinf(2 * M_PI_F * freq * t);
-          data[i] = (int32_t)(sample * INT32_MAX);
+          data[i] = (int32_t)(sample * (double)INT32_MAX);
         }
 
         priv->sindata = data;
