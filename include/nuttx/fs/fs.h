@@ -438,8 +438,8 @@ struct inode
 #if defined(CONFIG_PSEUDOFS_FILE) || defined(CONFIG_FS_SHMFS)
   size_t            i_size;     /* The size of per inode driver */
 #endif
-#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
   mode_t            i_mode;     /* Access mode flags */
+#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
   uid_t             i_owner;    /* Owner */
   gid_t             i_group;    /* Group */
   struct timespec   i_atime;    /* Time of last access */

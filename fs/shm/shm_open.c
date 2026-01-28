@@ -112,7 +112,6 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
           goto errout_with_sem;
         }
 
-#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
       if (((oflags & O_WRONLY) && !(inode->i_mode & S_IWUSR)) ||
           ((oflags & O_RDONLY) && !(inode->i_mode & S_IRUSR)))
         {
@@ -120,7 +119,6 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
           inode_release(inode);
           goto errout_with_sem;
         }
-#endif
 
       /* If the shared memory object already exists, truncate it to
        * zero bytes.
