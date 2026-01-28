@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/sched/sched_tickexpiration.c
+ * sched/sched/sched_processtickless.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -39,6 +39,7 @@
 
 #include "sched/sched.h"
 #include "wdog/wdog.h"
+#include "hrtimer/hrtimer.h"
 #include "clock/clock.h"
 #include "nuttx/seqlock.h"
 
@@ -368,8 +369,11 @@ static void nxsched_timer_start(clock_t ticks, clock_t interval)
  *
  ****************************************************************************/
 
-void nxsched_process_tick(void)
+void nxsched_process_timer(void)
 {
+#ifdef CONFIG_HRTIMER
+  hrtimer_process(clock_systime_nsec());
+#else
   irqstate_t flags;
   clock_t ticks;
 
@@ -395,6 +399,7 @@ void nxsched_process_tick(void)
   wd_timer(ticks);
 
   leave_critical_section(flags);
+#endif
 }
 
 /****************************************************************************

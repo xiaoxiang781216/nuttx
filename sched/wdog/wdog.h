@@ -41,6 +41,10 @@
 #include <nuttx/sched.h>
 #include <nuttx/arch.h>
 
+#ifdef CONFIG_HRTIMER
+#  include <nuttx/hrtimer.h> 
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -61,7 +65,12 @@ extern "C"
 DECLARE_PER_CPU_BMP(struct list_node, g_wdactivelist);
 #define g_wdactivelist this_cpu_var_bmp(g_wdactivelist)
 
-#ifdef CONFIG_SCHED_TICKLESS
+#ifdef CONFIG_HRTIMER
+DECLARE_PER_CPU_BMP(struct hrtimer_s, g_wdtimer);
+#define g_wdtimer this_cpu_var_bmp(g_wdtimer)
+#endif
+
+#if defined(CONFIG_SCHED_TICKLESS) || defined(CONFIG_HRTIMER)
 DECLARE_PER_CPU_BMP(bool, g_wdtimernested);
 #define g_wdtimernested this_cpu_var_bmp(g_wdtimernested)
 
@@ -70,10 +79,46 @@ DECLARE_PER_CPU_BMP(clock_t, g_wdexpired);
 #endif
 
 /****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: wd_timer
+ *
+ * Description:
+ *   This function is called from the timer interrupt handler to determine
+ *   if it is time to execute a watchdog function.  If so, the watchdog
+ *   function will be executed in the context of the timer interrupt
+ *   handler.
+ *
+ * Input Parameters:
+ *   ticks - If CONFIG_SCHED_TICKLESS is defined then the number of ticks
+ *     in the interval that just expired is provided.  Otherwise,
+ *     this function is called on each timer interrupt and a value of one
+ *     is implicit.
+ *   noswitches - True: Can't do context switches now.
+ *
+ * Returned Value:
+ *   If CONFIG_SCHED_TICKLESS is defined then the number of ticks for the
+ *   next delay is provided (zero if no delay).  Otherwise, this function
+ *   has no returned value.
+ *
+ * Assumptions:
+ *   Called from interrupt handler logic with interrupts disabled.
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_HRTIMER
+void wd_timer(clock_t ticks);
+#else
+uint64_t wd_timer(const hrtimer_t *timer, uint64_t expired);
+#endif
+
+/****************************************************************************
  * Inline functions
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_TICKLESS
+#if defined(CONFIG_SCHED_TICKLESS) || defined(CONFIG_HRTIMER)
 #  define wd_in_callback()          (g_wdtimernested)
 #  define wd_set_nested(f)          (g_wdtimernested = (f))
 #  define wd_update_expire(expired) (g_wdexpired = (expired))
@@ -83,7 +128,22 @@ DECLARE_PER_CPU_BMP(clock_t, g_wdexpired);
 #  define wd_update_expire(expired)
 #endif
 
-#ifdef CONFIG_SCHED_TICKLESS
+#ifdef CONFIG_HRTIMER
+static inline_function void wd_timer_start(clock_t tick, bool in_expiration)
+{
+  DEBUGASSERT((uint64_t)tick <= UINT64_MAX / NSEC_PER_TICK);
+  if (!in_expiration)
+    {
+      hrtimer_start(&g_wdtimer, wd_timer,
+                    TICK2NSEC((uint64_t)tick), HRTIMER_MODE_ABS);
+    }
+}
+
+static inline_function void wd_timer_cancel(void)
+{
+  hrtimer_cancel(&g_wdtimer);
+}
+#elif defined(CONFIG_SCHED_TICKLESS)
 static inline_function clock_t wd_adjust_next_tick(clock_t tick)
 {
   clock_t next_tick = tick;
@@ -114,7 +174,7 @@ static inline_function clock_t wd_adjust_next_tick(clock_t tick)
   return next_tick;
 }
 
-static inline_function void wd_timer_start(clock_t tick)
+static inline_function void wd_timer_start(clock_t tick, bool in_expiration)
 {
   clock_t next_tick = wd_adjust_next_tick(tick);
 #ifdef CONFIG_SCHED_TICKLESS_ALARM
@@ -134,7 +194,7 @@ static inline_function void wd_timer_cancel(void)
 #endif
 }
 #else
-#  define wd_timer_start(next_tick)
+#  define wd_timer_start(next_tick, in_expiration)
 #  define wd_timer_cancel()
 #endif
 
@@ -160,34 +220,6 @@ static inline_function clock_t wd_get_next_expire(clock_t curr)
   leave_critical_section(flags);
   return (sclock_t)(next - curr) <= 0 ? 0u : next;
 }
-
-/****************************************************************************
- * Name: wd_timer
- *
- * Description:
- *   This function is called from the timer interrupt handler to determine
- *   if it is time to execute a watchdog function.  If so, the watchdog
- *   function will be executed in the context of the timer interrupt
- *   handler.
- *
- * Input Parameters:
- *   ticks - If CONFIG_SCHED_TICKLESS is defined then the number of ticks
- *     in the interval that just expired is provided.  Otherwise,
- *     this function is called on each timer interrupt and a value of one
- *     is implicit.
- *   noswitches - True: Can't do context switches now.
- *
- * Returned Value:
- *   If CONFIG_SCHED_TICKLESS is defined then the number of ticks for the
- *   next delay is provided (zero if no delay).  Otherwise, this function
- *   has no returned value.
- *
- * Assumptions:
- *   Called from interrupt handler logic with interrupts disabled.
- *
- ****************************************************************************/
-
-void wd_timer(clock_t ticks);
 
 #undef EXTERN
 #ifdef __cplusplus

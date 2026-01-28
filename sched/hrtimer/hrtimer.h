@@ -142,19 +142,26 @@ void hrtimer_process(uint64_t now);
 
 static inline_function void hrtimer_reprogram(uint64_t next_expired)
 {
+  /* `hrtimer_reprogram` relies on the underlying timer being a non-periodic
+   * timer. If the underlying timer hardware is a periodic timer like
+   * systick, we cannot set the next expiration time.
+   */
+
 #ifdef CONFIG_SCHED_TICKLESS
-  int ret;
+  int ret = 0;
   struct timespec ts;
-#  ifdef CONFIG_SCHED_TICKLESS_ALARM
+
   clock_nsec2time(&ts, next_expired);
+
+#  ifdef CONFIG_ALARM_ARCH
   ret = up_alarm_start(&ts);
 #  else
   struct timespec current;
   up_timer_gettime(&current);
-  clock_nsec2time(&ts, next_expired);
   clock_timespec_subtract(&ts, &current, &ts);
   ret = up_timer_start(&ts);
 #  endif
+
   DEBUGASSERT(ret == 0);
 #endif
 }

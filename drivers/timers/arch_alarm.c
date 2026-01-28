@@ -122,7 +122,7 @@ static void udelay_coarse(useconds_t microseconds)
 static void oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
                              FAR void *arg)
 {
-#if defined(CONFIG_SCHED_TICKLESS) || defined(CONFIG_HRTIMER)
+#if defined(CONFIG_SCHED_TICKLESS)
   nxsched_process_timer();
 #else
   clock_t now;
