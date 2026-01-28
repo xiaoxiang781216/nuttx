@@ -120,6 +120,7 @@
 #define ELFMAG2            'L'
 #define ELFMAG3            'F'
 #define ELFMAG             "\177ELF"
+#define SELFMAG            4
 
 /* Table 3. Values for EI_CLASS */
 
