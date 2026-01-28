@@ -1506,6 +1506,9 @@ static int lpc17_40_ifup(struct net_driver_s *dev)
 #else
   up_enable_irq(LPC17_40_IRQ_ETH);
 #endif
+
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -1545,6 +1548,9 @@ static int lpc17_40_ifdown(struct net_driver_s *dev)
   lpc17_40_ethreset(priv);
   priv->lp_ifup = false;
   leave_critical_section(flags);
+
+  netdev_carrier_off(dev);
+
   return OK;
 }
 

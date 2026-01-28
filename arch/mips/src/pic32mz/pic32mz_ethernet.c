@@ -2338,6 +2338,8 @@ static int pic32mz_ifup(struct net_driver_s *dev)
   up_enable_irq(PIC32MZ_IRQ_ETH);
 #endif
 
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -2380,6 +2382,9 @@ static int pic32mz_ifdown(struct net_driver_s *dev)
   pic32mz_ethreset(priv);
   priv->pd_ifup = false;
   leave_critical_section(flags);
+
+  netdev_carrier_off(dev);
+
   return OK;
 }
 

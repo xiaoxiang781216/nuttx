@@ -1756,6 +1756,9 @@ static int c5471_ifup(struct net_driver_s *dev)
 
   priv->c_bifup = true;
   up_enable_irq(C5471_IRQ_ETHER);
+
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -1808,6 +1811,9 @@ static int c5471_ifdown(struct net_driver_s *dev)
 
   priv->c_bifup = false;
   leave_critical_section(flags);
+
+  netdev_carrier_off(dev);
+
   return OK;
 }
 

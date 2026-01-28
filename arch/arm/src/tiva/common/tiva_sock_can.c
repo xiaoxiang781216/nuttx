@@ -2249,6 +2249,8 @@ static int tivacan_ifup(struct net_driver_s *dev)
 
   priv->dev.d_buf = (uint8_t *)priv->tx_pool;
 
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -2277,6 +2279,8 @@ static int tivacan_ifdown(struct net_driver_s *dev)
   /* Stop processing messages */
 
   tivacan_reset(dev);
+
+  netdev_carrier_off(dev);
 
   return OK;
 }

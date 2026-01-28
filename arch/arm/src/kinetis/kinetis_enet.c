@@ -1104,6 +1104,8 @@ static int kinetis_ifup(struct net_driver_s *dev)
   priv->ints = RX_INTERRUPTS | ERROR_INTERRUPTS;
   modifyreg32(KINETIS_ENET_EIMR, TX_INTERRUPTS,  priv->ints);
 
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -1160,6 +1162,9 @@ static int kinetis_ifdown(struct net_driver_s *dev)
 
   priv->bifup = false;
   leave_critical_section(flags);
+
+  netdev_carrier_off(dev);
+
   return OK;
 }
 

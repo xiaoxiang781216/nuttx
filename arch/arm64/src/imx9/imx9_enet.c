@@ -1423,7 +1423,14 @@ static int imx9_ifup(struct net_driver_s *dev)
 {
   /* The externally available ifup action includes resetting the phy */
 
-  return imx9_ifup_action(dev, true);
+  int ret = imx9_ifup_action(dev, true);
+
+  if (ret == OK)
+    {
+      netdev_carrier_on(dev);
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -1475,6 +1482,8 @@ static int imx9_ifdown(struct net_driver_s *dev)
   /* Mark the device "down" */
 
   priv->bifup = false;
+
+  netdev_carrier_off(dev);
 
   return OK;
 }

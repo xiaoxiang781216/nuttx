@@ -857,6 +857,8 @@ static int litex_ifup(struct net_driver_s *dev)
 
   litex_phydump(priv);
 
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -897,6 +899,8 @@ static int litex_ifdown(struct net_driver_s *dev)
   leave_critical_section(flags);
 
   litex_phydump(priv);
+
+  netdev_carrier_off(dev);
 
   return OK;
 }

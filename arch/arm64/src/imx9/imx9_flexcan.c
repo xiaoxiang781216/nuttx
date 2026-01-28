@@ -1448,6 +1448,8 @@ static int imx9_ifup(struct net_driver_s *dev)
   up_enable_irq(priv->irq);
   up_enable_irq(priv->irq + 1);
 
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -1479,6 +1481,9 @@ static int imx9_ifdown(struct net_driver_s *dev)
   imx9_reset(priv);
 
   priv->bifup = false;
+
+  netdev_carrier_off(dev);
+
   return OK;
 }
 

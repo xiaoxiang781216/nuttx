@@ -1778,6 +1778,7 @@ static int spirit_ifup(FAR struct net_driver_s *dev)
       /* We are up! */
 
       priv->ifup = true;
+      netdev_carrier_on(dev);
     }
 
   return OK;
@@ -1876,6 +1877,7 @@ static int spirit_ifdown(FAR struct net_driver_s *dev)
         }
 
       priv->ifup = false;
+      netdev_carrier_off(dev);
     }
 
   return ret;

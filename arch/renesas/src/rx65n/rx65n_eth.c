@@ -2071,6 +2071,9 @@ static int rx65n_ifup(struct net_driver_s *dev)
 
   priv->prevlinkstatus = ETHER_LINKUP;
   rx65n_checksetup();
+
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -2126,6 +2129,9 @@ static int rx65n_ifdown(struct net_driver_s *dev)
   priv->prevlinkstatus = ETHER_LINKDOWN;
 
   spin_unlock_irqrestore(&priv->lock, flags);
+
+  netdev_carrier_off(dev);
+
   return ret;
 }
 

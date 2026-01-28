@@ -1558,6 +1558,8 @@ static int mpfs_ifup(struct net_driver_s *dev)
   up_enable_irq(priv->mac_q_int[2]);
   up_enable_irq(priv->mac_q_int[3]);
 
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -1612,6 +1614,9 @@ static int mpfs_ifdown(struct net_driver_s *dev)
 
   priv->ifup = false;
   leave_critical_section(flags);
+
+  netdev_carrier_off(dev);
+
   return OK;
 }
 

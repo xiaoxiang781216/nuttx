@@ -2346,6 +2346,9 @@ static int cdcmbim_ifup(FAR struct net_driver_s *dev)
     }
 
   priv->bifup = true;
+
+  netdev_lower_carrier_on(dev);
+
   return OK;
 }
 
@@ -2378,6 +2381,9 @@ static int cdcmbim_ifdown(FAR struct net_driver_s *dev)
   priv->bifup = false;
 
   spin_unlock_irqrestore(&priv->spinlock, flags);
+
+  netdev_lower_carrier_off(dev);
+
   return OK;
 }
 

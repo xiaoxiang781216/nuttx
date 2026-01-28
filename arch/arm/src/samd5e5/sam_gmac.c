@@ -1729,6 +1729,9 @@ static int sam_ifup(struct net_driver_s *dev)
 
   priv->ifup = true;
   up_enable_irq(SAM_IRQ_GMAL);
+
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -1775,6 +1778,9 @@ static int sam_ifdown(struct net_driver_s *dev)
 
   priv->ifup = false;
   leave_critical_section(flags);
+
+  netdev_carrier_off(dev);
+
   return OK;
 }
 

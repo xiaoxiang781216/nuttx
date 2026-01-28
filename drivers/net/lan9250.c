@@ -2187,6 +2187,7 @@ static int lan9250_ifup(FAR struct net_driver_s *dev)
             (uint8_t)(mac_addr[0] >> 24), (uint8_t)(mac_addr[0] >> 16),
             (uint8_t)(mac_addr[0] >>  8), (uint8_t)(mac_addr[0] >>  0));
 #endif
+      netdev_carrier_on(dev);
     }
 
   /* Un-lock the SPI bus */
@@ -2238,6 +2239,7 @@ static int lan9250_ifdown(FAR struct net_driver_s *dev)
 
   IFF_CLR_UP(priv->dev.d_flags);
   leave_critical_section(flags);
+  netdev_carrier_off(dev);
 
   /* Un-lock the SPI bus */
 

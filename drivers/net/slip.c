@@ -836,6 +836,8 @@ static int slip_ifup(FAR struct net_driver_s *dev)
 
   self->bifup = true;
 
+  netdev_carrier_on(dev);
+
   return OK;
 }
 
@@ -868,6 +870,8 @@ static int slip_ifdown(FAR struct net_driver_s *dev)
   /* Mark the device "down" */
 
   self->bifup = false;
+
+  netdev_carrier_off(dev);
 
   return OK;
 }
