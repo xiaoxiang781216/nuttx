@@ -1136,7 +1136,7 @@ static int noteram_dump_printf(FAR struct lib_outstream_s *s,
 
   if (note->npt_type == 0)
     {
-      ret = lib_osprintf(s, note->npt_fmt, note->npt_data);
+      ret = lib_osprintf(s, (FAR const char *)note->npt_fmt, note->npt_data);
     }
   else
     {
@@ -1145,7 +1145,7 @@ static int noteram_dump_printf(FAR struct lib_outstream_s *s,
       size_t i;
 
       fmt[0] = '\0';
-      ret += lib_sprintf(s, "%p", note->npt_fmt);
+      ret += lib_sprintf(s, "%p", (FAR void *)note->npt_fmt);
       for (i = 0; i < count; i++)
         {
           int type = NOTE_PRINTF_GET_TYPE(note->npt_type, i);

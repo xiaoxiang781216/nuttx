@@ -341,7 +341,7 @@ struct note_printf_s
 {
   struct note_common_s npt_cmn; /* Common note parameters */
   uintptr_t npt_ip;             /* Instruction pointer called from */
-  FAR const char *npt_fmt;      /* Printf format string */
+  uintptr_t npt_fmt;            /* Printf format string */
   uint64_t npt_type;            /* Printf parameter type */
   uint8_t npt_tag;              /* Printf tag */
   uint8_t npt_level;            /* Event level */

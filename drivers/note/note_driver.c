@@ -1767,7 +1767,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   note_common(tcb, &note->npt_cmn, length, NOTE_DUMP_PRINTF);
   note->npt_ip = ip;
   note->npt_tag = tag;
-  note->npt_fmt = fmt;
+  note->npt_fmt = (uintptr_t)fmt;
   note->npt_type = type;
   note->npt_level = level;
 
