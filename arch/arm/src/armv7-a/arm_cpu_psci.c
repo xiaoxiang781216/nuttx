@@ -125,7 +125,7 @@ static int psci_detect(void)
 {
   uint32_t ver = psci_get_version();
 
-  sinfo("Detected PSCI v%ld.%ld\n",
+  sinfo("Detected PSCI v%" PRId32 ".%" PRId32 "\n",
         PSCI_VERSION_MAJOR(ver), PSCI_VERSION_MINOR(ver));
 
   if (PSCI_VERSION_MAJOR(ver) == 0 && PSCI_VERSION_MINOR(ver) < 2)
