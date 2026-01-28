@@ -309,7 +309,7 @@ static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
   note_common(tcb, &note->npt_cmn, length, NOTE_DUMP_PRINTF);
   note->npt_ip = ip;
   note->npt_tag = tag;
-  note->npt_fmt = NULL;
+  note->npt_fmt = 0;
   note->npt_type = type;
   note->npt_level = level;
 
