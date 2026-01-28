@@ -48,7 +48,7 @@ size_t    fs_large_malloc_size(FAR void *mem);
 FAR void *fs_large_realloc(FAR void *oldmem, size_t size)
           realloc_like(2);
 FAR void *fs_large_memalign(size_t alignment, size_t size)
-          malloc_like1(3);
+          malloc_like1(2);
 void      fs_large_free(FAR void *mem);
 FAR char *fs_large_strdup(FAR const char *s) malloc_like;
 FAR char *fs_large_strndup(FAR const char *s, size_t size) malloc_like;
