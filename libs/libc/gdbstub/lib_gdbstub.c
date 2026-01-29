@@ -54,11 +54,7 @@
  *   Initialize the GDB state structure.
  *
  * Input Parameters:
- *   send    - The pointer to the send function.
- *   recv    - The pointer to the receive function.
- *   monitor - The pointer to the monitor function.
- *   packet  - True to enable packet buffer mode.
- *   priv    - The pointer to the private data.
+ *   init - The pointer to the initialization configuration structure.
  *
  * Returned Value:
  *   The pointer to the GDB state structure on success.
@@ -66,14 +62,12 @@
  *
  ****************************************************************************/
 
-FAR struct gdb_state_s *gdb_state_init(gdb_send_func_t send,
-                                       gdb_recv_func_t recv,
-                                       gdb_monitor_func_t monitor,
-                                       bool packet,
-                                       FAR void *priv)
+FAR struct gdb_state_s *gdb_state_init(
+    FAR const struct gdb_state_init_s *init)
 {
   FAR struct gdb_state_s *state = lib_memalign(XCPTCONTEXT_ALIGN,
-    sizeof(struct gdb_state_s) + (packet ? 3 * GDB_PKTBUF_SIZE + 4 : 0));
+    sizeof(struct gdb_state_s) +
+    (init->packet ? 3 * GDB_PKTBUF_SIZE + 4 : 0));
 
   if (state == NULL)
     {
@@ -81,12 +75,12 @@ FAR struct gdb_state_s *gdb_state_init(gdb_send_func_t send,
     }
 
   memset(state, 0, sizeof(struct gdb_state_s));
-  state->send = send;
-  state->recv = recv;
-  state->priv = priv;
-  state->monitor = monitor;
+  state->send = init->send;
+  state->recv = init->recv;
+  state->priv = init->priv;
+  state->monitor = init->monitor;
 
-  if (packet)
+  if (init->packet)
     {
       state->tx_size = 2 * GDB_PKTBUF_SIZE + 4;
       state->rx_buf = state->pkt_buf + 2 * GDB_PKTBUF_SIZE + 4;

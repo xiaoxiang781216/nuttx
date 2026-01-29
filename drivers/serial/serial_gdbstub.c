@@ -297,6 +297,10 @@ static ssize_t uart_gdbstub_send(FAR void *priv, FAR const void *buf,
 int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path)
 {
   FAR struct uart_gdbstub_s *uart_gdbstub;
+  struct gdb_state_init_s init =
+    {
+      0
+    };
 
   if (g_uart_gdbstub == NULL)
     {
@@ -323,11 +327,12 @@ int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path)
       return 0;
     }
 
-  uart_gdbstub->state = gdb_state_init(uart_gdbstub_send,
-                                       uart_gdbstub_receive,
-                                       NULL,
-                                       dev->ops->recvbuf != NULL,
-                                       uart_gdbstub);
+  init.send   = uart_gdbstub_send;
+  init.recv   = uart_gdbstub_receive;
+  init.packet = dev->ops->recvbuf != NULL;
+  init.priv   = uart_gdbstub;
+
+  uart_gdbstub->state = gdb_state_init(&init);
   if (uart_gdbstub->state == NULL)
     {
       kmm_free(uart_gdbstub);

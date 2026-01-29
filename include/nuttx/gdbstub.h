@@ -55,6 +55,19 @@ typedef CODE ssize_t (*gdb_recv_func_t)(FAR void *priv, FAR void *buf,
 typedef CODE int (*gdb_monitor_func_t)(FAR struct gdb_state_s *state,
                                        FAR const char *cmd);
 
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+struct gdb_state_init_s
+{
+  gdb_send_func_t    send;     /* Send function pointer */
+  gdb_recv_func_t    recv;     /* Receive function pointer */
+  gdb_monitor_func_t monitor;  /* Monitor function pointer */
+  bool               packet;   /* Enable packet buffer mode */
+  FAR void          *priv;     /* Private data pointer */
+};
+
 #ifdef CONFIG_ARCH_HAVE_DEBUG
 
 /****************************************************************************
@@ -79,11 +92,7 @@ int gdb_debugpoint_remove(int type, void *addr, size_t size);
  *   Initialize the GDB state structure.
  *
  * Input Parameters:
- *   send    - The pointer to the send function.
- *   recv    - The pointer to the receive function.
- *   monitor - The pointer to the monitor function.
- *   packet  - True to enable packet buffer mode.
- *   priv    - The pointer to the private data.
+ *   init - The pointer to the initialization configuration structure.
  *
  * Returned Value:
  *   The pointer to the GDB state structure on success.
@@ -91,11 +100,8 @@ int gdb_debugpoint_remove(int type, void *addr, size_t size);
  *
  ****************************************************************************/
 
-FAR struct gdb_state_s *gdb_state_init(gdb_send_func_t send,
-                                       gdb_recv_func_t recv,
-                                       gdb_monitor_func_t monitor,
-                                       bool packet,
-                                       FAR void *priv);
+FAR struct gdb_state_s *gdb_state_init(
+    FAR const struct gdb_state_init_s *init);
 
 /****************************************************************************
  * Name: gdb_state_uninit
