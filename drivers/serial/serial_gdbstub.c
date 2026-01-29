@@ -25,16 +25,12 @@
  ****************************************************************************/
 
 #include <nuttx/serial/serial.h>
-#include <nuttx/panic_notifier.h>
-#include <nuttx/syslog/syslog.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/gdbstub.h>
-#include <nuttx/nuttx.h>
 
 #include <fcntl.h>
 #include <poll.h>
 #include <string.h>
-#include <debug.h>
 
 /****************************************************************************
  * Private Types
@@ -43,11 +39,9 @@
 struct uart_gdbstub_s
 {
   FAR struct uart_dev_s *dev;
-  FAR struct uart_dev_s *console;
   FAR struct gdb_state_s *state;
   struct file file;
   struct pollfd fds;
-  struct notifier_block nb;
 };
 
 /****************************************************************************
@@ -91,93 +85,6 @@ static void uart_gdbstub_attach(FAR struct uart_gdbstub_s *uart_gdbstub)
       uart_gdbstub->fds.cb = uart_gdbstub_poll;
       file_poll(&uart_gdbstub->file, &uart_gdbstub->fds, true);
     }
-}
-
-/****************************************************************************
- * Name: uart_gdbstub_panic_callback
- *
- * Description:
- *   This is panic callback for gdbstub, If a crash occurs,
- *   you can debug it through gdb
- *
- ****************************************************************************/
-
-static int uart_gdbstub_panic_callback(FAR struct notifier_block *nb,
-                                       unsigned long action, FAR void *data)
-{
-  FAR struct uart_gdbstub_s *uart_gdbstub =
-    container_of(nb, struct uart_gdbstub_s, nb);
-#if CONFIG_SERIAL_GDBSTUB_PANIC_TIMEOUT != 0
-  FAR const struct uart_ops_s *ops = NULL;
-  unsigned int base;
-#endif
-
-  if (action != PANIC_KERNEL_FINAL)
-    {
-      return 0;
-    }
-
-#if CONFIG_SERIAL_GDBSTUB_PANIC_TIMEOUT == 0
-  gdb_console_message(uart_gdbstub->state,
-                      "Enter panic gdbstub mode!\n");
-#else
-  _alert("Press Y/y key in %d seconds to enter gdb debug mode\n",
-         CONFIG_SERIAL_GDBSTUB_PANIC_TIMEOUT);
-  syslog_flush();
-
-  if (uart_gdbstub->console == NULL)
-    {
-      uart_gdbstub->console = uart_gdbstub->dev;
-    }
-
-  ops = uart_gdbstub->console->ops;
-
-  base = clock_systime_ticks();
-  while (true)
-    {
-      if (ops->rxavailable(uart_gdbstub->console))
-        {
-          char ch;
-
-          if (ops->recvbuf)
-            {
-              ops->recvbuf(uart_gdbstub->console, &ch, 1);
-            }
-          else
-            {
-              unsigned int status;
-              ch = ops->receive(uart_gdbstub->console, &status);
-            }
-
-          if (ch == 'Y' || ch == 'y')
-            {
-              break;
-            }
-        }
-
-      if ((clock_systime_ticks()) - base >=
-           SEC2TICK(CONFIG_SERIAL_GDBSTUB_PANIC_TIMEOUT))
-        {
-          _alert("%d seconds passed, exit now\n",
-                 CONFIG_SERIAL_GDBSTUB_PANIC_TIMEOUT);
-          return 0;
-        }
-    }
-#endif
-
-#ifndef CONFIG_SERIAL_GDBSTUB_AUTO_ATTACH
-  uart_gdbstub_attach(uart_gdbstub);
-#endif
-
-  _alert("Enter panic gdbstub mode, plase use gdb connect to debug\n");
-  _alert("Please use gdb of the corresponding architecture to "
-         "connect to nuttx");
-  _alert("such as: arm-none-eabi-gdb nuttx -ex \"set "
-         "target-charset ASCII\" -ex \"target remote /dev/ttyUSB0\"\n");
-
-  syslog_flush();
-  gdb_process(uart_gdbstub->state, GDB_STOPREASON_NONE, NULL);
-  return 0;
 }
 
 /****************************************************************************
@@ -317,20 +224,16 @@ int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path)
       uart_gdbstub = g_uart_gdbstub;
     }
 
-  if (dev->isconsole && uart_gdbstub->console == NULL)
-    {
-      uart_gdbstub->console = dev;
-    }
-
   if (strcmp(path, CONFIG_SERIAL_GDBSTUB_PATH) != 0)
     {
       return 0;
     }
 
-  init.send   = uart_gdbstub_send;
-  init.recv   = uart_gdbstub_receive;
-  init.packet = dev->ops->recvbuf != NULL;
-  init.priv   = uart_gdbstub;
+  init.send          = uart_gdbstub_send;
+  init.recv          = uart_gdbstub_receive;
+  init.packet        = dev->ops->recvbuf != NULL;
+  init.priv          = uart_gdbstub;
+  init.panic_timeout = CONFIG_SERIAL_GDBSTUB_PANIC_TIMEOUT;
 
   uart_gdbstub->state = gdb_state_init(&init);
   if (uart_gdbstub->state == NULL)
@@ -340,8 +243,6 @@ int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path)
     }
 
   uart_gdbstub->dev = dev;
-  uart_gdbstub->nb.notifier_call = uart_gdbstub_panic_callback;
-  panic_notifier_chain_register(&uart_gdbstub->nb);
 
 #ifdef CONFIG_SERIAL_GDBSTUB_AUTO_ATTACH
   uart_gdbstub_attach(uart_gdbstub);

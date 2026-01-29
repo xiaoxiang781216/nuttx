@@ -35,6 +35,7 @@
 
 #include <nuttx/gdbstub.h>
 #include <nuttx/streams.h>
+#include <nuttx/notifier.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -93,6 +94,8 @@ struct gdb_state_s
 
   size_t tx_size;                         /* TX buffer size */
   size_t tx_pos;                          /* Current TX buffer position */
+  int panic_timeout;                      /* <0 infinite, 0 disabled, >0 seconds */
+  struct notifier_block nb;               /* Panic notifier block */
   char tx_buf[0];
 };
 

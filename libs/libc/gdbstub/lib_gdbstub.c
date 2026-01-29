@@ -27,9 +27,16 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <inttypes.h>
+
 #include <nuttx/lib/lib.h>
 #include <nuttx/ascii.h>
 #include <nuttx/streams.h>
+#include <nuttx/clock.h>
+#include <nuttx/panic_notifier.h>
+#include <nuttx/nuttx.h>
+#include <nuttx/syslog/syslog.h>
+#include <debug.h>
 
 #include "internal.h"
 
@@ -42,6 +49,65 @@
 #ifndef XCPTCONTEXT_ALIGN
 #  define XCPTCONTEXT_ALIGN 16
 #endif
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static int gdb_panic_callback(FAR struct notifier_block *nb,
+                              unsigned long action, FAR void *data)
+{
+  FAR struct gdb_state_s *state =
+    container_of(nb, struct gdb_state_s, nb);
+  clock_t base;
+  char c;
+  ssize_t ret;
+
+  UNUSED(data);
+
+  if (action != PANIC_KERNEL_FINAL)
+    {
+      return 0;
+    }
+
+  _alert("Entering panic gdbstub mode, waiting for GDB connection...\n");
+  _alert("Use: gdb-multiarch nuttx -ex \"target remote <device>\"\n");
+  syslog_flush();
+
+  if (state->panic_timeout > 0)
+    {
+      base = clock_systime_ticks();
+      while (clock_systime_ticks() - base < SEC2TICK(state->panic_timeout))
+        {
+          ret = state->recv(state->priv, &c, 1);
+          if (ret > 0)
+            {
+              break;
+            }
+        }
+
+      if (ret <= 0)
+        {
+          _alert("Timeout after %d seconds, continuing panic flow\n",
+                 state->panic_timeout);
+          return 0;
+        }
+    }
+  else
+    {
+      for (; ; )
+        {
+          ret = state->recv(state->priv, &c, 1);
+          if (ret > 0)
+            {
+              break;
+            }
+        }
+    }
+
+  gdb_process(state, GDB_STOPREASON_NONE, NULL);
+  return 0;
+}
 
 /****************************************************************************
  * Public Functions
@@ -87,6 +153,13 @@ FAR struct gdb_state_s *gdb_state_init(
       state->rx_size = GDB_PKTBUF_SIZE;
     }
 
+  if (init->panic_timeout != 0)
+    {
+      state->panic_timeout = init->panic_timeout;
+      state->nb.notifier_call = gdb_panic_callback;
+      panic_notifier_chain_register(&state->nb);
+    }
+
 #ifdef CONFIG_LIB_GDBSTUB_DEBUG
   lib_syslograwstream_open(&state->stream);
 #endif
@@ -109,6 +182,11 @@ void gdb_state_uninit(FAR struct gdb_state_s *state)
 {
   if (state != NULL)
     {
+      if (state->panic_timeout != 0)
+        {
+          panic_notifier_chain_unregister(&state->nb);
+        }
+
       lib_free(state);
     }
 }

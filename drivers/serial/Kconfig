@@ -82,8 +82,10 @@ config SERIAL_GDBSTUB_PANIC_TIMEOUT
 	int "GDBSTUB Serial panic timeout"
 	default 10
 	---help---
-		Delay the panic timeout for gdbstub to connect.
-		0 will disable the timeout.
+		Timeout in seconds to wait for GDB connection during panic.
+		Negative value: wait indefinitely for debugger.
+		Zero: disable panic gdbstub (no notifier registered).
+		Positive value: wait specified seconds, then continue panic flow.
 
 endif # SERIAL_GDBSTUB
 

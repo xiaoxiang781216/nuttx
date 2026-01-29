@@ -27,7 +27,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <stdlib.h>
+#include <stdint.h>
 #include <nuttx/arch.h>
 
 /****************************************************************************
@@ -61,11 +61,12 @@ typedef CODE int (*gdb_monitor_func_t)(FAR struct gdb_state_s *state,
 
 struct gdb_state_init_s
 {
-  gdb_send_func_t    send;     /* Send function pointer */
-  gdb_recv_func_t    recv;     /* Receive function pointer */
-  gdb_monitor_func_t monitor;  /* Monitor function pointer */
-  bool               packet;   /* Enable packet buffer mode */
-  FAR void          *priv;     /* Private data pointer */
+  gdb_send_func_t    send;          /* Send function pointer */
+  gdb_recv_func_t    recv;          /* Receive function pointer */
+  gdb_monitor_func_t monitor;       /* Monitor function pointer */
+  bool               packet;        /* Enable packet buffer mode */
+  FAR void          *priv;          /* Private data pointer */
+  int                panic_timeout; /* <0 infinite, 0 disabled, >0 seconds */
 };
 
 #ifdef CONFIG_ARCH_HAVE_DEBUG
