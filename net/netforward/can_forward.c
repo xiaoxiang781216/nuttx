@@ -72,9 +72,19 @@ static int can_dev_forward(FAR struct net_driver_s *dev,
   FAR struct net_driver_s *fwddev = fwdrule->dest_dev;
   int ret = -ENOMEM;
 
+  /* Check if forwarding is enabled on the destination device. */
+
+  if (IFF_IS_NODST_FORWARD(fwddev->d_flags))
+    {
+      nwarn("WARNING: CAN forwarding disabled on destination device %s\n",
+            fwddev->d_ifname);
+      ret = -EOPNOTSUPP;
+      goto errout;
+    }
+
   /* If the interface isn't "Running", we can't forward. */
 
-  if ((fwddev->d_flags & IFF_RUNNING) == 0)
+  if (!IFF_IS_RUNNING(fwddev->d_flags))
     {
       nwarn("WARNING: device is DOWN\n");
       ret = -EHOSTUNREACH;
@@ -199,6 +209,15 @@ int can_forward(FAR struct net_driver_s *dev)
 #endif
   FAR const sq_entry_t *entry;
   FAR struct cangw_rule_s *fwdrule;
+
+  /* Check if source device supports IP forwarding capability */
+
+  if (IFF_IS_NOSRC_FORWARD(dev->d_flags))
+    {
+      nwarn("WARNING: CAN forwarding disabled on source device %s\n",
+            dev->d_ifname);
+      return -EOPNOTSUPP;
+    }
 
   if (dev->d_iob->io_conn != NULL)
     {
