@@ -150,6 +150,11 @@ void arp_out(FAR struct net_driver_s *dev)
       return;
     }
 
+  if (peth->type != HTONS(ETHTYPE_IP))
+    {
+      return;
+    }
+
   /* Find the destination IP address in the ARP table and construct
    * the Ethernet header. If the destination IP address isn't on the
    * local network, we use the default router's IP address instead.
