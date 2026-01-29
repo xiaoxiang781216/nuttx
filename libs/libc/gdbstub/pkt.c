@@ -521,7 +521,7 @@ int gdb_recv_packet(FAR struct gdb_state_s *state)
 
           /* Normal or escaped data */
 
-          if (state->pkt_len >= sizeof(state->pkt_buf))
+          if (state->pkt_len >= state->pkt_size)
             {
               GDB_DEBUG(state, "packet buffer overflow\n");
               return -EOVERFLOW;
@@ -879,7 +879,7 @@ int gdb_send_error_packet(FAR struct gdb_state_s *state, unsigned char error)
   int ret;
 
   state->pkt_buf[0] = 'E';
-  ret = gdb_bin2hex(&state->pkt_buf[1], sizeof(state->pkt_buf) - 1,
+  ret = gdb_bin2hex(&state->pkt_buf[1], state->pkt_size - 1,
                     &error, 1);
   if (ret < 0)
     {

@@ -78,6 +78,13 @@ config SERIAL_GDBSTUB_WAIT_CONNECT
 	---help---
 		Wait for gdbstub to connect before continuing boot.
 
+
+config SERIAL_GDBSTUB_PKTSIZE
+	int "GDBSTUB Serial packet size"
+	default LIB_GDBSTUB_PKTSIZE
+	---help---
+		Serial gdbstub packet size.
+
 config SERIAL_GDBSTUB_PANIC_TIMEOUT
 	int "GDBSTUB Serial panic timeout"
 	default 10

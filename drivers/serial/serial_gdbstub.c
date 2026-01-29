@@ -232,6 +232,7 @@ int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path)
   init.send          = uart_gdbstub_send;
   init.recv          = uart_gdbstub_receive;
   init.packet        = dev->ops->recvbuf != NULL;
+  init.pkt_size      = CONFIG_SERIAL_GDBSTUB_PKTSIZE;
   init.priv          = uart_gdbstub;
   init.panic_timeout = CONFIG_SERIAL_GDBSTUB_PANIC_TIMEOUT;
 

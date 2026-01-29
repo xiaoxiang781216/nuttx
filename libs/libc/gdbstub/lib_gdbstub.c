@@ -131,10 +131,17 @@ static int gdb_panic_callback(FAR struct notifier_block *nb,
 FAR struct gdb_state_s *gdb_state_init(
     FAR const struct gdb_state_init_s *init)
 {
-  FAR struct gdb_state_s *state = lib_memalign(XCPTCONTEXT_ALIGN,
-    sizeof(struct gdb_state_s) +
-    (init->packet ? 3 * GDB_PKTBUF_SIZE + 4 : 0));
+  size_t pkt_size = init->pkt_size ? init->pkt_size :
+                                      CONFIG_LIB_GDBSTUB_PKTSIZE;
+  size_t alloc_size = sizeof(struct gdb_state_s) + pkt_size;
+  FAR struct gdb_state_s *state;
 
+  if (init->packet)
+    {
+      alloc_size += 2 * pkt_size + 4 + pkt_size;
+    }
+
+  state = lib_memalign(XCPTCONTEXT_ALIGN, alloc_size);
   if (state == NULL)
     {
       return NULL;
@@ -145,12 +152,14 @@ FAR struct gdb_state_s *gdb_state_init(
   state->recv = init->recv;
   state->priv = init->priv;
   state->monitor = init->monitor;
+  state->pkt_size = pkt_size;
 
   if (init->packet)
     {
-      state->tx_size = 2 * GDB_PKTBUF_SIZE + 4;
-      state->rx_buf = state->pkt_buf + 2 * GDB_PKTBUF_SIZE + 4;
-      state->rx_size = GDB_PKTBUF_SIZE;
+      state->tx_buf = state->pkt_buf + pkt_size;
+      state->tx_size = 2 * pkt_size + 4;
+      state->rx_buf = state->tx_buf + state->tx_size;
+      state->rx_size = pkt_size;
     }
 
   if (init->panic_timeout != 0)
@@ -216,7 +225,7 @@ int gdb_console_message(FAR struct gdb_state_s *state, FAR const char *msg)
     }
 
   state->pkt_buf[0] = 'O';
-  ret = gdb_bin2hex(&state->pkt_buf[1], sizeof(state->pkt_buf) - 1,
+  ret = gdb_bin2hex(&state->pkt_buf[1], state->pkt_size - 1,
                     msg, strlen(msg));
   if (ret < 0)
     {

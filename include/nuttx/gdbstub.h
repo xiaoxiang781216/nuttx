@@ -65,6 +65,7 @@ struct gdb_state_init_s
   gdb_recv_func_t    recv;          /* Receive function pointer */
   gdb_monitor_func_t monitor;       /* Monitor function pointer */
   bool               packet;        /* Enable packet buffer mode */
+  size_t             pkt_size;      /* Packet buffer size, 0 for default */
   FAR void          *priv;          /* Private data pointer */
   int                panic_timeout; /* <0 infinite, 0 disabled, >0 seconds */
 };

@@ -51,8 +51,6 @@
 #  define GDB_ASSERT() do {} while (0)
 #endif
 
-#define GDB_PKTBUF_SIZE CONFIG_LIB_GDBSTUB_PKTSIZE
-
 /* Calculate remaining space in packet from ptr_next position. */
 
 #define gdb_remaining_len(state) ((state)->pkt_len - \
@@ -77,9 +75,6 @@ struct gdb_state_s
   int last_stopreason;                    /* Last stop reason */
   FAR void *last_stopaddr;                /* Last stop address */
   pid_t pid;                              /* Current NuttX thread pid */
-  FAR char *pkt_next;                     /* Pointer to next byte in packet */
-  char pkt_buf[GDB_PKTBUF_SIZE];          /* Packet buffer */
-  size_t pkt_len;                         /* Packet send and receive length */
   FAR char *rx_buf;                       /* RX read-ahead buffer */
   size_t rx_size;                         /* RX buffer size */
   size_t rx_pos;
@@ -92,11 +87,15 @@ struct gdb_state_s
    * up to 2x, plus framing ('$' + "#" + 2 checksum hex digits).
    */
 
+  FAR char *tx_buf;
   size_t tx_size;                         /* TX buffer size */
   size_t tx_pos;                          /* Current TX buffer position */
   int panic_timeout;                      /* <0 infinite, 0 disabled, >0 seconds */
   struct notifier_block nb;               /* Panic notifier block */
-  char tx_buf[0];
+  FAR char *pkt_next;                     /* Pointer to next byte in packet */
+  size_t pkt_size;                        /* Packet buffer size */
+  size_t pkt_len;                         /* Packet send and receive length */
+  char pkt_buf[0];                        /* Packet buffer */
 };
 
 struct gdb_debugpoint_s

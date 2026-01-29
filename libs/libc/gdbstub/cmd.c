@@ -236,7 +236,7 @@ int gdb_read_registers(FAR struct gdb_state_s *state)
   size_t i;
   int ret;
 
-  memset(state->pkt_buf, '0', GDB_PKTBUF_SIZE);
+  memset(state->pkt_buf, '0', state->pkt_size);
 
   for (i = 0; i < g_tcbinfo.regs_num; i++)
     {
@@ -256,7 +256,7 @@ int gdb_read_registers(FAR struct gdb_state_s *state)
         {
           memcpy(&value, xcpregs + reg->toffset, reg->size);
           ret = gdb_bin2hex(&state->pkt_buf[offset * 2],
-                            GDB_PKTBUF_SIZE - offset * 2,
+                            state->pkt_size - offset * 2,
                             &value, reg->size);
           if (ret < 0)
             {
@@ -367,7 +367,7 @@ int gdb_read_register(FAR struct gdb_state_s *state)
       memcpy(&value, xcpregs + reg->toffset, reg->size);
     }
 
-  ret = gdb_bin2hex(state->pkt_buf, sizeof(state->pkt_buf),
+  ret = gdb_bin2hex(state->pkt_buf, state->pkt_size,
                     &value, reg->size);
   if (ret < 0)
     {
@@ -469,7 +469,7 @@ int gdb_read_memory(FAR struct gdb_state_s *state)
       return ret;
     }
 
-  ret = gdb_get_memory(state, state->pkt_buf, sizeof(state->pkt_buf),
+  ret = gdb_get_memory(state, state->pkt_buf, state->pkt_size,
                        addr, length, gdb_bin2hex);
   if (ret < 0)
     {
@@ -513,7 +513,7 @@ int gdb_read_bin_memory(FAR struct gdb_state_s *state)
     }
 
   state->pkt_buf[0] = 'b';
-  ret = gdb_get_memory(state, state->pkt_buf + 1, sizeof(state->pkt_buf) - 1,
+  ret = gdb_get_memory(state, state->pkt_buf + 1, state->pkt_size - 1,
                        addr, length, NULL);
   if (ret < 0)
     {
@@ -661,11 +661,11 @@ int gdb_query(FAR struct gdb_state_s *state)
 #ifdef CONFIG_ARCH_HAVE_DEBUG
       state->pkt_len = sprintf(state->pkt_buf,
                                "binary-upload+;hwbreak+;PacketSize=%zx",
-                               sizeof(state->pkt_buf));
+                               state->pkt_size);
 #else
       state->pkt_len = sprintf(state->pkt_buf,
                                "binary-upload+;PacketSize=%zx",
-                               sizeof(state->pkt_buf));
+                               state->pkt_size);
 #endif
       gdb_send_packet(state);
     }
@@ -703,7 +703,7 @@ int gdb_query(FAR struct gdb_state_s *state)
                 tcb->adj_stack_size);
 
       nxsched_put_tcb(tcb);
-      ret = gdb_bin2hex(state->pkt_buf, sizeof(state->pkt_buf),
+      ret = gdb_bin2hex(state->pkt_buf, state->pkt_size,
                         thread_info, strlen(thread_info));
 
       state->pkt_len = ret;
@@ -879,7 +879,7 @@ int gdb_send_signal_packet(FAR struct gdb_state_s *state,
   int ret;
 
   state->pkt_buf[0] = 'S';
-  ret = gdb_bin2hex(&state->pkt_buf[1], sizeof(state->pkt_buf) - 1,
+  ret = gdb_bin2hex(&state->pkt_buf[1], state->pkt_size - 1,
                     &signal, 1);
   if (ret < 0)
     {
