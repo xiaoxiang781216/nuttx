@@ -51,16 +51,10 @@ struct uart_gdbstub_s
 static FAR struct uart_gdbstub_s *g_uart_gdbstub;
 
 /****************************************************************************
- * Private Functions prototypes
- ****************************************************************************/
-
-static int uart_gdbstub_ctrlc(FAR struct uart_dev_s *dev,
-                              FAR unsigned int *status);
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_SERIAL_GDBSTUB_AUTO_ATTACH
 static void uart_gdbstub_poll(FAR struct pollfd *fds)
 {
   FAR struct uart_gdbstub_s *uart_gdbstub = fds->arg;
@@ -68,7 +62,9 @@ static void uart_gdbstub_poll(FAR struct pollfd *fds)
   if (fds->revents & POLLIN)
     {
       fds->revents &= ~POLLIN;
-      uart_gdbstub_ctrlc(uart_gdbstub->dev, NULL);
+      uart_disablerxint(uart_gdbstub->dev);
+      gdb_process(g_uart_gdbstub->state, GDB_STOPREASON_CTRLC, NULL);
+      uart_enablerxint(uart_gdbstub->dev);
     }
 }
 
@@ -86,24 +82,7 @@ static void uart_gdbstub_attach(FAR struct uart_gdbstub_s *uart_gdbstub)
       file_poll(&uart_gdbstub->file, &uart_gdbstub->fds, true);
     }
 }
-
-/****************************************************************************
- * Name: uart_gdbstub_ctrlc
- *
- * Description:
- *   This is uart receive callback in interruption.
- *   The function is to accept the initial connection of Ctrl c and gdb.
- *
- ****************************************************************************/
-
-static int uart_gdbstub_ctrlc(FAR struct uart_dev_s *dev,
-                              FAR unsigned int *status)
-{
-  uart_disablerxint(dev);
-  gdb_process(g_uart_gdbstub->state, GDB_STOPREASON_CTRLC, NULL);
-  uart_enablerxint(dev);
-  return 0;
-}
+#endif
 
 /****************************************************************************
  * Name: uart_gdbstub_receive
@@ -236,6 +215,16 @@ int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path)
   init.priv          = uart_gdbstub;
   init.panic_timeout = CONFIG_SERIAL_GDBSTUB_PANIC_TIMEOUT;
 
+#ifdef CONFIG_SERIAL_GDBSTUB_AUTO_ATTACH
+  uart_gdbstub_attach(uart_gdbstub);
+#endif
+
+#ifdef CONFIG_SERIAL_GDBSTUB_WAIT_CONNECT
+  init.wait = true;
+  uart_disablerxint(dev);
+#endif
+
+  uart_gdbstub->dev = dev;
   uart_gdbstub->state = gdb_state_init(&init);
   if (uart_gdbstub->state == NULL)
     {
@@ -243,13 +232,9 @@ int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path)
       return -ENOMEM;
     }
 
-  uart_gdbstub->dev = dev;
-
-#ifdef CONFIG_SERIAL_GDBSTUB_AUTO_ATTACH
-  uart_gdbstub_attach(uart_gdbstub);
-#  ifdef CONFIG_SERIAL_GDBSTUB_WAIT_CONNECT
-  uart_gdbstub_ctrlc(dev, NULL);
-#  endif
+#ifdef CONFIG_SERIAL_GDBSTUB_WAIT_CONNECT
+  uart_enablerxint(dev);
 #endif
+
   return 0;
 }

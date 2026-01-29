@@ -73,7 +73,6 @@ config SERIAL_GDBSTUB_AUTO_ATTACH
 
 config SERIAL_GDBSTUB_WAIT_CONNECT
 	bool "GDBSTUB Serial wait for connection"
-	depends on SERIAL_GDBSTUB_AUTO_ATTACH
 	default n
 	---help---
 		Wait for gdbstub to connect before continuing boot.

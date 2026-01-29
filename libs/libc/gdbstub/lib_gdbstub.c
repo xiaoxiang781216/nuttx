@@ -173,6 +173,11 @@ FAR struct gdb_state_s *gdb_state_init(
   lib_syslograwstream_open(&state->stream);
 #endif
 
+  if (init->wait)
+    {
+      gdb_process(state, GDB_STOPREASON_NONE, NULL);
+    }
+
   return state;
 }
 
