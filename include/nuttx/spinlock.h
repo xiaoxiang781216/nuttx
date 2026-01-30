@@ -161,10 +161,16 @@ static inline_function noinstrument_function
 void spin_lock_notrace(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_TICKET_SPINLOCK
-  int ticket = atomic_add_relaxed(&lock->next, 1);
-  while (atomic_read_acquire(&lock->owner) != ticket);
+  int32_t ticket = atomic_add_relaxed(&lock->next, 1);
+  while (atomic_read_acquire(&lock->owner) != ticket)
+    {
+      UP_WFE();
+    }
 #else /* CONFIG_TICKET_SPINLOCK */
-  while (atomic_xchg_acquire(&lock->lock, 1) == 1);
+  while (atomic_xchg_acquire(&lock->lock, 1) == 1)
+    {
+      UP_WFE();
+    }
 #endif
 }
 #else
@@ -349,6 +355,8 @@ spin_unlock_notrace(FAR volatile spinlock_t *lock)
 #else
   atomic_set_release(&lock->lock, 0);
 #endif
+  UP_DSB();
+  UP_SEV();
 }
 #else
 #  define spin_unlock_notrace(lock) ((void)(lock))
@@ -695,11 +703,16 @@ void rspin_lock(FAR rspinlock_t *lock)
 
       new_val = RSPINLOCK_VALUE(owner, 1u);
 
-      do
+      for (; ; )
         {
           old_val = 0u;
+          if (atomic_cmpxchg_acquire(&lock->val, &old_val, new_val))
+            {
+              break;
+            }
+
+          UP_WFE();
         }
-      while (!atomic_cmpxchg_acquire(&lock->val, &old_val, new_val));
 
       /* Mark locked only when the lock is acquired for the first time. */
 
@@ -1048,6 +1061,8 @@ bool rspin_unlock(FAR rspinlock_t *lock)
     {
       spinlock_mark_unlocked(&lock->info);
       atomic_set_release(&lock->val, 0u);
+      UP_DSB();
+      UP_SEV();
       ret = true;
     }
   else
@@ -1191,14 +1206,18 @@ void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
 static inline_function void read_lock(FAR volatile rwlock_t *lock)
 {
   nxsched_critmon_busywait(true, return_address(0));
-  while (true)
+  for (; ; )
     {
-      int old = atomic_read(&lock->lock);
+      int32_t old = atomic_read(&lock->lock);
 
-      if (old > RW_SP_WRITE_LOCKED &&
-          atomic_cmpxchg_acquire(&lock->lock, &old, old + 1))
+      if (old > RW_SP_WRITE_LOCKED)
         {
-          break;
+          if (atomic_cmpxchg_acquire(&lock->lock, &old, old + 1))
+            {
+              break;
+            }
+
+          UP_WFE();
         }
     }
 
@@ -1234,9 +1253,9 @@ static inline_function bool read_trylock(FAR volatile rwlock_t *lock)
 {
   bool ret = false;
 
-  while (true)
+  for (; ; )
     {
-      int old = atomic_read(&lock->lock);
+      int32_t old = atomic_read(&lock->lock);
 
       if (old <= RW_SP_WRITE_LOCKED)
         {
@@ -1275,6 +1294,8 @@ static inline_function void read_unlock(FAR volatile rwlock_t *lock)
   DEBUGASSERT(atomic_read(&lock->lock) >= RW_SP_READ_LOCKED);
 
   atomic_sub_release(&lock->lock, 1);
+  UP_DSB();
+  UP_SEV();
 }
 
 /****************************************************************************
@@ -1310,13 +1331,15 @@ static inline_function void write_lock(FAR volatile rwlock_t *lock)
   spinlock_mark_locking(&lock->info);
   nxsched_critmon_busywait(true, return_address(0));
 
-  while (true)
+  for (; ; )
     {
-      atomic_t zero = RW_SP_UNLOCKED;
+      int32_t zero = RW_SP_UNLOCKED;
       if (atomic_cmpxchg_acquire(&lock->lock, &zero, RW_SP_WRITE_LOCKED))
         {
           break;
         }
+
+      UP_WFE();
     }
 
   spinlock_mark_locked(&lock->info);
@@ -1351,7 +1374,7 @@ static inline_function void write_lock(FAR volatile rwlock_t *lock)
 
 static inline_function bool write_trylock(FAR volatile rwlock_t *lock)
 {
-  atomic_t zero = RW_SP_UNLOCKED;
+  int32_t zero = RW_SP_UNLOCKED;
   bool ret = atomic_cmpxchg_acquire(&lock->lock, &zero, RW_SP_WRITE_LOCKED);
 
   if (ret)
@@ -1387,6 +1410,8 @@ static inline_function void write_unlock(FAR volatile rwlock_t *lock)
 
   spinlock_mark_unlocked(&lock->info);
   atomic_set_release(&lock->lock, RW_SP_UNLOCKED);
+  UP_DSB();
+  UP_SEV();
 }
 
 /****************************************************************************
