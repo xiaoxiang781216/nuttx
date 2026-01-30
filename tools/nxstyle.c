@@ -794,6 +794,17 @@ static const char *g_white_files[] =
   "ssl_lib.c",
   "ssl_local.h",
 
+  /* Skip FlatBuffers generated files
+   * Ref:
+   * apps/mlearning/executorch/generated/executorch/schema/
+   *   scalar_type_generated.h
+   * apps/mlearning/executorch/generated/executorch/schema/
+   *   program_generated.h
+   */
+
+  "scalar_type_generated.h",
+  "program_generated.h",
+
   NULL
 };
 
