@@ -69,7 +69,7 @@ struct tty_priv_s
 
   bool          rxint;
 
-  /* Wd timer for transmit */
+  /* Work for transmit */
 
   struct work_s work;
 };
@@ -441,35 +441,33 @@ static void sim_tty_work(void *arg)
 {
   struct uart_dev_s *dev = (struct uart_dev_s *)arg;
   struct tty_priv_s *priv = dev->priv;
-  irqstate_t flags;
+  irqstate_t flags = uart_spinlock(dev, true);
 
-  if (priv->fd < 0)
+  if (priv->fd >= 0)
     {
-      return;
-    }
-
-  flags = irq_save_nopreempt();
-  if (priv->txint)
-    {
+      if (priv->txint)
+        {
 #ifdef CONFIG_SIM_UART_DMA
-      uart_dmatxavail(dev);
+          uart_dmatxavail(dev);
 #else
-      uart_xmitchars(dev);
+          uart_xmitchars(dev);
 #endif
-    }
+        }
 
-  if (priv->rxint)
-    {
+      if (priv->rxint)
+        {
 #ifdef CONFIG_SIM_UART_DMA
-      uart_dmarxfree(dev);
+          uart_dmarxfree(dev);
 #else
-      uart_recvchars(dev);
+          uart_recvchars(dev);
 #endif
+        }
+
+      work_queue_next_wq(g_work_queue, &priv->work, sim_tty_work, arg,
+                         SIM_UART_WORK_DELAY);
     }
 
-  irq_restore_nopreempt(flags);
-  work_queue_next_wq(g_work_queue, &priv->work, sim_tty_work, arg,
-                     SIM_UART_WORK_DELAY);
+  uart_spinunlock(dev, true, flags);
 }
 
 /****************************************************************************
