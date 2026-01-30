@@ -32,6 +32,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/addrenv.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
 
@@ -39,6 +40,80 @@
 #include "sched/sched.h"
 #include "group/group.h"
 #include "timer/timer.h"
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static void release_tcb_cb(FAR void *arg)
+{
+  FAR struct tcb_s *tcb = arg;
+  int ttype = tcb->flags & TCB_FLAG_TTYPE_MASK;
+
+#ifndef CONFIG_DISABLE_POSIX_TIMERS
+  /* Release any timers that the task might hold.  We do this
+   * before release the PID because it may still be trying to
+   * deliver signals (although interrupts are should be
+   * disabled here).
+   */
+
+  timer_deleteall(tcb->pid);
+#endif
+
+  /* Delete the thread's stack if one has been allocated */
+
+  if (tcb->stack_alloc_ptr)
+    {
+      up_release_stack(tcb, ttype);
+    }
+
+#ifdef CONFIG_PIC
+  /* Delete the task's allocated DSpace region (external modules only) */
+
+  if (tcb->dspace != NULL)
+    {
+      if (tcb->dspace->crefs <= 1)
+        {
+          kmm_free(tcb->dspace);
+        }
+      else
+        {
+          tcb->dspace->crefs--;
+        }
+    }
+#endif
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
+  /* Release the kernel stack */
+
+  up_addrenv_kstackfree(tcb);
+#endif
+
+#ifdef CONFIG_ARCH_ADDRENV
+  /* Release this thread's reference to the address environment */
+
+  addrenv_leave(tcb);
+#endif
+
+  nxsem_destroy(&tcb->exit_sem);
+
+  /* And, finally, release the TCB itself */
+
+  if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
+    {
+      if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_TASK)
+        {
+#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
+          /* Kernel build not use group_heap_initialize.
+           * If use addrenv, it will uninitialized
+           * in up_addrenv_destroy.
+           */
+
+          group_heap_uninitialize(tcb->group->tg_heap);
+#endif
+        }
+    }
+}
 
 /****************************************************************************
  * Public Functions
@@ -89,7 +164,8 @@ void nxsched_release_pid(pid_t pid)
  * Name: nxsched_release_tcb
  *
  * Description:
- *   Free all resources contained in a TCB
+ *   Free all resources contained in a TCB. The actual release is deferred
+ *   to the next mm_malloc() call via delay callback mechanism.
  *
  * Input Parameters:
  *   tcb - The TCB to be released
@@ -113,59 +189,9 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, int ttype)
   FAR struct task_group_s *group;
 #endif
   bool skipfree = false;
-  int ret = OK;
 
   if (tcb)
     {
-      /* Released tcb shouldn't on any list */
-
-      DEBUGASSERT(tcb->flink == NULL && tcb->blink == NULL);
-
-#ifndef CONFIG_DISABLE_POSIX_TIMERS
-      /* Release any timers that the task might hold.  We do this
-       * before release the PID because it may still be trying to
-       * deliver signals (although interrupts are should be
-       * disabled here).
-       */
-
-      timer_deleteall(tcb->pid);
-#endif
-
-      /* Delete the thread's stack if one has been allocated */
-
-      if (tcb->stack_alloc_ptr)
-        {
-          up_release_stack(tcb, ttype);
-        }
-
-#ifdef CONFIG_PIC
-      /* Delete the task's allocated DSpace region (external modules only) */
-
-      if (tcb->dspace != NULL)
-        {
-          if (tcb->dspace->crefs <= 1)
-            {
-              kmm_delayfree(tcb->dspace);
-            }
-          else
-            {
-              tcb->dspace->crefs--;
-            }
-        }
-#endif
-
-#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
-      /* Release the kernel stack */
-
-      up_addrenv_kstackfree(tcb);
-#endif
-
-#ifdef CONFIG_ARCH_ADDRENV
-      /* Release this thread's reference to the address environment */
-
-      ret = addrenv_leave(tcb);
-#endif
-
 #ifndef CONFIG_DISABLE_PTHREAD
       /* Destroy the pthread join mutex */
 
@@ -192,29 +218,9 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, int ttype)
 
       if (!skipfree)
         {
-          nxsem_destroy(&tcb->exit_sem);
-
-          /* And, finally, release the TCB itself */
-
-          if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
-            {
-              if ((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
-                  TCB_FLAG_TTYPE_TASK)
-                {
-#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
-                  /* Kernel build not use group_heap_initialize.
-                   * If use addrenv, it will uninitialized
-                   * in up_addrenv_destroy.
-                   */
-
-                  group_heap_uninitialize(tcb->group->tg_heap);
-#endif
-                }
-
-              kmm_delayfree(tcb);
-            }
+          kmm_delayfreecb(tcb, release_tcb_cb);
         }
     }
 
-  return ret;
+  return OK;
 }

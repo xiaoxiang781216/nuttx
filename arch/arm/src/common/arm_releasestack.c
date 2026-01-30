@@ -75,7 +75,7 @@ void up_release_stack(struct tcb_s *dtcb, int ttype)
   if (dtcb->stack_alloc_ptr &&
       (atomic_read(&dtcb->flags) & TCB_FLAG_FREE_STACK))
     {
-      group_delayfree(dtcb->group, dtcb->stack_alloc_ptr);
+      group_free(dtcb->group, dtcb->stack_alloc_ptr);
     }
 
   /* Mark the stack freed */

@@ -98,7 +98,7 @@ int up_addrenv_kstackfree(struct tcb_s *tcb)
     {
       /* Yes.. Free the kernel stack */
 
-      kmm_delayfree(tcb->xcp.kstack);
+      kmm_free(tcb->xcp.kstack);
       tcb->xcp.kstack = 0;
     }
 

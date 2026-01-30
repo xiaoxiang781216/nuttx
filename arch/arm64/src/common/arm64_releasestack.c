@@ -94,7 +94,7 @@ void up_release_stack(struct tcb_s *dtcb, int ttype)
 #if defined(CONFIG_ARCH_STACK_PROTECT) || defined(CONFIG_ARCH_KSTACK_PROTECT)
       mm_delayfree(USERSPACE_HEAP, dtcb->stack_alloc_ptr);
 #else
-      group_delayfree(dtcb->group, dtcb->stack_alloc_ptr);
+      group_free(dtcb->group, dtcb->stack_alloc_ptr);
 #endif
     }
 

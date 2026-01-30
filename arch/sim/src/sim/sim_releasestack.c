@@ -66,7 +66,7 @@ void up_release_stack(struct tcb_s *dtcb, int ttype)
   if (dtcb->stack_alloc_ptr &&
       (atomic_read(&dtcb->flags) & TCB_FLAG_FREE_STACK))
     {
-      kumm_delayfree(dtcb->stack_alloc_ptr);
+      kumm_free(dtcb->stack_alloc_ptr);
     }
 
   /* Mark the stack freed */
