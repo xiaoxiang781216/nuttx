@@ -1813,12 +1813,15 @@ void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
+      va_list copy;
       if (!note_isenabled_dump(*driver, tag, level, NOTE_DUMP_PRINTF))
         {
           continue;
         }
 
-      note_driver_vprintf_ip(*driver, tag, level, ip, type, fmt, va);
+      va_copy(copy, *va);
+      note_driver_vprintf_ip(*driver, tag, level, ip, type, fmt, &copy);
+      va_end(copy);
     }
 }
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
