@@ -210,7 +210,7 @@ static void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
 
           /* Expired work will be moved to tail of the expired queue. */
 
-          list_delete(&work->node);
+          list_delete_fast(&work->node);
           list_add_tail(&wqueue->expired, &work->node);
 
           /* Note that the thread execution this function is also
@@ -229,7 +229,7 @@ static void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
     {
       work = list_first_entry(&wqueue->expired, struct work_s, node);
 
-      list_delete(&work->node);
+      list_delete_fast(&work->node);
 
       /* Extract the work description from the entry (in case the
        * work instance will be reused after it has been de-queued).
