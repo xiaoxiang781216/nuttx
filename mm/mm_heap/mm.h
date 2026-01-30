@@ -229,6 +229,7 @@ static_assert(MM_ALIGN >= sizeof(uintptr_t) &&
 struct mm_delaynode_s
 {
   FAR struct mm_delaynode_s *flink;
+  mm_delaycb_t cb;  /* Optional callback, NULL just free */
 #ifdef CONFIG_DEBUG_ASSERTIONS
   uintptr_t magic;  /* Magic (～addr) to detect double-free */
 #endif

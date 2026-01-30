@@ -58,7 +58,7 @@ static inline bool mm_skip_free(FAR struct mm_heap_s *heap)
 }
 
 static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
-                          bool asan_check)
+                          mm_delaycb_t cb, bool asan_check)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delayhead_s *delay = get_delayhead(heap);
@@ -120,6 +120,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
 #endif
 
   tmp->flink  = delay->head;
+  tmp->cb     = cb;
   delay->head = tmp;
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
@@ -284,14 +285,17 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 }
 
 /****************************************************************************
- * Name: mm_delayfree
+ * Name: mm_delayfreecb
  *
  * Description:
- *   Add mem to delaylist, mem will be freed after a while.
+ *   Add mem to delaylist with optional callback. mem is always freed instead
+ *   heap manager, the callback is for freeing the sub field only.
+ *   If cb is provided, cb(mem) will be called instead.
  *
  ****************************************************************************/
 
-void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
+void mm_delayfreecb(FAR struct mm_heap_s *heap, FAR void *mem,
+                    mm_delaycb_t cb)
 {
   minfo("Adding delaylist %p\n", mem);
 
@@ -308,7 +312,7 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
     }
 
   DEBUGASSERT(mm_heapmember(heap, mem));
-  add_delaylist(heap, mem, false);
+  add_delaylist(heap, mem, cb, false);
 }
 
 /****************************************************************************
@@ -339,7 +343,7 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
   DEBUGASSERT(mm_heapmember(heap, mem));
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  add_delaylist(heap, mem, true);
+  add_delaylist(heap, mem, NULL, true);
 #else
 
   mm_forcefree(heap, mem);
