@@ -152,27 +152,18 @@
 
 /* Helper macros for dump instrumentation filter */
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-#  define NOTE_FILTER_TAGMASK_SET(tag, s) \
-          ((s)->tag_mask[(tag) / 8] |= (1 << ((tag) % 8)))
-#  define NOTE_FILTER_TAGMASK_CLR(tag, s) \
-          ((s)->tag_mask[(tag) / 8] &= ~(1 << ((tag) % 8)))
-#  define NOTE_FILTER_TAGMASK_ISSET(tag, s) \
-          ((s)->tag_mask[(tag) / 8] & (1 << ((tag) % 8)))
-#  define NOTE_FILTER_TAGMASK_ZERO(s) \
-          memset((s), 0, sizeof(struct note_filter_tag_s));
-#  define NOTE_FILTER_TAGMASK_FILL(s) \
-          memset((s), 0xff, sizeof(struct note_filter_tag_s))
-#  define NOTE_FILTER_LEVEL_SET(level, s) \
-          ((s)->level = (level))
-#else
-#  define NOTE_FILTER_TAGMASK_SET(tag, s)
-#  define NOTE_FILTER_TAGMASK_CLR(tag, s)
-#  define NOTE_FILTER_TAGMASK_ISSET(tag, s) (0)
-#  define NOTE_FILTER_TAGMASK_ZERO(s)
-#  define NOTE_FILTER_TAGMASK_FILL(s)
-#  define NOTE_FILTER_LEVEL_SET(level, s)
-#endif
+#define NOTE_FILTER_TAGMASK_SET(tag, s) \
+        ((s)->tag_mask[(tag) / 8] |= (1 << ((tag) % 8)))
+#define NOTE_FILTER_TAGMASK_CLR(tag, s) \
+        ((s)->tag_mask[(tag) / 8] &= ~(1 << ((tag) % 8)))
+#define NOTE_FILTER_TAGMASK_ISSET(tag, s) \
+        ((s)->tag_mask[(tag) / 8] & (1 << ((tag) % 8)))
+#define NOTE_FILTER_TAGMASK_ZERO(s) \
+        memset((s), 0, sizeof(struct note_filter_tag_s));
+#define NOTE_FILTER_TAGMASK_FILL(s) \
+        memset((s), 0xff, sizeof(struct note_filter_tag_s))
+#define NOTE_FILTER_LEVEL_SET(level, s) \
+        ((s)->level = (level))
 
 /* IOCTL Commands ***********************************************************/
 
