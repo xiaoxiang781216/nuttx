@@ -352,6 +352,52 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
 }
 
 /****************************************************************************
+ * Name: mempool_tryallocate_throttled
+ *
+ * Description:
+ *   Try to allocate a block from a specific memory pool without waiting.
+ *   This is a simplified, non-blocking version that does not support
+ *   waiting or pool expansion.
+ *
+ *   If `throttled` is true, the allocation will be denied and return NULL
+ *   if the number of currently free blocks is less than or equal to the
+ *   throttle limit.
+ *
+ * Input Parameters:
+ *   pool      - Address of the memory pool to be used.
+ *   throttled - An indication of the mempool allocation is "throttled".
+ *
+ * Returned Value:
+ *   The pointer to the allocated block on success; NULL on any failure.
+ *
+ ****************************************************************************/
+
+FAR void *mempool_tryallocate_throttled(FAR struct mempool_s *pool,
+                                        bool throttled);
+
+/****************************************************************************
+ * Name: mempool_tryallocate
+ *
+ * Description:
+ *   Try to allocate a block from a specific memory pool without waiting.
+ *   This is equivalent to mempool_tryallocate_throttled() with
+ *   throttled=true.
+ *
+ * Input Parameters:
+ *   pool - Address of the memory pool to be used.
+ *
+ * Returned Value:
+ *   The pointer to the allocated block on success; NULL on any failure.
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR void *mempool_tryallocate(FAR struct mempool_s *pool)
+{
+  return mempool_tryallocate_throttled(pool, true);
+}
+
+/****************************************************************************
  * Name: mempool_zallocate_throttled
  *
  * Description:

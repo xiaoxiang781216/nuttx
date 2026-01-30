@@ -484,6 +484,85 @@ int mempool_init(FAR struct mempool_s *pool)
 }
 
 /****************************************************************************
+ * Name: mempool_tryallocate_throttled
+ *
+ * Description:
+ *   Try to allocate a block from a specific memory pool without waiting.
+ *   This is a simplified, non-blocking version of mempool_allocate_throttled
+ *   that does not support:
+ *   - Waiting on semaphore
+ *   - Pool expansion
+ *
+ *   If `throttled` is true, the allocation will be denied and return NULL
+ *   if the number of currently free blocks is less than or equal to the
+ *   throttle limit.
+ *
+ * Input Parameters:
+ *   pool      - Address of the memory pool to be used.
+ *   throttled - An indication of the mempool allocation is "throttled".
+ *
+ * Returned Value:
+ *   The pointer to the allocated block on success; NULL on any failure.
+ *
+ ****************************************************************************/
+
+FAR void *mempool_tryallocate_throttled(FAR struct mempool_s *pool,
+                                        bool throttled)
+{
+#ifdef CONFIG_MM_RECORD
+  FAR struct mempool_record_s *record;
+#endif
+  FAR sq_entry_t *blk;
+  irqstate_t flags;
+  bool bypass;
+
+  mempool_try_init(pool);
+
+  flags = spin_lock_irqsave(&pool->lock);
+
+  /* Check throttle limit */
+
+  if (throttled && pool->throttle &&
+      (pool->ntotal - pool->nalloc <= pool->throttle))
+    {
+      spin_unlock_irqrestore(&pool->lock, flags);
+      minfo("INFO: mempool_tryallocate: free:%zu throttle=%zu\n",
+            pool->ntotal - pool->nalloc, pool->throttle);
+      return NULL;
+    }
+
+  /* Try to get a block from the queue (no waiting, no expansion) */
+
+  bypass = kasan_bypass(true);
+  blk = mempool_remove_queue(pool, &pool->queue);
+
+  if (blk != NULL)
+    {
+      pool->nalloc++;
+      kasan_bypass(bypass);
+      spin_unlock_irqrestore(&pool->lock, flags);
+
+#ifdef CONFIG_MM_RECORD
+      record = mempool_get_record_from_block(blk);
+      DEBUGASSERT(record->magic == MEMPOOL_MAGIC_FREE);
+      mempool_record(pool, record, MEMPOOL_MAGIC_ALLOC);
+#endif
+
+      blk = kasan_unpoison(blk, pool->blocksize);
+#ifdef CONFIG_MM_FILL_ALLOCATIONS
+      memset(blk, MM_ALLOC_MAGIC, pool->blocksize);
+#endif
+    }
+  else
+    {
+      kasan_bypass(bypass);
+      spin_unlock_irqrestore(&pool->lock, flags);
+    }
+
+  return blk;
+}
+
+/****************************************************************************
  * Name: mempool_allocate_throttled
  *
  * Description:
