@@ -223,7 +223,11 @@ static int net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
   FAR struct net_rpmsg_drv_s *drv =
                               container_of(dev, struct net_rpmsg_drv_s, dev);
   FAR struct net_rpmsg_transfer_s *transfer;
+#ifdef CONFIG_NET_PRMSG_DRV_ZERO_COPY_TRANSFER
+  unsigned int datalen = sizeof(FAR netpkt_t *);
+#else
   unsigned int datalen = netpkt_getdatalen(dev, pkt);
+#endif
   uint32_t len;
   int ret;
 
@@ -247,7 +251,20 @@ static int net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
   transfer->header.result  = 0;
   transfer->header.cookie  = 0;
   transfer->length         = datalen;
+
+#ifdef CONFIG_NET_PRMSG_DRV_ZERO_COPY_TRANSFER
+  /* Zero-Copy mode: send pkt address instead of data: store the pkt address
+   * in the transfer buffer
+   */
+
+  *((FAR netpkt_t **)(transfer + 1)) = pkt;
+  pkt = NULL;
+#else
+
+  /* Normal copy mode: copy packet data */
+
   netpkt_copyout(dev, (FAR uint8_t *)(transfer + 1), pkt, datalen, 0);
+#endif
 
   len = sizeof(*transfer) + datalen;
   ret = rpmsg_send_nocopy(&drv->ept, transfer, len);
@@ -455,7 +472,22 @@ static int net_rpmsg_drv_transfer_handler(FAR struct rpmsg_endpoint *ept,
       goto drop;
     }
 
-  /* TODO: No-Copy, hold rx buffer */
+#ifdef CONFIG_NET_PRMSG_DRV_ZERO_COPY_TRANSFER
+  /* Zero-Copy transfer mode: the data contains the pkt address directly */
+
+  pkt = *((FAR netpkt_t **)(transfer + 1));
+
+  DEBUGASSERT(pkt != NULL);
+
+  if (atomic_sub(&dev->quota_ptr[NETPKT_RX], 1) <= 0)
+    {
+      nerr("ERROR: Rx quota is full!\n");
+      goto free;
+    }
+
+#else
+
+  /* Normal copy mode: allocate new packet and copy data */
 
   pkt = netpkt_alloc(dev, NETPKT_RX);
   if (pkt == NULL)
@@ -470,6 +502,7 @@ static int net_rpmsg_drv_transfer_handler(FAR struct rpmsg_endpoint *ept,
       nerr("ERROR: Failed to copyin data!\n");
       goto free;
     }
+#endif
 
   flags = spin_lock_irqsave(&drv->lock);
   ret = netpkt_tryadd_queue(pkt, &drv->rxqueue);

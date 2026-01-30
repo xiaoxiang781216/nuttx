@@ -58,6 +58,13 @@ config NET_RPMSG_DRV_SERVER
 	---help---
 		Enable the net rpmsg default server.
 
+config NET_PRMSG_DRV_ZERO_COPY_TRANSFER
+	bool "Net rpmsg zero copy transfer"
+	default n
+	depends on BMP
+	---help---
+		Enable the net rpmsg zero copy transfer mode.
+
 endif # NET_RPMSG_DRV
 
 config NETDEV_TELNET
