@@ -123,10 +123,9 @@ SECTIONS
         KEEP(*(.eh_frame))
     }
 
-    _ertonly = LOADADDR(.tdata_tbss);
-
     .tdata_tbss ALIGN(0x1000) :
     {
+        _ertonly = ABSOLUTE(.);      /* For tls_initialize() */
         _stdata = ABSOLUTE(.);
         *(.tdata .tdata.* .gnu.linkonce.td.*);
         _etdata = ABSOLUTE(.);
