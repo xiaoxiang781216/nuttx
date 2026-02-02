@@ -138,6 +138,13 @@ if(NOT COMMAND nuttx_add_elf_app)
       set(ELF_TARGET "ELF_${NAME}")
       add_library(${ELF_TARGET} ${SRCS})
       add_dependencies(${ELF_TARGET} apps_post)
+      foreach(dep ${DEPENDS})
+        set_property(
+          TARGET ${ELF_TARGET}
+          APPEND
+          PROPERTY ELF_DEP_LINK_LIBRARIES $<TARGET_FILE:${dep}>)
+      endforeach()
+
       if(TARGET STARTUP_OBJS)
         add_dependencies(${ELF_TARGET} STARTUP_OBJS)
       endif()
@@ -191,6 +198,8 @@ if(NOT COMMAND nuttx_add_elf_app)
           $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--start-group
           # link user lib if kernel link
           $<$<BOOL:${KERNEL_ELF_MODE}>:$<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_LIBRARIES>>>
+          # link elf dependent target libs
+          $<GENEX_EVAL:$<TARGET_PROPERTY:${ELF_TARGET},ELF_DEP_LINK_LIBRARIES>>
           # always link extra libs
           $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_EXTRA_LIBRARIES>>
           $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--whole-archive
