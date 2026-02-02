@@ -1535,14 +1535,14 @@ static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
     }
 #endif
 
+  /* Set txbuf record used for txconfirm */
+
+  priv->tx_pktbuf[txidx] = pkt;
+
   /* Set TX ready */
 
   regval = CTUCANFD_TXCMD_TXCR + (1 << (CTUCANFD_TXCMD_TXB_SHIFT + txidx));
   ctucanfd_putreg(priv, CTUCANFD_TXINFOCMD, regval);
-
-  /* Set txbuf record used for txconfirm */
-
-  priv->tx_pktbuf[txidx] = pkt;
 
   return OK;
 }
