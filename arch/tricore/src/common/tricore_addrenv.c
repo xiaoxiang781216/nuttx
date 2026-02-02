@@ -54,6 +54,89 @@ static unsigned int g_addrenv_heap_region;
 static unsigned int g_addrenv_text_region;
 #endif
 
+#ifdef CONFIG_LIB_PPCCALL
+static unsigned int g_addrenv_callee_heap_region;
+static unsigned int g_addrenv_callee_text_region;
+#endif
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+#ifdef CONFIG_MM_TASK_HEAP
+static int addrenv_select_region(unsigned int *heap_region,
+                                 unsigned int *text_region,
+                                 const arch_addrenv_t *addrenv)
+{
+  struct mpu_region_s conf;
+
+  if (*heap_region == 0)
+    {
+      *heap_region = mpu_allocdataregion();
+    }
+
+  if (*text_region == 0)
+    {
+      *text_region = mpu_allocdataregion();
+    }
+
+  if (addrenv == NULL)
+    {
+      return -EINVAL;
+    }
+
+  if (addrenv->heap && (
+#ifndef CONFIG_BUILD_FLAT
+      addrenv->data == 0 ||
+#endif
+      (addrenv->data > addrenv->heap &&
+       addrenv->data + addrenv->datasize <=
+       addrenv->heap + addrenv->heapsize)))
+    {
+      conf.base = (uintptr_t)addrenv->heap;
+      conf.size = addrenv->heapsize;
+      conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
+      conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RW;
+      mpu_control(false);
+      mpu_modify_region(g_mpu_kset, *heap_region,
+                        conf.base, conf.size, conf.kflags);
+#ifdef CONFIG_BUILD_PROTECTED
+      mpu_modify_region(g_mpu_uset, *heap_region,
+                        conf.base, conf.size, conf.uflags);
+#endif
+      mpu_control(true);
+    }
+  else if (addrenv->data)
+    {
+      /* Heap include data or just have heap region */
+
+      conf.base = (uintptr_t)addrenv->data;
+      conf.size = addrenv->datasize;
+      conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
+      conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RW;
+      mpu_control(false);
+      mpu_modify_region(g_mpu_kset, *heap_region,
+                        conf.base, conf.size, conf.kflags);
+
+      /* Read and write for data */
+
+      mpu_modify_region(g_app_set, *heap_region,
+                        conf.base, conf.size, conf.kflags);
+      conf.base = (uintptr_t)addrenv->text;
+      conf.size = addrenv->textsize;
+      conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RO;
+
+      /* Read only for text  */
+
+      mpu_modify_region(g_app_set, *text_region,
+                        conf.base, conf.size, conf.kflags);
+      mpu_control(true);
+    }
+
+  return OK;
+}
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -269,66 +352,33 @@ int up_addrenv_vdata(arch_addrenv_t *addrenv, uintptr_t textsize,
 
 int up_addrenv_select(const arch_addrenv_t *addrenv)
 {
+#ifdef CONFIG_LIB_PPCCALL
+  struct tcb_s *tcb = this_task();
+#endif
+
 #ifdef CONFIG_MM_TASK_HEAP
-  struct mpu_region_s conf;
+  addrenv_select_region(&g_addrenv_heap_region, &g_addrenv_text_region,
+                        addrenv);
 
-  if (g_addrenv_heap_region == 0)
+#  ifdef CONFIG_LIB_PPCCALL
+  if (addrenv_select_region(&g_addrenv_callee_heap_region,
+                            &g_addrenv_callee_text_region,
+                            &tcb->addrenv_callee->addrenv) < 0)
     {
-      g_addrenv_heap_region = mpu_allocdataregion();
-    }
-
-  if (g_addrenv_text_region == 0)
-    {
-      g_addrenv_text_region = mpu_allocdataregion();
-    }
-
-  if (addrenv->heap && (
-#ifndef CONFIG_BUILD_FLAT
-      addrenv->data == 0 ||
-#endif
-      (addrenv->data > addrenv->heap &&
-       addrenv->data + addrenv->datasize <=
-       addrenv->heap + addrenv->heapsize)))
-    {
-      conf.base = (uintptr_t)addrenv->heap;
-      conf.size = addrenv->heapsize;
-      conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
-      conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RW;
       mpu_control(false);
-      mpu_modify_region(g_mpu_kset, g_addrenv_heap_region,
-                        conf.base, conf.size, conf.kflags);
+      mpu_modify_region(g_mpu_kset, g_addrenv_callee_heap_region,
+                        0, 0, REGION_TYPE_DATA);
 #ifdef CONFIG_BUILD_PROTECTED
-      mpu_modify_region(g_mpu_uset, g_addrenv_heap_region,
-                        conf.base, conf.size, conf.uflags);
+      mpu_modify_region(g_mpu_uset, g_addrenv_callee_heap_region,
+                        0, 0, REGION_TYPE_DATA);
 #endif
+      mpu_modify_region(g_app_set, g_addrenv_callee_heap_region,
+                        0, 0, REGION_TYPE_DATA);
+      mpu_modify_region(g_app_set, g_addrenv_callee_text_region,
+                        0, 0, REGION_TYPE_DATA);
       mpu_control(true);
     }
-  else if (addrenv->data)
-    {
-      /* Heap include data or just have heap region */
-
-      conf.base = (uintptr_t)addrenv->data;
-      conf.size = addrenv->datasize;
-      conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
-      conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RW;
-      mpu_control(false);
-      mpu_modify_region(g_mpu_kset, g_addrenv_heap_region,
-                        conf.base, conf.size, conf.kflags);
-
-      /* Read and write for data */
-
-      mpu_modify_region(g_app_set, g_addrenv_heap_region,
-                        conf.base, conf.size, conf.kflags);
-      conf.base = (uintptr_t)addrenv->text;
-      conf.size = addrenv->textsize;
-      conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RO;
-
-      /* Read only for text  */
-
-      mpu_modify_region(g_app_set, g_addrenv_text_region,
-                        conf.base, conf.size, conf.kflags);
-      mpu_control(true);
-    }
+#  endif
 #endif
 
   return OK;

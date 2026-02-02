@@ -34,6 +34,7 @@
 #include <arch/irq.h>
 #include <sched/sched.h>
 #include <nuttx/addrenv.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/ppccall.h>
 #include <nuttx/sched.h>
 
@@ -83,6 +84,8 @@ static bool dispatch_ppccall(struct tcb_s *rtcb, uintptr_t *puregs,
 {
   struct ppccall_param_s *param = (struct ppccall_param_s *)puregs[REG_D9];
   const struct ppccall_info_s *info = ppccall_find_info(param->nbr);
+  struct addrenv_s *addrenv_callee;
+  struct addrenv_s *addrenv;
   uintptr_t *nplregs;
   uintptr_t psw;
   uintptr_t pc;
@@ -92,6 +95,15 @@ static bool dispatch_ppccall(struct tcb_s *rtcb, uintptr_t *puregs,
       serr("ERROR: No ppc info found for nbr %" PRIuPTR "\n", param->nbr);
       plregs[REG_D2] = -ENOENT;
       return false;
+    }
+
+  addrenv_callee = info->tcb->group->tg_addrenv_own;
+  addrenv = rtcb->group->tg_addrenv_own;
+  if (addrenv_callee != NULL && addrenv != NULL)
+    {
+      addrenv_take(addrenv_callee);
+      rtcb->addrenv_callee = addrenv_callee;
+      up_addrenv_select(&addrenv->addrenv);
     }
 
 #ifdef CONFIG_BUILD_FLAT
@@ -226,6 +238,7 @@ void tricore_svcall(volatile void *trap)
         break;
 
 #if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
+      case SYS_ppccall_return:
       case SYS_syscall_return:
         {
           struct tcb_s *rtcb = this_task();
@@ -242,6 +255,21 @@ void tricore_svcall(volatile void *trap)
           rtcb->xcp.regs = puregs;
 
           tricore_change_pprs(rtcb, tricore_syscall_load_pprs(rtcb, index));
+
+#  ifdef CONFIG_LIB_PPCCALL
+          if (cmd == SYS_ppccall_return)
+            {
+              struct addrenv_s *addrenv = rtcb->group->tg_addrenv_own;
+              struct addrenv_s *addrenv_callee = rtcb->addrenv_callee;
+
+              if (addrenv != NULL && addrenv_callee != NULL)
+                {
+                  rtcb->addrenv_callee = NULL;
+                  up_addrenv_select(&addrenv->addrenv);
+                  addrenv_drop(addrenv_callee, true);
+                }
+            }
+#  endif
         }
         break;
 #endif

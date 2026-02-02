@@ -45,7 +45,7 @@
 
 /* Reserved syscall for special os feature */
 
-#define CONFIG_SYS_RESERVED 10
+#define CONFIG_SYS_RESERVED 11
 
 /* Cortex-M system calls ****************************************************/
 
@@ -116,7 +116,13 @@
  */
 
 #define SYS_ppccall               (9)
-#define SYS_ppccall_return        SYS_syscall_return
+
+/* SYS call 10:
+ *
+ * void ppccall_handler_return(void);
+ */
+
+#define SYS_ppccall_return        (10)
 
 /****************************************************************************
  * Public Types
