@@ -171,7 +171,8 @@ int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
   switch (relotype)
     {
       case R_X86_64_64: /* S + A */
-        *(uint64_t *)addr = sym->st_value + rel->r_addend;
+        value = sym->st_value + rel->r_addend;
+        memcpy((void *)addr, &value, sizeof(value));
         break;
       case R_X86_64_PC32:  /* S + A - P */
       case R_X86_64_PLT32: /* L + A - P */
