@@ -153,13 +153,14 @@ static int systick_getstatus(struct timer_lowerhalf_s *lower_,
 {
   struct systick_lowerhalf_s *lower = (struct systick_lowerhalf_s *)lower_;
   irqstate_t flags = up_irq_save();
+  uint32_t count;
 
   status->flags    = lower->callback ? TCFLAGS_HANDLER : 0;
   status->flags   |= systick_is_running() ? TCFLAGS_ACTIVE : 0;
   status->timeout  = usec_from_count(
     RELOAD2TIMEOUT(getreg32(NVIC_SYSTICK_RELOAD)), lower->freq);
-  status->timeleft = usec_from_count(getreg32(NVIC_SYSTICK_CURRENT),
-                                     lower->freq);
+  count = getreg32(NVIC_SYSTICK_CURRENT);
+  status->timeleft = usec_from_count(count, lower->freq);
 
   if (systick_irq_pending(lower))
     {
@@ -173,7 +174,7 @@ static int systick_getstatus(struct timer_lowerhalf_s *lower_,
           status->timeleft = 0;
         }
     }
-  else if (status->timeleft == 0)
+  else if (count == 0)
     {
       status->timeleft = status->timeout;
     }
