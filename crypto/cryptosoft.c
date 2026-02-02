@@ -43,6 +43,7 @@
 #include <crypto/curve25519.h>
 #include <crypto/ecc.h>
 #include <crypto/xform.h>
+#include <crypto/sha2.h>
 #include <sys/param.h>
 
 /****************************************************************************
@@ -1167,10 +1168,10 @@ int swcr_authcompute(FAR struct cryptop *crp,
   return axf->update(&sw->sw_ctx, aalg, axf->hashsize);
 }
 
-int swcr_hash(FAR struct cryptop *crp,
-              FAR struct cryptodesc *crd,
-              FAR struct swcr_data *sw,
-              caddr_t buf)
+static int swcr_hash(FAR struct cryptop *crp,
+                     FAR struct cryptodesc *crd,
+                     FAR struct swcr_data *sw,
+                     caddr_t buf)
 {
   FAR const struct auth_hash *axf = sw->sw_axf;
 
@@ -2131,7 +2132,7 @@ done:
   return 0;
 }
 
-int swcr_mod_exp(FAR struct cryptkop *krp)
+static int swcr_mod_exp(FAR struct cryptkop *krp)
 {
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
   FAR struct swkey_context_s *ctx = swkey_get_context();
@@ -2199,7 +2200,7 @@ int swcr_mod_exp(FAR struct cryptkop *krp)
   return 0;
 }
 
-int swcr_mod_exp_crt(FAR struct cryptkop *krp)
+static int swcr_mod_exp_crt(FAR struct cryptkop *krp)
 {
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
   FAR struct swkey_context_s *ctx = swkey_get_context();
@@ -2302,6 +2303,186 @@ int swcr_mod_exp_crt(FAR struct cryptkop *krp)
   return 0;
 }
 
+static int swcr_rsa_pss_sign(FAR struct cryptkop *krp)
+{
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+  FAR struct swkey_context_s *ctx = swkey_get_context();
+#endif
+  FAR uint8_t *encoded_msg;      /* EM: Encoded Message for PSS */
+  FAR uint8_t *data_block;       /* DB: Data Block in PSS */
+  FAR struct crparam *src;
+  FAR struct crparam *dst;
+  FAR struct crparam *p;
+  FAR struct crparam *q;
+  FAR struct crparam *dp;
+  FAR struct crparam *dq;
+  FAR struct crparam *qp;
+  struct bn bna;
+  struct bn bnp;
+  struct bn bnq;
+  struct bn bndp;
+  struct bn bndq;
+  struct bn bnqp;
+  struct bn bnr;
+  uint8_t m_prime[8 + 2 * SHA256_DIGEST_LENGTH];
+  uint8_t hash_output[SHA256_DIGEST_LENGTH];
+  uint8_t salt[SHA256_DIGEST_LENGTH];
+  uint8_t mgf_mask[256];         /* Mask from MGF1 */
+  size_t hash_len = SHA256_DIGEST_LENGTH;
+  size_t salt_len = SHA256_DIGEST_LENGTH;
+  size_t encoded_msg_len;        /* Length of EM */
+  size_t data_block_len;         /* Length of DB */
+  size_t i;
+  SHA2_CTX sha_ctx;
+  int ret = 0;
+
+  bignum_init(&bna);
+  bignum_init(&bnp);
+  bignum_init(&bnq);
+  bignum_init(&bndp);
+  bignum_init(&bndq);
+  bignum_init(&bnqp);
+  bignum_init(&bnr);
+
+  src = &krp->krp_param[0];
+  dst = &krp->krp_param[krp->krp_iparams +
+                        krp->krp_oparams - 1];
+  p = &krp->krp_param[4];
+  q = &krp->krp_param[5];
+  dp = &krp->krp_param[6];
+  dq = &krp->krp_param[7];
+  qp = &krp->krp_param[8];
+
+  if (krp->krp_flags & CRD_F_KEYID)
+    {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+      bnp.length = swkey_read(&ctx->file, *(FAR uint32_t *)p->crp_p,
+                              bnp.array, sizeof(bnp.array));
+      if (bnp.length < 0)
+        {
+          return bnp.length;
+        }
+
+      bnq.length = swkey_read(&ctx->file, *(FAR uint32_t *)q->crp_p,
+                              bnq.array, sizeof(bnq.array));
+      if (bnq.length < 0)
+        {
+          return bnq.length;
+        }
+
+      bndp.length = swkey_read(&ctx->file, *(FAR uint32_t *)dp->crp_p,
+                                bndp.array, sizeof(bndp.array));
+      if (bndp.length < 0)
+        {
+          return bndp.length;
+        }
+
+      bndq.length = swkey_read(&ctx->file, *(FAR uint32_t *)dq->crp_p,
+                                bndq.array, sizeof(bndq.array));
+      if (bndq.length < 0)
+        {
+          return bndq.length;
+        }
+
+      bnqp.length = swkey_read(&ctx->file, *(FAR uint32_t *)qp->crp_p,
+                                bnqp.array, sizeof(bnqp.array));
+      if (bnqp.length < 0)
+        {
+          return bnqp.length;
+        }
+#endif
+    }
+  else
+    {
+      bnp.length = p->crp_nbits / 8;
+      bnq.length = q->crp_nbits / 8;
+      bndp.length = dp->crp_nbits / 8;
+      bndq.length = dq->crp_nbits / 8;
+      bnqp.length = qp->crp_nbits / 8;
+      memcpy(bnp.array, p->crp_p, bnp.length);
+      memcpy(bnq.array, q->crp_p, bnq.length);
+      memcpy(bndp.array, dp->crp_p, bndp.length);
+      memcpy(bndq.array, dq->crp_p, bndq.length);
+      memcpy(bnqp.array, qp->crp_p, bnqp.length);
+      bignum_update_length(&bnp);
+      bignum_update_length(&bnq);
+      bignum_update_length(&bndp);
+      bignum_update_length(&bndq);
+      bignum_update_length(&bnqp);
+    }
+
+  /* PSS Encoding - Little Endian layout in bn.array:
+   * array[0] = 0xbc (BE rightmost)
+   * array[1..hash_len] = H
+   * array[1+hash_len..encoded_msg_len-1] = maskedDB (BE leftmost)
+   */
+
+  encoded_msg_len = (dst->crp_nbits + 7) / 8;
+  if (encoded_msg_len < hash_len + salt_len + 2)
+    {
+      return -EINVAL;
+    }
+
+  data_block_len = encoded_msg_len - hash_len - 1;
+  if (data_block_len > sizeof(mgf_mask))
+    {
+      return -ENOMEM;
+    }
+
+  encoded_msg = (FAR uint8_t *)bna.array;
+  arc4random_buf(salt, salt_len);
+
+  /* M' = (0x00)8 || mHash || salt */
+
+  memset(m_prime, 0, 8);
+  memcpy(m_prime + 8, (FAR uint8_t *)src->crp_p, hash_len);
+  memcpy(m_prime + 8 + hash_len, salt, salt_len);
+
+  sha256init(&sha_ctx);
+  sha256update(&sha_ctx, m_prime, sizeof(m_prime));
+  sha256final(hash_output, &sha_ctx);
+
+  /* DB = PS || 0x01 || salt (in BE, but we build in LE position) */
+
+  data_block = encoded_msg + 1 + hash_len;
+  memset(data_block, 0, data_block_len);
+  data_block[data_block_len - salt_len - 1] = 0x01;
+  memcpy(data_block + data_block_len - salt_len, salt, salt_len);
+
+  /* mask = MGF1(H, dbLen) and maskedDB = DB XOR mask */
+
+  sha256_mgf1(hash_output, hash_len, mgf_mask, data_block_len);
+  for (i = 0; i < data_block_len; i++)
+    {
+      data_block[i] ^= mgf_mask[i];
+    }
+
+  /* Clear leftmost bits of maskedDB (at high address in LE) */
+
+  if (dst->crp_nbits % 8)
+    {
+      data_block[data_block_len - 1] &= (0xff >> (8 - (dst->crp_nbits % 8)));
+    }
+  else
+    {
+      data_block[data_block_len - 1] &= 0x7f;
+    }
+
+  /* Place H and trailer in LE positions */
+
+  memcpy(encoded_msg + 1, hash_output, hash_len);
+  encoded_msg[0] = 0xbc;
+
+  /* Perform RSA CRT */
+
+  bna.length = encoded_msg_len;
+  bignum_update_length(&bna);
+
+  pow_mod_crt(&bna, &bnp, &bnq, &bndp, &bndq, &bnqp, &bnr);
+  memcpy(dst->crp_p, bnr.array, dst->crp_nbits / 8);
+  return ret;
+}
+
 static int swcr_dh_make_public(FAR struct cryptkop *krp)
 {
   /* Curve25519 is used for testing. In fact,
@@ -2334,7 +2515,174 @@ static int swcr_dh_make_common(FAR struct cryptkop *krp)
   return curve25519(shared, secret, public);
 }
 
-int swcr_rsa_verify(struct cryptkop *krp)
+static int swcr_rsa_pss_verify(struct cryptkop *krp)
+{
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+  FAR struct swkey_context_s *ctx = swkey_get_context();
+#endif
+  FAR uint8_t *masked_db_ptr;        /* Pointer to maskedDB in EM */
+  FAR uint8_t *hash_from_em;         /* H: Hash extracted from EM */
+  FAR uint8_t *encoded_msg;          /* EM: Encoded Message from signature */
+  FAR uint8_t *msg_hash;             /* Input message hash */
+  FAR struct crparam *src;
+  FAR struct crparam *dst;
+  FAR struct crparam *e;
+  FAR struct crparam *n;
+  struct bn bna;
+  struct bn bne;
+  struct bn bnn;
+  struct bn bnr;
+  uint8_t m_prime[8 + 2 * SHA256_DIGEST_LENGTH];
+  uint8_t computed_hash[SHA256_DIGEST_LENGTH];
+  uint8_t salt[SHA256_DIGEST_LENGTH];
+  uint8_t data_block[256];           /* DB: Data Block buffer */
+  uint8_t mgf_mask[256];             /* Mask from MGF1 */
+  size_t hash_len = SHA256_DIGEST_LENGTH;
+  size_t salt_len = SHA256_DIGEST_LENGTH;
+  size_t encoded_msg_len;            /* Length of EM */
+  size_t data_block_len;             /* Length of DB */
+  size_t i;
+  SHA2_CTX sha_ctx;
+  int ret = 0;
+
+  bignum_init(&bna);
+  bignum_init(&bne);
+  bignum_init(&bnn);
+  bignum_init(&bnr);
+
+  /* Params: 0 = Sig, 1 = N, 2 = E, 3 = Hash */
+
+  src = &krp->krp_param[0];
+  n = &krp->krp_param[1];
+  e = &krp->krp_param[2];
+  dst = &krp->krp_param[3];
+
+  if (krp->krp_flags & CRD_F_KEYID)
+    {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+      bnn.length = swkey_read(&ctx->file, *(FAR uint32_t *)n->crp_p,
+                              bnn.array, sizeof(bnn.array));
+      if (bnn.length < 0)
+        {
+          return bnn.length;
+        }
+
+      bne.length = swkey_read(&ctx->file, *(FAR uint32_t *)e->crp_p,
+                              bne.array, sizeof(bne.array));
+      if (bne.length < 0)
+        {
+          if (e->crp_nbits != 0) /* e keyid not exist */
+            {
+              return bne.length;
+            }
+          else
+            {
+              bignum_from_int(&bne, 65537); /* use default e */
+            }
+        }
+#endif
+    }
+  else
+    {
+      bnn.length = n->crp_nbits / 8;
+      bne.length = e->crp_nbits / 8;
+      memcpy(bne.array, e->crp_p, bne.length);
+      memcpy(bnn.array, n->crp_p, bnn.length);
+      bignum_update_length(&bne);
+      bignum_update_length(&bnn);
+    }
+
+  bna.length = src->crp_nbits / 8;
+  memcpy(bna.array, src->crp_p, bna.length);
+  bignum_update_length(&bna);
+
+  pow_mod_faster(&bna, &bne, &bnn, &bnr);
+
+  /* Verify PSS - EM in Little Endian layout:
+   * array[0] = 0xbc
+   * array[1..hash_len] = H
+   * array[1+hash_len..encoded_msg_len-1] = maskedDB
+   */
+
+  encoded_msg = (FAR uint8_t *)bnr.array;
+  if (encoded_msg[0] != 0xbc)
+    {
+      return -EINVAL;
+    }
+
+  encoded_msg_len = (n->crp_nbits + 7) / 8;
+  if (encoded_msg_len < hash_len + salt_len + 2)
+    {
+      return -EINVAL;
+    }
+
+  data_block_len = encoded_msg_len - hash_len - 1;
+  if (data_block_len > sizeof(data_block))
+    {
+      return -ENOMEM;
+    }
+
+  /* Extract H from LE position */
+
+  hash_from_em = encoded_msg + 1;
+
+  /* Extract maskedDB and unmask it */
+
+  masked_db_ptr = encoded_msg + 1 + hash_len;
+  sha256_mgf1(hash_from_em, hash_len, mgf_mask, data_block_len);
+  for (i = 0; i < data_block_len; i++)
+    {
+      data_block[i] = masked_db_ptr[i] ^ mgf_mask[i];
+    }
+
+  /* Clear leftmost bits (at high address in LE) */
+
+  if (n->crp_nbits % 8)
+    {
+      data_block[data_block_len - 1] &= (0xff >> (8 - (n->crp_nbits % 8)));
+    }
+  else
+    {
+      data_block[data_block_len - 1] &= 0x7f;
+    }
+
+  /* Check DB padding: PS || 0x01 || salt */
+
+  for (i = 0; i < data_block_len - salt_len - 1; i++)
+    {
+      if (data_block[i] != 0)
+        {
+          return -EINVAL;
+        }
+    }
+
+  if (data_block[data_block_len - salt_len - 1] != 0x01)
+    {
+      return -EINVAL;
+    }
+
+  memcpy(salt, data_block + data_block_len - salt_len, salt_len);
+
+  /* Calculate H' = Hash(M') */
+
+  memset(m_prime, 0, 8);
+  msg_hash = (FAR uint8_t *)dst->crp_p;
+  memcpy(m_prime + 8, msg_hash, hash_len);
+  memcpy(m_prime + 8 + hash_len, salt, salt_len);
+
+  sha256init(&sha_ctx);
+  sha256update(&sha_ctx, m_prime, sizeof(m_prime));
+  sha256final(computed_hash, &sha_ctx);
+
+  if (memcmp(hash_from_em, computed_hash, hash_len) != 0)
+    {
+      return -EINVAL;
+    }
+
+  return ret;
+}
+
+static int swcr_rsa_verify(struct cryptkop *krp)
 {
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
   FAR struct swkey_context_s *ctx = swkey_get_context();
@@ -2527,6 +2875,13 @@ int swcr_kprocess(struct cryptkop *krp)
           }
 
         break;
+      case CRK_RSA_PSS_SIGN:
+        if ((krp->krp_status = swcr_rsa_pss_sign(krp)) != 0)
+          {
+            goto done;
+          }
+
+        break;
       case CRK_DH_MAKE_PUBLIC:
         if ((krp->krp_status = swcr_dh_make_public(krp) != 0))
           {
@@ -2543,6 +2898,13 @@ int swcr_kprocess(struct cryptkop *krp)
         break;
       case CRK_RSA_PKCS15_VERIFY:
         if ((krp->krp_status = swcr_rsa_verify(krp)) != 0)
+          {
+            goto done;
+          }
+
+        break;
+      case CRK_RSA_PSS_VERIFY:
+        if ((krp->krp_status = swcr_rsa_pss_verify(krp)) != 0)
           {
             goto done;
           }
@@ -2647,6 +3009,8 @@ void swcr_init(void)
   kalgs[CRK_DH_COMPUTE_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_RSA_PKCS15_SIGN] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_RSA_PKCS15_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  kalgs[CRK_RSA_PSS_SIGN] = CRYPTO_ALG_FLAG_SUPPORTED;
+  kalgs[CRK_RSA_PSS_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_SIGN] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_GENKEY] = CRYPTO_ALG_FLAG_SUPPORTED;

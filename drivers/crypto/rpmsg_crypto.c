@@ -715,7 +715,7 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   keybufsize = VIRTIO_CRYPTO_RSA_DER_MAX_BYTES(
                 keybits, krp->krp_keytype == CRYPTO_KEY_TYPE_PRIVATE);
   keybufsize = ALIGN_UP(keybufsize, 4);
-  if (sizeof(*msg) + keybufsize + keybits > space)
+  if (sizeof(*msg) + keybufsize + keybits / 8 > space)
     {
       rpmsgerr("No share memory space for key\n");
       rpmsg_release_tx_buffer(&rdev->ept, msg);
@@ -1439,6 +1439,8 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
   kalgs[CRK_MOD_EXP_CRT] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_RSA_PKCS15_SIGN] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_RSA_PKCS15_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  kalgs[CRK_RSA_PSS_SIGN] = CRYPTO_ALG_FLAG_SUPPORTED;
+  kalgs[CRK_RSA_PSS_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_SIGN] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_GENKEY] = CRYPTO_ALG_FLAG_SUPPORTED;

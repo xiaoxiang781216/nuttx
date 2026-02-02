@@ -86,4 +86,9 @@ void sha512init(FAR SHA2_CTX *);
 void sha512update(FAR SHA2_CTX *, FAR const void *, size_t);
 void sha512final(FAR uint8_t *, FAR SHA2_CTX *);
 
+/* MGF1 (Mask Generation Function 1) - RFC 8017 */
+
+void sha256_mgf1(FAR const uint8_t *seed, size_t seed_len,
+                 FAR uint8_t *mask, size_t mask_len);
+
 #endif /* __INCLUDE_CRYPTO_SHA2_H */

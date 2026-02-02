@@ -1129,3 +1129,52 @@ void sha384final(FAR uint8_t *digest, FAR SHA2_CTX *context)
 
   explicit_bzero(context, sizeof(*context));
 }
+
+/****************************************************************************
+ * Name: sha256_mgf1
+ *
+ * Description:
+ *   MGF1 (Mask Generation Function 1) based on SHA-256.
+ *   Defined in RFC 8017 (PKCS#1 v2.2) Appendix B.2.1.
+ *   Used in RSA-PSS and RSA-OAEP padding schemes.
+ *
+ * Input Parameters:
+ *   seed    - Seed from which mask is generated
+ *   seedlen - Length of seed in bytes
+ *   mask    - Output buffer for generated mask
+ *   masklen - Desired length of mask in bytes
+ *
+ ****************************************************************************/
+
+void sha256_mgf1(FAR const uint8_t *seed, size_t seedlen,
+                 FAR uint8_t *mask, size_t masklen)
+{
+  uint8_t digest[SHA256_DIGEST_LENGTH];
+  uint32_t counter = 0;
+  uint32_t counter_be;
+  size_t outlen = 0;
+  size_t len;
+  SHA2_CTX ctx;
+
+  while (outlen < masklen)
+    {
+      sha256init(&ctx);
+      sha256update(&ctx, seed, seedlen);
+      counter_be = htobe32(counter);
+      sha256update(&ctx, (uint8_t *)&counter_be, 4);
+      sha256final(digest, &ctx);
+
+      if (masklen - outlen > SHA256_DIGEST_LENGTH)
+        {
+          len = SHA256_DIGEST_LENGTH;
+        }
+      else
+        {
+          len = masklen - outlen;
+        }
+
+      memcpy(mask + outlen, digest, len);
+      outlen += len;
+      counter++;
+    }
+}

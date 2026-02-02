@@ -719,6 +719,11 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
     }
 
   rsp->header.result = crypto_kinvoke(&krp);
+  if (rsp->header.result == 0)
+    {
+      rsp->header.result = krp.krp_status;
+    }
+
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + data_len);
 }
 
@@ -841,6 +846,11 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
     }
 
   rsp->header.result = crypto_kinvoke(&krp);
+  if (rsp->header.result == 0)
+    {
+      rsp->header.result = krp.krp_status;
+    }
+
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + data_len);
 }
 
