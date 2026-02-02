@@ -138,6 +138,10 @@
 #  define UP_SEV()
 #endif
 
+#if !defined(UP_ISB)
+#  define UP_ISB()
+#endif
+
 #ifdef CONFIG_SMP
 #  define SMP_MB()  UP_DMB()
 #  define SMP_RMB() UP_RMB()
