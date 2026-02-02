@@ -69,7 +69,7 @@ uImage
 .fakelnk
 .vscode
 .DS_Store
-tools/gdb/__pycache__
+tools/pynuttx
 /build
 .ccls-cache
 compile_commands.json
