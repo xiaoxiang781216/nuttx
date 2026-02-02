@@ -18,6 +18,11 @@
 #
 # ##############################################################################
 
+# Force the C or CXX compiler to avoid CMake automatic detection
+
+set(CMAKE_C_COMPILER_FORCED TRUE)
+set(CMAKE_CXX_COMPILER_FORCED TRUE)
+
 # Toolchain
 
 set(CMAKE_SYSTEM_NAME Generic)
