@@ -45,7 +45,11 @@ ifneq ($(CONFIG_DISABLE_SIGNALS),y)
 endif
 
 # Common C source files ( hardware BSP )
-CMN_CSRCS += arm64_arch_timer.c arm64_cache.c
+ifeq ($(CONFIG_ARM64_GENERIC_TIMER),y)
+  CMN_CSRCS += arm64_arch_timer.c
+endif
+
+CMN_CSRCS += arm64_cache.c
 CMN_CSRCS += arm64_doirq.c arm64_fatal.c
 CMN_CSRCS += arm64_syscall.c
 CMN_CSRCS += arm64_modifyreg8.c arm64_modifyreg16.c arm64_modifyreg32.c

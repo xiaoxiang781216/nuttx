@@ -446,6 +446,14 @@ config ARM64_SEMIHOSTING_HOSTFS_CACHE_COHERENCE
 
 endif # ARM64_SEMIHOSTING_HOSTFS
 
+config ARM64_GENERIC_TIMER
+	bool "Using ARM Generic Timer as Oneshot Timer"
+	default y
+	select ONESHOT
+	select ONESHOT_COUNT
+	---help---
+		Using ARM Generic Timer as Oneshot Timer.
+
 config ARM64_DCACHE_DISABLE
 	bool "Disable DCACHE at __start"
 	default n

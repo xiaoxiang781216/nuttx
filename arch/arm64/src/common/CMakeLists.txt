@@ -36,7 +36,11 @@ if(NOT CONFIG_DISABLE_SIGNALS)
 endif()
 
 # Common C source files ( hardware BSP )
-list(APPEND SRCS arm64_arch_timer.c arm64_cache.c)
+if(CONFIG_ARM64_GENERIC_TIMER)
+  list(APPEND SRCS arm64_arch_timer.c)
+endif()
+
+list(APPEND SRCS arm64_cache.c)
 list(APPEND SRCS arm64_doirq.c arm64_fatal.c)
 list(APPEND SRCS arm64_syscall.c)
 
