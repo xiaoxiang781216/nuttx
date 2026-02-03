@@ -101,7 +101,7 @@ static const struct procfs_entry_s g_procfs_entries[] =
 {
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
   { "[0-9]*/**",    &g_proc_operations,     PROCFS_UNKOWN_TYPE, 0    },
-  { "[0-9]*",       &g_proc_operations,     PROCFS_DIR_TYPE,    0444 },
+  { "[0-9]*",       &g_proc_operations,     PROCFS_DIR_TYPE,    0555 },
 #endif
 
 #if defined(CONFIG_CLK) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK)
@@ -192,7 +192,7 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
-  { "self",         &g_proc_operations,     PROCFS_DIR_TYPE,    0444 },
+  { "self",         &g_proc_operations,     PROCFS_DIR_TYPE,    0555 },
   { "self/**",      &g_proc_operations,     PROCFS_UNKOWN_TYPE, 0  },
 #endif
 
@@ -1193,6 +1193,7 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
        */
 
       buf->st_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR;
+      buf->st_mode |= S_IXOTH | S_IXGRP | S_IXUSR;
       ret = OK;
     }
   else
@@ -1237,6 +1238,7 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
               if (g_procfs_entries[x].pathpattern[len] == '/')
                 {
                   buf->st_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR;
+                  buf->st_mode |= S_IXOTH | S_IXGRP | S_IXUSR;
                   ret = OK;
                 }
               else
