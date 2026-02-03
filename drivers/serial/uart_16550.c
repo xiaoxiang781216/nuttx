@@ -1587,7 +1587,7 @@ static void u16550_txint(struct uart_dev_s *dev, bool enable)
     }
 #endif
 
-  flags = uart_spinlock(dev, false);
+  flags = uart_spinlock(dev, true);
   if (enable)
     {
       priv->ier |= UART_IER_ETBEI;
@@ -1605,7 +1605,7 @@ static void u16550_txint(struct uart_dev_s *dev, bool enable)
       u16550_serialout(priv, UART_IER_OFFSET, priv->ier);
     }
 
-  uart_spinunlock(dev, false, flags);
+  uart_spinunlock(dev, true, flags);
 }
 
 /****************************************************************************
