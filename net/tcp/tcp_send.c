@@ -128,6 +128,9 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
                            FAR struct tcp_conn_s *conn,
                            FAR struct tcp_hdr_s *tcp)
 {
+  uint32_t rcvseq;
+  uint32_t recvwndo;
+
   /* Set TCP sequence numbers and port numbers */
 
   memcpy(tcp->ackno, conn->rcvseq, 4);
@@ -138,41 +141,29 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
 
   /* Set the TCP window */
 
-  if (conn->tcpstateflags & TCP_STOPPED)
+  if (work_available(&conn->work) && conn->tx_unacked != 0)
     {
-      /* If the connection has issued TCP_STOPPED, we advertise a zero
-       * window so that the remote host will stop sending data.
-       */
-
-      tcp->wnd[0] = 0;
-      tcp->wnd[1] = 0;
+      conn->timeout = false;
+      tcp_update_retrantimer(conn, conn->rto);
     }
-  else
-    {
-      if (work_available(&conn->work) && conn->tx_unacked != 0)
-        {
-          conn->timeout = false;
-          tcp_update_retrantimer(conn, conn->rto);
-        }
 
-      /* Update the TCP received window based on I/O buffer availability */
+  /* Update the TCP received window based on I/O buffer availability */
 
-      uint32_t rcvseq = tcp_getsequence(conn->rcvseq);
-      uint32_t recvwndo = tcp_get_recvwindow(dev, conn);
+  rcvseq = tcp_getsequence(conn->rcvseq);
+  recvwndo = tcp_get_recvwindow(dev, conn);
 
-      /* Update the Receiver Window */
+  /* Update the Receiver Window */
 
-      conn->rcv_adv = rcvseq + recvwndo;
+  conn->rcv_adv = rcvseq + recvwndo;
 
 #ifdef CONFIG_NET_TCP_WINDOW_SCALE
-      recvwndo >>= conn->rcv_scale;
+  recvwndo >>= conn->rcv_scale;
 #endif
 
-      /* Set the TCP Window */
+  /* Set the TCP Window */
 
-      tcp->wnd[0] = recvwndo >> 8;
-      tcp->wnd[1] = recvwndo & 0xff;
-    }
+  tcp->wnd[0] = recvwndo >> 8;
+  tcp->wnd[1] = recvwndo & 0xff;
 
   tcp->urgp[0] = 0;
   tcp->urgp[1] = 0;

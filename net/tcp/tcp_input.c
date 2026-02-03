@@ -1617,8 +1617,7 @@ skip_rtt:
          * the sequence numbers will be screwed up.
          */
 
-        if ((tcp->flags & TCP_FIN) != 0 &&
-            (conn->tcpstateflags & TCP_STOPPED) == 0)
+        if ((tcp->flags & TCP_FIN) != 0)
           {
             /* Needs to be investigated further.
              * Windows often sends FIN packets together with the last ACK for
@@ -1711,12 +1710,10 @@ skip_rtt:
 #endif
 
         /* If d_len > 0 we have TCP data in the packet, and we flag this
-         * by setting the TCP_NEWDATA flag. If the application has stopped
-         * the data flow using TCP_STOPPED, we must not accept any data
-         * packets from the remote host.
+         * by setting the TCP_NEWDATA flag.
          */
 
-        if (dev->d_len > 0 && (conn->tcpstateflags & TCP_STOPPED) == 0)
+        if (dev->d_len > 0)
           {
             flags |= TCP_NEWDATA;
           }
