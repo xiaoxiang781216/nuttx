@@ -513,7 +513,7 @@ static inline_function void hrtimer_wait(FAR hrtimer_t *timer)
         {
           if (!up_interrupt_context() && !is_idle_task(this_task()))
             {
-              nxsched_usleep(HRTIMER_CANCEL_SYNC_DELAY_US);
+              usleep(HRTIMER_CANCEL_SYNC_DELAY_US);
             }
 
           /* Otherwise, spin-wait is enough. */
