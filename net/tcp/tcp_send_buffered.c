@@ -585,9 +585,28 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 #ifdef CONFIG_NET_TCP_CC_NEWRENO
               if (conn->dupacks >= TCP_FAST_RETRANSMISSION_THRESH)
 #elif defined(CONFIG_NET_TCP_FAST_RETRANSMIT)
-              /* Duplicate ACK? Retransmit data if need */
+              /* Fast Retransmit (RFC 5681): an acknowledgment is considered
+               * a "duplicate" when (a) the receiver of the ACK has
+               * outstanding data, (b) the incoming acknowledgment carries
+               * no data, (c) the SYN and FIN bits are both off, (d) the
+               * acknowledgment number is equal to the greatest
+               * acknowledgment received on the given connection and
+               * (e) the advertised window in the incoming acknowledgment
+               * equals the advertised window in the last incoming
+               * acknowledgment.
+               */
 
-              if (++TCP_WBNACK(wrb) == TCP_FAST_RETRANSMISSION_THRESH)
+              if (conn->tx_unacked > 0 &&
+                  (flags & TCP_NEWDATA) == 0 &&
+                  (tcp->flags & (TCP_SYN | TCP_FIN)) == 0 &&
+                  conn->snd_wnd == conn->snd_prev_wnd)
+                {
+                  ++TCP_WBNACK(wrb);
+                }
+
+              /* Retransmit data if need */
+
+              if (TCP_WBNACK(wrb) == TCP_FAST_RETRANSMISSION_THRESH)
 #endif
                 {
                   /* Fast retransmission has been triggered */
@@ -596,40 +615,6 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                   /* Reset counter */
 
                   TCP_WBNACK(wrb) = 0;
-#endif
-
-#ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
-                  if ((flags & TCP_NEWDATA) != 0)
-                    {
-                      FAR uint8_t *buf = dev->d_buf;
-                      FAR uint8_t *appdata = dev->d_appdata;
-                      uint16_t len = dev->d_len;
-#  ifdef CONFIG_NET_TCPURGDATA
-                      FAR uint8_t *urgdata = dev->d_urgdata;
-                      uint16_t urglen = dev->d_urglen;
-#  endif
-                      FAR struct iob_s *iob = dev->d_iob;
-
-                      dev->d_buf = NULL;
-                      dev->d_iob = NULL;
-
-                      /* The current receive data needs to be handled by
-                       * following tcp_recvhandler or tcp_data_event. Notify
-                       * driver to send the message and marked as rexmit
-                       */
-
-                      conn->timeout = true;
-                      netdev_txnotify_dev(conn->dev, TCP_POLL);
-                      netdev_iob_replace(dev, iob);
-                      dev->d_buf = buf;
-                      dev->d_appdata = appdata;
-                      dev->d_len = len;
-#  ifdef CONFIG_NET_TCPURGDATA
-                      dev->d_urgdata = urgdata;
-                      dev->d_urglen = urglen;
-#  endif
-                      return flags;
-                    }
 #endif
 
 #ifdef CONFIG_NET_TCP_SELECTIVE_ACK

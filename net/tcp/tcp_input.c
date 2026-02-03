@@ -215,6 +215,8 @@ static bool tcp_snd_wnd_update(FAR struct tcp_conn_s *conn,
 
   DEBUGASSERT((tcp->flags & TCP_ACK) != 0);
 
+  conn->snd_prev_wnd = conn->snd_wnd;
+
   if (TCP_SEQ_LT(wl2, ackseq))
     {
       uint32_t nacked = TCP_SEQ_SUB(ackseq, wl2);
@@ -1182,6 +1184,11 @@ found:
     }
 #endif
 
+  if (dev->d_len > 0)
+    {
+      flags |= TCP_NEWDATA;
+    }
+
   /* Check if the incoming segment acknowledges any outstanding data. If so,
    * we update the sequence number, reset the length of the outstanding
    * data, calculate RTT estimations, and reset the retransmission timer.
@@ -1422,17 +1429,18 @@ skip_rtt:
   if ((tcp->flags & TCP_ACK) != 0 &&
       (conn->tcpstateflags & TCP_STATE_MASK) != TCP_SYN_RCVD)
     {
-#ifdef CONFIG_NET_TCP_CC_NEWRENO
-      /* If the packet is ack, update the cc var. */
-
-      tcp_cc_recv_ack(conn, tcp);
-#endif
       if (tcp_snd_wnd_update(conn, tcp))
         {
           /* Window updated, set the acknowledged flag. */
 
           flags |= TCP_ACKDATA;
         }
+
+#ifdef CONFIG_NET_TCP_CC_NEWRENO
+      /* If the packet is ack, update the cc var. */
+
+      tcp_cc_recv_ack(conn, tcp, flags);
+#endif
     }
 
   /* Do different things depending on in what state the connection is. */
@@ -1499,11 +1507,6 @@ skip_rtt:
 #endif
             flags               = TCP_CONNECTED;
             ninfo("TCP state: TCP_ESTABLISHED\n");
-
-            if (dev->d_len > 0)
-              {
-                flags          |= TCP_NEWDATA;
-              }
 
             dev->d_sndlen       = 0;
             result              = tcp_callback(dev, conn, flags);
@@ -1637,10 +1640,6 @@ skip_rtt:
              */
 
             flags |= TCP_RXCLOSE;
-            if (dev->d_len > 0)
-              {
-                flags |= TCP_NEWDATA;
-              }
 
             result = tcp_callback(dev, conn, flags);
 
@@ -1681,6 +1680,11 @@ skip_rtt:
             dev->d_len     -= dev->d_urglen;
             dev->d_urgdata  = dev->d_appdata;
             dev->d_appdata += dev->d_urglen;
+
+            if (dev->d_len == 0)
+              {
+                flags = flags & ~TCP_NEWDATA;
+              }
           }
         else
           {
@@ -1708,15 +1712,6 @@ skip_rtt:
             conn->keepretries = 0;
           }
 #endif
-
-        /* If d_len > 0 we have TCP data in the packet, and we flag this
-         * by setting the TCP_NEWDATA flag.
-         */
-
-        if (dev->d_len > 0)
-          {
-            flags |= TCP_NEWDATA;
-          }
 
         /* If this packet constitutes an ACK for outstanding data (flagged
          * by the TCP_ACKDATA flag), we should call the application since it

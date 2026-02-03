@@ -257,11 +257,15 @@ struct tcp_conn_s
 #ifdef CONFIG_NET_TCP_WINDOW_SCALE
   uint32_t snd_wnd;       /* Sequence and acknowledgement numbers of last
                            * window update */
+  uint32_t snd_prev_wnd;  /* Sequence and acknowledgement numbers of prev
+                           * window update */
   uint8_t  snd_scale;     /* Sender window scale factor */
   uint8_t  rcv_scale;     /* Receiver windows scale factor */
 #else
   uint16_t snd_wnd;       /* Sequence and acknowledgement numbers of last
                            * window update */
+  uint16_t snd_prev_wnd;  /* Sequence and acknowledgement numbers of prev
+                           * window  update */
 #endif
   uint32_t snd_wl1;
   uint32_t snd_wl2;
@@ -2346,6 +2350,7 @@ void tcp_cc_update(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp);
  * Input Parameters:
  *   conn   - The TCP connection of interest
  *   tcp    - The TCP header.
+ *   flags  - The TCP events flags.
  *
  * Returned Value:
  *   None
@@ -2355,7 +2360,8 @@ void tcp_cc_update(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp);
  *
  ****************************************************************************/
 
-void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp);
+void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp,
+                     uint32_t flags);
 #endif
 
 #ifdef __cplusplus

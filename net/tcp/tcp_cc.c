@@ -177,6 +177,7 @@ void tcp_cc_update(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp)
  * Input Parameters:
  *   conn   - The TCP connection of interest
  *   tcp    - The TCP header.
+ *   flags  - The TCP events flags.
  *
  * Returned Value:
  *   None
@@ -186,14 +187,14 @@ void tcp_cc_update(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp)
  *
  ****************************************************************************/
 
-void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp)
+void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp,
+                     uint32_t flags)
 {
   uint32_t ackno = tcp_getsequence(tcp->ackno);
 
   /* Its only a duplicate ack if:
    * 1) It doesn't ACK new data
-   * 2) There is outstanding unacknowledged data (retransmission
-   *    timer running)
+   * 2) There is outstanding unacknowledged data
    * 3) The ACK is == biggest ACK sequence number so far (last_ackno)
    *
    * If it passes all conditions, should process as a dupack:
@@ -208,10 +209,22 @@ void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp)
 
   if (TCP_SEQ_LTE(ackno, conn->last_ackno))
     {
-      /* Clause 2 and Clause 3 */
+      /* Fast Retransmit (RFC 5681): an acknowledgment is considered
+       * a "duplicate" when (a) the receiver of the ACK has
+       * outstanding data, (b) the incoming acknowledgment carries
+       * no data, (c) the SYN and FIN bits are both off, (d) the
+       * acknowledgment number is equal to the greatest
+       * acknowledgment received on the given connection and
+       * (e) the advertised window in the incoming acknowledgment
+       * equals the advertised window in the last incoming
+       * acknowledgment.
+       */
 
-      if (conn->timer >= 0 &&
-          conn->last_ackno == ackno)
+      if (conn->tx_unacked > 0 &&
+          (flags & TCP_NEWDATA) == 0 &&
+          (tcp->flags & (TCP_SYN | TCP_FIN)) == 0 &&
+          conn->last_ackno == ackno &&
+          conn->snd_wnd == conn->snd_prev_wnd)
         {
           if (++conn->dupacks > TCP_FAST_RETRANSMISSION_THRESH)
             {
