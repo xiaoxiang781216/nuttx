@@ -101,24 +101,32 @@ uintptr_t g_idle_topstack = (uintptr_t)_ebss +
 int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 {
   uintptr_t stack_alloc;
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
+  size_t shadow_size = (stack_size >> 7) * CONFIG_ARCH_STACK_SPLIT_RATIO;
+#endif
 
   DEBUGASSERT(cpu > 0 && cpu < CONFIG_SMP_NCPUS && tcb != NULL &&
-              stack_size <= SMP_IDLE_STACK_SIZE);
+              stack_size <= SMP_STACK_SIZE);
 
   /* Get the top of the stack */
 
   stack_alloc = (uintptr_t)g_cpux_idlestack(cpu);
   DEBUGASSERT(stack_alloc != 0 && STACK_ISALIGNED(stack_alloc));
 
-  tcb->adj_stack_size  = SMP_IDLE_STACK_SIZE;
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
+  shadow_size = STACKFRAME_ALIGN_DOWN(shadow_size);
+  stack_size -= shadow_size;
+#endif
+
+  tcb->adj_stack_size  = stack_size;
   tcb->stack_alloc_ptr = (void *)stack_alloc;
   tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
 
 #ifdef CONFIG_ARCH_HW_SHADOW_STACK
   /* Setup shadow stack for idle task */
 
-  tcb->shadow_base_ptr = g_cpux_idleshadowstack(cpu);
-  tcb->shadow_top_ptr = tcb->shadow_base_ptr + SMP_SHADOW_STACK_SIZE;
+  tcb->shadow_base_ptr = (uintptr_t)tcb->stack_base_ptr + stack_size;
+  tcb->shadow_top_ptr = tcb->shadow_base_ptr + shadow_size;
 #endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
   return OK;

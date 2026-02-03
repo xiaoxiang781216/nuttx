@@ -45,22 +45,15 @@
 #define _START_TBSS  _stbss
 #define _END_TBSS    _etbss
 
-#ifdef CONFIG_ARCH_HW_SHADOW_STACK
-#  define SMP_SHADOW_STACK_SIZE (CONFIG_IDLETHREAD_STACKSIZE / 2)
-#else
-#  define SMP_SHADOW_STACK_SIZE (0)
-#endif
-
 #define SMP_STACK_MASK (15)
 
 /**
  * SMP_STACK_SIZE: Total per-CPU idle stack size (aligned to 16 bytes),
- * including both the normal stack (CONFIG_IDLETHREAD_STACKSIZE) and the
- * shadow stack (SMP_SHADOW_STACK_SIZE, if enabled).
+ * including both the normal and shadow stacks.
  */
 
 #define SMP_STACK_SIZE \
-   ((CONFIG_IDLETHREAD_STACKSIZE + SMP_SHADOW_STACK_SIZE) & ~SMP_STACK_MASK)
+   ((CONFIG_IDLETHREAD_STACKSIZE + SMP_STACK_MASK) & ~SMP_STACK_MASK)
 
 /****************************************************************************
  * Public Types
@@ -81,25 +74,25 @@ extern "C"
  *
  * Low Address
  * +-------------------------+
- * | CPU0 Normal Stack       | CONFIG_IDLETHREAD_STACKSIZE bytes
+ * | CPU0 Normal Stack       | CONFIG_IDLETHREAD_STACKSIZE - SHADOW_SIZE
  * +-------------------------+
- * | CPU0 Shadow Stack       | SMP_SHADOW_STACK_SIZE bytes (if enabled)
+ * | CPU0 Shadow Stack       | SHADOW_SIZE bytes (if enabled)
  * +-------------------------+
- * | CPU1 Normal Stack       | CONFIG_IDLETHREAD_STACKSIZE bytes
+ * | CPU1 Normal Stack       | CONFIG_IDLETHREAD_STACKSIZE - SHADOW_SIZE
  * +-------------------------+
- * | CPU1 Shadow Stack       | SMP_SHADOW_STACK_SIZE bytes (if enabled)
+ * | CPU1 Shadow Stack       | SHADOW_SIZE bytes (if enabled)
  * +-------------------------+
  * | ...                     |
  * +-------------------------+
- * | CPUn Normal Stack       | CONFIG_IDLETHREAD_STACKSIZE bytes
+ * | CPUn Normal Stack       | CONFIG_IDLETHREAD_STACKSIZE - SHADOW_SIZE
  * +-------------------------+
- * | CPUn Shadow Stack       | SMP_SHADOW_STACK_SIZE bytes (if enabled)
+ * | CPUn Shadow Stack       | SHADOW_SIZE bytes (if enabled)
  * +-------------------------+ <- g_idle_topstack
  * High Address
  *
  * Each CPU gets SMP_STACK_SIZE bytes total (aligned to 16-byte boundary):
- * - CONFIG_IDLETHREAD_STACKSIZE bytes for normal stack
- * - SMP_SHADOW_STACK_SIZE bytes for shadow stack
+ * - CONFIG_IDLETHREAD_STACKSIZE - SHADOW_SIZE bytes for normal stack
+ * - SHADOW_SIZE bytes for shadow stack
  *     (if CONFIG_ARCH_HW_SHADOW_STACK enabled)
  */
 
@@ -109,13 +102,6 @@ EXTERN uintptr_t g_idle_topstack;
 
 #define g_cpux_idlestack(cpuid) \
    (g_idle_topstack - SMP_STACK_SIZE * (CONFIG_SMP_NCPUS - (cpuid)))
-
-/* Address of per-cpu idle shadow stack base */
-
-#define SMP_IDLE_STACK_SIZE (SMP_STACK_SIZE - SMP_SHADOW_STACK_SIZE)
-
-#define g_cpux_idleshadowstack(cpuid) \
-   (g_cpux_idlestack(cpuid) + SMP_IDLE_STACK_SIZE)
 
 /* Address of the saved user stack pointer */
 

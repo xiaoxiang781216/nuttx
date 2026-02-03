@@ -70,6 +70,10 @@ void up_initial_state(struct tcb_s *tcb)
 #ifdef CONFIG_ARCH_KERNEL_STACK
   uintptr_t *kstack = xcp->kstack;
 #endif
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
+  size_t shadow_size = STACKFRAME_ALIGN_DOWN((SMP_STACK_SIZE >> 7) *
+                         CONFIG_ARCH_STACK_SPLIT_RATIO);
+#endif
 
   /* Initialize the initial exception register context structure */
 
@@ -104,13 +108,16 @@ void up_initial_state(struct tcb_s *tcb)
     {
       tcb->stack_alloc_ptr = (void *)g_cpux_idlestack(this_cpu());
       tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
-      tcb->adj_stack_size  = SMP_IDLE_STACK_SIZE;
+      tcb->adj_stack_size  = SMP_STACK_SIZE;
 
 #ifdef CONFIG_ARCH_HW_SHADOW_STACK
       /* Setup shadow stack for idle task */
 
-      tcb->shadow_base_ptr = g_cpux_idleshadowstack(this_cpu());
-      tcb->shadow_top_ptr = tcb->shadow_base_ptr + SMP_SHADOW_STACK_SIZE;
+      tcb->adj_stack_size -= shadow_size;
+
+      tcb->shadow_base_ptr = (uintptr_t)tcb->stack_base_ptr +
+                             tcb->adj_stack_size;
+      tcb->shadow_top_ptr = tcb->shadow_base_ptr + shadow_size;
 #endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
 #ifdef CONFIG_STACK_COLORATION

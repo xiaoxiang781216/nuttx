@@ -41,73 +41,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: create_shadow_stack
- *
- * Description:
- *   Allocate a shadow stack for a new thread and setup shadow stack-related
- *   information in the TCB.
- *
- *   The following TCB fields must be initialized by this function:
- *
- *   - sstack_alloc_ptr: Pointer to allocated shadow stack
- *   - sstack_top_ptr: Adjusted shadow stack top pointer after alignment
- *
- * Input Parameters:
- *   - tcb: The TCB of new task
- *   - stack_size: The requested shadow stack size. At least this much
- *     must be allocated.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_HW_SHADOW_STACK
-static int create_shadow_stack(struct tcb_s *tcb, size_t stack_size)
-{
-  /* Allocate shadow stack for all thread types */
-
-  tcb->shadow_base_ptr = (uintptr_t)kmm_malloc(stack_size);
-
-#ifdef CONFIG_DEBUG_FEATURES
-  /* Was the allocation successful? */
-
-  if (!tcb->shadow_base_ptr)
-    {
-      serr("ERROR: Failed to allocate shadow stack, size %zu\n", stack_size);
-    }
-#endif /* CONFIG_DEBUG_FEATURES */
-
-  /* Did we successfully allocate a shadow stack? */
-
-  if (tcb->shadow_base_ptr)
-    {
-      uintreg_t top_of_sstack;
-
-      /* RISC-V uses a push-down stack: the stack grows toward lower
-       * addresses in memory. The stack pointer register points to the
-       * lowest, valid working address (the "top" of the stack). Items on
-       * the stack are referenced as positive word offsets from SP.
-       */
-
-      top_of_sstack = tcb->shadow_base_ptr + stack_size;
-
-      /* The RISC-V shadow stack must be aligned at 16-byte boundaries.
-       * If necessary top_of_sstack must be rounded down to the
-       * next boundary.
-       */
-
-      top_of_sstack = STACKFRAME_ALIGN_DOWN(top_of_sstack);
-
-      /* Save the adjusted shadow stack values in the struct tcb_s */
-
-      tcb->shadow_top_ptr = top_of_sstack;
-
-      return OK;
-    }
-
-  return ERROR;
-}
-#endif /* CONFIG_ARCH_HW_SHADOW_STACK */
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -144,6 +77,9 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
 {
   uintptr_t top_of_stack;
   size_t size_of_stack;
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
+  size_t size_of_shadow;
+#endif
 
 #ifdef CONFIG_TLS_ALIGNED
   /* The allocated stack size must not exceed the maximum possible for the
@@ -183,6 +119,11 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
 
   tcb->stack_alloc_ptr = stack;
 
+#ifdef CONFIG_ARCH_HW_SHADOW_STACK
+  size_of_shadow = (stack_size >> 7) * CONFIG_ARCH_STACK_SPLIT_RATIO;
+  stack_size -= size_of_shadow;
+#endif
+
   /* RISC-V uses a push-down stack: the stack grows toward lower addresses in
    * memory. The stack pointer register, points to the lowest, valid work
    * address (the "top" of the stack). Items on the stack are referenced
@@ -213,16 +154,9 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
 #endif
 
 #ifdef CONFIG_ARCH_HW_SHADOW_STACK
-  /* Create shadow stack for this thread.
-   * Shadow stack only needs to store link registers, so use half
-   * the size of the main stack.
-   */
-
-  if (create_shadow_stack(tcb, stack_size / 2) != OK)
-    {
-      serr("ERROR: Failed to create shadow stack\n");
-      return ERROR;
-    }
+  tcb->shadow_base_ptr = top_of_stack;
+  tcb->shadow_top_ptr  = top_of_stack;
+  tcb->shadow_top_ptr += STACKFRAME_ALIGN_DOWN(size_of_shadow);
 #endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
   return OK;
