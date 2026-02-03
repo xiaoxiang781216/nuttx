@@ -42,6 +42,7 @@
 
 #include <nuttx/bits.h>
 #include <nuttx/crc8.h>
+#include <nuttx/crc16.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/mtd/configdata.h>
@@ -417,6 +418,48 @@ static inline uint32_t nvs_special_ate_id(FAR struct nvs_fs *fs)
 }
 
 /****************************************************************************
+ * Name: nvs_check
+ ****************************************************************************/
+
+#ifdef CONFIG_MTD_CONFIG_DEBUG
+static void nvs_check(FAR struct nvs_fs *fs, off_t offset,
+                      FAR const void *buffer, size_t len)
+{
+  uint16_t crc16_check;
+  uint16_t crc16_ori;
+  int rc;
+
+  crc16_ori = crc16(buffer, len);
+
+#ifdef CONFIG_MTD_BYTE_WRITE
+  rc = MTD_READ(fs->mtd, offset, len, (FAR void *)buffer);
+#else
+  rc = MTD_BREAD(fs->mtd, offset / fs->progsize, len / fs->progsize,
+                 (FAR void *)buffer);
+#endif
+
+  if (rc < 0)
+    {
+      ferr("[%s] read failed, rc=%d, offset=0x%" PRIx64 ", len=%zu!\n",
+           __func__, rc, offset, len);
+      lib_dumpbuffer("buffer:", buffer, len);
+      DEBUGASSERT(0);
+    }
+  else
+    {
+      crc16_check = crc16(buffer, len);
+      if (crc16_ori != crc16_check)
+        {
+          ferr("CRC16 check failed, offset=0x%" PRIx64 ", len=%zu\n", offset,
+               len);
+          lib_dumpbuffer("check:", buffer, len);
+          DEBUGASSERT(0);
+        }
+    }
+}
+#endif
+
+/****************************************************************************
  * Name: nvs_flash_wrt
  *
  * Description:
@@ -439,6 +482,9 @@ static int nvs_flash_wrt(FAR struct nvs_fs *fs, uint64_t addr,
   rc = MTD_BWRITE(fs->mtd, offset / fs->progsize, len / fs->progsize, data);
 #endif
 
+#ifdef CONFIG_MTD_CONFIG_DEBUG
+  nvs_check(fs, offset, data, len);
+#endif
   return rc < 0 ? rc : 0;
 }
 
@@ -479,6 +525,9 @@ static int nvs_flash_brd(FAR struct nvs_fs *fs, off_t offset,
         }
     }
 
+#ifdef CONFIG_MTD_CONFIG_DEBUG
+  nvs_check(fs, offset, data, len);
+#endif
   return rc < 0 ? rc : 0;
 }
 

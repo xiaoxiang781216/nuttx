@@ -263,6 +263,12 @@ config MTD_CONFIG_BUFFER_SIZE
 		Define a fixed size buffer on the stack instead of using a
 		variable length array.
 
+config MTD_CONFIG_DEBUG
+	bool "MTD CONFIG read/write double check"
+	depends on DEBUG_FS_ERROR
+	---help---
+		Enable MTD CONFIG read/write double check.
+
 endif
 
 config MTDLOG
