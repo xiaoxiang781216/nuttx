@@ -171,6 +171,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
     }
 
   heapend  = MM_ALIGN_DOWN((uintptr_t)heapbase + (uintptr_t)heapsize);
+  heap->mm_regionsize[idx] = heapsize;
   heapsize = heapend - heapbase;
 
 #if defined(CONFIG_FS_PROCFS) && \
@@ -416,7 +417,8 @@ void mm_uninitialize(FAR struct mm_heap_s *heap)
     {
       if (!heap->mm_nokasan)
         {
-          kasan_unregister(heap->mm_heapstart[i]);
+          kasan_unregister(heap->mm_heapstart[i],
+                           heap->mm_regionsize[i]);
         }
 
       sched_note_heap(NOTE_HEAP_REMOVE, heap, heap->mm_heapstart[i],

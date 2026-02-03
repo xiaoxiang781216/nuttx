@@ -1741,7 +1741,9 @@ void mm_uninitialize(FAR struct mm_heap_s *heap)
     {
       if (!heap->mm_nokasan)
         {
-          kasan_unregister(heap->mm_heapstart[i]);
+          kasan_unregister(heap->mm_heapstart[i],
+                           (uintptr_t)heap->mm_heapend[i] -
+                           (uintptr_t)heap->mm_heapstart[i]);
         }
 
       sched_note_heap(NOTE_HEAP_REMOVE, heap, heap->mm_heapstart[i],

@@ -40,7 +40,7 @@
 #  define kasan_poison(addr, size)
 #  define kasan_unpoison(addr, size) addr
 #  define kasan_register(addr, size)
-#  define kasan_unregister(addr)
+#  define kasan_unregister(addr, size)
 #  define kasan_get_tag(addr) 0
 #  define kasan_set_tag(addr, tag) addr
 #  define kasan_clear_tag(addr) addr
@@ -127,13 +127,14 @@ void kasan_register(FAR void *addr, FAR size_t *size);
  *
  * Input Parameters:
  *   addr - range start address
+ *   size - range size
  *
  * Returned Value:
  *   None.
  *
  ****************************************************************************/
 
-void kasan_unregister(FAR void *addr);
+void kasan_unregister(FAR void *addr, size_t size);
 
 /****************************************************************************
  * Name: kasan_set_tag

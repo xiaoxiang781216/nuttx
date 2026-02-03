@@ -69,6 +69,6 @@ void kasan_register(FAR void *addr, FAR size_t *size)
   kasan_poison(addr, *size);
 }
 
-void kasan_unregister(FAR void *addr)
+void kasan_unregister(FAR void *addr, size_t size)
 {
 }

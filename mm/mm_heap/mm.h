@@ -264,6 +264,7 @@ struct mm_heap_s
 
   FAR struct mm_allocnode_s *mm_heapstart[CONFIG_MM_REGIONS];
   FAR struct mm_allocnode_s *mm_heapend[CONFIG_MM_REGIONS];
+  size_t mm_regionsize[CONFIG_MM_REGIONS];
 
 #if CONFIG_MM_REGIONS > 1
   int mm_nregions;
