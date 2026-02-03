@@ -338,11 +338,13 @@ int virtio_crypto_get_service(int alg)
       case CRYPTO_SHA2_256_HMAC:
       case CRYPTO_SHA2_384_HMAC:
       case CRYPTO_SHA2_512_HMAC:
-      case CRYPTO_AES_128_GMAC:
       case CRYPTO_AES_CMAC:
       case CRYPTO_AES_128_CMAC:
         return VIRTIO_CRYPTO_SERVICE_MAC;
       case CRYPTO_AES_GCM_16:
+      case CRYPTO_AES_128_GMAC:
+      case CRYPTO_AES_192_GMAC:
+      case CRYPTO_AES_256_GMAC:
       case CRYPTO_CHACHA20_POLY1305:
       case CRYPTO_CHACHA20_POLY1305_MAC:
         return VIRTIO_CRYPTO_SERVICE_AEAD;
@@ -410,6 +412,8 @@ int virtio_crypto_get_alg(int alg)
       case CRYPTO_SHA2_512:
         return VIRTIO_CRYPTO_HASH_SHA_512;
       case CRYPTO_AES_128_GMAC:
+      case CRYPTO_AES_192_GMAC:
+      case CRYPTO_AES_256_GMAC:
         return VIRTIO_CRYPTO_MAC_GMAC_AES;
       case CRYPTO_AES_CMAC:
       case CRYPTO_AES_128_CMAC:
@@ -481,6 +485,20 @@ int virtio_crypto_get_mac_alg(int alg)
       return CRYPTO_SHA2_512_HMAC;
     case VIRTIO_CRYPTO_MAC_CMAC_AES:
       return CRYPTO_AES_128_CMAC;
+  }
+
+  return -EINVAL;
+}
+
+static inline_function
+int virtio_crypto_get_aead_alg(int alg)
+{
+  switch (alg)
+  {
+    case VIRTIO_CRYPTO_AEAD_GCM:
+      return CRYPTO_AES_GCM_16;
+    case VIRTIO_CRYPTO_AEAD_CHACHA20_POLY1305:
+      return CRYPTO_CHACHA20_POLY1305;
   }
 
   return -EINVAL;

@@ -177,12 +177,39 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
 
       keylen = msg->ctrl.op_flf.mac.auth_key_len;
     }
+  else if (msg->ctrl.header.opcode == VIRTIO_CRYPTO_AEAD_CREATE_SESSION)
+    {
+      txform = virtio_crypto_get_aead_alg(msg->ctrl.header.algo);
+      if (txform < 0)
+        {
+          msg->header.result = txform;
+          kmm_free(rcsdata);
+          goto out;
+        }
+      else if (txform == CRYPTO_AES_GCM_16)
+        {
+          keylen = msg->ctrl.op_flf.aead.key_len;
+          if (keylen == 16)
+            {
+              thash = CRYPTO_AES_128_GMAC;
+            }
+          else if (keylen == 24)
+            {
+              thash = CRYPTO_AES_192_GMAC;
+            }
+          else if (keylen == 32)
+            {
+              thash = CRYPTO_AES_256_GMAC;
+            }
+        }
+    }
 
   if (txform)
     {
       crie.cri_alg = txform;
       crie.cri_klen = keylen * 8;
       crie.cri_key = msg->buf;
+      rcsdata->crde.crd_alg = txform;
       if (msg->ctrl.header.flag & VIRTIO_CRYPTO_KEYID)
         {
           crie.cri_flags |= CRD_F_KEYID;
@@ -200,6 +227,7 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
       cria.cri_sid = -1;
       cria.cri_klen = keylen * 8;
       cria.cri_key = msg->buf;
+      rcsdata->crda.crd_alg = thash;
       if (msg->ctrl.header.flag & VIRTIO_CRYPTO_KEYID)
         {
           cria.cri_flags |= CRD_F_KEYID;
@@ -402,6 +430,229 @@ rpmsg_crypto_process_mac(FAR struct rpmsg_endpoint *ept,
   crde->crd_len = crp->crp_ilen;
   crp->crp_buf = msg->buf;
   return crypto_invoke(crp);
+}
+
+static int rpmsg_crypto_process_aead_update_aad(
+                FAR struct rpmsg_endpoint *ept,
+                FAR struct rpmsg_crypto_server_data_s *rcsdata,
+                FAR struct rpmsg_crypto_process_s *msg)
+{
+  FAR struct cryptodesc *crda = &rcsdata->crda;
+  FAR struct cryptodesc *crde = &rcsdata->crde;
+  FAR struct cryptop *crp = &rcsdata->crp;
+  FAR char *buf = msg->buf;
+  uint32_t ivlen = msg->data.op_flf.aead.iv_len;
+  uint32_t aadlen = msg->data.op_flf.aead.aad_len;
+
+  /* Set encrypt/decrypt flag and stage flag */
+
+  if (msg->data.header.opcode == VIRTIO_CRYPTO_AEAD_ENCRYPT)
+    {
+      crda->crd_flags = CRD_F_ENCRYPT;
+      crde->crd_flags = CRD_F_ENCRYPT;
+    }
+  else
+    {
+      crda->crd_flags = 0;
+      crde->crd_flags = 0;
+    }
+
+  /* UPDATE_AAD - process IV + AAD only */
+
+  crp->crp_iv = NULL;
+  crp->crp_ivlen = ivlen;
+  if (ivlen > 0)
+    {
+      crp->crp_iv = buf;
+      buf += ivlen;
+    }
+
+  crp->crp_aadlen = aadlen;
+  crp->crp_aad = buf;
+  crp->crp_ilen = 0;
+  crp->crp_buf = NULL;
+  crp->crp_dst = NULL;
+  crp->crp_mac = NULL;
+  crda->crd_len = 0;
+  crda->crd_flags |= CRD_F_UPDATE_AAD;
+  msg->header.result = crypto_invoke(crp);
+  if (msg->header.result == 0)
+    {
+      msg->header.result = crp->crp_etype;
+    }
+
+  return 0;
+}
+
+static int rpmsg_crypto_process_aead_update(
+                FAR struct rpmsg_endpoint *ept,
+                FAR struct rpmsg_crypto_server_data_s *rcsdata,
+                FAR struct rpmsg_crypto_process_s *msg)
+{
+  FAR struct cryptodesc *crda = &rcsdata->crda;
+  FAR struct cryptodesc *crde = &rcsdata->crde;
+  FAR struct cryptop *crp = &rcsdata->crp;
+  FAR struct rpmsg_crypto_process_s *rsp;
+  uint32_t datalen = msg->data.op_flf.aead.src_data_len;
+  uint32_t space;
+  FAR char *buf = msg->buf;
+
+  /* Get tx payload buffer for response */
+
+  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  if (rsp == NULL)
+    {
+      rpmsgerr("get tx payload failed or no enough space\n");
+      return -ENOMEM;
+    }
+
+  /* Set encrypt/decrypt flag and stage flag */
+
+  if (msg->data.header.opcode == VIRTIO_CRYPTO_AEAD_ENCRYPT)
+    {
+      crda->crd_flags = CRD_F_ENCRYPT;
+      crde->crd_flags = CRD_F_ENCRYPT;
+    }
+  else
+    {
+      crda->crd_flags = 0;
+      crde->crd_flags = 0;
+    }
+
+  /* UPDATE - process data only */
+
+  crp->crp_iv = NULL;
+  crp->crp_aadlen = 0;
+  crp->crp_aad = NULL;
+  crp->crp_ilen = datalen;
+  crda->crd_len = datalen;
+  crde->crd_len = datalen;
+  crp->crp_buf = buf;
+  crp->crp_olen = datalen;
+  crp->crp_dst = rsp->buf;
+  crp->crp_mac = NULL;
+  crda->crd_flags |= CRD_F_UPDATE;
+  crde->crd_flags |= CRD_F_UPDATE;
+
+  rsp->header = msg->header;
+  rsp->data = msg->data;
+  rsp->header.result = crypto_invoke(crp);
+  if (rsp->header.result == 0)
+    {
+      rsp->header.result = crp->crp_etype;
+    }
+
+  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + crp->crp_olen);
+}
+
+static int
+rpmsg_crypto_process_aead_final(
+                FAR struct rpmsg_endpoint *ept,
+                FAR struct rpmsg_crypto_server_data_s *rcsdata,
+                FAR struct rpmsg_crypto_process_s *msg)
+{
+  FAR struct cryptodesc *crda =
+        (FAR struct cryptodesc *)rcsdata->crp.crp_desc;
+  FAR struct cryptodesc *crde = &rcsdata->crde;
+  FAR struct cryptop *crp = &rcsdata->crp;
+  FAR struct rpmsg_crypto_process_s *rsp;
+  uint32_t taglen = msg->data.op_flf.aead.tag_len;
+  uint32_t space;
+
+  /* Set encrypt/decrypt flag */
+
+  if (msg->data.header.opcode == VIRTIO_CRYPTO_AEAD_ENCRYPT)
+    {
+      crda->crd_flags = CRD_F_ENCRYPT;
+      crde->crd_flags = CRD_F_ENCRYPT;
+    }
+  else
+    {
+      crda->crd_flags = 0;
+      crde->crd_flags = 0;
+    }
+
+  /* FINAL - get tag result */
+
+  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  if (rsp == NULL)
+    {
+      rpmsgerr("get tx payload failed\n");
+      return -ENOMEM;
+    }
+
+  rsp->header = msg->header;
+  rsp->data = msg->data;
+
+  /* No IV and AAD in final stage */
+
+  crp->crp_ivlen = 0;
+  crp->crp_iv = NULL;
+  crp->crp_aadlen = 0;
+  crp->crp_aad = NULL;
+
+  /* no data input/output, only tag */
+
+  crp->crp_ilen = 0;
+  crda->crd_len = 0;
+  crde->crd_len = 0;
+  crp->crp_buf = NULL;
+  crp->crp_olen = 0;
+  crp->crp_dst = NULL;
+  crp->crp_mac = rsp->buf;
+  rsp->header.result = crypto_invoke(crp);
+  if (rsp->header.result == 0)
+    {
+      rsp->header.result = crp->crp_etype;
+    }
+
+  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + taglen);
+}
+
+static int
+rpmsg_crypto_process_aead(FAR struct rpmsg_endpoint *ept,
+                          FAR struct rpmsg_crypto_process_s *msg,
+                          int msglen)
+{
+  FAR struct rpmsg_crypto_server_data_s *rcsdata;
+  FAR struct cryptodesc *crda;
+  FAR struct cryptodesc *crde;
+  uint32_t flags;
+
+  if (msg == NULL)
+    {
+      rpmsgerr("rpmsg_crypto_process_aead: msg is NULL\n");
+      return -EINVAL;
+    }
+
+  rcsdata =
+    (FAR struct rpmsg_crypto_server_data_s *)(uintptr_t)msg->header.tid;
+  if (rcsdata == NULL)
+    {
+      rpmsgerr("rpmsg_crypto_process_aead: invalid tid\n");
+      return -EINVAL;
+    }
+
+  crda = &rcsdata->crda;
+  crde = &rcsdata->crde;
+  flags = msg->data.header.flag;
+
+  rcsdata->crp.crp_sid = rcsdata->tid;
+  rcsdata->crp.crp_desc = crda;
+  crda->crd_next = crde;
+
+  if (flags & CRD_F_UPDATE_AAD)
+    {
+      return rpmsg_crypto_process_aead_update_aad(ept, rcsdata, msg);
+    }
+  else if (flags & CRD_F_UPDATE)
+    {
+      return rpmsg_crypto_process_aead_update(ept, rcsdata, msg);
+    }
+  else
+    {
+      return rpmsg_crypto_process_aead_final(ept, rcsdata, msg);
+    }
 }
 
 static void rpmsg_crypto_read_binary(FAR unsigned char **p,
@@ -887,6 +1138,11 @@ static int rpmsg_crypto_process_handler(FAR struct rpmsg_endpoint *ept,
   else if (msg->data.header.opcode == VIRTIO_CRYPTO_MAC)
     {
       ret = rpmsg_crypto_process_mac(ept, msg, len);
+    }
+  else if (msg->data.header.opcode == VIRTIO_CRYPTO_AEAD_ENCRYPT ||
+           msg->data.header.opcode == VIRTIO_CRYPTO_AEAD_DECRYPT)
+    {
+      ret = rpmsg_crypto_process_aead(ept, msg, len);
     }
 
   return ret;

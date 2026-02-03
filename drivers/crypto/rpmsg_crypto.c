@@ -307,10 +307,10 @@ rpmsg_crypto_fill_session_request(FAR struct cryptoini *cri,
         ctrl->op_flf.mac.auth_key_len = cri->cri_klen / 8;
         break;
       case VIRTIO_CRYPTO_SERVICE_AEAD:
-        ctrl->header.opcode = VIRTIO_CRYPTO_MAC_CREATE_SESSION;
+        ctrl->header.opcode = VIRTIO_CRYPTO_AEAD_CREATE_SESSION;
         ctrl->op_flf.aead.algo = algo;
         ctrl->op_flf.aead.key_len = cri->cri_klen / 8;
-        ctrl->op_flf.aead.tag_len = virtio_crypto_get_tag_len(algo);
+        ctrl->op_flf.aead.tag_len = virtio_crypto_get_tag_len(service);
         ctrl->op_flf.aead.op = cri->cri_op == COP_ENCRYPT ?
           VIRTIO_CRYPTO_OP_ENCRYPT : VIRTIO_CRYPTO_OP_DECRYPT;
         break;
@@ -389,6 +389,7 @@ static int rpmsg_crypto_fill_data_request(
   FAR struct virtio_crypto_op_data_req_s *data = &msg->data;
   FAR struct virtio_crypto_op_header_s *header = &data->header;
   FAR struct cryptodesc *crda = crp->crp_desc;
+  FAR struct cryptodesc *crde = crda->crd_next;
   int service = virtio_crypto_get_service(crda->crd_alg);
   int algo = virtio_crypto_get_alg(crda->crd_alg);
 
@@ -423,13 +424,10 @@ static int rpmsg_crypto_fill_data_request(
         data->op_flf.mac.hdr.src_data_len = crp->crp_ilen;
         break;
       case VIRTIO_CRYPTO_SERVICE_AEAD:
-        header->opcode = crda->crd_flags & CRD_F_ENCRYPT ?
-          VIRTIO_CRYPTO_AEAD_ENCRYPT : VIRTIO_CRYPTO_AEAD_DECRYPT;
+          header->opcode = crde->crd_flags & CRD_F_ENCRYPT ?
+            VIRTIO_CRYPTO_AEAD_ENCRYPT : VIRTIO_CRYPTO_AEAD_DECRYPT;
         data->op_flf.aead.iv_len = crp->crp_ivlen;
-        data->op_flf.aead.src_data_len = crp->crp_ilen;
-        data->op_flf.aead.dst_data_len = crp->crp_olen;
-        data->op_flf.aead.aad_len = crp->crp_aadlen;
-        data->op_flf.aead.tag_len = virtio_crypto_get_tag_len(algo);
+        data->op_flf.aead.tag_len = virtio_crypto_get_tag_len(service);
         break;
       default:
         return -ENOTSUP;
@@ -577,6 +575,207 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
   return session->result;
 }
 
+static int
+rpmsg_crypto_process_aead_update_aad(
+              FAR struct rpmsg_crypto_s *rdev,
+              FAR struct rpmsg_crypto_process_s *info,
+              FAR struct rpmsg_crypto_session_s *session,
+              FAR struct cryptop *crp)
+{
+  FAR struct rpmsg_crypto_process_s *msg;
+  uint32_t space = rpmsg_get_tx_buffer_size(&rdev->ept);
+  uint32_t flags = crp->crp_desc->crd_flags;
+  uint32_t remaining = crp->crp_aadlen;
+  uint32_t ivlen = crp->crp_ivlen;
+  uint32_t offset = 0;
+  uint32_t datalen;
+  uint32_t len;
+  FAR char *buf;
+  int ret;
+
+  session->data = NULL;
+
+  do
+    {
+      msg = rpmsg_crypto_get_process_msg(rdev, info);
+      if (msg == NULL)
+        {
+          return -ENOMEM;
+        }
+
+      buf = msg->buf;
+      len = sizeof(*msg);
+      msg->data.header.flag = flags;
+      msg->data.op_flf.aead.dst_data_len = crp->crp_olen;
+
+      /* First packet includes IV (ivlen > 0), then reset to 0 */
+
+      msg->data.op_flf.aead.iv_len = ivlen;
+      if (ivlen > 0)
+        {
+          memcpy(buf, crp->crp_iv, ivlen);
+          len += ivlen;
+          buf += ivlen;
+          ivlen = 0;
+        }
+
+      /* Copy AAD data */
+
+      datalen = MIN(space - len, remaining);
+      if (datalen > 0)
+        {
+          memcpy(buf, crp->crp_aad + offset, datalen);
+          len += datalen;
+          buf += datalen;
+          offset += datalen;
+          remaining -= datalen;
+        }
+
+      msg->data.op_flf.aead.aad_len = datalen;
+      msg->data.op_flf.aead.src_data_len = 0;
+
+      /* Send packet without waiting - AAD produces no output */
+
+      ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
+                                   RPMSG_CRYPTO_PROCESS,
+                                   len, false);
+      if (ret < 0)
+        {
+          rpmsgerr("Rpmsg Crypto AEAD update_aad failed, ret=%d\n", ret);
+          return ret;
+        }
+    }
+  while (remaining > 0);
+
+  return session->result;
+}
+
+static int
+rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
+                                 FAR struct rpmsg_crypto_process_s *info,
+                                 FAR struct rpmsg_crypto_session_s *session,
+                                 FAR struct cryptop *crp)
+{
+  FAR struct rpmsg_crypto_process_s *msg;
+  uint32_t space = rpmsg_get_tx_buffer_size(&rdev->ept);
+  uint32_t flags = crp->crp_desc->crd_flags;
+  uint32_t remaining = crp->crp_ilen;
+  uint32_t offset = 0;
+  uint32_t datalen;
+  uint32_t len;
+  FAR char *buf;
+  int ret;
+
+  /* Process data in packets if needed */
+
+  while (remaining > 0)
+    {
+      msg = rpmsg_crypto_get_process_msg(rdev, info);
+      if (msg == NULL)
+        {
+          return -ENOMEM;
+        }
+
+      buf = msg->buf;
+      len = sizeof(*msg);
+      msg->data.header.flag = flags;
+      msg->data.op_flf.aead.dst_data_len = crp->crp_olen;
+      msg->data.op_flf.aead.aad_len = 0;
+
+      /* Copy data */
+
+      datalen = MIN(space - len, remaining);
+      if (datalen > 0)
+        {
+          memcpy(buf, crp->crp_buf + offset, datalen);
+          len += datalen;
+          buf += datalen;
+          offset += datalen;
+          remaining -= datalen;
+        }
+
+      msg->data.op_flf.aead.src_data_len = datalen;
+
+      /* Update session data pointer for this packet's output */
+
+      session->data = crp->crp_dst + offset - datalen;
+
+      /* Send packet and wait for response to receive output data */
+
+      ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
+                                   RPMSG_CRYPTO_PROCESS,
+                                   len, true);
+      if (ret < 0)
+        {
+          rpmsgerr("Rpmsg Crypto AEAD update failed, ret=%d\n", ret);
+          return ret;
+        }
+    }
+
+  return session->result;
+}
+
+static int
+rpmsg_crypto_process_aead_final(FAR struct rpmsg_crypto_s *rdev,
+                                FAR struct rpmsg_crypto_process_s *info,
+                                FAR struct rpmsg_crypto_session_s *session,
+                                FAR struct cryptop *crp)
+{
+  FAR struct rpmsg_crypto_process_s *msg;
+  uint32_t flags = crp->crp_desc->crd_flags;
+  int ret;
+
+  msg = rpmsg_crypto_get_process_msg(rdev, info);
+  if (msg == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  /* Pass the flags to server for proper handling */
+
+  msg->data.header.flag = flags;
+  msg->data.op_flf.aead.dst_data_len = 0;
+  msg->data.op_flf.aead.iv_len = 0;
+  msg->data.op_flf.aead.aad_len = 0;
+  msg->data.op_flf.aead.src_data_len = 0;
+
+  /* Both encrypt and decrypt receive tag from server */
+
+  session->data = crp->crp_mac;
+  ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
+                               RPMSG_CRYPTO_PROCESS,
+                               sizeof(*msg), true);
+  if (ret < 0)
+    {
+      rpmsgerr("Rpmsg Crypto AEAD final failed, ret=%d\n", ret);
+      return ret;
+    }
+
+  return session->result;
+}
+
+static int
+rpmsg_crypto_process_aead(FAR struct rpmsg_crypto_s *rdev,
+                          FAR struct rpmsg_crypto_process_s *info,
+                          FAR struct rpmsg_crypto_session_s *session,
+                          FAR struct cryptop *crp)
+{
+  uint32_t flags = crp->crp_desc->crd_flags;
+
+  if (flags & CRD_F_UPDATE_AAD)
+    {
+      return rpmsg_crypto_process_aead_update_aad(rdev, info, session, crp);
+    }
+  else if (flags & CRD_F_UPDATE)
+    {
+      return rpmsg_crypto_process_aead_update(rdev, info, session, crp);
+    }
+  else
+    {
+      return rpmsg_crypto_process_aead_final(rdev, info, session, crp);
+    }
+}
+
 static int rpmsg_crypto_process(FAR struct cryptop *crp)
 {
   FAR struct rpmsg_crypto_s *rdev;
@@ -617,6 +816,11 @@ static int rpmsg_crypto_process(FAR struct cryptop *crp)
            info.data.header.opcode == VIRTIO_CRYPTO_MAC)
     {
       return rpmsg_crypto_process_hash_mac(rdev, &info, session, crp);
+    }
+  else if (info.data.header.opcode == VIRTIO_CRYPTO_AEAD_ENCRYPT ||
+           info.data.header.opcode == VIRTIO_CRYPTO_AEAD_DECRYPT)
+    {
+      return rpmsg_crypto_process_aead(rdev, &info, session, crp);
     }
 
   return -ENOTSUP;
