@@ -100,11 +100,6 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
   FAR struct ipv6_hdr_s *ip = IPv6BUF;
   struct neighbor_addr_s laddr;
 
-  if (eth->type != HTONS(ETHTYPE_IP6))
-    {
-      return;
-    }
-
   /* Find the destination IPv6 address in the Neighbor Table and construct
    * the Ethernet header. If the destination IPv6 address isn't on the local
    * network, we use the default router's IPv6 address instead.
