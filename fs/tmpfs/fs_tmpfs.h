@@ -38,10 +38,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Bit definitions for file object flags */
-
-#define TFO_FLAG_UNLINKED (1 << 0)  /* Bit 0: File is unlinked */
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -51,7 +47,9 @@
 enum tmpfs_objtype_e
 {
   TMPFS_DIRECTORY = 0,  /* Directory */
-  TMPFS_REGULAR         /* Regular file */
+  TMPFS_REGULAR,        /* Regular file */
+  TMPFS_HARDLINK,       /* Hard link */
+  TMPFS_SYMLINK         /* Symbolic link */
 };
 
 /* Values returned by tmpfs_foreach() */
@@ -140,9 +138,9 @@ struct tmpfs_file_s
 
   /* Remaining fields are unique to a directory object */
 
-  uint8_t       tfo_flags; /* See TFO_FLAG_* definitions */
+  uint8_t       tfo_nlink; /* Number of hard links to this file */
   size_t        tfo_size;  /* Valid file size */
-  FAR uint8_t  *tfo_data;  /* File data starts here */
+  FAR uint8_t  *tfo_data;  /* File data starts here, or target file for links */
 };
 
 /* This structure represents one instance of a TMPFS file system */

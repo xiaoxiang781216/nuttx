@@ -58,6 +58,13 @@
 #  warning CONFIG_FS_TMPFS_FILE_FREEGUARD needs to be > ALLOCGUARD
 #endif
 
+/* Flags for tmpfs_find_object/tmpfs_find_file */
+
+#define TMPFS_NOFOLLOW_HARDLINK  (1 << 0)  /* Do not follow hard links */
+#define TMPFS_NOFOLLOW_SYMLINK   (1 << 1)  /* Do not follow symbolic links */
+#define TMPFS_NOFOLLOW_ALL       (TMPFS_NOFOLLOW_HARDLINK | TMPFS_NOFOLLOW_SYMLINK)
+#define TMPFS_NOFOLLOW_NONE      (0)
+
 #define tmpfs_lock(fs) \
            nxrmutex_lock(&fs->tfs_lock)
 #define tmpfs_lock_object(to) \
@@ -116,11 +123,13 @@ static int  tmpfs_create_directory(FAR struct tmpfs_s *fs,
 static int  tmpfs_find_object(FAR struct tmpfs_s *fs,
               FAR const char *relpath, size_t len,
               FAR struct tmpfs_object_s **object,
-              FAR struct tmpfs_directory_s **parent);
+              FAR struct tmpfs_directory_s **parent,
+              uint8_t nofollow);
 static int  tmpfs_find_file(FAR struct tmpfs_s *fs,
               FAR const char *relpath,
               FAR struct tmpfs_file_s **tfo,
-              FAR struct tmpfs_directory_s **parent);
+              FAR struct tmpfs_directory_s **parent,
+              uint8_t nofollow);
 static int  tmpfs_find_directory(FAR struct tmpfs_s *fs,
               FAR const char *relpath, size_t len,
               FAR struct tmpfs_directory_s **tdo,
@@ -176,6 +185,16 @@ static void tmpfs_stat_common(FAR struct tmpfs_object_s *to,
               FAR struct stat *buf);
 static int  tmpfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
               FAR struct stat *buf);
+#ifdef CONFIG_FS_LINKS
+static int  tmpfs_link(FAR struct inode *mountpt,
+              FAR const char *oldrelpath, FAR const char *newrelpath);
+static int  tmpfs_symlink(FAR struct inode *mountpt,
+              FAR const char *target, FAR const char *linkpath);
+static ssize_t tmpfs_readlink(FAR struct inode *mountpt,
+              FAR const char *relpath, FAR char *buf, size_t bufsize);
+static int  tmpfs_lstat(FAR struct inode *mountpt, FAR const char *relpath,
+              FAR struct stat *buf);
+#endif
 
 /****************************************************************************
  * Public Data
@@ -216,7 +235,14 @@ const struct mountpt_operations g_tmpfs_operations =
   tmpfs_rmdir,      /* rmdir */
   tmpfs_rename,     /* rename */
   tmpfs_stat,       /* stat */
-  NULL              /* chstat */
+  NULL,             /* chstat */
+  NULL,             /* syncfs */
+#ifdef CONFIG_FS_LINKS
+  tmpfs_link,       /* link */
+  tmpfs_symlink,    /* symlink */
+  tmpfs_readlink,   /* readlink */
+  tmpfs_lstat,      /* lstat */
+#endif
 };
 
 /****************************************************************************
@@ -394,9 +420,9 @@ static void tmpfs_release_lockedobject(FAR struct tmpfs_object_s *to)
 {
   DEBUGASSERT(to && to->to_refs > 0);
 
-  /* Is this a file object? */
+  /* Is this a file object (regular, symlink, or hardlink)? */
 
-  if (to->to_type == TMPFS_REGULAR)
+  if (to->to_type != TMPFS_DIRECTORY)
     {
       tmpfs_release_lockedfile((FAR struct tmpfs_file_s *)to);
     }
@@ -419,11 +445,50 @@ static void tmpfs_release_lockedfile(FAR struct tmpfs_file_s *tfo)
    * unlinked from its parent directory, then free the file object now.
    */
 
-  if (tfo->tfo_refs == 1 && (tfo->tfo_flags & TFO_FLAG_UNLINKED) != 0)
+  if (tfo->tfo_refs == 1 && tfo->tfo_nlink == 0)
     {
+#ifdef CONFIG_FS_LINKS
+      if (tfo->tfo_type == TMPFS_HARDLINK)
+        {
+          /* Decrement the reference count on the target file */
+
+          FAR struct tmpfs_file_s *target =
+            (FAR struct tmpfs_file_s *)tfo->tfo_data;
+
+          DEBUGASSERT(target != NULL);
+
+          /* Get exclusive access to the target file */
+
+          tmpfs_lock_file(target);
+          target->tfo_nlink--;
+          if (target->tfo_refs == 0 && target->tfo_nlink == 0)
+            {
+              tmpfs_unlock_file(target);
+              nxrmutex_destroy(&target->tfo_lock);
+              fs_large_free(target->tfo_data);
+              fs_heap_free(target);
+            }
+          else
+            {
+              tmpfs_update_ctime((FAR struct tmpfs_object_s *)target);
+              tmpfs_unlock_file(target);
+            }
+        }
+#endif
+
       tmpfs_unlock_file(tfo);
       nxrmutex_destroy(&tfo->tfo_lock);
-      fs_large_free(tfo->tfo_data);
+
+      /* Free data based on file type
+       * We don't have to free tfo_data of hardlinks,
+       * since it's just a pointer to target
+       */
+
+      if (tfo->tfo_type == TMPFS_REGULAR || tfo->tfo_type == TMPFS_SYMLINK)
+        {
+          fs_large_free(tfo->tfo_data);
+        }
+
       fs_heap_free(tfo);
     }
 
@@ -620,7 +685,7 @@ tmpfs_alloc_file(FAR struct tmpfs_directory_s *parent)
   tfo->tfo_type   = TMPFS_REGULAR;
   tfo->tfo_refs   = 1;
   tfo->tfo_parent = parent;
-  tfo->tfo_flags  = 0;
+  tfo->tfo_nlink  = 1;
   tfo->tfo_size   = 0;
   tfo->tfo_data   = NULL;
 
@@ -909,26 +974,29 @@ errout_with_parent:
 }
 
 /****************************************************************************
- * Name: tmpfs_find_object
+ * Name: tmpfs_find_object_from
  ****************************************************************************/
 
-static int tmpfs_find_object(FAR struct tmpfs_s *fs,
-                             FAR const char *relpath, size_t len,
-                             FAR struct tmpfs_object_s **object,
-                             FAR struct tmpfs_directory_s **parent)
+static int tmpfs_find_object_from(FAR struct tmpfs_s *fs,
+                                  FAR struct tmpfs_directory_s *tdo,
+                                  FAR const char *relpath, size_t len,
+                                  FAR struct tmpfs_object_s **object,
+                                  FAR struct tmpfs_directory_s **parent,
+                                  uint8_t nofollow, int symlink_depth)
 {
-  FAR struct tmpfs_object_s *to = NULL;
-  FAR struct tmpfs_directory_s *tdo = NULL;
-  FAR struct tmpfs_directory_s *next_tdo;
+  FAR struct tmpfs_object_s *to;
   FAR const char *segment;
   FAR const char *next_segment;
+#ifdef CONFIG_FS_LINKS
+  FAR struct tmpfs_file_s *tfo;
+#endif
+  bool is_final;
   int index;
   int ret;
 
   /* Traverse the file system for any object with the matching name */
 
-  to       = fs->tfs_root.tde_object;
-  next_tdo = (FAR struct tmpfs_directory_s *)fs->tfs_root.tde_object;
+  to  = (FAR struct tmpfs_object_s *)tdo;
 
   for (segment = relpath; len != 0; segment = next_segment + 1)
     {
@@ -956,10 +1024,6 @@ static int tmpfs_find_object(FAR struct tmpfs_s *fs,
           len = 0;
         }
 
-      /* Search the next directory. */
-
-      tdo = next_tdo;
-
       /* Find the TMPFS object with the next segment name in the current
        * directory.
        */
@@ -973,34 +1037,102 @@ static int tmpfs_find_object(FAR struct tmpfs_s *fs,
         }
 
       to = tdo->tdo_entry[index].tde_object;
+      DEBUGASSERT(to != NULL);
 
-      /* Is this object another directory? */
+      /* Check if this is the final segment in the path */
 
-      if (to->to_type != TMPFS_DIRECTORY)
+      is_final = (len == 0 && *next_segment != '/');
+
+#ifdef CONFIG_FS_LINKS
+      /* First, resolve hardlinks
+       * For the final component, follow only if nofollow flag is not set.
+       */
+
+      if (to->to_type == TMPFS_HARDLINK &&
+          (!is_final || !(nofollow & TMPFS_NOFOLLOW_HARDLINK)))
         {
-          /* No.  Was this the final segment in the path? */
+          /* Follow hardlink to the target object */
 
-          if (len == 0 && *next_segment != '/')
+          tfo = (FAR struct tmpfs_file_s *)to;
+          to = (FAR struct tmpfs_object_s *)tfo->tfo_data;
+          DEBUGASSERT(to != NULL);
+
+          /* Note: The target could be a symlink, which will be handled
+           * in the next check.
+           */
+        }
+
+      /* Then, handle symlinks. For intermediate path components, always
+       * follow. For the final component, follow only if nofollow flag is
+       * not set.
+       */
+
+      if (to->to_type == TMPFS_SYMLINK &&
+          (!is_final || !(nofollow & TMPFS_NOFOLLOW_SYMLINK)))
+        {
+          FAR char *target;
+
+          /* Prevent infinite symlink loops */
+
+          if (++symlink_depth > SYMLOOP_MAX)
             {
-              /* Then we can break out of the loop now */
-
-               break;
+              return -ELOOP;
             }
 
-          /* No, this was not the final segment of the relpath.
-           * We cannot continue the search if any of the intermediate
-           * segments do no correspond to directories.
+          tfo = (FAR struct tmpfs_file_s *)to;
+          DEBUGASSERT(tfo->tfo_data != NULL);
+          target = (FAR char *)tfo->tfo_data;
+          if (target[0] == '/')
+            {
+              /* Only relative paths are supported */
+
+              return -ENOTSUP;
+            }
+
+          /* Relative path: search from symlink's parent directory */
+
+          ret = tmpfs_find_object_from(fs, tdo, target, strlen(target),
+                                       &to, NULL,
+                                       TMPFS_NOFOLLOW_NONE, symlink_depth);
+
+          if (ret < 0)
+            {
+              return ret;
+            }
+
+          /* Release the lock immediately since we just need the
+           * resolved object
            */
+
+          DEBUGASSERT(to != NULL);
+          tdo = to->to_parent;
+          tmpfs_release_lockedobject(to);
+        }
+#endif
+
+      /* Is this object a directory? */
+
+      if (to->to_type == TMPFS_DIRECTORY)
+        {
+          /* Yes, it's a directory. If there are more path segments,
+           * continue searching in this directory. When we exit the loop,
+           * tdo will refer to the parent directory of the final object.
+           */
+
+          if (!is_final)
+            {
+              tdo = (FAR struct tmpfs_directory_s *)to;
+            }
+        }
+
+      /* Not a directory. If this is not the final segment, error */
+
+      else if (!is_final)
+        {
+          /* Not the final segment, but this is a regular file */
 
           return -ENOTDIR;
         }
-
-      /* Search this directory for the next segment.  If we
-       * exit the loop, tdo will still refer to the parent
-       * directory of to.
-       */
-
-      next_tdo = (FAR struct tmpfs_directory_s *)to;
     }
 
   /* When we exit this loop (successfully), to will point to the TMPFS
@@ -1054,13 +1186,32 @@ static int tmpfs_find_object(FAR struct tmpfs_s *fs,
 }
 
 /****************************************************************************
+ * Name: tmpfs_find_object
+ ****************************************************************************/
+
+static int tmpfs_find_object(FAR struct tmpfs_s *fs,
+                             FAR const char *relpath, size_t len,
+                             FAR struct tmpfs_object_s **object,
+                             FAR struct tmpfs_directory_s **parent,
+                             uint8_t nofollow)
+{
+  /* Call tmpfs_find_object_from starting from the root directory */
+
+  return tmpfs_find_object_from(fs,
+                                (FAR struct tmpfs_directory_s *)
+                                fs->tfs_root.tde_object,
+                                relpath, len, object, parent, nofollow, 0);
+}
+
+/****************************************************************************
  * Name: tmpfs_find_file
  ****************************************************************************/
 
 static int tmpfs_find_file(FAR struct tmpfs_s *fs,
                            FAR const char *relpath,
                            FAR struct tmpfs_file_s **tfo,
-                           FAR struct tmpfs_directory_s **parent)
+                           FAR struct tmpfs_directory_s **parent,
+                           uint8_t nofollow)
 {
   FAR struct tmpfs_object_s *to;
   size_t len;
@@ -1081,12 +1232,12 @@ static int tmpfs_find_file(FAR struct tmpfs_s *fs,
    * reference count on both.
    */
 
-  ret = tmpfs_find_object(fs, relpath, len, &to, parent);
+  ret = tmpfs_find_object(fs, relpath, len, &to, parent, nofollow);
   if (ret >= 0)
     {
-      /* We found it... but is it a regular file? */
+      /* We found it... but is it a file? */
 
-      if (to->to_type != TMPFS_REGULAR)
+      if (to->to_type == TMPFS_DIRECTORY)
         {
           /* No... unlock the object and its parent and return an error */
 
@@ -1116,16 +1267,17 @@ static int tmpfs_find_file(FAR struct tmpfs_s *fs,
  ****************************************************************************/
 
 static int tmpfs_find_directory(FAR struct tmpfs_s *fs,
-                           FAR const char *relpath, size_t len,
-                           FAR struct tmpfs_directory_s **tdo,
-                           FAR struct tmpfs_directory_s **parent)
+                                FAR const char *relpath, size_t len,
+                                FAR struct tmpfs_directory_s **tdo,
+                                FAR struct tmpfs_directory_s **parent)
 {
   FAR struct tmpfs_object_s *to;
   int ret;
 
   /* Find the object at this path */
 
-  ret = tmpfs_find_object(fs, relpath, len, &to, parent);
+  ret = tmpfs_find_object(fs, relpath, len, &to, parent,
+                          TMPFS_NOFOLLOW_NONE);
   if (ret >= 0)
     {
       /* We found it... but is it a regular file? */
@@ -1225,9 +1377,9 @@ static int tmpfs_statfs_callout(FAR struct tmpfs_directory_s *tdo,
   tmpbuf->tsf_alloc += to->to_alloc +
                        strlen(tdo->tdo_entry[index].tde_name) + 1;
 
-  /* Is this directory entry a file object? */
+  /* Is this directory entry a file object (regular, symlink, or hardlink)? */
 
-  if (to->to_type == TMPFS_REGULAR)
+  if (to->to_type != TMPFS_DIRECTORY)
     {
       FAR struct tmpfs_file_s *tmptfo;
 
@@ -1299,21 +1451,31 @@ static int tmpfs_free_callout(FAR struct tmpfs_directory_s *tdo,
 
   /* Is this directory entry a file object? */
 
-  if (to->to_type == TMPFS_REGULAR)
+  if (to->to_type != TMPFS_DIRECTORY)
     {
       tfo = (FAR struct tmpfs_file_s *)to;
+      tfo->tfo_nlink--;
 
       /* Are there references to the file? */
 
-      if (tfo->tfo_refs > 0)
+      if (tfo->tfo_refs > 0 || tfo->tfo_nlink > 0)
         {
-          /* Yes.. We cannot delete the file now. Just mark it as unlinked. */
+          /* Yes.. We cannot delete the file now.
+           * nlink has already been decremented to 0 by the caller.
+           */
 
-          tfo->tfo_flags |= TFO_FLAG_UNLINKED;
           return TMPFS_UNLINKED;
         }
 
-      fs_large_free(tfo->tfo_data);
+      /* Free the data based on file type
+       * We don't have to free tfo_data of hardlinks,
+       * since it's just a pointer to target
+       */
+
+      if (to->to_type == TMPFS_REGULAR || to->to_type == TMPFS_SYMLINK)
+        {
+          fs_large_free(tfo->tfo_data);
+        }
     }
   else /* if (to->to_type == TMPFS_DIRECTORY) */
     {
@@ -1451,7 +1613,14 @@ static int tmpfs_open(FAR struct file *filep, FAR const char *relpath,
    * lock on the returned directory.
    */
 
-  ret = tmpfs_find_file(fs, relpath, &tfo, NULL);
+  /* Always follow hardlinks
+   * But follow symlinks only if O_NOFOLLOW is notset
+   */
+
+  ret = tmpfs_find_file(fs, relpath, &tfo, NULL,
+                        (oflags & O_NOFOLLOW) ?
+                        TMPFS_NOFOLLOW_SYMLINK : TMPFS_NOFOLLOW_NONE);
+
   if (ret >= 0)
     {
       /* The file exists.  We hold the lock and one reference count
@@ -2257,7 +2426,15 @@ static int tmpfs_readdir(FAR struct inode *mountpt,
 
            entry->d_type = DTYPE_DIRECTORY;
         }
-      else /* to->to_type == TMPFS_REGULAR) */
+#ifdef CONFIG_FS_LINKS
+      else if (to->to_type == TMPFS_SYMLINK)
+        {
+          /* A symbolic link */
+
+           entry->d_type = DTYPE_LINK;
+        }
+#endif
+      else /* to->to_type == TMPFS_REGULAR || to->to_type == TMPFS_HARDLINK) */
         {
           /* A regular file */
 
@@ -2493,7 +2670,7 @@ static int tmpfs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
    * and the parent directory and take one reference count on each.
    */
 
-  ret = tmpfs_find_file(fs, relpath, &tfo, &tdo);
+  ret = tmpfs_find_file(fs, relpath, &tfo, &tdo, TMPFS_NOFOLLOW_ALL);
   if (ret < 0)
     {
       goto errout_with_lock;
@@ -2525,30 +2702,8 @@ static int tmpfs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
       goto errout_with_objects;
     }
 
-  /* If the reference count is not one, then just mark the file as
-   * unlinked
-   */
-
-  if (tfo->tfo_refs > 1)
-    {
-      /* Make the file object as unlinked */
-
-      tfo->tfo_flags |= TFO_FLAG_UNLINKED;
-
-      /* Release the reference count on the file object */
-
-      tfo->tfo_refs--;
-      tmpfs_unlock_file(tfo);
-    }
-
-  /* Otherwise we can free the object now */
-
-  else
-    {
-      nxrmutex_destroy(&tfo->tfo_lock);
-      fs_large_free(tfo->tfo_data);
-      fs_heap_free(tfo);
-    }
+  tfo->tfo_nlink--;
+  tmpfs_release_lockedfile(tfo);
 
   /* Release the reference and lock on the parent directory */
 
@@ -2810,7 +2965,7 @@ static int tmpfs_rename(FAR struct inode *mountpt,
    */
 
   ret = tmpfs_find_object(fs, oldrelpath, strlen(oldrelpath),
-                          &to, &oldparent);
+                          &to, &oldparent, TMPFS_NOFOLLOW_ALL);
   if (ret < 0)
     {
       goto errout_with_newparent;
@@ -2879,7 +3034,7 @@ static void tmpfs_stat_common(FAR struct tmpfs_object_s *to,
 
   memset(buf, 0, sizeof(struct stat));
 
-  if (to->to_type == TMPFS_REGULAR)
+  if (to->to_type == TMPFS_REGULAR || to->to_type == TMPFS_HARDLINK)
     {
       FAR struct tmpfs_file_s *tfo =
         (FAR struct tmpfs_file_s *)to;
@@ -2888,10 +3043,33 @@ static void tmpfs_stat_common(FAR struct tmpfs_object_s *to,
 
       buf->st_mode = S_IRWXO | S_IRWXG | S_IRWXU | S_IFREG;
 
+      /* Set hard link count */
+
+      buf->st_nlink = tfo->tfo_nlink;
+
       /* Get the size of the object */
 
       objsize = tfo->tfo_size;
     }
+#ifdef CONFIG_FS_LINKS
+  else if (to->to_type == TMPFS_SYMLINK)
+    {
+      FAR struct tmpfs_file_s *tfo =
+        (FAR struct tmpfs_file_s *)to;
+
+      /* lrwxrwxrwx */
+
+      buf->st_mode = S_IRWXO | S_IRWXG | S_IRWXU | S_IFLNK;
+
+      /* Set hard link count */
+
+      buf->st_nlink = tfo->tfo_nlink;
+
+      /* Get the size of the symlink target path */
+
+      objsize = tfo->tfo_size;
+    }
+#endif
   else /* if (to->to_type == TMPFS_DIRECTORY) */
     {
       FAR struct tmpfs_directory_s *tdo =
@@ -2952,7 +3130,8 @@ static int tmpfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
    * reference count on the object.
    */
 
-  ret = tmpfs_find_object(fs, relpath, strlen(relpath), &to, NULL);
+  ret = tmpfs_find_object(fs, relpath, strlen(relpath), &to, NULL,
+                          TMPFS_NOFOLLOW_NONE);
   if (ret < 0)
     {
       goto errout_with_fslock;
@@ -2974,6 +3153,287 @@ errout_with_fslock:
   tmpfs_unlock(fs);
   return ret;
 }
+
+/****************************************************************************
+ * Name: tmpfs_link
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_LINKS
+static int tmpfs_link(FAR struct inode *mountpt,
+                      FAR const char *oldrelpath,
+                      FAR const char *newrelpath)
+{
+  FAR struct tmpfs_file_s *target;
+  FAR struct tmpfs_file_s *newtfo;
+  FAR struct tmpfs_s *fs;
+  int ret;
+
+  finfo("mountpt=%p oldrelpath=%s newrelpath=%s\n",
+        mountpt, oldrelpath, newrelpath);
+  DEBUGASSERT(mountpt != NULL && oldrelpath != NULL && newrelpath != NULL);
+
+  /* Get the file system structure from the inode reference. */
+
+  fs = mountpt->i_private;
+  DEBUGASSERT(fs != NULL && fs->tfs_root.tde_object != NULL);
+
+  /* Get exclusive access to the file system */
+
+  ret = tmpfs_lock(fs);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Find the target file. */
+
+  ret = tmpfs_find_file(fs, oldrelpath, &target, NULL,
+                        TMPFS_NOFOLLOW_SYMLINK);
+  if (ret < 0)
+    {
+      /* Convert -EISDIR to -EPERM for hard link to directory */
+
+      if (ret == -EISDIR)
+        {
+          ret = -EPERM;
+        }
+
+      goto errout_with_fslock;
+    }
+
+  /* Create a regular file first */
+
+  ret = tmpfs_create_file(fs, newrelpath, &newtfo);
+  if (ret < 0)
+    {
+      goto errout_with_target;
+    }
+
+  /* File is locked at this point. Modify it to be a hardlink by
+   * changing its type and data pointer to point to the target file.
+   * The target may be a regular file or a symbolic link.
+   */
+
+  newtfo->tfo_type = TMPFS_HARDLINK;
+  newtfo->tfo_data = (FAR uint8_t *)target;
+
+  /* Increment the hard link count of the target file */
+
+  target->tfo_nlink++;
+  tmpfs_update_ctime((FAR struct tmpfs_object_s *)target);
+
+  /* Release references and locks */
+
+  tmpfs_release_lockedfile(newtfo);
+
+errout_with_target:
+  tmpfs_release_lockedfile(target);
+
+errout_with_fslock:
+  tmpfs_unlock(fs);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: tmpfs_symlink
+ ****************************************************************************/
+
+static int tmpfs_symlink(FAR struct inode *mountpt,
+                         FAR const char *target,
+                         FAR const char *linkpath)
+{
+  FAR struct tmpfs_file_s *newtfo;
+  FAR struct tmpfs_s *fs;
+  FAR char *target_copy;
+  size_t target_len;
+  int ret;
+
+  finfo("mountpt=%p target=%s linkpath=%s\n",
+        mountpt, target, linkpath);
+  DEBUGASSERT(mountpt != NULL && target != NULL && linkpath != NULL);
+
+  /* Get the file system structure from the inode reference. */
+
+  fs = mountpt->i_private;
+  DEBUGASSERT(fs != NULL && fs->tfs_root.tde_object != NULL);
+
+  /* Get exclusive access to the file system */
+
+  ret = tmpfs_lock(fs);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Duplicate the target path */
+
+  target_len = strlen(target) + 1;
+  target_copy = fs_large_malloc(target_len);
+  if (target_copy == NULL)
+    {
+      ret = -ENOMEM;
+      goto errout_with_fslock;
+    }
+
+  memcpy(target_copy, target, target_len);
+
+  /* Create a regular file. This will handle all the path parsing,
+   * parent directory locking, and directory entry creation.
+   */
+
+  ret = tmpfs_create_file(fs, linkpath, &newtfo);
+  if (ret < 0)
+    {
+      goto errout_with_target;
+    }
+
+  /* File is locked at this point. Modify it to be a symlink by changing
+   * its type and setting the data pointer to the target path string.
+   */
+
+  newtfo->tfo_type = TMPFS_SYMLINK;
+  newtfo->tfo_data = (FAR uint8_t *)target_copy;
+  newtfo->tfo_size = target_len - 1;
+
+  /* Release reference and lock on the new symlink file */
+
+  tmpfs_release_lockedfile(newtfo);
+  tmpfs_unlock(fs);
+  return OK;
+
+errout_with_target:
+  fs_large_free(target_copy);
+
+errout_with_fslock:
+  tmpfs_unlock(fs);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: tmpfs_readlink
+ ****************************************************************************/
+
+static ssize_t tmpfs_readlink(FAR struct inode *mountpt,
+                              FAR const char *relpath,
+                              FAR char *buf, size_t bufsize)
+{
+  FAR struct tmpfs_s *fs;
+  FAR struct tmpfs_file_s *tfo;
+  ssize_t ret;
+
+  finfo("mountpt=%p relpath=%s buf=%p bufsize=%zu\n",
+        mountpt, relpath, buf, bufsize);
+  DEBUGASSERT(mountpt != NULL && relpath != NULL && buf != NULL);
+
+  /* Get the file system structure from the inode reference. */
+
+  fs = mountpt->i_private;
+  DEBUGASSERT(fs != NULL && fs->tfs_root.tde_object != NULL);
+
+  /* Get exclusive access to the file system */
+
+  ret = tmpfs_lock(fs);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Find the symlink object (don't follow it) */
+
+  ret = tmpfs_find_file(fs, relpath, &tfo, NULL, TMPFS_NOFOLLOW_SYMLINK);
+  if (ret < 0)
+    {
+      goto errout_with_fslock;
+    }
+
+  /* Verify it's a symlink */
+
+  if (tfo->tfo_type != TMPFS_SYMLINK)
+    {
+      ret = -EINVAL;
+      goto errout_with_file;
+    }
+
+  /* Copy the target path to the buffer */
+
+  if (tfo->tfo_data != NULL)
+    {
+      FAR const char *target = (FAR const char *)tfo->tfo_data;
+      size_t target_len = tfo->tfo_size;
+
+      if (target_len > bufsize)
+        {
+          target_len = bufsize;
+        }
+
+      memcpy(buf, target, target_len);
+      ret = target_len;
+    }
+  else
+    {
+      ret = -EINVAL;
+    }
+
+  /* Release the symlink object */
+
+errout_with_file:
+  tmpfs_release_lockedfile(tfo);
+
+errout_with_fslock:
+  tmpfs_unlock(fs);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: tmpfs_lstat
+ ****************************************************************************/
+
+static int tmpfs_lstat(FAR struct inode *mountpt, FAR const char *relpath,
+                       FAR struct stat *buf)
+{
+  FAR struct tmpfs_s *fs;
+  FAR struct tmpfs_object_s *to;
+  int ret;
+
+  finfo("mountpt=%p relpath=%s buf=%p\n", mountpt, relpath, buf);
+  DEBUGASSERT(mountpt != NULL && relpath != NULL && buf != NULL);
+
+  /* Get the file system structure from the inode reference. */
+
+  fs = mountpt->i_private;
+  DEBUGASSERT(fs != NULL && fs->tfs_root.tde_object != NULL);
+
+  /* Get exclusive access to the file system */
+
+  ret = tmpfs_lock(fs);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Find the tmpfs object at the relpath (don't follow symlinks) */
+
+  ret = tmpfs_find_object(fs, relpath, strlen(relpath), &to, NULL,
+                          TMPFS_NOFOLLOW_SYMLINK);
+  if (ret < 0)
+    {
+      goto errout_with_fslock;
+    }
+
+  /* Return information about the object in the stat buffer */
+
+  DEBUGASSERT(to != NULL);
+  tmpfs_stat_common(to, buf);
+
+  /* Unlock the object and return success */
+
+  tmpfs_release_lockedobject(to);
+
+errout_with_fslock:
+  tmpfs_unlock(fs);
+  return ret;
+}
+#endif /* CONFIG_FS_LINKS */
 
 /****************************************************************************
  * Public Functions
