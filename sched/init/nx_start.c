@@ -385,13 +385,13 @@ static void idle_task_initialize(void)
 {
   FAR struct tcb_s *tcb = &this_cpu_var(g_idletcb);
   tcb->pid              = 0;
-  tcb->flags            = TCB_FLAG_TTYPE_KERNEL;
+  atomic_set(&tcb->flags, TCB_FLAG_TTYPE_KERNEL);
   tcb->start            = nx_start;
   tcb->entry.main       = (main_t)nx_start;
 
   tcb->task_state       = TSTATE_TASK_RUNNING;
   tcb->lockcount        = 1;
-  tcb->refs             = 1;
+  atomic_set(&tcb->refs, 1);
 
 #if CONFIG_TASK_NAME_SIZE >= 12
   snprintf(tcb->name, CONFIG_TASK_NAME_SIZE, "CPU%d IDLE", up_cpu_index());
@@ -441,7 +441,7 @@ static void idle_group_initialize(void)
 
       /* Allocate the IDLE group */
 
-      DEBUGVERIFY(group_initialize(tcb, tcb->flags, 0));
+      DEBUGVERIFY(group_initialize(tcb, atomic_read(&tcb->flags), 0));
 
       /* Initialize the task join */
 
@@ -482,7 +482,7 @@ static void idle_group_initialize(void)
 
   /* Allocate the IDLE group */
 
-  DEBUGVERIFY(group_initialize(tcb, tcb->flags, 0));
+  DEBUGVERIFY(group_initialize(tcb, atomic_read(&tcb->flags), 0));
 
   /* Initialize the task join */
 

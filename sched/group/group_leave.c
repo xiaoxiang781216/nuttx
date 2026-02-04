@@ -246,7 +246,8 @@ void group_drop(FAR struct task_group_s *group)
 
       if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
         {
-          if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_TASK)
+          if ((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+              TCB_FLAG_TTYPE_TASK)
             {
 #if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
               /* Kernel build not use group_heap_initialize.
