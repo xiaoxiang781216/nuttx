@@ -37,8 +37,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STACK_ISALIGNED(a)   ((uintptr_t)(a) & ~SMP_STACK_MASK)
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -111,7 +109,7 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
   /* Get the top of the stack */
 
   stack_alloc = (uintptr_t)g_cpux_idlestack(cpu);
-  DEBUGASSERT(stack_alloc != 0 && STACK_ISALIGNED(stack_alloc));
+  DEBUGASSERT(stack_alloc != 0 && STACKFRAME_IS_ALIGNED(stack_alloc));
 
 #ifdef CONFIG_ARCH_HW_SHADOW_STACK
   shadow_size = STACKFRAME_ALIGN_DOWN(shadow_size);

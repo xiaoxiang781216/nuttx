@@ -45,15 +45,12 @@
 #define _START_TBSS  _stbss
 #define _END_TBSS    _etbss
 
-#define SMP_STACK_MASK (15)
-
 /**
  * SMP_STACK_SIZE: Total per-CPU idle stack size (aligned to 16 bytes),
  * including both the normal and shadow stacks.
  */
 
-#define SMP_STACK_SIZE \
-   ((CONFIG_IDLETHREAD_STACKSIZE + SMP_STACK_MASK) & ~SMP_STACK_MASK)
+#define SMP_STACK_SIZE STACKFRAME_ALIGN_UP(CONFIG_IDLETHREAD_STACKSIZE)
 
 /****************************************************************************
  * Public Types
