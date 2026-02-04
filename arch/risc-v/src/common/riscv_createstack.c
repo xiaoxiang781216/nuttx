@@ -67,12 +67,12 @@ static int create_shadow_stack(struct tcb_s *tcb, size_t stack_size)
 {
   /* Allocate shadow stack for all thread types */
 
-  tcb->xcp.sstack_alloc_ptr = kmm_malloc(stack_size);
+  tcb->shadow_base_ptr = (uintptr_t)kmm_malloc(stack_size);
 
 #ifdef CONFIG_DEBUG_FEATURES
   /* Was the allocation successful? */
 
-  if (!tcb->xcp.sstack_alloc_ptr)
+  if (!tcb->shadow_base_ptr)
     {
       serr("ERROR: Failed to allocate shadow stack, size %zu\n", stack_size);
     }
@@ -80,7 +80,7 @@ static int create_shadow_stack(struct tcb_s *tcb, size_t stack_size)
 
   /* Did we successfully allocate a shadow stack? */
 
-  if (tcb->xcp.sstack_alloc_ptr)
+  if (tcb->shadow_base_ptr)
     {
       uintreg_t top_of_sstack;
 
@@ -90,7 +90,7 @@ static int create_shadow_stack(struct tcb_s *tcb, size_t stack_size)
        * the stack are referenced as positive word offsets from SP.
        */
 
-      top_of_sstack = (uintreg_t)tcb->xcp.sstack_alloc_ptr + stack_size;
+      top_of_sstack = tcb->shadow_base_ptr + stack_size;
 
       /* The RISC-V shadow stack must be aligned at 16-byte boundaries.
        * If necessary top_of_sstack must be rounded down to the
@@ -101,7 +101,7 @@ static int create_shadow_stack(struct tcb_s *tcb, size_t stack_size)
 
       /* Save the adjusted shadow stack values in the struct tcb_s */
 
-      tcb->xcp.sstack_top_ptr = (uintreg_t *)top_of_sstack;
+      tcb->shadow_top_ptr = top_of_sstack;
 
       return OK;
     }

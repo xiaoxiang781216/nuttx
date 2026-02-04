@@ -71,19 +71,9 @@ void up_initial_state(struct tcb_s *tcb)
   uintptr_t *kstack = xcp->kstack;
 #endif
 
-#ifdef CONFIG_ARCH_HW_SHADOW_STACK
-  uintreg_t *sstack_alloc = xcp->sstack_alloc_ptr;
-  uintreg_t *sstack_top = xcp->sstack_top_ptr;
-#endif
-
   /* Initialize the initial exception register context structure */
 
   memset(xcp, 0, sizeof(struct xcptcontext));
-
-#ifdef CONFIG_ARCH_HW_SHADOW_STACK
-  xcp->sstack_alloc_ptr = sstack_alloc;
-  xcp->sstack_top_ptr = sstack_top;
-#endif
 
 #if defined(CONFIG_ARCH_RV_ISA_V) && (CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH == 0)
 
@@ -119,10 +109,8 @@ void up_initial_state(struct tcb_s *tcb)
 #ifdef CONFIG_ARCH_HW_SHADOW_STACK
       /* Setup shadow stack for idle task */
 
-      xcp->sstack_alloc_ptr =
-        (uintreg_t *)g_cpux_idleshadowstack(this_cpu());
-      xcp->sstack_top_ptr = (uintreg_t *)((uintptr_t)xcp->sstack_alloc_ptr +
-                                          SMP_SHADOW_STACK_SIZE);
+      tcb->shadow_base_ptr = g_cpux_idleshadowstack(this_cpu());
+      tcb->shadow_top_ptr = tcb->shadow_base_ptr + SMP_SHADOW_STACK_SIZE;
 #endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
 #ifdef CONFIG_STACK_COLORATION
@@ -189,7 +177,7 @@ void up_initial_state(struct tcb_s *tcb)
   xcp->regs[REG_INT_CTX] = regval;
 
 #ifdef CONFIG_ARCH_HW_SHADOW_STACK
-  xcp->regs[REG_SSP] = (uintreg_t)xcp->sstack_top_ptr;
+  xcp->regs[REG_SSP] = tcb->shadow_top_ptr;
 #endif
 
   /* Initialize the state of the extended context */

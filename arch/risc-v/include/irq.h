@@ -707,15 +707,6 @@ struct xcptcontext
   uintreg_t *vregs;
 #  endif
 #endif
-
-#ifdef CONFIG_ARCH_HW_SHADOW_STACK
-  /* Shadow stack for control flow integrity */
-
-  uintreg_t *sstack_alloc_ptr;           /* Pointer to allocated shadow stack */
-                                         /* Needed to deallocate shadow stack */
-  uintreg_t *sstack_top_ptr;             /* Adjusted initial shadow stack ptr */
-                                         /* after initialization             */
-#endif
 };
 
 #endif /* __ASSEMBLY__ */

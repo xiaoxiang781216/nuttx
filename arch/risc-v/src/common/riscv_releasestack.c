@@ -68,16 +68,16 @@ static void release_shadow_stack(struct tcb_s *dtcb)
 {
   /* Is there a shadow stack allocated? */
 
-  if (dtcb->xcp.sstack_alloc_ptr)
+  if (dtcb->shadow_base_ptr)
     {
       /* Free the shadow stack */
 
-      kmm_delayfree(dtcb->xcp.sstack_alloc_ptr);
+      kmm_delayfree((void *)dtcb->shadow_base_ptr);
 
       /* Clear the shadow stack pointers */
 
-      dtcb->xcp.sstack_alloc_ptr = NULL;
-      dtcb->xcp.sstack_top_ptr = NULL;
+      dtcb->shadow_base_ptr = 0;
+      dtcb->shadow_top_ptr = 0;
     }
 }
 #endif /* CONFIG_ARCH_HW_SHADOW_STACK */

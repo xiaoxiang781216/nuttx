@@ -117,9 +117,8 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 #ifdef CONFIG_ARCH_HW_SHADOW_STACK
   /* Setup shadow stack for idle task */
 
-  tcb->xcp.sstack_alloc_ptr = (uintreg_t *)g_cpux_idleshadowstack(cpu);
-  tcb->xcp.sstack_top_ptr = (uintreg_t *)(g_cpux_idleshadowstack(cpu) +
-                                          SMP_SHADOW_STACK_SIZE);
+  tcb->shadow_base_ptr = g_cpux_idleshadowstack(cpu);
+  tcb->shadow_top_ptr = tcb->shadow_base_ptr + SMP_SHADOW_STACK_SIZE;
 #endif /* CONFIG_ARCH_HW_SHADOW_STACK */
 
   return OK;
