@@ -120,7 +120,7 @@ int nxtask_exit(void)
   sched_note_csection(dtcb, false);
 #endif
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-  nxsched_critmon_csection(dtcb, false, NULL);
+  nxsched_critmon_csection(false, false, return_address(0));
 #endif
 
   sched_note_stop(dtcb);

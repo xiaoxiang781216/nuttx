@@ -29,10 +29,7 @@
  * Included Files
  ****************************************************************************/
 
-/* Include NuttX-specific IRQ definitions */
-
 #include <nuttx/config.h>
-#include <nuttx/irq.h>
 #include <nuttx/percpu.h>
 
 #include <sys/types.h>

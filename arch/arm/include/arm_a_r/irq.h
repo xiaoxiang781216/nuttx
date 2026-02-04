@@ -30,7 +30,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/irq.h>
 #include <nuttx/percpu.h>
 
 #ifndef __ASSEMBLY__

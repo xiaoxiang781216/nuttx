@@ -67,13 +67,8 @@ void restore_critical_section(uint16_t count)
 
   if (!up_interrupt_context())
     {
-      FAR struct tcb_s *rtcb = this_task();
-
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-      sched_note_csection(rtcb, true);
-#  endif
-#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-      nxsched_critmon_csection(rtcb, true, return_address(0));
+      sched_note_csection(this_task(), true);
 #  endif
     }
 }
@@ -88,9 +83,6 @@ uint16_t break_critical_section(void)
     {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
       sched_note_csection(rtcb, false);
-#  endif
-#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-      nxsched_critmon_csection(rtcb, false, return_address(0));
 #  endif
     }
 
@@ -115,14 +107,10 @@ irqstate_t enter_critical_section(void)
 
   if (!up_interrupt_context())
     {
-      FAR struct tcb_s *rtcb = this_task();
       if (RSPINLOCK_COUNT(g_schedlock.local_val) == 1)
         {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-          sched_note_csection(rtcb, true);
-#  endif
-#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-          nxsched_critmon_csection(rtcb, true, return_address(0));
+          sched_note_csection(this_task(), true);
 #  endif
         }
     }
@@ -134,14 +122,10 @@ void leave_critical_section(irqstate_t flags)
 {
   if (!up_interrupt_context())
     {
-      FAR struct tcb_s *rtcb = this_task();
       if (RSPINLOCK_COUNT(g_schedlock.local_val) == 1)
         {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-          sched_note_csection(rtcb, false);
-#  endif
-#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-          nxsched_critmon_csection(rtcb, false, return_address(0));
+          sched_note_csection(this_task(), false);
 #  endif
         }
     }

@@ -34,13 +34,11 @@
 
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
+#  include <stdbool.h>
 #  include <arch/syscall.h>
 #  include <nuttx/percpu.h>
 #endif
 
-/* Include NuttX-specific IRQ definitions */
-
-#include <nuttx/irq.h>
 #include <arch/arch.h>
 
 /****************************************************************************

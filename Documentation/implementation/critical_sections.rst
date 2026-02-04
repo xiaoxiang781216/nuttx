@@ -249,13 +249,15 @@ and preemption operations. Only have instructions when scheduler triggers contex
 * >= 0 to enable preemption disabled time statistic, data will be in critmon procfs.
 * > 0 to also do alert log when preemption disabled time above the configuration ticks.
 
-**Critical section entered time**::
+**IRQ disabled time (irq_save/irq_restore)**::
 
   CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION=-1
 
-* Default -1 to disable critical section entered time statistic.
-* >= 0 to enable critical section entered time statistic, data will be in critmon procfs.
-* > 0 to also do alert log when critical section entered time above the configuration ticks.
+* Default -1 to disable IRQ disabled time statistic.
+* >= 0 to enable IRQ disabled time statistic (covers all irq_save/irq_restore
+  paths including enter_critical_section, spin_lock_irqsave,
+  rspin_lock_irqsave, etc.), data will be in critmon procfs.
+* > 0 to also do alert log when IRQ disabled time above the configuration ticks.
 
 **Irq executing time**::
 

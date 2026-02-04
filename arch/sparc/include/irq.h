@@ -34,9 +34,6 @@
 #  include <stdbool.h>
 #endif
 
-/* Include NuttX-specific IRQ definitions */
-
-#include <nuttx/irq.h>
 #include <nuttx/percpu.h>
 
 /* Include chip-specific IRQ definitions (including IRQ numbers) */

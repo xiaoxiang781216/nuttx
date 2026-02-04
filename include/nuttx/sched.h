@@ -262,12 +262,11 @@ static inline_function FAR struct tcb_s *this_task(void)
   FAR struct tcb_s *tcb;
   irqstate_t flags;
 
-  /* If the CPU supports suppression of interprocessor interrupts, then
-   * simple disabling interrupts will provide sufficient protection for
-   * the following operations.
+  /* Use up_irq_save directly to avoid recursion when called from
+   * irq_save() -> nxsched_critmon_csection() -> running_task() path.
    */
 
-  flags = irq_save();
+  flags = up_irq_save();
 
   /* Obtain the TCB which is current running on this CPU */
 
@@ -275,7 +274,7 @@ static inline_function FAR struct tcb_s *this_task(void)
 
   /* Enable local interrupts */
 
-  irq_restore(flags);
+  up_irq_restore(flags);
   return tcb;
 }
 #endif
@@ -810,6 +809,7 @@ struct tcb_s
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
   clock_t crit_start;                    /* Time critical section entered   */
   clock_t crit_max;                      /* Max time in critical section    */
+  int     crit_count;                    /* Nest count of critical section  */
   void   *crit_caller;                   /* Caller of critical section      */
   void   *crit_max_caller;               /* Caller of max critical section  */
 #endif

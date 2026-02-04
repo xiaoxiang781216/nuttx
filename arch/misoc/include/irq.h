@@ -34,7 +34,6 @@
 #  include <stdbool.h>
 #endif
 
-#include <nuttx/irq.h>
 #include <arch/chip/irq.h>
 
 #ifdef CONFIG_ARCH_CHIP_LM32
