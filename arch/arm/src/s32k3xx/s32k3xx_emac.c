@@ -1700,7 +1700,7 @@ static void s32k3xx_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Get the DMA interrupt status bits (no MAC interrupts are expected) */
 
@@ -1771,7 +1771,7 @@ static void s32k3xx_interrupt_work(void *arg)
     }
 #endif
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts at the NVIC */
 
@@ -1861,7 +1861,7 @@ static void s32k3xx_txtimeout_work(void *arg)
 
   /* Increment statistics and dump debug info */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   nerr("Resetting interface\n");
 
   NETDEV_TXTIMEOUTS(&priv->dev);
@@ -1876,7 +1876,7 @@ static void s32k3xx_txtimeout_work(void *arg)
   /* Then poll the network for new XMIT data */
 
   s32k3xx_dopoll(priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2122,7 +2122,7 @@ static void s32k3xx_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Poll the network for new XMIT data */
@@ -2130,7 +2130,7 @@ static void s32k3xx_txavail_work(void *arg)
       s32k3xx_dopoll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

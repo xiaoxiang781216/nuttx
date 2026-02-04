@@ -1360,7 +1360,7 @@ static void sam_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   isr = sam_getreg(priv, SAM_EMAC_ISR);
   rsr = sam_getreg(priv, SAM_EMAC_RSR);
   tsr = sam_getreg(priv, SAM_EMAC_TSR);
@@ -1519,7 +1519,7 @@ static void sam_interrupt_work(void *arg)
     }
 #endif
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts */
 
@@ -1608,14 +1608,14 @@ static void sam_txtimeout_work(void *arg)
    * up again.
    */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   sam_ifdown(&priv->dev);
   sam_ifup(&priv->dev);
 
   /* Then poll the network for new XMIT data */
 
   sam_dopoll(priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1796,7 +1796,7 @@ static void sam_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->ifup)
     {
       /* Poll the network for new XMIT data */
@@ -1804,7 +1804,7 @@ static void sam_txavail_work(void *arg)
       sam_dopoll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

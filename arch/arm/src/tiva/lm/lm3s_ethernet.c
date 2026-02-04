@@ -896,7 +896,7 @@ static void tiva_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->ld_dev);
 
   /* Read the raw interrupt status register */
 
@@ -953,7 +953,7 @@ static void tiva_interrupt_work(void *arg)
       tiva_txdone(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->ld_dev);
 
   /* Re-enable Ethernet interrupts */
 
@@ -1051,7 +1051,7 @@ static void tiva_txtimeout_work(void *arg)
 
   /* Increment statistics */
 
-  net_lock();
+  netdev_lock(&priv->ld_dev);
   nerr("ERROR: Tx timeout\n");
   NETDEV_TXTIMEOUTS(&priv->ld_dev);
 
@@ -1064,7 +1064,7 @@ static void tiva_txtimeout_work(void *arg)
   /* Then poll the network for new XMIT data */
 
   devif_poll(&priv->ld_dev, tiva_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->ld_dev);
 }
 
 /****************************************************************************
@@ -1378,7 +1378,7 @@ static void tiva_txavail_work(void *arg)
    * will occur at that time.
    */
 
-  net_lock();
+  netdev_lock(&priv->ld_dev);
   if (priv->ld_bifup &&
       (tiva_ethin(priv, TIVA_MAC_TR_OFFSET) & MAC_TR_NEWTX) == 0)
     {
@@ -1389,7 +1389,7 @@ static void tiva_txavail_work(void *arg)
       devif_poll(&priv->ld_dev, tiva_txpoll);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->ld_dev);
 }
 
 /****************************************************************************

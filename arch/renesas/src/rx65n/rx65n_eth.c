@@ -1795,7 +1795,7 @@ static void rx65n_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Check and clear the Link Signal Change Flag */
 
@@ -1879,7 +1879,7 @@ static void rx65n_interrupt_work(void *arg)
       rx65n_txdone(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts */
 
@@ -1963,7 +1963,7 @@ static void rx65n_txtimeout_work(void *arg)
 
   /* Reset the hardware.Just take the interface down, then back up again. */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Increment statistics */
 
@@ -1978,7 +1978,7 @@ static void rx65n_txtimeout_work(void *arg)
   /* Then poll for new XMIT data */
 
   rx65n_dopoll(priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2160,7 +2160,7 @@ static void rx65n_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->ifup)
     {
       /* Poll the network for new XMIT data */
@@ -2168,7 +2168,7 @@ static void rx65n_txavail_work(void *arg)
       rx65n_dopoll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

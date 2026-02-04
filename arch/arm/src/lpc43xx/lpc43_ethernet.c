@@ -1841,7 +1841,7 @@ static void lpc43_interrupt_work(void *arg)
 
   /* Get the DMA interrupt status bits (no MAC interrupts are expected) */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   dmasr = lpc43_getreg(LPC43_ETH_DMASTAT);
 
   /* Mask only enabled interrupts.  This depends on the fact that the
@@ -1911,7 +1911,7 @@ static void lpc43_interrupt_work(void *arg)
     }
 #endif /* CONFIG_DEBUG_NET */
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts at the NVIC */
 
@@ -1997,14 +1997,14 @@ static void lpc43_txtimeout_work(void *arg)
    * up again.
    */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   lpc43_ifdown(&priv->dev);
   lpc43_ifup(&priv->dev);
 
   /* Then poll the network for new XMIT data */
 
   lpc43_dopoll(priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2175,7 +2175,7 @@ static void lpc43_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   ninfo("ifup: %d\n", priv->ifup);
   if (priv->ifup)
     {
@@ -2184,7 +2184,7 @@ static void lpc43_txavail_work(void *arg)
       lpc43_dopoll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

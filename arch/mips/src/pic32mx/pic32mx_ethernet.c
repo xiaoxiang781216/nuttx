@@ -1583,7 +1583,7 @@ static void pic32mx_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->pd_dev);
 
   /* Get the interrupt status (zero means no interrupts pending). */
 
@@ -1729,7 +1729,7 @@ static void pic32mx_interrupt_work(void *arg)
 #else
   mips_clrpend_irq(PIC32MX_IRQSRC_ETH);
 #endif
-  net_unlock();
+  netdev_unlock(&priv->pd_dev);
 
   /* Re-enable Ethernet interrupts */
 
@@ -1824,7 +1824,7 @@ static void pic32mx_txtimeout_work(void *arg)
 
   /* Increment statistics and dump debug info */
 
-  net_lock();
+  netdev_lock(&priv->pd_dev);
   NETDEV_TXTIMEOUTS(&priv->pd_dev);
   if (priv->pd_ifup)
     {
@@ -1841,7 +1841,7 @@ static void pic32mx_txtimeout_work(void *arg)
       pic32mx_poll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->pd_dev);
 }
 
 /****************************************************************************
@@ -2263,7 +2263,7 @@ static void pic32mx_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->pd_dev);
   if (priv->pd_ifup)
     {
       /* Check if the next Tx descriptor is available. */
@@ -2278,7 +2278,7 @@ static void pic32mx_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->pd_dev);
 }
 
 /****************************************************************************

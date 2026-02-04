@@ -1718,7 +1718,7 @@ static int lpc17can_txavail(struct net_driver_s *dev)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Check if there is room in the hardware to hold another outgoing
@@ -1735,7 +1735,7 @@ static int lpc17can_txavail(struct net_driver_s *dev)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   return OK;
 }

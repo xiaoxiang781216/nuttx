@@ -2194,7 +2194,7 @@ static void sam_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Read the interrupt status, RX status, and TX status registers.
    * NOTE that the interrupt status register is cleared by this read.
@@ -2358,7 +2358,7 @@ static void sam_interrupt_work(void *arg)
     }
 #endif
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts */
 
@@ -2443,7 +2443,7 @@ static void sam_txtimeout_work(void *arg)
 
   nerr("ERROR: Timeout!\n");
 
-  net_lock();
+  netdev_lock(&priv->dev);
   NETDEV_TXTIMEOUTS(&priv->dev);
 
   /* Reset the hardware.  Just take the interface down, then back up again. */
@@ -2454,7 +2454,7 @@ static void sam_txtimeout_work(void *arg)
   /* Then poll the network for new XMIT data */
 
   sam_dopoll(priv, EMAC_QUEUE_0);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2654,7 +2654,7 @@ static void sam_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->ifup)
     {
       /* Poll the network for new XMIT data */
@@ -2662,7 +2662,7 @@ static void sam_txavail_work(void *arg)
       sam_dopoll(priv, EMAC_QUEUE_0);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

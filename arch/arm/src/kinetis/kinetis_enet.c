@@ -768,7 +768,7 @@ static void kinetis_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Get the set of unmasked, pending interrupt. */
 
@@ -840,7 +840,7 @@ static void kinetis_interrupt_work(void *arg)
       putreg32(ENET_RDAR, KINETIS_ENET_RDAR);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts */
 
@@ -918,7 +918,7 @@ static void kinetis_txtimeout_work(void *arg)
 
   /* Increment statistics and dump debug info */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   NETDEV_TXTIMEOUTS(&priv->dev);
 
   /* Take the interface down and bring it back up.  The is the most
@@ -931,7 +931,7 @@ static void kinetis_txtimeout_work(void *arg)
   /* Then poll the network for new XMIT data */
 
   devif_poll(&priv->dev, kinetis_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1191,7 +1191,7 @@ static void kinetis_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Check if there is room in the hardware to hold another outgoing
@@ -1208,7 +1208,7 @@ static void kinetis_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

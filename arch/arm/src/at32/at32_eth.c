@@ -1950,7 +1950,7 @@ static void at32_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Get the DMA interrupt status bits (no MAC interrupts are expected) */
 
@@ -2024,7 +2024,7 @@ static void at32_interrupt_work(void *arg)
     }
 #endif
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts at the NVIC */
 
@@ -2108,14 +2108,14 @@ static void at32_txtimeout_work(void *arg)
 
   /* Reset the hardware.  Just take the interface down, then back up again. */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   at32_ifdown(&priv->dev);
   at32_ifup(&priv->dev);
 
   /* Then poll for new XMIT data */
 
   at32_dopoll(priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2298,7 +2298,7 @@ static void at32_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->ifup)
     {
       /* Poll the network for new XMIT data */
@@ -2306,7 +2306,7 @@ static void at32_txavail_work(void *arg)
       at32_dopoll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

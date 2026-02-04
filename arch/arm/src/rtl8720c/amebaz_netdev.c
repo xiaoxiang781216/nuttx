@@ -43,10 +43,10 @@ static int amebaz_txpoll(struct net_driver_s *dev)
 {
   struct amebaz_dev_s *priv = (struct amebaz_dev_s *)dev->d_private;
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (!priv->curr)
     {
-      net_unlock();
+      netdev_unlock(&priv->dev);
       amebaz_netdev_notify_tx_done(priv);
       return false;
     }
@@ -56,7 +56,7 @@ static int amebaz_txpoll(struct net_driver_s *dev)
   rltk_wlan_send_skb(priv->devnum, priv->curr);
   priv->dev.d_buf = NULL;
   priv->curr = NULL;
-  net_unlock();
+  netdev_unlock(&priv->dev);
   NETDEV_TXPACKETS(&priv->dev);
   amebaz_netdev_notify_tx_done(priv);
   return true;
@@ -107,7 +107,7 @@ void amebaz_netdev_notify_receive(struct amebaz_dev_s *priv,
       return;
     }
 
-  net_lock();
+  netdev_lock(&priv->dev);
   oldbuf = priv->dev.d_buf;
   hdr = (struct eth_hdr_s *)skb->data;
   priv->dev.d_buf = (void *)skb->data;
@@ -172,14 +172,14 @@ void amebaz_netdev_notify_receive(struct amebaz_dev_s *priv,
 
   skb_pull(skb, len);
   priv->dev.d_buf = oldbuf;
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 static void amebaz_txavail_work(void *arg)
 {
   struct amebaz_dev_s *priv = (struct amebaz_dev_s *)arg;
   struct net_driver_s *dev = &priv->dev;
-  net_lock();
+  netdev_lock(&priv->dev);
   if (IFF_IS_UP(dev->d_flags))
     {
       if (!priv->curr && rltk_wlan_check_isup(priv->devnum))
@@ -198,7 +198,7 @@ static void amebaz_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 static int amebaz_txavail(struct net_driver_s *dev)

@@ -1514,7 +1514,7 @@ static void c5471_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->c_dev);
 
   /* Get and clear interrupt status bits */
 
@@ -1567,7 +1567,7 @@ static void c5471_interrupt_work(void *arg)
       c5471_txdone(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->c_dev);
 
   /* Re-enable Ethernet interrupts */
 
@@ -1646,7 +1646,7 @@ static void c5471_txtimeout_work(void *arg)
 
   /* Increment statistics */
 
-  net_lock();
+  netdev_lock(&priv->c_dev);
 #ifdef CONFIG_C5471_NET_STATS
   priv->c_txtimeouts++;
   ninfo("c_txtimeouts: %d\n", priv->c_txtimeouts);
@@ -1660,7 +1660,7 @@ static void c5471_txtimeout_work(void *arg)
   /* Then poll the network for new XMIT data */
 
   devif_poll(&priv->c_dev, c5471_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->c_dev);
 }
 
 /****************************************************************************
@@ -1842,7 +1842,7 @@ static void c5471_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->c_dev);
   if (priv->c_bifup)
     {
       /* Check if the ESM has let go of the RX descriptor giving us access
@@ -1857,7 +1857,7 @@ static void c5471_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->c_dev);
 }
 
 /****************************************************************************

@@ -1065,7 +1065,7 @@ static void dm9x_interrupt_work(FAR void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dm_dev);
 
   /* Save previous register address */
 
@@ -1153,7 +1153,7 @@ static void dm9x_interrupt_work(FAR void *arg)
   /* Restore previous register address */
 
   DM9X_INDEX = save;
-  net_unlock();
+  netdev_unlock(&priv->dm_dev);
 
   /* Re-enable Ethernet interrupts */
 
@@ -1237,7 +1237,7 @@ static void dm9x_txtimeout_work(FAR void *arg)
 
   /* Increment statistics and dump debug info */
 
-  net_lock();
+  netdev_lock(&priv->dm_dev);
   NETDEV_TXTIMEOUTS(priv->dm_dev);
 
   ninfo("  TX packet count:           %d\n", priv->dm_ntxpending);
@@ -1253,7 +1253,7 @@ static void dm9x_txtimeout_work(FAR void *arg)
   /* Then poll the network for new XMIT data */
 
   devif_poll(&priv->dm_dev, dm9x_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->dm_dev);
 }
 
 /****************************************************************************
@@ -1477,7 +1477,7 @@ static void dm9x_txavail_work(FAR void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dm_dev);
   if (priv->dm_bifup)
     {
       /* Check if there is room in the DM90x0 to hold another packet. In 100M
@@ -1493,7 +1493,7 @@ static void dm9x_txavail_work(FAR void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dm_dev);
 }
 
 /****************************************************************************

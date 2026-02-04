@@ -808,7 +808,7 @@ static void lpc17_40_rxdone_work(void *arg)
    * scheduling this work to prevent work queue overruns.
    */
 
-  net_lock();
+  netdev_lock(&priv->lp_dev);
 
   /* Get the current producer and consumer indices */
 
@@ -996,7 +996,7 @@ static void lpc17_40_rxdone_work(void *arg)
       prodidx = lpc17_40_getreg(LPC17_40_ETH_RXPRODIDX) & ETH_RXPRODIDX_MASK;
     }
 
-  net_unlock();
+  netdev_unlock(&priv->lp_dev);
 
   /* Re-enable RX interrupts (this must be atomic).  Skip this step if the
    * lp-txpending TX underrun state is in effect.
@@ -1043,7 +1043,7 @@ static void lpc17_40_txdone_work(void *arg)
    * Tx now.
    */
 
-  net_lock();
+  netdev_lock(&priv->lp_dev);
   if (priv->lp_txpending)
     {
       /* Clear the pending condition, send the packet,
@@ -1065,7 +1065,7 @@ static void lpc17_40_txdone_work(void *arg)
       devif_poll(&priv->lp_dev, lpc17_40_txpoll);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->lp_dev);
 }
 
 /****************************************************************************
@@ -1296,7 +1296,7 @@ static void lpc17_40_txtimeout_work(void *arg)
 
   /* Increment statistics and dump debug info */
 
-  net_lock();
+  netdev_lock(&priv->lp_dev);
   NETDEV_TXTIMEOUTS(&priv->lp_dev);
   if (priv->lp_ifup)
     {
@@ -1311,7 +1311,7 @@ static void lpc17_40_txtimeout_work(void *arg)
       devif_poll(&priv->lp_dev, lpc17_40_txpoll);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->lp_dev);
 }
 
 /****************************************************************************
@@ -1577,7 +1577,7 @@ static void lpc17_40_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->lp_dev);
   if (priv->lp_ifup)
     {
       /* Check if there is room in the hardware to hold another packet. */
@@ -1590,7 +1590,7 @@ static void lpc17_40_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->lp_dev);
 }
 
 /****************************************************************************

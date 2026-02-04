@@ -2163,7 +2163,7 @@ static void tivacan_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Check if there is room in the hardware to hold another outgoing
@@ -2180,7 +2180,7 @@ static void tivacan_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

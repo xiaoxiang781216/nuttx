@@ -432,7 +432,7 @@ static int macnet_rxframe(FAR struct macnet_driver_s *priv,
 
   ind->frame = NULL;
 
-  net_lock();
+  netdev_lock(&priv->md_dev.r_dev);
 
   /* Transfer the frame to the network logic */
 
@@ -474,7 +474,7 @@ static int macnet_rxframe(FAR struct macnet_driver_s *priv,
   if (ret < 0)
 #endif
     {
-      net_unlock();
+      netdev_unlock(&priv->md_dev.r_dev);
       ind->frame = iob;
       return ret;
     }
@@ -484,7 +484,7 @@ static int macnet_rxframe(FAR struct macnet_driver_s *priv,
   NETDEV_RXPACKETS(&priv->md_dev.r_dev);
   NETDEV_RXIPV6(&priv->md_dev.r_dev);
 
-  net_unlock();
+  netdev_unlock(&priv->md_dev.r_dev);
 
   /* sixlowpan_input() will free the IOB, but we must free the struct
    * ieee802154_primitive_s container here.
@@ -751,7 +751,7 @@ static void macnet_txavail_work(FAR void *arg)
    * thread has been configured.
    */
 
-  net_lock();
+  netdev_lock(&priv->md_dev.r_dev);
 
   /* Ignore the notification if the interface is not yet up */
 
@@ -768,7 +768,7 @@ static void macnet_txavail_work(FAR void *arg)
       devif_poll(&priv->md_dev.r_dev, macnet_txpoll_callback);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->md_dev.r_dev);
 }
 
 /****************************************************************************

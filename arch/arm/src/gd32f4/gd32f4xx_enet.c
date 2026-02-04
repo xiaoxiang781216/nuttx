@@ -1911,7 +1911,7 @@ static void gd32_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Get the DMA interrupt status bits (no MAC interrupts are expected) */
 
@@ -1985,7 +1985,7 @@ static void gd32_interrupt_work(void *arg)
     }
 #endif
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts at the NVIC */
 
@@ -2069,14 +2069,14 @@ static void gd32_txtimeout_work(void *arg)
 
   /* Reset the hardware.  Just take the interface down, then back up again. */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   gd32_ifdown(&priv->dev);
   gd32_ifup(&priv->dev);
 
   /* Then poll for new XMIT data */
 
   gd32_do_poll(priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2151,7 +2151,7 @@ static void gd32_poll_work(void *arg)
    * nullified (and inflight should be < CONFIG_gd32_ETH_NTXDESC).
    */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if ((priv->txhead->tdes0 & ENET_TDES0_DAV) == 0 &&
        priv->txhead->tdes2 == 0)
     {
@@ -2189,7 +2189,7 @@ static void gd32_poll_work(void *arg)
 
   wd_start(&priv->txpoll, GD32_WDDELAY,
            gd32_poll_expiry, (wdparm_t)priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2354,7 +2354,7 @@ static void gd32_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->ifup)
     {
       /* Poll the network for new XMIT data */
@@ -2362,7 +2362,7 @@ static void gd32_txavail_work(void *arg)
       gd32_do_poll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

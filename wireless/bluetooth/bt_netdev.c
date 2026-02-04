@@ -374,7 +374,7 @@ static void btnet_l2cap_receive(FAR struct bt_conn_s *conn,
 
   /* Transfer the frame to the network logic */
 
-  net_lock();
+  netdev_lock(&priv->bd_dev.r_dev);
 
 #ifdef CONFIG_NET_BLUETOOTH
   /* Invoke the PF_BLUETOOTH tap first.  If the frame matches
@@ -434,7 +434,7 @@ drop:
   /* Release our reference on the buffer */
 
   bt_buf_release(buf);
-  net_unlock();
+  netdev_unlock(&priv->bd_dev.r_dev);
 }
 
 /****************************************************************************
@@ -504,7 +504,7 @@ static void btnet_hci_received(FAR struct bt_buf_s *buf, FAR void *context)
   frame      = buf->frame;
   buf->frame = NULL;
 
-  net_lock();
+  netdev_lock(&priv->bd_dev.r_dev);
 
   /* Ignore the frame if the network is not up */
 
@@ -582,7 +582,7 @@ drop:
 
   /* Release our reference on the buffer */
 
-  net_unlock();
+  netdev_unlock(&priv->bd_dev.r_dev);
 }
 
 #endif
@@ -721,7 +721,7 @@ static void btnet_txavail_work(FAR void *arg)
    * thread has been configured.
    */
 
-  net_lock();
+  netdev_lock(&priv->bd_dev.r_dev);
 
   /* Ignore the notification if the interface is not yet up */
 
@@ -738,7 +738,7 @@ static void btnet_txavail_work(FAR void *arg)
       devif_poll(&priv->bd_dev.r_dev, btnet_txpoll_callback);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->bd_dev.r_dev);
 }
 
 /****************************************************************************

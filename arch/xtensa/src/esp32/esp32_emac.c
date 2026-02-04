@@ -1297,14 +1297,14 @@ static void emac_txtimeout_work(void *arg)
 
   /* Reset the hardware.  Just take the interface down, then back up again. */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   emac_ifdown(&priv->dev);
   emac_ifup(&priv->dev);
 
   /* Then poll for new XMIT data */
 
   emac_dopoll(priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1366,7 +1366,7 @@ static void emac_rx_interrupt_work(void *arg)
   struct esp32_emac_s *priv = (struct esp32_emac_s *)arg;
   struct net_driver_s *dev = &priv->dev;
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Loop while while emac_recvframe() successfully retrieves valid
    * Ethernet frames.
@@ -1463,7 +1463,7 @@ static void emac_rx_interrupt_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1487,13 +1487,13 @@ static void emac_tx_interrupt_work(void *arg)
 {
   struct esp32_emac_s *priv = (struct esp32_emac_s *)arg;
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   wd_cancel(&priv->txtimeout);
 
   emac_dopoll(priv);
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1683,7 +1683,7 @@ static void emac_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->ifup)
     {
       /* Poll the network for new XMIT data */
@@ -1691,7 +1691,7 @@ static void emac_txavail_work(void *arg)
       emac_dopoll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

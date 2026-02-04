@@ -495,7 +495,7 @@ static void misoc_net_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->misoc_net_dev);
 
   /* Check if we received an incoming packet,
    * if so, call misoc_net_receive()
@@ -517,7 +517,7 @@ static void misoc_net_interrupt_work(void *arg)
       ethmac_sram_reader_ev_pending_write(1);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->misoc_net_dev);
 
   ethmac_sram_reader_ev_enable_write(1);
   ethmac_sram_writer_ev_enable_write(1);
@@ -598,7 +598,7 @@ static void misoc_net_txtimeout_work(void *arg)
 
   /* Increment statistics and dump debug info */
 
-  net_lock();
+  netdev_lock(&priv->misoc_net_dev);
   NETDEV_TXTIMEOUTS(&priv->misoc_net_dev);
 
   /* Then reset the hardware */
@@ -606,7 +606,7 @@ static void misoc_net_txtimeout_work(void *arg)
   /* Then poll the network for new XMIT data */
 
   devif_poll(&priv->misoc_net_dev, misoc_net_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->misoc_net_dev);
 }
 
 /****************************************************************************
@@ -771,7 +771,7 @@ static void misoc_net_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->misoc_net_dev);
   if (priv->misoc_net_bifup)
     {
       /* Check if there is room in the hardware to hold another packet. */
@@ -784,7 +784,7 @@ static void misoc_net_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->misoc_net_dev);
 }
 
 /****************************************************************************

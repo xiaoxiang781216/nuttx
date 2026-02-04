@@ -1435,7 +1435,7 @@ static void lpc54_eth_interrupt_work(void *arg)
 
   /* Lock the network to serialize driver operations. */
 
-  net_lock();
+  netdev_lock(&priv->eth_dev);
 
   /* Check if interrupt is from DMA channel 0. */
 
@@ -1455,7 +1455,7 @@ static void lpc54_eth_interrupt_work(void *arg)
 
   /* Un-lock the network and re-enable Ethernet interrupts */
 
-  net_unlock();
+  netdev_unlock(&priv->eth_dev);
   up_enable_irq(LPC54_IRQ_ETHERNET);
 }
 
@@ -1572,7 +1572,7 @@ static void lpc54_eth_txtimeout_work(void *arg)
    * thread has been configured.
    */
 
-  net_lock();
+  netdev_lock(&priv->eth_dev);
 
   /* Increment statistics and dump debug info */
 
@@ -1588,7 +1588,7 @@ static void lpc54_eth_txtimeout_work(void *arg)
   /* Then poll the network for new XMIT data */
 
   lpc54_eth_dopoll(priv);
-  net_unlock();
+  netdev_unlock(&priv->eth_dev);
 }
 
 /****************************************************************************
@@ -2087,7 +2087,7 @@ static void lpc54_eth_txavail_work(void *arg)
    * thread has been configured.
    */
 
-  net_lock();
+  netdev_lock(&priv->eth_dev);
 
   /* Ignore the notification if the interface is not yet up */
 
@@ -2098,7 +2098,7 @@ static void lpc54_eth_txavail_work(void *arg)
       lpc54_eth_dopoll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->eth_dev);
 }
 
 /****************************************************************************

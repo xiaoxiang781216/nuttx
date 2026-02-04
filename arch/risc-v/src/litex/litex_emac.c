@@ -260,14 +260,14 @@ static void litex_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   if (priv->ifup)
     {
       devif_poll(&priv->dev, litex_txpoll);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -409,7 +409,7 @@ static void litex_txtimeout_work(void *arg)
 
   /* Increment statistics and dump debug info */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   nerr("ERROR: Timeout!\n");
   nerr("Resetting interface\n");
@@ -426,7 +426,7 @@ static void litex_txtimeout_work(void *arg)
   /* Then poll the network for new XMIT data */
 
   devif_poll(&priv->dev, litex_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -690,7 +690,7 @@ static void litex_emac_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Rx Available */
 
@@ -710,7 +710,7 @@ static void litex_emac_interrupt_work(void *arg)
       putreg8(0x01, LITEX_ETHMAC_SRAM_READER_EV_PENDING);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts */
 

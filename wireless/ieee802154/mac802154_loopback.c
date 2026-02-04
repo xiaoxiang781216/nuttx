@@ -426,9 +426,9 @@ static void lo_loopback_work(FAR void *arg)
 
   /* Perform the loopback */
 
-  net_lock();
+  netdev_lock(&priv->lo_radio.r_dev);
   lo_loopback(&priv->lo_radio.r_dev);
-  net_unlock();
+  netdev_unlock(&priv->lo_radio.r_dev);
 }
 
 /****************************************************************************
@@ -549,7 +549,7 @@ static void lo_txavail_work(FAR void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->lo_radio.r_dev);
   if (priv->lo_bifup)
     {
       /* If so, then poll the network for new XMIT data */
@@ -563,7 +563,7 @@ static void lo_txavail_work(FAR void *arg)
       devif_poll(&priv->lo_radio.r_dev, lo_loopback);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->lo_radio.r_dev);
 }
 
 /****************************************************************************

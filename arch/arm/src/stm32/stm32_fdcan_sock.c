@@ -1978,9 +1978,9 @@ static void fdcan_txdone_work(void *arg)
    * new XMIT data
    */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   devif_poll(&priv->dev, fdcan_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2120,9 +2120,9 @@ static void fdcan_error_work(void *arg)
 
   /* Report errors */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   fdcan_error(priv, pending & FDCAN_ANYERR_INTS);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable ERROR interrupts */
 
@@ -3095,7 +3095,7 @@ static void fdcan_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Check if there is room in the hardware to hold another outgoing
@@ -3112,7 +3112,7 @@ static void fdcan_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

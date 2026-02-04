@@ -1470,7 +1470,7 @@ static void ez80emac_txinterrupt_work(FAR void *arg)
 
   /* Process pending Ethernet Tx interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* EMAC Tx interrupts:
    *
@@ -1553,7 +1553,7 @@ static void ez80emac_txinterrupt_work(FAR void *arg)
       wd_cancel(&priv->txtimeout);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet Tx interrupts */
 
@@ -1633,7 +1633,7 @@ static void ez80emac_rxinterrupt_work(FAR void *arg)
 
   /* Process pending Ethernet Rx interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* EMAC Rx interrupts:
    *
@@ -1655,7 +1655,7 @@ static void ez80emac_rxinterrupt_work(FAR void *arg)
   /* Process any RX packets pending the RX buffer */
 
   ez80emac_receive(priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet Rx interrupts */
 
@@ -1720,7 +1720,7 @@ static void ez80emac_sysinterrupt_work(FAR void *arg)
 
   /* Process pending system interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* EMAC system interrupts :
    *
@@ -1779,7 +1779,7 @@ static void ez80emac_sysinterrupt_work(FAR void *arg)
       EMAC_STAT(priv, rx_ovrerrors);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet system interrupts */
 
@@ -1844,7 +1844,7 @@ static void ez80emac_txtimeout_work(FAR void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Increment statistics and dump debug info */
 
@@ -1861,7 +1861,7 @@ static void ez80emac_txtimeout_work(FAR void *arg)
   /* Then poll the network for new XMIT data */
 
   devif_poll(&priv->dev, ez80emac_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2068,7 +2068,7 @@ static void ez80emac_txavail_work(FAR void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Check if there is room in the hardware to hold another packet. */
@@ -2078,7 +2078,7 @@ static void ez80emac_txavail_work(FAR void *arg)
       devif_poll(&priv->dev, ez80emac_txpoll);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

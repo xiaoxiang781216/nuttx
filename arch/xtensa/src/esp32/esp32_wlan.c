@@ -754,7 +754,7 @@ static void wlan_rxpoll(void *arg)
    * Ethernet frames.
    */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   while ((pktbuf = wlan_recvframe(priv)) != NULL)
     {
@@ -891,9 +891,9 @@ static void wlan_rxpoll(void *arg)
 
       if (rbytes >= WLAN_RX_THRESHOLD)
         {
-          net_unlock();
+          netdev_unlock(&priv->dev);
           rbytes = 0;
-          net_lock();
+          netdev_lock(&priv->dev);
         }
 #endif
     }
@@ -902,7 +902,7 @@ static void wlan_rxpoll(void *arg)
 
   wlan_transmit(priv);
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1030,7 +1030,7 @@ static void wlan_txtimeout_work(void *arg)
 
   wlan_transmit(priv);
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   wlan_ifdown(&priv->dev);
   wlan_ifup(&priv->dev);
@@ -1039,7 +1039,7 @@ static void wlan_txtimeout_work(void *arg)
 
   wlan_dopoll(priv);
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1101,7 +1101,7 @@ static void wlan_txavail_work(void *arg)
    * thread has been configured.
    */
 
-  net_lock();
+  netdev_lock(&priv->dev);
 
   /* Ignore the notification if the interface is not yet up */
 
@@ -1112,7 +1112,7 @@ static void wlan_txavail_work(void *arg)
       wlan_dopoll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1147,11 +1147,11 @@ static int wlan_ifup(struct net_driver_s *dev)
         dev->d_ipv6addr[6], dev->d_ipv6addr[7]);
 #endif
 
-  net_lock();
+  netdev_lock(dev);
 
   if (priv->ifup)
     {
-      net_unlock();
+      netdev_unlock(dev);
       return OK;
     }
 
@@ -1160,7 +1160,7 @@ static int wlan_ifup(struct net_driver_s *dev)
   if (ret < 0)
     {
       wlan_deinit_buffer(priv);
-      net_unlock();
+      netdev_unlock(dev);
       nerr("ERROR: Failed to start Wi-Fi ret=%d\n", ret);
       return ret;
     }
@@ -1182,14 +1182,14 @@ static int wlan_ifup(struct net_driver_s *dev)
    */
 
   wlan_deinit_buffer(priv);
-  net_unlock();
+  netdev_unlock(dev);
 
   return OK;
 }
 
 /****************************************************************************
  * Name: wlan_ifdown
- *
+
  * Description:
  *   NuttX Callback: Stop the interface.
  *
@@ -1206,11 +1206,11 @@ static int wlan_ifdown(struct net_driver_s *dev)
   int ret;
   struct wlan_priv_s *priv = (struct wlan_priv_s *)dev->d_private;
 
-  net_lock();
+  netdev_lock(dev);
 
   if (!priv->ifup)
     {
-      net_unlock();
+      netdev_unlock(dev);
       return OK;
     }
 
@@ -1238,7 +1238,7 @@ static int wlan_ifdown(struct net_driver_s *dev)
         }
     }
 
-  net_unlock();
+  netdev_unlock(dev);
 
   return OK;
 }

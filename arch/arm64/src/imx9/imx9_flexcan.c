@@ -984,7 +984,7 @@ static void imx9_receive(struct imx9_driver_s *priv)
           frame_len = sizeof(struct can_frame);
         }
 
-      net_lock();
+      netdev_lock(&priv->dev);
 
       /* Copy the buffer pointer to priv->dev..  Set amount of data
        * in priv->dev.d_len
@@ -997,7 +997,7 @@ static void imx9_receive(struct imx9_driver_s *priv)
 
       can_input(&priv->dev);
 
-      net_unlock();
+      netdev_unlock(&priv->dev);
 
       /* Clear MB interrupt flag */
 
@@ -1141,9 +1141,9 @@ static void imx9_txdone_work(void *arg)
    * new XMIT data
    */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   devif_poll(&priv->dev, imx9_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1510,7 +1510,7 @@ static void imx9_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Check if there is room in the hardware to hold another outgoing
@@ -1527,7 +1527,7 @@ static void imx9_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

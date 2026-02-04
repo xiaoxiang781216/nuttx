@@ -1064,9 +1064,9 @@ static void imxrt_txdone_work(void *arg)
    * new XMIT data
    */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   devif_poll(&priv->dev, imxrt_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1097,9 +1097,9 @@ static void imxrt_flexcan_interrupt_work(void *arg)
   flags  = getreg32(priv->base + IMXRT_CAN_IFLAG1_OFFSET);
   flags &= IFLAG1_RX;
 
-  net_lock();
+  netdev_lock(&priv->dev);
   imxrt_receive(priv, flags);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Mask MB again */
 
@@ -1427,7 +1427,7 @@ static void imxrt_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Check if there is room in the hardware to hold another outgoing
@@ -1444,7 +1444,7 @@ static void imxrt_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

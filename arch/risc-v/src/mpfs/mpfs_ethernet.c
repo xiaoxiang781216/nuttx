@@ -954,7 +954,7 @@ static void mpfs_interrupt_work(void *arg)
 
   /* Process pending Ethernet interrupts */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   isr = *priv->queue[queue].int_status;
   rsr = mac_getreg(priv, RECEIVE_STATUS);
   tsr = mac_getreg(priv, TRANSMIT_STATUS);
@@ -1118,7 +1118,7 @@ static void mpfs_interrupt_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Re-enable Ethernet interrupts */
 
@@ -1645,7 +1645,7 @@ static void mpfs_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->ifup)
     {
       /* Poll the network for new XMIT data */
@@ -1653,7 +1653,7 @@ static void mpfs_txavail_work(void *arg)
       mpfs_dopoll(priv);
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -2846,14 +2846,14 @@ static void mpfs_txtimeout_work(void *arg)
 
   /* Reset the hardware.  Just take the interface down, then back up again. */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   mpfs_ifdown(&priv->dev);
   mpfs_ifup(&priv->dev);
 
   /* Then poll the network for new XMIT data */
 
   mpfs_dopoll(priv);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************

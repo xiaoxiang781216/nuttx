@@ -705,7 +705,7 @@ static void sam_lin_txavail_work(void *arg)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   if (priv->bifup)
     {
       /* Check if there the hardware is capable to process another outgoing
@@ -722,7 +722,7 @@ static void sam_lin_txavail_work(void *arg)
         }
     }
 
-  net_unlock();
+  netdev_unlock(&priv->dev);
 }
 
 /****************************************************************************
@@ -1106,9 +1106,9 @@ static void sam_lin_txdone_work(void *arg)
    * new XMIT data
    */
 
-  net_lock();
+  netdev_lock(&priv->dev);
   devif_poll(&priv->dev, sam_lin_txpoll);
-  net_unlock();
+  netdev_unlock(&priv->dev);
 
   /* Enabled LIN ID interrupt for slave mode */
 
@@ -1215,7 +1215,7 @@ static void sam_lin_errinterrupt_work(void *arg)
 
       memcpy(frame->data, data, CAN_ERR_DLC);
 
-      net_lock();
+      netdev_lock(&priv->dev);
 
       /* Copy the buffer pointer to priv->dev..  Set amount of data
        * in priv->dev.d_len
@@ -1238,7 +1238,7 @@ static void sam_lin_errinterrupt_work(void *arg)
        */
 
       priv->dev.d_buf = (uint8_t *)priv->txdesc;
-      net_unlock();
+      netdev_unlock(&priv->dev);
     }
 
   /* Enabled LIN ID interrupt for slave mode */

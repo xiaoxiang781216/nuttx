@@ -586,8 +586,6 @@ static int bl602_launch_pending_rx(void)
 
   while (1)
     {
-      net_lock();
-
       irqstate     = enter_critical_section();
       tx_buf_empty = BIT_EMPTY(TX_BUFF_BIT_SIZE, &g_tx_buf_indicator);
       leave_critical_section(irqstate);
@@ -598,7 +596,6 @@ static int bl602_launch_pending_rx(void)
 
           nwarn("tx buf empty!\n");
 
-          net_unlock();
           return -ENOMEM;
         }
 
@@ -613,10 +610,10 @@ static int bl602_launch_pending_rx(void)
            * input, we start poll the normal tx routine.
            */
 
-          net_unlock();
-
           return OK;
         }
+
+      netdev_lock(&item->priv->net_dev);
 
       ninfo("input stack rx data :%p %d\n", item->data, item->len);
 
@@ -631,7 +628,7 @@ static int bl602_launch_pending_rx(void)
       bl602_net_receive(item->priv);
 
       DEBUGASSERT(item->priv->net_dev.d_buf == NULL);
-      net_unlock();
+      netdev_unlock(&item->priv->net_dev);
 
       kmm_free(item);
     }
@@ -735,7 +732,7 @@ int bl602_net_notify(uint32_t event, uint8_t *data, int len, void *opaque)
 
           wlinfo("input stack direct:%p %d\n", data, len);
 
-          net_lock();
+          netdev_lock(&priv->net_dev);
           DEBUGASSERT(priv->net_dev.d_buf == NULL);
 
           priv->net_dev.d_buf = data;
@@ -743,7 +740,7 @@ int bl602_net_notify(uint32_t event, uint8_t *data, int len, void *opaque)
           bl602_net_receive(priv);
 
           DEBUGASSERT(priv->net_dev.d_buf == NULL);
-          net_unlock();
+          netdev_unlock(&priv->net_dev);
         }
     }
 
@@ -839,7 +836,7 @@ static int bl602_net_ifdown(struct net_driver_s *dev)
     (struct bl602_net_driver_s *)dev->d_private;
   irqstate_t flags;
 
-  net_lock();
+  netdev_lock(dev);
 
   flags = enter_critical_section();
 
@@ -850,7 +847,7 @@ static int bl602_net_ifdown(struct net_driver_s *dev)
       bl602_net_soft_reset();
     }
 
-  net_unlock();
+  netdev_unlock(dev);
   return OK;
 }
 
@@ -875,7 +872,7 @@ static void bl602_net_txavail_work(void *arg)
 {
   struct bl602_net_driver_s *priv = (struct bl602_net_driver_s *)arg;
 
-  net_lock();
+  netdev_lock(&priv->net_dev);
   DEBUGASSERT(priv->net_dev.d_buf == NULL);
   DEBUGASSERT(priv->push_cnt == 0);
 
@@ -883,7 +880,7 @@ static void bl602_net_txavail_work(void *arg)
 
   if (!IFF_IS_UP(priv->net_dev.d_flags))
     {
-      net_unlock();
+      netdev_unlock(&priv->net_dev);
       return;
     }
 
@@ -922,7 +919,7 @@ static void bl602_net_txavail_work(void *arg)
     }
 
   DEBUGASSERT(priv->net_dev.d_buf == NULL);
-  net_unlock();
+  netdev_unlock(&priv->net_dev);
 }
 
 /****************************************************************************
@@ -1837,14 +1834,13 @@ void bl602_netdev_free_txbuf(uint8_t *buf)
 
 void bl602_net_event(int evt, int val)
 {
-  net_lock();
-
   switch (evt)
     {
     case CODE_WIFI_ON_CONNECTED:
       do
         {
           struct bl602_net_driver_s *priv = &g_bl602_net[0];
+          netdev_lock(&priv->net_dev);
           priv->prev_connectd = 1;
           g_state.sta_connected = 1;
 
@@ -1852,6 +1848,7 @@ void bl602_net_event(int evt, int val)
 
           wifi_mgmr_sta_autoconnect_disable();
           nxsem_post(&g_wifi_connect_sem);
+          netdev_unlock(&priv->net_dev);
         }
       while (0);
       break;
@@ -1877,6 +1874,7 @@ void bl602_net_event(int evt, int val)
           struct bl602_net_driver_s *priv = &g_bl602_net[0];
 
           wlinfo("retry connect : %d\n", g_state.retry_cnt);
+          netdev_lock(&priv->net_dev);
           if (!priv->prev_connectd)
             {
               if (g_state.retry_cnt++ > 3)
@@ -1887,6 +1885,8 @@ void bl602_net_event(int evt, int val)
                   nxsem_post(&g_wifi_connect_sem);
                 }
             }
+
+          netdev_unlock(&priv->net_dev);
         }
       while (0);
       break;
@@ -1927,8 +1927,6 @@ void bl602_net_event(int evt, int val)
       wlwarn("unhandled msg:%d\n", evt);
       break;
     }
-
-  net_unlock();
 }
 
 /****************************************************************************
