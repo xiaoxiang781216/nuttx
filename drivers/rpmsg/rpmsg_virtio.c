@@ -826,10 +826,11 @@ static void rpmsg_virtio_start_worker(FAR void *arg)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: rpmsg_virtio_probe
+ * Name: rpmsg_virtio_probe_cpuname
  ****************************************************************************/
 
-int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
+int rpmsg_virtio_probe_cpuname(FAR struct virtio_device *vdev,
+                               FAR const char *cpuname)
 {
   FAR struct rpmsg_virtio_priv_s *priv;
   uint64_t features;
@@ -859,28 +860,35 @@ int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
 
       /* Read the virtio rpmsg config to get the local/remote cpu name  */
 
-      DEBUGASSERT(virtio_has_feature(vdev, VIRTIO_RPMSG_F_CPUNAME));
-      if (vdev->role == VIRTIO_DEV_DRIVER)
+      if (virtio_has_feature(vdev, VIRTIO_RPMSG_F_CPUNAME))
         {
-          virtio_read_config_bytes(vdev, offsetof(struct fw_rsc_config,
-                                                  host_cpuname),
-                                   priv->rpmsg.local_cpuname,
-                                   VIRTIO_RPMSG_CPUNAME_SIZE);
-          virtio_read_config_bytes(vdev, offsetof(struct fw_rsc_config,
-                                                  remote_cpuname),
-                                   priv->rpmsg.cpuname,
-                                   VIRTIO_RPMSG_CPUNAME_SIZE);
+          if (vdev->role == VIRTIO_DEV_DRIVER)
+            {
+              virtio_read_config_bytes(vdev, offsetof(struct fw_rsc_config,
+                                                      host_cpuname),
+                                      priv->rpmsg.local_cpuname,
+                                      VIRTIO_RPMSG_CPUNAME_SIZE);
+              virtio_read_config_bytes(vdev, offsetof(struct fw_rsc_config,
+                                                      remote_cpuname),
+                                      priv->rpmsg.cpuname,
+                                      VIRTIO_RPMSG_CPUNAME_SIZE);
+            }
+          else
+            {
+              virtio_read_config_bytes(vdev, offsetof(struct fw_rsc_config,
+                                                      host_cpuname),
+                                      priv->rpmsg.cpuname,
+                                      VIRTIO_RPMSG_CPUNAME_SIZE);
+              virtio_read_config_bytes(vdev, offsetof(struct fw_rsc_config,
+                                                      remote_cpuname),
+                                      priv->rpmsg.local_cpuname,
+                                      VIRTIO_RPMSG_CPUNAME_SIZE);
+            }
         }
       else
         {
-          virtio_read_config_bytes(vdev, offsetof(struct fw_rsc_config,
-                                                  host_cpuname),
-                                   priv->rpmsg.cpuname,
-                                   VIRTIO_RPMSG_CPUNAME_SIZE);
-          virtio_read_config_bytes(vdev, offsetof(struct fw_rsc_config,
-                                                  remote_cpuname),
-                                   priv->rpmsg.local_cpuname,
-                                   VIRTIO_RPMSG_CPUNAME_SIZE);
+          DEBUGASSERT(cpuname != NULL);
+          strlcpy(priv->rpmsg.cpuname, cpuname, VIRTIO_RPMSG_CPUNAME_SIZE);
         }
 
       if (virtio_has_feature(vdev, VIRTIO_RPMSG_F_PRIORITY))
@@ -916,6 +924,15 @@ int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
     }
 
   return ret;
+}
+
+/****************************************************************************
+ * Name: rpmsg_virtio_probe
+ ****************************************************************************/
+
+int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
+{
+  return rpmsg_virtio_probe_cpuname(vdev, NULL);
 }
 
 /****************************************************************************
