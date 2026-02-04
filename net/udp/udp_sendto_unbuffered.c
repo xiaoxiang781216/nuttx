@@ -55,7 +55,7 @@
  * in some additional domain selection support.
  */
 
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
+#if defined(CONFIG_NET_IPv4) || defined(CONFIG_NET_IPv6)
 #  define NEED_IPDOMAIN_SUPPORT 1
 #endif
 
@@ -77,52 +77,6 @@ struct sendto_s
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: sendto_ipselect
- *
- * Description:
- *   If both IPv4 and IPv6 support are enabled, then we will need to select
- *   which one to use when generating the outgoing packet.  If only one
- *   domain is selected, then the setup is already in place and we need do
- *   nothing.
- *
- * Input Parameters:
- *   dev    - The structure of the network driver that caused the event
- *   pstate - sendto state structure
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   This function must be called with the network locked.
- *
- ****************************************************************************/
-
-#ifdef NEED_IPDOMAIN_SUPPORT
-static inline void sendto_ipselect(FAR struct net_driver_s *dev,
-                                   FAR struct sendto_s *pstate)
-{
-  FAR struct udp_conn_s *conn = pstate->st_conn;
-
-  /* Which domain the socket support */
-
-  if (conn->domain == PF_INET ||
-      (conn->domain == PF_INET6 &&
-       ip6_is_ipv4addr((FAR struct in6_addr *)conn->u.ipv6.raddr)))
-    {
-      /* Select the IPv4 domain */
-
-      udp_ipv4_select(dev);
-    }
-  else /* if (psock->s_domain == PF_INET6) */
-    {
-      /* Select the IPv6 domain */
-
-      udp_ipv6_select(dev);
-    }
-}
-#endif
 
 /****************************************************************************
  * Name: sendto_eventhandler
@@ -229,7 +183,7 @@ static uint32_t sendto_eventhandler(FAR struct net_driver_s *dev,
            * place and we need do nothing.
            */
 
-          sendto_ipselect(dev, pstate);
+          udp_ip_select(dev, pstate->st_conn);
 #endif
 
           pstate->st_sndlen = pstate->st_buflen;

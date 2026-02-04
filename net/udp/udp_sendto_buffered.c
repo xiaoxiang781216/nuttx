@@ -71,7 +71,7 @@
  * in some additional domain selection support.
  */
 
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
+#if defined(CONFIG_NET_IPv4) || defined(CONFIG_NET_IPv6)
 #  define NEED_IPDOMAIN_SUPPORT 1
 #endif
 
@@ -89,10 +89,6 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-#ifdef NEED_IPDOMAIN_SUPPORT
-static inline void sendto_ipselect(FAR struct net_driver_s *dev,
-                                   FAR struct udp_conn_s *conn);
-#endif
 static int sendto_next_transfer(FAR struct udp_conn_s *conn);
 static uint32_t sendto_eventhandler(FAR struct net_driver_s *dev,
                                     FAR void *pvpriv, uint32_t flags);
@@ -181,50 +177,6 @@ static void sendto_writebuffer_release(FAR struct udp_conn_s *conn,
   udp_sendbuffer_notify(conn);
 #endif /* CONFIG_NET_SEND_BUFSIZE */
 }
-
-/****************************************************************************
- * Name: sendto_ipselect
- *
- * Description:
- *   If both IPv4 and IPv6 support are enabled, then we will need to select
- *   which one to use when generating the outgoing packet.  If only one
- *   domain is selected, then the setup is already in place and we need do
- *   nothing.
- *
- * Input Parameters:
- *   dev   - The structure of the network driver that caused the event
- *   conn  - The UDP connection of interest
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   The network is locked
- *
- ****************************************************************************/
-
-#ifdef NEED_IPDOMAIN_SUPPORT
-static inline void sendto_ipselect(FAR struct net_driver_s *dev,
-                                   FAR struct udp_conn_s *conn)
-{
-  /* Which domain the socket support */
-
-  if (conn->domain == PF_INET ||
-      (conn->domain == PF_INET6 &&
-       ip6_is_ipv4addr((FAR struct in6_addr *)conn->u.ipv6.raddr)))
-    {
-      /* Select the IPv4 domain */
-
-      udp_ipv4_select(dev);
-    }
-  else /* if (conn->domain == PF_INET6) */
-    {
-      /* Select the IPv6 domain */
-
-      udp_ipv6_select(dev);
-    }
-}
-#endif
 
 /****************************************************************************
  * Name: sendto_next_transfer
@@ -486,7 +438,7 @@ static uint32_t sendto_eventhandler(FAR struct net_driver_s *dev,
        * place and we need do nothing.
        */
 
-      sendto_ipselect(dev, conn);
+      udp_ip_select(dev, conn);
 #endif
 
       /* Free the write buffer at the head of the queue and attempt to

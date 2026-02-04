@@ -47,6 +47,7 @@
 #include <nuttx/net/ipv6ext.h>
 
 #include "netdev/netdev.h"
+#include "arp/arp.h"
 #include "inet/inet.h"
 #include "icmp/icmp.h"
 #include "icmpv6/icmpv6.h"
@@ -249,6 +250,15 @@ static void ip_fragin_timerwork(FAR void *arg)
                 {
                   icmp_reply(dev, ICMP_TIME_EXCEEDED,
                             ICMP_EXC_FRAGTIME);
+
+                  /* IPFRAG_POLL polls packets directly from dev->d_fragout
+                   * queue, bypassing the normal IP version detection in
+                   * devif_poll. Therefore, we must explicitly call arp_out()
+                   * here to complete the IPv4 header processing
+                   * before transmission.
+                   */
+
+                  arp_out(dev);
                 }
 #endif
 
@@ -257,6 +267,15 @@ static void ip_fragin_timerwork(FAR void *arg)
                 {
                   icmpv6_reply(dev, ICMPv6_PACKET_TIME_EXCEEDED,
                               ICMPV6_EXC_FRAGTIME, 0);
+
+                  /* IPFRAG_POLL polls packets directly from dev->d_fragout
+                   * queue, bypassing the normal IP version detection in
+                   * devif_poll. Therefore, we must explicitly call
+                   * neighbor_out() to complete the IPv6 header processing
+                   * before transmission.
+                   */
+
+                  neighbor_out(dev);
                 }
 #endif
 

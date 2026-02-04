@@ -83,4 +83,56 @@ void udp_ipv6_select(FAR struct net_driver_s *dev)
 }
 #endif /* CONFIG_NET_IPv6 */
 
+/****************************************************************************
+ * Name: udp_ip_select
+ *
+ * Description:
+ *   If both IPv4 and IPv6 support are enabled, then we will need to select
+ *   which one to use when generating the outgoing packet.  If only one
+ *   domain is selected, then the setup is already in place and we need do
+ *   nothing.
+ *
+ * Input Parameters:
+ *   dev   - The structure of the network driver that caused the event
+ *   conn  - The UDP connection of interest
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   The network is locked
+ *
+ ****************************************************************************/
+
+void udp_ip_select(FAR struct net_driver_s *dev,
+                   FAR struct udp_conn_s *conn)
+{
+#if defined(CONFIG_NET_IPv6) && defined(CONFIG_NET_IPv4)
+  /* Which domain the socket support */
+
+  if (conn->domain == PF_INET ||
+      (conn->domain == PF_INET6 &&
+       ip6_is_ipv4addr((FAR struct in6_addr *)conn->u.ipv6.raddr)))
+    {
+      /* Select the IPv4 domain */
+
+      udp_ipv4_select(dev);
+    }
+  else /* if (conn->domain == PF_INET6) */
+    {
+      /* Select the IPv6 domain */
+
+      udp_ipv6_select(dev);
+    }
+
+#elif defined(CONFIG_NET_IPv4)
+
+  /* Select the IPv4 domain */
+
+  udp_ipv4_select(dev);
+#else
+  udp_ipv6_select(dev);
+#endif
+}
+
 #endif /* CONFIG_NET */

@@ -1162,8 +1162,7 @@ int devif_poll(FAR struct net_driver_s *dev, devif_poll_callback_t callback)
   if (dev->d_buf == NULL)
     {
       bstop = devif_iob_poll(dev, callback);
-      netdev_unlock(dev);
-      return bstop;
+      goto out;
     }
 
   buf = dev->d_buf;
@@ -1218,6 +1217,14 @@ int devif_poll(FAR struct net_driver_s *dev, devif_poll_callback_t callback)
   /* Restore the flat buffer */
 
   dev->d_buf = buf;
+
+out:
+#ifdef CONFIG_NET_IPv4
+  IFF_CLR_IPv4(dev->d_flags);
+#endif
+#ifdef CONFIG_NET_IPv6
+  IFF_CLR_IPv6(dev->d_flags);
+#endif
   netdev_unlock(dev);
 
   return bstop;
@@ -1248,21 +1255,18 @@ void devif_out(FAR struct net_driver_s *dev)
       case NET_LL_ETHERNET:
       case NET_LL_IEEE80211:
 #  ifdef CONFIG_NET_IPv4
-#    ifdef CONFIG_NET_IPv6
         if (IFF_IS_IPv4(dev->d_flags))
-#    endif /* CONFIG_NET_IPv6 */
           {
             arp_out(dev);
           }
-#  endif /* CONFIG_NET_IPv4 */
+#  endif
+
 #  ifdef CONFIG_NET_IPv6
-#    ifdef CONFIG_NET_IPv4
-        else
-#    endif /* CONFIG_NET_IPv4 */
+        if (IFF_IS_IPv6(dev->d_flags))
           {
             neighbor_out(dev);
           }
-#  endif /* CONFIG_NET_IPv6 */
+#  endif
 
         break;
 #endif /* CONFIG_NET_ETHERNET */

@@ -75,7 +75,7 @@
  * in some additional domain selection support.
  */
 
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
+#if defined(CONFIG_NET_IPv4) || defined(CONFIG_NET_IPv6)
 #  define NEED_IPDOMAIN_SUPPORT 1
 #endif
 

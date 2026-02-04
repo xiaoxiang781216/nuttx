@@ -290,6 +290,7 @@ static int ipv4_in(FAR struct net_driver_s *dev)
 #ifdef CONFIG_NET_IPFRAG
       if (ipv4_fragin(dev) == OK)
         {
+          IFF_CLR_IPv4(dev->d_flags);
           return OK;
         }
 
@@ -555,6 +556,8 @@ done:
 
   devif_out(dev);
 
+  IFF_CLR_IPv4(dev->d_flags);
+
   /* Return and let the caller do any pending transmission. */
 
   return ret;
@@ -564,6 +567,7 @@ done:
    */
 
 drop:
+  IFF_CLR_IPv4(dev->d_flags);
   dev->d_len = 0;
   return OK;
 }

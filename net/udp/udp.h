@@ -420,6 +420,17 @@ void udp_ipv6_select(FAR struct net_driver_s *dev);
 #endif
 
 /****************************************************************************
+ * Name: udp_ip_select
+ *
+ * Description:
+ *   Configure to send or receive an UDP IPv[4|6] packet for connection
+ *
+ ****************************************************************************/
+
+void udp_ip_select(FAR struct net_driver_s *dev,
+                   FAR struct udp_conn_s *conn);
+
+/****************************************************************************
  * Name: udp_poll
  *
  * Description:
