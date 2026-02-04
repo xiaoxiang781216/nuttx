@@ -41,7 +41,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define VLAN_DEV_NAME_FMT "%s.%i"
+#define VLAN_DEV_NAME_FMT "%.*s.%u"
 
 /****************************************************************************
  * Private Types
@@ -286,10 +286,9 @@ static void vlan_reclaim(FAR struct netdev_lowerhalf_s *dev)
  ****************************************************************************/
 
 int vlan_register(FAR struct netdev_lowerhalf_s *real, uint16_t vid,
-                  uint16_t prio)
+                  uint16_t prio, uint8_t rx_type, uint8_t rx_priority)
 {
   FAR struct vlan_device_s *vlan;
-  char vlanifname[IFNAMSIZ + 8];
   int ret;
 
   if (real == NULL || real->netdev.d_lltype != NET_LL_ETHERNET)
@@ -301,6 +300,12 @@ int vlan_register(FAR struct netdev_lowerhalf_s *real, uint16_t vid,
   if (vid >= VLAN_N_VID || prio > (VLAN_PRIO_MASK >> VLAN_PRIO_SHIFT))
     {
       nerr("ERROR: Invalid VID %" PRIu16 " with PCP %" PRIu16, vid, prio);
+      return -EINVAL;
+    }
+
+  if (rx_type > NETDEV_RX_DEFAULT)
+    {
+      nerr("ERROR: Invalid vlan rx_type %d\n", rx_type);
       return -EINVAL;
     }
 
@@ -328,11 +333,10 @@ int vlan_register(FAR struct netdev_lowerhalf_s *real, uint16_t vid,
 
   vlan->dev.netdev.d_pktsize = real->netdev.d_pktsize;
 
-  /* Set the VLAN device name, use a buffer to make compiler happy */
+  /* Set the VLAN device name */
 
-  snprintf(vlanifname, sizeof(vlanifname), VLAN_DEV_NAME_FMT,
-           real->netdev.d_ifname, vid);
-  strlcpy(vlan->dev.netdev.d_ifname, vlanifname, IFNAMSIZ);
+  snprintf(vlan->dev.netdev.d_ifname, IFNAMSIZ, VLAN_DEV_NAME_FMT,
+           IFNAMSIZ - 6, real->netdev.d_ifname, vid);
 
   /* Copy the MAC address from the real device */
 
@@ -346,6 +350,12 @@ int vlan_register(FAR struct netdev_lowerhalf_s *real, uint16_t vid,
     {
       nerr("ERROR: Failed to add VLAN device: %d\n", ret);
       goto errout;
+    }
+
+  if (rx_type != NETDEV_RX_DEFAULT)
+    {
+      vlan->dev.rxtype   = rx_type;
+      vlan->dev.priority = rx_priority;
     }
 
   ret = netdev_lower_register(&vlan->dev, NET_LL_ETHERNET);
