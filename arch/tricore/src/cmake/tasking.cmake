@@ -347,28 +347,29 @@ function(nuttx_add_elf_app)
       endif()
     endif()
     get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
+
+    # Build ELF_LINK_ARGS for both custom_command and .cmd file saving
+    set(ELF_LINK_ARGS
+        ${CMAKE_LINKER}
+        -r
+        -e__start
+        -I${CMAKE_BINARY_DIR}/include
+        -I${NUTTX_DIR}/include
+        --lsl-file=${CMAKE_SOURCE_DIR}/libs/libc/elf/tasking-elf.lsl
+        $<$<BOOL:${DYNLIB_ELF_MODE}>:$<TARGET_PROPERTY:nuttx_global,NUTTX_MOD_APP_LINK_OPTIONS>>
+        $<$<OR:$<BOOL:${KERNEL_ELF_MODE}>,$<BOOL:${LOADABLE_ELF_MODE}>>:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_LINK_OPTIONS>>
+        ${LINK_FLAGS}
+        $<$<AND:$<TARGET_EXISTS:STARTUP_OBJS>,$<NOT:$<BOOL:${DYNLIB_ELF_MODE}>>>:$<TARGET_OBJECTS:STARTUP_OBJS>>
+        $<$<BOOL:${KERNEL_ELF_MODE}>:$<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_LIBRARIES>>>
+        $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_EXTRA_LIBRARIES>>
+        $<TARGET_FILE:${ELF_TARGET}>
+        -o
+        ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME})
+
     add_custom_command(
       TARGET ${ELF_TARGET}
       POST_BUILD
-      COMMAND
-        # add default link option
-        ${CMAKE_LINKER} -r -e__start -I${CMAKE_BINARY_DIR}/include
-        -I${NUTTX_DIR}/include
-        --lsl-file=${CMAKE_SOURCE_DIR}/libs/libc/elf/tasking-elf.lsl
-        # add global MOD link option if dynlib link
-        $<$<BOOL:${DYNLIB_ELF_MODE}>:$<TARGET_PROPERTY:nuttx_global,NUTTX_MOD_APP_LINK_OPTIONS>>
-        # add global ELF link option if m&kernel link
-        $<$<OR:$<BOOL:${KERNEL_ELF_MODE}>,$<BOOL:${LOADABLE_ELF_MODE}>>:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_LINK_OPTIONS>>
-        # add local link option lastest
-        ${LINK_FLAGS}
-        # link startup obj if m&kernel link
-        $<$<AND:$<TARGET_EXISTS:STARTUP_OBJS>,$<NOT:$<BOOL:${DYNLIB_ELF_MODE}>>>:$<TARGET_OBJECTS:STARTUP_OBJS>>
-        # link user lib if kernel link
-        $<$<BOOL:${KERNEL_ELF_MODE}>:$<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_LIBRARIES>>>
-        # always link extra libs
-        $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_EXTRA_LIBRARIES>>
-        $<TARGET_FILE:${ELF_TARGET}> -o
-        ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME}
+      COMMAND ${ELF_LINK_ARGS}
       COMMAND
         ${CMAKE_OBJCOPY} ${SYMBOL_STACKSIZE} ${SYMBOL_PRIORITY} ${SYMBOL_UID}
         ${SYMBOL_GID} ${SYMBOL_MODE} ${SYMBOL_HEAPSIZE}
@@ -379,6 +380,9 @@ function(nuttx_add_elf_app)
               ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME}.mdf
       COMMENT "Building ELF:${ELF_NAME}"
       COMMAND_EXPAND_LISTS)
+
+    # Save link command to .cmd file for elf_fixup.py
+    nuttx_save_link_command(${ELF_NAME} "${ELF_LINK_ARGS}")
   else()
     add_executable(${ELF_TARGET} ${SRCS})
     target_link_options(

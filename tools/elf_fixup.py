@@ -49,6 +49,30 @@ def run_command(cmd: list[str], stdout=None):
         raise RuntimeError(f"Command failed: {' '.join(cmd)}") from e
 
 
+def load_link_command(cmd_file: Path) -> tuple[str, str, str]:
+    """Load saved link command from .cmd file.
+
+    Args:
+        cmd_file: Path to the .cmd file
+
+    Returns:
+        tuple: (app_name, cwd, link_command)
+
+    Raises:
+        FileNotFoundError: If .cmd file doesn't exist
+        ValueError: If .cmd file format is invalid
+    """
+    if not cmd_file.exists():
+        raise FileNotFoundError(f"Link command file not found: {cmd_file}")
+
+    content = cmd_file.read_text().strip()
+    parts = content.split("|", 2)  # Split into max 3 parts
+    if len(parts) != 3:
+        raise ValueError(f"Invalid .cmd file format: {cmd_file}")
+
+    return parts[0], parts[1], parts[2]
+
+
 def elf_parse(elf):
     config = lief.ELF.ParserConfig()
     config.parse_notes = False
@@ -59,7 +83,6 @@ def elf_parse(elf):
 
 
 class Toolchain(ABC):
-
     @abstractmethod
     def run_cpp(
         self,
@@ -77,9 +100,39 @@ class Toolchain(ABC):
     def run_cc(self, args, in_src: str, out_obj: str):
         pass
 
-    @abstractmethod
-    def run_ld(self, args, in_elf, in_ld, out_elf, gc_sections=True):
-        pass
+    def run_ld(self, args, cmd_file: Path, new_ld: str, out_elf: str):
+        """Execute saved link command with new linker script and output path.
+
+        Args:
+            args: Command line arguments
+            cmd_file: Path to the .cmd file containing original link command
+            new_ld: Path to the new linker script
+            out_elf: Path to the output ELF file
+        """
+        import re
+        import shlex
+
+        app_name, cwd, link_cmd = load_link_command(cmd_file)
+
+        # Convert to absolute paths before changing directory
+        new_ld = os.path.abspath(new_ld)
+        out_elf = os.path.abspath(out_elf)
+
+        # CMake uses semicolons as list separators, convert to spaces
+        link_cmd = link_cmd.replace(";", " ")
+
+        link_cmd = re.sub(r"\s+-r\s+", " ", link_cmd)
+        link_cmd = re.sub(
+            self.ld_script_pattern, self.ld_script_format.format(new_ld), link_cmd
+        )
+        link_cmd = re.sub(r"-o\s+\S+", f"-o {out_elf}", link_cmd)
+        cmd = shlex.split(link_cmd)
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(cwd)
+            run_command(cmd)
+        finally:
+            os.chdir(original_cwd)
 
     @abstractmethod
     def run_hex(self, args, in_elf, out_hex, extern):
@@ -106,6 +159,8 @@ class Toolchain(ABC):
 
 
 class GnuToolchain(Toolchain):
+    ld_script_pattern = r"-T\s+\S+"
+    ld_script_format = "-T {}"
 
     def run_cpp(
         self,
@@ -117,7 +172,6 @@ class GnuToolchain(Toolchain):
         out_ld: str,
         flags: list[str] = [],
     ):
-
         extern_symbols_str = ""
         for name, addr in extern_symbols.items():
             extern_symbols_str += f"{name} = 0x{addr:x};"
@@ -152,35 +206,14 @@ class GnuToolchain(Toolchain):
         ] + args.cflags
         run_command(cmd)
 
-    def run_ld(self, args, in_elf, in_ld, out_elf, gc_sections=True):
-        nostart = []
-        if args.ld.endswith("cc"):
-            nostart = ["-nostartfiles", "-nostdlib"]
-            if gc_sections:
-                nostart.extend(["-Wl,--gc-sections"])
-            nostart.extend(args.cflags)
-        else:
-            nostart = ["--nostdlib"]
-
-        cmd = [
-            args.ld,
-            "-e",
-            "__start",
-            "-T",
-            str(in_ld),
-            str(in_elf),
-            "-o",
-            out_elf,
-        ]
-        cmd.extend(nostart)
-        run_command(cmd)
-
     def run_hex(self, args, in_elf, out_hex, extern=[]):
         cmd = [args.objcopy, "-O", "ihex", in_elf, out_hex] + extern
         run_command(cmd)
 
 
 class TaskingToolchain(Toolchain):
+    ld_script_pattern = r"--lsl-file=\S+"
+    ld_script_format = "--lsl-file={}"
 
     def run_cpp(
         self,
@@ -243,25 +276,32 @@ class TaskingToolchain(Toolchain):
         ] + args.cflags
         run_command(cmd)
 
-    def run_ld(self, args, in_elf, in_ld, out_elf, gc_sections=True):
+    def run_ld(self, args, cmd_file: Path, new_ld: str, out_elf: str):
+        """Execute saved link command with new linker script and output path."""
+        import re
+        import shlex
 
-        tmp = tempfile.NamedTemporaryFile(suffix=".o", mode="wb")
-        with open(in_elf, "rb") as f:
-            tmp.write(f.read())
-            tmp.flush()
+        app_name, cwd, link_cmd = load_link_command(cmd_file)
 
-        cmd = [
-            args.ld,
-            "--user-provided-initialization-code",
-            f"--lsl-file={in_ld}",
-            tmp.name,
-            "-o",
-            out_elf,
-        ]
+        # Convert to absolute paths before changing directory
+        new_ld = os.path.abspath(new_ld)
+        out_elf = os.path.abspath(out_elf)
 
-        run_command(cmd)
-        tmp.close()
-        Path(str(out_elf).split(".")[0] + ".mdf").unlink(missing_ok=True)
+        # CMake uses semicolons as list separators, convert to spaces
+        link_cmd = link_cmd.replace(";", " ")
+
+        link_cmd = re.sub(r"\s+-r\s+", " ", link_cmd)
+        link_cmd = re.sub(
+            self.ld_script_pattern, self.ld_script_format.format(new_ld), link_cmd
+        )
+        link_cmd = re.sub(r"-o\s+\S+", f"-o {out_elf}", link_cmd)
+        cmd = shlex.split(link_cmd)
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(cwd)
+            run_command(cmd)
+        finally:
+            os.chdir(original_cwd)
 
     def run_hex(self, args, in_elf, out_hex, extern=[]):
         cmd = [args.objcopy, "-O", "ihex", in_elf, out_hex] + extern
@@ -551,7 +591,8 @@ def generate_elf_hex(args, apps, flash_start, flash_size, ram_start, ram_size):
         )
 
         elf_out = str(args.outdir / "elf" / os.path.basename(elf_file))
-        args.toolchain.run_ld(args, elf_file, ld_file, elf_out)
+        cmd_file = args.outdir.parent / "link_cmd" / f"{elf_file.stem}.cmd"
+        args.toolchain.run_ld(args, cmd_file, ld_file, elf_out)
         flash_used, flash_aligned, ram_used, ram_aligned = calculate_elf_size(
             args, elf_out
         )
@@ -574,7 +615,8 @@ def generate_elf_hex(args, apps, flash_start, flash_size, ram_start, ram_size):
         )
 
         logging.info(f"{elf_file.name}: Linker script written to {ld_file}")
-        args.toolchain.run_ld(args, elf_file, ld_file, elf_out)
+        cmd_file = args.outdir.parent / "link_cmd" / f"{elf_file.stem}.cmd"
+        args.toolchain.run_ld(args, cmd_file, ld_file, elf_out)
         hex_out = str(args.outdir / "hex" / f"{elf_file.stem}.hex")
         args.toolchain.run_hex(args, elf_out, hex_out)
 
@@ -653,6 +695,10 @@ def generate_fixup_src(args, in_dir, out_src: str):
         if elf is None:
             logging.error(f"Failed to parse ELF file: {elf_file}")
             continue
+
+        rel_elf_path = args.indir / elf_file.name
+        rel_elf = elf_parse(str(rel_elf_path)) if rel_elf_path.exists() else elf
+
         stacksize = ""
         priority = ""
         uid = ""
@@ -660,7 +706,7 @@ def generate_fixup_src(args, in_dir, out_src: str):
         mode = ""
         heap_size = ""
         heap_start = ""
-        for symbol in elf.symbols:
+        for symbol in rel_elf.symbols:
             if symbol.name == "nx_stacksize":
                 stacksize = f"    .stacksize=0x{symbol.value:x},\n"
             elif symbol.name == "nx_priority":
@@ -673,8 +719,12 @@ def generate_fixup_src(args, in_dir, out_src: str):
                 mode = f"    .mode=0x{symbol.value:x},\n"
             elif symbol.name == "nx_heapsize":
                 heap_size = f"    .heapsize=0x{symbol.value:x},\n"
-            elif symbol.name == "_sheap":
+
+        # _sheap is relative to the exec ELF, so we need to get it from there
+        for symbol in elf.symbols:
+            if symbol.name == "_sheap":
                 heap_start = f"    .heapstart=0x{symbol.value:x},\n"
+                break
 
         if heap_size == "":
             heap_start = ""

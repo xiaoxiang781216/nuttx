@@ -54,6 +54,31 @@ endif()
 #   include(nuttx_add_application. cmake)
 # ~~~
 
+# ~~~
+# nuttx_save_link_command
+#
+# Save link command to .cmd file for elf_fixup.py
+#
+# Usage: nuttx_save_link_command(ELF_NAME ELF_LINK_ARGS)
+#   ELF_NAME      - Name of the ELF file (without path)
+#   ELF_LINK_ARGS - List of link command arguments
+# ~~~
+function(nuttx_save_link_command ELF_NAME ELF_LINK_ARGS)
+  if(CONFIG_ELF_FIXUP)
+    # Convert list to string for .cmd file
+    list(JOIN ELF_LINK_ARGS " " ELF_LINK_CMD_STR)
+    set(ELF_LINK_CMD
+        "${ELF_NAME}|${CMAKE_CURRENT_BINARY_DIR}|${ELF_LINK_CMD_STR}")
+
+    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/link_cmd)
+    file(
+      GENERATE
+      OUTPUT ${CMAKE_BINARY_DIR}/link_cmd/${ELF_NAME}.cmd
+      CONTENT "${ELF_LINK_CMD}"
+      CONDITION $<BOOL:TRUE>)
+  endif()
+endfunction()
+
 if(NOT COMMAND nuttx_add_elf_app)
   # ~~~
   # nuttx_add_elf_app
@@ -180,12 +205,12 @@ if(NOT COMMAND nuttx_add_elf_app)
         endif()
       endif()
       get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
-      add_custom_command(
-        TARGET ${ELF_TARGET}
-        POST_BUILD
-        COMMAND
+      # Build ELF link command arguments once to avoid duplication
+      set(ELF_LINK_ARGS
           # add default link option
-          ${CMAKE_C_COMPILER} ${NUTTX_EXTRA_FLAGS} -T
+          ${CMAKE_C_COMPILER}
+          ${NUTTX_EXTRA_FLAGS}
+          -T
           ${CMAKE_BINARY_DIR}/gnu-elf.ld
           # add global MOD link option if dynlib link
           $<$<BOOL:${DYNLIB_ELF_MODE}>:$<TARGET_PROPERTY:nuttx_global,NUTTX_MOD_APP_LINK_OPTIONS>>
@@ -205,8 +230,13 @@ if(NOT COMMAND nuttx_add_elf_app)
           $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--whole-archive
           $<TARGET_FILE:${ELF_TARGET}>
           $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--no-whole-archive
-          $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--end-group -o
-          ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME}
+          $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--end-group
+          -o
+          ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME})
+      add_custom_command(
+        TARGET ${ELF_TARGET}
+        POST_BUILD
+        COMMAND ${ELF_LINK_ARGS}
         COMMAND
           ${CMAKE_OBJCOPY} ${SYMBOL_STACKSIZE} ${SYMBOL_PRIORITY} ${SYMBOL_UID}
           ${SYMBOL_GID} ${SYMBOL_MODE} ${SYMBOL_HEAPSIZE}
@@ -217,6 +247,9 @@ if(NOT COMMAND nuttx_add_elf_app)
         COMMAND ${CMAKE_STRIP} ${CMAKE_BINARY_DIR}/bin/${ELF_NAME}
         COMMENT "Building ELF:${ELF_NAME}"
         COMMAND_EXPAND_LISTS)
+
+      # Save link command to .cmd file for elf_fixup.py
+      nuttx_save_link_command(${ELF_NAME} "${ELF_LINK_ARGS}")
     else()
       add_executable(${ELF_TARGET} ${SRCS})
       target_link_options(
