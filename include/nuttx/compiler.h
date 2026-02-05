@@ -88,9 +88,12 @@
  * Define atomic_t/atomic64_t with _Atomic when available.
  */
 
+/* Clang's __atomic_* builtins don't accept _Atomic qualified pointers */
+
 #ifndef __ASSEMBLY__
 #  if !defined(__STDC_NO_ATOMICS__) && !defined(__cplusplus) && \
-      defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+      defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && \
+      !defined(__clang__)
 typedef volatile _Atomic int atomic_t;
 typedef volatile _Atomic long long atomic64_t;
 #  else
