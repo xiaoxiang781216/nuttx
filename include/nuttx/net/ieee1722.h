@@ -32,6 +32,7 @@
 #include <netinet/if_ether.h>
 #include <nuttx/queue.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/net/netdev.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -100,5 +101,33 @@ struct ieee1722acf_stream_s
   struct work_s cycle_work;       /* For stream cyclical send handling */
   FAR void *priv;                 /* Private data pointer */
 };
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+#ifdef __cplusplus
+#define EXTERN extern "C"
+extern "C"
+{
+#else
+#define EXTERN extern
+#endif
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+void add_1722acf_stream(FAR struct net_driver_s *dev,
+                        FAR struct ieee1722acf_stream_s *streams,
+                        size_t num);
+void del_1722acf_stream(FAR struct net_driver_s *dev,
+                        FAR struct ieee1722acf_stream_s *streams,
+                        size_t num);
+
+#undef EXTERN
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __INCLUDE_NUTTX_NET_IEEE1722_H */

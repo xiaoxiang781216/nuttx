@@ -454,6 +454,72 @@ ieee1722acf_stream_flush(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: del_1722acf_stream
+ *
+ * Description:
+ *   Delete a acf stream structure from the list.
+ *
+ * Assumptions: Input steam pointer should not be null
+ *              which is assured by caller.
+ *
+ ****************************************************************************/
+
+void del_1722acf_stream(FAR struct net_driver_s *dev,
+                        FAR struct ieee1722acf_stream_s *streams,
+                        size_t num)
+{
+  int i;
+
+  DEBUGASSERT(dev != NULL && streams != NULL);
+
+  netdev_lock(dev);
+
+  for (i = 0; i < num; i++)
+    {
+      sq_rem(&streams[i].node, &dev->d_1722acf_streams);
+    }
+
+  netdev_unlock(dev);
+
+  for (i = 0; i < num; i++)
+    {
+      work_cancel_sync(HPWORK, &streams[i].cycle_work);
+      iob_free_chain(streams[i].iob);
+      streams[i].iob = NULL;
+      streams[i].priv = NULL;
+    }
+}
+
+/****************************************************************************
+ * Name: add_1722acf_stream
+ *
+ * Description:
+ *   Add a acf stream structure to the list.
+ *
+ * Assumptions: Input steam pointer should not be null
+ *              which is assured by caller.
+ *
+ ****************************************************************************/
+
+void add_1722acf_stream(FAR struct net_driver_s *dev,
+                        FAR struct ieee1722acf_stream_s *streams,
+                        size_t num)
+{
+  int i;
+  DEBUGASSERT(dev != NULL && streams != NULL);
+
+  netdev_lock(dev);
+
+  for (i = 0; i < num; i++)
+    {
+      streams[i].priv = dev;
+      sq_addlast(&streams[i].node, &dev->d_1722acf_streams);
+    }
+
+  netdev_unlock(dev);
+}
+
+/****************************************************************************
  * Name: ieee1722acf_send
  *
  * Description:
