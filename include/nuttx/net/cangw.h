@@ -123,6 +123,14 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
+void add_cangw_rule(FAR struct net_driver_s *dev,
+                    FAR struct cangw_rule_s *cgw_rules,
+                    size_t size);
+
+void remove_cangw_rule(FAR struct net_driver_s *dev,
+                       FAR struct cangw_rule_s *cgw_rules,
+                       size_t size);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
