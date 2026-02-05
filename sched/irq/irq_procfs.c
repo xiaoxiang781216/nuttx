@@ -191,7 +191,7 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
    * byte offset into the pseudo-file, f_pos.
    */
 
-  if (copy.count == 0)
+  if (atomic_read(&copy.count) == 0)
     {
       return 0;
     }
@@ -212,20 +212,20 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
    */
 
   elapsed  = elapsed ? elapsed : 1;
-  intcount = (uint64_t)copy.count * TICK_PER_SEC;
+  intcount = (uint64_t)atomic_read(&copy.count) * TICK_PER_SEC;
   intpart  = intcount / elapsed;
   intcount = intcount - intpart * elapsed;
   fracpart = intcount / elapsed;
 
   /* Make sure that the count is representable with snprintf format */
 
-  if (copy.count > ULONG_MAX)
+  if (atomic_read(&copy.count) > ULONG_MAX)
     {
       count = ULONG_MAX;
     }
   else
     {
-      count = (unsigned long)copy.count;
+      count = (unsigned long)atomic_read(&copy.count);
     }
 #else
 #  error Missing logic
