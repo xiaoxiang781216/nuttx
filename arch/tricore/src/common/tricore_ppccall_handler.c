@@ -87,5 +87,5 @@ void up_ppccall_handler(uintptr_t func, struct ppccall_param_s *param)
 #endif
     ::: "memory"
   );
-  sys_call0(SYS_syscall_return);
+  sys_call0(SYS_ppccall_return);
 }
