@@ -30,6 +30,7 @@
 
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/time.h>
 
 #include <assert.h>
 #include <debug.h>
@@ -52,7 +53,9 @@
 #include "socket/socket.h"
 #include "utils/utils.h"
 
-#include <sys/time.h>
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+#include "netforward/ieee1722acf.h"
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -334,6 +337,40 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
       nerr("ERROR: Failed to copy data into write buffer\n");
       goto errout_with_wrb;
     }
+
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  if (psock->s_proto == CAN_1722ACF)
+    {
+      FAR struct sockaddr_can *canaddr =
+          (FAR struct sockaddr_can *)msg->msg_name;
+      struct cangw_rule_s fwdrule;
+
+      if (canaddr == NULL || canaddr->can_family != AF_CAN)
+        {
+          nerr("ERROR: CAN 1722ACF setting is not right\n");
+          goto errout_with_wrb;
+        }
+
+      fwdrule.dest_dev = dev;
+      fwdrule.gwtype = CGW_TYPE_CAN_ETH1722;
+      fwdrule.gw.cegw.stream_index =
+          canaddr->can_addr.eth1722acf.stream_index;
+      fwdrule.gw.cegw.acf_msg_type =
+          canaddr->can_addr.eth1722acf.acf_msg_type;
+      fwdrule.gw.cegw.can_bus_id = canaddr->can_addr.eth1722acf.can_bus_id;
+
+      ret = ieee1722acf_send(dev, &fwdrule, wb_iob);
+      if (ret < 0)
+        {
+          nerr("ERROR: Failed to send can msg into acf stream: %d\n", ret);
+          goto errout_with_wrb;
+        }
+
+      iob_free_chain(wb_iob);
+      conn_dev_unlock(&conn->sconn, dev);
+      return msg->msg_iov->iov_len;
+    }
+#endif
 
   /* Check if the write queue is empty */
 

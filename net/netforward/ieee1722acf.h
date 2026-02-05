@@ -140,7 +140,8 @@ extern "C"
  ****************************************************************************/
 
 int ieee1722acf_send(FAR struct net_driver_s *dev,
-                     FAR struct cangw_rule_s *fwdrule);
+                     FAR struct cangw_rule_s *fwdrule,
+                     FAR struct iob_s *can_iob);
 
 #undef EXTERN
 #ifdef __cplusplus

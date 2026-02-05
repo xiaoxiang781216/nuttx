@@ -231,9 +231,12 @@ static inline void ieee1722acf_canforward(FAR struct net_driver_s *dev,
                                           FAR struct iob_s *can_iob)
 {
   FAR struct iob_s *o_iob = dev->d_iob;
+  uint8_t d_llhdrlen = dev->d_llhdrlen;
 
   dev->d_iob = can_iob;
-  can_forward(dev);
+  dev->d_llhdrlen = 0;
+
+  can_input(dev);
 
   /* Release old buffer */
 
@@ -243,6 +246,7 @@ static inline void ieee1722acf_canforward(FAR struct net_driver_s *dev,
 
   dev->d_iob = o_iob;
   dev->d_len = o_iob->io_pktlen;
+  dev->d_llhdrlen = d_llhdrlen;
 }
 
 /****************************************************************************

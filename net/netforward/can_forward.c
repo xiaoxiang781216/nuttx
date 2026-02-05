@@ -300,7 +300,7 @@ int can_forward(FAR struct net_driver_s *dev)
             if (can_forward_filter(&fwdrule->gw.cegw.filter,
                                    frame->can_id))
               {
-                ieee1722acf_send(dev, fwdrule);
+                ieee1722acf_send(dev, fwdrule, dev->d_iob);
 #ifdef CONFIG_NET_STATISTICS
                 g_netstats.cangw.recv++;
 #endif

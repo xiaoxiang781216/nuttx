@@ -101,7 +101,8 @@
 #define CAN_MCNET    5           /* Bosch MCNet */
 #define CAN_ISOTP    6           /* ISO 15765-2 Transport Protocol */
 #define CAN_J1939    7           /* SAE J1939 */
-#define CAN_NPROTO   8
+#define CAN_1722ACF  8           /* IEEE 1722 AVTP CAN ACF */
+#define CAN_NPROTO   9
 
 #define SOL_CAN_BASE 100
 #define SOL_CAN_RAW  (SOL_CAN_BASE + CAN_RAW)
@@ -343,6 +344,22 @@ struct sockaddr_can
 
       uint8_t addr;
     } j1939;
+
+      /* 1722 ACF CAN */
+
+    struct
+    {
+      uint8_t stream_index;
+
+      /* acf msg type:
+       * IEEE1722ACF_TYPE_CAN
+       * IEEE1722ACF_TYPE_CAN_BRIEF
+       * IEEE1722ACF_TYPE_LIN
+       */
+
+      uint8_t acf_msg_type;
+      uint8_t can_bus_id;
+    } eth1722acf;
   } can_addr;
 };
 

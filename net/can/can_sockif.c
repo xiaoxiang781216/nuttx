@@ -233,6 +233,7 @@ static int can_setup(FAR struct socket *psock)
       case CAN_MCNET:    /* Bosch MCNet */
       case CAN_ISOTP:    /* ISO 15765-2 Transport Protocol */
       case CAN_J1939:    /* SAE J1939 */
+      case CAN_1722ACF:  /* IEEE 1722 AVTP CAN ACF */
         break;
 
       default:

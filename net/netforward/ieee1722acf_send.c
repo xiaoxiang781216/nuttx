@@ -463,9 +463,9 @@ ieee1722acf_stream_flush(FAR struct net_driver_s *dev,
  *   the TX poll is received from the forwarding device.
  *
  * Input Parameters:
- *   dev      - The device on which the packet was received and which
- *              contains the packet.
- *   fwdrule   - The forward target rule.
+ *   dev      - The device on which the packet was received.
+ *   fwdrule  - The forward target rule.
+ *   can_iob  - The packet need to be forward.
  *
  * Returned Value:
  *   Zero is returned if the packet was successfully forward;  A negated
@@ -475,13 +475,14 @@ ieee1722acf_stream_flush(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 int ieee1722acf_send(FAR struct net_driver_s *dev,
-                     FAR struct cangw_rule_s *fwdrule)
+                     FAR struct cangw_rule_s *fwdrule,
+                     FAR struct iob_s *can_iob)
 {
 #ifdef CONFIG_NET_CAN_CANFD
-  FAR struct canfd_frame *msg = NETLLBUF;
+  FAR struct canfd_frame *msg = (FAR struct canfd_frame *)IOB_DATA(can_iob);
   uint8_t data_len = msg->len;
 #else
-  FAR struct can_frame *msg = NETLLBUF;
+  FAR struct can_frame *msg = (FAR struct can_frame *)IOB_DATA(can_iob);
   uint8_t data_len = msg->can_dlc;
 #endif
   FAR struct ieee1722acf_stream_s *stream;
