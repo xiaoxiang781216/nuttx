@@ -31,6 +31,7 @@
 
 #include <netinet/if_ether.h>
 #include <nuttx/queue.h>
+#include <nuttx/wqueue.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -77,9 +78,13 @@ struct ieee1722acf_stream_s
 
   /* Stream configuration - set during stream initialization */
 
-  uint8_t index;                  /* Stream index for fwd processing */
+  uint16_t index;                 /* Stream index for fwd processing */
+  uint16_t cycle_us;              /* Tx Cycle time of acf pkt in units of us,
+                                   * set to 0 means not cyclical sending.
+                                   */
   uint8_t msgcnt_limit;           /* Max CAN message counter limit per ACF packet
-                                   * (0 or 1 means single message per packet)
+                                   * (0 or 1 means single message per packet),
+                                   * Only take effect when tx_cycle == 0
                                    */
   uint8_t stream_type;            /* Stream type: TSCF or NTSCF */
   uint8_t dest_mac[ETH_ALEN];     /* Destination MAC address */
@@ -92,6 +97,8 @@ struct ieee1722acf_stream_s
   uint8_t msg_cnt;                /* Available CAN message counter in the ACF packet */
   uint8_t stream_seq;             /* Stream packet sequence counter */
   FAR struct iob_s *iob;          /* I/O buffer holding the ACF stream packet */
+  struct work_s cycle_work;       /* For stream cyclical send handling */
+  FAR void *priv;                 /* Private data pointer */
 };
 
 #endif /* __INCLUDE_NUTTX_NET_IEEE1722_H */

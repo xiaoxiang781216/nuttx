@@ -223,7 +223,7 @@ ieee1722acf_update_header(FAR void *src_msg,
  *
  ****************************************************************************/
 
-static void
+static uint16_t
 ieee1722acf_update_packet_length(FAR struct ieee1722acf_stream_s *stream)
 {
   uint16_t payload_len;
@@ -250,6 +250,8 @@ ieee1722acf_update_packet_length(FAR struct ieee1722acf_stream_s *stream)
       }
     break;
   }
+
+  return payload_len;
 }
 
 /****************************************************************************
@@ -366,6 +368,88 @@ errout:
 }
 
 /****************************************************************************
+ * Name: ieee1722acf_stream_cycle_work
+ *
+ * Description:
+ *   This function is used to trigger a new cyclical sending for acf stream.
+ *
+ * Input Parameters:
+ *   arg - The acf stream which contains the packet.
+ *
+ ****************************************************************************/
+
+static void ieee1722acf_stream_cycle_work(FAR void *arg)
+{
+  FAR struct ieee1722acf_stream_s *stream =
+      (FAR struct ieee1722acf_stream_s *)arg;
+  FAR struct net_driver_s *dev;
+  int ret;
+
+  DEBUGASSERT(stream != NULL && stream->priv != NULL);
+
+  dev = (FAR struct net_driver_s *)stream->priv;
+
+  netdev_lock(dev);
+
+  if (IFF_IS_RUNNING(dev->d_flags) && stream->iob != NULL)
+    {
+      /* Update stream packet len */
+
+      if (ieee1722acf_update_packet_length(stream) > 0)
+        {
+          ret = ieee1722acf_dev_send(dev, stream, dev);
+          if (ret < 0)
+            {
+              nwarn("WARNING: stream send failed: %d\n", ret);
+            }
+
+          stream->stream_seq++;
+        }
+
+      work_queue_next(HPWORK, &stream->cycle_work,
+                      ieee1722acf_stream_cycle_work,
+                      stream, USEC2TICK(stream->cycle_us));
+    }
+
+  netdev_unlock(dev);
+}
+
+/****************************************************************************
+ * Name: ieee1722acf_stream_flush
+ *
+ * Description:
+ *   Flush the current acf stream packet: update packet length, send it
+ *   out, bump sequence number, and cancel the cycle work if active.
+ *
+ ****************************************************************************/
+
+static inline_function void
+ieee1722acf_stream_flush(FAR struct net_driver_s *dev,
+                         FAR struct ieee1722acf_stream_s *stream,
+                         FAR struct net_driver_s *fwddev)
+{
+  unsigned int blcount;
+  int ret;
+
+  ieee1722acf_update_packet_length(stream);
+
+  ret = ieee1722acf_dev_send(dev, stream, fwddev);
+  if (ret < 0)
+    {
+      nwarn("WARNING: stream send failed: %d\n", ret);
+    }
+
+  stream->stream_seq++;
+
+  if (stream->cycle_us != 0)
+    {
+      netdev_breaklock(fwddev, &blcount);
+      work_cancel_sync(HPWORK, &stream->cycle_work);
+      netdev_restorelock(fwddev, blcount);
+    }
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -423,20 +507,7 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
               sizeof(struct ieee1722acf_can_hdr_s) >
               devif_get_mtu(fwdrule->dest_dev))
             {
-              /* Update stream packet len */
-
-              ieee1722acf_update_packet_length(stream);
-
-              /* Forward acf iob to device */
-
-              ret = ieee1722acf_dev_send(dev, stream, fwdrule->dest_dev);
-              if (ret < 0)
-                {
-                  nwarn("WARNING: stream send failed: %d\n", ret);
-                  goto errout;
-                }
-
-              stream->stream_seq++;
+              ieee1722acf_stream_flush(dev, stream, fwdrule->dest_dev);
             }
 
           /* Prepare Stream packet */
@@ -447,15 +518,23 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
               iob = ieee1722acf_alloc_packet(stream, fwdrule->dest_dev);
               if (iob == NULL)
                 {
-  #ifdef CONFIG_NET_STATISTICS
+#ifdef CONFIG_NET_STATISTICS
                   g_netstats.cangw.drop++;
-  #endif
+#endif
                   nerr("ERROR: Failed to prepare stream iob buffer\n");
                   ret = -ENOMEM;
                   goto errout;
                 }
 
               stream->iob = iob;
+
+              if (stream->cycle_us != 0 &&
+                  work_available(&stream->cycle_work))
+                {
+                  work_queue(HPWORK, &stream->cycle_work,
+                             ieee1722acf_stream_cycle_work,
+                             stream, USEC2TICK(stream->cycle_us));
+                }
             }
           else
             {
@@ -557,29 +636,22 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
               goto errout_trim_iob;
             }
 
-          stream->msg_cnt--;
 #ifdef CONFIG_NET_STATISTICS
           g_netstats.cangw.forward++;
 #endif
+
+          if (stream->msg_cnt == 0)
+            {
+              break;
+            }
+
+          stream->msg_cnt--;
 
           /* Check if the sending of stream need to be trigger */
 
           if (stream->msg_cnt <= 0)
             {
-              /* Update stream packet len */
-
-              ieee1722acf_update_packet_length(stream);
-
-              /* Forward acf iob to device */
-
-              ret = ieee1722acf_dev_send(dev, stream, fwdrule->dest_dev);
-              if (ret < 0)
-                {
-                  nwarn("WARNING: stream send failed: %d\n", ret);
-                  goto errout;
-                }
-
-              stream->stream_seq++;
+              ieee1722acf_stream_flush(dev, stream, fwdrule->dest_dev);
             }
 
           break;
