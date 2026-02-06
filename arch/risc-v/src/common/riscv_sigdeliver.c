@@ -117,5 +117,5 @@ retry:
 
   g_running_task = NULL;
   rtcb->xcp.regs = regs;
-  riscv_fullcontextrestore();
+  nxsched_switch(rtcb, NULL);
 }

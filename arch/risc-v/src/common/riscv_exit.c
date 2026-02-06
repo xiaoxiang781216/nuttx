@@ -64,9 +64,9 @@ void up_exit(int status)
 
   /* Then switch contexts */
 
-  riscv_fullcontextrestore();
+  nxsched_switch(this_task(), NULL);
 
-  /* riscv_fullcontextrestore() should not return but could if the software
+  /* nxsched_switch() should not return but could if the software
    * interrupts are disabled.
    */
 

@@ -409,24 +409,6 @@ void riscv_jump_to_user(uintptr_t entry, uintreg_t a0, uintreg_t a1,
 /* Context switching via system calls ***************************************/
 
 /****************************************************************************
- * Name: riscv_fullcontextrestore
- *
- * Description:
- *   Restores the full context.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#define riscv_fullcontextrestore()    \
-  do                                  \
-    {                                 \
-      sys_call0(SYS_restore_context); \
-    }                                 \
-  while (1)
-
-/****************************************************************************
  * Name: riscv_switchcontext
  *
  * Description:

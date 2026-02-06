@@ -57,9 +57,14 @@
 
 void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 {
+  if (rtcb == NULL)
+    {
+      sys_call0(SYS_restore_context);
+    }
+
   /* Are we in an interrupt handler? */
 
-  if (up_interrupt_context())
+  else if (up_interrupt_context())
     {
       /* Yes, then we have to do things differently.
        * Just copy the current_regs into the OLD rtcb.
