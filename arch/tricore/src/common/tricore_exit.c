@@ -64,9 +64,9 @@ void up_exit(int status)
 
   /* Then switch contexts */
 
-  tricore_fullcontextrestore();
+  nxsched_switch(this_task(), NULL);
 
-  /* tricore_fullcontextrestore() should not return but could if the software
+  /* nxsched_switch() should not return but could if the software
    * interrupts are disabled.
    */
 

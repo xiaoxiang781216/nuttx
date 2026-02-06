@@ -80,7 +80,7 @@ retry:
    * errno that is needed by the user logic (it is probably EINTR).
    *
    * I would prefer that all interrupts are disabled when
-   * tricore_fullcontextrestore() is called, but that may not be necessary.
+   * nxsched_switch() is called, but that may not be necessary.
    */
 
   sinfo("Resuming\n");
@@ -120,5 +120,5 @@ retry:
   tricore_change_pprs(rtcb, tricore_sig_load_pprs(rtcb));
   tricore_sig_change_pprs(rtcb, UINT32_MAX);
 
-  tricore_fullcontextrestore();
+  nxsched_switch(rtcb, NULL);
 }

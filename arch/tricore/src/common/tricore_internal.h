@@ -114,8 +114,6 @@
 #define modreg32(v,m,a) putreg32((getreg32(a) & ~(m)) | ((v) & (m)), (a))
 #define modreg64(v,m,a) putreg64((getreg64(a) & ~(m)) | ((v) & (m)), (a))
 
-#define tricore_fullcontextrestore() sys_call0(SYS_restore_context)
-
 /* Update tls_info when task switchs */
 
 #define tricore_set_tls_info(val)                   \
