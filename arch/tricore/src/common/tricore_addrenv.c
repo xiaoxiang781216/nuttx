@@ -279,7 +279,7 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
 
   if (g_addrenv_text_region == 0)
     {
-      g_addrenv_text_region = mpu_alloccoderegion();
+      g_addrenv_text_region = mpu_allocdataregion();
     }
 
   if (addrenv->heap && (
