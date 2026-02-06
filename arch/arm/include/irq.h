@@ -79,13 +79,19 @@
 #ifndef __ASSEMBLY__
 
 #ifndef up_switch_context
-#define up_switch_context(tcb, rtcb)   \
-  do {                                 \
-    if (!up_interrupt_context())       \
-      {                                \
-        sys_call0(SYS_switch_context); \
-      }                                \
-      UNUSED(rtcb);                    \
+#define up_switch_context(tcb, rtcb)        \
+  do {                                      \
+    if (!up_interrupt_context())            \
+      {                                     \
+        if ((rtcb) == NULL)                 \
+          {                                 \
+            sys_call0(SYS_restore_context); \
+          }                                 \
+        else                                \
+          {                                 \
+            sys_call0(SYS_switch_context);  \
+          }                                 \
+      }                                     \
   } while (0)
 #endif
 

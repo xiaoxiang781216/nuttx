@@ -81,7 +81,7 @@ retry:
    * errno that is needed by the user logic (it is probably EINTR).
    *
    * I would prefer that all interrupts are disabled when
-   * arm_fullcontextrestore() is called, but that may not be necessary.
+   * nxsched_switch() is called, but that may not be necessary.
    */
 
   sinfo("Resuming\n");
@@ -117,6 +117,6 @@ retry:
   g_running_task = NULL;
   rtcb->xcp.regs = rtcb->xcp.saved_regs;
   rtcb->xcp.saved_regs = NULL;
-  arm_fullcontextrestore();
+  nxsched_switch(rtcb, NULL);
   UNUSED(regs);
 }

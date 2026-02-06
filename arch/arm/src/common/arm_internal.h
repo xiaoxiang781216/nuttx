@@ -133,12 +133,6 @@
 #define modreg32(v,m,a) putreg32((getreg32(a) & ~(m)) | ((v) & (m)), (a))
 #define modreg64(v,m,a) putreg64((getreg64(a) & ~(m)) | ((v) & (m)), (a))
 
-/* Context switching */
-
-#ifndef arm_fullcontextrestore
-#  define arm_fullcontextrestore() sys_call0(SYS_restore_context)
-#endif
-
 /* Redefine the linker symbols as armlink style */
 
 #ifdef CONFIG_ARM_TOOLCHAIN_ARMCLANG
