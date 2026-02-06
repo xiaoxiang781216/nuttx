@@ -714,6 +714,13 @@ void rspin_lock(FAR rspinlock_t *lock)
           UP_WFE();
         }
 
+      /* The local value shares the same memory location with the
+       * global atomic value. So if the atomic operation success,
+       * the local value should also change to the new_val.
+       */
+
+      compiler_assume(lock->local_val == new_val);
+
       /* Mark locked only when the lock is acquired for the first time. */
 
       spinlock_mark_locked(&lock->info);
@@ -803,6 +810,13 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 
       if (ret)
         {
+          /* The local value shares the same memory location with the
+           * global atomic value. So if the atomic operation success,
+           * the local value should also change to the new_val.
+           */
+
+          compiler_assume(lock->local_val == RSPINLOCK_VALUE(owner, 1u));
+
           spinlock_mark_locked(&lock->info);
         }
     }
