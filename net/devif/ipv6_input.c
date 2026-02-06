@@ -35,7 +35,6 @@
 
 #include <net/if.h>
 
-#include <nuttx/mutex.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/netstats.h>

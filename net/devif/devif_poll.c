@@ -30,7 +30,6 @@
 #include <debug.h>
 
 #include <nuttx/clock.h>
-#include <nuttx/mutex.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/net.h>
