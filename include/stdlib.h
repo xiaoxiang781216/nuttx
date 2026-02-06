@@ -67,7 +67,7 @@
 #ifdef CONFIG_DISABLE_ENVIRON
 #  define environ (FAR char *[]){ NULL }
 #else
-#  define environ get_environ_ptr()
+#  define environ (*get_environ_ptr())
 #endif
 
 #if defined(CONFIG_FS_LARGEFILE)
@@ -157,7 +157,7 @@ uint32_t  arc4random(void);
 
 /* Environment variable support */
 
-FAR char **get_environ_ptr(void);
+FAR char ***get_environ_ptr(void);
 
 FAR char *getenv(FAR const char *);
 int       putenv(FAR const char *);
