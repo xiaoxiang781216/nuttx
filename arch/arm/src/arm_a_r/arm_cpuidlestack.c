@@ -128,7 +128,7 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
       stack_alloc          = (uintptr_t)g_cpu_stackalloc[cpu];
     }
 
-  DEBUGASSERT((stack_alloc & STACKFRAME_ALIGN_MASK) == 0);
+  DEBUGASSERT(STACKFRAME_IS_ALIGNED(stack_alloc));
 
   tcb->adj_stack_size  = stack_size;
   tcb->stack_alloc_ptr = (void *)stack_alloc;
@@ -146,7 +146,7 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
   /* Get the top of the stack */
 
   stack_alloc = (uintptr_t)g_idle_topstack - CONFIG_IDLETHREAD_STACKSIZE;
-  DEBUGASSERT((stack_alloc & STACKFRAME_ALIGN_MASK) == 0);
+  DEBUGASSERT(STACKFRAME_IS_ALIGNED(stack_alloc));
 
   tcb->adj_stack_size  = stack_size;
   tcb->stack_alloc_ptr = (void *)stack_alloc;

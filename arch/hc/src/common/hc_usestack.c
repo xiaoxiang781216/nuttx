@@ -88,14 +88,14 @@ int up_use_stack(FAR struct tcb_s *tcb, FAR void *stack, size_t stack_size,
     {
       /* Make certain that the userspace stack is properly aligned */
 
-      DEBUGASSERT(((uintptr_t)stack & STACK_ALIGN_MASK) == 0);
+      DEBUGASSERT(STACK_IS_ALIGNED(stack));
     }
   else
 #endif
     {
       /* With Kernel space or Flat build, we can always get tls by tcb */
 
-      DEBUGASSERT(((uintptr_t)stack & STACKFRAME_ALIGN_MASK) == 0);
+      DEBUGASSERT(STACKFRAME_IS_ALIGNED(stack));
     }
 
   /* Is there already a stack allocated? */
