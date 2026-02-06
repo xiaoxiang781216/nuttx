@@ -142,7 +142,7 @@ void nxsched_switch(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
     }
 #endif
 
-  count = rspin_lock_count(&g_schedlock);
+  count = RSPINLOCK_COUNT(g_schedlock.local_val);
 
   up_switch_context(tcb, rtcb);
 

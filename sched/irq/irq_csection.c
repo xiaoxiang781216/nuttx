@@ -116,7 +116,7 @@ irqstate_t enter_critical_section(void)
   if (!up_interrupt_context())
     {
       FAR struct tcb_s *rtcb = this_task();
-      if (rspin_lock_count(&g_schedlock) == 1)
+      if (RSPINLOCK_COUNT(g_schedlock.local_val) == 1)
         {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
           sched_note_csection(rtcb, true);
@@ -135,7 +135,7 @@ void leave_critical_section(irqstate_t flags)
   if (!up_interrupt_context())
     {
       FAR struct tcb_s *rtcb = this_task();
-      if (rspin_lock_count(&g_schedlock) == 1)
+      if (RSPINLOCK_COUNT(g_schedlock.local_val) == 1)
         {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
           sched_note_csection(rtcb, false);
