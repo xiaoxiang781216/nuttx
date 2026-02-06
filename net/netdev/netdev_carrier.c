@@ -60,10 +60,16 @@
 
 void netdev_carrier_on(FAR struct net_driver_s *dev)
 {
-  if (dev && !IFF_IS_RUNNING(dev->d_flags))
+  if (dev)
     {
-      dev->d_flags |= IFF_RUNNING;
-      netlink_device_notify(dev);
+      netdev_lock(dev);
+      if (!IFF_IS_RUNNING(dev->d_flags))
+        {
+          dev->d_flags |= IFF_RUNNING;
+          netlink_device_notify(dev);
+        }
+
+      netdev_unlock(dev);
     }
 }
 
@@ -81,20 +87,26 @@ void netdev_carrier_on(FAR struct net_driver_s *dev)
 
 void netdev_carrier_off(FAR struct net_driver_s *dev)
 {
-  if (dev && IFF_IS_RUNNING(dev->d_flags))
+  if (dev)
     {
-      dev->d_flags &= ~IFF_RUNNING;
-      netlink_device_notify(dev);
+      netdev_lock(dev);
+      if (IFF_IS_RUNNING(dev->d_flags))
+        {
+          dev->d_flags &= ~IFF_RUNNING;
+          netlink_device_notify(dev);
 
 #ifdef CONFIG_NET_IPFRAG
-      /* Clean up fragment data for this NIC (if any) */
+          /* Clean up fragment data for this NIC (if any) */
 
-      ip_frag_stop(dev);
+          ip_frag_stop(dev);
 #endif
 
-      /* Notify clients that the network has been taken down */
+          /* Notify clients that the network has been taken down */
 
-      devif_dev_event(dev, NETDEV_DOWN);
-      arp_cleanup(dev);
+          devif_dev_event(dev, NETDEV_DOWN);
+          arp_cleanup(dev);
+        }
+
+      netdev_unlock(dev);
     }
 }
