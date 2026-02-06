@@ -57,6 +57,11 @@
 
 void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
 {
+  if (tcb == NULL)
+    {
+      return;
+    }
+
   nxsched_checkstackoverflow(tcb);
 
 #ifdef CONFIG_SPINLOCK_DEBUG
