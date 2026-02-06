@@ -1,5 +1,5 @@
 /****************************************************************************
- * net/icmpv6/icmpv6_neighbor.c
+ * net/neighbor/neighbor_send.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *

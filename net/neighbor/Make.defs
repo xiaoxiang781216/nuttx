@@ -27,6 +27,10 @@ ifeq ($(CONFIG_NET_IPv6),y)
 NET_CSRCS += neighbor_globals.c neighbor_add.c neighbor_lookup.c
 NET_CSRCS += neighbor_update.c neighbor_findentry.c neighbor_out.c
 
+ifeq ($(CONFIG_NET_ICMPv6_NEIGHBOR),y)
+NET_CSRCS += neighbor_send.c neighbor_notify.c
+endif
+
 # Link layer specific support
 
 ifeq ($(CONFIG_NET_ETHERNET),y)

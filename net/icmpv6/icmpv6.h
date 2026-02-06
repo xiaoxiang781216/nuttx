@@ -41,6 +41,8 @@
 #include <nuttx/net/netdev.h>
 #include <nuttx/semaphore.h>
 
+#include "neighbor/icmpv6_neighbor.h"
+
 #if defined(CONFIG_NET_ICMPv6) && !defined(CONFIG_NET_ICMPv6_NO_STACK)
 
 /****************************************************************************
@@ -113,18 +115,6 @@ struct icmpv6_conn_s
 
 typedef CODE int (*icmpv6_callback_t)(FAR struct icmpv6_conn_s *conn,
                                       FAR void *arg);
-#endif
-
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
-/* Used to notify a thread waiting for a particular Neighbor Advertisement */
-
-struct icmpv6_notify_s
-{
-  FAR struct icmpv6_notify_s *nt_flink;  /* Supports singly linked list */
-  net_ipv6addr_t nt_ipaddr;              /* Waited for IP address in the mapping */
-  sem_t nt_sem;                          /* Will wake up the waiter */
-  int nt_result;                         /* The result of the wait */
-};
 #endif
 
 #ifdef CONFIG_NET_ICMPv6_AUTOCONF
@@ -247,47 +237,6 @@ void icmpv6_devinit(FAR struct net_driver_s *dev);
 void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen);
 
 /****************************************************************************
- * Name: icmpv6_neighbor
- *
- * Description:
- *   The icmpv6_solicit() call may be to send an ICMPv6 Neighbor
- *   Solicitation to resolve an IPv6 address.  This function first checks if
- *   the IPv6 address is already in the Neighbor Table.  If so, then it
- *   returns success immediately.
- *
- *   If the requested IPv6 address in not in the Neighbor Table, then this
- *   function will send the Neighbor Solicitation, delay, then check if the
- *   IP address is now in the Neighbor able.  It will repeat this sequence
- *   until either (1) the IPv6 address mapping is now in the Neighbor table,
- *   or (2) a configurable number of timeouts occur without receiving the
- *   ICMPv6 Neighbor Advertisement.
- *
- * Input Parameters:
- *   dev      The suggested device driver structure to do the solicitation,
- *            can be NULL for auto decision, must set for link-local ipaddr.
- *   ipaddr   The IPv6 address to be queried.
- *
- * Returned Value:
- *   Zero (OK) is returned on success and the IP address mapping can now be
- *   found in the Neighbor Table.
- *   On error a negated errno value is returned:
- *
- *     -ETIMEDOUT:    The number or retry counts has been exceed.
- *     -EHOSTUNREACH: Could not find a route to the host
- *
- * Assumptions:
- *   This function is called from the normal tasking context.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
-int icmpv6_neighbor(FAR struct net_driver_s *dev,
-                    const net_ipv6addr_t ipaddr);
-#else
-#  define icmpv6_neighbor(d,i) (0)
-#endif
-
-/****************************************************************************
  * Name: icmpv6_poll
  *
  * Description:
@@ -394,89 +343,6 @@ void icmpv6_advertise(FAR struct net_driver_s *dev,
 
 #ifdef CONFIG_NET_ICMPv6_ROUTER
 void icmpv6_radvertise(FAR struct net_driver_s *dev);
-#endif
-
-/****************************************************************************
- * Name: icmpv6_wait_setup
- *
- * Description:
- *   Called BEFORE an Neighbor Solicitation is sent.  This function sets up
- *   the Neighbor Advertisement timeout before the Neighbor Solicitation
- *   is sent so that there is no race condition when icmpv6_wait() is called.
- *
- * Assumptions:
- *   This function is called from icmpv6_neighbor() and executes in the
- *   normal tasking environment.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
-void icmpv6_wait_setup(const net_ipv6addr_t ipaddr,
-                       FAR struct icmpv6_notify_s *notify);
-#else
-#  define icmpv6_wait_setup(i,n)
-#endif
-
-/****************************************************************************
- * Name: icmpv6_wait_cancel
- *
- * Description:
- *   Cancel any wait set after icmpv6_wait_setup is called but before
- *   icmpv6_wait()is called (icmpv6_wait() will automatically cancel the
- *   wait).
- *
- * Assumptions:
- *   This function may execute in the interrupt context when called from
- *   icmpv6_wait().
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
-int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify);
-#else
-#  define icmpv6_wait_cancel(n) (0)
-#endif
-
-/****************************************************************************
- * Name: icmpv6_wait
- *
- * Description:
- *   Called each time that a Neighbor Solicitation is sent.  This function
- *   will sleep until either: (1) the matching Neighbor Advertisement is
- *   received, or (2) a timeout occurs.
- *
- * Assumptions:
- *   This function is called from icmpv6_neighbor() and must execute with
- *   the network un-locked (interrupts may be disabled to keep the things
- *   stable).
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
-int icmpv6_wait(FAR struct net_driver_s *dev,
-                FAR struct icmpv6_notify_s *notify, unsigned int timeout);
-#else
-#  define icmpv6_wait(d,n,t) (0)
-#endif
-
-/****************************************************************************
- * Name: icmpv6_notify
- *
- * Description:
- *   Called each time that a Neighbor Advertisement is received in order to
- *   wake-up any threads that may be waiting for this particular Neighbor
- *   Advertisement.
- *
- * Assumptions:
- *   This function is called from the MAC device driver indirectly through
- *   icmpv6_icmpv6in() will execute with the network locked.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
-void icmpv6_notify(net_ipv6addr_t ipaddr);
-#else
-#  define icmpv6_notify(i)
 #endif
 
 /****************************************************************************

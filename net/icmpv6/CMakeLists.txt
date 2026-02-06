@@ -38,10 +38,6 @@ if(CONFIG_NET_ICMPv6 AND NOT CONFIG_NET_ICMPv6_NO_STACK)
       icmpv6_ioctl.c)
   endif()
 
-  if(CONFIG_NET_ICMPv6_NEIGHBOR)
-    list(APPEND SRCS icmpv6_neighbor.c icmpv6_notify.c)
-  endif()
-
   if(CONFIG_NET_ICMPv6_SOCKET OR CONFIG_NET_ICMPv6_NEIGHBOR)
     list(APPEND SRCS icmpv6_poll.c)
   endif()

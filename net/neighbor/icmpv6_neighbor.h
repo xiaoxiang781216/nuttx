@@ -1,5 +1,5 @@
 /****************************************************************************
- * net/icmpv6/icmpv6_notify.c
+ * net/neighbor/icmpv6_neighbor.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,54 +20,75 @@
  *
  ****************************************************************************/
 
+#ifndef __NET_NEIGHBOR_ICMPV6_NEIGHBOR_H
+#define __NET_NEIGHBOR_ICMPV6_NEIGHBOR_H
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
-#include <string.h>
-#include <assert.h>
-#include <errno.h>
-#include <debug.h>
-
-#include <netinet/in.h>
-
-#include <nuttx/spinlock.h>
-#include <nuttx/net/net.h>
-
-#include "utils/utils.h"
-#include "icmpv6/icmpv6.h"
+#include <nuttx/semaphore.h>
+#include <nuttx/net/ip.h>
 
 #ifdef CONFIG_NET_ICMPv6_NEIGHBOR
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Type Definitions
+ ****************************************************************************/
+
+struct net_driver_s; /* Forward reference */
+
+/* Used to notify a thread waiting for a particular Neighbor Advertisement */
+
+struct icmpv6_notify_s
+{
+  FAR struct icmpv6_notify_s *nt_flink;  /* Supports singly linked list */
+  net_ipv6addr_t nt_ipaddr;              /* Waited for IP address in the mapping */
+  sem_t nt_sem;                          /* Will wake up the waiter */
+  int nt_result;                         /* The result of the wait */
+};
+
+/****************************************************************************
+ * Public Function Prototypes
  ****************************************************************************/
 
 /****************************************************************************
- * Private Types
+ * Name: icmpv6_neighbor
+ *
+ * Description:
+ *   The icmpv6_solicit() call may be to send an ICMPv6 Neighbor
+ *   Solicitation to resolve an IPv6 address.  This function first checks if
+ *   the IPv6 address is already in the Neighbor Table.  If so, then it
+ *   returns success immediately.
+ *
+ *   If the requested IPv6 address in not in the Neighbor Table, then this
+ *   function will send the Neighbor Solicitation, delay, then check if the
+ *   IP address is now in the Neighbor able.  It will repeat this sequence
+ *   until either (1) the IPv6 address mapping is now in the Neighbor table,
+ *   or (2) a configurable number of timeouts occur without receiving the
+ *   ICMPv6 Neighbor Advertisement.
+ *
+ * Input Parameters:
+ *   dev      The suggested device driver structure to do the solicitation,
+ *            can be NULL for auto decision, must set for link-local ipaddr.
+ *   ipaddr   The IPv6 address to be queried.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success and the IP address mapping can now be
+ *   found in the Neighbor Table.
+ *   On error a negated errno value is returned:
+ *
+ *     -ETIMEDOUT:    The number or retry counts has been exceed.
+ *     -EHOSTUNREACH: Could not find a route to the host
+ *
+ * Assumptions:
+ *   This function is called from the normal tasking context.
+ *
  ****************************************************************************/
 
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/* List of tasks waiting for Neighbor Discover events */
-
-static DEFINE_PER_CPU_BSS_BMP(struct icmpv6_notify_s *, g_icmpv6_waiters);
-#define g_icmpv6_waiters this_cpu_var_bmp(g_icmpv6_waiters)
-
-static DEFINE_PER_CPU_BMP(spinlock_t, g_icmpv6_notify_lock) = SP_UNLOCKED;
-#define g_icmpv6_notify_lock this_cpu_var_bmp(g_icmpv6_notify_lock)
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
+int icmpv6_neighbor(FAR struct net_driver_s *dev,
+                    const net_ipv6addr_t ipaddr);
 
 /****************************************************************************
  * Name: icmpv6_wait_setup
@@ -84,24 +105,7 @@ static DEFINE_PER_CPU_BMP(spinlock_t, g_icmpv6_notify_lock) = SP_UNLOCKED;
  ****************************************************************************/
 
 void icmpv6_wait_setup(const net_ipv6addr_t ipaddr,
-                       FAR struct icmpv6_notify_s *notify)
-{
-  irqstate_t flags;
-
-  /* Initialize the wait structure */
-
-  net_ipv6addr_copy(notify->nt_ipaddr, ipaddr);
-  notify->nt_result = -ETIMEDOUT;
-
-  nxsem_init(&notify->nt_sem, 0, 0);
-
-  /* Add the wait structure to the list with interrupts disabled */
-
-  flags            = spin_lock_irqsave(&g_icmpv6_notify_lock);
-  notify->nt_flink = g_icmpv6_waiters;
-  g_icmpv6_waiters = notify;
-  spin_unlock_irqrestore(&g_icmpv6_notify_lock, flags);
-}
+                       FAR struct icmpv6_notify_s *notify);
 
 /****************************************************************************
  * Name: icmpv6_wait_cancel
@@ -117,43 +121,7 @@ void icmpv6_wait_setup(const net_ipv6addr_t ipaddr,
  *
  ****************************************************************************/
 
-int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify)
-{
-  FAR struct icmpv6_notify_s *curr;
-  FAR struct icmpv6_notify_s *prev;
-  irqstate_t flags;
-  int ret = -ENOENT;
-
-  /* Remove our wait structure from the list (we may no longer be at the
-   * head of the list).
-   */
-
-  flags = spin_lock_irqsave(&g_icmpv6_notify_lock);
-  for (prev = NULL, curr = g_icmpv6_waiters;
-       curr && curr != notify;
-       prev = curr, curr = curr->nt_flink)
-    {
-    }
-
-  DEBUGASSERT(curr && curr == notify);
-  if (curr)
-    {
-      if (prev)
-        {
-          prev->nt_flink = notify->nt_flink;
-        }
-      else
-        {
-          g_icmpv6_waiters = notify->nt_flink;
-        }
-
-      ret = OK;
-    }
-
-  spin_unlock_irqrestore(&g_icmpv6_notify_lock, flags);
-  nxsem_destroy(&notify->nt_sem);
-  return ret;
-}
+int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify);
 
 /****************************************************************************
  * Name: icmpv6_wait
@@ -165,30 +133,13 @@ int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify)
  *
  * Assumptions:
  *   This function is called from icmpv6_neighbor() and must execute with
- *   the network locked.
+ *   the network un-locked (interrupts may be disabled to keep the things
+ *   stable).
  *
  ****************************************************************************/
 
 int icmpv6_wait(FAR struct net_driver_s *dev,
-                FAR struct icmpv6_notify_s *notify, unsigned int timeout)
-{
-  int ret;
-
-  /* And wait for the Neighbor Advertisement (or a timeout). */
-
-  ret = conn_dev_sem_timedwait(&notify->nt_sem, true, timeout, NULL, dev);
-  if (ret >= 0)
-    {
-      ret = notify->nt_result;
-    }
-
-  /* Remove our wait structure from the list (we may no longer be at the
-   * head of the list).
-   */
-
-  icmpv6_wait_cancel(notify);
-  return ret;
-}
+                FAR struct icmpv6_notify_s *notify, unsigned int timeout);
 
 /****************************************************************************
  * Name: icmpv6_notify
@@ -204,33 +155,14 @@ int icmpv6_wait(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-void icmpv6_notify(net_ipv6addr_t ipaddr)
-{
-  FAR struct icmpv6_notify_s *curr;
-  irqstate_t flags;
+void icmpv6_notify(net_ipv6addr_t ipaddr);
 
-  flags = spin_lock_irqsave_nopreempt(&g_icmpv6_notify_lock);
-
-  /* Find an entry with the matching IP address in the list of waiters */
-
-  for (curr = g_icmpv6_waiters; curr; curr = curr->nt_flink)
-    {
-      /* Does this entry match?  If the result is okay, then we have
-       * already notified this waiter and it has not yet taken the
-       * entry from the list.
-       */
-
-      if (curr->nt_result != OK && net_ipv6addr_cmp(curr->nt_ipaddr, ipaddr))
-        {
-          /* Yes.. Signal the waiting, returning success */
-
-          curr->nt_result = OK;
-          nxsem_post(&curr->nt_sem);
-          break;
-        }
-    }
-
-  spin_unlock_irqrestore_nopreempt(&g_icmpv6_notify_lock, flags);
-}
-
+#else /* !CONFIG_NET_ICMPv6_NEIGHBOR */
+#  define icmpv6_neighbor(d,i) (0)
+#  define icmpv6_wait_setup(i,n)
+#  define icmpv6_wait_cancel(n) (0)
+#  define icmpv6_wait(d,n,t) (0)
+#  define icmpv6_notify(i)
 #endif /* CONFIG_NET_ICMPv6_NEIGHBOR */
+
+#endif /* __NET_NEIGHBOR_ICMPV6_NEIGHBOR_H */
