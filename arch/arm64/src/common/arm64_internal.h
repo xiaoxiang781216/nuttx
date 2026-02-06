@@ -97,15 +97,6 @@
 #  define STACK_WORDS   (CONFIG_IDLETHREAD_STACKSIZE >> 2)
 #endif
 
-/* Context switching */
-
-#define arm64_fullcontextrestore() \
-  do \
-    { \
-      sys_call0(SYS_restore_context); \
-    } \
-  while (1)
-
 #ifdef CONFIG_ARCH_SHADOW_STACK
 #  define IDLETHREAD_SHADOW STACKFRAME_ALIGN_DOWN( \
           CONFIG_ARCH_STACK_SPLIT_RATIO * (CONFIG_IDLETHREAD_STACKSIZE >> 7))

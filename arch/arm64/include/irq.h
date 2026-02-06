@@ -416,9 +416,15 @@ static inline_function bool up_interrupt_context(void)
     {                                                                     \
       if (!up_interrupt_context())                                        \
         {                                                                 \
-          sys_call0(SYS_switch_context);                                  \
+          if ((rtcb) == NULL)                                             \
+            {                                                             \
+              sys_call0(SYS_restore_context);                             \
+            }                                                             \
+          else                                                            \
+            {                                                             \
+              sys_call0(SYS_switch_context);                              \
+            }                                                             \
         }                                                                 \
-      UNUSED(rtcb);                                                       \
     }                                                                     \
   while (0)
 

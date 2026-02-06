@@ -69,5 +69,7 @@ void up_exit(int status)
 
   /* Then switch contexts */
 
-  arm64_fullcontextrestore();
+  nxsched_switch(this_task(), NULL);
+
+  PANIC();
 }
