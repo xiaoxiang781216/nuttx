@@ -546,14 +546,14 @@ irqstate_t spin_lock_irqsave_nopreempt(FAR volatile spinlock_t *lock)
  *   lock - Recursive spinlock descriptor.
  *
  * Return Value:
- *  If rspinlock has returned to True recursively, otherwise returns false.
+ *   If rspinlock has returned to True recursively, otherwise returns false.
  *
  ****************************************************************************/
 
 static inline_function
 bool rspin_lock_is_recursive(FAR volatile rspinlock_t *lock)
 {
-  return lock->count > 1;
+  return RSPINLOCK_COUNT(atomic_read(&lock->val)) > 1u;
 }
 
 /****************************************************************************
@@ -585,7 +585,12 @@ bool rspin_lock_is_hold(FAR volatile rspinlock_t *lock)
    */
 
   irqstate_t flags = up_irq_save();
-  ret = (lock->owner == this_cpu() + 1);
+#ifdef CONFIG_SPINLOCK
+  ret = RSPINLOCK_OWNER(atomic_read(&lock->val)) ==
+                        (uint32_t)this_cpu() + 1u;
+#else
+  ret = RSPINLOCK_COUNT(&lock->local_val) > 0u;
+#endif
   up_irq_restore(flags);
   return ret;
 }
@@ -610,7 +615,7 @@ bool rspin_lock_is_hold(FAR volatile rspinlock_t *lock)
 static inline_function
 bool rspin_lock_is_locked(FAR volatile rspinlock_t *lock)
 {
-  return lock->count > 0;
+  return RSPINLOCK_COUNT(atomic_read(&lock->val)) > 0u;
 }
 
 /****************************************************************************
@@ -619,18 +624,21 @@ bool rspin_lock_is_locked(FAR volatile rspinlock_t *lock)
  * Description:
  *   This function return rspinlock count.
  *
+ *   Note that this is inherently racy unless the calling thread is
+ *   holding the rspinlock.
+ *
  * Parameters:
  *   lock - Recursive spinlock descriptor.
  *
  * Return Value:
- *  Rspinlock count.
+ *   Rspinlock count.
  *
  ****************************************************************************/
 
 static inline_function
 uint16_t rspin_lock_count(FAR volatile rspinlock_t *lock)
 {
-  return lock->count;
+  return RSPINLOCK_COUNT(atomic_read(&lock->val));
 }
 
 /****************************************************************************
@@ -663,17 +671,19 @@ uint16_t rspin_lock_count(FAR volatile rspinlock_t *lock)
 static inline_function
 void rspin_lock(FAR rspinlock_t *lock)
 {
-  rspinlock_t new_val;
-  rspinlock_t old_val;
-  int         cpu = this_cpu() + 1;
+  uint32_t new_val;
+  uint32_t old_val;
+  uint32_t owner = (uint32_t)this_cpu() + 1u;
 
   /* Already owned this lock. */
 
-  old_val.val = atomic_read(&lock->val);
+  old_val = atomic_read(&lock->val);
 
-  if (old_val.owner == cpu)
+  if (RSPINLOCK_OWNER(old_val) == owner)
     {
-      lock->count += 1;
+      DEBUGASSERT(RSPINLOCK_COUNT(old_val + 1u) <= UINT16_MAX);
+
+      lock->local_val = old_val + 1u;
     }
   else
     {
@@ -683,15 +693,13 @@ void rspin_lock(FAR rspinlock_t *lock)
 
       /* Try seize the ownership of the lock using CAS. */
 
-      new_val.count = 1;
-      new_val.owner = cpu;
+      new_val = RSPINLOCK_VALUE(owner, 1u);
 
       do
         {
-          old_val.val = 0;
+          old_val = 0u;
         }
-      while (!atomic_cmpxchg_acquire(&lock->val,
-             &old_val.val, new_val.val));
+      while (!atomic_cmpxchg_acquire(&lock->val, &old_val, new_val));
 
       /* Mark locked only when the lock is acquired for the first time. */
 
@@ -704,7 +712,6 @@ irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
 {
   irqstate_t flags = up_irq_save();
   rspin_lock(lock);
-
   return flags;
 }
 #else
@@ -712,8 +719,11 @@ static inline_function
 irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
 {
   irqstate_t flags = up_irq_save();
-  lock->count++;
-  lock->owner = this_cpu() + 1;
+
+  lock->local_val++;
+
+  DEBUGASSERT(lock->local_val > 0u);
+
   return flags;
 }
 #endif
@@ -721,8 +731,7 @@ irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
 static inline_function
 irqstate_t rspin_lock_irqsave_nopreempt(FAR rspinlock_t *lock)
 {
-  irqstate_t flags;
-  flags = rspin_lock_irqsave(lock);
+  irqstate_t flags = rspin_lock_irqsave(lock);
   sched_lock();
   return flags;
 }
@@ -755,30 +764,27 @@ irqstate_t rspin_lock_irqsave_nopreempt(FAR rspinlock_t *lock)
 #ifdef CONFIG_SPINLOCK
 static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 {
-  rspinlock_t new_val;
-  rspinlock_t old_val;
-  int         cpu = this_cpu() + 1;
-  bool        ret = false;
+  uint32_t old_val;
+  bool         ret;
+  uint32_t   owner = (uint32_t)this_cpu() + 1u;
 
   /* Already owned this lock. */
 
-  old_val.val = atomic_read(&lock->val);
+  old_val = atomic_read(&lock->val);
 
-  if (old_val.owner == cpu)
+  if (RSPINLOCK_OWNER(old_val) == owner)
     {
-      lock->count += 1;
+      DEBUGASSERT(RSPINLOCK_COUNT(old_val + 1u) <= UINT16_MAX);
+
+      lock->local_val = old_val + 1u;
       ret = true;
     }
-  else if (old_val.val == 0)
+  else if (old_val == 0u)
     {
       /* Try seize the ownership of the lock using CAS. */
 
-      new_val.count = 1;
-      new_val.owner = cpu;
-
-      ret = atomic_cmpxchg_acquire(&lock->val,
-                                   &old_val.val,
-                                   new_val.val);
+      ret = atomic_cmpxchg_acquire(&lock->val, &old_val,
+                                   RSPINLOCK_VALUE(owner, 1u));
 
       /* Mark locked when the lock is successfully acquired. */
 
@@ -801,8 +807,8 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 #  define rspin_trylock_irqsave(l, f) \
     ({ \
       (f) = up_irq_save(); \
-      (l)->count++; \
-      (l)->owner = this_cpu() + 1; \
+      (l)->local_val++; \
+      DEBUGASSERT((l)->local_val > 0u); \
       true; \
     })
 #endif
@@ -1032,16 +1038,21 @@ void spin_unlock_irqrestore(FAR volatile spinlock_t *lock, irqstate_t flags)
 static inline_function
 bool rspin_unlock(FAR rspinlock_t *lock)
 {
-  bool ret = false;
+  bool     ret = false;
+  uint32_t val = lock->local_val;
 
-  DEBUGASSERT(lock->owner == this_cpu() + 1);
-  DEBUGASSERT(lock->count >= 1);
+  DEBUGASSERT(RSPINLOCK_OWNER(val) == (uint32_t)this_cpu() + 1u);
+  DEBUGASSERT(RSPINLOCK_COUNT(val) >= 1u);
 
-  if (--lock->count == 0)
+  if (RSPINLOCK_COUNT(val) == 1u)
     {
       spinlock_mark_unlocked(&lock->info);
-      atomic_set_release(&lock->val, 0);
+      atomic_set_release(&lock->val, 0u);
       ret = true;
+    }
+  else
+    {
+      lock->local_val = val - 1u;
     }
 
   return ret;
@@ -1061,11 +1072,9 @@ void rspin_unlock_irqrestore(FAR rspinlock_t *lock, irqstate_t flags)
 static inline_function
 void rspin_unlock_irqrestore(FAR rspinlock_t *lock, irqstate_t flags)
 {
-  if (--lock->count == 0)
-    {
-      lock->owner = 0;
-      up_irq_restore(flags);
-    }
+  DEBUGASSERT(lock->local_val > 0u);
+  lock->local_val--;
+  up_irq_restore(flags);
 
   /* If not last rspinlock restore,  up_irq_restore should not required */
 }
@@ -1083,12 +1092,16 @@ void rspin_unlock_irqrestore(FAR rspinlock_t *lock, irqstate_t flags)
 static inline_function
 uint16_t rspin_breaklock(FAR rspinlock_t *lock)
 {
-  int oldcount = 0;
+  uint16_t oldcount = 0u;
+  uint32_t val      = lock->local_val;
+  uint32_t owner    = (uint32_t)this_cpu() + 1u;
 
-  if (lock->owner == this_cpu() + 1)
+  DEBUGASSERT(owner <= UINT16_MAX);
+
+  if (RSPINLOCK_OWNER(val) == owner)
     {
-      oldcount = lock->count;
-      lock->count = 1;
+      oldcount        = RSPINLOCK_COUNT(val);
+      lock->local_val = RSPINLOCK_VALUE(owner, 1u);
       rspin_unlock(lock);
     }
 
@@ -1098,34 +1111,33 @@ uint16_t rspin_breaklock(FAR rspinlock_t *lock)
 static inline_function
 void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
 {
-  if (count != 0)
+  uint32_t val;
+  if (count != 0u)
     {
       rspin_lock(lock);
-      lock->count = count;
+      val = lock->local_val;
+      lock->local_val = RSPINLOCK_VALUE(RSPINLOCK_OWNER(val), count);
     }
 }
 #else
 static inline_function
 uint16_t rspin_breaklock(FAR rspinlock_t *lock)
 {
-  int oldcount = 0;
+  uint32_t val = lock->local_val;
 
-  if (lock->owner == this_cpu() + 1)
-    {
-      oldcount = lock->count;
-      lock->val = 0;
-    }
+  DEBUGASSERT(val <= UINT16_MAX);
 
-  return oldcount;
+  lock->local_val = 0u;
+
+  return val;
 }
 
 static inline_function
 void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
 {
-  if (count != 0)
+  if (count != 0u)
     {
-      lock->owner = this_cpu() + 1;
-      lock->count = count;
+      lock->local_val = count;
     }
 }
 #endif

@@ -120,14 +120,14 @@ typedef struct rspinlock_s
     {
       /* Which cpu is holding spinlock, and taking recursive count */
 
-      atomic_t val;
-      struct
-        {
-          uint16_t owner;
-          uint16_t count;
-        };
+      atomic_t val;       /* Shared lock value. */
+      uint32_t local_val; /* Local copy to avoid atomic read/write. */
     };
 } rspinlock_t;
+
+#define RSPINLOCK_OWNER(val)          ((uint32_t)(val) >> 16u)    /* The high 16 bits are the owner */
+#define RSPINLOCK_COUNT(val)          ((uint32_t)(val) & 0xffffu) /* The low 16 bits are the count */
+#define RSPINLOCK_VALUE(owner, count) (((uint32_t)(owner) << 16u) | (count))
 
 #define SEQLOCK_INITIALIZER { 0u }
 
