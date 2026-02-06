@@ -698,6 +698,10 @@ struct tcb_s
 
   FAR struct addrenv_s *addrenv_curr;    /* Current active memory mappings  */
 
+#ifdef CONFIG_LIB_PPCCALL
+  FAR struct addrenv_s *addrenv_callee;  /* The ppccall callee addrenv      */
+#endif
+
   /* Task Management Fields *************************************************/
 
   pid_t    pid;                          /* This is the ID of the thread    */
