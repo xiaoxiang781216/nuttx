@@ -75,11 +75,6 @@ void *sim_doirq(int irq, void *context)
 
       up_set_current_regs(regs);
 
-      if (tcb != NULL)
-        {
-          nxsched_suspend_scheduler(tcb);
-        }
-
       /* Deliver the IRQ */
 
       irq_dispatch(irq, regs);
@@ -90,8 +85,6 @@ void *sim_doirq(int irq, void *context)
        * context switch occurred during interrupt processing.
        */
 
-      tcb = this_task();
-
       if (regs != up_current_regs())
         {
           /* Record the new "running" task when context switch occurred.
@@ -99,11 +92,9 @@ void *sim_doirq(int irq, void *context)
            * crashes.
            */
 
-          *running_task = tcb;
+          *running_task = this_task();
           switch_ctx = true;
         }
-
-      nxsched_resume_scheduler(tcb);
 
       regs = up_current_regs();
 

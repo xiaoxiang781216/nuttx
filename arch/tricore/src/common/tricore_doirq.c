@@ -59,10 +59,9 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
   icr.U = __mfcr(CPU_ICR);
   regs = tricore_csa2addr(__mfcr(CPU_PCXI));
 
-  tcb = *running_task;
-  if (tcb != NULL)
+  if (*running_task != NULL)
     {
-      tcb->xcp.regs = regs - TC_CONTEXT_REGS;
+      (*running_task)->xcp.regs = regs - TC_CONTEXT_REGS;
     }
 
   /* set registers related to csa */
@@ -81,11 +80,6 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
   /* Set irq flag */
 
   up_set_interrupt_context(true);
-
-  if (tcb != NULL)
-    {
-      nxsched_suspend_scheduler(tcb);
-    }
 
   /* Deliver the IRQ */
 
@@ -126,8 +120,6 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
 
       *running_task = tcb;
     }
-
-  nxsched_resume_scheduler(tcb);
 
   /* Reserve at least two csa for CPU_LCX */
 

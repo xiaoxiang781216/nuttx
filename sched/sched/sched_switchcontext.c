@@ -144,6 +144,8 @@ void nxsched_switch(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
 
   count = RSPINLOCK_COUNT(g_schedlock.local_val);
 
+  nxsched_suspend_scheduler(rtcb);
+  nxsched_resume_scheduler(tcb);
   up_switch_context(tcb, rtcb);
 
   if (!up_interrupt_context())

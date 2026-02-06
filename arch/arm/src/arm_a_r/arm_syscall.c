@@ -168,11 +168,6 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   sched_note_irqhandler(NR_IRQS, arm_syscall, true);
 
-  if (*running_task != NULL)
-    {
-      nxsched_suspend_scheduler(*running_task);
-    }
-
   /* The SYSCALL command is in R0 on entry.  Parameters follow in R1..R7 */
 
   cmd = regs[REG_R0];
@@ -616,8 +611,6 @@ uint32_t *arm_syscall(uint32_t *regs)
   /* Note to ram */
 
   sched_note_irqhandler(NR_IRQS, arm_syscall, false);
-
-  nxsched_resume_scheduler(tcb);
 
   /* Update the TLS pointer.
    * The TLS pointer must skip over the
