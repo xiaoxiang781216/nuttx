@@ -29,13 +29,20 @@
 
 #include <stdint.h>
 
+#include <nuttx/fs/ioctl.h>
 #include <nuttx/queue.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/virtio/virtio-config.h>
 
-#ifdef CONFIG_OPENAMP
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
 
-#include <openamp/open_amp.h>
+/* VirtIO ioctl command definitions */
+
+#define VIRTIOIOC_DUMP        _VIRTIOIOC(1)
+
+#ifdef CONFIG_OPENAMP
 
 /****************************************************************************
  * Public Type Definitions
@@ -228,7 +235,7 @@ int virtio_register_device(FAR struct virtio_device *device);
 int virtio_unregister_driver(FAR struct virtio_driver *driver);
 int virtio_unregister_device(FAR struct virtio_device *device);
 
-/* Virtio driver initailied function, called in NuttX driver_intialize() */
+/* VirtIO driver initailied function, called in NuttX driver_intialize() */
 
 void virtio_register_drivers(void);
 

@@ -114,6 +114,7 @@
 #define _MSIOCBASE      (0x4400) /* Mouse ioctl commands */
 #define _PTPBASE        (0x4500) /* PTP ioctl commands */
 #define _MTDLOGBASE     (0x4600) /* MTD LOG ioctl commands */
+#define _VIRTIOBASE     (0x4700) /* VirtIO ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 #define _SAFETYBASE     (0x8c00) /* Safety modules ioctl commands */
 #define _DMABUFBASE     (0x8d00) /* DMA-Buf modules ioctl commands */
@@ -803,6 +804,13 @@
 
 #define _MTDLOGIOCVALID(c)    (_IOC_TYPE(c)==_MTDLOGBASE)
 #define _MTDLOGIOC(nr)        _IOC(_MTDLOGBASE,nr)
+
+/* VirtIO driver ioctl definitions ******************************************/
+
+/* see nuttx/include/nuttx/virtio/virtio.h */
+
+#define _VIRTIOIOCVALID(c)    (_IOC_TYPE(c)==_VIRTIOBASE)
+#define _VIRTIOIOC(nr)        _IOC(_VIRTIOBASE,nr)
 
 /* DMA-Buf driver ioctl definitions *****************************************/
 
