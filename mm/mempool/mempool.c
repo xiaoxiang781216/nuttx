@@ -870,7 +870,7 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
           int semcount = 0;
 
           nxsem_get_value(&pool->waitsem, &semcount);
-          info->nwaiter = (unsigned long)-semcount;
+          info->nwaiter = semcount >= 0 ? 0 : (unsigned long)-semcount;
         }
       else
         {
