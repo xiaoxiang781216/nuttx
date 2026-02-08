@@ -36,6 +36,7 @@
 #include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
+#include "group/group.h"
 #include "signal/signal.h"
 #include "task/task.h"
 
@@ -180,6 +181,12 @@ int nxtask_terminate(pid_t pid)
           nxtask_exithook(dtcb, EXIT_SUCCESS);
 
           leave_critical_section(flags);
+
+          /* Leave the task group.  Perhaps discarding any un-reaped child
+           * status (no zombies here!)
+           */
+
+          group_leave(dtcb);
 
           /* Release the task's PID sequence should align with
            * nx_pthread_exit, with in critical_section and after exit hook.

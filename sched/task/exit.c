@@ -110,6 +110,12 @@ void _exit(int status)
 
   leave_critical_section(flags);
 
+  /* Leave the task group.  Perhaps discarding any un-reaped child
+   * status (no zombies here!)
+   */
+
+  group_leave(tcb);
+
   /* In nxtask_exithook, nxmutex_lock is used, and nxmutex_lock depends
    * on nxsched_get_tcb. Therefore, we move nxsched_release_pid
    * to this position.

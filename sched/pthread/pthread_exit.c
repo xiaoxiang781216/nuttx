@@ -40,6 +40,7 @@
 #include <nuttx/signal.h>
 
 #include "sched/sched.h"
+#include "group/group.h"
 #include "task/task.h"
 #include "pthread/pthread.h"
 
@@ -126,6 +127,12 @@ void nx_pthread_exit(FAR void *exit_value)
   /* Enable interrupts to reduce irq latency */
 
   leave_critical_section(flags);
+
+  /* Leave the task group.  Perhaps discarding any un-reaped child
+   * status (no zombies here!)
+   */
+
+  group_leave(tcb);
 
   /* In nxtask_exithook, nxmutex_lock is used, and nxmutex_lock depends
    * on nxsched_get_tcb. Therefore, we move nxsched_release_pid
