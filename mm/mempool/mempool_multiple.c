@@ -81,7 +81,14 @@ mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
         }
 
       right = mpool->npools;
-      if (mpool->delta != 0u)
+
+      /* Fast path: check first and last pool */
+
+      if (mpool->pools[0].blocksize >= size)
+        {
+          ret = &mpool->pools[0];
+        }
+      else if (mpool->delta != 0u)
         {
           left = mpool->pools[0].blocksize;
           if (left >= size)
@@ -578,7 +585,14 @@ mempool_multiple_init(FAR const char *name,
               pools[i].name = name;
               pools[i].alloc = mempool_multiple_alloc_callback;
               pools[i].free = mempool_multiple_free_callback;
-              pools[i].check = mempool_multiple_check;
+              if (mpool->minpoolsize != 0u)
+                {
+                  pools[i].check = mempool_multiple_check;
+                }
+              else
+                {
+                  pools[i].check = NULL;
+                }
 
               if (mempool_init(pools + i) >= 0)
                 {
