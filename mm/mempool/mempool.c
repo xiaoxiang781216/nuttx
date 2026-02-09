@@ -790,32 +790,40 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 }
 
 /****************************************************************************
- * Name: mempool_navail
+ * Name: mempool_navail_throttled
  *
  * Description:
  *   Return the number of available buffers in the mempool.
  *
  * Input Parameters:
- *   pool - Address of the memory pool to be used.
+ *   pool      - Address of the memory pool to be used.
+ *   throttled - An indication of the mempool allocation is "throttled".
  *
  * Returned Value:
  *   Return the number of available buffers in the mempool, 0 means no room.
  *
  ****************************************************************************/
 
-size_t mempool_navail(FAR struct mempool_s *pool)
+size_t mempool_navail_throttled(FAR struct mempool_s *pool, bool throttled)
 {
   irqstate_t flags;
-  size_t ret = SIZE_MAX;
+  size_t ret;
 
   DEBUGASSERT(pool != NULL);
   mempool_try_init(pool);
 
   flags = spin_lock_irqsave(&pool->lock);
-  if (pool->maxalloc != 0u)
+  ret = pool->ntotal - pool->nalloc;
+  if (throttled && pool->throttle)
     {
-      ret = pool->maxalloc > pool->nalloc ?
-            pool->maxalloc - pool->nalloc : 0u;
+      if (ret > pool->throttle)
+        {
+          ret -= pool->throttle;
+        }
+      else
+        {
+          ret = 0;
+        }
     }
 
   spin_unlock_irqrestore(&pool->lock, flags);

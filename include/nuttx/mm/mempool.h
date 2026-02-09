@@ -467,6 +467,23 @@ FAR void *mempool_zallocate(FAR struct mempool_s *pool,
 void mempool_release(FAR struct mempool_s *pool, FAR void *blk);
 
 /****************************************************************************
+ * Name: mempool_navail_throttled
+ *
+ * Description:
+ *   Return the number of available buffers in the mempool.
+ *
+ * Input Parameters:
+ *   pool      - Address of the memory pool to be used.
+ *   throttled - An indication of the mempool allocation is "throttled".
+ *
+ * Returned Value:
+ *   Return the number of available buffers in the mempool, 0 means no room.
+ *
+ ****************************************************************************/
+
+size_t mempool_navail_throttled(FAR struct mempool_s *pool, bool throttled);
+
+/****************************************************************************
  * Name: mempool_navail
  *
  * Description:
@@ -480,7 +497,10 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk);
  *
  ****************************************************************************/
 
-size_t mempool_navail(FAR struct mempool_s *pool);
+static inline_function size_t mempool_navail(FAR struct mempool_s *pool)
+{
+  return mempool_navail_throttled(pool, true);
+}
 
 /****************************************************************************
  * Name: mempool_info
