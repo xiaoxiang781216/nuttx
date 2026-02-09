@@ -37,6 +37,7 @@
 #include <nuttx/net/ip.h>
 #include <nuttx/net/neighbor.h>
 
+#include "inet/inet.h"
 #include "netdev/netdev.h"
 #include "netlink/netlink.h"
 #include "neighbor/neighbor.h"
@@ -72,7 +73,15 @@ void neighbor_add(FAR struct net_driver_s *dev, FAR net_ipv6addr_t ipaddr,
   bool    new_entry;
   int     i;
 
-  DEBUGASSERT(dev != NULL && addr != NULL);
+  DEBUGASSERT(dev != NULL);
+
+#ifdef CONFIG_NET_ETHERNET
+  if (dev->d_lltype != NET_LL_ETHERNET &&
+      dev->d_lltype != NET_LL_IEEE80211)
+#endif
+    {
+      DEBUGASSERT(addr != NULL);
+    }
 
   /* Find the matching entry, first unused entry, or the oldest used entry.
    * The unused entry will have ne_time == 0 and should generate the oldest
@@ -110,6 +119,18 @@ void neighbor_add(FAR struct net_driver_s *dev, FAR net_ipv6addr_t ipaddr,
     }
 
   /* Need to notify when entry is not found or changes in table */
+
+  /* Determine if this is a new entry or a change. If addr is NULL, addr we
+   * treat that as an all-zero link-layer address (used to mark in-progress
+   * or unreachable states).
+   */
+
+#ifdef CONFIG_NET_ETHERNET
+  if (addr == NULL)
+    {
+      addr = (FAR uint8_t *)g_zero_ethaddr.ether_addr_octet;
+    }
+#endif
 
   new_entry = !found || memcmp(&g_neighbors[oldest_ndx].ne_addr.u, addr,
                              g_neighbors[oldest_ndx].ne_addr.na_llsize) != 0;

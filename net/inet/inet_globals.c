@@ -122,6 +122,13 @@ const struct ether_addr g_ipv6_ethallrouters =   /* All link local routers */
 #endif /* CONFIG_NET_ICMPv6_AUTOCONF || CONFIG_NET_ICMPv6_ROUTER || CONFIG_NET_MLD */
 #endif /* CONFIG_NET_IPv6 */
 
+#ifdef CONFIG_NET_ETHERNET
+const struct ether_addr g_zero_ethaddr =
+{
+  { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+};
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/

@@ -64,6 +64,7 @@
 
 #include "netdev/netdev.h"
 #include "netlink/netlink.h"
+#include "inet/inet.h"
 #include "arp/arp.h"
 
 #ifdef CONFIG_NET_ARP
@@ -95,13 +96,6 @@ struct arp_table_info_s
 static DEFINE_PER_CPU_BSS_BMP(struct arp_entry_s,
                               g_arptable[CONFIG_NET_ARPTAB_SIZE]);
 #define g_arptable this_cpu_var_bmp(g_arptable)
-
-static const struct ether_addr g_zero_ethaddr =
-{
-  {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-  }
-};
 
 /****************************************************************************
  * Private Functions

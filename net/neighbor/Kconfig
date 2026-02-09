@@ -38,6 +38,14 @@ config ICMPv6_NEIGHBOR_DELAYMSEC
 		when an Neighbor Solicitation is sent until the Neighbor
 		Advertisement is received.
 
+config NET_NEIGHBOR_MAXAGE_UNREACHABLE
+	int "Max unreachable Neighbor entry age"
+	default 1
+	---help---
+		The maximum age of unreachable Neighbor table entries measured in
+		deciseconds. During the unreachable period not send a retry
+		Neighbor solicitation for the same destination.
+
 endif # NET_ICMPv6_NEIGHBOR
 
 endif # NET_IPv6

@@ -30,12 +30,22 @@
 #include <debug.h>
 #include <string.h>
 
+#include <nuttx/clock.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/neighbor.h>
 
+#include "inet/inet.h"
 #include "netdev/netdev.h"
 #include "neighbor/neighbor.h"
 
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#  define NEIGHBOR_INPROGRESS_TICK MSEC2TICK(CONFIG_ICMPv6_NEIGHBOR_MAXTRIES * CONFIG_ICMPv6_NEIGHBOR_DELAYMSEC)
+#  define NEIGHBOR_MAXAGE_UNREACHABLE_TICK SEC2TICK(10 * CONFIG_NET_NEIGHBOR_MAXAGE_UNREACHABLE)
+#endif
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -46,6 +56,10 @@ struct neighbor_table_info_s
   FAR struct neighbor_addr_s *ni_laddr;  /* Location to return the link
                                           * layer address */
 };
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
 
 /****************************************************************************
  * Private Functions
@@ -108,7 +122,11 @@ static int neighbor_match(FAR struct net_driver_s *dev, FAR void *arg)
  *
  * Returned Value:
  *   Zero (OK) if the link layer address is returned.  A negated errno value
- *   is returned on any error.
+ *   is returned on any error:
+ *
+ *     -EINPROGRESS: Neighbor solicitation is already in progress
+ *                   (all-zero MAC address in table)
+ *     -ENOENT:      No matching neighbor entry found
  *
  ****************************************************************************/
 
@@ -123,6 +141,44 @@ int neighbor_lookup(FAR const net_ipv6addr_t ipaddr,
   neighbor = neighbor_findentry(ipaddr);
   if (neighbor != NULL)
     {
+#if defined(CONFIG_NET_ETHERNET) && defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+      int llsize;
+      llsize = neighbor->ne_addr.na_llsize;
+      if (llsize == sizeof(g_zero_ethaddr) &&
+          memcmp(&neighbor->ne_addr.u, g_zero_ethaddr.ether_addr_octet,
+                 llsize) == 0)
+        {
+          /* If ICMPv6 neighbor discovery is enabled, apply a timeout to
+           * the in-progress marker. If the marker is still within the
+           * timeout window, report -EINPROGRESS. If the marker expired,
+           * treat the entry as not found so a new solicitation can be
+           * initiated. If ICMPv6 neighbor is not enabled, conservatively
+           * report -EINPROGRESS.
+           */
+
+          clock_t elapsed;
+          elapsed = clock_systime_ticks() - neighbor->ne_time;
+          if (elapsed <= NEIGHBOR_INPROGRESS_TICK)
+            {
+              ninfo("Neighbor solicitation in progress (elapsed=%lu)\n",
+                    (unsigned long)elapsed);
+              return -EINPROGRESS;
+            }
+          else if (elapsed <= NEIGHBOR_MAXAGE_UNREACHABLE_TICK)
+            {
+              ninfo("Neighbor unreachable (elapsed=%lu)\n",
+                    (unsigned long)elapsed);
+              return -ENETUNREACH;
+            }
+          else
+            {
+              ninfo("Neighbor in-progress marker expired (elapsed=%lu)\n",
+                    (unsigned long)elapsed);
+              return -ENOENT;
+            }
+        }
+#endif
+
       /* Yes.. return the link layer address if the caller has provided a
        * non-NULL address in 'laddr'.
        */

@@ -187,6 +187,7 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
   struct icmpv6_notify_s notify;
   struct icmpv6_neighbor_s state;
   net_ipv6addr_t lookup;
+  bool sending = false;
   int ret;
 
   /* First check if destination is a local broadcast or a multicast address.
@@ -314,11 +315,11 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
        * performance issue.
        */
 
-      if (neighbor_lookup(lookup, NULL) >= 0)
+      ret = neighbor_lookup(lookup, NULL);
+      if (ret >= 0 || ret == -ENETUNREACH)
         {
-          /* We have it!  Break out with success */
+          /* We have it! Break out with ret value */
 
-          ret = OK;
           break;
         }
 
@@ -328,12 +329,31 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
 
       icmpv6_wait_setup(lookup, &notify);
 
+      if (ret == -EINPROGRESS && !sending)
+        {
+          /* Neighbor Solicitation for the same destination is in progress,
+           * directly wait neighbor advertisement notify.
+           */
+
+          goto wait;
+        }
+
       /* Arm/re-arm the callback */
 
       state.snd_sent      = false;
       state.snd_cb->flags = ICMPv6_POLL;
       state.snd_cb->priv  = (FAR void *)&state;
       state.snd_cb->event = icmpv6_neighbor_eventhandler;
+
+      /* MAC address marked with all zeros to limit concurrent task
+       * send Neighbor Solicitation for same destination.
+       */
+
+      if (state.snd_retries == 0)
+        {
+          neighbor_add(dev, lookup, NULL);
+          sending = true;
+        }
 
       /* Notify the device driver that new TX data is available. */
 
@@ -353,6 +373,7 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
        * received.
        */
 
+wait:
       ret = icmpv6_wait(dev, &notify, CONFIG_ICMPv6_NEIGHBOR_DELAYMSEC);
 
       /* icmpv6_wait will return OK if and only if the matching Neighbor

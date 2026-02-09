@@ -226,7 +226,6 @@ void icmpv6_notify(net_ipv6addr_t ipaddr)
 
           curr->nt_result = OK;
           nxsem_post(&curr->nt_sem);
-          break;
         }
     }
 

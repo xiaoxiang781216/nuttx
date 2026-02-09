@@ -99,6 +99,7 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
   FAR struct eth_hdr_s *eth = ETHBUF;
   FAR struct ipv6_hdr_s *ip = IPv6BUF;
   struct neighbor_addr_s laddr;
+  int ret;
 
   /* Find the destination IPv6 address in the Neighbor Table and construct
    * the Ethernet header. If the destination IPv6 address isn't on the local
@@ -153,7 +154,8 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
        * Neighbor Table.
        */
 
-      if (neighbor_lookup(ipaddr, &laddr) < 0)
+      ret = neighbor_lookup(ipaddr, &laddr);
+      if (ret < 0)
         {
 #ifdef NET_ICMPv6_HAVE_STACK
           /* No ARP packet if this device do not support ARP */
@@ -162,6 +164,27 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
             {
               return;
             }
+
+#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+          /* Check if a neighbor solicitation is already in progress.
+           * Return error to avoid sending duplicate solicitations.
+           * This follows the ARP model of limiting concurrent queries.
+           */
+
+          if (ret == -EINPROGRESS || ret == -ENETUNREACH)
+            {
+              ninfo("Neighbor solicitation in progress or unreachable\n");
+              dev->d_len = 0;
+              return;
+            }
+
+          /* Create a neighbor table entry with all-zero MAC address to mark
+           * that a solicitation is in progress. This prevents other threads
+           * from initiating duplicate solicitations.
+           */
+
+          neighbor_add(dev, ipaddr, NULL);
+#endif
 
           ninfo("IPv6 Neighbor solicitation for IPv6\n");
 
