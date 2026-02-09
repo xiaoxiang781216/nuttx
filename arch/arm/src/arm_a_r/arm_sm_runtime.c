@@ -34,6 +34,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
+#include <nuttx/reboot_notifier.h>
 #include <string.h>
 
 #include "arm.h"
@@ -66,6 +67,43 @@ typedef uint8_t monitor_stack_t[MONITOR_STACK_SIZE];
 static DEFINE_PER_CPU_BSS(monitor_stack_t, g_monitor_stack)
 locate_data(".monitor_stack") aligned_data(MONITOR_STACK_ALIGNMENT);
 #define g_monitor_stack this_cpu_var(g_monitor_stack)
+
+static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
+                                     unsigned long action,
+                                     FAR void *data);
+
+static DEFINE_PER_CPU_BMP(struct notifier_block, g_switch_nse_panic_nb) =
+{
+  arm_secure_panic_notifier,  /* notifier_call */
+};
+#define g_switch_nse_panic_nb this_cpu_var_bmp(g_switch_nse_panic_nb)
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: arm_secure_panic_notifier
+ *
+ * Description:
+ *   Panic notifier callback to switch secure world to nonsecure world.
+ *
+ ****************************************************************************/
+
+static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
+                                     unsigned long action,
+                                     FAR void *data)
+{
+  UNUSED(nb);
+  UNUSED(data);
+
+  if (action == SYS_HALT)
+    {
+      arm_sm_switch_nsec();
+    }
+
+  return 0;
+}
 
 /****************************************************************************
  * Public Functions
@@ -160,4 +198,24 @@ uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
    */
 
   return SM_EXIT_TO_SECURE;
+}
+
+/****************************************************************************
+ * Name: arm_panic_switch_nsec_register
+ *
+ * Description:
+ *   This function is used to register a panic notifier to handle system
+ *   crash events. When triggered, it switches the system to the non-secure
+ *   world by executing an SMC (Secure Monitor Call) instruction.
+ *
+ * Input Parameters:
+ *   None
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void arm_panic_switch_nsec_register(void)
+{
+  register_reboot_notifier(&g_switch_nse_panic_nb);
 }

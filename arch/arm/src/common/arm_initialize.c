@@ -119,5 +119,9 @@ void up_initialize(void)
   arm_enable_dbgmonitor();
 #endif
 
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+  arm_panic_switch_nsec_register();
+#endif
+
   board_autoled_on(LED_IRQSENABLED);
 }
