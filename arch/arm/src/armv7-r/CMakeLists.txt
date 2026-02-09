@@ -31,7 +31,7 @@ list(APPEND SRCS arm_head.S arm_saveusercontext.S)
 list(APPEND SRCS arm_cache.c arm_cpuinfo.c cp15_cacheops.c)
 
 if(NOT CONFIG_ARCH_CHIP STREQUAL tms570)
-  list(APPEND SRCS arm_gicv2.c arm_gicv2_dump.c)
+  list(APPEND SRCS arm_gicv2.c)
 endif()
 
 if(CONFIG_ARM_GICv2M)

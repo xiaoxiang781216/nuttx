@@ -35,7 +35,6 @@ list(
   arm_cache.c
   arm_cpuinfo.c
   arm_gicv2.c
-  arm_gicv2_dump.c
   arm_mmu.c
   cp15_cacheops.c)
 
