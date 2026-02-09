@@ -84,8 +84,8 @@ static void note_sysview_wdog(FAR struct note_driver_s *drv, uint8_t event,
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-static void note_sysview_vprintf(FAR struct note_driver_s *drv,
-                                 uint8_t level, uintptr_t ip,
+static void note_sysview_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
+                                 uint8_t level, uintptr_t ip, uint64_t type,
                                  FAR const char *fmt, va_list va);
 #endif
 
@@ -427,8 +427,8 @@ static void note_sysview_wdog(FAR struct note_driver_s *drv, uint8_t event,
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-static void note_sysview_vprintf(FAR struct note_driver_s *drv,
-                                 uint8_t level, uintptr_t ip,
+static void note_sysview_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
+                                 uint8_t level, uintptr_t ip, uint64_t type,
                                  FAR const char *fmt, va_list va)
 {
   SEGGER_SYSVIEW_VPrintfHost(fmt, &va);
