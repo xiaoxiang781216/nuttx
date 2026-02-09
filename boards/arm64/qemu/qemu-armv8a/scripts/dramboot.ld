@@ -101,6 +101,7 @@ SECTIONS
   _szrodata = _erodata - _srodata;
 
   .tdata : {
+      _ertonly = ABSOLUTE(.);
       _stdata = ABSOLUTE(.);
       *(.tdata .tdata.* .gnu.linkonce.td.*);
       _etdata = ABSOLUTE(.);
