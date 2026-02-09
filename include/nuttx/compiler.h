@@ -84,6 +84,14 @@
 #  define CONFIG_HAVE_ZERO_SIZE_ARRAY 1
 #endif
 
+/* Keyword about _Atomic */
+
+#if defined(__cplusplus) || defined(__clang__)
+#  define __Atomic(t) t
+#else
+#  define __Atomic(t) _Atomic(t)
+#endif
+
 /* Green Hills Software definitions *****************************************/
 
 #if defined(__ghs__)
@@ -647,27 +655,27 @@
 
 /* Atomic functions. */
 
-#  if defined(CONFIG_LIBC_ATOMIC_TOOLCHAIN)
-#    define atomic_store_4(obj, val, memorder)         __atomic_store_n(obj, val, memorder)
-#    define atomic_store_8(obj, val, memorder)         __atomic_store_n(obj, val, memorder)
-#    define atomic_load_4(obj, memorder)               __atomic_load_n(obj, memorder)
-#    define atomic_load_8(obj, memorder)               __atomic_load_n(obj, memorder)
-#    define atomic_fetch_add_4(obj, val, memorder)     __atomic_fetch_add(obj, val, memorder)
-#    define atomic_fetch_add_8(obj, val, memorder)     __atomic_fetch_add(obj, val, memorder)
-#    define atomic_fetch_sub_4(obj, val, memorder)     __atomic_fetch_sub(obj, val, memorder)
-#    define atomic_fetch_sub_8(obj, val, memorder)     __atomic_fetch_sub(obj, val, memorder)
-#    define atomic_fetch_and_4(obj, val, memorder)     __atomic_fetch_and(obj, val, memorder)
-#    define atomic_fetch_and_8(obj, val, memorder)     __atomic_fetch_and(obj, val, memorder)
-#    define atomic_fetch_or_4(obj, val, memorder)      __atomic_fetch_or(obj, val, memorder)
-#    define atomic_fetch_or_8(obj, val, memorder)      __atomic_fetch_or(obj, val, memorder)
-#    define atomic_fetch_xor_4(obj, val, memorder)     __atomic_fetch_xor(obj, val, memorder)
-#    define atomic_fetch_xor_8(obj, val, memorder)     __atomic_fetch_xor(obj, val, memorder)
-#    define atomic_exchange_4(obj, val, memorder)      __atomic_exchange_n(obj, val, memorder)
-#    define atomic_exchange_8(obj, val, memorder)      __atomic_exchange_n(obj, val, memorder)
+#  ifdef CONFIG_LIBC_ATOMIC_TOOLCHAIN
+#    define atomic_store_4(obj, val, memorder)     __atomic_store_n(obj, val, memorder)
+#    define atomic_store_8(obj, val, memorder)     __atomic_store_n(obj, val, memorder)
+#    define atomic_load_4(obj, memorder)           __atomic_load_n(obj, memorder)
+#    define atomic_load_8(obj, memorder)           __atomic_load_n(obj, memorder)
+#    define atomic_fetch_add_4(obj, val, memorder) __atomic_fetch_add(obj, val, memorder)
+#    define atomic_fetch_add_8(obj, val, memorder) __atomic_fetch_add(obj, val, memorder)
+#    define atomic_fetch_sub_4(obj, val, memorder) __atomic_fetch_sub(obj, val, memorder)
+#    define atomic_fetch_sub_8(obj, val, memorder) __atomic_fetch_sub(obj, val, memorder)
+#    define atomic_fetch_and_4(obj, val, memorder) __atomic_fetch_and(obj, val, memorder)
+#    define atomic_fetch_and_8(obj, val, memorder) __atomic_fetch_and(obj, val, memorder)
+#    define atomic_fetch_or_4(obj, val, memorder)  __atomic_fetch_or(obj, val, memorder)
+#    define atomic_fetch_or_8(obj, val, memorder)  __atomic_fetch_or(obj, val, memorder)
+#    define atomic_fetch_xor_4(obj, val, memorder) __atomic_fetch_xor(obj, val, memorder)
+#    define atomic_fetch_xor_8(obj, val, memorder) __atomic_fetch_xor(obj, val, memorder)
+#    define atomic_exchange_4(obj, val, memorder)  __atomic_exchange_n(obj, val, memorder)
+#    define atomic_exchange_8(obj, val, memorder)  __atomic_exchange_n(obj, val, memorder)
 #    define atomic_compare_exchange_4(obj, expected, desired, weak, success, failure) \
-      __atomic_compare_exchange_n(obj, expected, desired, weak, success, failure)
+       __atomic_compare_exchange_n(obj, expected, desired, weak, success, failure)
 #    define atomic_compare_exchange_8(obj, expected, desired, weak, success, failure) \
-      __atomic_compare_exchange_n(obj, expected, desired, weak, success, failure)
+       __atomic_compare_exchange_n(obj, expected, desired, weak, success, failure)
 #  endif
 
 /* SDCC-specific definitions ************************************************/
@@ -1216,43 +1224,43 @@
 
 /* Atomic functions. */
 
-#  if defined(CONFIG_LIBC_ATOMIC_TOOLCHAIN)
+#  ifdef CONFIG_LIBC_ATOMIC_TOOLCHAIN
 #    define atomic_store_4(obj, val, memorder) \
-      _InterlockedExchange((FAR long volatile *)(obj), (long)(val))
+       _InterlockedExchange((FAR long volatile *)(obj), val)
 #    define atomic_store_8(obj, val, memorder) \
-      _InterlockedExchange64((FAR long long volatile *)(obj), (long long)(val))
+       _InterlockedExchange64((FAR long long volatile *)(obj), val)
 #    define atomic_load_4(obj, memorder) \
-      _InterlockedOr((FAR long volatile *)(obj), 0)
+       _InterlockedOr((FAR long volatile *)(obj), 0)
 #    define atomic_load_8(obj, memorder) \
-      _InterlockedOr64((FAR long long volatile *)(obj), 0)
+       _InterlockedOr64((FAR long long volatile *)(obj), 0)
 #    define atomic_fetch_add_4(obj, val, memorder) \
-      _InterlockedExchangeAdd((FAR long volatile *)(obj), (long)(val))
+       _InterlockedExchangeAdd((FAR long volatile *)(obj), val)
 #    define atomic_fetch_add_8(obj, val, memorder) \
-      _InterlockedExchangeAdd64((FAR long long volatile *)(obj), (long long)(val))
+       _InterlockedExchangeAdd64((FAR long long volatile *)(obj), val)
 #    define atomic_fetch_sub_4(obj, val, memorder) \
-      _InterlockedExchangeAdd((FAR long volatile *)(obj), -(long)(val))
+       _InterlockedExchangeAdd((FAR long volatile *)(obj), -val)
 #    define atomic_fetch_sub_8(obj, val, memorder) \
-      _InterlockedExchangeAdd64((FAR long long volatile *)(obj), -(long long)(val))
+       _InterlockedExchangeAdd64((FAR long long volatile *)(obj), -val)
 #    define atomic_fetch_and_4(obj, val, memorder) \
-      _InterlockedAnd((FAR long volatile *)(obj), (long)(val))
+       _InterlockedAnd((FAR long volatile *)(obj), val)
 #    define atomic_fetch_and_8(obj, val, memorder) \
-      _InterlockedAnd64((FAR long long volatile *)(obj), (long long)(val))
+       _InterlockedAnd64((FAR long long volatile *)(obj), val)
 #    define atomic_fetch_or_4(obj, val, memorder) \
-      _InterlockedOr((FAR long volatile *)(obj), (long)(val))
+       _InterlockedOr((FAR long volatile *)(obj), val)
 #    define atomic_fetch_or_8(obj, val, memorder) \
-      _InterlockedOr64((FAR long long volatile *)(obj), (long long)(val))
+       _InterlockedOr64((FAR long long volatile *)(obj), val)
 #    define atomic_fetch_xor_4(obj, val, memorder) \
-      _InterlockedXor((FAR long volatile *)(obj), (long)(val))
+       _InterlockedXor((FAR long volatile *)(obj), val)
 #    define atomic_fetch_xor_8(obj, val, memorder) \
-      _InterlockedXor64((FAR long long volatile *)(obj), (long long)(val))
+       _InterlockedXor64((FAR long long volatile *)(obj), val)
 #    define atomic_exchange_4(obj, val, memorder) \
-      _InterlockedExchange((FAR long volatile *)(obj), (long)(val))
+       _InterlockedExchange((FAR long volatile *)(obj), val)
 #    define atomic_exchange_8(obj, val, memorder) \
-      _InterlockedExchange64((FAR long long volatile *)(obj), (long long)(val))
+       _InterlockedExchange64((FAR long long volatile *)(obj), val)
 #    define atomic_compare_exchange_4(obj, expect, desired, weak, success, failure) \
-      (_InterlockedCompareExchange((FAR long volatile *)(obj), (long)(desired), *(FAR long *)(expect)) == *(FAR long *)(expect))
+       (_InterlockedCompareExchange((FAR long volatile *)(obj), desired, *expect) == *expect)
 #    define atomic_compare_exchange_8(obj, expect, desired, weak, success, failure) \
-      (_InterlockedCompareExchange64((FAR long long volatile *)(obj), (long long)(desired), *(FAR long long *)(expect)) == *(FAR long long *)(expect))
+       (_InterlockedCompareExchange64((FAR long long volatile *)(obj), desired, *expect) == *expect)
 #  endif
 
 /* TASKING (Infineon AURIX C/C++)-specific definitions **********************/
@@ -1358,45 +1366,29 @@
 
 /* Atomic functions. */
 
-#  if defined(CONFIG_LIBC_ATOMIC_TOOLCHAIN)
-#    define atomic_store_4(obj, val, memorder) \
-      __c11_atomic_store((volatile _Atomic int32_t*)obj, val, memorder)
-#    define atomic_store_8(obj, val, memorder) \
-      __c11_atomic_store((volatile _Atomic int64_t*)obj, val, memorder)
-#    define atomic_load_4(obj, memorder) \
-      __c11_atomic_load((volatile _Atomic int32_t*)obj, memorder)
-#    define atomic_load_8(obj, memorder) \
-      __c11_atomic_load((volatile _Atomic int64_t*)obj, memorder)
-#    define atomic_fetch_add_4(obj, val, memorder) \
-      __c11_atomic_fetch_add((volatile _Atomic int32_t*)obj, val, memorder)
-#    define atomic_fetch_add_8(obj, val, memorder) \
-      __c11_atomic_fetch_add((volatile _Atomic int64_t*)obj, val, memorder)
-#    define atomic_fetch_sub_4(obj, val, memorder) \
-      __c11_atomic_fetch_sub((volatile _Atomic int32_t*)obj, val, memorder)
-#    define atomic_fetch_sub_8(obj, val, memorder) \
-      __c11_atomic_fetch_sub((volatile _Atomic int64_t*)obj, val, memorder)
-#    define atomic_fetch_and_4(obj, val, memorder) \
-      __c11_atomic_fetch_and((volatile _Atomic int32_t*)obj, val, memorder)
-#    define atomic_fetch_and_8(obj, val, memorder) \
-      __c11_atomic_fetch_and((volatile _Atomic int64_t*)obj, val, memorder)
-#    define atomic_fetch_or_4(obj, val, memorder) \
-      __c11_atomic_fetch_or((volatile _Atomic int32_t*)obj, val, memorder)
-#    define atomic_fetch_or_8(obj, val, memorder) \
-      __c11_atomic_fetch_or((volatile _Atomic int64_t*)obj, val, memorder)
-#    define atomic_fetch_xor_4(obj, val, memorder) \
-      __c11_atomic_fetch_xor((volatile _Atomic int32_t*)obj, val, memorder)
-#    define atomic_fetch_xor_8(obj, val, memorder) \
-      __c11_atomic_fetch_xor((volatile _Atomic int64_t*)obj, val, memorder)
-#    define atomic_exchange_4(obj, val, memorder) \
-      __c11_atomic_exchange((volatile _Atomic int32_t*)obj, val, memorder)
-#    define atomic_exchange_8(obj, val, memorder) \
-      __c11_atomic_exchange((volatile _Atomic int64_t*)obj, val, memorder)
+#  ifdef CONFIG_LIBC_ATOMIC_TOOLCHAIN
+#    define atomic_store_4(obj, val, memorder)     __c11_atomic_store(obj, val, memorder)
+#    define atomic_store_8(obj, val, memorder)     __c11_atomic_store(obj, val, memorder)
+#    define atomic_load_4(obj, memorder)           __c11_atomic_load(obj, memorder)
+#    define atomic_load_8(obj, memorder)           __c11_atomic_load(obj, memorder)
+#    define atomic_fetch_add_4(obj, val, memorder) __c11_atomic_fetch_add(obj, val, memorder)
+#    define atomic_fetch_add_8(obj, val, memorder) __c11_atomic_fetch_add(obj, val, memorder)
+#    define atomic_fetch_sub_4(obj, val, memorder) __c11_atomic_fetch_sub(obj, val, memorder)
+#    define atomic_fetch_sub_8(obj, val, memorder) __c11_atomic_fetch_sub(obj, val, memorder)
+#    define atomic_fetch_and_4(obj, val, memorder) __c11_atomic_fetch_and(obj, val, memorder)
+#    define atomic_fetch_and_8(obj, val, memorder) __c11_atomic_fetch_and(obj, val, memorder)
+#    define atomic_fetch_or_4(obj, val, memorder)  __c11_atomic_fetch_or(obj, val, memorder)
+#    define atomic_fetch_or_8(obj, val, memorder)  __c11_atomic_fetch_or(obj, val, memorder)
+#    define atomic_fetch_xor_4(obj, val, memorder) __c11_atomic_fetch_xor(obj, val, memorder)
+#    define atomic_fetch_xor_8(obj, val, memorder) __c11_atomic_fetch_xor(obj, val, memorder)
+#    define atomic_exchange_4(obj, val, memorder)  __c11_atomic_exchange(obj, val, memorder)
+#    define atomic_exchange_8(obj, val, memorder)  __c11_atomic_exchange(obj, val, memorder)
 #    define atomic_compare_exchange_4(obj, expected, desired, weak, success, failure) \
-      ((weak) ? __c11_atomic_compare_exchange_weak((volatile _Atomic int32_t*)obj, expected, desired, success, failure) \
-              : __c11_atomic_compare_exchange_strong((volatile _Atomic int32_t*)obj, expected, desired, success, failure))
+       ((weak) ? __c11_atomic_compare_exchange_weak(obj, expected, desired, success, failure) \
+               : __c11_atomic_compare_exchange_strong(obj, expected, desired, success, failure))
 #    define atomic_compare_exchange_8(obj, expected, desired, weak, success, failure) \
-      ((weak) ? __c11_atomic_compare_exchange_weak((volatile _Atomic int64_t*)obj, expected, desired, success, failure) \
-              : __c11_atomic_compare_exchange_strong((volatile _Atomic int64_t*)obj, expected, desired, success, failure))
+       ((weak) ? __c11_atomic_compare_exchange_weak(obj, expected, desired, success, failure) \
+               : __c11_atomic_compare_exchange_strong(obj, expected, desired, success, failure))
 #  endif
 
 /* Unknown compiler *********************************************************/
