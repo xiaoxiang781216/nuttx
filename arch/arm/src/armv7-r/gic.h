@@ -43,7 +43,7 @@
 #include "mpcore.h"
 #include "arm_internal.h"
 
-#ifdef CONFIG_ARMV7R_HAVE_GICv2
+#ifdef CONFIG_ARM_HAVE_GICv2
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -857,5 +857,5 @@ int gic_v2m_initialize(void);
 #endif
 #endif /* __ASSEMBLY__ */
 
-#endif /* CONFIG_ARMV7R_HAVE_GICv2 */
+#endif /* CONFIG_ARM_HAVE_GICv2 */
 #endif /* __ARCH_ARM_SRC_ARMV7_R_GIC_H */

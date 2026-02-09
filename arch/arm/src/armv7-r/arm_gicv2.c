@@ -36,7 +36,7 @@
 #include "arm_internal.h"
 #include "gic.h"
 
-#ifdef CONFIG_ARMV7R_HAVE_GICv2
+#ifdef CONFIG_ARM_HAVE_GICv2
 
 /****************************************************************************
  * Public Functions
@@ -691,4 +691,4 @@ int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
 #endif
 }
 
-#endif /* CONFIG_ARMV7R_HAVE_GICv2 */
+#endif /* CONFIG_ARM_HAVE_GICv2 */

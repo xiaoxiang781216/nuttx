@@ -1536,6 +1536,16 @@ config ARM_STACKCHECK_BREAKPOINT
 
 endif
 
+config ARM_HAVE_GICv2
+	bool
+	select ARCH_HAVE_IRQTRIGGER
+	select ARCH_HAVE_IRQPRIO
+	select ARCH_HAVE_HIPRI_INTERRUPT
+	default n
+	---help---
+		Selected by the configuration tool if the architecture supports the
+		Generic Interrupt Controller (GIC)
+
 config ARM_GICv2M
 	bool "gic support msi irq"
 	depends on PCI_MSIX
