@@ -7,10 +7,6 @@ comment "ARMv7-A Configuration Options"
 
 if ARM_HAVE_GICv2
 
-config ARMV7A_GICv2_DUMP
-	bool "Dump the gic register"
-	default DEBUG_IRQ_INFO
-
 config ARMV7A_GIC_EOIMODE
 	bool "Enable GIC EOImode"
 	default n
