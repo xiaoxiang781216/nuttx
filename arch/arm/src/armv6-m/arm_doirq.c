@@ -85,7 +85,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
       irq_dispatch(irq, regs);
 #endif
 #ifndef CONFIG_DISABLE_SIGNALS
-      if (tcb->sigdeliver)
+      if (tcb && tcb->sigdeliver && !tcb->xcp.saved_regs)
         {
           /* Pendsv able to access running tcb with no critical section */
 

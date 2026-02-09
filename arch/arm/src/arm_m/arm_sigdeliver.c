@@ -122,6 +122,7 @@ retry:
 
   g_running_task = NULL;
   rtcb->xcp.regs = rtcb->xcp.saved_regs;
+  rtcb->xcp.saved_regs = NULL;
   up_addrenv_leave_kernel();
   arm_fullcontextrestore();
   UNUSED(regs);
