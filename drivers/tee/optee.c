@@ -653,7 +653,7 @@ static int optee_memref_to_msg_param(FAR struct optee_priv_data *priv,
                                      FAR const struct tee_ioctl_param *p)
 {
   FAR struct optee_shm *shm;
-  uintptr_t page_list_pa;
+  uintptr_t page_list_pa = 0;
   bool external_vm_context = false;
 
   if (p->c == TEE_MEMREF_NULL)
