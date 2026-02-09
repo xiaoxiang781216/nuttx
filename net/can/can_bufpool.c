@@ -47,9 +47,10 @@
 
 /* The array containing all CAN buffers */
 
-MEMPOOL_DEFINE_WITH_THROTTLE(g_can_buffer, CAN_BUFFER_SIZE,
-                             CONFIG_NET_CAN_NBUFFERS, 0, 0,
-                             CONFIG_NET_CAN_IOB_THROTTLE);
+MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(g_can_buffer, CAN_BUFFER_SIZE,
+                                           CONFIG_NET_CAN_NBUFFERS, 0, 0,
+                                           CONFIG_NET_CAN_IOB_THROTTLE,
+                                           IOB_ALIGNMENT);
 
 /****************************************************************************
  * Private Functions
