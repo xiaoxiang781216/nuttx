@@ -44,7 +44,7 @@ if(CONFIG_ARM_GICv2M)
   list(APPEND SRCS arm_gicv2m.c)
 endif()
 
-if(CONFIG_ARMV7A_HAVE_PTM)
+if(CONFIG_ARM_HAVE_PTM)
   list(APPEND SRCS arm_timer.c)
 endif()
 

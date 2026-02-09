@@ -1526,6 +1526,16 @@ config ARM_GICv2M
 	depends on PCI_MSIX
 	default n
 
+config ARM_HAVE_PTM
+	bool
+	default n
+	select ONESHOT
+	select ONESHOT_COUNT
+	select ONESHOT_FAST_DIVISION
+	---help---
+		Selected by the configuration tool if the architecture supports the
+		per-processor Private Timers (PTMs)
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif

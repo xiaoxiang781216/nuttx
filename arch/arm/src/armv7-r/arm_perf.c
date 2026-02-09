@@ -66,7 +66,7 @@ void up_perf_init(void *arg)
 {
   g_cpu_freq = (unsigned long)(uintptr_t)arg;
 
-#ifdef CONFIG_ARMV7R_HAVE_PTM
+#ifdef CONFIG_ARM_HAVE_PTM
   if (g_cpu_freq == ULONG_MAX || g_cpu_freq == 0)
     {
       g_cpu_freq = arm_timer_get_freq();

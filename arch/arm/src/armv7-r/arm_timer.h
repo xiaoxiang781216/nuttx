@@ -65,7 +65,7 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7R_HAVE_PTM
+#ifdef CONFIG_ARM_HAVE_PTM
 struct oneshot_lowerhalf_s *arm_timer_initialize(unsigned int freq);
 #else
 #  define arm_timer_initialize(freq) NULL
