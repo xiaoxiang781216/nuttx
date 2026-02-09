@@ -88,5 +88,12 @@ endif
 CXXFLAGS += -DLIBCXXABI_NON_DEMANGLING_TERMINATE
 CXXFLAGS += -DLIBCXXABI_BAREMETAL
 
+# Fix GCC false positive -Warray-bounds in __builtin_memmove
+# triggered by libcxx constexpr_c_functions.h with -O3
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),)
+CXXFLAGS += -Wno-array-bounds -Wno-stringop-overflow
+endif
+
 DEPPATH += --dep-path libcxxabi/libcxxabi/src
 VPATH += libcxxabi/libcxxabi/src

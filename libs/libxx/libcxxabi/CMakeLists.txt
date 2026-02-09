@@ -120,6 +120,14 @@ if(CONFIG_LIBCXXABI)
   target_compile_definitions(libcxxabi
                              PRIVATE LIBCXXABI_NON_DEMANGLING_TERMINATE)
 
+  # Fix GCC false positive -Warray-bounds in __builtin_memmove triggered by
+  # libcxx constexpr_c_functions.h with -O3
+  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
+  if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
+    target_compile_options(libcxxabi PRIVATE -Wno-array-bounds
+                                             -Wno-stringop-overflow)
+  endif()
+
   target_sources(libcxxabi PRIVATE ${TARGET_SRCS})
   target_include_directories(
     libcxxabi BEFORE PRIVATE ${NUTTX_DIR}/libs/libxx/libcxx/libcxx/src
