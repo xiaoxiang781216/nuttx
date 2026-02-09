@@ -208,7 +208,7 @@ void arm_gic0_initialize(void)
       putreg32(0x01010101, GIC_ICDIPTR(irq));  /* SPI on CPU0 */
     }
 
-#ifdef CONFIG_ARMV7A_GICv2M
+#ifdef CONFIG_ARM_GICv2M
   gic_v2m_initialize();
 #endif
 

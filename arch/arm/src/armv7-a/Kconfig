@@ -37,11 +37,6 @@ config ARMV7A_GICV2_LEGACY_IRQ
 		Default value "35" is for QEMU arm/virt. Use -1 if a domain
 		doesn't need legacy IRQ.
 
-config ARMV7A_GICv2M
-	bool "gic support msi irq"
-	depends on PCI_MSIX
-	default n
-
 endif # ARMV7A_HAVE_GICv2
 
 config ARMV7A_HAVE_GTM

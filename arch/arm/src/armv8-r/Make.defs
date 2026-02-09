@@ -43,7 +43,7 @@ endif
 
 ifeq ($(CONFIG_ARM_GIC_VERSION),2)
   CMN_CSRCS += arm_gicv2.c
-  ifeq ($(CONFIG_ARMV8R_GICv2M),y)
+  ifeq ($(CONFIG_ARM_GICv2M),y)
     CMN_CSRCS += arm_gicv2m.c
   endif
 else

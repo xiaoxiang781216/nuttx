@@ -40,7 +40,7 @@ list(
   arm_perf.c
   cp15_cacheops.c)
 
-if(CONFIG_ARMV7A_GICv2M)
+if(CONFIG_ARM_GICv2M)
   list(APPEND SRCS arm_gicv2m.c)
 endif()
 

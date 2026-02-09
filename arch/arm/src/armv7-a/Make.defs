@@ -39,7 +39,7 @@ CMN_CSRCS += arm_gicv2.c arm_gicv2_dump.c
 CMN_CSRCS += arm_mmu.c
 CMN_CSRCS += arm_perf.c cp15_cacheops.c
 
-ifeq ($(CONFIG_ARMV7A_GICv2M),y)
+ifeq ($(CONFIG_ARM_GICv2M),y)
   CMN_CSRCS += arm_gicv2m.c
 endif
 

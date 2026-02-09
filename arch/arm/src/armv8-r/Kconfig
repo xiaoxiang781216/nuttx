@@ -27,11 +27,6 @@ config ARMV8R_GICV2_LEGACY_IRQ0
 	---help---
 		The QEMU legacy irq0 is 35. -1 means disable
 
-config ARMV8R_GICv2M
-	bool "gic support msi irq"
-	depends on PCI_MSIX
-	default n
-
 endif # ARM_GIC_VERSION = 2
 
 config ARMV8R_MEMINIT

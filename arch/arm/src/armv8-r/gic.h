@@ -335,7 +335,7 @@ int arm_start_handler(int irq, void *context, void *arg);
 void arm_cpu_sgi(int sgi, unsigned int cpuset);
 #endif /* !CONFIG_UP */
 
-#ifdef CONFIG_ARMV8R_GICv2M
+#ifdef CONFIG_ARM_GICv2M
 int arm_gic_v2m_initialize(void);
 #endif
 

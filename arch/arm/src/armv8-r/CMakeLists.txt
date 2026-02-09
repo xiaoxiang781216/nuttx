@@ -39,7 +39,7 @@ list(
 
 if(CONFIG_ARM_GIC_VERSION EQUAL 2)
   list(APPEND SRCS arm_gicv2.c)
-  if(CONFIG_ARMV8R_GICv2M)
+  if(CONFIG_ARM_GICv2M)
     list(APPEND SRCS arm_gicv2m.c)
   endif()
 endif()

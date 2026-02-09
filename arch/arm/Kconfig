@@ -1521,6 +1521,11 @@ config ARM_STACKCHECK_BREAKPOINT
 
 endif
 
+config ARM_GICv2M
+	bool "gic support msi irq"
+	depends on PCI_MSIX
+	default n
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif
