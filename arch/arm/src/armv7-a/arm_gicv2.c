@@ -209,7 +209,7 @@ void arm_gic0_initialize(void)
     }
 
 #ifdef CONFIG_ARM_GICv2M
-  gic_v2m_initialize();
+  arm_gic_v2m_initialize();
 #endif
 
 #ifdef CONFIG_SMP

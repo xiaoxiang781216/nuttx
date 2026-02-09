@@ -45,6 +45,7 @@ config ARCH_CHIP_QEMU_CORTEXR52
 	select ARCH_HAVE_MULTICPU
 	select ARMV8R_HAVE_DECODEFIQ
 	select ARM_HAVE_PTM
+	select ARM_HAVE_GICv2
 
 endchoice # Qemu Chip Selection
 

@@ -832,20 +832,11 @@ static void arm_gic_init(void)
 #endif
 }
 
-int arm_gic0_initialize(void)
+void arm_gic0_initialize(void)
 {
-  int err;
-
-  err = gic_validate_dist_version();
-  if (err)
-    {
-      sinfo("no distributor detected, giving up ret=%d\n", err);
-      return err;
-    }
+  DEBUGASSERT(gic_validate_dist_version() == 0);
 
   gicv3_dist_init();
-
-  return 0;
 }
 
 void arm_gic_initialize(void)

@@ -81,7 +81,7 @@ static bool is_valid_spi(uint32_t base, uint32_t number)
  * Public Functions
  ****************************************************************************/
 
-int gic_v2m_initialize(void)
+int arm_gic_v2m_initialize(void)
 {
   uint32_t typer;
 

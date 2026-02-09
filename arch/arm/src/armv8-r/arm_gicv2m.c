@@ -34,22 +34,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define MPCORE_ICM_VBASE                CONFIG_GICM_BASE
-
-/* V2m Registers */
-
-#define GIC_V2MTYPER_OFFSET             0x008
-#define GIC_V2MSETSPI_OFFSET            0x040
-#define GIC_V2MTYPER                    (MPCORE_ICM_VBASE + GIC_V2MTYPER_OFFSET)
-#define GIC_V2MSETSPI                   (MPCORE_ICM_VBASE + GIC_V2MSETSPI_OFFSET)
-
-#define GIC_V2MTYPES_BASE_SHIFT         16
-#define GIC_V2MTYPES_BASE_MASK          0x3FF
-#define GIC_V2MTYPES_NUM_MASK           0x3FF
-#define GIC_V2MTYPES_BASE(x)            \
-  (((x) >> GIC_V2MTYPES_BASE_SHIFT) & GIC_V2MTYPES_NUM_MASK)
-#define GIC_V2MTYPES_NUMBER(x)          ((x) & GIC_V2MTYPES_NUM_MASK)
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
