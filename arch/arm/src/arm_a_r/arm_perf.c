@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_perf.c
+ * arch/arm/src/arm_a_r/arm_perf.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

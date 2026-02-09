@@ -24,7 +24,7 @@ CMN_ASRCS += arm_vectors.S
 
 CMN_CSRCS += arm_tcbinfo.c arm_doirq.c arm_dataabort.c arm_syscall.c
 CMN_CSRCS += arm_prefetchabort.c arm_cpuidlestack.c arm_initialstate.c
-CMN_CSRCS += arm_undefinedinsn.c arm_allocpage.c
+CMN_CSRCS += arm_undefinedinsn.c arm_allocpage.c arm_perf.c
 
 ifneq ($(CONFIG_DISABLE_SIGNALS),y)
   CMN_CSRCS += arm_schedulesigaction.c arm_sigdeliver.c
@@ -40,4 +40,8 @@ endif
 
 ifeq ($(CONFIG_LEGACY_PAGING),y)
   CMN_CSRCS += arm_checkmapping.c
+endif
+
+ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
+  CMN_UCSRCS += arm_perf.c
 endif

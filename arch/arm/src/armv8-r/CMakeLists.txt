@@ -28,14 +28,7 @@ list(APPEND SRCS arm_head.S arm_saveusercontext.S)
 
 # Common C source files
 
-list(
-  APPEND
-  SRCS
-  arm_timer.c
-  arm_cache.c
-  arm_cpuinfo.c
-  arm_perf.c
-  cp15_cacheops.c)
+list(APPEND SRCS arm_timer.c arm_cache.c arm_cpuinfo.c cp15_cacheops.c)
 
 if(CONFIG_ARM_GIC_VERSION EQUAL 2)
   list(APPEND SRCS arm_gicv2.c)
@@ -66,8 +59,3 @@ if(CONFIG_ARCH_ADDRENV)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
-
-if(NOT CONFIG_BUILD_FLAT AND CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
-  target_sources(arch_interface PRIVATE arm_perf.c)
-  target_include_directories(arch_interface PRIVATE ${NUTTX_CHIP_ABS_DIR})
-endif()

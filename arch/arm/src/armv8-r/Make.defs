@@ -35,7 +35,7 @@ CMN_ASRCS += arm_head.S arm_saveusercontext.S
 # Common C source files
 
 CMN_CSRCS += arm_timer.c arm_cache.c arm_cpuinfo.c
-CMN_CSRCS += arm_perf.c cp15_cacheops.c
+CMN_CSRCS += cp15_cacheops.c
 
 ifeq ($(CONFIG_ARM_MPU),y)
   CMN_CSRCS += arm_mpu.c
@@ -67,10 +67,6 @@ endif
 
 ifeq ($(CONFIG_ARCH_ADDRENV),y)
   CMN_CSRCS += arm_addrenv.c
-endif
-
-ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
-  CMN_UCSRCS += arm_perf.c
 endif
 
 VPATH += arm_a_r
