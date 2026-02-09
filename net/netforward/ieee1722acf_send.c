@@ -542,7 +542,7 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
           /* Copy can msg data */
 
           ret = iob_trycopyin(iob, (FAR const uint8_t *)&msg->data,
-                              data_len, iob->io_pktlen + hdr_len, true);
+                              data_len, offset + hdr_len, true);
           if (ret != data_len)
             {
               ret = -ENOMEM;

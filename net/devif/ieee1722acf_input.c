@@ -88,7 +88,7 @@ static int ieee1722acf_can_parse(FAR struct net_driver_s *dev,
 
   ret = iob_copyout((uint8_t *)&can_hdr, dev->d_iob,
                     sizeof(struct ieee1722acf_can_common_hdr_s),
-                    offset);
+                    offset + sizeof(struct ieee1722acf_msg_hdr_s));
   if (ret != sizeof(struct ieee1722acf_can_common_hdr_s))
     {
       nerr("ERROR: Failed to copyout acf can common hdr\n");
