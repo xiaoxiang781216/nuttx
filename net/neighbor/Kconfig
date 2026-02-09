@@ -18,7 +18,15 @@ config NET_ICMPv6_NEIGHBOR
 		the target IPv6 address mapping does not appear in the Neighbor
 		table.
 
-if NET_ICMPv6_NEIGHBOR
+config NET_IPv6_NEIGHBOR_SEND_QUEUE
+	bool "IPv6 neighbor solicitation queue"
+	default n
+	depends on MM_IOB
+	---help---
+		Enable logic to queue packets while waiting for neighbor solicitation
+		response. This prevents packet loss during address resolution.
+
+if NET_ICMPv6_NEIGHBOR || NET_IPv6_NEIGHBOR_SEND_QUEUE
 
 config ICMPv6_NEIGHBOR_MAXTRIES
 	int "ICMPv6 neighbor solicitation retries"

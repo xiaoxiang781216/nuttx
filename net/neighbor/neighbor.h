@@ -35,6 +35,7 @@
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/sixlowpan.h>
 #include <nuttx/net/neighbor.h>
+#include <nuttx/mm/iob.h>
 
 #ifdef CONFIG_NET_IPv6
 
@@ -161,6 +162,34 @@ void neighbor_update(const net_ipv6addr_t ipaddr);
 
 #ifdef CONFIG_NET_ETHERNET
 void neighbor_ethernet_out(FAR struct net_driver_s *dev);
+#endif
+
+/****************************************************************************
+ * Name: neighbor_queue_iob
+ *
+ * Description:
+ *   Queue an IOB which L2 layer is unfinished to the target neighbor
+ *   entry's delay queue which in progress waiting for a Neighbor
+ *   Advertisement response.
+ *
+ * Input Parameters:
+ *   dev     - The device driver structure
+ *   ipaddr  - The IPv6 address
+ *   iob     - The IOB to be queued
+ *
+ * Returned Value:
+ *   Zero (OK) if the Neighbor Table entry was successfully modified.
+ *   A negated errno value is returned on any error.
+ *
+ * Assumptions
+ *   The network is locked to assure exclusive access to the Neighbor Table
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+int neighbor_queue_iob(FAR struct net_driver_s *dev,
+                       FAR const net_ipv6addr_t ipaddr,
+                       FAR struct iob_s *iob);
 #endif
 
 /****************************************************************************

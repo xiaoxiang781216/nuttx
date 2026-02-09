@@ -38,6 +38,7 @@
 #include <nuttx/net/neighbor.h>
 
 #include "inet/inet.h"
+#include "icmpv6/icmpv6.h"
 #include "netdev/netdev.h"
 #include "netlink/netlink.h"
 #include "neighbor/neighbor.h"
@@ -110,6 +111,25 @@ void neighbor_add(FAR struct net_driver_s *dev, FAR net_ipv6addr_t ipaddr,
         }
     }
 
+#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+  if (!found && g_neighbors[oldest_ndx].ne_time != 0)
+    {
+      /* Neighbor entry will be replaced, clean delayed IOBs if exist */
+
+      work_cancel_sync(LPWORK, &g_neighbors[oldest_ndx].ne_work);
+      iob_free_queue(&g_neighbors[oldest_ndx].ne_queue);
+    }
+  else if (found && addr != NULL)
+    {
+      /* Found existing entry and updating with real MAC address,
+       * move queued packets to device output queue
+       */
+
+      work_cancel_sync(LPWORK, &g_neighbors[oldest_ndx].ne_work);
+      iob_concat_queue(&dev->d_neighout, &g_neighbors[oldest_ndx].ne_queue);
+    }
+#endif
+
   /* When overwite old entry, need to notify RTM_DELNEIGH */
 
   if (!found && g_neighbors[oldest_ndx].ne_time != 0)
@@ -156,6 +176,28 @@ void neighbor_add(FAR struct net_driver_s *dev, FAR net_ipv6addr_t ipaddr,
       netlink_neigh_notify(&g_neighbors[oldest_ndx], RTM_NEWNEIGH,
                            AF_INET6);
     }
+
+#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+  if (!IOB_QEMPTY(&dev->d_neighout))
+    {
+      /* In Rx context, we need to backup the dev iob and related members,
+       * as some drivers netdev_txnotify_dev() execute transmit in sync mode
+       * which will modify iob and other members.
+       * We need to restore the dev iob and related members after
+       * netdev_txnotify_dev() return because iob will be used in left
+       * bottom Rx process.
+       */
+
+      uint16_t len = dev->d_len;
+      FAR struct iob_s *iob = dev->d_iob;
+
+      dev->d_iob = NULL;
+      dev->d_buf = NULL;
+      netdev_txnotify_dev(dev, ICMPv6_POLL);
+      netdev_iob_replace(dev, iob);
+      dev->d_len = len;
+    }
+#endif
 
   /* Dump the contents of the new entry */
 

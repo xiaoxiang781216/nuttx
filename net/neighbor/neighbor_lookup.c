@@ -31,8 +31,10 @@
 #include <string.h>
 
 #include <nuttx/clock.h>
+#include <nuttx/mm/iob.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/neighbor.h>
+#include <nuttx/wqueue.h>
 
 #include "inet/inet.h"
 #include "netdev/netdev.h"
@@ -42,7 +44,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#if defined(CONFIG_NET_ICMPv6_NEIGHBOR) || defined(CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE)
 #  define NEIGHBOR_INPROGRESS_TICK MSEC2TICK(CONFIG_ICMPv6_NEIGHBOR_MAXTRIES * CONFIG_ICMPv6_NEIGHBOR_DELAYMSEC)
 #  define NEIGHBOR_MAXAGE_UNREACHABLE_TICK SEC2TICK(10 * CONFIG_NET_NEIGHBOR_MAXAGE_UNREACHABLE)
 #endif
@@ -103,6 +105,25 @@ static int neighbor_match(FAR struct net_driver_s *dev, FAR void *arg)
   return 1;
 }
 
+#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+
+/****************************************************************************
+ * Name: neighbor_unreach_work
+ *
+ * Description:
+ *   Work queue callback to clean up IOB queue for neighbor entry that
+ *   remains unreachable or in-progress beyond the timeout period.
+ *
+ ****************************************************************************/
+
+static void neighbor_unreach_work(FAR void *param)
+{
+  FAR struct neighbor_entry_s *entry = (FAR struct neighbor_entry_s *)param;
+  iob_free_queue(&entry->ne_queue);
+}
+
+#endif /* CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE */
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -141,7 +162,8 @@ int neighbor_lookup(FAR const net_ipv6addr_t ipaddr,
   neighbor = neighbor_findentry(ipaddr);
   if (neighbor != NULL)
     {
-#if defined(CONFIG_NET_ETHERNET) && defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+#if defined(CONFIG_NET_ETHERNET) && \
+    (defined(CONFIG_NET_ICMPv6_NEIGHBOR) || defined(CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE))
       int llsize;
       llsize = neighbor->ne_addr.na_llsize;
       if (llsize == sizeof(g_zero_ethaddr) &&
@@ -212,3 +234,68 @@ int neighbor_lookup(FAR const net_ipv6addr_t ipaddr,
 
   return -ENOENT;
 }
+
+#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+
+/****************************************************************************
+ * Name: neighbor_queue_iob
+ *
+ * Description:
+ *   Queue an IOB which L2 layer is unfinished to the target neighbor
+ *   entry's delay queue which in progress waiting for a Neighbor
+ *   Advertisement response.
+ *
+ * Input Parameters:
+ *   dev     - The device driver structure
+ *   ipaddr  - The IPv6 address
+ *   iob     - The IOB to be queued
+ *
+ * Returned Value:
+ *   Zero (OK) if the Neighbor Table entry was successfully modified.
+ *   A negated errno value is returned on any error.
+ *
+ * Assumptions
+ *   The network is locked to assure exclusive access to the Neighbor Table
+ *
+ ****************************************************************************/
+
+int neighbor_queue_iob(FAR struct net_driver_s *dev,
+                       FAR const net_ipv6addr_t ipaddr,
+                       FAR struct iob_s *iob)
+{
+  FAR struct neighbor_entry_s *entry;
+
+  /* The IPv6 address should be in the Neighbor Table and ND in progress. */
+
+  entry = neighbor_findentry(ipaddr);
+  if (entry && entry->ne_dev == dev)
+    {
+      /* Check if this is an in-progress entry (all zeros MAC address) */
+
+      if (entry->ne_addr.na_lltype == NET_LL_ETHERNET ||
+          entry->ne_addr.na_lltype == NET_LL_IEEE80211)
+        {
+          if (memcmp(&entry->ne_addr.u.na_ethernet, &g_zero_ethaddr,
+                     sizeof(struct ether_addr)) == 0)
+            {
+              if (iob_tryadd_queue(iob, &entry->ne_queue) == 0)
+                {
+                  if (work_available(&entry->ne_work))
+                    {
+                      work_queue(LPWORK, &entry->ne_work,
+                                 neighbor_unreach_work,
+                                 entry, NEIGHBOR_INPROGRESS_TICK);
+                    }
+
+                  return OK;
+                }
+
+              return -ENOMEM;
+            }
+        }
+    }
+
+  return -ENOENT;
+}
+
+#endif /* CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE */

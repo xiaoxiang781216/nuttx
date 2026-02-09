@@ -96,7 +96,7 @@
 
 void neighbor_ethernet_out(FAR struct net_driver_s *dev)
 {
-  FAR struct eth_hdr_s *eth = ETHBUF;
+  FAR struct eth_hdr_s *eth;
   FAR struct ipv6_hdr_s *ip = IPv6BUF;
   struct neighbor_addr_s laddr;
   int ret;
@@ -158,23 +158,35 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
       if (ret < 0)
         {
 #ifdef NET_ICMPv6_HAVE_STACK
-          /* No ARP packet if this device do not support ARP */
+          /* No Neighbor Solicitation if this device does not support ARP */
 
           if (IFF_IS_NOARP(dev->d_flags))
             {
+              dev->d_len = 0;
               return;
             }
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#if defined(CONFIG_NET_ICMPv6_NEIGHBOR) || defined(CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE)
           /* Check if a neighbor solicitation is already in progress.
            * Return error to avoid sending duplicate solicitations.
            * This follows the ARP model of limiting concurrent queries.
            */
 
-          if (ret == -EINPROGRESS || ret == -ENETUNREACH)
+          if (ret == -ENETUNREACH)
             {
-              ninfo("Neighbor solicitation in progress or unreachable\n");
+              ninfo("Neighbor solicitation unreachable\n");
               dev->d_len = 0;
+              return;
+            }
+          else if (ret == -EINPROGRESS)
+            {
+              ninfo("Neighbor solicitation in progress\n");
+#  ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+              neighbor_queue_iob(dev, ipaddr, dev->d_iob);
+              netdev_iob_clear(dev);
+#  else
+              dev->d_len = 0;
+#  endif
               return;
             }
 
@@ -187,6 +199,19 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
 #endif
 
           ninfo("IPv6 Neighbor solicitation for IPv6\n");
+
+#  ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+          /* Queue the packet for later transmission when Neighbor
+           * Advertisement is received
+           */
+
+          neighbor_queue_iob(dev, ipaddr, dev->d_iob);
+          netdev_iob_clear(dev);
+          if (netdev_iob_prepare(dev, false, 0) != OK)
+            {
+              return;
+            }
+#  endif
 
           /* The destination address was not in our Neighbor Table, so we
            * overwrite the IPv6 packet with an ICMPv6 Neighbor Solicitation
@@ -205,6 +230,8 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
     }
 
   /* Build an Ethernet header. */
+
+  eth = ETHBUF;
 
   if (net_is_addr_mcast(ip->destipaddr))
     {

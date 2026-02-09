@@ -729,7 +729,8 @@ devif_poll_tcp_connections(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-#if defined(CONFIG_NET_ARP_SEND_QUEUE) || defined(CONFIG_NET_IPFRAG)
+#if defined(CONFIG_NET_ARP_SEND_QUEUE) || defined(CONFIG_NET_IPFRAG) || \
+    defined(CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE)
 static int devif_poll_queue(FAR struct iob_queue_s *iobq,
                             FAR struct net_driver_s *dev,
                             devif_poll_callback_t callback)
@@ -862,6 +863,33 @@ static inline_function int devif_poll_arp(FAR struct net_driver_s *dev,
     }
 
   return bstop;
+}
+#endif
+
+/****************************************************************************
+ * Name: devif_poll_neighbor
+ *
+ * Description:
+ *   Poll all queue iobs with neighbor discovery finished to send.
+ *
+ * Input Parameters:
+ *   dev - NIC Device instance.
+ *   callback - the actual sending API provided by each NIC driver.
+ *
+ * Returned Value:
+ *   Zero indicated the polling will continue, else stop the polling.
+ *
+ * Assumptions:
+ *   This function is called from the MAC device driver with the network
+ *   locked.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+static inline_function int devif_poll_neighbor(FAR struct net_driver_s *dev,
+                                              devif_poll_callback_t callback)
+{
+  return devif_poll_queue(&dev->d_neighout, dev, callback);
 }
 #endif
 
@@ -1020,6 +1048,16 @@ static int devif_poll_connections(FAR struct net_driver_s *dev,
              */
 
             bstop = devif_poll_icmpv6(dev, callback);
+#  ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+            if (!bstop)
+              {
+                /* Poll the neighbor queue for packets waiting to be sent
+                 * after neighbor discovery completes.
+                 */
+
+                bstop = devif_poll_neighbor(dev, callback);
+              }
+#  endif
             break;
 #endif
 #ifdef CONFIG_NET_FORWARD
