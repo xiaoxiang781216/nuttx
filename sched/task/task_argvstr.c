@@ -65,7 +65,8 @@ size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
 
   /* Sanity checks and idle tasks */
 
-  if (!tcb || size < 1u || is_idle_task(tcb))
+  if (!tcb || size < 1u || is_idle_task(tcb) ||
+      tcb->task_state == TSTATE_TASK_INVALID)
     {
       *args = '\0';
     }
