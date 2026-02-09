@@ -655,8 +655,8 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
           /* Check if the stream iob enough space for new can msg */
 
           if (stream->iob != NULL && stream->iob->io_pktlen + data_len +
-              sizeof(struct ieee1722acf_can_hdr_s) >
-              devif_get_mtu(fwdrule->dest_dev))
+              sizeof(struct ieee1722acf_can_hdr_s) +
+              fwdrule->dest_dev->d_llhdrlen > CONFIG_NET_IEEE1722_PKTSIZE)
             {
               ieee1722acf_stream_flush(dev, stream, fwdrule->dest_dev);
             }

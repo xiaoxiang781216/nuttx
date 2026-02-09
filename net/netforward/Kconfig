@@ -40,6 +40,14 @@ config NET_CANFORWARD_IEEE1722ACF
 	default n
 	depends on NET_CANFORWARD
 
+config NET_IEEE1722_PKTSIZE
+	int "IEEE 1722 packet buffer size"
+	default NET_ETH_PKTSIZE
+	depends on NET_CANFORWARD_IEEE1722ACF
+	range 0 NET_ETH_PKTSIZE
+	---help---
+		Packet buffer size for IEEE 1722 (Audio Video Bridging) packets.
+
 config NET_IPFORWARD_BROADCAST
 	bool "Forward broadcast/multicast packets"
 	default n
