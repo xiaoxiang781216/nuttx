@@ -37,7 +37,7 @@
 
 #include "inode/inode.h"
 #include "vfs/vfs.h"
-#include "semaphore/semaphore.h"
+#include "semaphore.h"
 
 /****************************************************************************
  * Public Functions

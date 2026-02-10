@@ -43,7 +43,7 @@
 
 #include "inode/inode.h"
 #include "vfs/vfs.h"
-#include "semaphore/semaphore.h"
+#include "semaphore.h"
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
 
