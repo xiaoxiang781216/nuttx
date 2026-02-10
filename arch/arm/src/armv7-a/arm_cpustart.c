@@ -119,10 +119,6 @@ int weak_function up_cpu_start(int cpu)
   sched_note_cpu_start(this_task(), cpu);
 #endif
 
-  /* Execute SGI1 */
-
-  arm_cpu_sgi(GIC_SMP_CPUSTART, (1 << cpu));
-
   return OK;
 }
 

@@ -291,7 +291,6 @@ __cpu1_boot:
   /* Set up the stack pointer and the CPU index */
 
   ldr   sp, .Lcpu1_stackpointer
-  sub   sp, sp, #XCPTCONTEXT_SIZE
   mov   r5, #1
 
   /* Then branch to the common startup logic (PC-relative) */
@@ -312,7 +311,6 @@ __cpu2_boot:
   /* Set up the stack pointer and the CPU index */
 
   ldr   sp, .Lcpu2_stackpointer
-  sub   sp, sp, #XCPTCONTEXT_SIZE
   mov   r5, #2
 
   /* Then branch to the common startup logic (PC-relative) */
@@ -333,7 +331,6 @@ __cpu3_boot:
   /* Set up the stack pointer and the CPU index */
 
   ldr   sp, .Lcpu3_stackpointer
-  sub   sp, sp, #XCPTCONTEXT_SIZE
   mov   r5, #3
 
   /* Then branch to the common startup logic (PC-relative) */
@@ -354,7 +351,6 @@ __cpu4_boot:
   /* Set up the stack pointer and the CPU index */
 
   ldr   sp, .Lcpu4_stackpointer
-  sub   sp, sp, #XCPTCONTEXT_SIZE
   mov   r5, #4
 
   /* Then branch to the common startup logic (PC-relative) */
@@ -375,7 +371,6 @@ __cpu5_boot:
   /* Set up the stack pointer and the CPU index */
 
   ldr   sp, .Lcpu5_stackpointer
-  sub   sp, sp, #XCPTCONTEXT_SIZE
   mov   r5, #5
 
   /* Then branch to the common startup logic (PC-relative) */
@@ -396,7 +391,6 @@ __cpu6_boot:
   /* Set up the stack pointer and the CPU index */
 
   ldr   sp, .Lcpu6_stackpointer
-  sub   sp, sp, #XCPTCONTEXT_SIZE
   mov   r5, #6
 
   /* Then branch to the common startup logic (PC-relative) */
@@ -417,7 +411,6 @@ __cpu7_boot:
   /* Set up the stack pointer and the CPU index */
 
   ldr   sp, .Lcpu7_stackpointer
-  sub   sp, sp, #XCPTCONTEXT_SIZE
   mov   r5, #7
 
   /* Then branch to the common startup logic (PC-relative) */

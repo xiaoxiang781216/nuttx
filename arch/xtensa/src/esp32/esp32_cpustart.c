@@ -120,8 +120,7 @@ void IRAM_ATTR xtensa_appcpu_start(void)
    * is to switch to a well-known IDLE thread stack.
    */
 
-  sp = (uint32_t)tcb->stack_base_ptr + tcb->adj_stack_size -
-                 XCPTCONTEXT_SIZE;
+  sp = (uint32_t)tcb->stack_base_ptr + tcb->adj_stack_size;
   __asm__ __volatile__("mov sp, %0\n" : : "r"(sp));
 
   sinfo("CPU%d Started\n", this_cpu());
@@ -183,12 +182,7 @@ void IRAM_ATTR xtensa_appcpu_start(void)
   xtensa_set_cpenable(CONFIG_XTENSA_CP_INITSET);
 #endif
 
-  /* Then switch contexts. This instantiates the exception context of the
-   * tcb at the head of the assigned task list.  In this case, this should
-   * be the CPUs NULL task.
-   */
-
-  xtensa_context_restore();
+  nx_idle_trampoline();
 }
 
 /****************************************************************************

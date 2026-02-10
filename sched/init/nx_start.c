@@ -455,10 +455,10 @@ static void idle_group_initialize(void)
         {
           DEBUGVERIFY(up_cpu_idlestack(i, tcb, CONFIG_IDLETHREAD_STACKSIZE));
         }
-
-      /* Initialize the processor-specific portion of the TCB */
-
-      up_initial_state(tcb);
+      else
+        {
+          up_initial_state(tcb);
+        }
 
       /* Initialize the thread local storage */
 
