@@ -51,7 +51,8 @@ list(
   lib_getnprocs.c
   lib_mutex.c
   lib_semaphore.c
-  lib_lrucache.c)
+  lib_lrucache.c
+  lib_dynamic.c)
 
 if(CONFIG_LIBC_TEMPBUFFER)
   list(APPEND SRCS lib_tempbuffer.c)

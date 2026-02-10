@@ -31,6 +31,7 @@
 #endif
 
 NXSYMBOLS(__cxa_atexit)
+NXSYMBOLS(_DYNAMIC)
 NXSYMBOLS(_ZdaPv) /* void operator delete[]( void* ptr ) throw(); */
 NXSYMBOLS(_ZdaPvRKSt9nothrow_t) /* void operator delete[]( void* ptr, const std::nothrow_t& tag ) throw(); */
 NXSYMBOLS(_ZdaPvS_) /* void operator delete[]( void* ptr, void* place ) throw(); */
