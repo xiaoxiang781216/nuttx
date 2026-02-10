@@ -107,6 +107,7 @@ retry:
    */
 
   rtcb->sigdeliver = NULL;  /* Allows next handler to be scheduled */
+  g_running_task = NULL;
   rtcb->xcp.regs = rtcb->xcp.saved_regs;
   rtcb->xcp.saved_regs = NULL;
 
