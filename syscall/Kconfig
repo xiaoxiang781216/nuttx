@@ -45,8 +45,11 @@ config SYS_NNEST
 		current design so the default maximum nesting level of 2 should be
 		more than sufficient.
 
+endif # LIB_SYSCALL
+
 config LIB_SYSCALL_FILES
 	string "system call csv files"
+	depends on LIB_SYSCALL_WRAPPER || LIB_SYSCALL
 	default ""
 	---help---
 		This allows users to define syscalls in flat, protected, or kernel
@@ -64,8 +67,6 @@ config LIB_SYSCALL_FILES
 		For the csv file format, please see syscals.csv for example.
 		e.g. CONFIG_LIB_SYSCALL_FILES="<path relative to nuttx>/syscall_ext1.csv;
 		<path relative to nuttx>/syscall_ext2.csv"
-
-endif # LIB_SYSCALL
 
 config LIB_PPCCALL
 	bool "Protected Procedure Call"
