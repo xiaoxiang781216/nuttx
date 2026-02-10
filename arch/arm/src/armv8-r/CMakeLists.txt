@@ -28,7 +28,7 @@ list(APPEND SRCS arm_head.S arm_saveusercontext.S)
 
 # Common C source files
 
-list(APPEND SRCS arm_timer.c arm_cache.c arm_cpuinfo.c cp15_cacheops.c)
+list(APPEND SRCS arm_cache.c arm_cpuinfo.c cp15_cacheops.c)
 
 if(CONFIG_ARM_GIC_VERSION EQUAL 2)
   list(APPEND SRCS arm_gicv2.c)

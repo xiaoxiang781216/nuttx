@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_timer.h
+ * arch/arm/src/arm_a_r/arm_timer.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV7_A_ARM_TIMER_H
-#define __ARCH_ARM_SRC_ARMV7_A_ARM_TIMER_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_ARM_TIMER_H
+#define __ARCH_ARM_SRC_ARM_A_R_ARM_TIMER_H
 
 /****************************************************************************
  * Included Files
@@ -76,4 +76,4 @@ struct oneshot_lowerhalf_s *arm_timer_initialize(unsigned int freq);
 }
 #endif
 
-#endif /* __ARCH_ARM_SRC_ARMV7_A_ARM_TIMER_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_ARM_TIMER_H */

@@ -41,10 +41,6 @@ ifeq ($(CONFIG_ARM_GICv2M),y)
   CMN_CSRCS += arm_gicv2m.c
 endif
 
-ifeq ($(CONFIG_ARM_HAVE_PTM), y)
-  CMN_CSRCS += arm_timer.c
-endif
-
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
   CMN_CSRCS += arm_mpu.c
 endif

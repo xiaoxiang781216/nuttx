@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-r/arm_timer.c
+ * arch/arm/src/arm_a_r/arm_timer.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -29,6 +29,7 @@
 #include <nuttx/kmalloc.h>
 
 #include <arch/barriers.h>
+#include <arch/irq.h>
 
 #include <sys/param.h>
 
@@ -91,8 +92,11 @@ static inline void arm_timer_phy_set_irq_mask(bool mask)
 static int arm_timer_interrupt(int irq, void *regs, void *arg)
 {
   struct oneshot_lowerhalf_s *priv = (struct oneshot_lowerhalf_s *)arg;
+
   arm_timer_phy_set_absolute(UINT64_MAX);
+
   oneshot_process_callback(priv);
+
   return OK;
 }
 
@@ -118,7 +122,6 @@ static void arm_oneshot_start(struct oneshot_lowerhalf_s *lower,
                               clkcnt_t delta)
 {
   arm_timer_phy_set_relative(MIN(UINT32_MAX, delta));
-  arm_timer_phy_set_irq_mask(false);
 }
 
 static void arm_oneshot_cancel(struct oneshot_lowerhalf_s *lower)
@@ -166,7 +169,7 @@ static struct oneshot_lowerhalf_s g_arm_oneshot_lowerhalf =
 
 struct oneshot_lowerhalf_s *arm_timer_initialize(unsigned int freq)
 {
-  struct oneshot_lowerhalf_s  *lower = &g_arm_oneshot_lowerhalf;
+  struct oneshot_lowerhalf_s *lower = &g_arm_oneshot_lowerhalf;
 
   /* The init freq is for trust-zone only since CNTFRQ is only
    * allowed to access in secure state.
@@ -183,5 +186,7 @@ struct oneshot_lowerhalf_s *arm_timer_initialize(unsigned int freq)
 
 void arm_timer_secondary_init(unsigned int freq)
 {
+#ifdef CONFIG_SCHED_TICKLESS
   arm_timer_initialize_per_cpu(freq);
+#endif
 }

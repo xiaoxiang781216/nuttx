@@ -36,6 +36,10 @@ if(CONFIG_PAGING)
   list(APPEND CSRCS arm_checkmapping.c)
 endif()
 
+if(CONFIG_ARM_HAVE_PTM)
+  list(APPEND CSRCS arm_timer.c)
+endif()
+
 list(
   APPEND
   CSRCS

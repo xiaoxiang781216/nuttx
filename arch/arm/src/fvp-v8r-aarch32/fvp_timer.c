@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_timer.h
+ * arch/arm/src/fvp-v8r-aarch32/fvp_timer.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,22 +18,21 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV8_R_ARM_TIMER_H
-#define __ARCH_ARM_SRC_ARMV8_R_ARM_TIMER_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/timers/oneshot.h>
+#include <nuttx/timers/arch_alarm.h>
 
-#include <arch/arm_a_r/cp15.h>
+#include "arm_timer.h"
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
 
-#define arm_timer_get_freq() CP15_GET(CNTFRQ)
+void up_timer_initialize(void)
+{
+  up_alarm_set_lowerhalf(arm_timer_initialize(0));
+}
 
-#endif /* __ARCH_ARM_SRC_ARMV8_R_ARM_TIMER_H */

@@ -38,10 +38,6 @@ if(CONFIG_ARM_GICv2M)
   list(APPEND SRCS arm_gicv2m.c)
 endif()
 
-if(CONFIG_ARM_HAVE_PTM)
-  list(APPEND SRCS arm_timer.c)
-endif()
-
 if(CONFIG_BUILD_PROTECTED)
   list(APPEND SRCS arm_mpu.c)
 endif()

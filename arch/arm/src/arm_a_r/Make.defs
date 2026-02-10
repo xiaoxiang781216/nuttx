@@ -27,6 +27,10 @@ CMN_CSRCS += arm_prefetchabort.c arm_cpuidlestack.c arm_initialstate.c
 CMN_CSRCS += arm_undefinedinsn.c arm_allocpage.c arm_perf.c
 CMN_CSRCS += arm_gicv2_dump.c
 
+ifeq ($(CONFIG_ARM_HAVE_PTM),y)
+  CMN_CSRCS += arm_timer.c
+endif
+
 ifneq ($(CONFIG_DISABLE_SIGNALS),y)
   CMN_CSRCS += arm_schedulesigaction.c arm_sigdeliver.c
 endif
