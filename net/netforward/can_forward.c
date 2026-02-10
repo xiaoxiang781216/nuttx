@@ -110,7 +110,7 @@ static int can_dev_forward(FAR struct net_driver_s *dev,
 
   /* Relay the device buffer */
 
-  fwd->f_iob = can_iob_clone(dev, true);  /* IOB chain to be forwarded */
+  fwd->f_iob = netdev_iob_clone(dev, true);  /* IOB chain to be forwarded */
   if (fwd->f_iob == NULL)
     {
       nwarn("WARNING: Failed to clone IOB\n");

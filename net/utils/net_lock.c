@@ -252,7 +252,7 @@ int net_sem_wait(FAR sem_t *sem)
 #ifdef CONFIG_MM_IOB
 
 /****************************************************************************
- * Name: conn_dev_iobtimedalloc
+ * Name: conn_dev_iobtimedalloc_with_size
  *
  * Description:
  *   Allocate an IOB.  If no IOBs are available, then atomically wait for
@@ -266,6 +266,7 @@ int net_sem_wait(FAR sem_t *sem)
  *   possibility.
  *
  * Input Parameters:
+ *   size       - The size of the IOB to allocate.
  *   throttled  - An indication of the IOB allocation is "throttled"
  *   timeout    - The relative time to wait until a timeout is declared.
  *   sconn      - The socket connection structure.
@@ -278,9 +279,10 @@ int net_sem_wait(FAR sem_t *sem)
  ****************************************************************************/
 
 FAR struct iob_s *
-conn_dev_iobtimedalloc(bool throttled, unsigned int timeout,
-                       FAR struct socket_conn_s *sconn,
-                       FAR struct net_driver_s *dev)
+conn_dev_iobtimedalloc_with_size(size_t size, bool throttled,
+                                 unsigned int timeout,
+                                 FAR struct socket_conn_s *sconn,
+                                 FAR struct net_driver_s *dev)
 {
   FAR struct iob_s *iob;
   unsigned int count1 = 0;
@@ -288,7 +290,7 @@ conn_dev_iobtimedalloc(bool throttled, unsigned int timeout,
   int          blresult1 = -ENOENT;
   int          blresult2 = -ENOENT;
 
-  iob = iob_tryalloc(throttled);
+  iob = iob_tryalloc_with_size(size, throttled);
   if (iob != NULL || timeout == 0)
     {
       return iob;
@@ -310,7 +312,7 @@ conn_dev_iobtimedalloc(bool throttled, unsigned int timeout,
 
   /* Now take the semaphore, waiting if so requested. */
 
-  iob = iob_timedalloc(throttled, timeout);
+  iob = iob_timedalloc_with_size(size, throttled, timeout);
 
   /* Recover the network lock at the proper count (if we held it before) */
 
@@ -325,36 +327,6 @@ conn_dev_iobtimedalloc(bool throttled, unsigned int timeout,
     }
 
   return iob;
-}
-
-/****************************************************************************
- * Name: conn_dev_ioballoc
- *
- * Description:
- *   Allocate an IOB.  If no IOBs are available, then atomically wait for
- *   for the IOB while temporarily releasing the lock on the network.
- *
- *   Caution should be utilized.  Because the network lock is relinquished
- *   during the wait, there could be changes in the network state that occur
- *   before the lock is recovered.  Your design should account for this
- *   possibility.
- *
- * Input Parameters:
- *   throttled  - An indication of the IOB allocation is "throttled"
- *   sconn      - The socket connection structure.
- *   dev        - The network device structure.
- *
- * Returned Value:
- *   A pointer to the newly allocated IOB is returned on success.  NULL is
- *   returned on any allocation failure.
- *
- ****************************************************************************/
-
-FAR struct iob_s *conn_dev_ioballoc(bool throttled,
-                                    FAR struct socket_conn_s *sconn,
-                                    FAR struct net_driver_s *dev)
-{
-  return conn_dev_iobtimedalloc(throttled, UINT_MAX, sconn, dev);
 }
 
 #endif

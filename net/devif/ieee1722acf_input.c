@@ -341,7 +341,7 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
           goto out;
         }
 
-        can_iob = can_iob_timedalloc(true, 0, NULL, NULL);
+        can_iob = iob_tryalloc_with_size(NET_CAN_BUFSIZE, true);
         if (can_iob == NULL)
           {
             nerr("ERROR: Failed to allocate CAN IOB\n");

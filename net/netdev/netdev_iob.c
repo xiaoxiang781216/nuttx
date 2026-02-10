@@ -236,7 +236,7 @@ FAR struct iob_s *netdev_iob_clone(FAR struct net_driver_s *dev,
   FAR struct iob_s *iob;
   int ret;
 
-  iob = iob_tryalloc(throttled);
+  iob = iob_tryalloc_with_size(IOB_BUFSIZE(dev->d_iob), throttled);
   if (iob == NULL)
     {
       nwarn("WARNING: IOB alloc failed for dev %s!\n", dev->d_ifname);

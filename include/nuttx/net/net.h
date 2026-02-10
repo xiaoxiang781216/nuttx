@@ -463,6 +463,39 @@ struct net_driver_s; /* Forward reference */
 #ifdef CONFIG_MM_IOB
 
 /****************************************************************************
+ * Name: conn_dev_iobtimedalloc_with_size
+ *
+ * Description:
+ *   Allocate an IOB.  If no IOBs are available, then atomically wait for
+ *   for the IOB while temporarily releasing the lock on the network.
+ *   This function is wrapped version of conn_dev_ioballoc(), this wait will
+ *   be terminated when the specified timeout expires.
+ *
+ *   Caution should be utilized.  Because the network lock is relinquished
+ *   during the wait, there could be changes in the network state that occur
+ *   before the lock is recovered.  Your design should account for this
+ *   possibility.
+ *
+ * Input Parameters:
+ *   size       - The size of the IOB to allocate.
+ *   throttled  - An indication of the IOB allocation is "throttled"
+ *   timeout    - The relative time to wait until a timeout is declared.
+ *   sconn      - The socket connection structure.
+ *   dev        - The network device structure.
+ *
+ * Returned Value:
+ *   A pointer to the newly allocated IOB is returned on success.  NULL is
+ *   returned on any allocation failure.
+ *
+ ****************************************************************************/
+
+FAR struct iob_s *
+conn_dev_iobtimedalloc_with_size(size_t size, bool throttled,
+                                 unsigned int timeout,
+                                 FAR struct socket_conn_s *sconn,
+                                 FAR struct net_driver_s *dev);
+
+/****************************************************************************
  * Name: conn_dev_iobtimedalloc
  *
  * Description:
@@ -488,10 +521,47 @@ struct net_driver_s; /* Forward reference */
  *
  ****************************************************************************/
 
-FAR struct iob_s *
+static inline_function FAR struct iob_s *
 conn_dev_iobtimedalloc(bool throttled, unsigned int timeout,
                        FAR struct socket_conn_s *sconn,
-                       FAR struct net_driver_s *dev);
+                       FAR struct net_driver_s *dev)
+{
+  return conn_dev_iobtimedalloc_with_size(CONFIG_IOB_BUFSIZE, throttled,
+                                          timeout, sconn, dev);
+}
+
+/****************************************************************************
+ * Name: conn_dev_ioballoc_with_size
+ *
+ * Description:
+ *   Allocate an IOB.  If no IOBs are available, then atomically wait for
+ *   for the IOB while temporarily releasing the lock on the network.
+ *
+ *   Caution should be utilized.  Because the network lock is relinquished
+ *   during the wait, there could be changes in the network state that occur
+ *   before the lock is recovered.  Your design should account for this
+ *   possibility.
+ *
+ * Input Parameters:
+ *   size       - The size of the IOB to allocate.
+ *   throttled  - An indication of the IOB allocation is "throttled"
+ *   sconn      - The socket connection structure.
+ *   dev        - The network device structure.
+ *
+ * Returned Value:
+ *   A pointer to the newly allocated IOB is returned on success.  NULL is
+ *   returned on any allocation failure.
+ *
+ ****************************************************************************/
+
+static inline_function FAR struct iob_s *
+conn_dev_ioballoc_with_size(size_t size, bool throttled,
+                            FAR struct socket_conn_s *sconn,
+                            FAR struct net_driver_s *dev)
+{
+  return conn_dev_iobtimedalloc_with_size(size, throttled,
+                                          UINT_MAX, sconn, dev);
+}
 
 /****************************************************************************
  * Name: conn_dev_ioballoc
@@ -516,9 +586,14 @@ conn_dev_iobtimedalloc(bool throttled, unsigned int timeout,
  *
  ****************************************************************************/
 
+static inline_function
 FAR struct iob_s *conn_dev_ioballoc(bool throttled,
                                     FAR struct socket_conn_s *sconn,
-                                    FAR struct net_driver_s *dev);
+                                    FAR struct net_driver_s *dev)
+{
+  return conn_dev_iobtimedalloc_with_size(CONFIG_IOB_BUFSIZE, throttled,
+                                          UINT_MAX, sconn, dev);
+}
 #endif
 
 /****************************************************************************

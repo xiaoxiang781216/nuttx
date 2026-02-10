@@ -58,6 +58,8 @@
 #  define NET_CAN_PKTSIZE sizeof(struct can_frame)
 #endif
 
+#define NET_CAN_BUFSIZE (NET_CAN_PKTSIZE + CONFIG_NET_LL_GUARDSIZE)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -126,52 +128,6 @@ int can_set_rx_callback(FAR struct socket *psock, can_rx_cb_t callback,
 
 struct net_driver_s; /* Forward reference */
 int can_input(FAR struct net_driver_s *dev);
-
-/****************************************************************************
- * Name: can_iob_timedalloc
- *
- * Description:
- *  Allocate an CAN I/O buffer from the CAN buffer pool.
- *
- ****************************************************************************/
-
-#if CONFIG_NET_CAN_NBUFFERS > 0
-struct socket_conn_s; /* Forward reference */
-FAR struct iob_s *can_iob_timedalloc(bool throttled, unsigned int timeout,
-                                     FAR struct socket_conn_s *sconn,
-                                     FAR struct net_driver_s *dev);
-#else
-#define can_iob_timedalloc(th,t,s,d) conn_dev_iobtimedalloc(th, t, s, d)
-#endif
-
-/****************************************************************************
- * Name: can_iob_clone
- *
- * Description:
- *  Clone an I/O buffer from the CAN buffer pool.
- *
- ****************************************************************************/
-
-#if CONFIG_NET_CAN_NBUFFERS > 0
-FAR struct iob_s *can_iob_clone(FAR struct net_driver_s *dev,
-                                bool throttled);
-#else
-#define can_iob_clone(d, th) netdev_iob_clone(d, th)
-#endif
-
-/****************************************************************************
- * Name: can_iob_navail
- *
- * Description:
- *   Return the number of available CAN I/O buffers.
- *
- ****************************************************************************/
-
-#if CONFIG_NET_CAN_NBUFFERS > 0
-int can_iob_navail(void);
-#else
-#define can_iob_navail() iob_navail(false)
-#endif
 
 #undef EXTERN
 #ifdef __cplusplus

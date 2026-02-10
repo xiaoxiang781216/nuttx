@@ -279,12 +279,12 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
   if (nonblock)
     {
-      wb_iob = can_iob_timedalloc(true, 0, NULL, NULL);
+      wb_iob = iob_timedalloc_with_size(NET_CAN_BUFSIZE, true, 0);
     }
   else
     {
-      wb_iob = can_iob_timedalloc(true, _SO_TIMEOUT(conn->sconn.s_sndtimeo),
-                                  &conn->sconn, dev);
+      wb_iob = iob_timedalloc_with_size(NET_CAN_BUFSIZE, true,
+                             _SO_TIMEOUT(conn->sconn.s_sndtimeo));
     }
 
   if (wb_iob == NULL)
@@ -489,7 +489,7 @@ int psock_can_cansend(FAR struct socket *psock)
   conn = psock->s_conn;
 #endif
 
-  if (can_iob_navail() <= 0
+  if (iob_navail(false) <= 0
 #if CONFIG_NET_SEND_BUFSIZE > 0
       || iob_get_queue_size(&conn->write_q) >= conn->sconn.s_sndbufs
 #endif
