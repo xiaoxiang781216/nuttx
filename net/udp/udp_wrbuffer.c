@@ -158,7 +158,7 @@ FAR struct udp_wrbuffer_s *udp_wrbuffer_tryalloc(void)
 
   wrb->wb_iob =
 #ifdef CONFIG_NET_JUMBO_FRAME
-    iob_alloc_dynamic(len);
+    iob_tryalloc_with_size(len, false);
 #else
     iob_tryalloc(false);
 #endif

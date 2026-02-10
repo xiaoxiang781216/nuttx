@@ -117,11 +117,8 @@
    } while (0)
 #define IOB_FLAG_TEST(iob, flag) (IOB_FLAG_GET(iob) & (flag))
 
-#ifdef CONFIG_IOB_ALLOC
-#  define IOB_BUFSIZE(p) ((p)->io_bufsize)
 #if CONFIG_IOB_NPOOLS > 1
-#  define IOB_BUFSIZE(p) ((p)->io_pool->blocksize - \
-                          ALIGN_UP(offsetof(struct iob_s, io_data), IOB_ALIGNMENT))
+#  define IOB_BUFSIZE(p) ((p)->io_pool->blocksize - sizeof(struct iob_s) + 1)
 #else
 #  define IOB_BUFSIZE(p) CONFIG_IOB_BUFSIZE
 #endif
@@ -145,15 +142,12 @@ struct iob_s
 
   /* Payload */
 
-#if CONFIG_IOB_BUFSIZE < 256 && !defined(CONFIG_IOB_ALLOC)
+#if CONFIG_IOB_BUFSIZE < 256
   uint8_t  io_len;      /* Length of the data in the entry */
   uint8_t  io_offset;   /* Data begins at this offset */
 #else
   uint16_t io_len;      /* Length of the data in the entry */
   uint16_t io_offset;   /* Data begins at this offset */
-#  ifdef CONFIG_IOB_ALLOC
-  uint16_t io_bufsize;  /* Total length of the data buffer */
-#  endif
 #endif
   unsigned int io_pktlen; /* Total length of the packet */
 
@@ -176,12 +170,7 @@ struct iob_s
                                   */
 #endif
 
-#ifdef CONFIG_IOB_ALLOC
-  iob_free_cb_t io_free;  /* Custom free callback */
-  FAR uint8_t  *io_data;
-#else
-  uint8_t       io_data[CONFIG_IOB_BUFSIZE] aligned_data(IOB_ALIGNMENT);
-#endif
+  uint8_t io_data[1] aligned_data(IOB_ALIGNMENT);
 };
 
 /* The I/O buffer queue head structure.
@@ -311,80 +300,6 @@ FAR struct iob_s *iob_alloc_with_size(uint16_t size, bool throttled)
 {
   return iob_timedalloc_with_size(size, throttled, UINT_MAX);
 }
-
-#ifdef CONFIG_IOB_ALLOC
-/****************************************************************************
- * Name: iob_alloc_dynamic
- *
- * Description:
- *   Allocate an I/O buffer and playload from heap
- *
- * Input Parameters:
- *   size    - The size of the io_data that is allocated.
- *
- *             +---------+
- *             |   IOB   |
- *             | io_data |--+
- *             | buffer  |<-+
- *             +---------+
- *
- ****************************************************************************/
-
-FAR struct iob_s *iob_alloc_dynamic(uint16_t size);
-
-/****************************************************************************
- * Name: iob_alloc_with_data
- *
- * Description:
- *   Allocate an I/O buffer from heap and attach the external payload
- *
- * Input Parameters:
- *   data    - Make io_data point to a specific address, the caller is
- *             responsible for the memory management. The caller should
- *             ensure that the memory is not freed before the iob is freed.
- *
- *             +---------+  +-->+--------+
- *             |   IOB   |  |   |  data  |
- *             | io_data |--+   +--------+
- *             +---------+
- *
- *   size    - The size of the data parameter
- *   free_cb - Notify the caller when the iob is freed. The caller can
- *             perform additional operations on the data before it is freed.
- *             The free_cb is called when the iob is freed.
- *
- ****************************************************************************/
-
-FAR struct iob_s *iob_alloc_with_data(FAR void *data, uint16_t size,
-                                      iob_free_cb_t free_cb);
-
-/****************************************************************************
- * Name: iob_init_with_data
- *
- * Description:
- *   Initialize an I/O buffer and playload
- *
- * Input Parameters:
- *   data    - Make io_data point to a specific address, the caller is
- *             responsible for the memory management. The caller should
- *             ensure that the memory is not freed before the iob is freed,
- *             and caller need to reserve space for alignment.
- *   size    - The size of the data parameter
- *   free_cb - Notify the caller when the iob is freed. The caller can
- *             perform additional operations on the data before it is freed.
- *
- *             +---------+
- *             |   IOB   |
- *             | io_data |--+
- *             | buffer  |<-+
- *             +---------+
- *
- ****************************************************************************/
-
-FAR struct iob_s *iob_init_with_data(FAR void *data, uint16_t size,
-                                     iob_free_cb_t free_cb);
-
-#endif
 
 /****************************************************************************
  * Name: iob_navail

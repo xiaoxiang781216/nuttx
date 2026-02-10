@@ -765,7 +765,8 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
             {
               /* alloc iob */
 
-              netdev_iob_prepare_dynamic(dev, sndlen + tcpip_hdrsize(conn));
+              netdev_iob_prepare_with_size(dev,
+                                           sndlen + tcpip_hdrsize(conn));
             }
 #endif
 
@@ -1094,7 +1095,8 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
             {
               /* alloc iob */
 
-              netdev_iob_prepare_dynamic(dev, sndlen + tcpip_hdrsize(conn));
+              netdev_iob_prepare_with_size(dev,
+                                           sndlen + tcpip_hdrsize(conn));
             }
 #endif
 

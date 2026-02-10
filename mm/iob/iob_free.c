@@ -32,9 +32,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#ifdef CONFIG_IOB_ALLOC
-#  include <nuttx/kmalloc.h>
-#endif
 #include <nuttx/nuttx.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/mm/mempool.h>
@@ -117,25 +114,6 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
       iobinfo("next=%p io_pktlen=%u io_len=%u\n",
               next, next->io_pktlen, next->io_len);
     }
-
-#ifdef CONFIG_IOB_ALLOC
-  if (iob->io_free != NULL)
-    {
-      FAR uint8_t *io_data = (FAR uint8_t *)ALIGN_UP((uintptr_t)(iob + 1),
-                                                     IOB_ALIGNMENT);
-      if (iob->io_data == io_data)
-        {
-          iob->io_free(iob);
-        }
-      else
-        {
-          iob->io_free(iob->io_data);
-          kmm_free(iob);
-        }
-
-      return next;
-    }
-#endif
 
   /* Free the I/O buffer using mempool */
 

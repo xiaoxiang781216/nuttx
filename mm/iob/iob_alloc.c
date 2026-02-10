@@ -32,9 +32,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
-#ifdef CONFIG_IOB_ALLOC
-#  include <nuttx/kmalloc.h>
-#endif
 #include <nuttx/nuttx.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/mm/mempool.h>
@@ -120,18 +117,13 @@ static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
       /* Initialize the IOB */
 
 #if CONFIG_IOB_NPOOLS > 1
-      iob->io_pool    = mempool;
+      iob->io_pool   = mempool;
 #endif
-      iob->io_flink   = NULL; /* Not in a chain */
-      iob->io_len     = 0;    /* Length of the data in the entry */
-      iob->io_offset  = 0;    /* Offset to the beginning of data */
-      iob->io_pktlen  = 0;    /* Total length of the packet */
-      iob->io_conn    = NULL;
-#ifdef CONFIG_IOB_ALLOC
-      iob->io_data    = (FAR uint8_t *)ALIGN_UP((uintptr_t)(iob + 1),
-                                                IOB_ALIGNMENT);
-      iob->io_bufsize = mempool->blocksize - IOB_ALIGN_SIZE(0);
-#endif
+      iob->io_flink  = NULL; /* Not in a chain */
+      iob->io_len    = 0;    /* Length of the data in the entry */
+      iob->io_offset = 0;    /* Offset to the beginning of data */
+      iob->io_pktlen = 0;    /* Total length of the packet */
+      iob->io_conn   = NULL;
 
       /* Verify IOB and IOB data address alignment */
 
@@ -141,24 +133,6 @@ static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
 
   return iob;
 }
-
-#ifdef CONFIG_IOB_ALLOC
-/****************************************************************************
- * Name: iob_free_dynamic
- *
- * Description:
- *   Free the I/O buffer and payload to the heap
- *
- * Input Parameters:
- *   data -
- *
- ****************************************************************************/
-
-static void iob_free_dynamic(FAR void *data)
-{
-  kmm_free(data);
-}
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -196,122 +170,3 @@ FAR struct iob_s *iob_timedalloc_with_size(uint16_t size, bool throttled,
       return iob_alloc_internal(size, throttled, timeout);
     }
 }
-
-#ifdef CONFIG_IOB_ALLOC
-
-/****************************************************************************
- * Name: iob_alloc_dynamic
- *
- * Description:
- *   Allocate an I/O buffer and playload from heap
- *
- * Input Parameters:
- *   size    - The size of the io_data that is allocated.
- *
- *             +---------+
- *             |   IOB   |
- *             | io_data |--+
- *             | buffer  |<-+
- *             +---------+
- *
- ****************************************************************************/
-
-FAR struct iob_s *iob_alloc_dynamic(uint16_t size)
-{
-  FAR struct iob_s *iob;
-  size_t alignsize;
-
-  alignsize = ALIGN_UP(sizeof(struct iob_s), IOB_ALIGNMENT) + size;
-
-  iob = kmm_memalign(IOB_ALIGNMENT, alignsize);
-  if (iob)
-    {
-      memset(iob, 0, offsetof(struct iob_s, io_data));
-      iob->io_bufsize = size;             /* Total length of the iob buffer */
-      iob->io_free    = iob_free_dynamic; /* Customer free callback */
-      iob->io_data    = (FAR uint8_t *)ALIGN_UP((uintptr_t)(iob + 1),
-                                                IOB_ALIGNMENT);
-    }
-
-  return iob;
-}
-
-/****************************************************************************
- * Name: iob_alloc_with_data
- *
- * Description:
- *   Allocate an I/O buffer from heap and attach the external payload
- *
- * Input Parameters:
- *   data    - Make io_data point to a specific address, the caller is
- *             responsible for the memory management. The caller should
- *             ensure that the memory is not freed before the iob is freed.
- *
- *             +---------+  +-->+--------+
- *             |   IOB   |  |   |  data  |
- *             | io_data |--+   +--------+
- *             +---------+
- *
- *   size    - The size of the data parameter
- *   free_cb - Notify the caller when the iob is freed. The caller can
- *             perform additional operations on the data before it is freed.
- *             The free_cb is called when the iob is freed.
- *
- ****************************************************************************/
-
-FAR struct iob_s *iob_alloc_with_data(FAR void *data, uint16_t size,
-                                      iob_free_cb_t free_cb)
-{
-  FAR struct iob_s *iob;
-
-  DEBUGASSERT(free_cb != NULL);
-
-  iob = kmm_zalloc(sizeof(struct iob_s));
-  if (iob)
-    {
-      iob->io_bufsize = size;    /* Total length of the iob buffer */
-      iob->io_free    = free_cb; /* Customer free callback */
-      iob->io_data    = data;
-    }
-
-  return iob;
-}
-
-/****************************************************************************
- * Name: iob_init_with_data
- *
- * Description:
- *   Initialize an I/O buffer and playload
- *
- * Input Parameters:
- *   data    - Make io_data point to a specific address, the caller is
- *             responsible for the memory management. The caller should
- *             ensure that the memory is not freed before the iob is freed,
- *             and caller need to reserve space for alignment.
- *   size    - The size of the data parameter
- *   free_cb - Notify the caller when the iob is freed. The caller can
- *             perform additional operations on the data before it is freed.
- *
- *             +---------+
- *             |   IOB   |
- *             | io_data |--+
- *             | buffer  |<-+
- *             +---------+
- *
- ****************************************************************************/
-
-FAR struct iob_s *iob_init_with_data(FAR void *data, uint16_t size,
-                                     iob_free_cb_t free_cb)
-{
-  FAR struct iob_s *iob = (FAR struct iob_s *)data;
-
-  memset(iob, 0, offsetof(struct iob_s, io_data));
-  iob->io_free    = free_cb; /* Customer free callback */
-  iob->io_data    = (FAR uint8_t *)ALIGN_UP((uintptr_t)(iob + 1),
-                                            IOB_ALIGNMENT);
-  iob->io_bufsize = ((FAR uint8_t *)data + size) - iob->io_data;
-
-  return iob;
-}
-
-#endif

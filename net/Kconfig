@@ -153,10 +153,11 @@ config NET_LL_GUARDSIZE
 
 config NET_JUMBO_FRAME
 	bool "Net jumbo frame"
-	depends on IOB_ALLOC
+	depends on IOB_BUFSIZE > 4096
 	default n
 	---help---
 		Optimize the sending of the JUMBO frame in network stack.
+		IOB_BUFSIZE must be greater than 4096 to support the JUMBO frame.
 
 config NET_RECV_BUFSIZE
 	int "Net Default Receive buffer size"
