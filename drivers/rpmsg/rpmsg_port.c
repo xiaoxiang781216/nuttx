@@ -885,14 +885,8 @@ static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
 {
   FAR struct rpmsg_port_s *port = (FAR struct rpmsg_port_s *)rpmsg;
   FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
-  bool needunlock = false;
 
-  if (!up_interrupt_context() && !sched_idletask())
-    {
-      metal_mutex_acquire(&rdev->lock);
-      needunlock = true;
-    }
-
+  metal_mutex_acquire(&rdev->lock);
   syslog(LOG_EMERG, "Remote: %s state: %d\n",
                     port->rpmsg.cpuname, rpmsg_is_running(rdev));
   if (verbose)
@@ -903,10 +897,7 @@ static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
       rpmsg_port_dump_buffer(rdev, &port->txq, false);
     }
 
-  if (needunlock)
-    {
-      metal_mutex_release(&rdev->lock);
-    }
+  metal_mutex_release(&rdev->lock);
 
   if (port->ops->dump)
     {

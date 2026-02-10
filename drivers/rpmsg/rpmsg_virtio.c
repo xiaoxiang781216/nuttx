@@ -411,7 +411,6 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
     (FAR struct rpmsg_virtio_priv_s *)rpmsg;
   FAR struct rpmsg_virtio_device *rvdev = &priv->rvdev;
   FAR struct rpmsg_device *rdev = &rvdev->rdev;
-  bool needunlock = false;
 
   syslog(LOG_EMERG, "Local: %s Remote: %s Headrx %u Headtx %u\n",
                     priv->rpmsg.local_cpuname, priv->rpmsg.cpuname,
@@ -419,12 +418,7 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
 
   if (rvdev->vdev)
     {
-      if (!up_interrupt_context() && !sched_idletask())
-        {
-          metal_mutex_acquire(&rdev->lock);
-          needunlock = true;
-        }
-
+      metal_mutex_acquire(&rdev->lock);
       if (verbose)
         {
           syslog(LOG_EMERG,
@@ -447,10 +441,7 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
           rpmsg_virtio_dump_buffer(rvdev, false);
         }
 
-      if (needunlock)
-        {
-          metal_mutex_release(&rdev->lock);
-        }
+      metal_mutex_release(&rdev->lock);
     }
 }
 
