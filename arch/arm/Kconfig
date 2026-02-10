@@ -1565,6 +1565,29 @@ config ARM_DCACHE_WRITETHROUGH
 	bool "Enable DCACHE Write-Through for __start or arm_m"
 	default n
 
+config ARM_GIC_EOIMODE
+	bool "Enable GIC EOImode"
+	default n
+	---help---
+		Enable GICC_CTLR.EOImode, this will separates the priority drop and interrupt
+		deactivation operations.
+
+config ARM_GIC_SPI_EDGE
+	bool "Configure all SPIs as edge-triggered"
+	default n
+	---help---
+		Configure all SPIs (Shared Peripheral Interrupts) as
+		edge-triggered by default.
+
+config ARM_GICV2_LEGACY_IRQ
+	string "Legacy IRQ bases list for PCI domains"
+	default "35"
+	depends on PCI && ARM_HAVE_GICv2
+	---help---
+		Colon separated list of legacy IRQ bases for PCI domains.
+		Default value "35" is for QEMU arm/virt. Use -1 if a domain
+		doesn't need legacy IRQ.
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif

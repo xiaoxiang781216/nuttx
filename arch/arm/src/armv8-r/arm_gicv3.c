@@ -534,7 +534,7 @@ static void gicv3_dist_init(void)
        intid += GIC_NUM_CFG_PER_REG)
     {
       idx = intid / GIC_NUM_CFG_PER_REG;
-#ifdef CONFIG_ARMV8R_GIC_SPI_EDGE
+#ifdef CONFIG_ARM_GIC_SPI_EDGE
       /* Configure all SPIs as edge-triggered by default */
 
       putreg32(0xaaaaaaaa, ICFGR(base, idx));

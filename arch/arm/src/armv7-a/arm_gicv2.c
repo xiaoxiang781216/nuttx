@@ -325,7 +325,7 @@ void arm_gic_initialize(void)
   iccicr |= GIC_ICCICRS_FIQEN;
 #endif
 
-#ifdef CONFIG_ARMV7A_GIC_EOIMODE
+#ifdef CONFIG_ARM_GIC_EOIMODE
 #  if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
   /* Set EnableS=1 to enable CPU interface to signal secure interrupts.
    *
@@ -400,7 +400,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
   regval = getreg32(GIC_ICCIAR);
   irq    = (regval & GIC_ICCIAR_INTID_MASK) >> GIC_ICCIAR_INTID_SHIFT;
 
-#ifdef CONFIG_ARMV7A_GIC_EOIMODE
+#ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCEOIR);
 #endif
 
@@ -418,7 +418,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
 
   /* Write to the end-of-interrupt register */
 
-#ifdef CONFIG_ARMV7A_GIC_EOIMODE
+#ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCDIR);
 #else
   putreg32(regval, GIC_ICCEOIR);
@@ -452,7 +452,7 @@ uint32_t *arm_decodefiq(uint32_t *regs)
   regval = getreg32(GIC_ICCIAR);
   irq    = (regval & GIC_ICCIAR_INTID_MASK) >> GIC_ICCIAR_INTID_SHIFT;
 
-#  ifdef CONFIG_ARMV7A_GIC_EOIMODE
+#  ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCEOIR);
 #  endif
 
@@ -475,7 +475,7 @@ uint32_t *arm_decodefiq(uint32_t *regs)
 
   /* Write to the end-of-interrupt register */
 
-#  ifdef CONFIG_ARMV7A_GIC_EOIMODE
+#  ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCDIR);
 #  else
   putreg32(regval, GIC_ICCEOIR);
@@ -759,11 +759,11 @@ void arm_cpu_sgi(int sgi, unsigned int cpuset)
 
 int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
 {
-#ifdef CONFIG_ARMV7A_GICV2_LEGACY_IRQ
+#ifdef CONFIG_ARM_GICV2_LEGACY_IRQ
   uint8_t slot = PCI_SLOT(devfn);
   uint8_t tmp = (pin - 1 + slot) % 4;
   uint16_t domain = PCI_DOMAIN(devfn);
-  const char *ptr = CONFIG_ARMV7A_GICV2_LEGACY_IRQ;
+  const char *ptr = CONFIG_ARM_GICV2_LEGACY_IRQ;
   int i = 0;
 
   while (i != domain && ptr[0])

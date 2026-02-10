@@ -5,26 +5,6 @@
 
 comment "ARMv7-A Configuration Options"
 
-if ARM_HAVE_GICv2
-
-config ARMV7A_GIC_EOIMODE
-	bool "Enable GIC EOImode"
-	default n
-	---help---
-		Enable GICC_CTLR.EOImode, this will separates the priority drop and interrupt
-		deactivation operations.
-
-config ARMV7A_GICV2_LEGACY_IRQ
-	string "Legacy IRQ bases list for PCI domains"
-	default "35"
-	depends on PCI
-	---help---
-		Colon separated list of legacy IRQ bases for PCI domains.
-		Default value "35" is for QEMU arm/virt. Use -1 if a domain
-		doesn't need legacy IRQ.
-
-endif # ARM_HAVE_GICv2
-
 config ARMV7A_HAVE_GTM
 	bool
 	default n

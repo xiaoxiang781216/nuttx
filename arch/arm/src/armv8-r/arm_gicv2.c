@@ -326,7 +326,7 @@ static void arm_gic_init(void)
   iccicr |= GIC_ICCICRS_ACKTCTL;
 #endif
 
-#ifdef CONFIG_ARMV8R_GIC_EOIMODE
+#ifdef CONFIG_ARM_GIC_EOIMODE
 #  if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
   /* Set EnableS=1 to enable CPU interface to signal secure interrupts.
    *
@@ -411,7 +411,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
   regval = getreg32(GIC_ICCIAR);
   irq    = (regval & GIC_ICCIAR_INTID_MASK) >> GIC_ICCIAR_INTID_SHIFT;
 
-#ifdef CONFIG_ARMV8R_GIC_EOIMODE
+#ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCEOIR);
 #endif
 
@@ -429,7 +429,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
 
   /* Write to the end-of-interrupt register */
 
-#ifdef CONFIG_ARMV8R_GIC_EOIMODE
+#ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCDIR);
 #else
   putreg32(regval, GIC_ICCEOIR);
@@ -462,7 +462,7 @@ uint32_t *arm_decodefiq(uint32_t *regs)
   regval = getreg32(GIC_ICCIAR);
   irq    = (regval & GIC_ICCIAR_INTID_MASK) >> GIC_ICCIAR_INTID_SHIFT;
 
-#ifdef CONFIG_ARMV8R_GIC_EOIMODE
+#ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCEOIR);
 #endif
 
@@ -481,7 +481,7 @@ uint32_t *arm_decodefiq(uint32_t *regs)
 
   /* Write to the end-of-interrupt register */
 
-#ifdef CONFIG_ARMV8R_GIC_EOIMODE
+#ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCDIR);
 #else
   putreg32(regval, GIC_ICCEOIR);
@@ -805,14 +805,14 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
 
 int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
 {
-#if CONFIG_ARMV8R_GICV2_LEGACY_IRQ0 >= 0
+#if CONFIG_ARM_GICV2_LEGACY_IRQ >= 0
   uint8_t slot;
   uint8_t tmp;
 
   UNUSED(line);
   slot = PCI_SLOT(devfn);
   tmp = (pin - 1 + slot) % 4;
-  return CONFIG_ARMV8R_GICV2_LEGACY_IRQ0 + tmp;
+  return CONFIG_ARM_GICV2_LEGACY_IRQ + tmp;
 #else
   return -ENOTSUP;
 #endif
