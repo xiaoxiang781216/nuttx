@@ -36,7 +36,6 @@
 #ifdef CONFIG_RPMSG
 
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/reboot_notifier.h>
 #include <nuttx/semaphore.h>
 #include <openamp/rpmsg.h>
 #include <openamp/rpmsg_internal.h>

@@ -230,14 +230,13 @@ static int rpmsg_ioctl_foreach_cb(FAR struct rpmsg_s *rpmsg, FAR void *arg)
   return ret;
 }
 
-static int rpmsg_reboot_notifier(FAR struct notifier_block *nb,
-                                 unsigned long action, FAR void *data)
+static int rpmsg_panic_notifier(FAR struct notifier_block *nb,
+                                unsigned long action, FAR void *data)
 {
-  FAR struct rpmsg_s *rpmsg = container_of(nb, struct rpmsg_s,
-                                           nbreboot);
+  FAR struct rpmsg_s *rpmsg = container_of(nb, struct rpmsg_s, nbpanic);
   int ret = OK;
 
-  if (action == SYS_HALT)
+  if (action == PANIC_KERNEL_FINAL)
     {
 #ifdef CONFIG_RPMSG_PANIC_DUMP_VERBOSE
       ret = rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP, 1ul);
@@ -859,8 +858,9 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
               dq_addlast(&rpmsg->node, &g_rpmsg);
               up_write(&g_rpmsg_lock);
 
-              rpmsg->nbreboot.notifier_call = rpmsg_reboot_notifier;
-              register_reboot_notifier(&rpmsg->nbreboot);
+              rpmsg->nbpanic.notifier_call = rpmsg_panic_notifier;
+              rpmsg->nbpanic.priority = INT_MIN + 1;
+              panic_notifier_chain_register(&rpmsg->nbpanic);
             }
           else
             {
@@ -881,7 +881,7 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
 
 void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
 {
-  unregister_reboot_notifier(&rpmsg->nbreboot);
+  panic_notifier_chain_unregister(&rpmsg->nbpanic);
 
   down_write(&g_rpmsg_lock);
   dq_rem(&rpmsg->node, &g_rpmsg);

@@ -28,6 +28,7 @@
 #ifdef CONFIG_RPMSG
 
 #include <nuttx/list.h>
+#include <nuttx/panic_notifier.h>
 #include <nuttx/queue.h>
 #include <nuttx/rpmsg/rpmsg.h>
 
@@ -93,7 +94,7 @@ struct rpmsg_s
   struct rpmsg_char_s          chr;
 #endif
   atomic_t                     signals;
-  struct notifier_block        nbreboot;
+  struct notifier_block        nbpanic;
 };
 
 /**
