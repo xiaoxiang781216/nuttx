@@ -60,6 +60,7 @@ list(
   arm_allocpage.c
   arm_prefetchabort.c
   arm_gicv2_dump.c
+  arm_cache.c
   arm_perf.c)
 
 target_sources(arch PRIVATE ${CSRCS})

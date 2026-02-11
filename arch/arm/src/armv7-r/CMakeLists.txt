@@ -28,7 +28,7 @@ list(APPEND SRCS arm_head.S arm_saveusercontext.S)
 
 # Common C source files
 
-list(APPEND SRCS arm_cache.c arm_cpuinfo.c cp15_cacheops.c)
+list(APPEND SRCS arm_cpuinfo.c cp15_cacheops.c)
 
 if(CONFIG_BUILD_PROTECTED)
   list(APPEND SRCS arm_mpu.c)

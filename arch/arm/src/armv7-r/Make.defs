@@ -34,7 +34,7 @@ CMN_ASRCS += arm_head.S arm_saveusercontext.S
 
 # Common C source files
 
-CMN_CSRCS += arm_cache.c arm_cpuinfo.c
+CMN_CSRCS += arm_cpuinfo.c
 CMN_CSRCS += cp15_cacheops.c
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)

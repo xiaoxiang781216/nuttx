@@ -34,7 +34,7 @@ CMN_ASRCS += arm_cpuhead.S arm_saveusercontext.S
 
 # Common C source files
 
-CMN_CSRCS += arm_cache.c arm_cpuinfo.c
+CMN_CSRCS += arm_cpuinfo.c
 CMN_CSRCS += arm_mmu.c
 CMN_CSRCS += cp15_cacheops.c
 
