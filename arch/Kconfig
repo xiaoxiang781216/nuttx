@@ -581,7 +581,7 @@ config ARCH_SAFE_STACK
 		with dangerous variables live in unsafe stack only.
 
 config ARCH_SHADOW_STACK
-	bool "Enable safe stack"
+	bool "Enable shadow stack"
 	depends on ARCH_HAVE_SHADOWSTACK
 	---help---
 		This enables software based return flow security via
