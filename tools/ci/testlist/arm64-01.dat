@@ -7,6 +7,7 @@
 -vdk-armv8r:nsh_smp
 
 -imx93-evk:bootloader
+-imx93-evk:optee
 
 # arm64 Boards build by CMake
 CMake,qemu-armv8a:citest
