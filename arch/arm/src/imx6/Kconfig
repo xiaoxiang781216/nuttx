@@ -14,34 +14,34 @@ choice
 config ARCH_CHIP_IMX6_6SOLOLITE
 	bool "i.MX 6SoloLite"
 	select ARM_HAVE_GICv2
-	select ARMV7A_HAVE_GTM
+	select ARM_HAVE_GTM
 	select ARM_HAVE_PTM
 
 config ARCH_CHIP_IMX6_6SOLO
 	bool "i.MX 6Solo"
 	select ARM_HAVE_GICv2
-	select ARMV7A_HAVE_GTM
+	select ARM_HAVE_GTM
 	select ARM_HAVE_PTM
 
 config ARCH_CHIP_IMX6_6DUALLITE
 	bool "i.MX 6DualLite"
 	select ARCH_HAVE_MULTICPU
 	select ARM_HAVE_GICv2
-	select ARMV7A_HAVE_GTM
+	select ARM_HAVE_GTM
 	select ARM_HAVE_PTM
 
 config ARCH_CHIP_IMX6_6DUAL
 	bool "i.MX 6Dual"
 	select ARCH_HAVE_MULTICPU
 	select ARM_HAVE_GICv2
-	select ARMV7A_HAVE_GTM
+	select ARM_HAVE_GTM
 	select ARM_HAVE_PTM
 
 config ARCH_CHIP_IMX6_6QUAD
 	bool "i.MX 6Quad"
 	select ARCH_HAVE_MULTICPU
 	select ARM_HAVE_GICv2
-	select ARMV7A_HAVE_GTM
+	select ARM_HAVE_GTM
 	select ARM_HAVE_PTM
 
 endchoice # iMX.6 Chip Selection

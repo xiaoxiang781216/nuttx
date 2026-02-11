@@ -5,13 +5,6 @@
 
 comment "ARMv7-A Configuration Options"
 
-config ARMV7A_HAVE_GTM
-	bool
-	default n
-	---help---
-		Selected by the configuration tool if the architecture supports the
-		Global Timer (GTM)
-
 config ARMV7A_HAVE_L2CC
 	bool
 	default n

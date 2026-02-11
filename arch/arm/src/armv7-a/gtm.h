@@ -34,7 +34,7 @@
 #include <stdint.h>
 #include "mpcore.h"
 
-#ifdef CONFIG_ARMV7A_HAVE_GTM
+#ifdef CONFIG_ARM_HAVE_GTM
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -115,5 +115,5 @@ extern "C"
 #endif
 #endif /* __ASSEMBLY__ */
 
-#endif /* CONFIG_ARMV7A_HAVE_GTM */
+#endif /* CONFIG_ARM_HAVE_GTM */
 #endif /* __ARCH_ARM_SRC_ARMV7_A_GTM_H */

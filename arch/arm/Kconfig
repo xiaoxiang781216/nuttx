@@ -1588,6 +1588,13 @@ config ARM_GICV2_LEGACY_IRQ
 		Default value "35" is for QEMU arm/virt. Use -1 if a domain
 		doesn't need legacy IRQ.
 
+config ARM_HAVE_GTM
+	bool
+	default n
+	---help---
+		Selected by the configuration tool if the architecture supports the
+		Global Timer (GTM)
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif
