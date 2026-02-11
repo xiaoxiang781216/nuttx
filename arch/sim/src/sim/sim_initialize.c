@@ -43,20 +43,34 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SIM_X11EVENT_PERIOD    MSEC2TICK(CONFIG_SIM_X11EVENT_INTERVAL)
-#define SIM_X11UPDATE_PERIOD   MSEC2TICK(CONFIG_SIM_X11UPDATE_INTERVAL)
+#if defined(CONFIG_SIM_X11FB) || defined(CONFIG_SIM_TOUCHSCREEN) || \
+    defined(CONFIG_SIM_AJOYSTICK) || defined(CONFIG_SIM_BUTTONS)
+
+#  ifndef CONFIG_SIM_X11EVENT_INTERVAL
+#    define CONFIG_SIM_X11EVENT_INTERVAL UINT32_MAX
+#  endif
+
+#  ifndef CONFIG_SIM_X11UPDATE_INTERVAL
+#    define CONFIG_SIM_X11UPDATE_INTERVAL UINT32_MAX
+#  endif
+
+/* Use the shorter period to drive the combined X11 work */
+
+#  if CONFIG_SIM_X11EVENT_INTERVAL < CONFIG_SIM_X11UPDATE_INTERVAL
+#    define SIM_X11_PERIOD MSEC2TICK(CONFIG_SIM_X11EVENT_INTERVAL)
+#  else
+#    define SIM_X11_PERIOD MSEC2TICK(CONFIG_SIM_X11UPDATE_INTERVAL)
+#  endif
+
+#endif
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-#if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
-    defined(CONFIG_SIM_BUTTONS)
-static struct work_s g_x11event_work;          /* Work structure for event loop */
-#endif
-
-#ifdef CONFIG_SIM_X11FB
-static struct work_s g_x11update_work;          /* Work structure for event loop */
+#if defined(CONFIG_SIM_X11FB) || defined(CONFIG_SIM_TOUCHSCREEN) || \
+    defined(CONFIG_SIM_AJOYSTICK) || defined(CONFIG_SIM_BUTTONS)
+static struct work_s g_x11_work;               /* Combined X11 work structure */
 #endif
 
 #undef g_current_regs
@@ -89,43 +103,39 @@ static void sim_init_cmdline(void)
 #endif
 
 /****************************************************************************
- * Name: sim_x11event_work
+ * Name: sim_x11_work
  *
  * Description:
- *   interrupts event process function
+ *   Combined X11 work function that handles both event processing and
+ *   framebuffer update in a single non-preemptible section.
+ *
+ *   X11 is not thread-safe. Since NuttX sim runs as coroutines on the
+ *   host, we must ensure no context switch happens between X11 calls.
+ *   Merging event and update into one work item prevents X11 library
+ *   state corruption caused by interleaved access from different
+ *   NuttX tasks.
  *
  ****************************************************************************/
+
+#if defined(CONFIG_SIM_X11FB) || defined(CONFIG_SIM_TOUCHSCREEN) || \
+    defined(CONFIG_SIM_AJOYSTICK) || defined(CONFIG_SIM_BUTTONS)
+static void sim_x11_work(void *arg)
+{
+  irqstate_t flags = irq_save_nopreempt();
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
-static void sim_x11event_work(void *arg)
-{
-  irqstate_t flags = irq_save_nopreempt();
   sim_x11events();
-  irq_restore_nopreempt(flags);
-
-  work_queue_next_wq(g_work_queue, &g_x11event_work, sim_x11event_work,
-                     NULL, SIM_X11EVENT_PERIOD);
-}
 #endif
 
-/****************************************************************************
- * Name: sim_x11update_work
- *
- * Description:
- *   interrupts event process function
- *
- ****************************************************************************/
-
 #ifdef CONFIG_SIM_X11FB
-static void sim_x11update_work(void *arg)
-{
-  irqstate_t flags = irq_save_nopreempt();
   sim_x11loop();
+#endif
+
   irq_restore_nopreempt(flags);
 
-  work_queue_next_wq(g_work_queue, &g_x11update_work, sim_x11update_work,
-                     NULL, SIM_X11UPDATE_PERIOD);
+  work_queue_next_wq(g_work_queue, &g_x11_work, sim_x11_work,
+                     NULL, SIM_X11_PERIOD);
 }
 #endif
 
@@ -333,15 +343,10 @@ void up_initialize(void)
   sim_encoder_initialize();
 #endif
 
-#if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
-    defined(CONFIG_SIM_BUTTONS)
-  work_queue_wq(g_work_queue, &g_x11event_work, sim_x11event_work,
-                NULL, SIM_X11EVENT_PERIOD);
-#endif
-
-#ifdef CONFIG_SIM_X11FB
-  work_queue_wq(g_work_queue, &g_x11update_work, sim_x11update_work,
-                NULL, SIM_X11UPDATE_PERIOD);
+#if defined(CONFIG_SIM_X11FB) || defined(CONFIG_SIM_TOUCHSCREEN) || \
+    defined(CONFIG_SIM_AJOYSTICK) || defined(CONFIG_SIM_BUTTONS)
+  work_queue_wq(g_work_queue, &g_x11_work, sim_x11_work,
+                NULL, SIM_X11_PERIOD);
 #endif
 }
 
