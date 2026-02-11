@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/scu.h
+ * arch/arm/src/arm_a_r/scu.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,8 +22,8 @@
  *   Cortex™-R8 MPCore, Revision: r0p3, Technical Reference Manual.
  */
 
-#ifndef __ARCH_ARM_SRC_ARMV8_R_SCU_H
-#define __ARCH_ARM_SRC_ARMV8_R_SCU_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_SCU_H
+#define __ARCH_ARM_SRC_ARM_A_R_SCU_H
 
 /****************************************************************************
  * Included Files
@@ -46,6 +46,7 @@
 #define SCU_PFILTERSTART_OFFSET      0x0048           /* Peripherals Filtering Start Address Register */
 #define SCU_PFILTEREND_OFFSET        0x004c           /* Peripherals Filtering End Address Register */
 #define SCU_SAC_OFFSET               0x0050           /* SCU Access Control (SAC) Register */
+#define SCU_SNSAC_OFFSET             0x0054           /* SCU Non-secure Access Control (SNSAC) Register */
 #define SCU_ERRBANKFST_OFFSET        0x0060           /* SCU Error Bank First Entry Register */
 #define SCU_ERRBANKSND_OFFSET        0x0064           /* SCU Error Bank Second Entry Register */
 #define SCU_DEBUGRAM_OFFSET          0x0070           /* SCU Debug Tag RAM Operation Register */
@@ -66,6 +67,7 @@
 #define SCU_PFILTERSTART             (MPCORE_SCU_VBASE+SCU_PFILTERSTART_OFFSET)
 #define SCU_PFILTEREND               (MPCORE_SCU_VBASE+SCU_PFILTEREND_OFFSET)
 #define SCU_SAC                      (MPCORE_SCU_VBASE+SCU_SAC_OFFSET)
+#define SCU_SNSAC                    (MPCORE_SCU_VBASE+SCU_SNSAC_OFFSET)
 #define SCU_ERRBANKFST               (MPCORE_SCU_VBASE+SCU_ERRBANKFST_OFFSET)
 #define SCU_ERRBANKSND               (MPCORE_SCU_VBASE+SCU_ERRBANKSND_OFFSET)
 #define SCU_DEBUGRAM                 (MPCORE_SCU_VBASE+SCU_DEBUGRAM_OFFSET)
@@ -83,6 +85,7 @@
 #define SCU_CTRL_ADDRFILTER          (1 << 1)         /* Address filtering enable */
 #define SCU_CTRL_RAMPARITY           (1 << 2)         /* SCU RAMs ECC enable */
 #define SCU_CTRL_LINFILL             (1 << 3)         /* SCU speculative linefill enable */
+#define SCU_CTRL_PORT0               (1 << 4)         /* Force all device to port0 enable */
 #define SCU_CTRL_STANDBY             (1 << 5)         /* SCU standby enable */
 #define SCU_CTRL_ICSTANDBY           (1 << 6)         /* IC standby enable */
 #define SCU_CTRL_ECCCHKEN_M0         (1 << 12)        /* ECC check enable on M0 */
@@ -174,6 +177,12 @@
 
 #define SCU_SAC_CPU(n)               (1 << (n)) /* CPUn may access components */
 
+/* SCU Non-secure Access Control (SNSAC) Register */
+
+#define SCU_SNSAC_COMP_CPU(n)        (1 << (n))     /* CPUn has non-secure access to components */
+#define SCU_SNSAC_PTIM_CPU(n)        (1 << ((n)+4)) /* CPUn has non-secure access to private timers */
+#define SCU_SNSAC_GTIM_CPU(n)        (1 << ((n)+8)) /* CPUn has non-secure access to global timer */
+
 /* SCU Error Bank First Entry Register */
 
 #define SCU_ERRBANKFST_STATUS_SHIFT  0
@@ -249,4 +258,4 @@
 
 void arm_enable_smp(int cpu);
 
-#endif /* __ARCH_ARM_SRC_ARMV8_R_SCU_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_SCU_H */
