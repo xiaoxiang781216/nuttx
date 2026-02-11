@@ -35,7 +35,6 @@ CMN_ASRCS += arm_cpuhead.S arm_saveusercontext.S
 # Common C source files
 
 CMN_CSRCS += arm_mmu.c
-CMN_CSRCS += cp15_cacheops.c
 
 ifeq ($(CONFIG_ARMV7A_L2CC_PL310),y)
   CMN_CSRCS += arm_l2cc_pl310.c

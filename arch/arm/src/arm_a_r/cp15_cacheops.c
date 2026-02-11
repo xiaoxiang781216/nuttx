@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/cp15_cacheops.c
+ * arch/arm/src/arm_a_r/cp15_cacheops.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

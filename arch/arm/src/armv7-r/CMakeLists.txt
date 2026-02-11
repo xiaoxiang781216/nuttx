@@ -28,8 +28,6 @@ list(APPEND SRCS arm_head.S arm_saveusercontext.S)
 
 # Common C source files
 
-list(APPEND SRCS cp15_cacheops.c)
-
 if(CONFIG_BUILD_PROTECTED)
   list(APPEND SRCS arm_mpu.c)
 endif()

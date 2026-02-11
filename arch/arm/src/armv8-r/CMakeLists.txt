@@ -28,8 +28,6 @@ list(APPEND SRCS arm_head.S arm_saveusercontext.S)
 
 # Common C source files
 
-list(APPEND SRCS cp15_cacheops.c)
-
 if(CONFIG_ARM_GIC_VERSION EQUAL 3)
   list(APPEND SRCS arm_gicv3.c)
 endif()
