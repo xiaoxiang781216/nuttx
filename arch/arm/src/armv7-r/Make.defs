@@ -30,7 +30,7 @@ HEAD_ASRC += arm_vectortab.S
 
 # Common assembly language files
 
-CMN_ASRCS += arm_head.S arm_saveusercontext.S
+CMN_ASRCS += arm_head.S
 
 # Common C source files
 

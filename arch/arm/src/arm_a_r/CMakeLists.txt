@@ -18,7 +18,7 @@
 #
 # ##############################################################################
 
-set(CSRCS arm_vectors.S)
+set(CSRCS arm_vectors.S arm_saveusercontext.S)
 
 if(NOT CONFIG_DISABLE_SIGNALS)
   list(APPEND CSRCS arm_schedulesigaction.c arm_sigdeliver.c)
