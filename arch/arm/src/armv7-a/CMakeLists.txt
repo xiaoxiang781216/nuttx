@@ -67,10 +67,6 @@ if(CONFIG_MM_PGALLOC)
   endif()
 endif()
 
-if(CONFIG_ARCH_FPU)
-  list(APPEND SRCS arm_fpucmp.c arm_fpuconfig.S)
-endif()
-
 if(CONFIG_ARM_PSCI)
   list(APPEND SRCS arm_cpu_psci.c arm_smccc.S)
 endif()

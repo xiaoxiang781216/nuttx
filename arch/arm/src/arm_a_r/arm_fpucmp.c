@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_fpuconfig.S
+ * arch/arm/src/arm_a_r/arm_fpucmp.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,72 +24,48 @@
 
 #include <nuttx/config.h>
 
-#include <arch/irq.h>
+#include <stdint.h>
+#include <string.h>
+#include <nuttx/irq.h>
 
-#ifdef CONFIG_ARCH_FPU
+#include "arm_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-/****************************************************************************
- * Public Symbols
- ****************************************************************************/
+#ifdef CONFIG_ARCH_FPU
 
-	.globl	arm_fpuconfig
-	.file	"arm_fpuconfig.S"
-
-/****************************************************************************
- * Assembly Macros
- ****************************************************************************/
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-	.text
-	.syntax	unified
-	.arm
+#  define FPU_CALLEE_REGS   (16)
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_fpuconfig
+ * Name: up_fpucmp
  *
  * Description:
- *   Configure the FPU.  Enables access to CP10 and CP11
+ *   Compare FPU areas from thread context.
+ *
+ * Input Parameters:
+ *   saveregs1 - Pointer to the saved FPU registers.
+ *   saveregs2 - Pointer to the saved FPU registers.
+ *
+ * Returned Value:
+ *   True if FPU areas compare equal, False otherwise.
  *
  ****************************************************************************/
 
-	.globl	arm_fpuconfig
-	.type	arm_fpuconfig, %function
+bool up_fpucmp(const void *saveregs1, const void *saveregs2)
+{
+  const uint32_t *regs1 = saveregs1;
+  const uint32_t *regs2 = saveregs2;
 
-arm_fpuconfig:
+  /* Only compare callee-saved registers, caller-saved registers do not
+   * need to be preserved.
+   */
 
-	/* Enable access to CP10 and CP11 in CP15.CACR */
-
-	mrc		CP15_CPACR(r0)
-	orr		r0, r0, #0xf00000
-	mcr		CP15_CPACR(r0)
-
-	/* Enable access to CP10 and CP11 in CP15.NSACR */
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-	mrc		CP15_NSACR(r0)
-	orr		r0, r0, #0xc00
-	mcr		CP15_NSACR(r0)
-#endif
-
-	/* REVISIT: Do we need to do this? */
-
-	/* Set FPEXC.EN (B30) */
-
-	fmrx		r0, fpexc
-	orr		r0, r0, #0x40000000
-	fmxr		fpexc, r0
-	bx		lr
-	.size	arm_fpuconfig, . - arm_fpuconfig
-#endif
-	.end
+  return memcmp(&regs1[REG_S16], &regs2[REG_S16], 4 * FPU_CALLEE_REGS) == 0;
+}
+#endif /* CONFIG_ARCH_FPU */

@@ -32,10 +32,6 @@ if(CONFIG_ARMV7R_L2CC_PL310)
   list(APPEND SRCS arm_l2cc_pl310.c)
 endif()
 
-if(CONFIG_ARCH_FPU)
-  list(APPEND SRCS arm_fpucmp.c arm_fpuconfig.S)
-endif()
-
 if(CONFIG_SMP)
   list(APPEND SRCS arm_cpuhead.S)
 endif()
