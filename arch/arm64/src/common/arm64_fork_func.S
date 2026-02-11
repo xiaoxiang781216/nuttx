@@ -87,30 +87,30 @@ SECTION_FUNC(text, up_fork)
     /* Create a stack frame */
 
     sub    sp,  sp, #8 * FORK_REGS_SIZE    /* Allocate the structure on the stack */
-    stp    x29, x30, [sp, #8 * FORK_REG_FP] /* Save the FP, LR */
+    stp    x29, x30, [sp, #8 * REG_FP]     /* Save the FP, LR */
 
     /* CPU registers, save all register*/
 
-    stp    x0, x1, [sp, #8 * FORK_REG_X0]
-    stp    x2, x3, [sp, #8 * FORK_REG_X2]
-    stp    x4, x5, [sp, #8 * FORK_REG_X4]
-    stp    x6, x7, [sp, #8 * FORK_REG_X6]
-    stp    x8, x9, [sp, #8 * FORK_REG_X8]
-    stp    x10, x11, [sp, #8 * FORK_REG_X10]
-    stp    x12, x13, [sp, #8 * FORK_REG_X12]
-    stp    x14, x15, [sp, #8 * FORK_REG_X14]
-    stp    x16, x17, [sp, #8 * FORK_REG_X16]
-    stp    x18, x19, [sp, #8 * FORK_REG_X18]
-    stp    x20, x21, [sp, #8 * FORK_REG_X20]
-    stp    x22, x23, [sp, #8 * FORK_REG_X22]
-    stp    x24, x25, [sp, #8 * FORK_REG_X24]
-    stp    x26, x27, [sp, #8 * FORK_REG_X26]
-    str    x28,      [sp, #8 * FORK_REG_X28]
+    stp    x0, x1, [sp, #8 * REG_X0]
+    stp    x2, x3, [sp, #8 * REG_X2]
+    stp    x4, x5, [sp, #8 * REG_X4]
+    stp    x6, x7, [sp, #8 * REG_X6]
+    stp    x8, x9, [sp, #8 * REG_X8]
+    stp    x10, x11, [sp, #8 * REG_X10]
+    stp    x12, x13, [sp, #8 * REG_X12]
+    stp    x14, x15, [sp, #8 * REG_X14]
+    stp    x16, x17, [sp, #8 * REG_X16]
+    stp    x18, x19, [sp, #8 * REG_X18]
+    stp    x20, x21, [sp, #8 * REG_X20]
+    stp    x22, x23, [sp, #8 * REG_X22]
+    stp    x24, x25, [sp, #8 * REG_X24]
+    stp    x26, x27, [sp, #8 * REG_X26]
+    str    x28,      [sp, #8 * REG_X28]
 
     /* Save the stack pointer */
 
     add    x0, sp, #8 * FORK_REGS_SIZE
-    str    x0, [sp, #8 * FORK_REG_SP]
+    str    x0, [sp, #8 * REG_SP_ELX]
 
     /* Floating point registers */
 #ifdef CONFIG_ARCH_FPU
@@ -128,7 +128,7 @@ SECTION_FUNC(text, up_fork)
 
     /* Release the stack data and return the value returned by arm64_fork */
 
-    ldp    x29, x30, [sp, #8 * FORK_REG_FP]
+    ldp    x29, x30, [sp, #8 * REG_FP]
     add    sp, sp,  #8 * FORK_REGS_SIZE
 
     ret
