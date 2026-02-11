@@ -34,23 +34,11 @@ ifeq ($(CONFIG_ARCH_HAVE_AE),y)
   OPTION_MARCH_FEATURE = ae
 endif
 
-ifeq ($(CONFIG_ARCH_ARMV8A),y)
-  ifeq ($(CONFIG_ARCH_AS_HAS_ARMV8_5),y)
-    OPTION_MARCH = -march=armv8.5-a
-  else
-    OPTION_MARCH = -march=armv8-a
-  endif
-  ifeq ($(CONFIG_ARM64_MTE),y)
-    OPTION_MARCH_FEATURE = +memtag
-  endif
-  ARCHCPUFLAGS += $(OPTION_MARCH)$(OPTION_MARCH_FEATURE)
-else ifeq ($(CONFIG_ARCH_ARMV8R),y)
-  ifeq ($(CONFIG_ARCH_FPU),y)
-    ARCHCPUFLAGS += -march=armv8-r
-  else
-    ARCHCPUFLAGS += -march=armv8-r+nofp
-  endif
-else ifeq ($(CONFIG_ARCH_CORTEX_A53),y)
+ifeq ($(CONFIG_ARM64_MTE),y)
+  OPTION_MARCH_FEATURE = +memtag
+endif
+
+ifeq ($(CONFIG_ARCH_CORTEX_A53),y)
   ARCHCPUFLAGS += -mcpu=cortex-a53$(OPTION_MARCH_FEATURE)
 else ifeq ($(CONFIG_ARCH_CORTEX_A55),y)
   ARCHCPUFLAGS += -mcpu=cortex-a55$(OPTION_MARCH_FEATURE)
@@ -60,6 +48,19 @@ else ifeq ($(CONFIG_ARCH_CORTEX_A72),y)
   ARCHCPUFLAGS += -mcpu=cortex-a72$(OPTION_MARCH_FEATURE)
 else ifeq ($(CONFIG_ARCH_CORTEX_R82),y)
   ARCHCPUFLAGS += -mcpu=cortex-r82$(OPTION_MARCH_FEATURE)
+else ifeq ($(CONFIG_ARCH_ARMV8A),y)
+  ifeq ($(CONFIG_ARCH_AS_HAS_ARMV8_5),y)
+    OPTION_MARCH = -march=armv8.5-a
+  else
+    OPTION_MARCH = -march=armv8-a
+  endif
+  ARCHCPUFLAGS += $(OPTION_MARCH)$(OPTION_MARCH_FEATURE)
+else ifeq ($(CONFIG_ARCH_ARMV8R),y)
+  ifeq ($(CONFIG_ARCH_FPU),y)
+    ARCHCPUFLAGS += -march=armv8-r$(OPTION_MARCH_FEATURE)
+  else
+    ARCHCPUFLAGS += -march=armv8-r+nofp$(OPTION_MARCH_FEATURE)
+  endif
 endif
 
 ifeq ($(CONFIG_DEBUG_CUSTOMOPT),y)
