@@ -996,12 +996,12 @@ static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
       syslog(LOG_EMERG, "Rptun driver reset remote %s reason: %lu\n",
              RPTUN_GET_CPUNAME(priv->dev), val);
       ret = priv->dev->ops->reset(priv->dev, val);
+      syslog(LOG_EMERG, "Rptun driver reset remote %s ret %d\n",
+             RPTUN_GET_CPUNAME(priv->dev), ret);
     }
 
   if (ret == -ENOTSUP)
     {
-      syslog(LOG_EMERG, "Rptun default reset remote %s reason: %lu\n",
-             RPTUN_GET_CPUNAME(priv->dev), val);
       rptun_set_status(priv, val);
 
       ret = -ETIMEDOUT;
