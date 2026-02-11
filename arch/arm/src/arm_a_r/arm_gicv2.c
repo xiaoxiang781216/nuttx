@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_gicv2.c
+ * arch/arm/src/arm_a_r/arm_gicv2.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -28,16 +28,66 @@
 #include <stdint.h>
 #include <assert.h>
 #include <errno.h>
-#include <debug.h>
+#include <stdlib.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/pci/pci.h>
+#include <nuttx/spinlock.h>
 #include <arch/irq.h>
 
 #include "arm_internal.h"
 #include "gic.h"
 
-#if CONFIG_ARM_GIC_VERSION == 2
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_TRUSTZONE_NONSECURE)
+# if defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#  error "ARCH_HIPRI_INTERRUPT must configure with ARCH_TRUSTZONE_DISABLED or no trustzone"
+# endif
+#endif
+
+#ifdef CONFIG_ARM_HAVE_GICv2
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+#if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
+static atomic_t g_gic_init_done;
+#endif
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: arm_gic_init_done
+ *
+ * Description:
+ *   Indicates gic init done, and only cpu0 need wait the gic initialize
+ *   done. Because cpu1 ~ (CONFIG_SMP_NCPUS - 1) may not response the
+ *   interrupt request by cpu0 when the gic not initialize done.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
+static void arm_gic_init_done(void)
+{
+  atomic_or(&g_gic_init_done, 1 << this_cpu());
+}
+
+static void arm_gic_wait_done(cpu_set_t cpuset)
+{
+  cpu_set_t tmpset;
+
+  do
+    {
+      tmpset = (cpu_set_t)atomic_read(&g_gic_init_done) & cpuset;
+    }
+  while (!CPU_EQUAL(&tmpset, &cpuset));
+}
+#else
+#define arm_gic_init_done()
+#define arm_gic_wait_done(cpuset)
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -96,58 +146,7 @@ void up_secure_irq_all(bool secure)
 #endif
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: gic_validate_dist_version
- *
- * Description:
- *   Verify that GIC Version is 2.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Zero (OK) if GIC Version is 2; -ENODEV if GIC Version isn't 2.
- *
- ****************************************************************************/
-
-static int gic_validate_dist_version(void)
-{
-  uint32_t  reg;
-
-  /* Read the CPU Interface Implementer ID Register */
-
-  reg = getreg32(GIC_ICCIDR) & GIC_ICCIDR_ARCHNO_MASK;
-
-  /* GIC Version should be 2 */
-
-  if (reg == (0x2 << GIC_ICCIDR_ARCHNO_SHIFT))
-    {
-      sinfo("GICv2 detected\n");
-      return 0;
-    }
-
-  /* Read the Peripheral ID2 Register (ICPIDR2) */
-
-  reg = getreg32(GIC_ICDPIDR(GIC_ICPIDR2)) & GICD_PIDR2_ARCH_MASK;
-
-  /* GIC Version should be 2 */
-
-  if (reg == GICD_PIDR2_ARCH_GICV2)
-    {
-      sinfo("GICv2 detected\n");
-      return 0;
-    }
-
-  sinfo("GICv2 not detected\n");
-
-  return -ENODEV;
-}
-
-/****************************************************************************
- * Name: arm_gic0_init
+ * Name: arm_gic0_initialize
  *
  * Description:
  *   Perform common, one-time GIC initialization on CPU0 only.  Both
@@ -162,17 +161,19 @@ static int gic_validate_dist_version(void)
  *
  ****************************************************************************/
 
-static void arm_gic0_init(void)
+void arm_gic0_initialize(void)
 {
   unsigned int nlines = arm_gic_nlines();
   unsigned int irq;
+
+  arm_gic_dump("Entry arm_gic0_initialize", true, 0);
 
   /* Initialize SPIs.  The following should be done only by CPU0. */
 
   /* A processor in Secure State sets:
    *
-   * 1. Which interrupts are non-secure (ICDISR).  All set to zero (group
-   *    0).
+   * 1. Which interrupts are non-secure (ICDISR).  All set to one (group
+   *    1).
    * 2. Trigger mode of the SPI (ICDICFR). All fields set to 0b01->Level
    *    sensitive, 1-N model.
    * 3. Interrupt Clear-Enable (ICDICER)
@@ -188,7 +189,7 @@ static void arm_gic0_init(void)
 
   for (irq = GIC_IRQ_SPI; irq < nlines; irq += 32)
     {
-      putreg32(0x00000000, GIC_ICDISR(irq));   /* SPIs group 0 */
+      putreg32(0xffffffff, GIC_ICDISR(irq));   /* SPIs group 1 */
       putreg32(0xffffffff, GIC_ICDICER(irq));  /* SPIs disabled */
     }
 
@@ -217,10 +218,12 @@ static void arm_gic0_init(void)
   DEBUGVERIFY(irq_attach(GIC_SMP_SCHED, arm_smp_sched_handler, NULL));
   DEBUGVERIFY(irq_attach(GIC_SMP_CALL, nxsched_smp_call_handler, NULL));
 #endif
+
+  arm_gic_dump("Exit arm_gic0_initialize", true, 0);
 }
 
 /****************************************************************************
- * Name: arm_gic_init
+ * Name: arm_gic_initialize
  *
  * Description:
  *   Perform common GIC initialization for the current CPU (all CPUs)
@@ -233,10 +236,12 @@ static void arm_gic0_init(void)
  *
  ****************************************************************************/
 
-static void arm_gic_init(void)
+void arm_gic_initialize(void)
 {
   uint32_t iccicr;
   uint32_t icddcr;
+
+  arm_gic_dump("Entry arm_gic_initialize", true, 0);
 
   /* Initialize PPIs.  The following steps need to be done by all CPUs */
 
@@ -256,7 +261,7 @@ static void arm_gic_init(void)
 
   putreg32(0x000000ff, GIC_ICDISR(0));
 #else
-  putreg32(0x00000000, GIC_ICDISR(0));      /* SGIs and PPIs secure */
+  putreg32(0xffffffff, GIC_ICDISR(0));      /* SGIs and PPIs no-secure */
 #endif
   putreg32(0xfe000000, GIC_ICDICER(0));     /* PPIs disabled */
 
@@ -275,12 +280,17 @@ static void arm_gic_init(void)
    * field; the value n (n=0-6) specifies that bits (n+1) through bit 7 are
    * used in the comparison for interrupt pre-emption.  A GIC supports a
    * minimum of 16 and a maximum of 256 priority levels so not all binary
-   * point settings may be meaningul. The special value n=7
-   * (GIC_ICCBPR_NOPREMPT) disables pre-emption.  We disable all pre-emption
-   * here to prevent nesting of interrupt handling.
+   * point settings may be meaningul. When CONFIG_ARCH_HIPRI_INTERRUPT is not
+   * enabled, we set n=7 (GIC_ICCBPR_NOPREMPT) to disable interrupt nesting.
+   * When CONFIG_ARCH_HIPRI_INTERRUPT is enabled, we set n=6 (GIC_ICCBPR_7_7)
+   * (g.sssssss) to support group priority.
    */
 
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+  putreg32(GIC_ICCBPR_7_7, GIC_ICCBPR);
+#else
   putreg32(GIC_ICCBPR_NOPREMPT, GIC_ICCBPR);
+#endif
 
   /* Program the idle priority in the PMR */
 
@@ -290,7 +300,12 @@ static void arm_gic_init(void)
 
   iccicr  = getreg32(GIC_ICCICR);
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+#ifdef CONFIG_ARCH_TRUSTZONE_NONSECURE
+  /* Clear non-secure state ICCICR bits to be configured below */
+
+  iccicr &= ~(GIC_ICCICRU_EOIMODENS | GIC_ICCICRU_ENABLEGRP1 |
+              GIC_ICCICRU_FIQBYPDISGRP1 | GIC_ICCICRU_IRQBYPDISGRP1);
+#else
   /* Clear secure state ICCICR bits to be configured below */
 
   iccicr &= ~(GIC_ICCICRS_FIQEN | GIC_ICCICRS_ACKTCTL | GIC_ICCICRS_CBPR |
@@ -298,16 +313,9 @@ static void arm_gic_init(void)
               GIC_ICCICRS_ENABLEGRP0 | GIC_ICCICRS_ENABLEGRP1 |
               GIC_ICCICRS_FIQBYPDISGRP0 | GIC_ICCICRS_IRQBYPDISGRP0 |
               GIC_ICCICRS_FIQBYPDISGRP1 | GIC_ICCICRS_IRQBYPDISGRP1);
-
-#else
-  /* Clear non-secure state ICCICR bits to be configured below */
-
-  iccicr &= ~(GIC_ICCICRU_EOIMODENS | GIC_ICCICRU_ENABLEGRP1 |
-              GIC_ICCICRU_FIQBYPDISGRP1 | GIC_ICCICRU_IRQBYPDISGRP1);
-
 #endif
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
   /* Set FIQn=1 if secure interrupts are to signal using nfiq_c.
    *
    * NOTE:  Only for processors that operate in secure state.
@@ -315,15 +323,6 @@ static void arm_gic_init(void)
    */
 
   iccicr |= GIC_ICCICRS_FIQEN;
-
-  /* Program the AckCtl bit to select the required interrupt acknowledge
-   * behavior.
-   *
-   * NOTE: Only for processors that operate in both secure and non-secure
-   * state.
-   */
-
-  iccicr |= GIC_ICCICRS_ACKTCTL;
 #endif
 
 #ifdef CONFIG_ARM_GIC_EOIMODE
@@ -344,7 +343,15 @@ static void arm_gic_init(void)
 #  endif
 #endif
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+  iccicr |= GIC_ICCICRS_ACKTCTL;
+
+#ifdef CONFIG_ARCH_TRUSTZONE_NONSECURE
+  /* Enable the Group 1 interrupts and disable Group 1 bypass. */
+
+  iccicr |= (GIC_ICCICRU_ENABLEGRP1 | GIC_ICCICRU_FIQBYPDISGRP1 |
+             GIC_ICCICRU_IRQBYPDISGRP1);
+  icddcr  = GIC_ICDDCR_ENABLE;
+#else
   /* Enable the Group 0 interrupts, FIQEn and disable Group 0/1
    * bypass.
    */
@@ -353,22 +360,6 @@ static void arm_gic_init(void)
              GIC_ICCICRS_FIQBYPDISGRP0 | GIC_ICCICRS_IRQBYPDISGRP0 |
              GIC_ICCICRS_FIQBYPDISGRP1 | GIC_ICCICRS_IRQBYPDISGRP1);
   icddcr  = (GIC_ICDDCR_ENABLEGRP0 | GIC_ICDDCR_ENABLEGRP1);
-
-#else
-  /* Enable the Group 1 interrupts and disable Group 1 bypass. */
-
-  iccicr |= (GIC_ICCICRU_ENABLEGRP1 | GIC_ICCICRU_FIQBYPDISGRP1 |
-             GIC_ICCICRU_IRQBYPDISGRP1);
-  icddcr  = GIC_ICDDCR_ENABLE;
-
-#endif
-
-#ifdef CONFIG_BMP
-  /* The GICD_ISENABLER0 is mixed type register, 0-15 SGI bits are RO,
-   * We should ensure handler already attach before enable whole
-   */
-
-  DEBUGVERIFY(irq_attach(GIC_SMP_CALL, nxsched_smp_call_handler, NULL));
 #endif
 
   /* Write the final ICCICR value to enable the GIC. */
@@ -380,11 +371,9 @@ static void arm_gic_init(void)
    */
 
   putreg32(icddcr, GIC_ICDDCR);
+  arm_gic_dump("Exit arm_gic_initialize", true, 0);
+  arm_gic_init_done();
 }
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: arm_decodeirq
@@ -452,6 +441,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
  *
  ****************************************************************************/
 
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 uint32_t *arm_decodefiq(uint32_t *regs)
 {
   uint32_t regval;
@@ -462,9 +452,9 @@ uint32_t *arm_decodefiq(uint32_t *regs)
   regval = getreg32(GIC_ICCIAR);
   irq    = (regval & GIC_ICCIAR_INTID_MASK) >> GIC_ICCIAR_INTID_SHIFT;
 
-#ifdef CONFIG_ARM_GIC_EOIMODE
+#  ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCEOIR);
-#endif
+#  endif
 
   /* Ignore spurions IRQs.  ICCIAR will report 1023 if there is no pending
    * interrupt.
@@ -476,18 +466,23 @@ uint32_t *arm_decodefiq(uint32_t *regs)
     {
       /* Dispatch the interrupt */
 
+#  ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+      regs = arm_dofiq(irq, regs);
+#  else
       regs = arm_doirq(irq, regs);
+#  endif
     }
 
   /* Write to the end-of-interrupt register */
 
-#ifdef CONFIG_ARM_GIC_EOIMODE
+#  ifdef CONFIG_ARM_GIC_EOIMODE
   putreg32(regval, GIC_ICCDIR);
-#else
+#  else
   putreg32(regval, GIC_ICCEOIR);
-#endif
+#  endif
   return regs;
 }
+#endif
 
 /****************************************************************************
  * Name: up_enable_irq
@@ -525,6 +520,8 @@ void up_enable_irq(int irq)
 
       regaddr = GIC_ICDISER(irq);
       putreg32(GIC_ICDISER_INT(irq), regaddr);
+
+      arm_gic_dump("Exit up_enable_irq", false, irq);
     }
 }
 
@@ -559,6 +556,8 @@ void up_disable_irq(int irq)
 
       regaddr = GIC_ICDICER(irq);
       putreg32(GIC_ICDICER_INT(irq), regaddr);
+
+      arm_gic_dump("Exit up_disable_irq", false, irq);
     }
 }
 
@@ -567,6 +566,8 @@ void up_disable_irq(int irq)
  *
  * Description:
  *   Set the priority of an IRQ.
+ *   For group0, priority bit[7] must be 0;
+ *   For group1, priority bit[7] must be 1;
  *
  *   Since this API is not supported on all architectures, it should be
  *   avoided in common implementations where possible.
@@ -594,6 +595,7 @@ int up_prioritize_irq(int irq, int priority)
       regval |= GIC_ICDIPR_ID(irq, priority);
       putreg32(regval, regaddr);
 
+      arm_gic_dump("Exit up_prioritize_irq", false, irq);
       return OK;
     }
 
@@ -624,6 +626,42 @@ void up_affinity_irq(int irq, cpu_set_t cpuset)
       regval &= ~GIC_ICDIPTR_ID_MASK(irq);
       regval |= GIC_ICDIPTR_ID(irq, cpuset);
       putreg32(regval, regaddr);
+    }
+}
+
+/****************************************************************************
+ * Name: up_trigger_irq
+ *
+ * Description:
+ *   Perform a Software Generated Interrupt (SGI).  If CONFIG_SMP is
+ *   selected, then the SGI is sent to all CPUs specified in the CPU set.
+ *   That set may include the current CPU.
+ *
+ *   If CONFIG_SMP is not selected, the cpuset is ignored and SGI is sent
+ *   only to the current CPU.
+ *
+ * Input Parameters
+ *   irq    - The SGI interrupt ID (0-15)
+ *   cpuset - The set of CPUs to receive the SGI
+ *
+ ****************************************************************************/
+
+void up_trigger_irq(int irq, cpu_set_t cpuset)
+{
+  if (irq >= 0 && irq <= GIC_IRQ_SGI15)
+    {
+      arm_cpu_sgi(irq, cpuset);
+    }
+  else if (irq >= 0 && irq < NR_IRQS)
+    {
+      uintptr_t regaddr;
+
+      /* Write '1' to the corresponding bit in the distributor Interrupt
+       * Set-Pending (ICDISPR)
+       */
+
+      regaddr = GIC_ICDISPR(irq);
+      putreg32(GIC_ICDISPR_INT(irq), regaddr);
     }
 }
 
@@ -683,59 +721,11 @@ int up_set_irq_type(int irq, int mode)
   return -EINVAL;
 }
 
-/****************************************************************************
- * Name: arm_gic_initialize
- *
- * Description:
- *   Initialize GIC. Called by CPU0 only.
- *
- * Input Parameters
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void arm_gic0_initialize(void)
-{
-  /* Verify that GIC Version is 2 */
-
-  DEBUGASSERT(gic_validate_dist_version() == 0);
-
-  /* CPU0-specific initialization for GIC */
-
-  arm_gic0_init();
-
-  /* CPU-generic initialization for GIC */
-
-  arm_gic_init();
-}
-
-/****************************************************************************
- * Name: arm_gic_secondary_init
- *
- * Description:
- *   Initialize GIC. Called by all CPUs except CPU0.
- *
- * Input Parameters
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void arm_gic_initialize(void)
-{
-  /* CPU-generic initialization for GIC */
-
-  arm_gic_init();
-}
-
 void arm_cpu_sgi(int sgi, unsigned int cpuset)
 {
   uint32_t regval;
+
+  arm_gic_wait_done(cpuset);
 
   regval = GIC_ICDSGIR_INTID(sgi) | GIC_ICDSGIR_CPUTARGET(cpuset) |
            GIC_ICDSGIR_TGTFILTER_LIST;
@@ -760,42 +750,6 @@ void arm_cpu_sgi(int sgi, unsigned int cpuset)
 }
 
 /****************************************************************************
- * Name: up_trigger_irq
- *
- * Description:
- *   Perform a Software Generated Interrupt (SGI).  If CONFIG_SMP is
- *   selected, then the SGI is sent to all CPUs specified in the CPU set.
- *   That set may include the current CPU.
- *
- *   If CONFIG_SMP is not selected, the cpuset is ignored and SGI is sent
- *   only to the current CPU.
- *
- * Input Parameters
- *   irq    - The SGI interrupt ID (0-15)
- *   cpuset - The set of CPUs to receive the SGI
- *
- ****************************************************************************/
-
-void up_trigger_irq(int irq, cpu_set_t cpuset)
-{
-  if (irq >= 0 && irq <= GIC_IRQ_SGI15)
-    {
-      arm_cpu_sgi(irq, cpuset);
-    }
-  else if (irq >= 0 && irq < NR_IRQS)
-    {
-      uintptr_t regaddr;
-
-      /* Write '1' to the corresponding bit in the distributor Interrupt
-       * Set-Pending (ICDISPR)
-       */
-
-      regaddr = GIC_ICDISPR(irq);
-      putreg32(GIC_ICDISPR_INT(irq), regaddr);
-    }
-}
-
-/****************************************************************************
  * Name: up_get_legacy_irq
  *
  * Description:
@@ -805,17 +759,31 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
 
 int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
 {
-#if CONFIG_ARM_GICV2_LEGACY_IRQ >= 0
-  uint8_t slot;
-  uint8_t tmp;
+#ifdef CONFIG_ARM_GICV2_LEGACY_IRQ
+  uint8_t slot = PCI_SLOT(devfn);
+  uint8_t tmp = (pin - 1 + slot) % 4;
+  uint16_t domain = PCI_DOMAIN(devfn);
+  const char *ptr = CONFIG_ARM_GICV2_LEGACY_IRQ;
+  int i = 0;
 
-  UNUSED(line);
-  slot = PCI_SLOT(devfn);
-  tmp = (pin - 1 + slot) % 4;
-  return CONFIG_ARM_GICV2_LEGACY_IRQ + tmp;
-#else
-  return -ENOTSUP;
+  while (i != domain && ptr[0])
+    {
+      ptr++;
+      if (':' == ptr[0])
+        {
+          ptr++;
+          i++;
+        }
+    }
+
+  if (ptr[0])
+    {
+      i = strtol(ptr, NULL, 0);
+      return i >= 0 ? i + tmp : -ENOTSUP;
+    }
 #endif
+
+  return -ENOTSUP;
 }
 
-#endif /* CONFIG_ARM_GIC_VERSION == 2 */
+#endif /* CONFIG_ARM_HAVE_GICv2 */

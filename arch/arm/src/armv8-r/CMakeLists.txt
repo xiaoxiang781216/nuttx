@@ -30,13 +30,6 @@ list(APPEND SRCS arm_head.S arm_saveusercontext.S)
 
 list(APPEND SRCS arm_cache.c arm_cpuinfo.c cp15_cacheops.c)
 
-if(CONFIG_ARM_GIC_VERSION EQUAL 2)
-  list(APPEND SRCS arm_gicv2.c)
-  if(CONFIG_ARM_GICv2M)
-    list(APPEND SRCS arm_gicv2m.c)
-  endif()
-endif()
-
 if(CONFIG_ARM_GIC_VERSION EQUAL 3)
   list(APPEND SRCS arm_gicv3.c)
 endif()

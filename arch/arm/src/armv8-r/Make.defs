@@ -41,12 +41,7 @@ ifeq ($(CONFIG_ARM_MPU),y)
   CMN_CSRCS += arm_mpu.c
 endif
 
-ifeq ($(CONFIG_ARM_GIC_VERSION),2)
-  CMN_CSRCS += arm_gicv2.c
-  ifeq ($(CONFIG_ARM_GICv2M),y)
-    CMN_CSRCS += arm_gicv2m.c
-  endif
-else
+ifeq ($(CONFIG_ARM_GIC_VERSION),3)
   CMN_CSRCS += arm_gicv3.c
 endif
 

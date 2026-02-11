@@ -29,18 +29,7 @@ list(APPEND SRCS arm_cpuhead.S arm_saveusercontext.S)
 
 # Common C source files
 
-list(
-  APPEND
-  SRCS
-  arm_cache.c
-  arm_cpuinfo.c
-  arm_gicv2.c
-  arm_mmu.c
-  cp15_cacheops.c)
-
-if(CONFIG_ARM_GICv2M)
-  list(APPEND SRCS arm_gicv2m.c)
-endif()
+list(APPEND SRCS arm_cache.c arm_cpuinfo.c arm_mmu.c cp15_cacheops.c)
 
 if(CONFIG_ARMV7A_L2CC_PL310)
   list(APPEND SRCS arm_l2cc_pl310.c)

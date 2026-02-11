@@ -30,14 +30,6 @@ list(APPEND SRCS arm_head.S arm_saveusercontext.S)
 
 list(APPEND SRCS arm_cache.c arm_cpuinfo.c cp15_cacheops.c)
 
-if(NOT CONFIG_ARCH_CHIP STREQUAL tms570)
-  list(APPEND SRCS arm_gicv2.c)
-endif()
-
-if(CONFIG_ARM_GICv2M)
-  list(APPEND SRCS arm_gicv2m.c)
-endif()
-
 if(CONFIG_BUILD_PROTECTED)
   list(APPEND SRCS arm_mpu.c)
 endif()

@@ -40,6 +40,13 @@ if(CONFIG_ARM_HAVE_PTM)
   list(APPEND CSRCS arm_timer.c)
 endif()
 
+if(CONFIG_ARM_GIC_VERSION EQUAL 2)
+  list(APPEND CSRCS arm_gicv2.c)
+  if(CONFIG_ARM_GICv2M)
+    list(APPEND CSRCS arm_gicv2m.c)
+  endif()
+endif()
+
 list(
   APPEND
   CSRCS
