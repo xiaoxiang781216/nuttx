@@ -54,6 +54,10 @@ ifeq ($(CONFIG_LEGACY_PAGING),y)
   CMN_CSRCS += arm_checkmapping.c
 endif
 
+ifeq ($(CONFIG_ARCH_HIPRI_INTERRUPT),y)
+  CMN_CSRCS += arm_dofiq.c
+endif
+
 ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
   CMN_UCSRCS += arm_perf.c
 endif

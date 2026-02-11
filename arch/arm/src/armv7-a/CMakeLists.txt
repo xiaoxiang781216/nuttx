@@ -84,8 +84,4 @@ if(CONFIG_ARM_PSCI)
   list(APPEND SRCS arm_cpu_psci.c arm_smccc.S)
 endif()
 
-if(CONFIG_ARCH_HIPRI_INTERRUPT)
-  list(APPEND SRCS arm_dofiq.c)
-endif()
-
 target_sources(arch PRIVATE ${SRCS})

@@ -47,6 +47,10 @@ if(CONFIG_ARM_GIC_VERSION EQUAL 2)
   endif()
 endif()
 
+if(CONFIG_ARCH_HIPRI_INTERRUPT)
+  list(APPEND CSRCS arm_dofiq.c)
+endif()
+
 list(
   APPEND
   CSRCS
