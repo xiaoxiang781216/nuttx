@@ -63,7 +63,7 @@ uintptr_t g_irqstack_top[CONFIG_NCPUS] =
   (uintptr_t)g_irqstack_alloc + (3 * INTSTACK_SIZE),
 #endif
 #if CONFIG_NCPUS > 3
-  (uintptr_t)g_irqstack_alloc + (4 * INTSTACK_SIZE)
+  (uintptr_t)g_irqstack_alloc + (4 * INTSTACK_SIZE),
 #endif
 #if CONFIG_NCPUS > 4
   (uintptr_t)g_irqstack_alloc + (5 * INTSTACK_SIZE),
@@ -89,7 +89,7 @@ uintptr_t g_fiqstack_top[CONFIG_NCPUS] =
   (uintptr_t)g_fiqstack_alloc + 3 * INTSTACK_SIZE,
 #endif
 #if CONFIG_NCPUS > 3
-  (uintptr_t)g_fiqstack_alloc + 4 * INTSTACK_SIZE
+  (uintptr_t)g_fiqstack_alloc + 4 * INTSTACK_SIZE,
 #endif
 #if CONFIG_NCPUS > 4
   (uintptr_t)g_fiqstack_alloc + 5 * INTSTACK_SIZE,
