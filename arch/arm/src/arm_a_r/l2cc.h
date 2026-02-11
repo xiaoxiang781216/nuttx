@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/l2cc.h
+ * arch/arm/src/arm_a_r/l2cc.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV7_A_L2CC_H
-#define __ARCH_ARM_SRC_ARMV7_A_L2CC_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_L2CC_H
+#define __ARCH_ARM_SRC_ARM_A_R_L2CC_H
 
 /****************************************************************************
  * Included Files
@@ -274,4 +274,4 @@ void l2cc_flush(uint32_t startaddr, uint32_t endaddr);
 #  define l2cc_flush(s,e)
 
 #endif /* CONFIG_ARCH_L2CACHE */
-#endif /* __ARCH_ARM_SRC_ARMV7_A_L2CC_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_L2CC_H */

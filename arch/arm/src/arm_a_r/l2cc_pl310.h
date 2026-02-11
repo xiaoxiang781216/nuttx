@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/l2cc_pl310.h
+ * arch/arm/src/arm_a_r/l2cc_pl310.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,8 +22,8 @@
  *   Technical Reference Manual, ARM DDI 0246F (ID011711), ARM
  */
 
-#ifndef __ARCH_ARM_SRC_ARMV8_R_L2CC_PL310_H
-#define __ARCH_ARM_SRC_ARMV8_R_L2CC_PL310_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_L2CC_PL310_H
+#define __ARCH_ARM_SRC_ARM_A_R_L2CC_PL310_H
 
 /****************************************************************************
  * Included Files
@@ -480,4 +480,4 @@
 #define L2CC_POWCR_STBYEN          (1 << 0)  /* Bit 0:  Standby Mode Enable */
 #define L2CC_POWCR_DCKGATEN        (1 << 1)  /* Bit 1:  Dynamic Clock Gating Enable */
 
-#endif /* __ARCH_ARM_SRC_ARMV8_R_L2CC_PL310_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_L2CC_PL310_H */
