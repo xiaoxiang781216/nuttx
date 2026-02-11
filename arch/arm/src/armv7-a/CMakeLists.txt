@@ -76,10 +76,6 @@ if(CONFIG_ARCH_FPU)
   list(APPEND SRCS arm_fpucmp.c arm_fpuconfig.S)
 endif()
 
-if(CONFIG_SMP)
-  list(APPEND SRCS arm_cpustart.c)
-endif()
-
 if(CONFIG_ARM_PSCI)
   list(APPEND SRCS arm_cpu_psci.c arm_smccc.S)
 endif()

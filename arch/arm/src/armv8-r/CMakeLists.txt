@@ -43,7 +43,7 @@ if(CONFIG_ARM_MPU)
 endif()
 
 if(NOT CONFIG_UP)
-  list(APPEND SRCS arm_cpuhead.S arm_cpustart.c)
+  list(APPEND SRCS arm_cpuhead.S)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)

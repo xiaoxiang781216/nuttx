@@ -59,7 +59,7 @@ ifeq ($(CONFIG_ARCH_HIPRI_INTERRUPT),y)
 endif
 
 ifneq ($(CONFIG_UP),y)
-  CMN_CSRCS += arm_scu.c arm_smpcall.c
+  CMN_CSRCS += arm_scu.c arm_smpcall.c arm_cpustart.c
 endif
 
 ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)

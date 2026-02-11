@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_cpustart.c
+ * arch/arm/src/arm_a_r/arm_cpustart.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -37,7 +37,7 @@
 #include "gic.h"
 #include "sched/sched.h"
 
-#ifdef CONFIG_ARCH_HAVE_MULTICPU
+#ifdef CONFIG_SMP
 
 /****************************************************************************
  * Private Functions
@@ -107,7 +107,7 @@ int arm_start_handler(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-int up_cpu_start(int cpu)
+int weak_function up_cpu_start(int cpu)
 {
   sinfo("Starting CPU%d\n", cpu);
 
@@ -122,4 +122,4 @@ int up_cpu_start(int cpu)
   return OK;
 }
 
-#endif /* CONFIG_ARCH_HAVE_MULTICPU */
+#endif /* CONFIG_SMP */

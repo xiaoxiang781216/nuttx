@@ -52,7 +52,7 @@ if(CONFIG_ARCH_HIPRI_INTERRUPT)
 endif()
 
 if(NOT CONFIG_UP)
-  list(APPEND CSRCS arm_scu.c arm_smpcall.c)
+  list(APPEND CSRCS arm_scu.c arm_smpcall.c arm_cpustart.c)
 endif()
 
 list(
