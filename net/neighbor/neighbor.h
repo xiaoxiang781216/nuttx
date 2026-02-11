@@ -186,7 +186,7 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
 int neighbor_queue_iob(FAR struct net_driver_s *dev,
                        FAR const net_ipv6addr_t ipaddr,
                        FAR struct iob_s *iob);

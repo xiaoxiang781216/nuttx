@@ -1426,7 +1426,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
       return ret;
     }
 
-#if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+#if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_NEIGHBOR_SEND)
 #ifdef CONFIG_NET_ARP_SEND
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
   if (conn->domain == PF_INET)
@@ -1438,16 +1438,16 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
     }
 #endif /* CONFIG_NET_ARP_SEND */
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#ifdef CONFIG_NET_NEIGHBOR_SEND
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
   if (conn->domain == PF_INET6)
 #endif
     {
       /* Make sure that the IP address mapping is in the Neighbor Table */
 
-      ret = icmpv6_neighbor(NULL, conn->u.ipv6.raddr);
+      ret = neighbor_send(NULL, conn->u.ipv6.raddr);
     }
-#endif /* CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_NEIGHBOR_SEND */
 
   /* Did we successfully get the address mapping? */
 
@@ -1455,7 +1455,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
     {
       return -ENETUNREACH;
     }
-#endif /* CONFIG_NET_ARP_SEND || CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_ARP_SEND || CONFIG_NET_NEIGHBOR_SEND */
 
   /* Initialize and return the connection structure, bind it to the port
    * number.  At this point, we do not know the size of the initial MSS We

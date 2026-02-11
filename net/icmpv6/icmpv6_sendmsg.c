@@ -354,17 +354,17 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock,
       iob_free_queue(&conn->readahead);
     }
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#ifdef CONFIG_NET_NEIGHBOR_SEND
   /* Make sure that the IP address mapping is in the Neighbor Table */
 
-  ret = icmpv6_neighbor(dev, inaddr->sin6_addr.s6_addr16);
+  ret = neighbor_send(dev, inaddr->sin6_addr.s6_addr16);
   if (ret < 0)
     {
       nerr("ERROR: Not reachable\n");
       ret = -ENETUNREACH;
       goto errout;
     }
-#endif /* CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_NEIGHBOR_SEND */
 
   /* Initialize the state structure */
 

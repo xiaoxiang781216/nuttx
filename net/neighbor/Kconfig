@@ -9,7 +9,7 @@ config NET_IPv6_NCONF_ENTRIES
 	int "Number of IPv6 neighbors"
 	default 8
 
-config NET_ICMPv6_NEIGHBOR
+config NET_NEIGHBOR_SEND
 	bool "Solicit destination addresses"
 	default n
 	depends on NET_ICMPv6 && !NET_ICMPv6_NO_STACK
@@ -18,7 +18,7 @@ config NET_ICMPv6_NEIGHBOR
 		the target IPv6 address mapping does not appear in the Neighbor
 		table.
 
-config NET_IPv6_NEIGHBOR_SEND_QUEUE
+config NET_NEIGHBOR_SEND_QUEUE
 	bool "IPv6 neighbor solicitation queue"
 	default n
 	depends on MM_IOB
@@ -26,16 +26,16 @@ config NET_IPv6_NEIGHBOR_SEND_QUEUE
 		Enable logic to queue packets while waiting for neighbor solicitation
 		response. This prevents packet loss during address resolution.
 
-if NET_ICMPv6_NEIGHBOR || NET_IPv6_NEIGHBOR_SEND_QUEUE
+if NET_NEIGHBOR_SEND || NET_NEIGHBOR_SEND_QUEUE
 
-config ICMPv6_NEIGHBOR_MAXTRIES
+config NET_NEIGHBOR_MAXTRIES
 	int "ICMPv6 neighbor solicitation retries"
 	default 5
 	---help---
 		Send the Neighbor solicitation this number of times before giving
 		up and deciding that the target IP6 address is non reachable.
 
-config ICMPv6_NEIGHBOR_DELAYMSEC
+config NET_NEIGHBOR_DELAYMSEC
 	int "ICMPv6 neighbor re-solicit delay"
 	default 20
 	---help---
@@ -54,6 +54,6 @@ config NET_NEIGHBOR_MAXAGE_UNREACHABLE
 		deciseconds. During the unreachable period not send a retry
 		Neighbor solicitation for the same destination.
 
-endif # NET_ICMPv6_NEIGHBOR
+endif # NET_NEIGHBOR_SEND
 
 endif # NET_IPv6

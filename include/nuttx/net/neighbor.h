@@ -86,7 +86,7 @@ struct neighbor_entry_s
   struct neighbor_addr_s   ne_addr;    /* Link layer address of the Neighbor */
   clock_t                  ne_time;    /* For aging, units of tick */
   FAR struct net_driver_s *ne_dev;     /* The device driver structure */
-#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
   struct iob_queue_s       ne_queue;   /* Queue IOBs waiting for ND complete */
   struct work_s            ne_work;    /* ND response timeout handle */
 #endif

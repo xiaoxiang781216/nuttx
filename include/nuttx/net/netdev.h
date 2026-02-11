@@ -439,7 +439,7 @@ struct net_driver_s
   struct iob_queue_s d_arpout;
 #endif
 
-#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
   struct iob_queue_s d_neighout;
 #endif
 

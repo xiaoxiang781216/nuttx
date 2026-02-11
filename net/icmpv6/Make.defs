@@ -35,7 +35,7 @@ endif
 
 ifeq ($(CONFIG_NET_ICMPv6_SOCKET),y)
 SOCK_CSRCS += icmpv6_poll.c
-else ifeq ($(CONFIG_NET_ICMPv6_NEIGHBOR),y)
+else ifeq ($(CONFIG_NET_NEIGHBOR_SEND),y)
 NET_CSRCS += icmpv6_poll.c
 endif
 

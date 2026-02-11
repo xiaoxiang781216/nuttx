@@ -41,7 +41,7 @@
 #include <nuttx/net/netdev.h>
 #include <nuttx/semaphore.h>
 
-#include "neighbor/icmpv6_neighbor.h"
+#include "neighbor/neighbor_send.h"
 
 #if defined(CONFIG_NET_ICMPv6) && !defined(CONFIG_NET_ICMPv6_NO_STACK)
 
@@ -253,7 +253,7 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_NET_ICMPv6_SOCKET) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+#if defined(CONFIG_NET_ICMPv6_SOCKET) || defined(CONFIG_NET_NEIGHBOR_SEND)
 void icmpv6_poll(FAR struct net_driver_s *dev,
                  FAR struct icmpv6_conn_s *conn);
 #endif

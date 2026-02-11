@@ -520,7 +520,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock,
 
   /* Make sure that we have the IP address mapping */
 
-#if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+#if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_NEIGHBOR_SEND)
 #ifdef CONFIG_NET_ARP_SEND
   if (psock->s_domain == PF_INET)
     {
@@ -530,14 +530,14 @@ ssize_t psock_tcp_send(FAR struct socket *psock,
     }
 #endif /* CONFIG_NET_ARP_SEND */
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#ifdef CONFIG_NET_NEIGHBOR_SEND
   if (psock->s_domain == PF_INET6)
     {
       /* Make sure that the IP address mapping is in the Neighbor Table */
 
-      ret = icmpv6_neighbor(NULL, conn->u.ipv6.raddr);
+      ret = neighbor_send(NULL, conn->u.ipv6.raddr);
     }
-#endif /* CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_NEIGHBOR_SEND */
 
   /* Did we successfully get the address mapping? */
 
@@ -547,7 +547,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock,
       ret = -ENETUNREACH;
       goto errout;
     }
-#endif /* CONFIG_NET_ARP_SEND || CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_ARP_SEND || CONFIG_NET_NEIGHBOR_SEND */
 
   /* Perform the TCP send operation */
 

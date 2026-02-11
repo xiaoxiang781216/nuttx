@@ -478,7 +478,7 @@ static inline_function int devif_poll_icmp(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-#if defined(CONFIG_NET_ICMPv6_SOCKET) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+#if defined(CONFIG_NET_ICMPv6_SOCKET) || defined(CONFIG_NET_NEIGHBOR_SEND)
 static inline_function int devif_poll_icmpv6(FAR struct net_driver_s *dev,
                                              devif_poll_callback_t callback)
 {
@@ -498,7 +498,7 @@ static inline_function int devif_poll_icmpv6(FAR struct net_driver_s *dev,
         {
           /* Perform the ICMPV6 poll
            * Note: conn equal NULL in the first iteration means poll dev's
-           * callback list since icmpv6_autoconfig and icmpv6_neighbor still
+           * callback list since icmpv6_autoconfig and neighbor_send still
            * append it's callback into this list.
            */
 
@@ -518,7 +518,7 @@ static inline_function int devif_poll_icmpv6(FAR struct net_driver_s *dev,
   icmpv6_conn_list_unlock();
   return bstop;
 }
-#endif /* CONFIG_NET_ICMPv6_SOCKET || CONFIG_NET_ICMPv6_NEIGHBOR*/
+#endif /* CONFIG_NET_ICMPv6_SOCKET || CONFIG_NET_NEIGHBOR_SEND*/
 
 /****************************************************************************
  * Name: devif_poll_forward
@@ -545,7 +545,7 @@ static inline_function int devif_poll_forward(FAR struct net_driver_s *dev,
 
   return devif_poll_out(dev, callback);
 }
-#endif /* CONFIG_NET_ICMPv6_SOCKET || CONFIG_NET_ICMPv6_NEIGHBOR*/
+#endif /* CONFIG_NET_ICMPv6_SOCKET || CONFIG_NET_NEIGHBOR_SEND*/
 
 /****************************************************************************
  * Name: devif_poll_igmp
@@ -730,7 +730,7 @@ devif_poll_tcp_connections(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 #if defined(CONFIG_NET_ARP_SEND_QUEUE) || defined(CONFIG_NET_IPFRAG) || \
-    defined(CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE)
+    defined(CONFIG_NET_NEIGHBOR_SEND_QUEUE)
 static int devif_poll_queue(FAR struct iob_queue_s *iobq,
                             FAR struct net_driver_s *dev,
                             devif_poll_callback_t callback)
@@ -885,7 +885,7 @@ static inline_function int devif_poll_arp(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
 static inline_function int devif_poll_neighbor(FAR struct net_driver_s *dev,
                                               devif_poll_callback_t callback)
 {
@@ -1040,7 +1040,7 @@ static int devif_poll_connections(FAR struct net_driver_s *dev,
             bstop = devif_poll_icmp(dev, callback);
             break;
 #endif
-#if defined(CONFIG_NET_ICMPv6_SOCKET) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+#if defined(CONFIG_NET_ICMPv6_SOCKET) || defined(CONFIG_NET_NEIGHBOR_SEND)
           case ICMPv6_POLL:
 
             /* Traverse all of the tasks waiting to send an ICMPv6 ECHO
@@ -1048,7 +1048,7 @@ static int devif_poll_connections(FAR struct net_driver_s *dev,
              */
 
             bstop = devif_poll_icmpv6(dev, callback);
-#  ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#  ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
             if (!bstop)
               {
                 /* Poll the neighbor queue for packets waiting to be sent

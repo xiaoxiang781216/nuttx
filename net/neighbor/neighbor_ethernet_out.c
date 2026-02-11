@@ -166,7 +166,7 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
               return;
             }
 
-#if defined(CONFIG_NET_ICMPv6_NEIGHBOR) || defined(CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE)
+#if defined(CONFIG_NET_NEIGHBOR_SEND) || defined(CONFIG_NET_NEIGHBOR_SEND_QUEUE)
           /* Check if a neighbor solicitation is already in progress.
            * Return error to avoid sending duplicate solicitations.
            * This follows the ARP model of limiting concurrent queries.
@@ -181,7 +181,7 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
           else if (ret == -EINPROGRESS)
             {
               ninfo("Neighbor solicitation in progress\n");
-#  ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#  ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
               neighbor_queue_iob(dev, ipaddr, dev->d_iob);
               netdev_iob_clear(dev);
 #  else
@@ -200,7 +200,7 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
 
           ninfo("IPv6 Neighbor solicitation for IPv6\n");
 
-#  ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#  ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
           /* Queue the packet for later transmission when Neighbor
            * Advertisement is received
            */

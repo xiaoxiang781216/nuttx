@@ -26,7 +26,7 @@ if(CONFIG_NET_IPv6)
   set(SRCS neighbor_globals.c neighbor_add.c neighbor_lookup.c
            neighbor_update.c neighbor_findentry.c neighbor_out.c)
 
-  if(CONFIG_NET_ICMPv6_NEIGHBOR)
+  if(CONFIG_NET_NEIGHBOR_SEND)
     list(APPEND SRCS neighbor_send.c neighbor_notify.c)
   endif()
 

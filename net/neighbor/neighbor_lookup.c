@@ -44,8 +44,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if defined(CONFIG_NET_ICMPv6_NEIGHBOR) || defined(CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE)
-#  define NEIGHBOR_INPROGRESS_TICK MSEC2TICK(CONFIG_ICMPv6_NEIGHBOR_MAXTRIES * CONFIG_ICMPv6_NEIGHBOR_DELAYMSEC)
+#if defined(CONFIG_NET_NEIGHBOR_SEND) || defined(CONFIG_NET_NEIGHBOR_SEND_QUEUE)
+#  define NEIGHBOR_INPROGRESS_TICK MSEC2TICK(CONFIG_NET_NEIGHBOR_MAXTRIES * CONFIG_NET_NEIGHBOR_DELAYMSEC)
 #  define NEIGHBOR_MAXAGE_UNREACHABLE_TICK SEC2TICK(10 * CONFIG_NET_NEIGHBOR_MAXAGE_UNREACHABLE)
 #endif
 /****************************************************************************
@@ -105,7 +105,7 @@ static int neighbor_match(FAR struct net_driver_s *dev, FAR void *arg)
   return 1;
 }
 
-#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
 
 /****************************************************************************
  * Name: neighbor_unreach_work
@@ -122,7 +122,7 @@ static void neighbor_unreach_work(FAR void *param)
   iob_free_queue(&entry->ne_queue);
 }
 
-#endif /* CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE */
+#endif /* CONFIG_NET_NEIGHBOR_SEND_QUEUE */
 
 /****************************************************************************
  * Public Functions
@@ -163,7 +163,7 @@ int neighbor_lookup(FAR const net_ipv6addr_t ipaddr,
   if (neighbor != NULL)
     {
 #if defined(CONFIG_NET_ETHERNET) && \
-    (defined(CONFIG_NET_ICMPv6_NEIGHBOR) || defined(CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE))
+    (defined(CONFIG_NET_NEIGHBOR_SEND) || defined(CONFIG_NET_NEIGHBOR_SEND_QUEUE))
       int llsize;
       llsize = neighbor->ne_addr.na_llsize;
       if (llsize == sizeof(g_zero_ethaddr) &&
@@ -235,7 +235,7 @@ int neighbor_lookup(FAR const net_ipv6addr_t ipaddr,
   return -ENOENT;
 }
 
-#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
 
 /****************************************************************************
  * Name: neighbor_queue_iob
@@ -298,4 +298,4 @@ int neighbor_queue_iob(FAR struct net_driver_s *dev,
   return -ENOENT;
 }
 
-#endif /* CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE */
+#endif /* CONFIG_NET_NEIGHBOR_SEND_QUEUE */

@@ -47,7 +47,7 @@
 #include "utils/utils.h"
 #include "icmpv6/icmpv6.h"
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#ifdef CONFIG_NET_NEIGHBOR_SEND
 
 /****************************************************************************
  * Private Types
@@ -57,7 +57,7 @@
  * operated upon from the event handler.
  */
 
-struct icmpv6_neighbor_s
+struct neighbor_send_s
 {
   FAR struct devif_callback_s *snd_cb; /* Reference to callback instance */
   sem_t snd_sem;                       /* Used to wake up the waiting thread */
@@ -72,13 +72,13 @@ struct icmpv6_neighbor_s
  ****************************************************************************/
 
 /****************************************************************************
- * Name: icmpv6_neighbor_eventhandler
+ * Name: neighbor_send_eventhandler
  ****************************************************************************/
 
-static uint32_t icmpv6_neighbor_eventhandler(FAR struct net_driver_s *dev,
+static uint32_t neighbor_send_eventhandler(FAR struct net_driver_s *dev,
                                              FAR void *priv, uint32_t flags)
 {
-  FAR struct icmpv6_neighbor_s *state = (FAR struct icmpv6_neighbor_s *)priv;
+  FAR struct neighbor_send_s *state = (FAR struct neighbor_send_s *)priv;
 
   ninfo("flags: %" PRIx32 " sent: %d\n", flags, state->snd_sent);
 
@@ -148,7 +148,7 @@ static uint32_t icmpv6_neighbor_eventhandler(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: icmpv6_neighbor
+ * Name: neighbor_send
  *
  * Description:
  *   The icmpv6_solicit() call may be to send an ICMPv6 Neighbor
@@ -181,11 +181,11 @@ static uint32_t icmpv6_neighbor_eventhandler(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-int icmpv6_neighbor(FAR struct net_driver_s *dev,
+int neighbor_send(FAR struct net_driver_s *dev,
                     const net_ipv6addr_t ipaddr)
 {
-  struct icmpv6_notify_s notify;
-  struct icmpv6_neighbor_s state;
+  struct neighbor_notify_s notify;
+  struct neighbor_send_s state;
   net_ipv6addr_t lookup;
   bool sending = false;
   int ret;
@@ -306,7 +306,7 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
 
   ret = -ETIMEDOUT; /* Assume a timeout failure */
 
-  while (state.snd_retries < CONFIG_ICMPv6_NEIGHBOR_MAXTRIES)
+  while (state.snd_retries < CONFIG_NET_NEIGHBOR_MAXTRIES)
     {
       /* Check if the address mapping is present in the Neighbor Table.  This
        * is only really meaningful on the first time through the loop.
@@ -327,7 +327,7 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
        * Solicitation.
        */
 
-      icmpv6_wait_setup(lookup, &notify);
+      neighbor_wait_setup(lookup, &notify);
 
       if (ret == -EINPROGRESS && !sending)
         {
@@ -343,7 +343,7 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
       state.snd_sent      = false;
       state.snd_cb->flags = ICMPv6_POLL;
       state.snd_cb->priv  = (FAR void *)&state;
-      state.snd_cb->event = icmpv6_neighbor_eventhandler;
+      state.snd_cb->event = neighbor_send_eventhandler;
 
       /* MAC address marked with all zeros to limit concurrent task
        * send Neighbor Solicitation for same destination.
@@ -374,9 +374,9 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
        */
 
 wait:
-      ret = icmpv6_wait(dev, &notify, CONFIG_ICMPv6_NEIGHBOR_DELAYMSEC);
+      ret = neighbor_wait(dev, &notify, CONFIG_NET_NEIGHBOR_DELAYMSEC);
 
-      /* icmpv6_wait will return OK if and only if the matching Neighbor
+      /* neighbor_wait will return OK if and only if the matching Neighbor
        * Advertisement is received.  Otherwise, it will return -ETIMEDOUT.
        */
 
@@ -400,4 +400,4 @@ errout:
   return ret;
 }
 
-#endif /* CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_NEIGHBOR_SEND */

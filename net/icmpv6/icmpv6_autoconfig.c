@@ -323,7 +323,7 @@ int icmpv6_autoconfig(FAR struct net_driver_s *dev)
         NTOHS(lladdr[4]), NTOHS(lladdr[5]),
         NTOHS(lladdr[6]), NTOHS(lladdr[7]));
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#ifdef CONFIG_NET_NEIGHBOR_SEND
   /* 2. Link-Local Address Uniqueness Test:  The node tests to ensure that
    *    the address it generated isn't for some reason already in use on the
    *    local network. (This is very unlikely to be an issue if the link-
@@ -339,7 +339,7 @@ int icmpv6_autoconfig(FAR struct net_driver_s *dev)
   if (dev->d_lltype == NET_LL_ETHERNET ||
       dev->d_lltype == NET_LL_IEEE80211)
     {
-      ret = icmpv6_neighbor(dev, lladdr);
+      ret = neighbor_send(dev, lladdr);
       if (ret >= 0)
         {
           /* Hmmm... someone else responded to our Neighbor Solicitation.  We

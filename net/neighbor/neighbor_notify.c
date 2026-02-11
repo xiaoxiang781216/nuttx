@@ -39,7 +39,7 @@
 #include "utils/utils.h"
 #include "icmpv6/icmpv6.h"
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#ifdef CONFIG_NET_NEIGHBOR_SEND
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -55,11 +55,12 @@
 
 /* List of tasks waiting for Neighbor Discover events */
 
-static DEFINE_PER_CPU_BSS_BMP(struct icmpv6_notify_s *, g_icmpv6_waiters);
-#define g_icmpv6_waiters this_cpu_var_bmp(g_icmpv6_waiters)
+static DEFINE_PER_CPU_BSS_BMP(struct neighbor_notify_s *,
+                              g_neighbor_waiters);
+#define g_neighbor_waiters this_cpu_var_bmp(g_neighbor_waiters)
 
-static DEFINE_PER_CPU_BMP(spinlock_t, g_icmpv6_notify_lock) = SP_UNLOCKED;
-#define g_icmpv6_notify_lock this_cpu_var_bmp(g_icmpv6_notify_lock)
+static DEFINE_PER_CPU_BMP(spinlock_t, g_neighbor_notify_lock) = SP_UNLOCKED;
+#define g_neighbor_notify_lock this_cpu_var_bmp(g_neighbor_notify_lock)
 
 /****************************************************************************
  * Private Functions
@@ -70,21 +71,22 @@ static DEFINE_PER_CPU_BMP(spinlock_t, g_icmpv6_notify_lock) = SP_UNLOCKED;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: icmpv6_wait_setup
+ * Name: neighbor_wait_setup
  *
  * Description:
  *   Called BEFORE an Neighbor Solicitation is sent.  This function sets up
  *   the Neighbor Advertisement timeout before the Neighbor Solicitation
- *   is sent so that there is no race condition when icmpv6_wait() is called.
+ *   is sent so that there is no race condition when neighbor_wait() is
+ *   called.
  *
  * Assumptions:
- *   This function is called from icmpv6_neighbor() and executes in the
+ *   This function is called from neighbor_send() and executes in the
  *   normal tasking environment.
  *
  ****************************************************************************/
 
-void icmpv6_wait_setup(const net_ipv6addr_t ipaddr,
-                       FAR struct icmpv6_notify_s *notify)
+void neighbor_wait_setup(const net_ipv6addr_t ipaddr,
+                       FAR struct neighbor_notify_s *notify)
 {
   irqstate_t flags;
 
@@ -97,30 +99,30 @@ void icmpv6_wait_setup(const net_ipv6addr_t ipaddr,
 
   /* Add the wait structure to the list with interrupts disabled */
 
-  flags            = spin_lock_irqsave(&g_icmpv6_notify_lock);
-  notify->nt_flink = g_icmpv6_waiters;
-  g_icmpv6_waiters = notify;
-  spin_unlock_irqrestore(&g_icmpv6_notify_lock, flags);
+  flags            = spin_lock_irqsave(&g_neighbor_notify_lock);
+  notify->nt_flink = g_neighbor_waiters;
+  g_neighbor_waiters = notify;
+  spin_unlock_irqrestore(&g_neighbor_notify_lock, flags);
 }
 
 /****************************************************************************
- * Name: icmpv6_wait_cancel
+ * Name: neighbor_wait_cancel
  *
  * Description:
- *   Cancel any wait set after icmpv6_wait_setup is called but before
- *   icmpv6_wait()is called (icmpv6_wait() will automatically cancel the
+ *   Cancel any wait set after neighbor_wait_setup is called but before
+ *   neighbor_wait()is called (neighbor_wait() will automatically cancel the
  *   wait).
  *
  * Assumptions:
  *   This function may execute in the interrupt context when called from
- *   icmpv6_wait().
+ *   neighbor_wait().
  *
  ****************************************************************************/
 
-int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify)
+int neighbor_wait_cancel(FAR struct neighbor_notify_s *notify)
 {
-  FAR struct icmpv6_notify_s *curr;
-  FAR struct icmpv6_notify_s *prev;
+  FAR struct neighbor_notify_s *curr;
+  FAR struct neighbor_notify_s *prev;
   irqstate_t flags;
   int ret = -ENOENT;
 
@@ -128,8 +130,8 @@ int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify)
    * head of the list).
    */
 
-  flags = spin_lock_irqsave(&g_icmpv6_notify_lock);
-  for (prev = NULL, curr = g_icmpv6_waiters;
+  flags = spin_lock_irqsave(&g_neighbor_notify_lock);
+  for (prev = NULL, curr = g_neighbor_waiters;
        curr && curr != notify;
        prev = curr, curr = curr->nt_flink)
     {
@@ -144,19 +146,19 @@ int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify)
         }
       else
         {
-          g_icmpv6_waiters = notify->nt_flink;
+          g_neighbor_waiters = notify->nt_flink;
         }
 
       ret = OK;
     }
 
-  spin_unlock_irqrestore(&g_icmpv6_notify_lock, flags);
+  spin_unlock_irqrestore(&g_neighbor_notify_lock, flags);
   nxsem_destroy(&notify->nt_sem);
   return ret;
 }
 
 /****************************************************************************
- * Name: icmpv6_wait
+ * Name: neighbor_wait
  *
  * Description:
  *   Called each time that a Neighbor Solicitation is sent.  This function
@@ -164,13 +166,13 @@ int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify)
  *   received, or (2) a timeout occurs.
  *
  * Assumptions:
- *   This function is called from icmpv6_neighbor() and must execute with
+ *   This function is called from neighbor_send() and must execute with
  *   the network locked.
  *
  ****************************************************************************/
 
-int icmpv6_wait(FAR struct net_driver_s *dev,
-                FAR struct icmpv6_notify_s *notify, unsigned int timeout)
+int neighbor_wait(FAR struct net_driver_s *dev,
+                FAR struct neighbor_notify_s *notify, unsigned int timeout)
 {
   int ret;
 
@@ -186,12 +188,12 @@ int icmpv6_wait(FAR struct net_driver_s *dev,
    * head of the list).
    */
 
-  icmpv6_wait_cancel(notify);
+  neighbor_wait_cancel(notify);
   return ret;
 }
 
 /****************************************************************************
- * Name: icmpv6_notify
+ * Name: neighbor_notify
  *
  * Description:
  *   Called each time that a Neighbor Advertisement is received in order to
@@ -204,16 +206,16 @@ int icmpv6_wait(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-void icmpv6_notify(net_ipv6addr_t ipaddr)
+void neighbor_notify(net_ipv6addr_t ipaddr)
 {
-  FAR struct icmpv6_notify_s *curr;
+  FAR struct neighbor_notify_s *curr;
   irqstate_t flags;
 
-  flags = spin_lock_irqsave_nopreempt(&g_icmpv6_notify_lock);
+  flags = spin_lock_irqsave_nopreempt(&g_neighbor_notify_lock);
 
   /* Find an entry with the matching IP address in the list of waiters */
 
-  for (curr = g_icmpv6_waiters; curr; curr = curr->nt_flink)
+  for (curr = g_neighbor_waiters; curr; curr = curr->nt_flink)
     {
       /* Does this entry match?  If the result is okay, then we have
        * already notified this waiter and it has not yet taken the
@@ -229,7 +231,7 @@ void icmpv6_notify(net_ipv6addr_t ipaddr)
         }
     }
 
-  spin_unlock_irqrestore_nopreempt(&g_icmpv6_notify_lock, flags);
+  spin_unlock_irqrestore_nopreempt(&g_neighbor_notify_lock, flags);
 }
 
-#endif /* CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_NEIGHBOR_SEND */

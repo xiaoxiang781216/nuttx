@@ -111,7 +111,7 @@ void neighbor_add(FAR struct net_driver_s *dev, FAR net_ipv6addr_t ipaddr,
         }
     }
 
-#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
   if (!found && g_neighbors[oldest_ndx].ne_time != 0)
     {
       /* Neighbor entry will be replaced, clean delayed IOBs if exist */
@@ -177,7 +177,7 @@ void neighbor_add(FAR struct net_driver_s *dev, FAR net_ipv6addr_t ipaddr,
                            AF_INET6);
     }
 
-#ifdef CONFIG_NET_IPv6_NEIGHBOR_SEND_QUEUE
+#ifdef CONFIG_NET_NEIGHBOR_SEND_QUEUE
   if (!IOB_QEMPTY(&dev->d_neighout))
     {
       /* In Rx context, we need to backup the dev iob and related members,

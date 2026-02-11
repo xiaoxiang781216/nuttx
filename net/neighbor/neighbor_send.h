@@ -1,5 +1,5 @@
 /****************************************************************************
- * net/neighbor/icmpv6_neighbor.h
+ * net/neighbor/neighbor_send.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,8 +20,8 @@
  *
  ****************************************************************************/
 
-#ifndef __NET_NEIGHBOR_ICMPV6_NEIGHBOR_H
-#define __NET_NEIGHBOR_ICMPV6_NEIGHBOR_H
+#ifndef __NET_NEIGHBOR_NEIGHBOR_SEND_H
+#define __NET_NEIGHBOR_NEIGHBOR_SEND_H
 
 /****************************************************************************
  * Included Files
@@ -31,7 +31,7 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/net/ip.h>
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#ifdef CONFIG_NET_NEIGHBOR_SEND
 
 /****************************************************************************
  * Public Type Definitions
@@ -41,12 +41,14 @@ struct net_driver_s; /* Forward reference */
 
 /* Used to notify a thread waiting for a particular Neighbor Advertisement */
 
-struct icmpv6_notify_s
+struct neighbor_notify_s
 {
-  FAR struct icmpv6_notify_s *nt_flink;  /* Supports singly linked list */
-  net_ipv6addr_t nt_ipaddr;              /* Waited for IP address in the mapping */
-  sem_t nt_sem;                          /* Will wake up the waiter */
-  int nt_result;                         /* The result of the wait */
+  FAR struct neighbor_notify_s *nt_flink; /* Supports singly linked list */
+  net_ipv6addr_t nt_ipaddr;               /* Waited for IP address in
+                                           * the mapping
+                                           */
+  sem_t nt_sem;                           /* Will wake up the waiter */
+  int nt_result;                          /* The result of the wait */
 };
 
 /****************************************************************************
@@ -54,7 +56,7 @@ struct icmpv6_notify_s
  ****************************************************************************/
 
 /****************************************************************************
- * Name: icmpv6_neighbor
+ * Name: neighbor_send
  *
  * Description:
  *   The icmpv6_solicit() call may be to send an ICMPv6 Neighbor
@@ -87,44 +89,45 @@ struct icmpv6_notify_s
  *
  ****************************************************************************/
 
-int icmpv6_neighbor(FAR struct net_driver_s *dev,
+int neighbor_send(FAR struct net_driver_s *dev,
                     const net_ipv6addr_t ipaddr);
 
 /****************************************************************************
- * Name: icmpv6_wait_setup
+ * Name: neighbor_wait_setup
  *
  * Description:
  *   Called BEFORE an Neighbor Solicitation is sent.  This function sets up
  *   the Neighbor Advertisement timeout before the Neighbor Solicitation
- *   is sent so that there is no race condition when icmpv6_wait() is called.
+ *   is sent so that there is no race condition when neighbor_wait() is
+ *   called.
  *
  * Assumptions:
- *   This function is called from icmpv6_neighbor() and executes in the
+ *   This function is called from neighbor_send() and executes in the
  *   normal tasking environment.
  *
  ****************************************************************************/
 
-void icmpv6_wait_setup(const net_ipv6addr_t ipaddr,
-                       FAR struct icmpv6_notify_s *notify);
+void neighbor_wait_setup(const net_ipv6addr_t ipaddr,
+                       FAR struct neighbor_notify_s *notify);
 
 /****************************************************************************
- * Name: icmpv6_wait_cancel
+ * Name: neighbor_wait_cancel
  *
  * Description:
- *   Cancel any wait set after icmpv6_wait_setup is called but before
- *   icmpv6_wait()is called (icmpv6_wait() will automatically cancel the
+ *   Cancel any wait set after neighbor_wait_setup is called but before
+ *   neighbor_wait()is called (neighbor_wait() will automatically cancel the
  *   wait).
  *
  * Assumptions:
  *   This function may execute in the interrupt context when called from
- *   icmpv6_wait().
+ *   neighbor_wait().
  *
  ****************************************************************************/
 
-int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify);
+int neighbor_wait_cancel(FAR struct neighbor_notify_s *notify);
 
 /****************************************************************************
- * Name: icmpv6_wait
+ * Name: neighbor_wait
  *
  * Description:
  *   Called each time that a Neighbor Solicitation is sent.  This function
@@ -132,17 +135,17 @@ int icmpv6_wait_cancel(FAR struct icmpv6_notify_s *notify);
  *   received, or (2) a timeout occurs.
  *
  * Assumptions:
- *   This function is called from icmpv6_neighbor() and must execute with
+ *   This function is called from neighbor_send() and must execute with
  *   the network un-locked (interrupts may be disabled to keep the things
  *   stable).
  *
  ****************************************************************************/
 
-int icmpv6_wait(FAR struct net_driver_s *dev,
-                FAR struct icmpv6_notify_s *notify, unsigned int timeout);
+int neighbor_wait(FAR struct net_driver_s *dev,
+                FAR struct neighbor_notify_s *notify, unsigned int timeout);
 
 /****************************************************************************
- * Name: icmpv6_notify
+ * Name: neighbor_notify
  *
  * Description:
  *   Called each time that a Neighbor Advertisement is received in order to
@@ -155,14 +158,14 @@ int icmpv6_wait(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-void icmpv6_notify(net_ipv6addr_t ipaddr);
+void neighbor_notify(net_ipv6addr_t ipaddr);
 
-#else /* !CONFIG_NET_ICMPv6_NEIGHBOR */
-#  define icmpv6_neighbor(d,i) (0)
-#  define icmpv6_wait_setup(i,n)
-#  define icmpv6_wait_cancel(n) (0)
-#  define icmpv6_wait(d,n,t) (0)
-#  define icmpv6_notify(i)
-#endif /* CONFIG_NET_ICMPv6_NEIGHBOR */
+#else /* !CONFIG_NET_NEIGHBOR_SEND */
+#  define neighbor_send(d,i) (0)
+#  define neighbor_wait_setup(i,n)
+#  define neighbor_wait_cancel(n) (0)
+#  define neighbor_wait(d,n,t) (0)
+#  define neighbor_notify(i)
+#endif /* CONFIG_NET_NEIGHBOR_SEND */
 
-#endif /* __NET_NEIGHBOR_ICMPV6_NEIGHBOR_H */
+#endif /* __NET_NEIGHBOR_NEIGHBOR_SEND_H */

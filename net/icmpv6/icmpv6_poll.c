@@ -25,7 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#if defined(CONFIG_NET_ICMPv6_SOCKET) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+#if defined(CONFIG_NET_ICMPv6_SOCKET) || defined(CONFIG_NET_NEIGHBOR_SEND)
 
 #include <debug.h>
 
@@ -78,4 +78,4 @@ void icmpv6_poll(FAR struct net_driver_s *dev,
                    conn ? conn->sconn.s_list : dev->d_conncb);
 }
 
-#endif /* CONFIG_NET_ICMPv6_SOCKET || CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_ICMPv6_SOCKET || CONFIG_NET_NEIGHBOR_SEND */

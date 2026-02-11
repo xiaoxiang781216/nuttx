@@ -281,7 +281,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
       return -EDESTADDRREQ;
     }
 
-#if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
+#if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_NEIGHBOR_SEND)
 #ifdef CONFIG_NET_ARP_SEND
   /* Assure the the IPv4 destination address maps to a valid MAC address in
    * the ARP table.
@@ -319,7 +319,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
     }
 #endif /* CONFIG_NET_ARP_SEND */
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#ifdef CONFIG_NET_NEIGHBOR_SEND
   /* Assure the the IPv6 destination address maps to a valid MAC address in
    * the neighbor table.
    */
@@ -352,9 +352,9 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
       /* Make sure that the IP address mapping is in the Neighbor Table */
 
-      ret = icmpv6_neighbor(NULL, destipaddr);
+      ret = neighbor_send(NULL, destipaddr);
     }
-#endif /* CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_NEIGHBOR_SEND */
 
   /* Did we successfully get the address mapping? */
 
@@ -363,7 +363,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
       nerr("ERROR: Peer not reachable\n");
       return -ENETUNREACH;
     }
-#endif /* CONFIG_NET_ARP_SEND || CONFIG_NET_ICMPv6_NEIGHBOR */
+#endif /* CONFIG_NET_ARP_SEND || CONFIG_NET_NEIGHBOR_SEND */
 
   /* Initialize the state structure.  This is done with the network
    * locked because we don't want anything to happen until we are

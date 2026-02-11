@@ -356,10 +356,10 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
                 neighbor_add(dev, ipv6->srcipaddr, adv->tgtlladdr);
               }
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
+#ifdef CONFIG_NET_NEIGHBOR_SEND
             /* Then notify any logic waiting for the Neighbor Advertisement */
 
-            icmpv6_notify(ipv6->srcipaddr);
+            neighbor_notify(ipv6->srcipaddr);
 #endif
 
             /* We consumed the packet but we don't send anything in
