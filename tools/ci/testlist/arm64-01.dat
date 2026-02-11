@@ -18,3 +18,7 @@ CMake,qemu-armv8a:nsh_gicv2
 CMake,qemu-armv8a:nsh_smp
 CMake,qemu-armv8a:nsh_smp_tickless
 CMake,qemu-armv8a:sotest
+
+# imx95-a55-evk
+CMake,imx95-a55-evk:nsh
+CMake,imx95-a55-evk:nsh_smp
