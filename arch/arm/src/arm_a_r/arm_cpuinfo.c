@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_cpuinfo.c
+ * arch/arm/src/arm_a_r/arm_cpuinfo.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -121,17 +121,43 @@ ssize_t up_show_cpuinfo(char *buf, size_t buf_size, off_t file_off)
       /* VFP Features */
 
 #if defined(CONFIG_ARCH_FPU)
-      procfs_sprintf(buf, buf_size, &file_off, " %s %s %s %s",
-                     HWCAP_VFPV3, HWCAP_FPSP, HWCAP_FPDP, HWCAP_VFPV3D16);
+# if defined(CONFIG_ARCH_CORTEXA8) || defined(CONFIG_ARCH_CORTEXA9)
+      procfs_sprintf(buf, buf_size, &file_off, " %s %s %s",
+                     HWCAP_VFPV3, HWCAP_FPSP, HWCAP_FPDP);
+# else
+      procfs_sprintf(buf, buf_size, &file_off, " %s %s %s",
+                     HWCAP_VFPV4, HWCAP_FPSP, HWCAP_FPDP);
+# endif
+
+# if defined(CONFIG_ARCH_CORTEXA5) || defined(CONFIG_ARCH_CORTEXA9)
+      procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_FPHP);
+# endif
+
+# ifdef CONFIG_ARM_DPFPU32
+      procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_VFPD32);
+# else
+      procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_VFPV3D16);
+# endif
+
+# ifdef CONFIG_ARM_NEON
+      procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_NEON);
+# endif
 #endif
 
       /* Cpuid info */
 
       cpuid = CP15_GET(MIDR);
+#ifdef CONFIG_ARCH_ARMV8R
       procfs_sprintf(buf, buf_size, &file_off,
                      "\nmodel name\t: %s rev %" PRIx32 " (%s)\n"
                      "CPU architecture: %s\n",
                      "ARMv8 Processor", cpuid & 15, "v8", "8");
+#else
+      procfs_sprintf(buf, buf_size, &file_off,
+                     "\nmodel name\t: %s rev %" PRIx32 " (%s)\n"
+                     "CPU architecture: %s\n",
+                     "ARMv7 Processor", cpuid & 15, "v7", "7");
+#endif
 
       procfs_sprintf(buf, buf_size, &file_off,
                      "CPU implementer\t: 0x%02" PRIx32 "\n"
