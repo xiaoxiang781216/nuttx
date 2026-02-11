@@ -43,7 +43,7 @@ if(CONFIG_ARCH_FPU)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS arm_cpuhead.S arm_cpustart.c arm_smpcall.c)
+  list(APPEND SRCS arm_cpuhead.S arm_cpustart.c)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)
