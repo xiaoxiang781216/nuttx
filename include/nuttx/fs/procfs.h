@@ -152,6 +152,15 @@ struct procfs_meminfo_entry_s
 #endif
 };
 
+/* Function pointer types for procfs_create_custom callbacks */
+
+typedef ssize_t (*procfs_read_t)(FAR struct file *filep,
+                                 FAR char *buffer, size_t buflen,
+                                 FAR void *priv);
+typedef ssize_t (*procfs_write_t)(FAR struct file *filep,
+                                  FAR const char *buffer, size_t buflen,
+                                  FAR void *priv);
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -530,6 +539,33 @@ procfs_create_size_t(FAR const char *path, mode_t mode,
 FAR struct procfs_entry_s *
 procfs_create_bool(FAR const char *path, mode_t mode,
                    FAR bool *value);
+
+/****************************************************************************
+ * Name: procfs_create_custom
+ *
+ * Description:
+ *   Create a procfs entry with custom read/write callbacks.
+ *   This allows modules to implement arbitrary procfs file behavior
+ *   without manually defining procfs_operations.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   read  - Read callback: fills buffer, returns bytes written or negative
+ *           errno. The priv pointer and file position are provided.
+ *   write - Write callback: processes buffer, returns bytes consumed or
+ *           negative errno. Can be NULL for read-only files.
+ *   priv  - Private data pointer passed to callbacks
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_custom(FAR const char *path, mode_t mode,
+                     procfs_read_t read, procfs_write_t write,
+                     FAR void *priv);
 
 #undef EXTERN
 #ifdef __cplusplus
