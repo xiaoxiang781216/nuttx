@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-r/arm_scu.c
+ * arch/arm/src/arm_a_r/arm_scu.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 
+#include <nuttx/init.h>
 #include <arch/barriers.h>
 #include <arch/irq.h>
 #include <sched/sched.h>
@@ -62,13 +63,11 @@ void arm_enable_smp(int cpu)
     {
       /* Invalidate the SCU duplicate tags for all processors */
 
-      putreg32((SCU_INVALIDATE_ALL_WAYS << SCU_INVALIDATE_CPU0_SHIFT)
-               | (SCU_INVALIDATE_ALL_WAYS << SCU_INVALIDATE_CPU1_SHIFT)
-#if CONFIG_SMP_NCPUS > 2
-               | (SCU_INVALIDATE_ALL_WAYS << SCU_INVALIDATE_CPU2_SHIFT)
-               | (SCU_INVALIDATE_ALL_WAYS << SCU_INVALIDATE_CPU3_SHIFT)
-#endif
-               , SCU_INVALIDATE);
+      putreg32((SCU_INVALIDATE_ALL_WAYS << SCU_INVALIDATE_CPU0_SHIFT) |
+               (SCU_INVALIDATE_ALL_WAYS << SCU_INVALIDATE_CPU1_SHIFT) |
+               (SCU_INVALIDATE_ALL_WAYS << SCU_INVALIDATE_CPU2_SHIFT) |
+               (SCU_INVALIDATE_ALL_WAYS << SCU_INVALIDATE_CPU3_SHIFT),
+               SCU_INVALIDATE);
 
       /* Invalidate CPUn L1 data cache so that is will we be reloaded from
        * coherent L2.
@@ -97,11 +96,21 @@ void arm_enable_smp(int cpu)
 #ifdef CONFIG_SMP
       /* We need to confirm that current_task has been initialized. */
 
-      while (!current_task(this_cpu()));
+      while (!current_task(this_cpu()))
+          ;
 
       /* Init idle task to percpu reg */
 
       up_update_task(current_task(cpu));
+#endif
+
+      /* If we do coloration in assembly, will hard to cover the tls etc.
+       * And we should not do coloration before tcb stack_base_ptr updated.
+       */
+
+#ifdef CONFIG_STACK_COLORATION
+      while (!OSINIT_MM_READY());
+      arm_stack_color(current_task(cpu)->stack_base_ptr, 0);
 #endif
 
       /* Invalidate CPUn L1 data cache so that is will we be reloaded from
@@ -118,15 +127,19 @@ void arm_enable_smp(int cpu)
 
   /* Enable the data cache, set the SMP mode with ACTLR.SMP=1.
    *
-   *   SMP - Sgnals if the processor is taking part in coherency
+   *   SMP - Sgnals if the Cortex-A9 processor is taking part in coherency
    *         or not.
+   *
+   * Cortex-A9 also needs  ACTLR.FW=1
    *
    *   FW  - Cache and TLB maintenance broadcast.
    */
 
   regval  = CP15_GET(ACTLR);
   regval |= ACTLR_SMP;
+#ifdef CONFIG_ARCH_CORTEXA9
   regval |= ACTLR_FW;
+#endif
   CP15_SET(ACTLR, regval);
 
   regval  = CP15_GET(SCTLR);

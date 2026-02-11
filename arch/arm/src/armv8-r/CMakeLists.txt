@@ -44,7 +44,7 @@ endif()
 
 if(NOT CONFIG_UP)
   list(APPEND SRCS arm_cpuhead.S arm_cpustart.c)
-  list(APPEND SRCS arm_smpcall.c arm_scu.c)
+  list(APPEND SRCS arm_smpcall.c)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)

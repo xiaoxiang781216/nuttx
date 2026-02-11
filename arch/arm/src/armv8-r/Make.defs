@@ -57,7 +57,6 @@ endif
 ifneq ($(CONFIG_UP),y)
   CMN_ASRCS += arm_cpuhead.S
   CMN_CSRCS += arm_cpustart.c arm_smpcall.c
-  CMN_CSRCS += arm_scu.c
 endif
 
 ifeq ($(CONFIG_ARCH_ADDRENV),y)

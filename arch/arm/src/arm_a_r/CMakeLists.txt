@@ -51,6 +51,10 @@ if(CONFIG_ARCH_HIPRI_INTERRUPT)
   list(APPEND CSRCS arm_dofiq.c)
 endif()
 
+if(NOT CONFIG_UP)
+  list(APPEND CSRCS arm_scu.c)
+endif()
+
 list(
   APPEND
   CSRCS
