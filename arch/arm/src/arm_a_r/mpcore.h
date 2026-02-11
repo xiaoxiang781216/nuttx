@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/mpcore.h
+ * arch/arm/src/arm_a_r/mpcore.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -23,14 +23,14 @@
  *   0407I (ID091612).
  */
 
-#ifndef __ARCH_ARM_SRC_ARMV8_R_MPCORE_H
-#define __ARCH_ARM_SRC_ARMV8_R_MPCORE_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_MPCORE_H
+#define __ARCH_ARM_SRC_ARM_A_R_MPCORE_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include "chip.h" /* For CHIP_MPCORE_VBASE */
+#include "chip.h"    /* For CHIP_MPCORE_VBASE */
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -44,16 +44,24 @@
 
 /* Peripheral Base Offsets **************************************************/
 
+#ifndef MPCORE_SCU_OFFSET
 #define MPCORE_SCU_OFFSET  0x0000 /* 0x0000-0x00fc SCU registers */
-#ifndef MPCORE_ICC_OFFSET
-#define MPCORE_ICC_OFFSET  0x2000 /* 0x0000-0x00FC Interrupt controller interface */
 #endif
+#ifndef MPCORE_ICC_OFFSET
+#ifdef CONFIG_ARCH_CORTEXA7
+#define MPCORE_ICC_OFFSET  0x2000 /* 0x0000-0x00FC Interrupt controller interface */
+#else
+#define MPCORE_ICC_OFFSET  0x0100 /* 0x0000-0x00FC Interrupt controller interface */
+#endif
+#endif
+#ifndef MPCORE_GTM_OFFSET
 #define MPCORE_GTM_OFFSET  0x0200 /* 0x0200-0x02ff Global timer */
-
-/* 0x0300-0x05ff Reserved */
+#endif
+                                  /* 0x0300-0x05ff Reserved */
+#ifndef MPCORE_PTM_OFFSET
 #define MPCORE_PTM_OFFSET  0x0600 /* 0x0600-0x06ff Private timers and watchdogs */
-
-/* 0x0700-0x07ff Reserved */
+#endif
+                                  /* 0x0700-0x07ff Reserved */
 #ifndef MPCORE_ICD_OFFSET
 #define MPCORE_ICD_OFFSET  0x1000 /* 0x1000-0x1fff Interrupt Distributor */
 #endif
@@ -67,4 +75,4 @@
 #define MPCORE_ICD_VBASE   (CHIP_MPCORE_VBASE+MPCORE_ICD_OFFSET)
 #define MPCORE_V2M_VBASE   (CHIP_MPCORE_VBASE+MPCORE_V2M_OFFSET)
 
-#endif /* __ARCH_ARM_SRC_ARMV8_R_MPCORE_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_MPCORE_H */
