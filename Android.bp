@@ -24,6 +24,7 @@ cc_defaults {
         "-DCONFIG_STREAM_BASE64_BUFFER_SIZE=128",
         "-DCONFIG_STREAM_HEXDUMP_BUFFER_SIZE=128",
         "-DCONFIG_STREAM_OUT_BUFFER_SIZE=64",
+        "-DCONFIG_NFILE_DESCRIPTORS_PER_BLOCK=16",
         "-DDEBUGASSERT=assert",
         "-DFAR=",
         "-DOK=0",
@@ -39,17 +40,36 @@ genrule {
     srcs: [
         "include/debug.h",
         "include/netdb.h",
+        "include/nuttx/atomic.h",
         "include/nuttx/compiler.h",
         "include/nuttx/crc32.h",
+        "include/nuttx/fs/fs.h",
+        "include/nuttx/fs/ioctl.h",
+        "include/nuttx/fs/uio.h",
         "include/nuttx/kmalloc.h",
         "include/nuttx/lib/lib.h",
+        "include/nuttx/mm/gran.h",
+        "include/nuttx/mm/map.h",
+        "include/nuttx/mutex_type.h",
         "include/nuttx/net/dns.h",
         "include/nuttx/net/ethernet.h",
         "include/nuttx/net/netconfig.h",
+        "include/nuttx/note/note_driver.h",
+        "include/nuttx/percpu.h",
+        "include/nuttx/queue.h",
+        "include/nuttx/sched_note.h",
+        "include/nuttx/semaphore_type.h",
+        "include/nuttx/spawn.h",
+        "include/nuttx/spinlock_type.h",
         "include/nuttx/streams.h",
-     ],
-    cmd: "mkdir -p $(genDir)/nuttx/lib; " +
+        "include/sys/queue.h",
+    ],
+    cmd: "mkdir -p $(genDir)/nuttx/fs; " +
+         "mkdir -p $(genDir)/nuttx/lib; " +
+         "mkdir -p $(genDir)/nuttx/mm; " +
          "mkdir -p $(genDir)/nuttx/net; " +
+         "mkdir -p $(genDir)/nuttx/note; " +
+         "mkdir -p $(genDir)/sys; " +
          "touch $(out); " +
          "for f in $(in); do " +
          "cp $$f $(genDir)/$${f#*include/};" +
@@ -57,15 +77,30 @@ genrule {
     out: [
         "debug.h",
         "netdb.h",
+        "nuttx/atomic.h",
         "nuttx/compiler.h",
         "nuttx/config.h",
         "nuttx/crc32.h",
+        "nuttx/fs/fs.h",
+        "nuttx/fs/ioctl.h",
+        "nuttx/fs/uio.h",
         "nuttx/kmalloc.h",
         "nuttx/lib/lib.h",
+        "nuttx/mm/gran.h",
+        "nuttx/mm/map.h",
+        "nuttx/mutex_type.h",
         "nuttx/net/dns.h",
         "nuttx/net/ethernet.h",
         "nuttx/net/netconfig.h",
+        "nuttx/note/note_driver.h",
+        "nuttx/percpu.h",
+        "nuttx/queue.h",
+        "nuttx/sched_note.h",
+        "nuttx/semaphore_type.h",
+        "nuttx/spawn.h",
+        "nuttx/spinlock_type.h",
         "nuttx/streams.h",
+        "sys/queue.h",
     ],
 }
 
@@ -89,6 +124,7 @@ cc_library_static {
         "libs/libc/stream/lib_ultoa_invert.c",
         "libs/libc/stream/lib_libnoflush.c",
         "libs/libc/stream/lib_meminstream.c",
+        "libs/libc/stream/lib_memoutstream.c",
         "libs/libc/stream/lib_stdoutstream.c",
     ],
     cflags: [
