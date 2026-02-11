@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/arm/arm_vectortab.S
+ * arch/arm/src/arm_a_r/arm_vectortab.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -34,11 +34,15 @@
  * Public Symbols
  ****************************************************************************/
 
+#ifdef CONFIG_ARM_TOOLCHAIN_ARMCLANG
+	.eabi_attribute Tag_ABI_align_preserved, 1
+#endif
+
 	.syntax	unified
 	.arm
 
-	.globl	_vector_start
-	.globl	_vector_end
+	.globl		_vector_start
+	.globl		_vector_end
 
 /****************************************************************************
  * Assembly Macros
@@ -51,19 +55,20 @@
  *   Vector initialization block
  ****************************************************************************/
 
-	.globl	_vector_start
+	.section	.vectors, "ax"
+	.globl		_vector_start
 
 /* These will be relocated to VECTOR_BASE. */
 
 _vector_start:
-	ldr	pc, .Lresethandler		/* 0x00: Reset */
-	ldr	pc, .Lundefinedhandler		/* 0x04: Undefined instruction */
-	ldr	pc, .Lsvchandler		/* 0x08: Software interrupt */
-	ldr	pc, .Lprefetchaborthandler	/* 0x0c: Prefetch abort */
-	ldr	pc, .Ldataaborthandler		/* 0x10: Data abort */
-	ldr	pc, .Laddrexcptnhandler		/* 0x14: Address exception (reserved) */
-	ldr	pc, .Lirqhandler		/* 0x18: IRQ */
-	ldr	pc, .Lfiqhandler		/* 0x1c: FIQ */
+	ldr		pc, .Lresethandler		/* 0x00: Reset */
+	ldr		pc, .Lundefinedhandler		/* 0x04: Undefined instruction */
+	ldr		pc, .Lsvchandler		/* 0x08: Software interrupt */
+	ldr		pc, .Lprefetchaborthandler	/* 0x0c: Prefetch abort */
+	ldr		pc, .Ldataaborthandler		/* 0x10: Data abort */
+	ldr		pc, .Laddrexcptnhandler		/* 0x14: Address exception (reserved) */
+	ldr		pc, .Lirqhandler		/* 0x18: IRQ */
+	ldr		pc, .Lfiqhandler		/* 0x1c: FIQ */
 
 	.globl	__start
 	.globl	arm_vectorundefinsn
@@ -94,4 +99,32 @@ _vector_start:
 	.globl	_vector_end
 _vector_end:
 	.size	_vector_start, . - _vector_start
+
+/****************************************************************************
+ * Name: _hyp_vector_start
+ *
+ * Description:
+ *   Vector initialization block
+ ****************************************************************************/
+
+	.section	.hyp_vectors, "ax"
+	.globl		_hyp_vector_start
+
+_hyp_vector_start:
+	ldr		pc, .Lhypresethandler	/* 0x00: Reset */
+	b		$+0x0					/* 0x04: Undefined instruction */
+	b		$+0x0					/* 0x08: Software interrupt */
+	b		$+0x0					/* 0x0c: Prefetch abort */
+	b		$+0x0					/* 0x10: Data abort */
+	b		$+0x0					/* 0x14: Address exception (reserved) */
+	b		$+0x0					/* 0x18: IRQ */
+	b		$+0x0					/* 0x1c: FIQ */
+
+	.globl	__start
+
+.Lhypresethandler:
+	.long	__start
+
+_hyp_vector_end:
+	.size	_hyp_vector_start, . - _hyp_vector_start
 	.end

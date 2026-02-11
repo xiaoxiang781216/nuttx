@@ -18,11 +18,6 @@
 #
 # ##############################################################################
 
-# The vector table is the "head" object, i.e., the one that must forced into the
-# link in order to draw in all of the other components
-
-target_sources(nuttx PRIVATE arm_vectortab.S)
-
 # Common assembly language files
 
 list(APPEND SRCS arm_cpuhead.S)

@@ -95,7 +95,7 @@
 	.global	_ebss				/* End+1 of .bss in RAM */
 
 	.global _hyp_vector_start
-	.global _sys_vector_start
+	.global _vector_start
 #ifdef CONFIG_BOOT_RUNFROMFLASH
 	.global	_eronly				/* Where .data defaults are stored in FLASH */
 	.global	_sdata				/* Where .data needs to reside in SDRAM */
@@ -576,7 +576,7 @@ sctlr_initialize:
 .Lhypvectorstart:
 	.long	_hyp_vector_start
 .Lsysvectorstart:
-	.long	_sys_vector_start
+	.long	_vector_start
 
 #ifdef CONFIG_BOOT_RUNFROMFLASH
 	.type	.Ldatainit, %object

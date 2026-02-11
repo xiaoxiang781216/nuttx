@@ -18,10 +18,6 @@
 #
 # ##############################################################################
 
-# The vector table
-
-target_sources(nuttx PRIVATE arm_vectortab.S)
-
 # Common assembly language files
 
 list(APPEND SRCS arm_head.S)

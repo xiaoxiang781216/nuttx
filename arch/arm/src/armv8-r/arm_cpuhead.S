@@ -700,7 +700,7 @@ __cpu7_boot:
 .Lhypvectorstart:
   .long _hyp_vector_start
 .Lsysvectorstart:
-  .long _sys_vector_start
+  .long _vector_start
 
 /***************************************************************************
  * .noinit section data

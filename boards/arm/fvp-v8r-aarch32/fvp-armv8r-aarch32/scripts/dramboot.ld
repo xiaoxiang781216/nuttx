@@ -37,7 +37,7 @@ SECTIONS
         _stext = ABSOLUTE(.);
         KEEP(*(.hyp_vectors))
         . = ALIGN(32);
-        KEEP(*(.sys_vectors))
+        KEEP(*(.vectors))
         *(.text .text.*)
         *(.fixup)
         *(.gnu.warning)

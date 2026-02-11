@@ -66,7 +66,7 @@ SECTIONS
       __text_start = .;
       KEEP(*(.hyp_vectors))
       . = ALIGN(32);
-      KEEP(*(.sys_vectors))
+      KEEP(*(.vectors))
       *(.vectors)
       *(.text*)
       *(.fixup)

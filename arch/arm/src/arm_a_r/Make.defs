@@ -18,6 +18,11 @@
 #
 ############################################################################
 
+# The vector table is the "head" object, i.e., the one that must forced into
+# the link in order to draw in all of the other components
+
+HEAD_ASRC += arm_vectortab.S
+
 # Common ARM_A_R files
 
 CMN_ASRCS += arm_vectors.S arm_saveusercontext.S
