@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/cp15_cacheops.h
+ * arch/arm/src/arm_a_r/cp15_cacheops.h
  *
  *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
