@@ -83,6 +83,7 @@ struct ramlog_header_s
 {
   atomic_t          rl_magic;    /* The rl_magic number for ramlog buffer init */
   volatile uint32_t rl_head;     /* The head index (where data is added,natural growth) */
+  volatile uint32_t rl_tail;     /* The tail index (oldest valid data) */
   spinlock_t        rl_lock;     /* The lock for ramlog */
   char              rl_buffer[]; /* Circular RAM buffer */
 };
@@ -90,7 +91,7 @@ struct ramlog_header_s
 struct ramlog_user_s
 {
   dq_entry_t        rl_entry;      /* The dq entry of reader */
-  volatile uint32_t rl_tail;       /* The tail index (where data is removed) */
+  volatile uint32_t rl_read;       /* The read index (per-reader position) */
   uint32_t          rl_threashold; /* The threashold of the reader to read log */
 #ifndef CONFIG_RAMLOG_NONBLOCKING
   sem_t             rl_waitsem;    /* Used to wait for data */
@@ -238,8 +239,13 @@ static void ramlog_dump(void)
   up_puts("\r\n========== RAMLOG DUMP BEGIN ==========\r\n");
 
   head = header->rl_head;
-  used = ramlog_bufferused(&g_sysdev);
-  tail = head - used;
+  tail = header->rl_tail;
+  used = head - tail;
+  if (used > bufsize)
+    {
+      tail = head - bufsize;
+      used = bufsize;
+    }
 
   /* Apply length limit */
 
@@ -330,8 +336,11 @@ void ramlog_timeout_reset(FAR struct ramlog_dev_s * dev)
 static void ramlog_timeout_handler(wdparm_t arg)
 {
   FAR struct ramlog_dev_s *dev = (FAR struct ramlog_dev_s *)arg;
+  irqstate_t flags;
 
+  flags = spin_lock_irqsave_nopreempt(&dev->rl_header->rl_lock);
   ramlog_pollnotify(dev);
+  spin_unlock_irqrestore_nopreempt(&dev->rl_header->rl_lock, flags);
   ramlog_timeout_reset(dev);
 }
 #else
@@ -366,6 +375,7 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
                                     RAMLOG_MAGIC_INIT))
         {
           dev->rl_header->rl_head = 0;
+          dev->rl_header->rl_tail = 0;
           spin_lock_init(&dev->rl_header->rl_lock);
           atomic_set_release(&dev->rl_header->rl_magic, RAMLOG_MAGIC_READY);
 #ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
@@ -437,14 +447,20 @@ static bool ramlog_ratelimit(FAR struct ramlog_dev_s *dev)
 }
 
 /****************************************************************************
- * Name: ramlog_bufferused
+ * Name: ramlog_unread
  ****************************************************************************/
 
-static uint32_t ramlog_bufferused(FAR struct ramlog_dev_s *priv,
-                                  FAR struct ramlog_user_s *upriv)
+static uint32_t ramlog_unread(FAR struct ramlog_dev_s *priv,
+                              FAR struct ramlog_user_s *upriv)
 {
-  uint32_t used = priv->rl_header->rl_head - upriv->rl_tail;
-  return used > priv->rl_bufsize ? priv->rl_bufsize : used;
+  uint32_t read = upriv->rl_read;
+
+  if (read < priv->rl_header->rl_tail)
+    {
+      read = priv->rl_header->rl_tail;
+    }
+
+  return priv->rl_header->rl_head - read;
 }
 
 /****************************************************************************
@@ -462,7 +478,6 @@ static void ramlog_readnotify(FAR struct ramlog_dev_s *priv)
     {
       FAR struct ramlog_user_s *upriv =
         container_of(entry, struct ramlog_user_s, rl_entry);
-      upriv->rl_tail = 0;
 
       for (; ; )
         {
@@ -494,7 +509,7 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv)
     {
       FAR struct ramlog_user_s *upriv =
         container_of(entry, struct ramlog_user_s, rl_entry);
-      if (ramlog_bufferused(priv, upriv) >= upriv->rl_threashold)
+      if (ramlog_unread(priv, upriv) >= upriv->rl_threashold)
         {
           /* Notify all poll/select waiters that they can read from
            * the FIFO
@@ -514,12 +529,13 @@ static void ramlog_bufferflush(FAR struct ramlog_dev_s *priv)
   FAR dq_entry_t *entry;
 
   priv->rl_header->rl_head = 0;
+  priv->rl_header->rl_tail = 0;
 
   dq_for_every(&priv->rl_queue, entry)
     {
       FAR struct ramlog_user_s *upriv =
         container_of(entry, struct ramlog_user_s, rl_entry);
-      upriv->rl_tail = 0;
+      upriv->rl_read = 0;
     }
 }
 
@@ -554,6 +570,13 @@ static void ramlog_copybuf(FAR struct ramlog_dev_s *priv,
     }
 
   header->rl_head += len;
+
+  /* Advance tail if buffer is full */
+
+  if (header->rl_head - header->rl_tail > priv->rl_bufsize)
+    {
+      header->rl_tail = header->rl_head - priv->rl_bufsize;
+    }
 }
 
 /****************************************************************************
@@ -635,8 +658,6 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
   uint32_t tail;
   uint32_t pos;
 
-  /* Get exclusive access to the rl_tail index */
-
   flags = spin_lock_irqsave(&header->rl_lock);
 
   /* Loop until something is read */
@@ -645,7 +666,7 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
     {
       /* Get the next byte from the buffer */
 
-      if (header->rl_head == upriv->rl_tail)
+      if (header->rl_head == upriv->rl_read)
         {
           /* The circular buffer is empty. */
 
@@ -712,19 +733,19 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
         }
       else
         {
-          /* Determine whether the read pointer is overwritten */
+          /* Clamp read pointer to valid data range [tail, head) */
 
-          if (header->rl_head - upriv->rl_tail > priv->rl_bufsize)
+          if (upriv->rl_read < header->rl_tail)
             {
-              upriv->rl_tail = header->rl_head - priv->rl_bufsize;
+              upriv->rl_read = header->rl_tail;
             }
 
           /* The circular buffer is not empty, get the next byte from the
            * tail index.
            */
 
-          pos = upriv->rl_tail % priv->rl_bufsize;
-          ncopy = header->rl_head - upriv->rl_tail;
+          pos = upriv->rl_read % priv->rl_bufsize;
+          ncopy = header->rl_head - upriv->rl_read;
           tail = priv->rl_bufsize - pos;
 
           if (ncopy > len - nread)
@@ -742,7 +763,7 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
               memcpy(&buffer[nread], &header->rl_buffer[pos], ncopy);
             }
 
-          upriv->rl_tail += ncopy;
+          upriv->rl_read += ncopy;
           nread += ncopy;
         }
     }
@@ -786,7 +807,7 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
   switch (cmd)
     {
       case FIONREAD:
-        *(FAR int *)((uintptr_t)arg) = ramlog_bufferused(priv, upriv);
+        *(FAR int *)((uintptr_t)arg) = ramlog_unread(priv, upriv);
         break;
       case PIPEIOC_POLLINTHRD:
         upriv->rl_threashold = (uint32_t)arg;
@@ -872,7 +893,7 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       /* Check if the receive buffer is not empty. */
 
-      if (ramlog_bufferused(priv, upriv) >= upriv->rl_threashold)
+      if (ramlog_unread(priv, upriv) >= upriv->rl_threashold)
         {
           eventset |= POLLIN;
         }
@@ -913,8 +934,6 @@ static int ramlog_file_open(FAR struct file *filep)
   FAR struct ramlog_user_s *upriv;
   irqstate_t flags;
 
-  /* Get exclusive access to the rl_tail index */
-
   upriv = kmm_zalloc(sizeof(FAR struct ramlog_user_s));
   if (upriv == NULL)
     {
@@ -928,8 +947,7 @@ static int ramlog_file_open(FAR struct file *filep)
 
   flags = spin_lock_irqsave(&header->rl_lock);
   dq_addlast(&upriv->rl_entry, &priv->rl_queue);
-  upriv->rl_tail = header->rl_head > priv->rl_bufsize ?
-                   header->rl_head - priv->rl_bufsize : 0;
+  upriv->rl_read = header->rl_tail;
   spin_unlock_irqrestore(&header->rl_lock, flags);
 
   filep->f_priv = upriv;
@@ -947,8 +965,6 @@ static int ramlog_file_close(FAR struct file *filep)
   FAR struct ramlog_user_s *upriv = filep->f_priv;
   FAR struct ramlog_header_s *header = priv->rl_header;
   irqstate_t flags;
-
-  /* Get exclusive access to the rl_tail index */
 
   flags = spin_lock_irqsave(&header->rl_lock);
   dq_rem(&upriv->rl_entry, &priv->rl_queue);
