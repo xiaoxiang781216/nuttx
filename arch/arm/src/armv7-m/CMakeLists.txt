@@ -20,14 +20,10 @@
 
 # TODO: do not use config to detect this
 
-set(SRCS arm_dbgmonitor.c arm_cache.c arm_itm.c arm_perf.c arm_dbgmonitor.c)
+set(SRCS arm_dbgmonitor.c arm_cache.c arm_itm.c arm_dbgmonitor.c)
 
 if(CONFIG_ARMV7M_ITMSYSLOG)
   list(APPEND SRCS arm_itm_syslog.c)
-endif()
-
-if(CONFIG_ARCH_FPU)
-  list(APPEND SRCS arm_fpuconfig.c arm_fpucmp.c)
 endif()
 
 if(CONFIG_ARM_MPU OR CONFIG_ARM_MPU_EARLY_RESET)

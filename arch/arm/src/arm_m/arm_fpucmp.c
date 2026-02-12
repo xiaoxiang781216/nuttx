@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/arm_perf.c
+ * arch/arm/src/arm_m/arm_fpucmp.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,58 +22,50 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/arch.h>
-#include <nuttx/clock.h>
+#include <nuttx/config.h>
+
+#include <stdint.h>
+#include <string.h>
+#include <nuttx/irq.h>
 
 #include "arm_internal.h"
-#include "dwt.h"
-#include "itm.h"
-#include "nvic.h"
-
-#ifdef CONFIG_ARCH_PERF_EVENTS
 
 /****************************************************************************
- * Private Data
+ * Pre-processor Definitions
  ****************************************************************************/
 
-static unsigned long g_cpu_freq = ULONG_MAX;
+#ifdef CONFIG_ARCH_FPU
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-void up_perf_init(void *arg)
+/****************************************************************************
+ * Name: up_fpucmp
+ *
+ * Description:
+ *   Compare FPU areas from thread context.
+ *
+ * Input Parameters:
+ *   saveregs1 - Pointer to the saved FPU registers.
+ *   saveregs2 - Pointer to the saved FPU registers.
+ *
+ * Returned Value:
+ *   True if FPU areas compare equal, False otherwise.
+ *
+ ****************************************************************************/
+
+bool up_fpucmp(const void *saveregs1, const void *saveregs2)
 {
-  g_cpu_freq = (unsigned long)(uintptr_t)arg;
+  const uint32_t *regs1 = saveregs1;
+  const uint32_t *regs2 = saveregs2;
 
-  /* Enable ITM and DWT resources, if not left enabled by debugger. */
-
-  modifyreg32(NVIC_DEMCR, 0, NVIC_DEMCR_TRCENA);
-
-  /* Make sure the high speed cycle counter is running.  It will be started
-   * automatically only if a debugger is connected.
+  /* Only compare callee-saved registers, caller-saved registers do not
+   * need to be preserved.
    */
 
-  putreg32(0xc5acce55, ITM_LAR);
-  modifyreg32(DWT_CTRL, 0, DWT_CTRL_CYCCNTENA_MASK);
-}
+  /* compare of hardware fp registers should skip REG_FP_RESERVED */
 
-unsigned long up_perf_getfreq(void)
-{
-  return g_cpu_freq;
+  return memcmp(&regs1[REG_S16], &regs2[REG_S16], 4 * SW_FPU_REGS) == 0;
 }
-
-clock_t noinstrument_function up_perf_gettime(void)
-{
-  return getreg32(DWT_CYCCNT);
-}
-
-void up_perf_convert(clock_t elapsed, struct timespec *ts)
-{
-  clock_t left;
-
-  ts->tv_sec  = elapsed / g_cpu_freq;
-  left        = elapsed - ts->tv_sec * g_cpu_freq;
-  ts->tv_nsec = NSEC_PER_SEC * (uint64_t)left / g_cpu_freq;
-}
-#endif
+#endif /* CONFIG_ARCH_FPU */

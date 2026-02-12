@@ -34,11 +34,15 @@ list(
   arm_trigger_irq.c)
 
 if(NOT CONFIG_ARCH_ARMV6M)
-  list(APPEND SRCS arm_usagefault.c arm_memfault.c)
+  list(APPEND SRCS arm_usagefault.c arm_memfault.c arm_perf.c)
 endif()
 
 if(CONFIG_ARCH_ARMV8M)
   list(APPEND SRCS arm_securefault.c arm_sau.c arm_secure_irq.c)
+endif()
+
+if(CONFIG_ARCH_FPU)
+  list(APPEND SRCS arm_fpuconfig.c arm_fpucmp.c)
 endif()
 
 if(CONFIG_ARM_STACKCHECK)

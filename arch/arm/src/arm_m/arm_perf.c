@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/arm_fpucmp.c
+ * arch/arm/src/arm_m/arm_perf.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,50 +22,58 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#include <stdint.h>
-#include <string.h>
-#include <nuttx/irq.h>
+#include <nuttx/arch.h>
+#include <nuttx/clock.h>
 
 #include "arm_internal.h"
+#include "dwt.h"
+#include "itm.h"
+#include "nvic.h"
+
+#ifdef CONFIG_ARCH_PERF_EVENTS
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Private Data
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_FPU
+static unsigned long g_cpu_freq = ULONG_MAX;
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: up_fpucmp
- *
- * Description:
- *   Compare FPU areas from thread context.
- *
- * Input Parameters:
- *   saveregs1 - Pointer to the saved FPU registers.
- *   saveregs2 - Pointer to the saved FPU registers.
- *
- * Returned Value:
- *   True if FPU areas compare equal, False otherwise.
- *
- ****************************************************************************/
-
-bool up_fpucmp(const void *saveregs1, const void *saveregs2)
+void up_perf_init(void *arg)
 {
-  const uint32_t *regs1 = saveregs1;
-  const uint32_t *regs2 = saveregs2;
+  g_cpu_freq = (unsigned long)(uintptr_t)arg;
 
-  /* Only compare callee-saved registers, caller-saved registers do not
-   * need to be preserved.
+  /* Enable ITM and DWT resources, if not left enabled by debugger. */
+
+  modifyreg32(NVIC_DEMCR, 0, NVIC_DEMCR_TRCENA);
+
+  /* Make sure the high speed cycle counter is running.  It will be started
+   * automatically only if a debugger is connected.
    */
 
-  /* compare of hardware fp registers should skip REG_FP_RESERVED */
-
-  return memcmp(&regs1[REG_S16], &regs2[REG_S16], 4 * SW_FPU_REGS) == 0;
+  putreg32(0xc5acce55, ITM_LAR);
+  modifyreg32(DWT_CTRL, 0, DWT_CTRL_CYCCNTENA_MASK);
 }
-#endif /* CONFIG_ARCH_FPU */
+
+unsigned long up_perf_getfreq(void)
+{
+  return g_cpu_freq;
+}
+
+clock_t noinstrument_function up_perf_gettime(void)
+{
+  return getreg32(DWT_CYCCNT);
+}
+
+void up_perf_convert(clock_t elapsed, struct timespec *ts)
+{
+  clock_t left;
+
+  ts->tv_sec  = elapsed / g_cpu_freq;
+  left        = elapsed - ts->tv_sec * g_cpu_freq;
+  ts->tv_nsec = NSEC_PER_SEC * (uint64_t)left / g_cpu_freq;
+}
+#endif

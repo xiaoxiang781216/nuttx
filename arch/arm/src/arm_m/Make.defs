@@ -35,11 +35,15 @@ CMN_CSRCS += arm_tcbinfo.c arm_busfault.c arm_hardfault.c arm_initialstate.c
 CMN_CSRCS += arm_systemreset.c arm_trigger_irq.c arm_svcall.c arm_doirq.c
 
 ifneq ($(CONFIG_ARCH_ARMV6M),y)
-  CMN_CSRCS += arm_usagefault.c arm_memfault.c
+  CMN_CSRCS += arm_usagefault.c arm_memfault.c arm_perf.c
 endif
 
 ifeq ($(CONFIG_ARCH_ARMV8M),y)
   CMN_CSRCS += arm_securefault.c arm_sau.c arm_secure_irq.c
+endif
+
+ifeq ($(CONFIG_ARCH_FPU),y)
+  CMN_CSRCS += arm_fpucmp.c arm_fpuconfig.c
 endif
 
 ifeq ($(CONFIG_ARM_STACKCHECK),y)
