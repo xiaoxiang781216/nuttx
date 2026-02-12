@@ -126,7 +126,7 @@ void up_irqinitialize(void)
   putreg32(0xffffffff, TMS570_VIM_REQENACLR3);
 #endif
 
-#ifdef CONFIG_ARMV7R_HAVE_DECODEFIQ
+#ifdef CONFIG_ARCH_HAVE_HIPRI_INTERRUPT
   /* By default, interrupt CHAN0 is mapped to ESM (Error Signal Module)
    * high level interrupt and CHAN1 is reserved for other NMI. For safety
    * reasons, these two channels are mapped to FIQ only and can NOT be
@@ -217,7 +217,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7R_HAVE_DECODEFIQ
+#ifdef CONFIG_ARCH_HAVE_HIPRI_INTERRUPT
 uint32_t *arm_decodefiq(uint32_t *regs)
 {
   int vector;
@@ -300,7 +300,7 @@ void up_enable_irq(int channel)
   channel = VIM_REGBIT(channel);
   bitmask = (1 << channel);
 
-#ifdef CONFIG_ARMV7R_HAVE_DECODEFIQ
+#ifdef CONFIG_ARCH_HAVE_HIPRI_INTERRUPT
   /* Select IRQ (vs FIQ) by clearing the corresponding FIRQPR bit */
 
   regaddr  = TMS570_VIM_FIRQPR(regndx);
@@ -325,7 +325,7 @@ void up_enable_irq(int channel)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7R_HAVE_DECODEFIQ
+#ifdef CONFIG_ARCH_HAVE_HIPRI_INTERRUPT
 void up_enable_fiq(int channel)
 {
   uintptr_t regaddr;

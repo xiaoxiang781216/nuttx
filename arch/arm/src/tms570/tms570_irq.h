@@ -54,7 +54,7 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7R_HAVE_DECODEFIQ
+#ifdef CONFIG_ARCH_HAVE_HIPRI_INTERRUPT
 void up_enable_fiq(int channel);
 #endif
 
