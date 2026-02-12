@@ -89,14 +89,6 @@ struct rpmsg_ioctl_s
   unsigned long   arg;
 };
 
-struct rpmsg_work_s
-{
-  struct work_s       work;
-  rpmsg_worker_t      worker;
-  FAR struct rpmsg_s *rpmsg;
-  FAR void           *arg;
-};
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -313,7 +305,7 @@ rpmsg_get_current_wqueue(FAR struct rpmsg_s *rpmsg)
   return wqueue;
 }
 
-static void rpmsg_rx_worker(FAR void *arg)
+void rpmsg_rx_worker(FAR void *arg)
 {
   FAR struct rpmsg_work_s *work = arg;
   FAR struct rpmsg_s *rpmsg = work->rpmsg;
@@ -1073,19 +1065,4 @@ int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
 #endif
 
   return work_queue_wq(wqueues[idx].kwqueue, work, worker, arg, 0);
-}
-
-void rpmsg_queue_rx_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
-                         rpmsg_worker_t worker, FAR void *arg)
-{
-  FAR struct rpmsg_work_s *work;
-
-  work = list_remove_head_type(&rpmsg->freerx, struct rpmsg_work_s,
-                               work.node);
-  DEBUGASSERT(work != NULL);
-  work->arg = arg;
-  work->rpmsg = rpmsg;
-  work->worker = worker;
-
-  rpmsg_queue_work(rpmsg, priority, &work->work, rpmsg_rx_worker, work);
 }
