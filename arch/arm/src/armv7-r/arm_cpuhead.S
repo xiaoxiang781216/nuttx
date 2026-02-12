@@ -299,7 +299,7 @@ __cpu3_start:
 	orr		r0, r0, #(SCTLR_A)
 #endif
 
-#ifdef CONFIG_ARMV7R_SCTLR_CCP15BEN
+#ifdef CONFIG_ARM_SCTLR_CCP15BEN
 	/* Enable memory barriers
 	 *
 	 *  SCTLR_CCP15BEN Bit 5: CP15 barrier enable
@@ -326,7 +326,7 @@ __cpu3_start:
 	orr		r0, r0, #(SCTLR_RR)
 #endif
 
-#ifdef CONFIG_ARMV7R_BACKGROUND_REGION
+#ifdef CONFIG_ARM_BACKGROUND_REGION
 	/* Allow PL1 access to back region when MPU is enabled
 	 *
 	 *  SCTLR_BR Bit 17: Background Region bit
@@ -335,7 +335,7 @@ __cpu3_start:
 	orr		r0, r0, #(SCTLR_BR)
 #endif
 
-#ifdef CONFIG_ARMV7R_DIV0_FAULT
+#ifdef CONFIG_ARM_DIV0_FAULT
 	/* Enable divide by zero faults
 	 *
 	 *   SCTLR_DZ Bit 19: Divide by Zero fault enable bit
@@ -344,7 +344,7 @@ __cpu3_start:
 	orr		r0, r0, #(SCTLR_DZ)
 #endif
 
-#ifdef CONFIG_ARMV7R_FAST_INTERRUPT
+#ifdef CONFIG_ARM_FAST_INTERRUPT
 	/* Fast interrupts configuration enable bit
 	 *
 	 *   SCTLR_FI Bit 21: Fast interrupts configuration enable bit
@@ -353,7 +353,7 @@ __cpu3_start:
 	orr		r0, r0, #(SCTLR_FI)
 #endif
 
-#ifdef CONFIG_ARMV7R_IMPL_VECTORS
+#ifdef CONFIG_ARM_IMPL_VECTORS
 	/* Implementation defined interrupt vectors
 	 *
 	 *   SCTLR_VE Bit 24: Interrupt Vectors Enable bit
@@ -371,7 +371,7 @@ __cpu3_start:
 	orr		r0, r0, #(SCTLR_EE)
 #endif
 
-#ifdef CONFIG_ARMV7R_NONMASKABLE_FIQ
+#ifdef CONFIG_ARM_NONMASKABLE_FIQ
 	/* Non-maskable FIQ support
 	 *
 	 *   SCTLR_NMFI Bit 27: Non-maskable FIQ (NMFI) support

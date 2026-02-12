@@ -4,24 +4,3 @@
 #
 
 comment "ARMv8-R Configuration Options"
-
-config ARMV8R_SCTLR_CCP15BEN
-	bool "Enable CP15 Barrier at __start"
-	default y
-
-config ARMV8R_BACKGROUND_REGION
-	bool "Enable MPU Background region at __start"
-	default y
-
-config ARMV8R_DIV0_FAULT
-	bool "Enable DIV0 Fault at __start"
-	default n
-
-config ARMV8R_FAST_INTERRUPT
-	bool "Enable Fast Interrupts at __start"
-	default n
-
-config ARMV8R_NONMASKABLE_FIQ
-	bool "Enable Non-maskable FIQ Support at __start"
-	default n
-

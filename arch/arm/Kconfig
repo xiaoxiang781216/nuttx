@@ -1746,6 +1746,30 @@ config ARM_ICACHE_DISABLE
 	bool "Disable ICACHE at __start"
 	default n
 
+config ARM_SCTLR_CCP15BEN
+	bool "Enable CP15 Barrier at __start"
+	default y
+
+config ARM_BACKGROUND_REGION
+	bool "Enable MPU Background region at __start"
+	default y
+
+config ARM_DIV0_FAULT
+	bool "Enable DIV0 Fault at __start"
+	default n
+
+config ARM_FAST_INTERRUPT
+	bool "Enable Fast Interrupts at __start"
+	default n
+
+config ARM_IMPL_VECTORS
+	bool "Enable Interrupt Vector at __start"
+	default n
+
+config ARM_NONMASKABLE_FIQ
+	bool "Enable Non-maskable FIQ Support at __start"
+	default n
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif

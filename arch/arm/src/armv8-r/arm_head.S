@@ -470,7 +470,7 @@ sctlr_initialize:
 	orr		r0, r0, #(SCTLR_C)
 #endif
 
-#ifdef CONFIG_ARMV8R_SCTLR_CCP15BEN
+#ifdef CONFIG_ARM_SCTLR_CCP15BEN
 	/* Enable memory barriers
 	 *
 	 *  SCTLR_CCP15BEN Bit 5: CP15 barrier enable
@@ -497,7 +497,7 @@ sctlr_initialize:
 	orr		r0, r0, #(SCTLR_RR)
 #endif
 
-#ifdef CONFIG_ARMV8R_BACKGROUND_REGION
+#ifdef CONFIG_ARM_BACKGROUND_REGION
 	/* Allow PL1 access to back region when MPU is enabled
 	 *
 	 *  SCTLR_BR Bit 17: Background Region bit
@@ -506,7 +506,7 @@ sctlr_initialize:
 	orr		r0, r0, #(SCTLR_BR)
 #endif
 
-#ifdef CONFIG_ARMV8R_DIV0_FAULT
+#ifdef CONFIG_ARM_DIV0_FAULT
 	/* Enable divide by zero faults
 	 *
 	 *   SCTLR_DZ Bit 19: Divide by Zero fault enable bit
@@ -515,7 +515,7 @@ sctlr_initialize:
 	orr		r0, r0, #(SCTLR_DZ)
 #endif
 
-#ifdef CONFIG_ARMV8R_FAST_INTERRUPT
+#ifdef CONFIG_ARM_FAST_INTERRUPT
 	/* Fast interrupts configuration enable bit
 	 *
 	 *   SCTLR_FI Bit 21: Fast interrupts configuration enable bit
@@ -533,7 +533,7 @@ sctlr_initialize:
 	orr		r0, r0, #(SCTLR_EE)
 #endif
 
-#ifdef CONFIG_ARMV8R_NONMASKABLE_FIQ
+#ifdef CONFIG_ARM_NONMASKABLE_FIQ
 	/* Non-maskable FIQ support
 	 *
 	 *   SCTLR_NMFI Bit 27: Non-maskable FIQ (NMFI) support
