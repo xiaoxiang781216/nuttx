@@ -18,11 +18,7 @@
 #
 # ##############################################################################
 
-set(SRCS arm_itm.c)
-
-if(CONFIG_ARMV8M_ITMSYSLOG)
-  list(APPEND SRCS arm_itm_syslog.c)
-endif()
+set(SRCS)
 
 if(CONFIG_ARM_MPU OR CONFIG_ARM_MPU_EARLY_RESET)
   list(APPEND SRCS arm_mpu.c)

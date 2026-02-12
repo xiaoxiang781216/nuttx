@@ -40,7 +40,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV8M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
 void itm_syslog_initialize(void);
 #else
 #  define itm_syslog_initialize()

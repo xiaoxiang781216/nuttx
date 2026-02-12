@@ -36,7 +36,11 @@ CMN_CSRCS += arm_systemreset.c arm_trigger_irq.c arm_svcall.c arm_doirq.c
 
 ifneq ($(CONFIG_ARCH_ARMV6M),y)
   CMN_CSRCS += arm_usagefault.c arm_memfault.c arm_perf.c arm_cache.c
-  CMN_CSRCS += arm_dbgmonitor.c
+  CMN_CSRCS += arm_dbgmonitor.c arm_itm.c
+endif
+
+ifeq ($(CONFIG_ARM_ITMSYSLOG),y)
+  CMN_CSRCS += arm_itm_syslog.c
 endif
 
 ifeq ($(CONFIG_ARCH_ARMV8M),y)

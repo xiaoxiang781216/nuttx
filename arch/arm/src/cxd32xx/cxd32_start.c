@@ -136,7 +136,7 @@ void __start(void)
 
   showprogress('D');
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
   /* Perform ARMv7-M ITM SYSLOG initialization */
 
   itm_syslog_initialize();

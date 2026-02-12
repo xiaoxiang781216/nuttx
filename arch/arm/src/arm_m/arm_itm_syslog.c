@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/arm_itm_syslog.c
+ * arch/arm/src/arm_m/arm_itm_syslog.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -36,24 +36,24 @@
 #include "arm_internal.h"
 #include "itm_syslog.h"
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifndef CONFIG_ARMV7M_ITMSYSLOG_SWODIV
-#  define CONFIG_ARMV7M_ITMSYSLOG_SWODIV 15
+#ifndef CONFIG_ITMSYSLOG_SWODIV
+#  define CONFIG_ITMSYSLOG_SWODIV 15
 #endif
 
-#if CONFIG_ARMV7M_ITMSYSLOG_SWODIV < 0
-#  error CONFIG_ARMV7M_ITMSYSLOG_SWODIV should be at least equal to 1
+#if CONFIG_ITMSYSLOG_SWODIV < 0
+#  error CONFIG_ITMSYSLOG_SWODIV should be at least equal to 1
 #endif
 
 /* Use Port #0 at default */
 
-#ifndef CONFIG_ARMV7M_ITMSYSLOG_PORT
-#  define CONFIG_ARMV7M_ITMSYSLOG_PORT 0
+#ifndef CONFIG_ITMSYSLOG_PORT
+#  define CONFIG_ITMSYSLOG_PORT 0
 #endif
 
 /****************************************************************************
@@ -108,12 +108,12 @@ static int itm_putc(syslog_channel_t *channel, int ch)
       return EOF;
     }
 
-  /* ITM Port "CONFIG_ARMV7M_ITMSYSLOG_PORT" enabled */
+  /* ITM Port "CONFIG_ITMSYSLOG_PORT" enabled */
 
-  if (getreg32(ITM_TER) & (1 << CONFIG_ARMV7M_ITMSYSLOG_PORT))
+  if (getreg32(ITM_TER) & (1 << CONFIG_ITMSYSLOG_PORT))
     {
-      while (getreg32(ITM_PORT(CONFIG_ARMV7M_ITMSYSLOG_PORT)) == 0);
-      putreg8((uint8_t)ch, ITM_PORT(CONFIG_ARMV7M_ITMSYSLOG_PORT));
+      while (getreg32(ITM_PORT(CONFIG_ITMSYSLOG_PORT)) == 0);
+      putreg8((uint8_t)ch, ITM_PORT(CONFIG_ITMSYSLOG_PORT));
     }
 
   return ch;
@@ -169,7 +169,7 @@ void itm_syslog_initialize(void)
 
   /* Default 880kbps */
 
-  regval = CONFIG_ARMV7M_ITMSYSLOG_SWODIV - 1;
+  regval = CONFIG_ITMSYSLOG_SWODIV - 1;
   putreg32(regval,     TPI_ACPR); /* TRACECLKIN/(ACPR+1) SWO speed */
 
   putreg32(0,          ITM_TPR);
@@ -183,4 +183,4 @@ void itm_syslog_initialize(void)
   syslog_channel_register(&g_itm_channel);
 }
 
-#endif /* CONFIG_ARMV7M_ITMSYSLOG */
+#endif /* CONFIG_ARM_ITMSYSLOG */

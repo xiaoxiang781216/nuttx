@@ -151,7 +151,7 @@ static void efm32_enable_hfxo(void)
   efm32_statuswait(CMU_STATUS_HFXORDY);
 }
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
 static inline void efm32_enable_auxhfrco(void)
 {
   /* Enable the HFXO */
@@ -843,7 +843,7 @@ static inline void efm32_gpioclock(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
 static inline void efm32_itm_syslog(void)
 {
   int regval;

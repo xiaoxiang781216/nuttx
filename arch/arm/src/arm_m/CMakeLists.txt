@@ -41,7 +41,12 @@ if(NOT CONFIG_ARCH_ARMV6M)
     arm_memfault.c
     arm_cache.c
     arm_dbgmonitor.c
+    arm_itm.c
     arm_perf.c)
+endif()
+
+if(CONFIG_ARM_ITMSYSLOG)
+  list(APPEND SRCS arm_itm_syslog.c)
 endif()
 
 if(CONFIG_ARCH_ARMV8M)

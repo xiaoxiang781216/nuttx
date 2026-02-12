@@ -723,7 +723,7 @@ static void at32_stdclockconfig(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
 static inline void rcc_itm_syslog(void)
 {
   uint32_t regval;

@@ -5,6 +5,24 @@
 
 comment "ARM_M Configuration Options"
 
+config ARM_ITMSYSLOG
+	bool "Use ITM for syslog output"
+	default n
+
+if ARM_ITMSYSLOG
+
+config ARM_ITMSYSLOG_PORT
+	int "ITM SYSLOG Port"
+	default 0
+	range 0 31
+
+config ARM_ITMSYSLOG_SWODIV
+	int "ITM SYSLOG SWO divider"
+	default 15
+	range 1 8192
+
+endif # ARM_ITMSYSLOG
+
 config ARM_SYSTICK
 	bool "SysTick timer driver"
 	depends on TIMER

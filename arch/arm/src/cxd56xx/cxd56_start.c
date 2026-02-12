@@ -180,7 +180,7 @@ void __start(void)
 
   arm_fpuconfig();
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
   /* Perform ARMv7-M ITM SYSLOG initialization */
 
   itm_syslog_initialize();

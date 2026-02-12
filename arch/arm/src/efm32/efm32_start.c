@@ -83,7 +83,7 @@ const uintptr_t g_idle_topstack = HEAP_BASE;
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_FEATURES
-#  if defined(CONFIG_ARMV7M_ITMSYSLOG)
+#  if defined(CONFIG_ARM_ITMSYSLOG)
 #    define showprogress(c) up_putc(c)
 #  elif defined(HAVE_UART_CONSOLE) || defined(HAVE_LEUART_CONSOLE)
 #    define showprogress(c) efm32_lowputc(c)
@@ -144,7 +144,7 @@ void __start(void)
 
   showprogress('C');
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
   /* Perform ARMv7-M ITM SYSLOG initialization */
 
   itm_syslog_initialize();

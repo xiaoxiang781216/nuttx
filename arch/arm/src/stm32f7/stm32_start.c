@@ -251,7 +251,7 @@ void __start(void)
   up_perf_init((void *)STM32_SYSCLK_FREQUENCY);
 #endif
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
   /* Perform ARMv7-M ITM SYSLOG initialization */
 
   itm_syslog_initialize();

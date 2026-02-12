@@ -156,7 +156,7 @@ void __start(void)
   arm_stack_check_init();
 #endif
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
   /* Perform ARMv7-M ITM SYSLOG initialization */
 
   itm_syslog_initialize();

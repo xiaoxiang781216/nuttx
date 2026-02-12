@@ -1002,7 +1002,7 @@ static void stm32_stdclockconfig(void)
 }
 #endif
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
+#ifdef CONFIG_ARM_ITMSYSLOG
 static inline void rcc_itm_syslog(void)
 {
   /* Enable SWO output */
