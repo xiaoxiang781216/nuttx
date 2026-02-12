@@ -757,10 +757,18 @@ int up_backtrace(struct tcb_s *tcb,
     {
       frame.fp = (unsigned long)__builtin_frame_address(0);
       frame.lr = (unsigned long)__builtin_return_address(0);
-      frame.pc = (unsigned long)&up_backtrace;
       frame.sp = frame.fp;
       frame.stack_base = (unsigned long)rtcb->stack_base_ptr;
       frame.stack_top = frame.stack_base + rtcb->adj_stack_size;
+
+      /* Use up_getpc() to obtain a PC inside the function body rather
+       * than the function entry address. Using &up_backtrace would
+       * match the function start, causing unwind_frame() to take the
+       * "first instruction" early-return path which skips the exidx
+       * unwind and leaves frame->sp stale.
+       */
+
+      frame.pc = up_getpc();
 
       if (up_interrupt_context())
         {
