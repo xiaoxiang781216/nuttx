@@ -1561,6 +1561,10 @@ config ARM_HAVE_PTM
 		Selected by the configuration tool if the architecture supports the
 		per-processor Private Timers (PTMs)
 
+config ARM_DCACHE_WRITETHROUGH
+	bool "Enable DCACHE Write-Through for __start or arm_m"
+	default n
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif

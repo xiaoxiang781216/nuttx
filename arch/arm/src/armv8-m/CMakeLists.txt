@@ -18,7 +18,7 @@
 #
 # ##############################################################################
 
-set(SRCS arm_dbgmonitor.c arm_cache.c arm_itm.c)
+set(SRCS arm_dbgmonitor.c arm_itm.c)
 
 if(CONFIG_ARMV8M_ITMSYSLOG)
   list(APPEND SRCS arm_itm_syslog.c)

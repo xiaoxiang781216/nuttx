@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/arm_cache.c
+ * arch/arm/src/arm_m/arm_cache.c
  *
  *   Copyright (C) 2015, 2018-2019 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -92,7 +92,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 static inline uint32_t arm_clz(unsigned int value)
 {
   uint32_t ret;
@@ -120,7 +120,7 @@ static inline uint32_t arm_clz(unsigned int value)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARMV7M_ICACHE) || defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_ICACHE) || defined(CONFIG_ARCH_DCACHE)
 static size_t up_get_cache_linesize(bool icache)
 {
   uint32_t ccsidr;
@@ -214,7 +214,7 @@ static size_t up_get_cache_size(bool icache)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_ICACHE
+#ifdef CONFIG_ARCH_ICACHE
 size_t up_get_icache_linesize(void)
 {
   static uint32_t clsize;
@@ -268,7 +268,7 @@ size_t up_get_icache_size(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_ICACHE
+#ifdef CONFIG_ARCH_ICACHE
 void up_enable_icache(void)
 {
   uint32_t regval;
@@ -303,7 +303,7 @@ void up_enable_icache(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_ICACHE
+#ifdef CONFIG_ARCH_ICACHE
 void up_disable_icache(void)
 {
   uint32_t regval;
@@ -339,7 +339,7 @@ void up_disable_icache(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_ICACHE
+#ifdef CONFIG_ARCH_ICACHE
 void up_invalidate_icache(uintptr_t start, uintptr_t end)
 {
   uint32_t ssize = up_get_icache_linesize();
@@ -383,7 +383,7 @@ void up_invalidate_icache(uintptr_t start, uintptr_t end)
 
   UP_MB();
 }
-#endif /* CONFIG_ARMV7M_ICACHE */
+#endif /* CONFIG_ARCH_ICACHE */
 
 /****************************************************************************
  * Name: up_invalidate_icache_all
@@ -399,7 +399,7 @@ void up_invalidate_icache(uintptr_t start, uintptr_t end)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_ICACHE
+#ifdef CONFIG_ARCH_ICACHE
 void up_invalidate_icache_all(void)
 {
   UP_MB();
@@ -426,7 +426,7 @@ void up_invalidate_icache_all(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 size_t up_get_dcache_linesize(void)
 {
   static uint32_t clsize;
@@ -480,7 +480,7 @@ size_t up_get_dcache_size(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 void up_enable_dcache(void)
 {
   uint32_t ccsidr;
@@ -537,7 +537,7 @@ void up_enable_dcache(void)
 
   UP_DSB();
 
-#ifdef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifdef CONFIG_ARM_DCACHE_WRITETHROUGH
   ccr = getreg32(NVIC_CACR);
   ccr |= NVIC_CACR_FORCEWT;
   putreg32(ccr, NVIC_CACR);
@@ -553,7 +553,7 @@ void up_enable_dcache(void)
 
   l2cc_enable();
 }
-#endif /* CONFIG_ARMV7M_DCACHE */
+#endif /* CONFIG_ARCH_DCACHE */
 
 /****************************************************************************
  * Name: up_disable_dcache
@@ -569,19 +569,19 @@ void up_enable_dcache(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 void up_disable_dcache(void)
 {
   struct
   {
     uint32_t ccsidr;
-    uint32_t sets;
-    uint32_t ways;
+    uint32_t ccr;
     uint32_t sshift;
     uint32_t wshift;
-    uint32_t tmpways;
     uint32_t sw;
-    uint32_t ccr;
+    uint32_t sets;
+    uint32_t ways;
+    uint32_t tmpways;
   } locals;
 
   /* Disable the D-Cache */
@@ -589,16 +589,12 @@ void up_disable_dcache(void)
   locals.ccr = getreg32(NVIC_CFGCON);
   locals.ccr &= ~NVIC_CFGCON_DC;
   putreg32(locals.ccr, NVIC_CFGCON);
-
-  UP_DSB();
-  UP_ISB();
+  UP_MB();
 
   /* Clean and invalidate the local variable cache. */
 
   up_flush_dcache((uintptr_t)&locals, (uintptr_t)&locals + sizeof(locals));
-
-  UP_DSB();
-  UP_ISB();
+  UP_MB();
 
   /* Get the characteristics of the D-Cache */
 
@@ -642,7 +638,7 @@ void up_disable_dcache(void)
 
   l2cc_disable();
 }
-#endif /* CONFIG_ARMV7M_DCACHE */
+#endif /* CONFIG_ARCH_DCACHE */
 
 /****************************************************************************
  * Name: up_invalidate_dcache
@@ -664,11 +660,11 @@ void up_disable_dcache(void)
  * Assumptions:
  *   This operation is not atomic.  This function assumes that the caller
  *   has exclusive access to the address range so that no harm is done if
- *   the operation is pre-empted.
+ *   the operation is preempted.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 void up_invalidate_dcache(uintptr_t start, uintptr_t end)
 {
   uintptr_t start_ = start;
@@ -717,7 +713,7 @@ void up_invalidate_dcache(uintptr_t start, uintptr_t end)
 
   l2cc_invalidate(start_, end);
 }
-#endif /* CONFIG_ARMV7M_DCACHE */
+#endif /* CONFIG_ARCH_DCACHE */
 
 /****************************************************************************
  * Name: up_invalidate_dcache_all
@@ -733,7 +729,7 @@ void up_invalidate_dcache(uintptr_t start, uintptr_t end)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 void up_invalidate_dcache_all(void)
 {
   uint32_t ccsidr;
@@ -784,7 +780,7 @@ void up_invalidate_dcache_all(void)
 
   l2cc_invalidate_all();
 }
-#endif /* CONFIG_ARMV7M_DCACHE */
+#endif /* CONFIG_ARCH_DCACHE */
 
 /****************************************************************************
  * Name: up_clean_dcache
@@ -806,15 +802,15 @@ void up_invalidate_dcache_all(void)
  * Assumptions:
  *   This operation is not atomic.  This function assumes that the caller
  *   has exclusive access to the address range so that no harm is done if
- *   the operation is pre-empted.
+ *   the operation is preempted.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 void up_clean_dcache(uintptr_t start, uintptr_t end)
 {
   uintptr_t start_ = start;
-#ifndef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifndef CONFIG_ARM_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
   uint32_t ssize;
@@ -858,7 +854,7 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
       start += ssize;
     }
   while (start < end);
-#endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
+#endif /* !CONFIG_ARM_DCACHE_WRITETHROUGH */
 
   UNUSED(start_);
 
@@ -866,7 +862,7 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
 
   l2cc_clean(start_, end);
 }
-#endif /* CONFIG_ARMV7M_DCACHE */
+#endif /* CONFIG_ARCH_DCACHE */
 
 /****************************************************************************
  * Name: up_clean_dcache_all
@@ -887,14 +883,14 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
  * Assumptions:
  *   This operation is not atomic.  This function assumes that the caller
  *   has exclusive access to the address range so that no harm is done if
- *   the operation is pre-empted.
+ *   the operation is preempted.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 void up_clean_dcache_all(void)
 {
-#ifndef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifndef CONFIG_ARM_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
   uint32_t wshift;
@@ -938,13 +934,13 @@ void up_clean_dcache_all(void)
       while (tmpways--);
     }
   while (sets--);
-#endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
+#endif /* !CONFIG_ARM_DCACHE_WRITETHROUGH */
 
   UP_MB();
 
   l2cc_clean_all();
 }
-#endif /* CONFIG_ARMV7M_DCACHE */
+#endif /* CONFIG_ARCH_DCACHE */
 
 /****************************************************************************
  * Name: up_flush_dcache
@@ -966,15 +962,15 @@ void up_clean_dcache_all(void)
  * Assumptions:
  *   This operation is not atomic.  This function assumes that the caller
  *   has exclusive access to the address range so that no harm is done if
- *   the operation is pre-empted.
+ *   the operation is preempted.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 void up_flush_dcache(uintptr_t start, uintptr_t end)
 {
   uintptr_t start_ = start;
-#ifndef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifndef CONFIG_ARM_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
   uint32_t ssize;
@@ -1022,13 +1018,13 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
   UP_MB();
 #else
   up_invalidate_dcache(start, end);
-#endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
+#endif /* !CONFIG_ARM_DCACHE_WRITETHROUGH */
 
   UNUSED(start_);
 
   l2cc_flush(start_, end);
 }
-#endif /* CONFIG_ARMV7M_DCACHE */
+#endif /* CONFIG_ARCH_DCACHE */
 
 /****************************************************************************
  * Name: up_flush_dcache_all
@@ -1048,14 +1044,14 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
  * Assumptions:
  *   This operation is not atomic.  This function assumes that the caller
  *   has exclusive access to the address range so that no harm is done if
- *   the operation is pre-empted.
+ *   the operation is preempted.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 void up_flush_dcache_all(void)
 {
-#ifndef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifndef CONFIG_ARM_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
   uint32_t wshift;
@@ -1103,11 +1099,11 @@ void up_flush_dcache_all(void)
   UP_MB();
 #else
   up_invalidate_dcache_all();
-#endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
+#endif /* !CONFIG_ARM_DCACHE_WRITETHROUGH */
 
   l2cc_flush_all();
 }
-#endif /* CONFIG_ARMV7M_DCACHE */
+#endif /* CONFIG_ARCH_DCACHE */
 
 /****************************************************************************
  * Name: up_coherent_dcache
@@ -1127,7 +1123,7 @@ void up_flush_dcache_all(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 void up_coherent_dcache(uintptr_t addr, size_t len)
 {
   uintptr_t end;
