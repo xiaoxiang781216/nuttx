@@ -191,14 +191,14 @@
 
                              /* 0x00000000-0x0fffffff: Internal Memories */
 #define SAM_ROM_SIZE             (256*1024)      /* 0x00000000-0x0003ffff: ROM */
-#ifdef CONFIG_ARMV7A_L2CC_PL310
+#ifdef CONFIG_ARM_L2CC_PL310
 #  define SAM_SRAMREMAP_SIZE     (128*1024)      /* 0x00000000-0x0001ffff: Remapped ISRAM0 */
 #else
 #  define SAM_SRAMREMAP_SIZE     (256*1024)      /* 0x00000000-0x0003ffff: Remapped ISRAM0+1 */
 #endif
 #define SAM_ECCROM_SIZE          (768*1024)      /* 0x00040000-0x000fffff: EEC ROM */
 #define SAM_NFCSRAM_SIZE         (1*1024*1024)   /* 0x00100000-0x001fffff: NFC SRAM */
-#ifdef CONFIG_ARMV7A_L2CC_PL310
+#ifdef CONFIG_ARM_L2CC_PL310
 #  define SAM_ISRAM_SIZE         (128*1024)      /* 0x00200000-0x0001ffff: SRAM0 */
 #else
 #  define SAM_ISRAM_SIZE         (256*1024)      /* 0x00200000-0x0003ffff: SRAM0+1 */

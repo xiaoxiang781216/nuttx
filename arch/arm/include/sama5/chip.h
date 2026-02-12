@@ -98,7 +98,7 @@
 #  undef  ATSAMA5D3                  /* Not SAMA5D3 family */
 #  undef  ATSAMA5D4                  /* Not SAMA5D4 family */
 #  define SAM_ISRAM0_SIZE (128*1024) /* SRAM0: 128KB */
-#ifdef CONFIG_ARMV7A_L2CC_PL310
+#ifdef CONFIG_ARM_L2CC_PL310
 #  define SAM_ISRAM1_SIZE (0)        /* (SRAM1 used for L2 cache )*/
 #else
 #  define SAM_ISRAM0_SIZE (64*1024)  /* SRAM1: 128KB */

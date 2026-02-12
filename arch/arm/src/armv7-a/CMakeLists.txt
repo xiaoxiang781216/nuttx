@@ -26,10 +26,6 @@ list(APPEND SRCS arm_cpuhead.S)
 
 list(APPEND SRCS arm_mmu.c)
 
-if(CONFIG_ARMV7A_L2CC_PL310)
-  list(APPEND SRCS arm_l2cc_pl310.c)
-endif()
-
 if(CONFIG_LEGACY_PAGING)
   list(APPEND SRCS arm_pginitialize.c arm_va2pte.c arm_pghead.S)
 else()

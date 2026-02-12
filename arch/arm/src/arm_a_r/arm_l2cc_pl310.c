@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_l2cc_pl310.c
+ * arch/arm/src/arm_a_r/arm_l2cc_pl310.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -43,7 +43,7 @@
 #include "l2cc.h"
 #include "l2cc_pl310.h"
 
-#ifdef CONFIG_ARMV7A_L2CC_PL310
+#ifdef CONFIG_ARM_L2CC_PL310
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -53,10 +53,10 @@
 
 /* Number of ways depends on ARM configuration */
 
-#if defined(CONFIG_ARMV7A_ASSOCIATIVITY_8WAY)
+#if defined(CONFIG_ARM_ASSOCIATIVITY_8WAY)
 #  define PL310_NWAYS      8
 #  define PL310_WAY_MASK   0x000000ff
-#elif defined(CONFIG_ARMV7A_ASSOCIATIVITY_16WAY)
+#elif defined(CONFIG_ARM_ASSOCIATIVITY_16WAY)
 #  define PL310_NWAYS 16
 #  define PL310_WAY_MASK   0x0000ffff
 #else
@@ -65,17 +65,17 @@
 
 /* The size of one depends on ARM configuration */
 
-#if defined(CONFIG_ARMV7A_WAYSIZE_16KB)
+#if defined(CONFIG_ARM_WAYSIZE_16KB)
 #  define PL310_WAYSIZE (16 * 1024)
-#elif defined(CONFIG_ARMV7A_WAYSIZE_32KB)
+#elif defined(CONFIG_ARM_WAYSIZE_32KB)
 #  define PL310_WAYSIZE (32 * 1024)
-#elif defined(CONFIG_ARMV7A_WAYSIZE_64KB)
+#elif defined(CONFIG_ARM_WAYSIZE_64KB)
 #  define PL310_WAYSIZE (64 * 1024)
-#elif defined(CONFIG_ARMV7A_WAYSIZE_128KB)
+#elif defined(CONFIG_ARM_WAYSIZE_128KB)
 #  define PL310_WAYSIZE (128 * 1024)
-#elif defined(CONFIG_ARMV7A_WAYSIZE_256KB)
+#elif defined(CONFIG_ARM_WAYSIZE_256KB)
 #  define PL310_WAYSIZE (256 * 1024)
-#elif defined(CONFIG_ARMV7A_WAYSIZE_512KB)
+#elif defined(CONFIG_ARM_WAYSIZE_512KB)
 #  define PL310_WAYSIZE (512 * 1024)
 #else
 #  error "Way size not selected"
@@ -367,30 +367,30 @@ void arm_l2ccinitialize(void)
    * cache configuration.
    */
 
-#if defined(CONFIG_ARMV7A_ASSOCIATIVITY_8WAY)
+#if defined(CONFIG_ARM_ASSOCIATIVITY_8WAY)
   DEBUGASSERT((getreg32(L2CC_ACR) & L2CC_ACR_ASS) == 0);
-#elif defined(CONFIG_ARMV7A_ASSOCIATIVITY_16WAY)
+#elif defined(CONFIG_ARM_ASSOCIATIVITY_16WAY)
   DEBUGASSERT((getreg32(L2CC_ACR) & L2CC_ACR_ASS) == L2CC_ACR_ASS);
 #else
 #  error No associativity selected
 #endif
 
-#if defined(CONFIG_ARMV7A_WAYSIZE_16KB)
+#if defined(CONFIG_ARM_WAYSIZE_16KB)
   DEBUGASSERT((getreg32(L2CC_ACR) & L2CC_ACR_WAYSIZE_MASK) ==
               L2CC_ACR_WAYSIZE_16KB);
-#elif defined(CONFIG_ARMV7A_WAYSIZE_32KB)
+#elif defined(CONFIG_ARM_WAYSIZE_32KB)
   DEBUGASSERT((getreg32(L2CC_ACR) & L2CC_ACR_WAYSIZE_MASK) ==
               L2CC_ACR_WAYSIZE_32KB);
-#elif defined(CONFIG_ARMV7A_WAYSIZE_64KB)
+#elif defined(CONFIG_ARM_WAYSIZE_64KB)
   DEBUGASSERT((getreg32(L2CC_ACR) & L2CC_ACR_WAYSIZE_MASK) ==
               L2CC_ACR_WAYSIZE_64KB);
-#elif defined(CONFIG_ARMV7A_WAYSIZE_128KB)
+#elif defined(CONFIG_ARM_WAYSIZE_128KB)
   DEBUGASSERT((getreg32(L2CC_ACR) & L2CC_ACR_WAYSIZE_MASK) ==
               L2CC_ACR_WAYSIZE_128KB);
-#elif defined(CONFIG_ARMV7A_WAYSIZE_256KB)
+#elif defined(CONFIG_ARM_WAYSIZE_256KB)
   DEBUGASSERT((getreg32(L2CC_ACR) & L2CC_ACR_WAYSIZE_MASK) ==
               L2CC_ACR_WAYSIZE_256KB);
-#elif defined(CONFIG_ARMV7A_WAYSIZE_512KB)
+#elif defined(CONFIG_ARM_WAYSIZE_512KB)
   DEBUGASSERT((getreg32(L2CC_ACR) & L2CC_ACR_WAYSIZE_MASK) ==
               L2CC_ACR_WAYSIZE_512KB);
 #else
@@ -937,4 +937,4 @@ void l2cc_flush(uint32_t startaddr, uint32_t endaddr)
   spin_unlock_irqrestore(&g_l2cc_lock, flags);
 }
 
-#endif /* CONFIG_ARMV7A_L2CC_PL310 */
+#endif /* CONFIG_ARM_L2CC_PL310 */
