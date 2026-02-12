@@ -72,8 +72,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifndef CONFIG_ARMV7R_MEMINIT
-#  error CONFIG_ARMV7R_MEMINIT is required by this architecture.
+#ifndef CONFIG_BOOT_SDRAM_DATA
+#  error CONFIG_BOOT_SDRAM_DATA is required by this architecture.
 #endif
 
 #ifndef CONFIG_ARCH_LOWVECTORS
@@ -214,7 +214,7 @@ static void tms570_memory_initialize(uint32_t ramset)
  *   1.  The __start entry point in armv7-r/arm_head.S is invoked upon power-
  *       on reset.
  *   2.  __start prepares CPU for code execution.
- *   3a. If CONFIG_ARMV7R_MEMINIT is not defined, then __start will prepare
+ *   3a. If CONFIG_BOOT_SDRAM_DATA is not defined, then __start will prepare
  *       memory resources by calling arm_data_initialize() and will then
  *       branch this function.
  *   3b. Otherwise, this function will be called without having initialized
@@ -376,7 +376,7 @@ void arm_boot(void)
 
   arm_fpuconfig();
 
-#ifdef CONFIG_ARMV7R_MEMINIT
+#ifdef CONFIG_BOOT_SDRAM_DATA
   /* Initialize the .bss and .data sections as well as RAM functions
    * now after RAM has been initialized.
    *

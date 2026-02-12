@@ -229,8 +229,10 @@ __cpu0_start:
 	bl		cp15_dcache_op_level
 	isb
 
+#ifndef CONFIG_BOOT_SDRAM_DATA
 	/* Initialize .bss and .data assumt that RAM that is ready to use. */
 	bl		arm_data_initialize
+#endif
 
 	/* Platform hook for highest EL */
 	bl		arm_el_init

@@ -384,7 +384,7 @@ __cpu0_start:
 	mcr		CP15_ACTLR(r0)			/* Write Auxiliary Control register */
 #endif
 
-#ifndef CONFIG_ARMV7R_MEMINIT
+#ifndef CONFIG_BOOT_SDRAM_DATA
 	/* Initialize .bss and .data ONLY if .bss and .data lie in RAM that is
 	 * ready to use.  Other memory, such as SDRAM, must be initialized before
 	 * it can be used.  arm_boot() will perform that memory initialization and
@@ -397,7 +397,7 @@ __cpu0_start:
 
 	/* Perform early C-level, platform-specific initialization.  Logic
 	 * within arm_boot() must configure SDRAM and call arm_data_initialize()
-	 * if CONFIG_ARMV7R_MEMINIT=y.
+	 * if CONFIG_BOOT_SDRAM_DATA=y.
 	 *
 	 * This function does not return.  It must give control to nx_start()
 	 * at the completion of its initialization.
