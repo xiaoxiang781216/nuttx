@@ -34,7 +34,14 @@ list(
   arm_trigger_irq.c)
 
 if(NOT CONFIG_ARCH_ARMV6M)
-  list(APPEND SRCS arm_usagefault.c arm_memfault.c arm_perf.c arm_cache.c)
+  list(
+    APPEND
+    SRCS
+    arm_usagefault.c
+    arm_memfault.c
+    arm_cache.c
+    arm_dbgmonitor.c
+    arm_perf.c)
 endif()
 
 if(CONFIG_ARCH_ARMV8M)

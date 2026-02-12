@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/arm_dbgmonitor.c
+ * arch/arm/src/arm_m/arm_dbgmonitor.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -131,6 +131,7 @@ static void arm_dwt_init(void)
  *
  * Notes:
  *  The size of the watchpoint is determined by the hardware.
+ *  armv7-m supports only support 4 bytes.
  *
  ****************************************************************************/
 
@@ -160,6 +161,7 @@ static int arm_watchpoint_add(int type, uintptr_t addr, size_t size)
                 return -EINVAL;
             }
 
+#ifdef CONFIG_ARCH_ARMV8M
         if (size > 4)
             {
               if (i + 1 >= num || i % 2 != 0 ||
@@ -172,6 +174,7 @@ static int arm_watchpoint_add(int type, uintptr_t addr, size_t size)
               putreg32(DWT_FUNCTION_WATCHPOINT_CO,
                        DWT_FUNCTION0 + 16 * (i + 1));
             }
+#endif
 
           putreg32(addr, DWT_COMP0 + 16 * i);
           putreg32(fun, DWT_FUNCTION0 + 16 * i);
@@ -197,6 +200,7 @@ static int arm_watchpoint_add(int type, uintptr_t addr, size_t size)
  *
  * Returned Value:
  *  Zero on success; a negated errno value on failure
+ *  armv7-m supports only support 4 bytes.
  *
  ****************************************************************************/
 
@@ -244,6 +248,7 @@ static int arm_watchpoint_remove(int type, uintptr_t addr, size_t size)
           continue;
         }
 
+#ifdef CONFIG_ARCH_ARMV8M
       if (size > 4)
         {
           if (i + 1 >= num || i % 2 != 0 ||
@@ -256,6 +261,7 @@ static int arm_watchpoint_remove(int type, uintptr_t addr, size_t size)
           putreg32(0, DWT_FUNCTION0 + 16 * (i + 1));
           putreg32(0, DWT_MASK0 + 16 * (i + 1));
         }
+#endif
 
       putreg32(0, DWT_COMP0 + 16 * i);
       putreg32(0, DWT_FUNCTION0 + 16 * i);

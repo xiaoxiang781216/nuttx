@@ -23,7 +23,7 @@
 include common/Make.defs
 include arm_m/Make.defs
 
-CMN_CSRCS += arm_dbgmonitor.c arm_itm.c
+CMN_CSRCS += arm_itm.c
 
 ifeq ($(CONFIG_ARMV8M_ITMSYSLOG),y)
   CMN_CSRCS += arm_itm_syslog.c

@@ -20,7 +20,7 @@
 
 # TODO: do not use config to detect this
 
-set(SRCS arm_dbgmonitor.c arm_itm.c arm_dbgmonitor.c)
+set(SRCS arm_itm.c)
 
 if(CONFIG_ARMV7M_ITMSYSLOG)
   list(APPEND SRCS arm_itm_syslog.c)
