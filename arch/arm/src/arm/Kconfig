@@ -4,7 +4,3 @@
 #
 
 comment "ARM Configuration Options"
-
-config ARM_ICACHE_DISABLE
-	bool "Disable ICACHE at __start"
-	default n

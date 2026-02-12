@@ -5,10 +5,6 @@
 
 comment "ARMv7-A Configuration Options"
 
-config ARMV7A_ICACHE_DISABLE
-	bool "Disable ICACHE at __start"
-	default n
-
 config ARMV7A_AFE_ENABLE
 	bool "Enable Access Flag at __start"
 	default n
