@@ -6,14 +6,14 @@
 config NET_FORWARD
 	bool
 	default n
-	--help--
+	---help---
 		Enable forwarding function.
 
 config NET_FORWARD_NCALLBACKS
 	int "Temporary cached forward callbacks max number"
 	default 0
 	depends on NET_FORWARD
-	--help--
+	---help---
 		Default temporary cached forward callbacks max number for each
 		device to avoid overconsumption. Zero means no limit.
 
