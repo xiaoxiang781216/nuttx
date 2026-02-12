@@ -1734,6 +1734,10 @@ config ARM_ALIGNMENT_TRAP
 	bool "Enable Alignment Check at __start"
 	default n
 
+config ARM_CACHE_ROUND_ROBIN
+	bool "Enable Cache Round Robin Replacement Policy at __start"
+	default n
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif

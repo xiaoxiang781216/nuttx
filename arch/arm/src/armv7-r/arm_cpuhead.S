@@ -317,7 +317,7 @@ __cpu3_start:
 	orr		r0, r0, #(SCTLR_V)
 #endif
 
-#ifdef CONFIG_ARMV7R_CACHE_ROUND_ROBIN
+#ifdef CONFIG_ARM_CACHE_ROUND_ROBIN
 	/* Round Robin cache replacement
 	 *
 	 *   SCTLR_RR   Bit 14: Round-robin replacement strategy.
