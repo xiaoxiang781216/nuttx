@@ -348,7 +348,7 @@ __cpu3_start:
 	orr		r0, r0, #(SCTLR_I)
 #endif
 
-#ifdef CONFIG_ARMV7A_ALIGNMENT_TRAP
+#ifdef CONFIG_ARM_ALIGNMENT_TRAP
 	/* Alignment abort enable
 	 *
 	 *   SCTLR_A    Bit 1:  Strict alignment enabled

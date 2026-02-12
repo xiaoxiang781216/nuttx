@@ -1730,6 +1730,10 @@ endif # ARCH_L2CACHE
 endmenu # L2 Cache Configuration
 endif # ARM_HAVE_L2CC
 
+config ARM_ALIGNMENT_TRAP
+	bool "Enable Alignment Check at __start"
+	default n
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif

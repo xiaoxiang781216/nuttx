@@ -5,10 +5,6 @@
 
 comment "ARMv7-A Configuration Options"
 
-config ARMV7A_ALIGNMENT_TRAP
-	bool "Enable Alignment Check at __start"
-	default n
-
 config ARMV7A_CACHE_ROUND_ROBIN
 	bool "Enable Cache Round Robin Replacement Policy at __start"
 	default n

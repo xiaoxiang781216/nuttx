@@ -290,7 +290,7 @@ __cpu3_start:
 
 	/* Set configured bits */
 
-#ifdef CONFIG_ARMV7R_ALIGNMENT_TRAP
+#ifdef CONFIG_ARM_ALIGNMENT_TRAP
 	/* Alignment abort enable
 	 *
 	 *   SCTLR_A Bit 1:  Strict alignment enabled

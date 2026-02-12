@@ -452,7 +452,7 @@ sctlr_initialize:
 
 	/* Set configured bits */
 
-#ifdef CONFIG_ARMV8R_ALIGNMENT_TRAP
+#ifdef CONFIG_ARM_ALIGNMENT_TRAP
 	/* Alignment abort enable
 	 *
 	 *   SCTLR_A Bit 1:  Strict alignment enabled

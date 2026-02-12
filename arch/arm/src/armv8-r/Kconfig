@@ -5,10 +5,6 @@
 
 comment "ARMv8-R Configuration Options"
 
-config ARMV8R_ALIGNMENT_TRAP
-	bool "Enable Alignment Check at __start"
-	default n
-
 config ARMV8R_CACHE_ROUND_ROBIN
 	bool "Enable Cache Round Robin Replacement Policy at __start"
 	default n
