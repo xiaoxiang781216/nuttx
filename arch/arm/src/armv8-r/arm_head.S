@@ -341,7 +341,7 @@ arm_data_initialize:
 	cmp		r1, r2
 	blt		3b
 
-#ifndef CONFIG_ARMV8R_DCACHE_DISABLE
+#ifndef CONFIG_ARM_DCACHE_DISABLE
 	/* Flush the copied RAM functions into physical RAM so that will
 	 * be available when fetched into the I-Cache.
 	 *
@@ -374,7 +374,7 @@ arm_data_initialize:
 hsctlr_initialize:
 	mrc		CP15_HSCTLR(r0)		/* Get Hyp System Control Register */
 
-#if !defined(CONFIG_ARMV8R_DCACHE_DISABLE)
+#if !defined(CONFIG_ARM_DCACHE_DISABLE)
 	/* Dcache enable
 	 *
 	 *   SCTLR_C    Bit 2:  DCache enable
@@ -461,7 +461,7 @@ sctlr_initialize:
 	orr		r0, r0, #(SCTLR_A)
 #endif
 
-#if !defined(CONFIG_ARMV8R_DCACHE_DISABLE) && !defined(CONFIG_SMP)
+#if !defined(CONFIG_ARM_DCACHE_DISABLE) && !defined(CONFIG_SMP)
 	/* Dcache enable
 	 *
 	 *   SCTLR_C    Bit 2:  DCache enable

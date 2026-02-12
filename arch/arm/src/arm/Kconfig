@@ -5,10 +5,6 @@
 
 comment "ARM Configuration Options"
 
-config ARM_DCACHE_DISABLE
-	bool "Disable DCACHE at __start"
-	default n
-
 config ARM_ICACHE_DISABLE
 	bool "Disable ICACHE at __start"
 	default n

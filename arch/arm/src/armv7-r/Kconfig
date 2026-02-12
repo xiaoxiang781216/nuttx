@@ -5,10 +5,6 @@
 
 comment "ARMv7-R Configuration Options"
 
-config ARMV7R_DCACHE_DISABLE
-	bool "Disable DCACHE at __start"
-	default n
-
 config ARMV7R_ICACHE_DISABLE
 	bool "Disable ICACHE at __start"
 	default n
