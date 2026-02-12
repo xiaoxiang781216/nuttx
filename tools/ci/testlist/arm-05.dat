@@ -21,6 +21,8 @@
 
 # Boards build by CMake
 
+CMake,nrf51-microbit:nsh
+
 CMake,arduino-nano-33ble:nsh
 CMake,arduino-nano-33ble:usbnsh
 
