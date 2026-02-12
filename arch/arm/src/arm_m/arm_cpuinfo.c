@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/arm_cpuinfo.c
+ * arch/arm/src/arm_m/arm_cpuinfo.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -53,6 +53,8 @@ static int hwcap_extract_field(uint32_t features, int field)
 
   return feature;
 }
+#else
+#  define hwcap_extract_field(features, field) 0
 #endif
 
 /****************************************************************************
@@ -78,31 +80,64 @@ ssize_t up_show_cpuinfo(char *buf, size_t buf_size, off_t file_off)
                      CONFIG_ARCH_CPUINFO_FREQ_KHZ / 1000,
                      CONFIG_ARCH_CPUINFO_FREQ_KHZ % 1000);
 
-      /* Cpu features */
+      /* CPU Features */
 
       procfs_sprintf(buf, buf_size, &file_off, "Features\t:");
-      procfs_sprintf(buf, buf_size, &file_off, " %s %s %s",
-                     HWCAP_HALF, HWCAP_FAST_MULT, HWCAP_LPAE);
-
-#ifdef CONFIG_ARM_THUMB
       procfs_sprintf(buf, buf_size, &file_off, " %s %s",
-                     HWCAP_IDIVT, HWCAP_THUMB);
-#else
-      procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_IDIVA);
-#endif
+                     HWCAP_HALF, HWCAP_FAST_MULT);
 
-#ifdef CONFIG_ARM_DSP
-      procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_EDSP);
+      /* If the CPU supports LDREX/STREX and LDREXB/STREXB,
+       * avoid advertising SWP; it may not be atomic with
+       * multiprocessing cores.
+       */
+
+      if (hwcap_extract_field(getreg32(NVIC_ISAR3), 12) <= 1 &&
+          hwcap_extract_field(getreg32(NVIC_ISAR4), 20) < 3)
+        {
+          procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_SWP);
+        }
+
+      if (hwcap_extract_field(getreg32(NVIC_ISAR0), 24) == 1)
+#ifdef CONFIG_ARM_THUMB
+        {
+          procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_IDIVT);
+        }
+
+      procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_THUMB);
+#else
+        {
+          procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_IDIVA);
+        }
 #endif
 
 #ifdef CONFIG_SCHED_THREAD_LOCAL
       procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_TLS);
 #endif
 
-      /* VFP features */
+      /* LPAE implies atomic ldrd/strd instructions */
+
+      if (hwcap_extract_field(getreg32(NVIC_ISAR2), 0) == 1)
+        {
+          procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_LPAE);
+        }
+
+      /* VFP Features */
 
 #if defined(CONFIG_ARCH_FPU)
-# if defined(CONFIG_ARCH_CORTEXM33) || defined(CONFIG_ARCH_CORTEXM35P)
+#  if defined(CONFIG_ARM_DSP)
+      procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_EDSP);
+#  endif
+
+# ifdef CONFIG_ARCH_CORTEXM4
+      procfs_sprintf(buf, buf_size, &file_off, " %s %s %s",
+                     HWCAP_VFPV4, HWCAP_FPSP, HWCAP_VFPV3D16);
+# elif defined(CONFIG_ARCH_CORTEXM7)
+      procfs_sprintf(buf, buf_size, &file_off, " %s %s %s",
+                     HWCAP_FPV5, HWCAP_FPSP, HWCAP_VFPV3D16);
+#   ifdef CONFIG_ARCH_DPFPU
+      procfs_sprintf(buf, buf_size, &file_off, " %s", HWCAP_FPDP);
+#   endif
+# elif defined(CONFIG_ARCH_CORTEXM33) || defined(CONFIG_ARCH_CORTEXM35P)
       procfs_sprintf(buf, buf_size, &file_off, " %s %s %s",
                      HWCAP_FPV5, HWCAP_FPSP, HWCAP_VFPV3D16);
 # elif defined(CONFIG_ARCH_CORTEXM55) || defined(CONFIG_ARCH_CORTEXM85)
@@ -126,7 +161,16 @@ ssize_t up_show_cpuinfo(char *buf, size_t buf_size, off_t file_off)
       procfs_sprintf(buf, buf_size, &file_off,
                      "\nmodel name\t: %s rev %" PRIx32 " (%s)\n"
                      "CPU architecture: %s\n",
-                     "ARMv8-M", cpuid & 15, "v8ml", "8M");
+#ifdef CONFIG_ARCH_ARMV6M
+                     "ARMv6-M", cpuid & 15, "v6", "6TEJ"
+#elif defined(CONFIG_ARCH_ARMV7M)
+                     "ARMv7-M", cpuid & 15, "v7ml", "7M"
+#elif defined(CONFIG_ARCH_ARMV8M)
+                     "ARMv8-M", cpuid & 15, "v8ml", "8M"
+#else
+                      "Unknown ARM-M", cpuid & 15, "?", "?"
+#endif
+                    );
 
       procfs_sprintf(buf, buf_size, &file_off,
                      "CPU implementer\t: 0x%02" PRIx32 "\n"

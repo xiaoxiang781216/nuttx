@@ -17,7 +17,3 @@
 # the License.
 #
 # ##############################################################################
-
-set(SRCS arm_cpuinfo.c)
-
-target_sources(arch PRIVATE ${SRCS})
