@@ -426,7 +426,7 @@ int rpmsg_tickwait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem,
                   if (wqueue->recursive < CONFIG_RPMSG_RECURSIVE_LIMIT)
                     {
                       wqueue->recursive++;
-                      work_qeueue_dispatch(wqueue->kwqueue);
+                      work_queue_dispatch(wqueue->kwqueue);
                       wqueue->recursive--;
                     }
                 }

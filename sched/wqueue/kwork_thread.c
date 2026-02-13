@@ -404,7 +404,7 @@ static int work_thread_create(FAR const char *name, int priority,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: work_qeueue_dispatch
+ * Name: work_queue_dispatch
  *
  * Description:
  *   Execute all pending work items on a given work queue by iterating
@@ -415,7 +415,7 @@ static int work_thread_create(FAR const char *name, int priority,
  *
  ****************************************************************************/
 
-void work_qeueue_dispatch(FAR struct kwork_wqueue_s *wqueue)
+void work_queue_dispatch(FAR struct kwork_wqueue_s *wqueue)
 {
   FAR struct kworker_s *kworker = wq_get_worker(wqueue);
   pid_t pid = gettid();
