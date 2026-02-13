@@ -53,7 +53,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_IPFORWARD
+#ifdef CONFIG_NET_FORWARD
 static int proto_dropstats(int proto)
 {
   switch (proto)
@@ -146,7 +146,7 @@ void ipv4_dropstats(FAR struct ipv4_hdr_s *ipv4)
   g_netstats.ipv4.drop++;
 }
 #endif
-#endif /* CONFIG_NET_IPFORWARD */
+#endif /* CONFIG_NET_FORWARD */
 
 /****************************************************************************
  * Name: netfwd_dropstats

@@ -50,6 +50,9 @@
 
 static int netprocfs_header(FAR struct netprocfs_file_s *netfile);
 static int netprocfs_received(FAR struct netprocfs_file_s *netfile);
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+static int netprocfs_1722acf_received(FAR struct netprocfs_file_s *netfile);
+#endif
 static int netprocfs_dropped(FAR struct netprocfs_file_s *netfile);
 #ifdef CONFIG_NET_IPv4
 static int netprocfs_ipv4_dropped(FAR struct netprocfs_file_s *netfile);
@@ -79,6 +82,9 @@ static const linegen_t g_stat_linegen[] =
 {
   netprocfs_header,
   netprocfs_received,
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  netprocfs_1722acf_received,
+#endif
   netprocfs_dropped,
 
 #ifdef CONFIG_NET_IPv4
@@ -139,6 +145,12 @@ static int netprocfs_header(FAR struct netprocfs_file_s *netfile)
 #ifdef CONFIG_NET_ICMPv6
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "  ICMPv6");
 #endif
+#ifdef CONFIG_NET_CANFORWARD
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, " CANFWD");
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, " 1722ACF");
+#endif
+#endif
 
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "\n");
   return len;
@@ -179,11 +191,34 @@ static int netprocfs_received(FAR struct netprocfs_file_s *netfile)
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
                   g_netstats.icmpv6.recv);
 #endif
+#ifdef CONFIG_NET_CANFORWARD
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
+                  g_netstats.cangw.recv);
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
+                  g_netstats.cangw.acf_recv);
+#endif
+#endif
 
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "\n");
   return len;
 }
 #endif /* CONFIG_NET_STATISTICS */
+
+/****************************************************************************
+ * Name: netprocfs_1722acf_received
+ ****************************************************************************/
+
+#if defined(CONFIG_NET_STATISTICS) && defined(CONFIG_NET_CANFORWARD_IEEE1722ACF)
+static int netprocfs_1722acf_received(FAR struct netprocfs_file_s *netfile)
+{
+  return snprintf(netfile->line, NET_LINELEN,
+                  "  1722acf     ntscf: %04x    tscf: %04x   Can: %04x\n",
+                  g_netstats.cangw.acf_ntscf_recv,
+                  g_netstats.cangw.acf_tscf_recv,
+                  g_netstats.cangw.acf_can_recv);
+}
+#endif
 
 /****************************************************************************
  * Name: netprocfs_dropped
@@ -218,6 +253,14 @@ static int netprocfs_dropped(FAR struct netprocfs_file_s *netfile)
 #ifdef CONFIG_NET_ICMPv6
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
                   g_netstats.icmpv6.drop);
+#endif
+#ifdef CONFIG_NET_CANFORWARD
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
+                  g_netstats.cangw.drop);
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
+                  g_netstats.cangw.acf_drop);
+#endif
 #endif
 
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "\n");
@@ -282,6 +325,12 @@ static int netprocfs_checksum(FAR struct netprocfs_file_s *netfile)
 #endif
 #ifdef CONFIG_NET_ICMPv6
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "  ----");
+#endif
+#ifdef CONFIG_NET_CANFORWARD
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  ----");
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  ----");
+#endif
 #endif
 
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "\n");
@@ -359,6 +408,12 @@ static int netprocfs_prototype(FAR struct netprocfs_file_s *netfile)
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
                   g_netstats.icmpv6.typeerr);
 #endif
+#ifdef CONFIG_NET_CANFORWARD
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  ----");
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  ----");
+#endif
+#endif
 
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "\n");
   return len;
@@ -399,6 +454,14 @@ static int netprocfs_sent(FAR struct netprocfs_file_s *netfile)
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
                   g_netstats.icmpv6.sent);
 #endif
+#ifdef CONFIG_NET_CANFORWARD
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
+                  g_netstats.cangw.forward);
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
+                  g_netstats.cangw.acf_sent);
+#endif
+#endif
 
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "\n");
   return len;
@@ -431,6 +494,12 @@ static int netprocfs_retransmissions(FAR struct netprocfs_file_s *netfile)
 #endif
 #ifdef CONFIG_NET_ICMPv6
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "  ----");
+#endif
+#ifdef CONFIG_NET_CANFORWARD
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  ----");
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "  ----");
+#endif
 #endif
 
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "\n");

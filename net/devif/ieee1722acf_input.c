@@ -34,6 +34,9 @@
 #include <nuttx/net/ieee1722.h>
 #include <nuttx/net/netdev.h>
 #include <netinet/if_ether.h>
+#ifdef CONFIG_NET_STATISTICS
+#include <nuttx/net/netstats.h>
+#endif
 
 #include "netforward/ieee1722acf.h"
 #include "netforward/netforward.h"
@@ -233,6 +236,10 @@ static inline void ieee1722acf_canforward(FAR struct net_driver_s *dev,
 {
   FAR struct iob_s *o_iob = dev->d_iob;
 
+#ifdef CONFIG_NET_STATISTICS
+  g_netstats.cangw.acf_can_recv++;
+#endif
+
   dev->d_iob = can_iob;
 
   can_input(dev);
@@ -288,6 +295,10 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
                       (packt_hdr->ntscf_data_length_h << 8);
 
         offset = sizeof(struct ieee1722acf_ntscf_hdr_s);
+
+#ifdef CONFIG_NET_STATISTICS
+        g_netstats.cangw.acf_ntscf_recv++;
+#endif
       }
     break;
 
@@ -298,6 +309,10 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
         payload_len = HTONS(packt_hdr->stream_data_length);
 
         offset = sizeof(struct ieee1722acf_tscf_hdr_s);
+
+#ifdef CONFIG_NET_STATISTICS
+        g_netstats.cangw.acf_tscf_recv++;
+#endif
       }
     break;
 
@@ -349,6 +364,10 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
 
       dev->d_iob->io_pktlen = offset + payload_len;
     }
+
+#ifdef CONFIG_NET_STATISTICS
+  g_netstats.cangw.acf_recv++;
+#endif
 
   while (dev->d_iob->io_pktlen - offset >
          sizeof(struct ieee1722acf_msg_hdr_s))

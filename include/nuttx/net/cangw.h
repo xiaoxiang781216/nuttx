@@ -99,11 +99,15 @@ struct cangw_rule_s
 #ifdef CONFIG_NET_STATISTICS
 struct cangw_stats_s
 {
-  net_stats_t drop;         /* Number of dropped can msg */
-  net_stats_t forward;      /* Number of forward can msg */
-  net_stats_t recv;         /* Number of received can msg */
-  net_stats_t acf_drop;     /* Number of dropped acf stream packet */
-  net_stats_t acf_sent;     /* Number of send acf stream packet */
+  net_stats_t drop;           /* Number of dropped can msg */
+  net_stats_t forward;        /* Number of forward can msg */
+  net_stats_t recv;           /* Number of received can msg */
+  net_stats_t acf_drop;       /* Number of dropped acf stream packet */
+  net_stats_t acf_sent;       /* Number of send acf stream packet */
+  net_stats_t acf_recv;       /* Number of received acf stream packet */
+  net_stats_t acf_ntscf_recv; /* Number of received ntscf acf packet */
+  net_stats_t acf_tscf_recv;  /* Number of received tscf acf packet */
+  net_stats_t acf_can_recv;   /* Number of received can msg from acf packet */
 };
 #endif
 
