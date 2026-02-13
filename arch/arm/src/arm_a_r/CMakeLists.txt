@@ -20,7 +20,7 @@
 
 target_sources(nuttx PRIVATE arm_vectortab.S)
 
-set(CSRCS arm_vectors.S arm_saveusercontext.S)
+set(CSRCS arm_vectors.S arm_saveusercontext.S arm_head.S)
 
 if(NOT CONFIG_DISABLE_SIGNALS)
   list(APPEND CSRCS arm_schedulesigaction.c arm_sigdeliver.c)

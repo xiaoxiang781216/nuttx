@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_head.S
+ * arch/arm/src/arm_a_r/arm_head.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -28,9 +28,14 @@
 
 #include "arm.h"
 #include "sctlr.h"
-#include "mmu.h"
-#include "chip.h"
 #include "arm_internal.h"
+
+#ifdef CONFIG_ARCH_HAVE_MMU
+#  include "mmu.h"
+#  include "chip.h"
+#else
+#  include "cp15_cacheops.h"
+#endif
 
 #ifndef IDLE_STACK_BASE
   #ifdef CONFIG_BOOT_SDRAM_DATA
@@ -42,7 +47,7 @@
 
 #define IDLE_STACK_TOP  (IDLE_STACK_BASE + CONFIG_IDLETHREAD_STACKSIZE)
 
-#ifndef CONFIG_LEGACY_PAGING
+#if !defined(CONFIG_LEGACY_PAGING) || !defined(CONFIG_ARCH_HAVE_MMU)
 
 	.file	"arm_head.S"
 
@@ -59,6 +64,8 @@
  *    - Initialize the .data section in RAM, and
  *    - Clear .bss section
  */
+
+#ifdef CONFIG_ARCH_HAVE_MMU
 
 #ifdef CONFIG_BOOT_RUNFROMFLASH
   /* Check for the identity mapping:  For this configuration, this would be
@@ -123,7 +130,8 @@
 #    define CONFIG_IDENTITY_TEXTMAP 1
 #  endif
 
-#endif
+#endif /* CONFIG_BOOT_RUNFROMFLASH */
+#endif /* CONFIG_ARCH_HAVE_MMU */
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -162,6 +170,41 @@
 #endif
 
 /****************************************************************************
+ * Global Symbols
+ ****************************************************************************/
+
+/* Imported symbols */
+
+#ifdef CONFIG_ARCH_HAVE_MMU
+	.global	nx_start
+#endif
+	.global	arm_boot
+
+	.global	_sbss
+	.global	_ebss
+
+#ifdef CONFIG_ARM_HAVE_EL2
+	.global	_hyp_vector_start
+	.global	_vector_start
+#endif
+#ifdef CONFIG_BOOT_RUNFROMFLASH
+	.global	_eronly
+	.global	_sdata
+	.global	_edata
+#endif
+#ifdef CONFIG_ARCH_RAMFUNCS
+	.global	_framfuncs
+	.global	_sramfuncs
+	.global	_eramfuncs
+#endif
+
+/* Exported symbols */
+
+	.global	__start
+	.global	arm_data_initialize
+	.global	g_idle_topstack
+
+/****************************************************************************
  * Name: __start
  ****************************************************************************/
 
@@ -177,12 +220,12 @@
 	.type	__start, #function
 
 __start:
-#if CONFIG_NCPUS > 1
 	/* Get cpuindex, cpu0 continue boot, others wait event from cpu0 */
 
 	mrc		CP15_MPIDR(r0)
-	and		r0, r0, #0x3
+	and		r0, r0, #0x7
 	cmp		r0, #0
+#if CONFIG_NCPUS > 1
 	beq		__cpu0_start
 
 #ifdef CONFIG_ARM_BUSY_WAIT
@@ -195,12 +238,12 @@ __start:
 	wfe
 #endif
 
-#  if CONFIG_NCPUS > 1
+	cpsid		if			/* Disable IRQs and FIQs */
+	mov		fp, #0			/* Clear frame pointer */
 	ldr		r1, =cpu1_start
 	ldr		r1, [r1]
 	cmp		r0, #1
 	bxeq		r1
-#  endif
 #  if CONFIG_NCPUS > 2
 	ldr		r1, =cpu2_start
 	ldr		r1, [r1]
@@ -214,16 +257,52 @@ __start:
 	bxeq		r1
 #  endif
 #  if CONFIG_NCPUS > 4
-#    error This logic needs to extended for CONFIG_SMP_NCPUS > 4
+	ldr		r1, =cpu4_start
+	ldr		r1, [r1]
+	cmp		r0, #4
+	bxeq		r1
+#  endif
+#  if CONFIG_NCPUS > 5
+	ldr		r1, =cpu5_start
+	ldr		r1, [r1]
+	cmp		r0, #5
+	bxeq		r1
+#  endif
+#  if CONFIG_NCPUS > 6
+	ldr		r1, =cpu6_start
+	ldr		r1, [r1]
+	cmp		r0, #6
+	bxeq		r1
+#  endif
+#  if CONFIG_NCPUS > 7
+	ldr		r1, =cpu7_start
+	ldr		r1, [r1]
+	cmp		r0, #7
+	bxeq		r1
+#  endif
+#  if CONFIG_NCPUS > 8
+#    error This logic needs to extended for CONFIG_SMP_NCPUS > 8
 #  endif
 
 __cpu0_start:
+
+#endif /* CONFIG_NCPUS > 1 */
+
+	/* Make sure that IRQs and FIQs are disabled */
+
+#ifdef CONFIG_ARM_HAVE_EL2
+	cpsid		if
+#else
+	cpsid		if, #PSR_MODE_SYS
 #endif
 
-	/* Make sure that we are in SYS mode with IRQs and FIQs disabled */
+	/* Set up the stack pointer and clear the frame pointer. */
 
-	cpsid		if, #PSR_MODE_SYS
+	ldr		sp, .Lstackpointer
+	bic		sp, sp, #7		/* Get the stack pointer with 8-byte alignment */
+	mov		fp, #0
 
+#ifdef CONFIG_ARCH_HAVE_MMU
 	/* The MMU and caches should be disabled */
 
 	mrc		CP15_SCTLR(r0)
@@ -354,6 +433,7 @@ __cpu0_start:
 
 #endif /* CONFIG_BOOT_RUNFROMFLASH && !CONFIG_BOOT_SDRAM_DATA */
 #endif /* CONFIG_ARCH_ROMPGTABLE */
+#endif /* CONFIG_ARCH_HAVE_MMU */
 
 	/* The following logic will set up the ARMv7-A for normal operation.
 	 *
@@ -383,14 +463,23 @@ __cpu0_start:
 	mcr		CP15_BPIALLIS(r0)	/* Invalidate entire branch prediction array */
 	mcr		CP15_ICIALLUIS(r0)	/* Invalidate I-cache */
 #else
+#  ifdef CONFIG_ARCH_HAVE_MMU
 	mcr		CP15_TLBIALL(r0,c7)	/* Invalidate the entire unified TLB */
 	mcr		CP15_TLBIALL(r0,c6)
 	mcr		CP15_TLBIALL(r0,c5)
+#  endif
 	mcr		CP15_BPIALL(r0)		/* Invalidate entire branch prediction array */
 	mcr		CP15_ICIALLU(r0)	/* Invalidate I-cache */
 #endif
 
+#ifndef CONFIG_ARCH_HAVE_MMU
+	mov		r1, CP15_CACHE_INVALIDATE
+	bl		cp15_dcache_op_level
+#endif
+
 	isb
+
+#ifdef CONFIG_ARCH_HAVE_MMU
 
 	/* Load the page table address.
 	 *
@@ -556,14 +645,37 @@ __cpu0_start:
 	nop
 	.endr
 
+#if !defined(CONFIG_ARCH_ROMPGTABLE) && !defined(CONFIG_IDENTITY_TEXTMAP)
+	/* Remove the temporary mapping (if one was made). */
+
+	ldr		r5, .LCvpgtable			/* r5=Virtual page table base address */
+	ldr		r3, .LCptextbase		/* r0=Physical base address of .text section */
+	mov		r0, #0				/* flags + base = 0 */
+	str		r3, [r5, r3, lsr #18]		/* identity mapping */
+#endif /* !CONFIG_ARCH_ROMPGTABLE && !CONFIG_IDENTITY_TEXTMAP */
+
+	/* Set up the stack pointer and clear the frame pointer */
+
+	ldr		sp, .Lstackpointer
+	bic		sp, sp, #7			/* Get the stack pointer with 8-byte alignment */
+	mov		fp, #0
+
+#ifndef CONFIG_BOOT_SDRAM_DATA
+	mov		r4, lr
+	bl		arm_data_initialize
+	mov		lr, r4
+#endif
+
 	/* And "jump" to .Lvstart in the newly mapped virtual address space */
 
 	mov		pc, lr
+#endif /* CONFIG_ARCH_HAVE_MMU */
 
 /****************************************************************************
  * PC_Relative Data
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_HAVE_MMU
 	/* The physical base address of the page table */
 
 	.type	.LCppgtable, %object
@@ -645,12 +757,128 @@ __cpu0_start:
 .LCvstart:
 	.long	.Lvstart
 	.size	.LCvstart, . -.LCvstart
+#endif /* CONFIG_ARCH_HAVE_MMU */
 
+.Lstackpointer:
+	.long	IDLE_STACK_TOP
 	.size	__start, .-__start
+
+#ifndef CONFIG_ARCH_HAVE_MMU
+#ifndef CONFIG_BOOT_SDRAM_DATA
+	/* Initialize .bss and .data assume that RAM is ready to use. */
+	bl		arm_data_initialize
+#endif
+
+#ifdef CONFIG_ARM_HAVE_EL2
+	/* Check if we are in HYP mode, if so do EL2 boot */
+	mrs		r0, CPSR
+	and		r0, r0, #PSR_MODE_MASK
+	cmp		r0, #PSR_MODE_HYP
+	bne		.Lel1_boot
+
+	adr		lr, .Lel1_boot
+	b		__el2_boot
+.Lel1_boot:
+	/* Set up the stack pointer and clear the frame pointer. */
+	ldr		sp, .Lstackpointer
+	mov		fp, #0
+
+	/* Set PL1 Vector table base register */
+	ldr		r0, .Lsysvectorstart
+	mcr		CP15_VBAR(r0)
+#endif /* CONFIG_ARM_HAVE_EL2 */
+
+	/* Configure the system control register (see sctrl.h) */
+
+	mrc		CP15_SCTLR(r0)			/* Get control register */
+
+	/* Clear bits to reset values.
+	 *
+	 *   SCTLR_M        Bit 0:  MPU enable bit
+	 *   SCTLR_A        Bit 1:  Strict alignment disabled
+	 *   SCTLR_C        Bit 2:  DCache disabled
+	 *   SCTLR_CCP15BEN Bit 5:  CP15 barrier enable
+	 *   SCTLR_B        Bit 7:  Should be zero on ARMv7R
+	 *
+	 *   SCTLR_SW       Bit 10: SWP/SWPB not enabled
+	 *   SCTLR_I        Bit 12: ICache disabled
+	 *   SCTLR_V        Bit 13: Assume low vectors
+	 *   SCTLR_RR       Bit 14: Round-robin replacement strategy.
+	 *
+	 *   SCTLR_BR       Bit 17: Background Region bit
+	 *   SCTLR_DZ       Bit 19: Divide by Zero fault enable bit
+	 *   SCTLR_FI       Bit 21: Fast interrupts configuration enable bit
+	 *
+	 *   SCTLR_VE       Bit 24: Interrupt Vectors Enable bit
+	 *   SCTLR_EE       Bit 25: 0=Little endian.
+	 *   SCTLR_NMFI     Bit 27: Non-maskable FIQ (NMFI) support
+	 *   SCTLR_TE       Bit 30: All exceptions handled in ARM state.
+	 */
+
+	bic		r0, r0, #(SCTLR_A  | SCTLR_C  | SCTLR_CCP15BEN | SCTLR_B)
+	bic		r0, r0, #(SCTLR_SW | SCTLR_I  | SCTLR_V        | SCTLR_RR)
+	bic		r0, r0, #(SCTLR_BR | SCTLR_DZ | SCTLR_FI)
+	bic		r0, r0, #(SCTLR_VE | SCTLR_EE | SCTLR_NMFI     | SCTLR_TE)
+
+	/* Set bits to enable the MPU */
+
+#ifndef CONFIG_SMP
+	orr		r0, r0, #(SCTLR_M)
+#endif
+#ifdef CONFIG_ARM_ALIGNMENT_TRAP
+	orr		r0, r0, #(SCTLR_A)
+#endif
+#if !defined(CONFIG_ARM_DCACHE_DISABLE) && !defined(CONFIG_SMP)
+	orr		r0, r0, #(SCTLR_C)
+#endif
+#if !defined(CONFIG_ARM_ICACHE_DISABLE) && !defined(CONFIG_SMP)
+	orr		r0, r0, #(SCTLR_I)
+#endif
+#ifdef CONFIG_ARM_SCTLR_CCP15BEN
+	orr		r0, r0, #(SCTLR_CCP15BEN)
+#endif
+#ifndef CONFIG_ARCH_LOWVECTORS
+	orr		r0, r0, #(SCTLR_V)
+#endif
+#ifdef CONFIG_ARM_CACHE_ROUND_ROBIN
+	orr		r0, r0, #(SCTLR_RR)
+#endif
+#ifdef CONFIG_ARM_BACKGROUND_REGION
+	orr		r0, r0, #(SCTLR_BR)
+#endif
+#ifdef CONFIG_ARM_DIV0_FAULT
+	orr		r0, r0, #(SCTLR_DZ)
+#endif
+#ifdef CONFIG_ARM_FAST_INTERRUPT
+	orr		r0, r0, #(SCTLR_FI)
+#endif
+#ifdef CONFIG_ARM_IMPL_VECTORS
+	orr		r0, r0, #(SCTLR_VE)
+#endif
+#ifdef CONFIG_ENDIAN_BIG
+	orr		r0, r0, #(SCTLR_EE)
+#endif
+#ifdef CONFIG_ARM_NONMASKABLE_FIQ
+	orr		r0, r0, #(SCTLR_NMFI)
+#endif
+
+	/* Then write the configured control register */
+
+	mcr		CP15_SCTLR(r0)			/* Write control reg */
+	isb
+	.rept		12				/* Some CPUs want want lots of NOPs here */
+	nop
+	.endr
+
+	/* Branch to .Lvstart for common boot finalization */
+
+	b		.Lvstart
+
+#endif /* CONFIG_ARCH_HAVE_MMU */
 
 /****************************************************************************
  * Name: .Lvstart
- ***************************************************************************/
+ ****************************************************************************/
 
 /* The following is executed after the MMU has been enabled. This uses
  * absolute addresses; this is not position independent.
@@ -660,34 +888,6 @@ __cpu0_start:
 	.type	.Lvstart, %function
 
 .Lvstart:
-
-#if !defined(CONFIG_ARCH_ROMPGTABLE) && !defined(CONFIG_IDENTITY_TEXTMAP)
-	/* Remove the temporary mapping (if one was made).  The following assumes
-	 * that the total RAM size is > 1Mb and extends that initial mapping to
-	 * cover additional RAM sections.
-	 */
-
-	ldr		r5, .LCvpgtable			/* r5=Virtual page table base address */
-	ldr		r3, .LCptextbase		/* r0=Physical base address of .text section */
-	mov		r0, #0				/* flags + base = 0 */
-	str		r3, [r5, r3, lsr #18]		/* identity mapping */
-#endif /* !CONFIG_ARCH_ROMPGTABLE && !CONFIG_IDENTITY_TEXTMAP */
-
-	/* Set up the stack pointer and clear the frame pointer */
-
-	ldr		sp, .Lstackpointer
-	bic		sp, sp, #7			/* Get the stack pointer with 8-byte alignment */
-	mov		fp, #0
-
-#ifndef CONFIG_BOOT_SDRAM_DATA
-	/* Initialize .bss and .data ONLY if .bss and .data lie in SRAM that is
-	 * ready to use.  Other memory, such as SDRAM, must be initialized before
-	 * it can be used.  arm_boot() will perform that memory initialization and
-	 * .bss and .data can be initialized after arm_boot() returns.
-	 */
-
-	bl		arm_data_initialize
-#endif
 
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
 	/* Perform init the secure monitor runtime. As the following arm_boot may
@@ -762,10 +962,105 @@ arm_data_initialize:
 	blt		2b
 #endif
 
-	/* And return to the caller */
+#ifdef CONFIG_ARCH_RAMFUNCS
+	/* Copy any necessary code sections from FLASH to RAM.  The correct
+	 * destination in SRAM is given by _sramfuncs and _eramfuncs.  The
+	 * temporary location is in flash after the data initialization code
+	 * at _framfuncs
+	 */
+
+	adr		r3, .Lfuncinit
+	ldmia		r3, {r0, r1, r2}
+
+3:
+	ldr		r3, [r0], #4
+	str		r3, [r1], #4
+	cmp		r1, r2
+	blt		3b
+
+#ifndef CONFIG_ARM_DCACHE_DISABLE
+	/* Flush the copied RAM functions into physical RAM so that will
+	 * be available when fetched into the I-Cache.
+	 *
+	 * Note that this is a branch, not a call and so will return
+	 * directly to the caller without returning here.
+	 */
+
+	adr		r3, .Lramfuncs
+	ldmia		r3, {r0, r1}
+	ldr		r3, =up_clean_dcache
+	bx		r3
+#endif /* CONFIG_ARM_DCACHE_DISABLE */
+#endif /* CONFIG_ARCH_RAMFUNCS */
+
+	/* Return to the caller */
 
 	bx		lr
+
 	.size	arm_data_initialize, . - arm_data_initialize
+
+/***************************************************************************
+ * Name: __el2_boot
+ * Desc: Setup EL2 and switch to EL1 via eret
+ *        Caller must set lr to the EL1 entry point before branching here.
+ ***************************************************************************/
+
+#ifdef CONFIG_ARM_HAVE_EL2
+	.global	__el2_boot
+	.type	__el2_boot, #function
+
+__el2_boot:
+	/* Save the EL1 entry point (passed in lr by caller) */
+	mov		r4, lr
+
+	/* Set Hyp/PL2 Vector table base register */
+	ldr		r0, .Lhypvectorstart
+	mcr		CP15_HVBAR(r0)
+
+	/* Initialize Hyp system control register */
+	bl		hsctlr_initialize
+
+	ldr		r0, =HACTLR_INIT
+	mcr		CP15_HACTLR(r0)	/* Enable EL1 access all IMP DEFINED registers */
+
+	/* Platform hook for highest EL */
+	bl		arm_el_init
+
+	/* Switch to PL1 SYS with all exceptions masked */
+	mov		r0, #(PSR_MODE_SYS | PSR_I_BIT | PSR_F_BIT | PSR_A_BIT)
+	msr		spsr_hyp, r0
+
+	mov		r0, r4
+	msr		elr_hyp, r0
+	dsb
+	isb
+	eret
+	.size	__el2_boot, . - __el2_boot
+#endif /* CONFIG_ARM_HAVE_EL2 */
+
+/***************************************************************************
+ * Name: hsctlr_initialize
+ ***************************************************************************/
+
+#ifdef CONFIG_ARM_HAVE_EL2
+	.global	hsctlr_initialize
+	.type	hsctlr_initialize, #function
+
+hsctlr_initialize:
+	mrc		CP15_HSCTLR(r0)		/* Get Hyp System Control Register */
+
+#if !defined(CONFIG_ARM_DCACHE_DISABLE)
+	orr		r0, r0, #(SCTLR_C)
+#endif
+
+#if !defined(CONFIG_ARM_ICACHE_DISABLE)
+	orr		r0, r0, #(SCTLR_I)
+#endif
+
+	mcr		CP15_HSCTLR(r0)		/* Write Hyp System Control Register */
+
+	bx		lr
+#endif /* CONFIG_ARM_HAVE_EL2 */
 
 /***************************************************************************
  * Text-section constants
@@ -786,7 +1081,7 @@ arm_data_initialize:
 	 * to the end of SDRAM.
 	 */
 
-#ifndef CONFIG_ARCH_ROMPGTABLE
+#if defined(CONFIG_ARCH_HAVE_MMU) && !defined(CONFIG_ARCH_ROMPGTABLE)
 	/* The virtual base address of the page table */
 
 	.type	.LCvpgtable, %object
@@ -794,7 +1089,7 @@ arm_data_initialize:
 	.long	PGTABLE_BASE_VADDR			/* Virtual start of page table */
 	.size	.LCvpgtable, . -.LCvpgtable
 
-#endif /* CONFIG_ARCH_ROMPGTABLE */
+#endif /* CONFIG_ARCH_HAVE_MMU && !CONFIG_ARCH_ROMPGTABLE*/
 
 #ifndef CONFIG_ARCH_SKIP_ZERO_BSS
 	.type	.Linitparms, %object
@@ -804,9 +1099,12 @@ arm_data_initialize:
 	.size	.Linitparms, . -.Linitparms
 #endif
 
-.Lstackpointer:
-	.long	IDLE_STACK_TOP
-	.size	.Lstackpointer, . -.Lstackpointer
+#ifdef CONFIG_ARM_HAVE_EL2
+.Lhypvectorstart:
+	.long	_hyp_vector_start
+.Lsysvectorstart:
+	.long	_vector_start
+#endif
 
 #ifdef CONFIG_BOOT_RUNFROMFLASH
 	.type	.Ldatainit, %object
@@ -815,6 +1113,16 @@ arm_data_initialize:
 	.long	_sdata					/* Where .data needs to reside in SDRAM */
 	.long	_edata
 	.size	.Ldatainit, . -.Ldatainit
+#endif
+
+#ifdef CONFIG_ARCH_RAMFUNCS
+	.type	.Lfuncinit, %object
+.Lfuncinit:
+	.long	_framfuncs				/* Where RAM functions are stored in FLASH */
+.Lramfuncs:
+	.long	_sramfuncs				/* Where RAM functions needs to reside in RAM */
+	.long	_eramfuncs
+	.size	.Lfuncinit, . -.Lfuncinit
 #endif
 
 /***************************************************************************
@@ -836,4 +1144,5 @@ g_idle_topstack:
 	.long	IDLE_STACK_TOP
 	.size	g_idle_topstack, .-g_idle_topstack
 	.end
-#endif
+
+#endif /* !CONFIG_LEGACY_PAGING || !CONFIG_ARCH_HAVE_MMU */

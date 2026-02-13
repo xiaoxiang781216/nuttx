@@ -20,8 +20,6 @@
 
 # Common assembly language files
 
-list(APPEND SRCS arm_head.S)
-
 # Common C source files
 
 if(CONFIG_ARM_GIC_VERSION EQUAL 3)

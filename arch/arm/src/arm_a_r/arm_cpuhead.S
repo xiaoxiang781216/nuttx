@@ -129,6 +129,7 @@
 __cpu1_start:
 #ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu1_stackpointer
+  adr   lr, __el1_boot
   b     __el2_boot
 #else
   b     __el1_boot
@@ -147,6 +148,7 @@ __cpu1_start:
 __cpu2_start:
 #ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu2_stackpointer
+  adr   lr, __el1_boot
   b     __el2_boot
 #else
   b     __el1_boot
@@ -165,6 +167,7 @@ __cpu2_start:
 __cpu3_start:
 #ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu3_stackpointer
+  adr   lr, __el1_boot
   b     __el2_boot
 #else
   b     __el1_boot
@@ -183,6 +186,7 @@ __cpu3_start:
 __cpu4_start:
 #ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu4_stackpointer
+  adr   lr, __el1_boot
   b     __el2_boot
 #else
   b     __el1_boot
@@ -201,6 +205,7 @@ __cpu4_start:
 __cpu5_start:
 #ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu5_stackpointer
+  adr   lr, __el1_boot
   b     __el2_boot
 #else
   b     __el1_boot
@@ -219,6 +224,7 @@ __cpu5_start:
 __cpu6_start:
 #ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu6_stackpointer
+  adr   lr, __el1_boot
   b     __el2_boot
 #else
   b     __el1_boot
@@ -237,6 +243,7 @@ __cpu6_start:
 __cpu7_start:
 #ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu7_stackpointer
+  adr   lr, __el1_boot
   b     __el2_boot
 #else
   b     __el1_boot
@@ -252,35 +259,6 @@ __cpu7_start:
 #if CONFIG_NCPUS > 8
 #  error Need work for CONFIG_NCPUS > 8
 #endif
-
-#ifdef CONFIG_ARM_HAVE_EL2
-/****************************************************************************
- * Name: __el2_boot
- * Desc: Setup el2 and jump to __el1_boot
- ****************************************************************************/
-
-__el2_boot:
-  ldr   r0, .Lhypvectorstart
-  mcr   CP15_HVBAR(r0)     /* Set Hyp/PL2 Vectortable base register */
-
-  bl    hsctlr_initialize  /* Init Hyp control register */
-
-  ldr   r0, =HACTLR_INIT
-  mcr   CP15_HACTLR(r0)    /* Enable EL1 access to IMP DEFINED regs */
-
-  bl    arm_el_init        /* Platform hook for highest EL */
-
-  /* Switch PL1 SYS with all exceptions masked */
-
-  mov   r0, #(PSR_MODE_SYS | PSR_I_BIT | PSR_F_BIT | PSR_A_BIT)
-  msr   spsr_hyp, r0
-
-  adr   r0, __el1_boot
-  msr   elr_hyp, r0
-  dsb
-  isb
-  eret
-#endif /* CONFIG_ARM_HAVE_EL2 */
 
 /****************************************************************************
  * Name: __el1_boot
@@ -852,17 +830,6 @@ __cpu7_boot:
   mov   r0, r5        /* Input parameter = CPU index */
   b     arm_cpu_boot  /* Branch to C level CPU initialization */
   .size .Lcpu_vstart, .-.Lcpu_vstart
-
-/***************************************************************************
- * Text-section constants
- ***************************************************************************/
-
-#ifdef CONFIG_ARM_HAVE_EL2
-.Lhypvectorstart:
-  .long _hyp_vector_start
-.Lsysvectorstart:
-  .long _vector_start
-#endif
 
 /***************************************************************************
  * .noinit section data

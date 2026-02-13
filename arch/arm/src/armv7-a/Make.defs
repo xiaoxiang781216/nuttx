@@ -31,8 +31,6 @@ ifeq ($(CONFIG_LEGACY_PAGING),y)
   CMN_CSRCS += arm_pginitialize.c
   CMN_CSRCS += arm_va2pte.c
   CMN_ASRCS += arm_pghead.S
-else
-  CMN_ASRCS += arm_head.S
 endif
 
 ifeq ($(CONFIG_ARCH_TRUSTZONE_SECURE),y)

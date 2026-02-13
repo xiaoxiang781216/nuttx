@@ -24,8 +24,6 @@ list(APPEND SRCS arm_mmu.c)
 
 if(CONFIG_LEGACY_PAGING)
   list(APPEND SRCS arm_pginitialize.c arm_va2pte.c arm_pghead.S)
-else()
-  list(APPEND SRCS arm_head.S)
 endif()
 
 if(CONFIG_ARCH_TRUSTZONE_SECURE)

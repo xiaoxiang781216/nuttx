@@ -25,7 +25,7 @@ HEAD_ASRC += arm_vectortab.S
 
 # Common ARM_A_R files
 
-CMN_ASRCS += arm_vectors.S arm_saveusercontext.S
+CMN_ASRCS += arm_vectors.S arm_saveusercontext.S arm_head.S
 
 CMN_CSRCS += arm_tcbinfo.c arm_doirq.c arm_dataabort.c arm_syscall.c
 CMN_CSRCS += arm_prefetchabort.c arm_cpuidlestack.c arm_initialstate.c
