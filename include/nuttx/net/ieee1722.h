@@ -34,6 +34,10 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/net/netdev.h>
 
+#if defined(CONFIG_NET_TIMESTAMP) && defined(CONFIG_PTP_CLOCK)
+#include <nuttx/fs/fs.h>
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -92,6 +96,10 @@ struct ieee1722acf_stream_s
   uint16_t stream_id;             /* IEEE 1722 stream identifier from user setting,
                                    * will be added into stream packet header
                                    */
+#if defined(CONFIG_NET_TIMESTAMP) && defined(CONFIG_PTP_CLOCK)
+  uint8_t ptp_id;                 /* PTP clock ID */
+  struct file ptp_filep;          /* PTP clock device file pointer */
+#endif
 
   /* Runtime state - dynamically updated during packet processing */
 

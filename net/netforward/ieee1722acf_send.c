@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <nuttx/net/cangw.h>
 #include <nuttx/net/ieee1722.h>
@@ -40,6 +41,10 @@
 #include "utils/utils.h"
 #include "netforward/ieee1722acf.h"
 #include "netforward/netforward.h"
+
+#if defined(CONFIG_NET_TIMESTAMP) && defined(CONFIG_PTP_CLOCK)
+#include <nuttx/timers/ptp_clock.h>
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -52,6 +57,45 @@
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: ieee1722acf_stream_gettime
+ *
+ * Description:
+ *   This function is used to get the PTP time for acf stream packet
+ *   timestamping.
+ *
+ * Input Parameters:
+ *   acf_stream - The acf stream structure
+ *   tv         - The location to return the PTP time
+ *
+ * Returned Value:
+ *   Zero is returned on success; A negated errno value is returned on any
+ *   failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_TIMESTAMP
+static inline_function int
+ieee1722acf_stream_gettime(FAR struct ieee1722acf_stream_s *acf_stream,
+                           FAR struct timespec *tv)
+{
+  int ret = -EINVAL;
+
+#ifdef CONFIG_PTP_CLOCK
+  if (acf_stream->ptp_filep.f_inode != NULL)
+    {
+      /* Get PTP time */
+
+      ret = file_ioctl(&acf_stream->ptp_filep, PTP_CLOCK_GETTIME, tv);
+    }
+#else
+  ret = clock_gettime(CLOCK_REALTIME, tv);
+#endif
+
+  return ret;
+}
+#endif
 
 /****************************************************************************
  * Name: ieee1722acf_dev_send
@@ -234,6 +278,16 @@ ieee1722acf_update_packet_length(FAR struct ieee1722acf_stream_s *stream)
         FAR struct ieee1722acf_tscf_hdr_s *packt_hdr =
         (FAR struct ieee1722acf_tscf_hdr_s *)IOB_DATA(stream->iob);
         payload_len = stream->iob->io_pktlen - sizeof(*packt_hdr);
+
+#ifdef CONFIG_NET_TIMESTAMP
+        struct timespec tv;
+        if (ieee1722acf_stream_gettime(stream, &tv) == OK)
+          {
+            packt_hdr->time_valid = 1;
+            packt_hdr->avtp_timestamp = HTONQ(tv.tv_sec * 1000000000ull +
+                                              tv.tv_nsec);
+          }
+#endif
 
         packt_hdr->stream_data_length = HTONS(payload_len);
       }
@@ -487,6 +541,13 @@ void del_1722acf_stream(FAR struct net_driver_s *dev,
       iob_free_chain(streams[i].iob);
       streams[i].iob = NULL;
       streams[i].priv = NULL;
+
+#if defined(CONFIG_NET_TIMESTAMP) && defined(CONFIG_PTP_CLOCK)
+
+      /* Close PTP clock device */
+
+      file_close(&streams[i].ptp_filep);
+#endif
     }
 }
 
@@ -512,6 +573,21 @@ void add_1722acf_stream(FAR struct net_driver_s *dev,
 
   for (i = 0; i < num; i++)
     {
+#if defined(CONFIG_NET_TIMESTAMP) && defined(CONFIG_PTP_CLOCK)
+
+      /* Open PTP clock device */
+
+      char path[16];
+
+      snprintf(path, sizeof(path), "/dev/ptp%d", streams[i].ptp_id);
+      int ret = file_open(&streams[i].ptp_filep, path,
+                          O_RDONLY | O_CLOEXEC);
+      if (ret < 0)
+        {
+          nerr("ERROR: Failed to open PTP clock device %s: %d\n", path, ret);
+        }
+#endif
+
       streams[i].priv = dev;
       sq_addlast(&streams[i].node, &dev->d_1722acf_streams);
     }
@@ -627,6 +703,16 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
                                                     &dest_hdr.can_hdr,
                                                     &can_id,
                                                     IEEE1722ACF_TYPE_CAN);
+
+#ifdef CONFIG_NET_TIMESTAMP
+                struct timespec tv;
+                if (ieee1722acf_stream_gettime(stream, &tv) == OK)
+                  {
+                    dest_hdr.can_hdr.msg_time_valid = 1;
+                    dest_hdr.msg_timestamp = HTONQ(1000000000ull *
+                                                   tv.tv_sec + tv.tv_nsec);
+                  }
+#endif
 
                 dest_hdr.canid = HTONL(can_id);
                 dest_hdr.msg_hdr.acf_msg_type = IEEE1722ACF_TYPE_CAN;

@@ -349,6 +349,17 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
             goto out;
           }
 
+#ifdef CONFIG_NET_TIMESTAMP
+          if ((dev->d_features & NETDEV_RX_STAMP) == 0)
+            {
+              clock_gettime(CLOCK_REALTIME, &can_iob->io_time);
+            }
+          else
+            {
+              can_iob->io_time = dev->d_iob->io_time;
+            }
+#endif
+
         offset = ieee1722acf_can_parse(dev, can_iob, offset, &msg_hdr);
         if (offset < 0)
           {
