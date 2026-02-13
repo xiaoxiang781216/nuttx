@@ -134,6 +134,14 @@ static int ieee1722acf_dev_send(FAR struct net_driver_s *dev,
       goto errout;
     }
 
+  if (IFF_IS_NODST_FORWARD(fwddev->d_flags))
+    {
+      nwarn("WARNING: CAN2ETH1722 forwarding disabled"
+            " on destination device %s\n", fwddev->d_ifname);
+      ret = -EOPNOTSUPP;
+      goto errout;
+    }
+
   /* Get a pre-allocated forwarding structure,  This structure will be
    * completely zeroed when we receive it.
    */
