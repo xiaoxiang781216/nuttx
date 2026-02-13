@@ -20,6 +20,14 @@
 
 set(PLATFORM_FLAGS)
 
+set(LLVM_CPUTYPE cortex-r52)
+
+if(CONFIG_ARM_THUMB)
+  set(LLVM_ARCHTYPE thumbv8r)
+else()
+  set(LLVM_ARCHTYPE armv8r)
+endif()
+
 if(CONFIG_ARCH_HAVE_DPFPU)
   list(APPEND PLATFORM_FLAGS -march=armv8-r)
 else()
@@ -27,6 +35,7 @@ else()
 endif()
 
 if(CONFIG_ARCH_FPU)
+  set(LLVM_ABITYPE eabihf)
 
   if(CONFIG_ARM_NEON)
     list(APPEND PLATFORM_FLAGS -mfpu=neon-fp-armv8)
@@ -41,6 +50,7 @@ if(CONFIG_ARCH_FPU)
     list(APPEND PLATFORM_FLAGS -mfloat-abi=hard)
   endif()
 else()
+  set(LLVM_ABITYPE eabi)
   list(APPEND PLATFORM_FLAGS -mfloat-abi=soft)
 endif()
 

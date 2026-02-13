@@ -18,6 +18,14 @@
 #
 ############################################################################
 
+LLVM_CPUTYPE := cortex-r52
+
+ifeq ($(CONFIG_ARM_THUMB),y)
+  LLVM_ARCHTYPE := thumbv8r
+else
+  LLVM_ARCHTYPE := armv8r
+endif
+
 ifeq ($(CONFIG_ARCH_HAVE_DPFPU),y)
   ARCHCPUFLAGS += -march=armv8-r
 else
