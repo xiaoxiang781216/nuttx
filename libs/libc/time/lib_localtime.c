@@ -2057,8 +2057,8 @@ static FAR struct tm *gmtsub(FAR const time_t *timep,
 
       if (!g_gmt_isset)
         {
-          gmtload(&g_gmt_st);
           g_gmt_isset = 1;
+          gmtload(&g_gmt_st);
         }
 
       tz_unlock(&g_gmt_lock);
