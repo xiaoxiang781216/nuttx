@@ -72,6 +72,16 @@ endif()
 
 if(CONFIG_ARCH_HAVE_MMU)
   list(APPEND SRCS arm64_mmu.c)
+  if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+    set_source_files_properties(
+      arm64_mmu.c DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../../..
+      PROPERTIES COMPILE_FLAGS
+                 "-fno-profile-instr-generate -fno-coverage-mapping")
+  else()
+    set_source_files_properties(
+      arm64_mmu.c DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../../..
+      PROPERTIES COMPILE_FLAGS "-fno-profile-arcs")
+  endif()
 endif()
 
 if(CONFIG_ARM64_MTE)
