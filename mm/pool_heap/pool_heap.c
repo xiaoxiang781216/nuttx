@@ -333,6 +333,18 @@ void mm_initialize_pool(FAR const struct mm_heap_config_s *config,
                                                 *heap);
       DEBUGASSERT((*heap)->mm_mpool);
     }
+
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
+#  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+  /* The attempt in mm_initialize_heap may fail due to kmm isnt ready */
+
+  if ((*heap)->mm_procfs == NULL)
+    {
+      (*heap)->mm_procfs = procfs_register_meminfo(config->name, *heap,
+                                               NULL, NULL);
+    }
+#  endif
+#endif
 }
 
 /****************************************************************************
