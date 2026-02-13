@@ -424,19 +424,19 @@ static long_double decfloat(FAR char *ptr, FAR char **endptr, int flag)
   switch (flag)
     {
       case TYPE_FLOAT:
-        if (y < FLT_MIN || y > FLT_MAX)
+        if (fabsl(y) < FLT_MIN || fabsl(y) > FLT_MAX)
           {
             set_errno(ERANGE);
           }
         break;
       case TYPE_DOUBLE:
-        if (y < DBL_MIN || y > DBL_MAX)
+        if (fabsl(y) < DBL_MIN || fabsl(y) > DBL_MAX)
           {
             set_errno(ERANGE);
           }
         break;
       case TYPE_LONG_DOUBLE:
-        if (y < LDBL_MIN || y > LDBL_MAX)
+        if (fabsl(y) < LDBL_MIN || fabsl(y) > LDBL_MAX)
           {
             set_errno(ERANGE);
           }
