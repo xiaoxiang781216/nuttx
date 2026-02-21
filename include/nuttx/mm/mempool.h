@@ -29,7 +29,6 @@
 
 #include <sys/types.h>
 
-#include <nuttx/list.h>
 #include <nuttx/queue.h>
 #include <nuttx/macro.h>
 #include <nuttx/mm/mm.h>
