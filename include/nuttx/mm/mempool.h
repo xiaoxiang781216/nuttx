@@ -902,7 +902,7 @@ static inline_function
 FAR struct mempool_record_s *mempool_get_record_from_block(FAR void *blk)
 {
   blk = (FAR char *)blk - MEMPOOL_RECORD_SIZE;
-  return blk;
+  return (FAR struct mempool_record_s *)blk;
 }
 #endif
 
