@@ -68,6 +68,8 @@
  *                    be generated.  This feature should assume to be
  *                    disabled after WDIOC_SETTIMEOUT.
  *                    Argument: A 32-bit time value in milliseconds.
+ * WDIOC_SETWINDOW  - Set the window value of the watchdog.
+ *                    Argument: A pointer to struct watchdog_window_s.
  */
 
 #define WDIOC_START      _WDIOC(0x001)
@@ -77,6 +79,7 @@
 #define WDIOC_CAPTURE    _WDIOC(0x005)
 #define WDIOC_KEEPALIVE  _WDIOC(0x006)
 #define WDIOC_SETSOFT    _WDIOC(0x007)
+#define WDIOC_SETWINDOW  _WDIOC(0x008)
 
 #define WDIOC_MINTIME    _WDIOC(0x080)
 
@@ -154,6 +157,16 @@ struct watchdog_status_s
   uint32_t  timeout;        /* The current timeout setting (in milliseconds) */
   uint32_t  timeleft;       /* Time left until the watchdog expiration
                              * (in milliseconds) */
+};
+
+/* This is the type of the argument passed to the WDIOC_SETWINDOW ioctl and
+ * used to set the window value (in milliseconds) of the watchdog.
+ */
+
+struct watchdog_window_s
+{
+  uint32_t  lwindow;        /* The left window value settings */
+  uint32_t  rwindow;        /* The right window value settings */
 };
 
 /* This structure provides the "lower-half" driver operations available to
