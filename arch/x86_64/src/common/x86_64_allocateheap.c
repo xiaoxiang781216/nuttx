@@ -55,8 +55,7 @@
  * Public Functions
  ****************************************************************************/
 
-static const uintptr_t g_idle_stackalloc = (uintptr_t)_ebss +
-  CONFIG_IDLETHREAD_STACKSIZE * CONFIG_SMP_NCPUS;
+static const uintptr_t g_idle_stackalloc = (uintptr_t)_ebss;
 
 const uintptr_t g_idle_topstack[CONFIG_SMP_NCPUS] =
 {
