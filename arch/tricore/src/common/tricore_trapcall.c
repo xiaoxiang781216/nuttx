@@ -34,6 +34,7 @@
 #include <arch/barriers.h>
 #include <sched/sched.h>
 #include <nuttx/coredump.h>
+#include <nuttx/percpu.h>
 #include <nuttx/sched.h>
 
 #include "tricore_internal.h"
@@ -45,6 +46,12 @@
  ****************************************************************************/
 
 static IfxCpu_Trap g_trapinfo;
+
+/* Bus trap hook for safety test modules (e.g., BusMonTst).
+ */
+
+static DEFINE_PER_CPU_BMP(tricore_bustrap_hook_t, g_bustrap_hook);
+#define g_bustrap_hook this_cpu_var_bmp(g_bustrap_hook)
 
 /****************************************************************************
  * Private Functions
@@ -63,6 +70,27 @@ static inline_function void tricore_trapinfo(volatile void *trap)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: tricore_bustrap_register_hook
+ *
+ * Description:
+ *   Register a hook function for bus trap handling. This allows safety test
+ *   modules (e.g., BusMonTst) to intercept and handle expected bus errors
+ *   during self-tests without triggering a system panic.
+ *
+ * Input Parameters:
+ *   hook - The hook function to register, or NULL to unregister
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void tricore_bustrap_register_hook(tricore_bustrap_hook_t hook)
+{
+  g_bustrap_hook = hook;
+}
 
 int weak_function tricore_nmitrap(uint32_t tid, void *context, void *arg)
 {
@@ -246,6 +274,23 @@ int tricore_contexmnttrap(uint32_t tid, void *context, void *arg)
 
 int tricore_bustrap(uint32_t tid, void *context, void *arg)
 {
+  /* First, let the registered hook try to handle the trap.
+   * This is used by safety test modules (e.g., BusMonTst) to handle
+   * expected bus errors during self-tests.
+   */
+
+  if (g_bustrap_hook != NULL)
+    {
+      if (g_bustrap_hook(tid, context) == OK)
+        {
+          /* Hook handled the trap, return normally */
+
+          return OK;
+        }
+    }
+
+  /* Hook did not handle or no hook registered, proceed with panic */
+
   _alert("PANIC!!! System Bus Trap:\n");
   _alert("\tClass %d TID: %" PRId32 " regs: %p\n", IfxCpu_Trap_Class_bus,
          tid, context);
@@ -335,12 +380,16 @@ void tricore_trapcall(volatile void *trap)
   IfxCpu_Trap *ctrap = (IfxCpu_Trap *)trap;
   IfxCpu_Trap_Class tclass = (IfxCpu_Trap_Class)ctrap->tClass;
   unsigned int tid = ctrap->tId;
+  bool was_interrupt_context;
+  uint32_t saved_fcx;
+  uint32_t saved_lcx;
 
   /* enter this funtion means that the regs is upcsa */
 
   regs = tricore_csa2addr(__mfcr(CPU_PCXI));
 
-  if (!up_interrupt_context())
+  was_interrupt_context = up_interrupt_context();
+  if (!was_interrupt_context)
     {
       uintptr_t istackbase = up_get_intstackbase(up_cpu_index());
 
@@ -349,6 +398,16 @@ void tricore_trapcall(volatile void *trap)
       /* Update the current task's regs */
 
       g_running_task->xcp.regs = regs - TC_CONTEXT_REGS;
+
+      /* Save the original FCX/LCX before switching to IRQ stack CSA.
+       * These must be restored if the trap is handled by a hook and
+       * returns normally (e.g., BusMonTst safety test), because the
+       * caller (IfxCpu_Trap_busError) will execute rslcx + rfe which
+       * needs the original CSA chain to restore context correctly.
+       */
+
+      saved_fcx = __mfcr(CPU_FCX);
+      saved_lcx = __mfcr(CPU_LCX);
 
       __mtcr(CPU_FCX, tricore_addr2csa(istackbase));
       __mtcr(CPU_LCX, tricore_addr2csa(istackbase
@@ -391,7 +450,37 @@ void tricore_trapcall(volatile void *trap)
 
   if (tclass == IfxCpu_Trap_Class_bus)
     {
-      tricore_bustrap(tid, regs, NULL);
+      if (tricore_bustrap(tid, regs, NULL) == OK)
+        {
+          /* Bus trap was handled by hook (e.g., BusMonTst safety test).
+           * Restore the full trap-entry state so that the caller
+           * (IfxCpu_Trap_busError) can execute IFX_TRAP_RET (rslcx + rfe)
+           * with the correct CSA chain.
+           */
+
+          if (!was_interrupt_context)
+            {
+              up_set_interrupt_context(false);
+
+              /* Restore the original FCX/LCX that were saved before
+               * switching to the IRQ stack CSA. Without this, rslcx
+               * in IFX_TRAP_RET would use the IRQ stack CSA chain
+               * instead of the original one, corrupting the context
+               * and causing a panic on the next interrupt.
+               */
+
+              __mtcr(CPU_FCX, saved_fcx);
+              __mtcr(CPU_LCX, saved_lcx);
+              UP_ISB();
+
+              /* g_running_task->xcp.regs is about to become invalid
+               * and will be marked as NULL to avoid misusage.
+               */
+
+              g_running_task->xcp.regs = NULL;
+            }
+        }
+
       __jumpBackToLink();
     }
 
