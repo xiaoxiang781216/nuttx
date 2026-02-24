@@ -24,6 +24,8 @@
 
 #include <nuttx/clock.h>
 
+#include <arch/arch.h>
+
 #include "arm64_pmu.h"
 
 #ifdef CONFIG_ARCH_PERF_EVENTS
@@ -42,6 +44,11 @@ static unsigned long g_cpu_freq = ULONG_MAX;
 void up_perf_init(void *arg)
 {
   g_cpu_freq = (unsigned long)(uintptr_t)arg;
+
+  if (g_cpu_freq == ULONG_MAX || g_cpu_freq == 0)
+    {
+      g_cpu_freq = read_sysreg(cntfrq_el0);
+    }
 
 #ifdef CONFIG_ARCH_CLUSTER_PMU
   pmu_clucntr_control_config(CLUSTERPMCR_EL1_C | CLUSTERPMCR_EL1_P |
