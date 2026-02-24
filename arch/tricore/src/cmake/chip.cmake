@@ -22,6 +22,7 @@ set(PLATFORM_FLAGS)
 
 if(CONFIG_ARCH_CHIP_AURIX_TC39X)
   if(CONFIG_TRICORE_TOOLCHAIN_TASKING)
+    add_compile_options(--default-near-size=0)
     add_compile_options(--cpu=tc39xb)
     add_link_options(-Ctc39xb)
   else()
