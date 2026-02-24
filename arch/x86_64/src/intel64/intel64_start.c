@@ -141,6 +141,9 @@ static void x86_64_mb2_config(void)
 void __nxstart(void)
 {
   uint64_t *dest = NULL;
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+  uintptr_t fsbase;
+#endif
 
   /* This is only for BSP core. AP cores are handled by x86_64_ap_boot() */
 
@@ -165,10 +168,10 @@ void __nxstart(void)
 #ifdef CONFIG_SCHED_THREAD_LOCAL
   /* Make sure that FS_BASE is not null */
 
-  write_fsbase((uintptr_t)(g_idle_topstack[0] -
-                           CONFIG_IDLETHREAD_STACKSIZE +
-                           sizeof(struct tls_info_s) +
-                           (_END_TBSS - _START_TDATA)));
+  fsbase = g_idle_topstack[0] - CONFIG_IDLETHREAD_STACKSIZE +
+           sizeof(struct tls_info_s) + (_END_TBSS - _START_TDATA);
+  *(uintptr_t *)fsbase = fsbase;
+  write_fsbase(fsbase);
 #endif
 
   /* Low-level, pre-OS initialization */

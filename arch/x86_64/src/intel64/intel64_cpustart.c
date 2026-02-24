@@ -126,6 +126,9 @@ void x86_64_ap_boot(void)
 {
   struct tcb_s *tcb;
   uint8_t cpu = 0;
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+  uintptr_t fsbase;
+#endif
 
   /* Do some checking on CPU compatibilities at the top of this function */
 
@@ -150,9 +153,10 @@ void x86_64_ap_boot(void)
 #ifdef CONFIG_SCHED_THREAD_LOCAL
   /* Make sure that FS_BASE is not null */
 
-  write_fsbase((uintptr_t)tcb->stack_alloc_ptr +
-               sizeof(struct tls_info_s) +
-               (_END_TBSS - _START_TDATA));
+  fsbase = (uintptr_t)tcb->stack_alloc_ptr + sizeof(struct tls_info_s) +
+                      (_END_TBSS - _START_TDATA);
+  *(uintptr_t *)fsbase = fsbase;
+  write_fsbase(fsbase);
 #endif
 
   /* Configure interrupts */
