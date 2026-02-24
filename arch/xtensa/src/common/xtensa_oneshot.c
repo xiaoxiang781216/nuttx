@@ -48,12 +48,22 @@ struct xoneshot_lowerhalf_s
   uint32_t                   irq;
   spinlock_t                 lock;     /* Lock to protect oneshot state */
   uint32_t                   overflow;
+  uint32_t                   last_count;
 };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
+#ifdef CONFIG_ONESHOT_COUNT
+static clkcnt_t xtensa_oneshot_current(struct oneshot_lowerhalf_s *lower);
+static void     xtensa_oneshot_start(struct oneshot_lowerhalf_s *lower,
+                                     clkcnt_t delay);
+static void     xtensa_oneshot_start_absolute(
+                    struct oneshot_lowerhalf_s *lower, clkcnt_t cnt);
+static void     xtensa_oneshot_cancel(struct oneshot_lowerhalf_s *lower);
+static clkcnt_t xtensa_oneshot_maxdelay(struct oneshot_lowerhalf_s *lower);
+#else
 static int xtensa_oneshot_maxdelay(struct oneshot_lowerhalf_s *lower,
                                    struct timespec *ts);
 static int xtensa_oneshot_start(struct oneshot_lowerhalf_s *lower,
@@ -62,6 +72,7 @@ static int xtensa_oneshot_cancel(struct oneshot_lowerhalf_s *lower,
                                  struct timespec *ts);
 static int xtensa_oneshot_current(struct oneshot_lowerhalf_s *lower,
                                   struct timespec *ts);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -69,15 +80,100 @@ static int xtensa_oneshot_current(struct oneshot_lowerhalf_s *lower,
 
 static const struct oneshot_operations_s g_xtensa_oneshot_ops =
 {
+#ifdef CONFIG_ONESHOT_COUNT
+  .current        = xtensa_oneshot_current,
+  .start          = xtensa_oneshot_start,
+  .start_absolute = xtensa_oneshot_start_absolute,
+  .cancel         = xtensa_oneshot_cancel,
+  .max_delay      = xtensa_oneshot_maxdelay,
+#else
   .max_delay = xtensa_oneshot_maxdelay,
   .start     = xtensa_oneshot_start,
   .cancel    = xtensa_oneshot_cancel,
   .current   = xtensa_oneshot_current,
+#endif
 };
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static inline clkcnt_t
+xtensa_oneshot_get_count(struct xoneshot_lowerhalf_s *lower)
+{
+  uint32_t count;
+
+  count = xtensa_getcount();
+  if (count < lower->last_count)
+    {
+      lower->overflow++;
+    }
+
+  lower->last_count = count;
+
+  return (clkcnt_t)count + (clkcnt_t)lower->overflow * UINT32_MAX;
+}
+
+#ifdef CONFIG_ONESHOT_COUNT
+
+static clkcnt_t xtensa_oneshot_current(struct oneshot_lowerhalf_s *lower_)
+{
+  struct xoneshot_lowerhalf_s *lower =
+    (struct xoneshot_lowerhalf_s *)lower_;
+
+  return xtensa_oneshot_get_count(lower);
+}
+
+static void xtensa_oneshot_start(struct oneshot_lowerhalf_s *lower_,
+                                 clkcnt_t delay)
+{
+  struct xoneshot_lowerhalf_s *lower =
+    (struct xoneshot_lowerhalf_s *)lower_;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&lower->lock);
+
+  xtensa_setcompare(xtensa_getcount() + (uint32_t)delay);
+  up_enable_irq(lower->irq);
+
+  spin_unlock_irqrestore(&lower->lock, flags);
+}
+
+static void xtensa_oneshot_start_absolute(struct oneshot_lowerhalf_s *lower_,
+                                          clkcnt_t cnt)
+{
+  struct xoneshot_lowerhalf_s *lower =
+    (struct xoneshot_lowerhalf_s *)lower_;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&lower->lock);
+
+  xtensa_setcompare((uint32_t)cnt);
+  up_enable_irq(lower->irq);
+
+  spin_unlock_irqrestore(&lower->lock, flags);
+}
+
+static void xtensa_oneshot_cancel(struct oneshot_lowerhalf_s *lower_)
+{
+  struct xoneshot_lowerhalf_s *lower =
+    (struct xoneshot_lowerhalf_s *)lower_;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&lower->lock);
+
+  up_disable_irq(lower->irq);
+
+  spin_unlock_irqrestore(&lower->lock, flags);
+}
+
+static clkcnt_t xtensa_oneshot_maxdelay(struct oneshot_lowerhalf_s *lower_)
+{
+  UNUSED(lower_);
+  return (clkcnt_t)UINT32_MAX;
+}
+
+#else /* !CONFIG_ONESHOT_COUNT */
 
 static inline uint64_t nsec_from_count(uint32_t count, uint32_t freq)
 {
@@ -138,19 +234,10 @@ static int xtensa_oneshot_current(struct oneshot_lowerhalf_s *lower_,
 {
   struct xoneshot_lowerhalf_s *lower =
     (struct xoneshot_lowerhalf_s *)lower_;
-  static uint32_t last_count;
-  uint64_t count;
+  clkcnt_t count;
   uint64_t left;
 
-  count = xtensa_getcount();
-  if (count < last_count)
-    {
-      lower->overflow++;
-    }
-
-  last_count = count;
-
-  count += (uint64_t)lower->overflow * UINT32_MAX;
+  count = xtensa_oneshot_get_count(lower);
 
   ts->tv_sec  = count / lower->freq;
   left        = count - (uint64_t)ts->tv_sec * lower->freq;
@@ -172,6 +259,8 @@ static int xtensa_oneshot_maxdelay(struct oneshot_lowerhalf_s *lower_,
 
   return 0;
 }
+
+#endif /* CONFIG_ONESHOT_COUNT */
 
 static int xtensa_oneshot_interrupt(int irq, void *context, void *arg)
 {
@@ -201,6 +290,10 @@ xtensa_oneshot_initialize(uint32_t irq, uint32_t freq)
   lower->lh.ops = &g_xtensa_oneshot_ops;
   lower->freq   = freq;
   lower->irq    = irq;
+
+#ifdef CONFIG_ONESHOT_COUNT
+  oneshot_count_init(&lower->lh, freq);
+#endif
 
   spin_lock_init(&lower->lock);
   irq_attach(irq, xtensa_oneshot_interrupt, lower);
