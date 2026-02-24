@@ -660,15 +660,15 @@ The state-machine diagram of the HRTimer is as follows:
   |                                                      |
   |     +----------------------+                         |
   |     | HRTIMER_COMPLETED    |                         |
-  |     |      (private)       |                         |
-  |     +----------------------+                         |
-  |                |                                     |
-  |                | hrtimer_start                       |
-  |                |                                     |
-  |                |                                     |
-  |                v                                     |
-  |     +----------------------+                         |
-  |     | HRTIMER_PENDING      |---------------------+   |
+  | +-->|      (private)       |                         |
+  | |   +----------------------+                         |
+  | |               |                                    |
+  | |hrtimer_cancel |hrtimer_start                       |
+  | |               |                                    |
+  | |               |                                    |
+  | |               v                                    |
+  | |   +----------------------+                         |
+  | +---| HRTIMER_PENDING      |---------------------+   |
   | +-->|      (shared)        |<---+                |   |
   | |   +----------------------+    |                |   |
   | |            |                  |timer callback  |   |
@@ -681,7 +681,7 @@ The state-machine diagram of the HRTimer is as follows:
   | |   +----------------------+                     |   |
   | |                    |                           |   |
   | |                    |                           |   |
-  | |                    |timer return zero          |   |
+  | |                    |timer callback return zero |   |
   | |                    |or                         |   |
   | |                    |hrtimer_cancel             |   |
   | |                    |                           |   |
@@ -712,7 +712,7 @@ been inserted into the hrtimer queue and is waiting to be executed.
 **HRTIMER_COMPLETED|private**: `hrtimer->func == NULL` ∧
 `∀c ∈ [0, CONFIG_SMP_NCPUS), (g_hrtimer_running[c] & ~(1u)) != hrtimer`
 That is, the hrtimer is not in a pending state, and no core is currently
-executing the hrtimer's callback function.  
+executing the hrtimer's callback function.
 
 **HRTIMER_RUNNING|shared**: `hrtimer->func == NULL` ∧
 `∃c ∈ [0, CONFIG_SMP_NCPUS), g_hrtimer_running[c] == hrtimer`.
@@ -721,8 +721,8 @@ core that is currently executing the hrtimer’s callback function.
 
 **HRTIMER_CANCELED|half_shared**: `hrtimer->func == NULL` ∧
 `∀c ∈ [0, CONFIG_SMP_NCPUS), g_hrtimer_running[c] != hrtimer`.
-That is, the hrtimer is not in a pending state, and all cores have lost
-ownership of the hrtimer—meaning they can no longer read from or write to the
+That is, the hrtimer is not in a pending state, and all cores have lost write
+ownership of the hrtimer—meaning they can no longer write to the
 hrtimer—though its callback function may still be in the process of being
 executed.
 
