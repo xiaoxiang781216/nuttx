@@ -36,7 +36,7 @@ list(
   rp2040_pll.c)
 
 if(CONFIG_SMP)
-  list(APPEND SRCS rp2040_cpustart.c rp2040_smpcall.c rp2040_cpuidlestack.c
+  list(APPEND SRCS rp2040_cpustart.c rp2040_cpucall.c rp2040_cpuidlestack.c
        rp2040_testset.c)
 endif()
 

@@ -37,7 +37,7 @@ CHIP_CSRCS += rp2040_hwspinlock.c
 
 ifeq ($(CONFIG_SMP),y)
 CHIP_CSRCS += rp2040_cpustart.c
-CHIP_CSRCS += rp2040_smpcall.c
+CHIP_CSRCS += rp2040_cpucall.c
 CHIP_CSRCS += rp2040_cpuidlestack.c
 CMN_ASRCS  := $(filter-out arm_testset.S,$(CMN_ASRCS))
 endif

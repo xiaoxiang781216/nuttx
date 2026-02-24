@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sparc/src/s698pm/s698pm_smpcall.c
+ * arch/xtensa/src/common/xtensa_cpucall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,20 +26,19 @@
 
 #include <stdint.h>
 #include <assert.h>
-#include <debug.h>
-#include <string.h>
-#include <stdio.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
+#include "xtensa.h"
 #include "sched/sched.h"
-#include "sparc_internal.h"
-#include "chip.h"
+
+#ifdef CONFIG_SMP
 
 /****************************************************************************
- * Public Data
+ * Private Data
  ****************************************************************************/
 
 /****************************************************************************
@@ -47,30 +46,17 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: s698pm_smp_call_handler
+ * Name: xtensa_cpu_call_handler
  *
  * Description:
- *   This is the handler for SMP_CALL.
+ *   This is the handler for smp.
  *
  ****************************************************************************/
 
-int s698pm_smp_call_handler(int irq, void *c, void *arg)
+void xtensa_cpu_call_handler(int irq, void *context, void *arg)
 {
-  struct tcb_s *tcb;
-  int cpu = this_cpu();
-
-  /* Clear IPI (Inter-Processor-Interrupt) */
-
-  putreg32(1 << S698PM_IPI_VECTOR, S698PM_IRQREG_ICLEAR);
-
-  tcb = current_task(cpu);
-  sparc_savestate(tcb->xcp.regs);
-  nxsched_smp_call_handler(irq, c, arg);
-  nxsched_process_delivered(cpu);
-  tcb = current_task(cpu);
-  sparc_restorestate(tcb->xcp.regs);
-
-  return OK;
+  nxsched_cpu_call_handler(irq, context, arg);
+  nxsched_process_delivered(this_cpu());
 }
 
 /****************************************************************************
@@ -94,18 +80,15 @@ int s698pm_smp_call_handler(int irq, void *c, void *arg)
 
 int up_send_smp_sched(int cpu)
 {
-  uintptr_t regaddr;
+  /* Execute the intercpu interrupt */
 
-  /* Execute Pause IRQ to CPU(cpu) */
-
-  regaddr = (uintptr_t)S698PM_IRQREG_P0_FORCE + (4 * cpu);
-  putreg32(1 << S698PM_IPI_VECTOR, regaddr);
+  xtensa_intercpu_interrupt(cpu, CPU_INTCODE_PAUSE);
 
   return OK;
 }
 
 /****************************************************************************
- * Name: up_send_smp_call
+ * Name: up_send_cpu_call
  *
  * Description:
  *   Send smp call to target cpu.
@@ -118,7 +101,7 @@ int up_send_smp_sched(int cpu)
  *
  ****************************************************************************/
 
-void up_send_smp_call(cpu_set_t cpuset)
+void up_send_cpu_call(cpu_set_t cpuset)
 {
   int cpu;
 
@@ -128,3 +111,5 @@ void up_send_smp_call(cpu_set_t cpuset)
       up_send_smp_sched(cpu);
     }
 }
+
+#endif /* CONFIG_SMP */

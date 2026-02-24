@@ -183,7 +183,7 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb,
                     }
 
                   count = break_critical_section();
-                  nxsched_smp_call_single(cpu, sig_handler, &arg);
+                  nxsched_cpu_call_single(cpu, sig_handler, &arg);
                   restore_critical_section(count);
                 }
               else

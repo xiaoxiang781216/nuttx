@@ -178,7 +178,7 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
               arg.need_restore = true;
             }
 
-          nxsched_smp_call_single(tcb->cpu, nxsched_suspend_handler, &arg);
+          nxsched_cpu_call_single(tcb->cpu, nxsched_suspend_handler, &arg);
         }
       else
 #endif

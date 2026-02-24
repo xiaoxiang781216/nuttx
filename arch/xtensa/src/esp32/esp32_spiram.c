@@ -76,8 +76,8 @@ static bool spiram_inited = false;
 
 #ifdef CONFIG_SMP
 static int pause_cpu_handler(FAR void *cookie);
-static struct smp_call_data_s g_call_data =
-SMP_CALL_INITIALIZER(pause_cpu_handler, NULL);
+static struct cpu_call_data_s g_call_data =
+CPU_CALL_INITIALIZER(pause_cpu_handler, NULL);
 #endif
 
 /****************************************************************************
@@ -211,7 +211,7 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
       cpu_to_stop = this_cpu() == 1 ? 0 : 1;
       g_cpu_wait  = true;
       g_cpu_pause = false;
-      nxsched_smp_call_single_async(cpu_to_stop, &g_call_data);
+      nxsched_cpu_call_single_async(cpu_to_stop, &g_call_data);
       while (!g_cpu_pause);
     }
 

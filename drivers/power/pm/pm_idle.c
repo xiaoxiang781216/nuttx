@@ -49,7 +49,7 @@ struct pm_idle_s
   spinlock_t lock;
   cpu_set_t running;
   cpu_set_t firstdone;
-  struct smp_call_data_s smp_call_data;
+  struct cpu_call_data_s smp_call_data;
 };
 
 /****************************************************************************
@@ -67,7 +67,7 @@ static struct pm_idle_s g_pm_idle =
   SP_UNLOCKED,
   PM_SMP_ALL_CPUS,
   0,
-  SMP_CALL_INITIALIZER(pm_idle_smp_call_cb, NULL),
+  CPU_CALL_INITIALIZER(pm_idle_smp_call_cb, NULL),
 };
 
 /****************************************************************************
@@ -119,7 +119,7 @@ static bool pm_idle_checkstate(int cpu)
 
   if (CPU_COUNT(&cpus) > 0)
     {
-      nxsched_smp_call_async(cpus, &g_pm_idle.smp_call_data);
+      nxsched_cpu_call_async(cpus, &g_pm_idle.smp_call_data);
       return false;
     }
 
@@ -248,7 +248,7 @@ void pm_idle(pm_idle_handler_t handler)
 #if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
   if (last && cpu != CONFIG_PM_SMP_LAST_CPU_INDEX)
     {
-      nxsched_smp_call_single_async(CONFIG_PM_SMP_LAST_CPU_INDEX,
+      nxsched_cpu_call_single_async(CONFIG_PM_SMP_LAST_CPU_INDEX,
                                     &g_pm_idle.smp_call_data);
       last = false;
     }

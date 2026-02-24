@@ -102,7 +102,7 @@ CMN_CSRCS += arm64_cpustart.c
 endif
 
 ifneq ($(CONFIG_UP),y)
-CMN_CSRCS += arm64_smpcall.c
+CMN_CSRCS += arm64_cpucall.c
 endif
 
 ifeq ($(CONFIG_BUILD_PROTECTED)$(CONFIG_BUILD_KERNEL),y)

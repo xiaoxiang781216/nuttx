@@ -114,7 +114,7 @@ if(CONFIG_SCHED_DUMP_ON_EXIT)
 endif()
 
 if(NOT CONFIG_UP)
-  list(APPEND SRCS sched_smp.c)
+  list(APPEND SRCS sched_cpucall.c)
 endif()
 
 if(CONFIG_PERF_EVENTS)

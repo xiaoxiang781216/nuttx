@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/sam34/sam4cm_smpcall.c
+ * arch/sparc/src/s698pm/s698pm_cpucall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -35,23 +35,11 @@
 #include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
-#include "arm_internal.h"
-#include "hardware/sam4cm_ipc.h"
-
-#ifdef CONFIG_SMP
+#include "sparc_internal.h"
+#include "chip.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#if 0
-#  define DPRINTF(fmt, args...) _err(fmt, ##args)
-#else
-#  define DPRINTF(fmt, args...) do {} while (0)
-#endif
-
-/****************************************************************************
- * Private Data
+ * Public Data
  ****************************************************************************/
 
 /****************************************************************************
@@ -59,35 +47,28 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sam4cm_smp_call_handler
+ * Name: s698pm_cpu_call_handler
  *
  * Description:
- *   This is the handler for SMP_CALL.
+ *   This is the handler for CPU_CALL.
  *
  ****************************************************************************/
 
-int sam4cm_smp_call_handler(int irq, void *c, void *arg)
+int s698pm_cpu_call_handler(int irq, void *c, void *arg)
 {
+  struct tcb_s *tcb;
   int cpu = this_cpu();
 
-  nxsched_smp_call_handler(irq, c, arg);
+  /* Clear IPI (Inter-Processor-Interrupt) */
 
-  /* Clear : Pause IRQ */
+  putreg32(1 << S698PM_IPI_VECTOR, S698PM_IRQREG_ICLEAR);
 
-  /* IPC Interrupt Clear Command Register (write-only) */
-
-  if (1 == cpu)
-    {
-      DPRINTF("CPU0 -> CPU1\n");
-      putreg32(0x1, SAM_IPC1_ICCR);
-    }
-  else
-    {
-      DPRINTF("CPU1 -> CPU0\n");
-      putreg32(0x1, SAM_IPC0_ICCR);
-    }
-
+  tcb = current_task(cpu);
+  sparc_savestate(tcb->xcp.regs);
+  nxsched_cpu_call_handler(irq, c, arg);
   nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  sparc_restorestate(tcb->xcp.regs);
 
   return OK;
 }
@@ -113,24 +94,18 @@ int sam4cm_smp_call_handler(int irq, void *c, void *arg)
 
 int up_send_smp_sched(int cpu)
 {
+  uintptr_t regaddr;
+
   /* Execute Pause IRQ to CPU(cpu) */
 
-  /* Set IPC Interrupt (IRQ0) (write-only) */
-
-  if (cpu == 1)
-    {
-      putreg32(0x1, SAM_IPC1_ISCR);
-    }
-  else
-    {
-      putreg32(0x1, SAM_IPC0_ISCR);
-    }
+  regaddr = (uintptr_t)S698PM_IRQREG_P0_FORCE + (4 * cpu);
+  putreg32(1 << S698PM_IPI_VECTOR, regaddr);
 
   return OK;
 }
 
 /****************************************************************************
- * Name: up_send_smp_call
+ * Name: up_send_cpu_call
  *
  * Description:
  *   Send smp call to target cpu.
@@ -143,7 +118,7 @@ int up_send_smp_sched(int cpu)
  *
  ****************************************************************************/
 
-void up_send_smp_call(cpu_set_t cpuset)
+void up_send_cpu_call(cpu_set_t cpuset)
 {
   int cpu;
 
@@ -153,5 +128,3 @@ void up_send_smp_call(cpu_set_t cpuset)
       up_send_smp_sched(cpu);
     }
 }
-
-#endif /* CONFIG_SMP */

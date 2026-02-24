@@ -274,10 +274,10 @@
 
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
 #  define GIC_SMP_SCHED             GIC_IRQ_SGI9
-#  define GIC_SMP_CALL              GIC_IRQ_SGI11
+#  define GIC_CPU_CALL              GIC_IRQ_SGI11
 #else
 #  define GIC_SMP_SCHED             GIC_IRQ_SGI1
-#  define GIC_SMP_CALL              GIC_IRQ_SGI3
+#  define GIC_CPU_CALL              GIC_IRQ_SGI3
 #endif
 
 /****************************************************************************

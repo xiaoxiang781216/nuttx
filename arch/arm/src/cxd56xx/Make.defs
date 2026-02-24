@@ -42,7 +42,7 @@ CHIP_CSRCS += cxd56_hwspinlock.c
 
 ifeq ($(CONFIG_SMP), y)
 CHIP_CSRCS += cxd56_cpuidlestack.c
-CHIP_CSRCS += cxd56_smpcall.c
+CHIP_CSRCS += cxd56_cpucall.c
 CHIP_CSRCS += cxd56_cpustart.c
 endif
 

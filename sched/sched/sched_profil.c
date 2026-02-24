@@ -60,8 +60,8 @@ static int profil_timer_handler_cpu(FAR void *arg);
 
 #ifdef CONFIG_SMP
 static struct profinfo_s g_prof;
-static struct smp_call_data_s g_call_data =
-SMP_CALL_INITIALIZER(profil_timer_handler_cpu, &g_prof);
+static struct cpu_call_data_s g_call_data =
+CPU_CALL_INITIALIZER(profil_timer_handler_cpu, &g_prof);
 #endif
 
 /****************************************************************************
@@ -97,7 +97,7 @@ static void profil_timer_handler(wdparm_t arg)
 #ifdef CONFIG_SMP
   cpu_set_t cpus = (1 << CONFIG_SMP_NCPUS) - 1;
   CPU_CLR(this_cpu(), &cpus);
-  nxsched_smp_call_async(cpus, &g_call_data);
+  nxsched_cpu_call_async(cpus, &g_call_data);
 #endif
 
   profil_timer_handler_cpu(prof);

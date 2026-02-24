@@ -603,7 +603,7 @@ static void gicv3_dist_init(void)
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
   DEBUGVERIFY(irq_attach(GIC_SMP_SCHED, arm64_smp_sched_handler, NULL));
-  DEBUGVERIFY(irq_attach(GIC_SMP_CALL, nxsched_smp_call_handler, NULL));
+  DEBUGVERIFY(irq_attach(GIC_CPU_CALL, nxsched_cpu_call_handler, NULL));
 #endif
 }
 
@@ -925,14 +925,14 @@ static void arm64_gic_init(void)
   gicv3_cpuif_init();
 
 #ifdef CONFIG_BMP
-  DEBUGVERIFY(irq_attach(GIC_SMP_CALL, nxsched_smp_call_handler, NULL));
+  DEBUGVERIFY(irq_attach(GIC_CPU_CALL, nxsched_cpu_call_handler, NULL));
 #endif
 
 #ifdef CONFIG_SMP
   up_enable_irq(GIC_SMP_SCHED);
 #endif
 #ifndef CONFIG_UP
-  up_enable_irq(GIC_SMP_CALL);
+  up_enable_irq(GIC_CPU_CALL);
 #endif
 }
 

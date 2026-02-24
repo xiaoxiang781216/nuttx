@@ -47,7 +47,7 @@ if(NOT CONFIG_ALARM_ARCH)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS riscv_smpcall.c riscv_cpustart.c)
+  list(APPEND SRCS riscv_cpucall.c riscv_cpustart.c)
 endif()
 
 if(CONFIG_ARCH_HAVE_MULTICPU)

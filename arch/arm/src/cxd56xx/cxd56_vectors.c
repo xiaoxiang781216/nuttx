@@ -77,7 +77,7 @@ extern void exception_direct(void);
  * Public data
  ****************************************************************************/
 
-/* The cx56 use CXD56_IRQ_SMP_CALL to do SMP call.
+/* The cx56 use CXD56_IRQ_CPU_CALL to do SMP call.
  * When sig dispatch do up_schedule_sigaction, need to make a new frame to
  * run arm_sigdeliver. But the exception_direct cannot handle xcp.regs as we
  * did not update the regs when c-function expection handler is called.
@@ -99,9 +99,9 @@ const void * const _vectors[] locate_data(".vectors")
   /* Vectors 2 - n point directly at the generic handler */
 
   [2 ... NVIC_IRQ_PENDSV] = &exception_common,
-  [NVIC_IRQ_SYSTICK ... (CXD56_IRQ_SMP_CALL - 1)]
+  [NVIC_IRQ_SYSTICK ... (CXD56_IRQ_CPU_CALL - 1)]
                           = &exception_direct,
-  [CXD56_IRQ_SMP_CALL]    = &exception_common,
-  [(CXD56_IRQ_SMP_CALL + 1) ... (15 + ARMV7M_PERIPHERAL_INTERRUPTS)]
+  [CXD56_IRQ_CPU_CALL]    = &exception_common,
+  [(CXD56_IRQ_CPU_CALL + 1) ... (15 + ARMV7M_PERIPHERAL_INTERRUPTS)]
                           = &exception_direct
 };

@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/xtensa/src/common/xtensa_smpcall.c
+ * arch/arm/src/rp2040/rp2040_cpucall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,37 +26,106 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <debug.h>
+#include <string.h>
+#include <stdio.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
-#include "xtensa.h"
 #include "sched/sched.h"
+#include "arm_internal.h"
+#include "hardware/rp2040_sio.h"
 
 #ifdef CONFIG_SMP
 
 /****************************************************************************
- * Private Data
+ * Pre-processor Definitions
  ****************************************************************************/
+
+#if 0
+#define DPRINTF(fmt, args...) llinfo(fmt, ##args)
+#else
+#define DPRINTF(fmt, args...) do {} while (0)
+#endif
+
+/****************************************************************************
+ * Name: rp2040_handle_irqreq
+ *
+ * Description:
+ *   If an irq handling request is found on cpu, call up_enable_irq() or
+ *   up_disable_irq().
+ *
+ * Input Parameters:
+ *   irqreq - The IRQ number to be handled (>0 : enable / <0 : disable)
+ *
+ ****************************************************************************/
+
+static void rp2040_handle_irqreq(int irqreq)
+{
+  DEBUGASSERT(this_cpu() == 0);
+
+  if (irqreq > 0)
+    {
+      up_enable_irq(irqreq);
+    }
+  else
+    {
+      up_disable_irq(-irqreq);
+    }
+}
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: xtensa_smp_call_handler
+ * Name: rp2040_cpu_call_handler
  *
  * Description:
- *   This is the handler for smp.
+ *   This is the handler for CPU_CALL.
  *
  ****************************************************************************/
 
-void xtensa_smp_call_handler(int irq, void *context, void *arg)
+int rp2040_cpu_call_handler(int irq, void *c, void *arg)
 {
-  nxsched_smp_call_handler(irq, context, arg);
-  nxsched_process_delivered(this_cpu());
+  int cpu = this_cpu();
+  int irqreq;
+  uint32_t stat;
+
+  nxsched_cpu_call_handler(irq, c, arg);
+
+  stat = getreg32(RP2040_SIO_FIFO_ST);
+  if (stat & (RP2040_SIO_FIFO_ST_ROE | RP2040_SIO_FIFO_ST_WOF))
+    {
+      /* Clear sticky flag */
+
+      putreg32(0, RP2040_SIO_FIFO_ST);
+    }
+
+  if (!(stat & RP2040_SIO_FIFO_ST_VLD))
+    {
+      /* No data received */
+
+      return OK;
+    }
+
+  irqreq = getreg32(RP2040_SIO_FIFO_RD);
+
+  if (irqreq != 0)
+    {
+      /* Handle IRQ enable/disable request */
+
+      rp2040_handle_irqreq(irqreq);
+      return OK;
+    }
+
+  DPRINTF("cpu%d will be paused\n", cpu);
+
+  nxsched_process_delivered(cpu);
+
+  return OK;
 }
 
 /****************************************************************************
@@ -80,15 +149,17 @@ void xtensa_smp_call_handler(int irq, void *context, void *arg)
 
 int up_send_smp_sched(int cpu)
 {
-  /* Execute the intercpu interrupt */
+  /* Generate IRQ for CPU(cpu) */
 
-  xtensa_intercpu_interrupt(cpu, CPU_INTCODE_PAUSE);
+  while (!(getreg32(RP2040_SIO_FIFO_ST) & RP2040_SIO_FIFO_ST_RDY))
+    ;
+  putreg32(0, RP2040_SIO_FIFO_WR);
 
   return OK;
 }
 
 /****************************************************************************
- * Name: up_send_smp_call
+ * Name: up_send_cpu_call
  *
  * Description:
  *   Send smp call to target cpu.
@@ -101,7 +172,7 @@ int up_send_smp_sched(int cpu)
  *
  ****************************************************************************/
 
-void up_send_smp_call(cpu_set_t cpuset)
+void up_send_cpu_call(cpu_set_t cpuset)
 {
   int cpu;
 
@@ -110,6 +181,30 @@ void up_send_smp_call(cpu_set_t cpuset)
       cpu = ffs(cpuset) - 1;
       up_send_smp_sched(cpu);
     }
+}
+
+/****************************************************************************
+ * Name: rp2040_send_irqreq()
+ *
+ * Description:
+ *   Send up_enable_irq() / up_disable_irq() request to the Core #0
+ *
+ *   This function is called from up_enable_irq() or up_disable_irq()
+ *   to be handled on specified CPU. Locking protocol in the sequence is
+ *   the same as up_pause_cpu() plus up_resume_cpu().
+ *
+ * Input Parameters:
+ *   irqreq - The IRQ number to be handled (>0 : enable / <0 : disable)
+ *
+ ****************************************************************************/
+
+void rp2040_send_irqreq(int irqreq)
+{
+  /* Send IRQ number to Core #0 */
+
+  while (!(getreg32(RP2040_SIO_FIFO_ST) & RP2040_SIO_FIFO_ST_RDY))
+    ;
+  putreg32(irqreq, RP2040_SIO_FIFO_WR);
 }
 
 #endif /* CONFIG_SMP */

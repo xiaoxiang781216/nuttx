@@ -66,7 +66,7 @@ static int IRAM_ATTR esp32s3_fromcpu_interrupt(int irq, void *context,
 
   /* Smp call handler */
 
-  xtensa_smp_call_handler(irq, context, arg);
+  xtensa_cpu_call_handler(irq, context, arg);
 
   return OK;
 }

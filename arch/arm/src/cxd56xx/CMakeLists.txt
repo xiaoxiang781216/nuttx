@@ -43,7 +43,7 @@ set(SRCS
 
 if(CONFIG_SMP)
   list(APPEND SRCS cxd56_cpuidlestack.c)
-  list(APPEND SRCS cxd56_smpcall.c)
+  list(APPEND SRCS cxd56_cpucall.c)
   list(APPEND SRCS cxd56_cpustart.c)
 endif()
 

@@ -74,7 +74,7 @@ if(CONFIG_MM_PGALLOC)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS intel64_cpuidlestack.c intel64_smpcall.c intel64_cpustart.c)
+  list(APPEND SRCS intel64_cpuidlestack.c intel64_cpucall.c intel64_cpustart.c)
 endif()
 
 if(CONFIG_MULTBOOT2_FB_TERM)

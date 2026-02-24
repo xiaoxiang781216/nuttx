@@ -102,12 +102,12 @@ const void * const _vectors[] locate_data(".vectors")
   /* Vectors 2 - n point directly at the generic handler */
 
   [2 ... NVIC_IRQ_PENDSV] = &exception_common,
-  [(NVIC_IRQ_PENDSV + 1) ... (SAM_IRQ_SMP_CALL0 - 1)]
+  [(NVIC_IRQ_PENDSV + 1) ... (SAM_IRQ_CPU_CALL0 - 1)]
                           = &exception_direct,
-  [SAM_IRQ_SMP_CALL0]     = &exception_common,
-  [(SAM_IRQ_SMP_CALL0 + 1) ... (SAM_IRQ_SMP_CALL1 - 1)]
+  [SAM_IRQ_CPU_CALL0]     = &exception_common,
+  [(SAM_IRQ_CPU_CALL0 + 1) ... (SAM_IRQ_CPU_CALL1 - 1)]
                           = &exception_direct,
-  [SAM_IRQ_SMP_CALL1]     = &exception_common,
-  [(SAM_IRQ_SMP_CALL1 + 1) ... (15 + ARMV7M_PERIPHERAL_INTERRUPTS)]
+  [SAM_IRQ_CPU_CALL1]     = &exception_common,
+  [(SAM_IRQ_CPU_CALL1 + 1) ... (15 + ARMV7M_PERIPHERAL_INTERRUPTS)]
                           = &exception_direct
 };

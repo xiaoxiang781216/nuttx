@@ -81,7 +81,7 @@ if(CONFIG_SCHED_BACKTRACE)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS xtensa_smpcall.c)
+  list(APPEND SRCS xtensa_cpucall.c)
 endif()
 
 if(CONFIG_STACK_COLORATION)

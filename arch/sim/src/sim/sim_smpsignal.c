@@ -38,21 +38,21 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sim_smp_call_handler
+ * Name: sim_cpu_call_handler
  *
  * Description:
- *   This is the handler for SMP_CALL.
+ *   This is the handler for CPU_CALL.
  *
  ****************************************************************************/
 
-static int sim_smp_call_handler(int irq, void *context, void *arg)
+static int sim_cpu_call_handler(int irq, void *context, void *arg)
 {
   struct tcb_s *tcb;
   int cpu = this_cpu();
 
   tcb = current_task(cpu);
   sim_savestate(tcb->xcp.regs);
-  nxsched_smp_call_handler(irq, context, arg);
+  nxsched_cpu_call_handler(irq, context, arg);
   tcb = current_task(cpu);
   sim_restorestate(tcb->xcp.regs);
 
@@ -211,18 +211,18 @@ int up_send_smp_sched(int cpu)
 int sim_init_func_call_ipi(int irq)
 {
   up_enable_irq(irq);
-  return irq_attach(irq, sim_smp_call_handler, NULL);
+  return irq_attach(irq, sim_cpu_call_handler, NULL);
 }
 
 /****************************************************************************
- * Name: up_send_smp_call
+ * Name: up_send_cpu_call
  *
  * Description:
  *   Notify the cpuset cpus handler function calls.
  *
  ****************************************************************************/
 
-void up_send_smp_call(cpu_set_t cpuset)
+void up_send_cpu_call(cpu_set_t cpuset)
 {
   int cpu;
 

@@ -135,7 +135,7 @@ int sched_backtrace(pid_t tid, FAR void **buffer, int size, int skip)
               arg.skip = skip;
 
               nxsched_put_tcb(tcb);
-              ret = nxsched_smp_call_single(cpu,
+              ret = nxsched_cpu_call_single(cpu,
                                             sched_backtrace_handler,
                                             &arg) < 0 ? 0 : arg.stacksize;
             }

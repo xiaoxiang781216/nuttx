@@ -1425,12 +1425,12 @@ static int perf_event_do_disable(FAR void *arg)
 
 static int perf_task_function_call(FAR struct tcb_s *tcb,
                                    FAR struct perf_event_s *event,
-                                   nxsched_smp_call_t func)
+                                   nxsched_cpu_call_t func)
 {
 #ifdef CONFIG_SMP
   if (tcb->cpu != this_cpu())
     {
-      return nxsched_smp_call_single(tcb->cpu, func, event);
+      return nxsched_cpu_call_single(tcb->cpu, func, event);
     }
 #endif
 
@@ -1455,12 +1455,12 @@ static int perf_task_function_call(FAR struct tcb_s *tcb,
  ****************************************************************************/
 
 static int perf_cpu_function_call(int cpu, FAR struct perf_event_s *event,
-                                  nxsched_smp_call_t func)
+                                  nxsched_cpu_call_t func)
 {
 #ifdef CONFIG_SMP
   if (cpu != this_cpu())
     {
-      return nxsched_smp_call_single(cpu, func, event);
+      return nxsched_cpu_call_single(cpu, func, event);
     }
 #endif
 
@@ -1485,7 +1485,7 @@ static int perf_cpu_function_call(int cpu, FAR struct perf_event_s *event,
  ****************************************************************************/
 
 static int perf_function_call(FAR struct perf_event_s *event,
-                              nxsched_smp_call_t func)
+                              nxsched_cpu_call_t func)
 {
   FAR struct perf_event_context_s *ctx = event->ctx;
 
@@ -1592,7 +1592,7 @@ static int perf_event_reset(FAR void *arg)
  ****************************************************************************/
 
 static int perf_event_for_child(FAR struct perf_event_s *event,
-                                nxsched_smp_call_t func)
+                                nxsched_cpu_call_t func)
 {
   FAR struct perf_event_s *child_event;
   int ret;
@@ -1635,7 +1635,7 @@ static int perf_event_for_child(FAR struct perf_event_s *event,
  ****************************************************************************/
 
 static int perf_event_for_group(FAR struct perf_event_s *event,
-                                nxsched_smp_call_t func)
+                                nxsched_cpu_call_t func)
 {
   FAR struct perf_event_s *sub_event;
   int ret;
@@ -2194,7 +2194,7 @@ static ssize_t perf_read(FAR struct file *filep, FAR char *buffer,
 static int perf_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   FAR struct perf_event_s *event = filep->f_priv;
-  nxsched_smp_call_t func = NULL;
+  nxsched_cpu_call_t func = NULL;
   int ret = OK;
 
   ASSERT(event != NULL);
@@ -2385,12 +2385,12 @@ static void perf_swevent_timer_handle(wdparm_t arg)
 
   if (event->oncpu != -1 && event->oncpu != cpu)
     {
-      nxsched_smp_call_single(event->oncpu,
+      nxsched_cpu_call_single(event->oncpu,
                               perf_swevent_timer_handle_cpu, event);
     }
   else if(event->cpu != -1 && event->cpu != cpu)
     {
-      nxsched_smp_call_single(event->cpu,
+      nxsched_cpu_call_single(event->cpu,
                               perf_swevent_timer_handle_cpu, event);
     }
   else

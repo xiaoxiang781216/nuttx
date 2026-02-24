@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm64/src/common/arm64_smpcall.c
+ * arch/risc-v/src/common/riscv_cpucall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -27,18 +27,20 @@
 #include <stdint.h>
 #include <assert.h>
 #include <debug.h>
+#include <string.h>
+#include <stdio.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
-#include "arm64_internal.h"
-#include "arm64_gic.h"
 #include "sched/sched.h"
+#include "riscv_internal.h"
+#include "riscv_ipi.h"
+#include "chip.h"
 
 /****************************************************************************
- * Private Data
+ * Public Data
  ****************************************************************************/
 
 /****************************************************************************
@@ -46,32 +48,32 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm64_smp_sched_handler
+ * Name: riscv_cpu_call_handler
  *
  * Description:
- *   This is the handler for sched.
- *
- *   1. It saves the current task state at the head of the current assigned
- *      task list.
- *   2. It process g_delivertasks
- *   3. Returns from interrupt, restoring the state of the new task at the
- *      head of the ready to run list.
- *
- * Input Parameters:
- *   Standard interrupt handling
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
+ *   This is the handler for CPU_CALL.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
-int arm64_smp_sched_handler(int irq, void *context, void *arg)
+int riscv_cpu_call_handler(int irq, void *c, void *arg)
 {
-  nxsched_process_delivered(this_cpu());
+  struct tcb_s *tcb;
+  int cpu = this_cpu();
+
+  nxsched_cpu_call_handler(irq, c, arg);
+
+  /* Clear IPI (Inter-Processor-Interrupt) */
+
+  riscv_ipi_clear(cpu);
+
+  tcb = current_task(cpu);
+  riscv_savecontext(tcb);
+  nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  riscv_restorecontext(tcb);
+
   return OK;
 }
-#endif
 
 /****************************************************************************
  * Name: up_send_smp_sched
@@ -94,15 +96,15 @@ int arm64_smp_sched_handler(int irq, void *context, void *arg)
 
 int up_send_smp_sched(int cpu)
 {
-  /* Execute SGI2 */
+  /* Execute Pause IRQ to CPU(cpu) */
 
-  up_trigger_irq(GIC_SMP_SCHED, (1 << cpu));
+  riscv_ipi_send(cpu);
 
   return OK;
 }
 
 /****************************************************************************
- * Name: up_send_smp_call
+ * Name: up_send_cpu_call
  *
  * Description:
  *   Send smp call to target cpu.
@@ -115,7 +117,13 @@ int up_send_smp_sched(int cpu)
  *
  ****************************************************************************/
 
-void up_send_smp_call(cpu_set_t cpuset)
+void up_send_cpu_call(cpu_set_t cpuset)
 {
-  up_trigger_irq(GIC_SMP_CALL, cpuset);
+  int cpu;
+
+  for (; cpuset != 0; cpuset &= ~(1 << cpu))
+    {
+      cpu = ffs(cpuset) - 1;
+      up_send_smp_sched(cpu);
+    }
 }

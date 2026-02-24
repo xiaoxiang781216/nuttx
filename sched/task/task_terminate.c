@@ -147,7 +147,7 @@ int nxtask_terminate(pid_t pid)
 
           tcb_flags = atomic_or(&dtcb->flags, TCB_FLAG_CPU_LOCKED);
 
-          ret = nxsched_smp_call_single(dtcb->cpu, terminate_handler,
+          ret = nxsched_cpu_call_single(dtcb->cpu, terminate_handler,
                                         (FAR void *)(uintptr_t)dtcb);
 
           if (ret < 0)

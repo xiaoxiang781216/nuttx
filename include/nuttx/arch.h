@@ -2404,7 +2404,7 @@ int up_send_smp_sched(int cpu);
 #endif
 
 /****************************************************************************
- * Name: up_send_smp_call
+ * Name: up_send_cpu_call
  *
  * Description:
  *   Send smp call to target cpu
@@ -2412,7 +2412,7 @@ int up_send_smp_sched(int cpu);
  ****************************************************************************/
 
 #ifndef CONFIG_UP
-void up_send_smp_call(cpu_set_t cpuset);
+void up_send_cpu_call(cpu_set_t cpuset);
 #endif
 
 /****************************************************************************

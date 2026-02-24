@@ -54,7 +54,7 @@ struct pm_stability_governor_domain_s
 
   /* SMP call data to wake self up */
 
-  struct smp_call_delay_data_s call_data;
+  struct cpu_call_delay_data_s call_data;
 #else
 
   /* Timer to wakeup system, delay the sleep request */
@@ -182,11 +182,11 @@ static void stability_governor_statechanged(int domain,
       if (thresh > 0 && state != newstate)
         {
 #ifdef CONFIG_SMP
-          nxsched_smp_call_delay_init(&gdom->call_data,
+          nxsched_cpu_call_delay_init(&gdom->call_data,
                                       stability_governor_cb,
                                       gdom);
 
-          nxsched_smp_call_single_delay(this_cpu(), thresh,
+          nxsched_cpu_call_single_delay(this_cpu(), thresh,
                                         &gdom->call_data);
 #else
           wd_start(wdog, thresh, (wdentry_t)stability_governor_cb, 0);

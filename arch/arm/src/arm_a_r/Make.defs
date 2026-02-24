@@ -73,7 +73,7 @@ ifeq ($(CONFIG_ARM_L2CC_PL310),y)
 endif
 
 ifneq ($(CONFIG_UP),y)
-  CMN_CSRCS += arm_scu.c arm_smpcall.c arm_cpustart.c
+  CMN_CSRCS += arm_scu.c arm_cpucall.c arm_cpustart.c
 endif
 
 ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)

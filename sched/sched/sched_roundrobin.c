@@ -46,7 +46,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-static struct smp_call_data_s g_call_data;
+static struct cpu_call_data_s g_call_data;
 #endif
 
 /****************************************************************************
@@ -202,10 +202,10 @@ clock_t nxsched_process_roundrobin(FAR struct tcb_s *tcb, clock_t ticks,
               DEBUGASSERT(tcb->task_state == TSTATE_TASK_RUNNING);
               if (tcb->cpu != this_cpu())
                 {
-                  nxsched_smp_call_init(&g_call_data,
+                  nxsched_cpu_call_init(&g_call_data,
                                         nxsched_roundrobin_handler,
                                         (FAR void *)(uintptr_t)tcb->pid);
-                  nxsched_smp_call_single_async(tcb->cpu, &g_call_data);
+                  nxsched_cpu_call_single_async(tcb->cpu, &g_call_data);
                 }
               else if (nxsched_switch_running(tcb->cpu, true))
 #else

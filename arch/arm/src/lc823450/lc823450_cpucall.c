@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/x86_64/src/intel64/intel64_smpcall.c
+ * arch/arm/src/lc823450/lc823450_cpucall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -30,15 +30,23 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <arch/irq.h>
-
 #include <nuttx/arch.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
+#include "arm_internal.h"
+#include "lc823450_intc.h"
 
-#include "x86_64_internal.h"
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#if 0
+#define DPRINTF(fmt, args...) llinfo(fmt, ##args)
+#else
+#define DPRINTF(fmt, args...) do {} while (0)
+#endif
 
 /****************************************************************************
  * Public Data
@@ -49,43 +57,33 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: x86_64_smp_call_handler
+ * Name: lc823450_cpu_call_handler
  *
  * Description:
- *   This is the handler for SMP_CALL.
+ *   This is the handler for CPU_CALL.
  *
  ****************************************************************************/
 
-int x86_64_smp_call_handler(int irq, void *c, void *arg)
+int lc823450_cpu_call_handler(int irq, void *c, void *arg)
 {
-  nxsched_smp_call_handler(irq, c, arg);
+  int cpu = this_cpu();
 
-  return OK;
-}
+  nxsched_cpu_call_handler(irq, c, arg);
 
-/****************************************************************************
- * Name: x86_64_smp_sched_handler
- *
- * Description:
- *   This is the handler for smp.
- *
- *   1. It saves the current task state at the head of the current assigned
- *      task list.
- *   2. It porcess g_delivertasks
- *   3. Returns from interrupt, restoring the state of the new task at the
- *      head of the ready to run list.
- *
- * Input Parameters:
- *   Standard interrupt handling
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- ****************************************************************************/
+  /* Clear : Pause IRQ */
 
-int x86_64_smp_sched_handler(int irq, void *c, void *arg)
-{
-  nxsched_process_delivered(this_cpu());
+  if (irq == LC823450_IRQ_CPU_CALL_01)
+    {
+      DPRINTF("CPU0 -> CPU1\n");
+      putreg32(IPICLR_INTISR0_CLR_1, IPICLR);
+    }
+  else
+    {
+      DPRINTF("CPU1 -> CPU0\n");
+      putreg32(IPICLR_INTISR1_CLR_1, IPICLR);
+    }
+
+  nxsched_process_delivered(cpu);
 
   return OK;
 }
@@ -111,18 +109,22 @@ int x86_64_smp_sched_handler(int irq, void *c, void *arg)
 
 int up_send_smp_sched(int cpu)
 {
-  cpu_set_t cpuset;
+  /* Execute Pause IRQ to CPU(cpu) */
 
-  CPU_ZERO(&cpuset);
-  CPU_SET(cpu, &cpuset);
-
-  up_trigger_irq(SMP_IPI_SCHED_IRQ, cpuset);
+  if (cpu == 1)
+    {
+      putreg32(IPIREG_INTISR0_1, IPIREG);
+    }
+  else
+    {
+      putreg32(IPIREG_INTISR1_1, IPIREG);
+    }
 
   return OK;
 }
 
 /****************************************************************************
- * Name: up_send_smp_call
+ * Name: up_send_cpu_call
  *
  * Description:
  *   Send smp call to target cpu.
@@ -135,7 +137,13 @@ int up_send_smp_sched(int cpu)
  *
  ****************************************************************************/
 
-void up_send_smp_call(cpu_set_t cpuset)
+void up_send_cpu_call(cpu_set_t cpuset)
 {
-  up_trigger_irq(SMP_IPI_CALL_IRQ, cpuset);
+  int cpu;
+
+  for (; cpuset != 0; cpuset &= ~(1 << cpu))
+    {
+      cpu = ffs(cpuset) - 1;
+      up_send_smp_sched(cpu);
+    }
 }

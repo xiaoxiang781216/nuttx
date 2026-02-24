@@ -101,7 +101,7 @@ if(NOT CONFIG_UP)
 endif()
 
 if(NOT CONFIG_UP)
-  list(APPEND SRCS arm64_smpcall.c)
+  list(APPEND SRCS arm64_cpucall.c)
 endif()
 
 if(CONFIG_BUILD_KERNEL OR CONFIG_BUILD_PROTECTED)

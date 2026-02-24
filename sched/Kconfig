@@ -454,7 +454,7 @@ config PERCPU_SECTION
 
 endchoice
 
-config SMP_CALL_POOL_COUNT
+config CPU_CALL_POOL_COUNT
 	int "Number of pre-allocated SMP CALl cookie etc"
 	depends on BMP
 	default 0
