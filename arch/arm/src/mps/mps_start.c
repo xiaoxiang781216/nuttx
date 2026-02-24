@@ -45,6 +45,7 @@
 #define HEAP_BASE ((uintptr_t)_ebss + CONFIG_IDLETHREAD_STACKSIZE)
 #define MPS_PERIPH_BASE    0x40000000
 #define MPS_PERIPH_SIZE    0x20000000
+#define MPS_DWT_FREQUENCY  1000000000uL
 
 /****************************************************************************
  * Public Data
@@ -152,6 +153,10 @@ void __start(void)
     {
       *dest++ = *src++;
     }
+#endif
+
+#ifdef CONFIG_ARCH_PERF_EVENTS
+  up_perf_init((void *)MPS_DWT_FREQUENCY);
 #endif
 
   /* Perform early serial initialization */
