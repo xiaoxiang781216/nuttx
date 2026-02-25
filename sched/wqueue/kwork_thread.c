@@ -162,8 +162,8 @@ DEFINE_PER_CPU_BMP(struct lp_wqueue_s, g_lpwork) =
  *
  ****************************************************************************/
 
-static void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
-                          FAR struct kworker_s *kworker)
+static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
+                                          FAR struct kworker_s *kworker)
 {
   FAR struct work_s *work;
   FAR struct work_s *next;
