@@ -106,6 +106,7 @@ struct audio_rpmsg_send_data_s
   struct audio_rpmsg_header_s header;
   uint32_t flags;  /* Apb flags */
   uint32_t length; /* Msg data length */
+  uint32_t count;
   uint8_t data[0]; /* Request data */
 };
 
@@ -476,6 +477,7 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
 
           memcpy(req->data, apb->samp + apb->curbyte, space);
           req->length = space;
+          req->count = apb->nbytes;
 
           if ((apb->curbyte + space) == apb->nbytes)
             {
@@ -488,6 +490,7 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
         {
           space = apb->nbytes - apb->curbyte;
           req->length = space;
+          req->count = apb->nbytes;
           req->flags = apb->flags;
           ret = rpmsg_send_nocopy(&aud->ept, req, sizeof(*req));
         }
@@ -739,7 +742,7 @@ static int audio_rpmsg_send_data_handler(FAR struct rpmsg_endpoint *ept,
 
   apb->curbyte += req->length;
 
-  if (apb->curbyte == apb->nmaxbytes || req->flags & AUDIO_APB_FINAL)
+  if (apb->curbyte == req->count || req->flags & AUDIO_APB_FINAL)
     {
       dq_remfirst(&aud->pendq);
       apb->flags = req->flags;
