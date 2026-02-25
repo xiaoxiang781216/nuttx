@@ -102,15 +102,17 @@ void arm_enable_smp(int cpu)
       /* Init idle task to percpu reg */
 
       up_update_task(current_task(cpu));
-#endif
 
       /* If we do coloration in assembly, will hard to cover the tls etc.
        * And we should not do coloration before tcb stack_base_ptr updated.
+       * Only SMP mode will core-0 do core-N tls init.
        */
 
-#ifdef CONFIG_STACK_COLORATION
+#  ifdef CONFIG_STACK_COLORATION
       while (!OSINIT_MM_READY());
       arm_stack_color(current_task(cpu)->stack_base_ptr, 0);
+#  endif
+
 #endif
 
       /* Invalidate CPUn L1 data cache so that is will we be reloaded from
