@@ -314,7 +314,7 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
 
   if (dev->d_iob->io_pktlen != offset + payload_len)
     {
-      nerr("ERROR: Invalid acf packet, pktlen %d, payload len %d\n",
+      nerr("ERROR: Invalid acf packet, pktlen %u, payload len %zu\n",
             dev->d_iob->io_pktlen, payload_len);
       ret = -EINVAL;
       goto out;
