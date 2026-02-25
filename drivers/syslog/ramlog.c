@@ -114,11 +114,12 @@ struct ramlog_dev_s
 
   FAR struct ramlog_header_s *rl_header;
 
-  uint32_t                   rl_bufsize;   /* Size of the circular buffer */
-  dq_queue_t                 rl_queue;     /* The dq of ramlog_user_s */
-  struct ramlog_ratelimit_s  rl_ratelimit; /* The ratelimit for ramlog */
+  uint32_t                   rl_bufsize;     /* Size of the circular buffer */
+  bool                       rl_clearonread; /* Advance tail after read */
+  dq_queue_t                 rl_queue;       /* The dq of ramlog_user_s */
+  struct ramlog_ratelimit_s  rl_ratelimit;   /* The ratelimit for ramlog */
 #if CONFIG_RAMLOG_POLLTIMEOUT_MS > 0
-  struct wdog_s              rl_wdog;      /* The wdog for poll timeout */
+  struct wdog_s              rl_wdog;        /* The wdog for poll timeout */
 #endif
 };
 
@@ -765,6 +766,13 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
 
           upriv->rl_read += ncopy;
           nread += ncopy;
+
+          /* Advance tail after read if read-on-clear is enabled */
+
+          if (priv->rl_clearonread)
+            {
+              header->rl_tail = upriv->rl_read;
+            }
         }
     }
 
@@ -814,6 +822,9 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
         break;
       case SYSLOGIOC_CLEAR:
         ramlog_bufferflush(priv);
+        break;
+      case SYSLOGIOC_CLEARONREAD:
+        priv->rl_clearonread = (bool)arg;
         break;
 
       case SYSLOGIOC_SETRATELIMIT:
