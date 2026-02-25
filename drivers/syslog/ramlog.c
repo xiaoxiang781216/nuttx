@@ -115,6 +115,7 @@ struct ramlog_dev_s
   FAR struct ramlog_header_s *rl_header;
 
   uint32_t                   rl_bufsize;     /* Size of the circular buffer */
+  bool                       rl_overwrite;   /* Overwrite old data when full */
   bool                       rl_clearonread; /* Advance tail after read */
   dq_queue_t                 rl_queue;       /* The dq of ramlog_user_s */
   struct ramlog_ratelimit_s  rl_ratelimit;   /* The ratelimit for ramlog */
@@ -185,8 +186,9 @@ static uint32_t g_sysbuffer[CONFIG_RAMLOG_BUFSIZE / 4];
 
 static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_sysdev) =
 {
-  (FAR struct ramlog_header_s *)g_sysbuffer,            /* rl_buffer */
+  (FAR struct ramlog_header_s *)g_sysbuffer,            /* rl_header */
   sizeof(g_sysbuffer) - sizeof(struct ramlog_header_s), /* rl_bufsize */
+  true,                                                 /* rl_overwrite */
 };
 #  define g_sysdev this_cpu_var_bmp(g_sysdev)
 #endif
@@ -616,6 +618,17 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
       buflen = priv->rl_bufsize;
     }
 
+  /* When overwrite is disabled, discard new data when buffer is full.
+   * Only effective with clearonread, since tail never advances otherwise.
+   */
+
+  if (!priv->rl_overwrite && priv->rl_clearonread &&
+      header->rl_head - header->rl_tail + buflen > priv->rl_bufsize)
+    {
+      spin_unlock_irqrestore_nopreempt(&header->rl_lock, flags);
+      return len;
+    }
+
   ramlog_copybuf(priv, buffer, buflen);
 
   /* Was anything written? */
@@ -826,6 +839,9 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
       case SYSLOGIOC_CLEARONREAD:
         priv->rl_clearonread = (bool)arg;
         break;
+      case SYSLOGIOC_SETOVERWRITE:
+        priv->rl_overwrite = (bool)arg;
+        break;
 
       case SYSLOGIOC_SETRATELIMIT:
         if (arg == 0)
@@ -1018,6 +1034,7 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
 
       priv->rl_bufsize = buflen - sizeof(struct ramlog_header_s);
       priv->rl_header = (FAR struct ramlog_header_s *)buffer;
+      priv->rl_overwrite = true;
 
       /* Initialize the ramlog header if it has not been initialized yet. */
 
