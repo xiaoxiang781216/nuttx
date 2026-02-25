@@ -240,7 +240,7 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
                       count, intpart, fracpart,
                       (unsigned long)delta.tv_nsec / 1000
 #ifdef CONFIG_ARCH_IRQPRIO
-                      , (unsigned long)copy.nests
+                      , copy.nests
 #endif
                       );
 
