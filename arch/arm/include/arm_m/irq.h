@@ -235,6 +235,10 @@ struct xcpt_syscall_s
   uint32_t excreturn;   /* The EXC_RETURN value */
   uint32_t sysreturn;   /* The return PC */
   uint32_t ctrlreturn;  /* The return CONTROL value */
+  uint32_t r1;          /* Saved R1 across syscall dispatch */
+  uint32_t r2;          /* Saved R2 across syscall dispatch */
+  uint32_t r3;          /* Saved R3 across syscall dispatch */
+  uint32_t r12;         /* Saved R12 (ip) across syscall dispatch */
 };
 #endif
 

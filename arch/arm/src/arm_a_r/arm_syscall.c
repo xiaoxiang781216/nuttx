@@ -233,6 +233,16 @@ uint32_t *arm_syscall(uint32_t *regs)
 
           regs[REG_R0]         = regs[REG_R2];
 
+          /* Restore R1-R3, R12 that were saved on syscall entry.
+           * The two-stage syscall dispatch does not preserve these
+           * caller-saved registers, but user code may rely on them.
+           */
+
+          regs[REG_R1]         = rtcb->xcp.syscall[index].r1;
+          regs[REG_R2]         = rtcb->xcp.syscall[index].r2;
+          regs[REG_R3]         = rtcb->xcp.syscall[index].r3;
+          regs[REG_R12]        = rtcb->xcp.syscall[index].r12;
+
 #ifdef CONFIG_ARCH_KERNEL_STACK
           /* If this is the outermost SYSCALL and if there is a saved user
            * stack pointer, then restore the user stack pointer on this
@@ -523,6 +533,17 @@ uint32_t *arm_syscall(uint32_t *regs)
 #  ifndef CONFIG_BUILD_FLAT
           rtcb->xcp.syscall[index].cpsr      = regs[REG_CPSR];
 #  endif
+
+          /* Save R1-R3, R12 so they can be restored on
+           * SYS_syscall_return.  The two-stage syscall dispatch
+           * (arm_dispatch_syscall) clobbers these caller-saved
+           * registers, but user code may rely on them.
+           */
+
+          rtcb->xcp.syscall[index].r1        = regs[REG_R1];
+          rtcb->xcp.syscall[index].r2        = regs[REG_R2];
+          rtcb->xcp.syscall[index].r3        = regs[REG_R3];
+          rtcb->xcp.syscall[index].r12       = regs[REG_R12];
 
           if (cmd == SYS_ppccall)
             {

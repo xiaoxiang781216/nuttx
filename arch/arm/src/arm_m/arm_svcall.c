@@ -196,6 +196,16 @@ int arm_svcall(int irq, void *context, void *arg)
 
           regs[REG_R0]         = regs[REG_R2];
 
+          /* Restore R1-R3, R12 that were saved on syscall entry.
+           * The two-stage syscall dispatch does not preserve these
+           * caller-saved registers, but user code may rely on them.
+           */
+
+          regs[REG_R1]         = tcb->xcp.syscall[index].r1;
+          regs[REG_R2]         = tcb->xcp.syscall[index].r2;
+          regs[REG_R3]         = tcb->xcp.syscall[index].r3;
+          regs[REG_R12]        = tcb->xcp.syscall[index].r12;
+
 #  ifdef CONFIG_LIB_PPCCALL
           if (cmd == SYS_ppccall_return)
             {
@@ -467,6 +477,17 @@ int arm_svcall(int irq, void *context, void *arg)
           tcb->xcp.syscall[index].sysreturn  = regs[REG_PC];
           tcb->xcp.syscall[index].excreturn  = regs[REG_EXC_RETURN];
           tcb->xcp.syscall[index].ctrlreturn = regs[REG_CONTROL];
+
+          /* Save R1-R3, R12 so they can be restored on
+           * SYS_syscall_return.  The two-stage syscall dispatch
+           * (arm_dispatch_syscall) clobbers these caller-saved
+           * registers, but user code may rely on them.
+           */
+
+          tcb->xcp.syscall[index].r1         = regs[REG_R1];
+          tcb->xcp.syscall[index].r2         = regs[REG_R2];
+          tcb->xcp.syscall[index].r3         = regs[REG_R3];
+          tcb->xcp.syscall[index].r12        = regs[REG_R12];
 
           if (cmd == SYS_ppccall)
             {

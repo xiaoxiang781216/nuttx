@@ -232,6 +232,10 @@ struct xcpt_syscall_s
   uint32_t cpsr;        /* The CPSR value */
 #endif
   uint32_t sysreturn;   /* The return PC */
+  uint32_t r1;          /* Saved R1 across syscall dispatch */
+  uint32_t r2;          /* Saved R2 across syscall dispatch */
+  uint32_t r3;          /* Saved R3 across syscall dispatch */
+  uint32_t r12;         /* Saved R12 (ip) across syscall dispatch */
 #ifdef CONFIG_ARCH_KERNEL_STACK
   uint32_t r11;          /* The r11 help unwind sp */
 #endif
