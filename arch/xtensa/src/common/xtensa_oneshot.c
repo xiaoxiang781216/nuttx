@@ -101,7 +101,11 @@ static const struct oneshot_operations_s g_xtensa_oneshot_ops =
 static inline clkcnt_t
 xtensa_oneshot_get_count(struct xoneshot_lowerhalf_s *lower)
 {
+  irqstate_t flags;
   uint32_t count;
+  clkcnt_t result;
+
+  flags = spin_lock_irqsave(&lower->lock);
 
   count = xtensa_getcount();
   if (count < lower->last_count)
@@ -110,8 +114,11 @@ xtensa_oneshot_get_count(struct xoneshot_lowerhalf_s *lower)
     }
 
   lower->last_count = count;
+  result = (clkcnt_t)count + (clkcnt_t)lower->overflow * UINT32_MAX;
 
-  return (clkcnt_t)count + (clkcnt_t)lower->overflow * UINT32_MAX;
+  spin_unlock_irqrestore(&lower->lock, flags);
+
+  return result;
 }
 
 #ifdef CONFIG_ONESHOT_COUNT
