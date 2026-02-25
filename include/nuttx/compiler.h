@@ -84,21 +84,6 @@
 #  define CONFIG_HAVE_ZERO_SIZE_ARRAY 1
 #endif
 
-/* ISO C11 supports _Atomic keyword for atomic types.
- * Define atomic_t/atomic64_t with _Atomic when available.
- */
-
-#ifndef __ASSEMBLY__
-#  if !defined(__STDC_NO_ATOMICS__) && !defined(__cplusplus) && \
-      defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-typedef volatile _Atomic int atomic_t;
-typedef volatile _Atomic long long atomic64_t;
-#  else
-typedef volatile int atomic_t;
-typedef volatile long long atomic64_t;
-#  endif
-#endif /* __ASSEMBLY__ */
-
 /* Green Hills Software definitions *****************************************/
 
 #if defined(__ghs__)
