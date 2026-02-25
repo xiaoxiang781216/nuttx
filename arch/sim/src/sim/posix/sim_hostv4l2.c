@@ -36,6 +36,7 @@
 #include <sys/ioctl.h>
 
 #include "sim_hostvideo.h"
+#include "sim_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -75,7 +76,7 @@ static int host_video_ioctl(int fd, int request, void *arg)
 
   do
     {
-      r = ioctl(fd, request, arg);
+      r = host_uninterruptible(ioctl, fd, request, arg);
     }
   while (-1 == r && EINTR == errno);
 
@@ -88,7 +89,7 @@ static int host_video_ioctl(int fd, int request, void *arg)
 
 bool host_video_is_available(const char *host_video_dev_path)
 {
-  return access(host_video_dev_path, F_OK) == 0;
+  return host_uninterruptible(access, host_video_dev_path, F_OK) == 0;
 }
 
 struct host_video_dev_s *host_video_init(const char *host_video_dev_path)
@@ -96,18 +97,18 @@ struct host_video_dev_s *host_video_init(const char *host_video_dev_path)
   int fd;
   struct host_video_dev_s *vdev;
 
-  fd = open(host_video_dev_path, O_RDWR | O_NONBLOCK);
+  fd = host_uninterruptible(open, host_video_dev_path, O_RDWR | O_NONBLOCK);
   if (fd < 0)
     {
-      perror(host_video_dev_path);
+      host_uninterruptible_no_return(perror, host_video_dev_path);
       return NULL;
     }
 
-  vdev = calloc(1, sizeof(*vdev));
+  vdev = host_uninterruptible(calloc, 1, sizeof(*vdev));
   if (vdev == NULL)
     {
-      perror("host_video_init failed");
-      close(fd);
+      host_uninterruptible_no_return(perror, "host_video_init failed");
+      host_uninterruptible(close, fd);
       return NULL;
     }
 
@@ -137,7 +138,7 @@ int host_video_dqbuf(struct host_video_dev_s *vdev, uint8_t *addr,
             return 0;
 
           default:
-            perror("VIDIOC_DQBUF");
+            host_uninterruptible_no_return(perror, "VIDIOC_DQBUF");
             return -errno;
         }
     }
@@ -148,9 +149,9 @@ int host_video_dqbuf(struct host_video_dev_s *vdev, uint8_t *addr,
     }
 
   memcpy(addr, vdev->addrs[buf.index], size);
-  if (-1 == ioctl(vdev->fd, VIDIOC_QBUF, &buf))
+  if (-1 == host_video_ioctl(vdev->fd, VIDIOC_QBUF, &buf))
     {
-      perror("VIDIOC_QBUF");
+      host_uninterruptible_no_return(perror, "VIDIOC_QBUF");
       return -errno;
     }
 
@@ -161,8 +162,8 @@ int host_video_uninit(struct host_video_dev_s *vdev)
 {
   if (vdev != NULL)
     {
-      close(vdev->fd);
-      free(vdev);
+      host_uninterruptible(close, vdev->fd);
+      host_uninterruptible_no_return(free, vdev);
     }
 
   return 0;
@@ -184,14 +185,14 @@ int host_video_start_capture(struct host_video_dev_s *vdev)
 
   if (-1 == host_video_ioctl(vdev->fd, VIDIOC_REQBUFS, &reqbuf))
     {
-      perror("VIDIOC_REQBUFS");
+      host_uninterruptible_no_return(perror, "VIDIOC_REQBUFS");
       return -errno;
     }
 
   if (reqbuf.count < 2)
     {
       errno = ENOMEM;
-      perror("Not enough buffers");
+      host_uninterruptible_no_return(perror, "Not enough buffers");
       return -ENOMEM;
     }
 
@@ -203,22 +204,23 @@ int host_video_start_capture(struct host_video_dev_s *vdev)
       buf.index = i;
       if (-1 == host_video_ioctl(vdev->fd, VIDIOC_QUERYBUF, &buf))
         {
-          perror("VIDIOC_QUERYBUF");
+          host_uninterruptible_no_return(perror, "VIDIOC_QUERYBUF");
           goto err_out;
         }
 
-      vdev->addrs[i] = mmap(NULL, buf.length, PROT_READ | PROT_WRITE,
+      vdev->addrs[i] = host_uninterruptible(mmap, NULL, buf.length,
+                            PROT_READ | PROT_WRITE,
                             MAP_SHARED, vdev->fd, buf.m.offset);
       if (vdev->addrs[i] == MAP_FAILED)
         {
-          perror("Mmap failed");
+          host_uninterruptible_no_return(perror, "Mmap failed");
           goto err_out;
         }
 
       vdev->buflen[i] = buf.length;
       if (-1 == host_video_ioctl(vdev->fd, VIDIOC_QBUF, &buf))
         {
-          perror("VIDIOC_QBUF");
+          host_uninterruptible_no_return(perror, "VIDIOC_QBUF");
           goto err_out;
         }
     }
@@ -226,7 +228,7 @@ int host_video_start_capture(struct host_video_dev_s *vdev)
   type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   if (-1 == host_video_ioctl(vdev->fd, VIDIOC_STREAMON, &type))
     {
-      perror("VIDIOC_STREAMON");
+      host_uninterruptible_no_return(perror, "VIDIOC_STREAMON");
       goto err_out;
     }
 
@@ -235,7 +237,7 @@ int host_video_start_capture(struct host_video_dev_s *vdev)
 err_out:
   while (i--)
     {
-      munmap(vdev->addrs[i], vdev->buflen[i]);
+      host_uninterruptible(munmap, vdev->addrs[i], vdev->buflen[i]);
       vdev->addrs[i] = NULL;
       vdev->buflen[i] = 0;
     }
@@ -251,7 +253,7 @@ int host_video_stop_capture(struct host_video_dev_s *vdev)
   type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   if (-1 == host_video_ioctl(vdev->fd, VIDIOC_STREAMOFF, &type))
     {
-      perror("VIDIOC_STREAMOFF");
+      host_uninterruptible_no_return(perror, "VIDIOC_STREAMOFF");
       return -errno;
     }
 
@@ -262,7 +264,7 @@ int host_video_stop_capture(struct host_video_dev_s *vdev)
           break;
         }
 
-        munmap(vdev->addrs[i], vdev->buflen[i]);
+        host_uninterruptible(munmap, vdev->addrs[i], vdev->buflen[i]);
         vdev->addrs[i] = NULL;
         vdev->buflen[i] = 0;
     }
@@ -286,7 +288,7 @@ int host_video_set_fmt(struct host_video_dev_s *vdev,
 
   if (-1 == host_video_ioctl(vdev->fd, VIDIOC_S_FMT, &v4l2_fmt))
     {
-      perror("VIDIOC_S_FMT");
+      host_uninterruptible_no_return(perror, "VIDIOC_S_FMT");
       return -errno;
     }
 
@@ -294,7 +296,7 @@ int host_video_set_fmt(struct host_video_dev_s *vdev,
   streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   if (-1 == host_video_ioctl(vdev->fd, VIDIOC_G_PARM, &streamparm))
     {
-      perror("VIDIOC_G_PARM");
+      host_uninterruptible_no_return(perror, "VIDIOC_G_PARM");
       return -errno;
     }
 
@@ -303,7 +305,7 @@ int host_video_set_fmt(struct host_video_dev_s *vdev,
   streamparm.parm.capture.timeperframe.denominator = denom;
   if (-1 == host_video_ioctl(vdev->fd, VIDIOC_S_PARM, &streamparm))
     {
-      perror("VIDIOC_S_PARM");
+      host_uninterruptible_no_return(perror, "VIDIOC_S_PARM");
       return -errno;
     }
 
@@ -326,7 +328,7 @@ int host_video_try_fmt(struct host_video_dev_s *vdev,
 
   if (-1 == host_video_ioctl(vdev->fd, VIDIOC_TRY_FMT, &v4l2_fmt))
     {
-      perror("VIDIOC_TRY_FMT");
+      host_uninterruptible_no_return(perror, "VIDIOC_TRY_FMT");
       return -errno;
     }
 

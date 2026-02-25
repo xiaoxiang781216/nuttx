@@ -50,6 +50,7 @@
 #include <syslog.h>
 
 #include "sim_protocol.h"
+#include "sim_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -87,7 +88,7 @@ int really_read(int fd, uint8_t *buffer, size_t total)
 
   while (remaining > 0)
     {
-      n = read(fd, buffer, remaining);
+      n = host_uninterruptible(read, fd, buffer, remaining);
       if (n == 0)
         {
           ERROR("EOF reading from socket: closing\n");
@@ -111,7 +112,7 @@ err:
    * shutdown
    */
 
-  shutdown(fd, SHUT_RD);
+  host_uninterruptible(shutdown, fd, SHUT_RD);
   return -1;
 }
 
@@ -122,7 +123,7 @@ int really_write(int fd, uint8_t *buffer, size_t total)
 
   while (remaining > 0)
     {
-      n = write(fd, buffer, remaining);
+      n = host_uninterruptible(write, fd, buffer, remaining);
       if (n == 0)
         {
           ERROR("EOF writing to socket: closing");
@@ -146,7 +147,7 @@ err:
 
   /* On error: stop listening to the socket */
 
-  shutdown(fd, SHUT_WR);
+  host_uninterruptible(shutdown, fd, SHUT_WR);
   return -1;
 }
 
@@ -154,7 +155,7 @@ struct init_message *create_init_message(void)
 {
   struct init_message *m;
 
-  m = malloc(sizeof(struct init_message));
+  m = host_uninterruptible(malloc, sizeof(struct init_message));
   if (!m)
     {
       return NULL;
@@ -177,7 +178,7 @@ char *print_init_message(struct init_message *m)
   char *buffer;
   int n;
 
-  buffer = malloc(80);
+  buffer = host_uninterruptible(malloc, 80);
   if (!buffer)
     {
       return NULL;
@@ -186,8 +187,10 @@ char *print_init_message(struct init_message *m)
   n = snprintf(buffer, 80, "version %d, commit %s", m->version, tmp);
   if (n < 0)
     {
-      perror("Failed to format init_message");
-      exit(1);
+      host_uninterruptible_no_return(perror,
+                                     "Failed to format "
+                                     "init_message");
+      host_uninterruptible_no_return(exit, 1);
     }
 
   return buffer;

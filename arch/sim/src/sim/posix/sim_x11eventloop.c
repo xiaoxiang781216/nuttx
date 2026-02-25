@@ -105,13 +105,13 @@ void sim_x11events(void)
 
   /* Dequeue any pending X11 events. */
 
-  while (g_display && XPending(g_display) > 0)
+  while (g_display && host_uninterruptible(XPending, g_display) > 0)
     {
       /* Yes, get the event (this should not block since we know there are
        * pending events)
        */
 
-      XNextEvent(g_display, &event);
+      host_uninterruptible_no_return(XNextEvent, g_display, &event);
 
       /* Then process the event */
 
@@ -119,10 +119,12 @@ void sim_x11events(void)
         {
           #ifdef CONFIG_SIM_KEYBOARD
           case KeyPress:
-            sim_kbdevent(XLookupKeysym(&event.xkey, 0), true);
+            sim_kbdevent(host_uninterruptible(XLookupKeysym,
+                         &event.xkey, 0), true);
             break;
           case KeyRelease:
-            sim_kbdevent(XLookupKeysym(&event.xkey, 0), false);
+            sim_kbdevent(host_uninterruptible(XLookupKeysym,
+                         &event.xkey, 0), false);
             break;
           #endif
 

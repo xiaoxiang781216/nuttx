@@ -224,7 +224,7 @@ void host_init_cwd(void)
 #  else
   if (_NSGetExecutablePath(path, &len) < 0)
     {
-      perror("_NSGetExecutablePath failed");
+      host_uninterruptible_no_return(perror, "_NSGetExecutablePath failed");
       return;
     }
 #  endif

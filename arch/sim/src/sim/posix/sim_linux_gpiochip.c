@@ -97,7 +97,7 @@ int host_gpiochip_direction(struct host_gpiochip_dev *priv, uint8_t pin,
 
   if (priv->line_fd[pin] > 0)
     {
-      close(priv->line_fd[pin]);
+      host_uninterruptible(close, priv->line_fd[pin]);
       priv->line_fd[pin] = -1;
     }
 
@@ -152,7 +152,7 @@ int host_gpiochip_irq_request(struct host_gpiochip_dev *priv, uint8_t pin,
 
   if (priv->line_fd[pin] > 0)
     {
-      close(priv->line_fd[pin]);
+      host_uninterruptible(close, priv->line_fd[pin]);
       priv->line_fd[pin] = -1;
     }
 
@@ -397,7 +397,7 @@ struct host_gpiochip_dev *host_gpiochip_alloc(const char *filename)
   if (dev->file < 0)
     {
       gpioerr("Failed to open %s: %d", filename, dev->file);
-      free(dev);
+      host_uninterruptible_no_return(free, dev);
       return NULL;
     }
 
@@ -418,7 +418,7 @@ struct host_gpiochip_dev *host_gpiochip_alloc(const char *filename)
 void host_gpiochip_free(struct host_gpiochip_dev *priv)
 {
   host_uninterruptible(close, priv->file);
-  free(priv);
+  host_uninterruptible_no_return(free, priv);
 }
 
 #else

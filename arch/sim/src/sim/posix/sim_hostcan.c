@@ -36,6 +36,7 @@
 #include <linux/can/raw.h>
 
 #include "sim_hostcan.h"
+#include "sim_internal.h"
 
 /****************************************************************************
  * Public Functions
@@ -54,7 +55,7 @@ int host_can_init(struct host_can_s *can, int devidx)
 
   /* Get socket */
 
-  can->fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+  can->fd = host_uninterruptible(socket, PF_CAN, SOCK_RAW, CAN_RAW);
   if (can->fd < 0)
     {
       return -errno;
@@ -63,7 +64,7 @@ int host_can_init(struct host_can_s *can, int devidx)
   /* Get SocketCAN interface */
 
   snprintf(ifr.ifr_name, IFNAMSIZ, "can%d", devidx);
-  ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
+  ifr.ifr_ifindex = host_uninterruptible(if_nametoindex, ifr.ifr_name);
   if (!ifr.ifr_ifindex)
     {
       return -EINVAL;
@@ -75,8 +76,9 @@ int host_can_init(struct host_can_s *can, int devidx)
 
   /* Switch to CAN FD mode */
 
-  ret = setsockopt(can->fd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd,
-                   sizeof(enable_canfd));
+  ret = host_uninterruptible(setsockopt, can->fd, SOL_CAN_RAW,
+                             CAN_RAW_FD_FRAMES, &enable_canfd,
+                             sizeof(enable_canfd));
   if (ret < 0)
     {
       return -errno;
@@ -84,7 +86,8 @@ int host_can_init(struct host_can_s *can, int devidx)
 
   /* Bind socket */
 
-  ret = bind(can->fd, (struct sockaddr *)&addr, sizeof(addr));
+  ret = host_uninterruptible(bind, can->fd, (struct sockaddr *)&addr,
+                             sizeof(addr));
   if (ret < 0)
     {
       return -errno;
@@ -111,7 +114,8 @@ int host_can_read(struct host_can_s *can, void *frame)
       return -EIO;
     }
 
-  return read(can->fd, frame, sizeof(struct canfd_frame));
+  return host_uninterruptible(read, can->fd, frame,
+                              sizeof(struct canfd_frame));
 }
 
 /****************************************************************************
@@ -137,7 +141,7 @@ int host_can_send(struct host_can_s *can, void *frame, size_t len)
       return -EINVAL;
     }
 
-  return write(can->fd, frame, len);
+  return host_uninterruptible(write, can->fd, frame, len);
 }
 
 /****************************************************************************
@@ -182,5 +186,7 @@ bool host_can_avail(struct host_can_s *can)
   FD_ZERO(&fdset);
   FD_SET(can->fd, &fdset);
 
-  return select(can->fd + 1, &fdset, NULL, NULL, &tv) > 0;
+  return host_uninterruptible(select, can->fd + 1,
+                              &fdset, NULL, NULL,
+                              &tv) > 0;
 }

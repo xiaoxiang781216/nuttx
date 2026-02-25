@@ -72,7 +72,7 @@ static int vpnkit_connect(void)
       return 0;
     }
 
-  fd = socket(AF_UNIX, SOCK_STREAM, 0);
+  fd = host_uninterruptible(socket, AF_UNIX, SOCK_STREAM, 0);
   if (fd == -1)
     {
       ERROR("failed to create a socket");
@@ -83,7 +83,8 @@ static int vpnkit_connect(void)
   sun.sun_family = AF_UNIX;
   strncpy(sun.sun_path, g_vpnkit_socket_path, sizeof(sun.sun_path) - 1);
 
-  if (connect(fd, (const struct sockaddr *)&sun, sizeof(sun)) == -1)
+  if (host_uninterruptible(connect, fd,
+      (const struct sockaddr *)&sun, sizeof(sun)) == -1)
     {
       if (!g_connect_warned)
         {
@@ -92,14 +93,14 @@ static int vpnkit_connect(void)
           g_connect_warned = true;
         }
 
-      close(fd);
+      host_uninterruptible(close, fd);
       return -1;
     }
 
   if (negotiate(fd, &g_vifinfo))
     {
       ERROR("failed to negotiate with vpnkit");
-      close(fd);
+      host_uninterruptible(close, fd);
       return -1;
     }
 
@@ -118,7 +119,7 @@ static void vpnkit_disconnect(void)
     }
 
   INFO("disconnecting from vpnkit");
-  close(g_vpnkit_fd);
+  host_uninterruptible(close, g_vpnkit_fd);
   g_vpnkit_fd = -1;
 }
 
@@ -158,7 +159,7 @@ int sim_vpnkit_avail(void)
   memset(&pfd, 0, sizeof(pfd));
   pfd.fd = g_vpnkit_fd;
   pfd.events = POLLIN;
-  ret = poll(&pfd, 1, 0);
+  ret = host_uninterruptible(poll, &pfd, 1, 0);
   if (ret == -1)
     {
       ERROR("poll failed on vpnkit socket");

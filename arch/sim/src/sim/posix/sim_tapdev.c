@@ -197,7 +197,7 @@ void sim_tapdev_init(int devidx, void *priv,
 
   /* Open the tap device */
 
-  tapdevfd = open(DEVTAP, O_RDWR, 0644);
+  tapdevfd = host_uninterruptible(open, DEVTAP, O_RDWR, 0644);
   if (tapdevfd < 0)
     {
       syslog(LOG_ERR, "TAPDEV: open failed: %d\n", -tapdevfd);
@@ -208,11 +208,12 @@ void sim_tapdev_init(int devidx, void *priv,
 
   memset(&ifr, 0, sizeof(ifr));
   ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-  ret = ioctl(tapdevfd, TUNSETIFF, (unsigned long) &ifr);
+  ret = host_uninterruptible(ioctl, tapdevfd, TUNSETIFF,
+                             (unsigned long)&ifr);
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: ioctl failed: %d\n", -ret);
-      close(tapdevfd);
+      host_uninterruptible(close, tapdevfd);
       return;
     }
 
@@ -224,11 +225,11 @@ void sim_tapdev_init(int devidx, void *priv,
    * ioctl calls unfortunately won't work on the tap device fd.
    */
 
-  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  sockfd = host_uninterruptible(socket, AF_INET, SOCK_DGRAM, 0);
   if (sockfd < 0)
     {
       syslog(LOG_ERR, "TAPDEV: Can't open socket: %d\n", -sockfd);
-      close(tapdevfd);
+      host_uninterruptible(close, tapdevfd);
       return;
     }
 
@@ -237,16 +238,16 @@ void sim_tapdev_init(int devidx, void *priv,
 
   memset(&ifr, 0, sizeof(ifr));
   strncpy(ifr.ifr_name, CONFIG_SIM_NET_BRIDGE_DEVICE, IFNAMSIZ);
-  ifr.ifr_ifindex = if_nametoindex(gdevname[devidx]);
+  ifr.ifr_ifindex = host_uninterruptible(if_nametoindex, gdevname[devidx]);
 
-  ret = ioctl(sockfd, SIOCBRADDIF, &ifr);
+  ret = host_uninterruptible(ioctl, sockfd, SIOCBRADDIF, &ifr);
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: ioctl failed (can't add interface %s to "
              "bridge %s): %d\n",
              gdevname[devidx], CONFIG_SIM_NET_BRIDGE_DEVICE, -ret);
-      close(sockfd);
-      close(tapdevfd);
+      host_uninterruptible(close, sockfd);
+      host_uninterruptible(close, tapdevfd);
       return;
     }
 #endif
@@ -254,23 +255,23 @@ void sim_tapdev_init(int devidx, void *priv,
   memset(&ifr, 0, sizeof(ifr));
   strncpy(ifr.ifr_name, gdevname[devidx], IFNAMSIZ);
   ifr.ifr_mtu = CONFIG_SIM_NETDEV_MTU;
-  ret = ioctl(sockfd, SIOCSIFMTU, &ifr);
+  ret = host_uninterruptible(ioctl, sockfd, SIOCSIFMTU, &ifr);
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: ioctl failed (can't set MTU "
                       "for %s): %d\n", gdevname[devidx], -ret);
-      close(sockfd);
-      close(tapdevfd);
+      host_uninterruptible(close, sockfd);
+      host_uninterruptible(close, tapdevfd);
       return;
     }
 
-  ret = ioctl(sockfd, SIOCGIFMTU, &ifr);
-  close(sockfd);
+  ret = host_uninterruptible(ioctl, sockfd, SIOCGIFMTU, &ifr);
+  host_uninterruptible(close, sockfd);
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: ioctl failed (can't get MTU "
              "from %s): %d\n", gdevname[devidx], -ret);
-      close(tapdevfd);
+      host_uninterruptible(close, tapdevfd);
       return;
     }
   else
@@ -314,7 +315,8 @@ int sim_tapdev_avail(int devidx)
   FD_ZERO(&fdset);
   FD_SET(gtapdevfd[devidx], &fdset);
 
-  return select(gtapdevfd[devidx] + 1, &fdset, NULL, NULL, &tv) > 0;
+  return host_uninterruptible(select, gtapdevfd[devidx] + 1, &fdset,
+                             NULL, NULL, &tv) > 0;
 }
 
 unsigned int sim_tapdev_read(int devidx, unsigned char *buf,
@@ -327,7 +329,7 @@ unsigned int sim_tapdev_read(int devidx, unsigned char *buf,
       return 0;
     }
 
-  ret = read(gtapdevfd[devidx], buf, buflen);
+  ret = host_uninterruptible(read, gtapdevfd[devidx], buf, buflen);
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: read failed: %d\n", -ret);
@@ -358,11 +360,11 @@ void sim_tapdev_send(int devidx, unsigned char *buf, unsigned int buflen)
     }
 #endif
 
-  ret = write(gtapdevfd[devidx], buf, buflen);
+  ret = host_uninterruptible(write, gtapdevfd[devidx], buf, buflen);
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: write failed: %d\n", -ret);
-      exit(1);
+      host_uninterruptible_no_return(exit, 1);
     }
 
   dump_ethhdr("write", buf, buflen);
@@ -402,9 +404,9 @@ void sim_tapdev_ifup(int devidx, void *ifaddr)
   /* Get a socket with which to manipulate the tap device */
 
 #  ifdef CONFIG_NET_IPv4
-  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  sockfd = host_uninterruptible(socket, AF_INET, SOCK_DGRAM, 0);
 #  else
-  sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
+  sockfd = host_uninterruptible(socket, AF_INET6, SOCK_DGRAM, 0);
 #  endif
   if (sockfd < 0)
     {
@@ -416,22 +418,24 @@ void sim_tapdev_ifup(int devidx, void *ifaddr)
 
   strncpy(ifr.ifr_name, gdevname[devidx], IFNAMSIZ);
 
-  ret = ioctl(sockfd, SIOCGIFFLAGS, (unsigned long)&ifr);
+  ret = host_uninterruptible(ioctl, sockfd, SIOCGIFFLAGS,
+                             (unsigned long)&ifr);
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: ioctl failed "
              "(can't get interface flags): %d\n", -ret);
-      close(sockfd);
+      host_uninterruptible(close, sockfd);
       return;
     }
 
   ifr.ifr_flags |= IFF_UP;
-  ret = ioctl(sockfd, SIOCSIFFLAGS, (unsigned long)&ifr);
+  ret = host_uninterruptible(ioctl, sockfd, SIOCSIFFLAGS,
+                             (unsigned long)&ifr);
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: ioctl failed "
              "(can't set interface flags): %d\n", -ret);
-      close(sockfd);
+      host_uninterruptible(close, sockfd);
       return;
     }
 
@@ -449,28 +453,31 @@ void sim_tapdev_ifup(int devidx, void *ifaddr)
   ghostroute[devidx].rt_flags  = RTF_UP | RTF_HOST;
   ghostroute[devidx].rt_metric = 0;
 
-  ret = ioctl(sockfd, SIOCADDRT, (unsigned long)&ghostroute[devidx]);
+  ret = host_uninterruptible(ioctl, sockfd, SIOCADDRT,
+                             (unsigned long)&ghostroute[devidx]);
 #  else
   memset(&ghostrtm[devidx], 0, sizeof(ghostrtm[devidx]));
 
   ghostrtm[devidx].rtmsg_flags = RTF_UP | RTF_HOST;
   ghostrtm[devidx].rtmsg_metric = 1;
-  ghostrtm[devidx].rtmsg_ifindex = if_nametoindex(gdevname[devidx]);
+  ghostrtm[devidx].rtmsg_ifindex = host_uninterruptible(if_nametoindex,
+                                                        gdevname[devidx]);
   memcpy(&ghostrtm[devidx].rtmsg_dst, ifaddr, sizeof(struct in6_addr));
 
-  ret = ioctl(sockfd, SIOCADDRT, (unsigned long)&ghostrtm[devidx]);
+  ret = host_uninterruptible(ioctl, sockfd, SIOCADDRT,
+                             (unsigned long)&ghostrtm[devidx]);
 #  endif
 
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: ioctl failed"
               "(can't add host route): %d\n", -ret);
-      close(sockfd);
+      host_uninterruptible(close, sockfd);
       return;
     }
 #endif
 
-  close(sockfd);
+  host_uninterruptible(close, sockfd);
 }
 
 void sim_tapdev_ifdown(int devidx)
@@ -489,14 +496,15 @@ void sim_tapdev_ifdown(int devidx)
     {
       /* Get a socket with which to manipulate the tap device */
 
-      sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+      sockfd = host_uninterruptible(socket, AF_INET, SOCK_DGRAM, 0);
       if (sockfd < 0)
         {
           syslog(LOG_ERR, "TAPDEV: Can't open socket: %d\n", -sockfd);
           return;
         }
 
-      ret = ioctl(sockfd, SIOCDELRT, (unsigned long)&ghostroute[devidx]);
+      ret = host_uninterruptible(ioctl, sockfd, SIOCDELRT,
+                                 (unsigned long)&ghostroute[devidx]);
       if (ret < 0)
         {
           syslog(LOG_ERR, "TAPDEV: ioctl failed "
@@ -504,21 +512,22 @@ void sim_tapdev_ifdown(int devidx)
         }
 
       ghostroute[devidx].rt_flags = 0;
-      close(sockfd);
+      host_uninterruptible(close, sockfd);
     }
 #  else
   if (ghostrtm[devidx].rtmsg_flags != 0)
     {
       /* Get a socket with which to manipulate the tap device */
 
-      sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
+      sockfd = host_uninterruptible(socket, AF_INET6, SOCK_DGRAM, 0);
       if (sockfd < 0)
         {
           syslog(LOG_ERR, "TAPDEV: Can't open socket: %d\n", -sockfd);
           return;
         }
 
-      ret = ioctl(sockfd, SIOCDELRT, (unsigned long)&ghostrtm[devidx]);
+      ret = host_uninterruptible(ioctl, sockfd, SIOCDELRT,
+                                 (unsigned long)&ghostrtm[devidx]);
       if (ret < 0)
         {
           syslog(LOG_ERR, "TAPDEV: ioctl failed "
@@ -526,7 +535,7 @@ void sim_tapdev_ifdown(int devidx)
         }
 
       ghostrtm[devidx].rtmsg_flags = 0;
-      close(sockfd);
+      host_uninterruptible(close, sockfd);
     }
 #  endif
 #endif

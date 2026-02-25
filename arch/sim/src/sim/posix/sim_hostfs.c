@@ -35,6 +35,7 @@
 #include <errno.h>
 
 #include "hostfs.h"
+#include "sim_internal.h"
 
 /****************************************************************************
  * Private Functions
@@ -191,7 +192,7 @@ int host_open(const char *pathname, int flags, int mode)
       mapflags |= O_DIRECTORY;
     }
 
-  int ret = open(pathname, mapflags, mode);
+  int ret = host_uninterruptible(open, pathname, mapflags, mode);
   if (ret == -1)
     {
       ret = -errno;
@@ -208,7 +209,7 @@ int host_close(int fd)
 {
   /* Just call the close routine */
 
-  int ret = close(fd);
+  int ret = host_uninterruptible(close, fd);
   if (ret == -1)
     {
       ret = -errno;
@@ -225,7 +226,7 @@ nuttx_ssize_t host_read(int fd, void *buf, nuttx_size_t count)
 {
   /* Just call the read routine */
 
-  nuttx_ssize_t ret = read(fd, buf, count);
+  nuttx_ssize_t ret = host_uninterruptible(read, fd, buf, count);
   if (ret == -1)
     {
       ret = -errno;
@@ -242,7 +243,7 @@ nuttx_ssize_t host_write(int fd, const void *buf, nuttx_size_t count)
 {
   /* Just call the write routine */
 
-  nuttx_ssize_t ret = write(fd, buf, count);
+  nuttx_ssize_t ret = host_uninterruptible(write, fd, buf, count);
   if (ret == -1)
     {
       ret = -errno;
@@ -260,7 +261,7 @@ nuttx_off_t host_lseek(int fd, nuttx_off_t pos, nuttx_off_t offset,
 {
   /* Just call the lseek routine */
 
-  nuttx_off_t ret = lseek(fd, offset, whence);
+  nuttx_off_t ret = host_uninterruptible(lseek, fd, offset, whence);
   if (ret == (nuttx_off_t)-1)
     {
       ret = -errno;
@@ -277,7 +278,7 @@ int host_ioctl(int fd, int request, unsigned long arg)
 {
   /* Just call the ioctl routine */
 
-  return ioctl(fd, request, arg);
+  return host_uninterruptible(ioctl, fd, request, arg);
 }
 
 /****************************************************************************
@@ -288,7 +289,7 @@ void host_sync(int fd)
 {
   /* Just call the sync routine */
 
-  fsync(fd);
+  host_uninterruptible_no_return(fsync, fd);
 }
 
 /****************************************************************************
@@ -297,7 +298,7 @@ void host_sync(int fd)
 
 int host_dup(int fd)
 {
-  return dup(fd);
+  return host_uninterruptible(dup, fd);
 }
 
 /****************************************************************************
@@ -311,7 +312,7 @@ int host_fstat(int fd, struct nuttx_stat_s *buf)
 
   /* Call the host's stat routine */
 
-  ret = fstat(fd, &hostbuf);
+  ret = host_uninterruptible(fstat, fd, &hostbuf);
   if (ret < 0)
     {
       ret = -errno;
@@ -334,7 +335,7 @@ int host_fchstat(int fd, const struct nuttx_stat_s *buf, int flags)
 
   if (flags & NUTTX_CH_STAT_MODE)
     {
-      ret = fchmod(fd, buf->st_mode);
+      ret = host_uninterruptible(fchmod, fd, buf->st_mode);
       if (ret < 0)
         {
           return -errno;
@@ -343,7 +344,7 @@ int host_fchstat(int fd, const struct nuttx_stat_s *buf, int flags)
 
   if (flags & (NUTTX_CH_STAT_UID | NUTTX_CH_STAT_GID))
     {
-      ret = fchown(fd, buf->st_uid, buf->st_gid);
+      ret = host_uninterruptible(fchown, fd, buf->st_uid, buf->st_gid);
       if (ret < 0)
         {
           return -errno;
@@ -374,7 +375,7 @@ int host_fchstat(int fd, const struct nuttx_stat_s *buf, int flags)
           times[1].tv_nsec = UTIME_OMIT;
         }
 
-      ret = futimens(fd, times);
+      ret = host_uninterruptible(futimens, fd, times);
       if (ret < 0)
         {
           return -errno;
@@ -390,7 +391,7 @@ int host_fchstat(int fd, const struct nuttx_stat_s *buf, int flags)
 
 int host_ftruncate(int fd, nuttx_off_t length)
 {
-  int ret = ftruncate(fd, length);
+  int ret = host_uninterruptible(ftruncate, fd, length);
   if (ret < 0)
     {
       ret = -errno;
@@ -407,7 +408,7 @@ void *host_opendir(const char *name)
 {
   /* Return the host DIR pointer */
 
-  return (void *)opendir(name);
+  return (void *)host_uninterruptible(opendir, name);
 }
 
 /****************************************************************************
@@ -420,7 +421,7 @@ int host_readdir(void *dirp, struct nuttx_dirent_s *entry)
 
   /* Call the host's readdir routine */
 
-  ent = readdir(dirp);
+  ent = host_uninterruptible(readdir, dirp);
   if (ent != NULL)
     {
       /* Copy the entry name */
@@ -477,7 +478,7 @@ void host_rewinddir(void *dirp)
 {
   /* Just call the rewinddir routine */
 
-  rewinddir(dirp);
+  host_uninterruptible_no_return(rewinddir, dirp);
 }
 
 /****************************************************************************
@@ -486,7 +487,7 @@ void host_rewinddir(void *dirp)
 
 int host_closedir(void *dirp)
 {
-  int ret = closedir(dirp);
+  int ret = host_uninterruptible(closedir, dirp);
   if (ret < 0)
     {
       ret = -errno;
@@ -506,7 +507,7 @@ int host_statfs(const char *path, struct nuttx_statfs_s *buf)
 
   /* Call the host's statfs routine */
 
-  ret = statvfs(path, &hostbuf);
+  ret = host_uninterruptible(statvfs, path, &hostbuf);
   if (ret < 0)
     {
       ret = -errno;
@@ -532,7 +533,7 @@ int host_statfs(const char *path, struct nuttx_statfs_s *buf)
 
 int host_unlink(const char *pathname)
 {
-  int ret = unlink(pathname);
+  int ret = host_uninterruptible(unlink, pathname);
   if (ret < 0)
     {
       ret = -errno;
@@ -549,7 +550,7 @@ int host_mkdir(const char *pathname, int mode)
 {
   /* Just call the host's mkdir routine */
 
-  int ret = mkdir(pathname, mode);
+  int ret = host_uninterruptible(mkdir, pathname, mode);
   if (ret < 0)
     {
       ret = -errno;
@@ -564,7 +565,7 @@ int host_mkdir(const char *pathname, int mode)
 
 int host_rmdir(const char *pathname)
 {
-  int ret = rmdir(pathname);
+  int ret = host_uninterruptible(rmdir, pathname);
   if (ret < 0)
     {
       ret = -errno;
@@ -579,7 +580,7 @@ int host_rmdir(const char *pathname)
 
 int host_rename(const char *oldpath, const char *newpath)
 {
-  int ret = rename(oldpath, newpath);
+  int ret = host_uninterruptible(rename, oldpath, newpath);
   if (ret < 0)
     {
       ret = -errno;
@@ -599,7 +600,7 @@ int host_stat(const char *path, struct nuttx_stat_s *buf)
 
   /* Call the host's stat routine */
 
-  ret = stat(path, &hostbuf);
+  ret = host_uninterruptible(stat, path, &hostbuf);
   if (ret < 0)
     {
       ret = -errno;
@@ -622,7 +623,7 @@ int host_chstat(const char *path, const struct nuttx_stat_s *buf, int flags)
 
   if (flags & NUTTX_CH_STAT_MODE)
     {
-      ret = chmod(path, buf->st_mode);
+      ret = host_uninterruptible(chmod, path, buf->st_mode);
       if (ret < 0)
         {
           return -errno;
@@ -631,7 +632,7 @@ int host_chstat(const char *path, const struct nuttx_stat_s *buf, int flags)
 
   if (flags & (NUTTX_CH_STAT_UID | NUTTX_CH_STAT_GID))
     {
-      ret = chown(path, buf->st_uid, buf->st_gid);
+      ret = host_uninterruptible(chown, path, buf->st_uid, buf->st_gid);
       if (ret < 0)
         {
           return -errno;
@@ -662,7 +663,7 @@ int host_chstat(const char *path, const struct nuttx_stat_s *buf, int flags)
           times[1].tv_nsec = UTIME_OMIT;
         }
 
-      ret = utimensat(AT_FDCWD, path, times, 0);
+      ret = host_uninterruptible(utimensat, AT_FDCWD, path, times, 0);
       if (ret < 0)
         {
           return -errno;
@@ -679,7 +680,7 @@ int host_chstat(const char *path, const struct nuttx_stat_s *buf, int flags)
 #ifdef CONFIG_FS_LINKS
 int host_link(const char *path1, const char *path2)
 {
-  int ret = link(path1, path2);
+  int ret = host_uninterruptible(link, path1, path2);
   if (ret < 0)
     {
       ret = -errno;
@@ -694,7 +695,7 @@ int host_link(const char *path1, const char *path2)
 
 int host_symlink(const char *target, const char *linkpath)
 {
-  int ret = symlink(target, linkpath);
+  int ret = host_uninterruptible(symlink, target, linkpath);
   if (ret < 0)
     {
       ret = -errno;
@@ -710,7 +711,7 @@ int host_symlink(const char *target, const char *linkpath)
 nuttx_ssize_t host_readlink(const char *path, char *buf,
                             nuttx_size_t bufsize)
 {
-  ssize_t ret = readlink(path, buf, bufsize);
+  ssize_t ret = host_uninterruptible(readlink, path, buf, bufsize);
   if (ret < 0)
     {
       ret = -errno;
@@ -730,7 +731,7 @@ int host_lstat(const char *path, struct nuttx_stat_s *buf)
 
   /* Call the host's lstat routine */
 
-  ret = lstat(path, &hostbuf);
+  ret = host_uninterruptible(lstat, path, &hostbuf);
   if (ret < 0)
     {
       ret = -errno;

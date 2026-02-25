@@ -46,6 +46,7 @@
 #include <syslog.h>
 
 #include "sim_protocol.h"
+#include "sim_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -100,7 +101,7 @@ int negotiate(int fd, struct vif_info *vif)
     }
 
   INFO("Server reports %s", txt);
-  free(txt);
+  host_uninterruptible_no_return(free, txt);
 
   if (write_command(fd, &command) == -1)
     {
