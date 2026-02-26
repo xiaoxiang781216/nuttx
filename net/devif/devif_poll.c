@@ -756,6 +756,25 @@ static int devif_poll_queue(FAR struct iob_queue_s *iobq,
 
       netdev_iob_replace(dev, iob);
 
+      /* Detect IP version and set d_flags for L2 header building. */
+
+#ifdef CONFIG_NET_IPv4
+#  ifdef CONFIG_NET_IPv6
+      if ((IPv4BUF->vhl & IP_VERSION_MASK) == IPv4_VERSION)
+#  endif
+        {
+          IFF_SET_IPv4(dev->d_flags);
+        }
+#endif
+#ifdef CONFIG_NET_IPv6
+#  ifdef CONFIG_NET_IPv4
+      else
+#  endif
+        {
+          IFF_SET_IPv6(dev->d_flags);
+        }
+#endif
+
       /* build L2 headers */
 
       devif_out(dev);
