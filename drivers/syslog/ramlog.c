@@ -232,7 +232,7 @@ static void ramlog_dump(void)
 
   /* Verify ramlog is initialized */
 
-  if ((header->rl_magic != RAMLOG_MAGIC_READY)
+  if (header->rl_magic != RAMLOG_MAGIC_READY)
     {
       return;
     }
