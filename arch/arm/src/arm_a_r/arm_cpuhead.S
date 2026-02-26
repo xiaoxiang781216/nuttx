@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_cpuhead.S
+ * arch/arm/src/arm_a_r/arm_cpuhead.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -29,6 +29,9 @@
 #include "arm.h"
 #include "cp15_cacheops.h"
 #include "sctlr.h"
+#ifdef CONFIG_ARCH_HAVE_MMU
+#include "mmu.h"
+#endif
 #include "smp.h"
 #include "chip.h"
 #include "arm_internal.h"
@@ -40,6 +43,21 @@
 /****************************************************************************
  * Configuration
  ****************************************************************************/
+
+#ifdef CONFIG_ARCH_HAVE_MMU
+/* Check for the identity mapping:  For this configuration, this would be
+ * the case where the virtual beginning of RAM is the same as the physical
+ * beginning of RAM.
+ */
+
+#if !defined(CONFIG_RAM_START) || !defined(CONFIG_RAM_VSTART)
+#  error "CONFIG_RAM_START or CONFIG_RAM_VSTART is not defined"
+#endif
+
+#if CONFIG_RAM_START == CONFIG_RAM_VSTART
+#  define CONFIG_IDENTITY_TEXTMAP 1
+#endif
+#endif /* CONFIG_ARCH_HAVE_MMU */
 
 /* There are three operational memory configurations:
  *
@@ -89,118 +107,153 @@
   .syntax unified
   .arm
 
-  .extern __cpux_wfi
-  .extern __hyp_vector_start
-  .extern __sys_vector_start
-
 /****************************************************************************
  * Name: __cpu[n]_start
- * Desc: Setup stack and jump to __el2_boot
+ *
+ * Description:
+ *   Boot functions for each CPU (other than CPU0).  These functions set up
+ *   the ARM operating mode, the initial stack, and configure co-processor
+ *   registers.  At the end of the boot, arm_cpu_boot() is called.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   Do not return.
+ *
  ****************************************************************************/
 
 #if CONFIG_NCPUS > 1
   .global __cpu1_start
   .type   __cpu1_start, #function
 __cpu1_start:
+#ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu1_stackpointer
   b     __el2_boot
+#else
+  b     __el1_boot
+#endif
 
-	.globl	cpu1_start
-	.type	cpu1_start, object
+  .globl  cpu1_start
+  .type  cpu1_start, object
 
-	cpu1_start:
-	.long	__cpu1_start
+  cpu1_start:
+  .long  __cpu1_start
 #endif
 
 #if CONFIG_NCPUS > 2
   .global __cpu2_start
   .type   __cpu2_start, #function
 __cpu2_start:
+#ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu2_stackpointer
   b     __el2_boot
+#else
+  b     __el1_boot
+#endif
 
-	.globl	cpu2_start
-	.type	cpu2_start, object
+  .globl  cpu2_start
+  .type  cpu2_start, object
 
-	cpu2_start:
-	.long	__cpu2_start
+  cpu2_start:
+  .long  __cpu2_start
 #endif
 
 #if CONFIG_NCPUS > 3
   .global __cpu3_start
   .type   __cpu3_start, #function
 __cpu3_start:
+#ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu3_stackpointer
   b     __el2_boot
+#else
+  b     __el1_boot
+#endif
 
-	.globl	cpu3_start
-	.type	cpu3_start, object
+  .globl  cpu3_start
+  .type  cpu3_start, object
 
-	cpu3_start:
-	.long	__cpu3_start
+  cpu3_start:
+  .long  __cpu3_start
 #endif
 
 #if CONFIG_NCPUS > 4
   .global __cpu4_start
   .type   __cpu4_start, #function
 __cpu4_start:
+#ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu4_stackpointer
   b     __el2_boot
+#else
+  b     __el1_boot
+#endif
 
-	.globl	cpu4_start
-	.type	cpu4_start, object
+  .globl  cpu4_start
+  .type  cpu4_start, object
 
-	cpu4_start:
-	.long	__cpu4_start
+  cpu4_start:
+  .long  __cpu4_start
 #endif
 
 #if CONFIG_NCPUS > 5
   .global __cpu5_start
   .type   __cpu5_start, #function
 __cpu5_start:
+#ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu5_stackpointer
   b     __el2_boot
+#else
+  b     __el1_boot
+#endif
 
-	.globl	cpu5_start
-	.type	cpu5_start, object
+  .globl  cpu5_start
+  .type  cpu5_start, object
 
-	cpu5_start:
-	.long	__cpu5_start
+  cpu5_start:
+  .long  __cpu5_start
 #endif
 
 #if CONFIG_NCPUS > 6
   .global __cpu6_start
   .type   __cpu6_start, #function
 __cpu6_start:
+#ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu6_stackpointer
   b     __el2_boot
+#else
+  b     __el1_boot
+#endif
 
-	.globl	cpu6_start
-	.type	cpu6_start, object
+  .globl  cpu6_start
+  .type  cpu6_start, object
 
-	cpu6_start:
-	.long	__cpu6_start
+  cpu6_start:
+  .long  __cpu6_start
 #endif
 
 #if CONFIG_NCPUS > 7
   .global __cpu7_start
   .type   __cpu7_start, #function
 __cpu7_start:
+#ifdef CONFIG_ARM_HAVE_EL2
   ldr   sp, .Lcpu7_stackpointer
   b     __el2_boot
+#else
+  b     __el1_boot
+#endif
 
-	.globl	cpu7_start
-	.type	cpu7_start, object
+  .globl  cpu7_start
+  .type  cpu7_start, object
 
-	cpu7_start:
-	.long	__cpu7_start
+  cpu7_start:
+  .long  __cpu7_start
 #endif
 
 #if CONFIG_NCPUS > 8
-#  warn Need work for CONFIG_NCPUS > 8
-  b     _cpux_wfi
+#  error Need work for CONFIG_NCPUS > 8
 #endif
 
+#ifdef CONFIG_ARM_HAVE_EL2
 /****************************************************************************
  * Name: __el2_boot
  * Desc: Setup el2 and jump to __el1_boot
@@ -227,6 +280,7 @@ __el2_boot:
   dsb
   isb
   eret
+#endif /* CONFIG_ARM_HAVE_EL2 */
 
 /****************************************************************************
  * Name: __el1_boot
@@ -273,11 +327,10 @@ __el1_boot:
  * Name: __cpu[n]_boot
  *
  * Description:
- *   Boot functions for each CPU (other than CPU0).  These functions set up
- *   the ARM operating mode, the initial stack, and configure co-processor
- *   registers.  At the end of the boot, arm_cpu_boot() is called.
- *
- *   These functions are provided by the common ARMv8-R logic.
+ *   Boot functions for each CPU (other than CPU0) after EL2 setup.
+ *   These functions set up the ARM operating mode, the initial stack,
+ *   and configure co-processor registers.  At the end of the boot,
+ *   arm_cpu_boot() is called.
  *
  ****************************************************************************/
 
@@ -448,7 +501,7 @@ __cpu7_boot:
   .type .Lcpu_start, #function
 
 .Lcpu_start:
-  /* The MPU and caches should be disabled */
+  /* The MMU/MPU and caches should be disabled */
 
   mrc   CP15_SCTLR(r0)
   bic   r0, r0, #(SCTLR_M | SCTLR_C)
@@ -472,12 +525,71 @@ __cpu7_boot:
   mcr   CP15_TPIDRPRW(r0) /* Initialize percpu reg TPIDRPRW */
   mcr   CP15_TPIDRURW(r0) /* Initialize percpu reg TPIDRURW */
   mcr   CP15_TPIDRURO(r0) /* Initialize percpu reg TPIDRURO */
+#ifdef CONFIG_ARCH_HAVE_MMU
+#ifdef CONFIG_ARM_HAVE_MPCORE
+  mcr  CP15_TLBIALLIS(r0)  /* Invalidate the entire unified TLB */
+  mcr  CP15_BPIALLIS(r0)  /* Invalidate entire branch prediction array */
+  mcr  CP15_ICIALLUIS(r0)  /* Invalidate I-cache */
+#else
+  mcr  CP15_TLBIALL(r0,c7)  /* Invalidate the entire unified TLB */
+  mcr  CP15_TLBIALL(r0,c6)
+  mcr  CP15_TLBIALL(r0,c5)
+  mcr  CP15_BPIALL(r0)  /* Invalidate entire branch prediction array */
+  mcr  CP15_ICIALLU(r0)  /* Invalidate I-cache */
+#endif
+#else
   mcr   CP15_BPIALL(r0)   /* Invalidate entire branch prediction array */
+#endif
   isb
 
-  /* Set lr = Resume at .Lcpu_vstart with the MMU enabled */
+#ifdef CONFIG_ARCH_HAVE_MMU
+  /* Load the page table address.
+   *
+   * NOTES:
+   * - Here we assume that the page table address is aligned to at least
+   *   least a 16KB boundary (bits 0-13 are zero).  No masking is provided
+   *   to protect against an unaligned page table address.
+   * - The ARMv7-A has two page table address registers, TTBR0 and 1.
+   *   Only TTBR0 is used in this implementation but both are initialized.
+   */
+
+  ldr  r1, .LCppgtable  /* r1=phys. page table */
+#ifdef CONFIG_ARCH_ADDRENV
+  mov  r2, #PGTABLE_SIZE
+  mla  r1, r2, r5, r1  /* page table of cpu1,2,3 */
+#endif
+  orr  r1, r1, #(TTBR0_RGN_WBWA | TTBR0_IRGN0)  /* Select cache properties */
+  mcr  CP15_TTBR0(r1)
+  mcr  CP15_TTBR1(r1)
+
+  /* Set the TTB control register (TTBCR) to indicate that we are using
+   * TTBR0.  r0 still holds the value of zero.
+   *
+   *   N   : 0=Selects TTBR0 and 16KB page table size indexed by VA[31:20]
+   *   PD0 : 0=Perform translation table walks using TTBR0
+   *   PD1 : 0=Perform translation table walks using TTBR1 (but it is disabled)
+   *   EAE : 0=Use 32-bit translation system
+   */
+
+  mcr  CP15_TTBCR(r0)
+
+  /* Enable the MMU and caches
+   * lr = Resume at .Lcpu_vstart with the MMU enabled
+   */
+
+  ldr  lr, .LCcpu_vstart  /* Abs. virtual address */
+
+  /* Configure the domain access register (see mmu.h).  Only domain 0 is
+   * supported and it uses the permissions in the TLB.
+   */
+
+  mov  r0, #DACR_CLIENT(0)
+  mcr  CP15_DACR(r0)    /* Set domain access register */
+#else
+  /* Set lr = Resume at .Lcpu_vstart */
 
   ldr   lr, .LCcpu_vstart   /* Abs. address */
+#endif /* CONFIG_ARCH_HAVE_MMU */
 
   /* Configure the system control register (see sctrl.h) */
 
@@ -487,7 +599,7 @@ __cpu7_boot:
    * example, we get here via a bootloader and the control register is in some
    * unknown state.
    *
-   *   SCTLR_M        Bit 0:  MPU enable bit
+   *   SCTLR_M        Bit 0:  MMU/MPU enable bit
    *   SCTLR_A        Bit 1:  Strict alignment disabled
    *   SCTLR_C        Bit 2:  DCache disabled
    *   SCTLR_CCP15BEN Bit 5:  CP15 barrier enable
@@ -509,17 +621,32 @@ __cpu7_boot:
    *   SCTLR_TE       Bit 30: All exceptions handled in ARM state.
    */
 
+#ifdef CONFIG_ARCH_HAVE_MMU
+  bic  r0, r0, #(SCTLR_A  | SCTLR_C)
+  bic  r0, r0, #(SCTLR_SW | SCTLR_I   | SCTLR_V   | SCTLR_RR | SCTLR_HA)
+  bic  r0, r0, #(SCTLR_EE | SCTLR_TRE | SCTLR_AFE | SCTLR_TE)
+#else
   bic   r0, r0, #(SCTLR_A  | SCTLR_C  | SCTLR_CCP15BEN | SCTLR_B)
   bic   r0, r0, #(SCTLR_SW | SCTLR_I  | SCTLR_V        | SCTLR_RR)
   bic   r0, r0, #(SCTLR_BR | SCTLR_DZ | SCTLR_FI)
   bic   r0, r0, #(SCTLR_VE | SCTLR_EE | SCTLR_NMFI     | SCTLR_TE)
+#endif
 
-  /* Set bits to enable the MPU
+  /* Set bits to enable the MMU/MPU
    *
-   *   SCTLR_M     Bit 0:  Enable the MPU
+   *   SCTLR_M     Bit 0:  Enable the MMU/MPU
    */
 
   orr   r0, r0, #(SCTLR_M)
+
+#if defined(CONFIG_ARCH_HAVE_MMU) && !defined(CONFIG_ARCH_CORTEXA5)
+  /* Program flow prediction
+   *
+   *   SCTLR_Z     Bit 11: Program flow prediction control
+   */
+
+  orr  r0, r0, #(SCTLR_Z)
+#endif
 
   /* Set configured bits */
 
@@ -532,6 +659,7 @@ __cpu7_boot:
   orr   r0, r0, #(SCTLR_A)
 #endif
 
+#ifndef CONFIG_ARCH_HAVE_MMU
 #ifdef CONFIG_ARM_SCTLR_CCP15BEN
   /* Enable memory barriers
    *
@@ -539,6 +667,7 @@ __cpu7_boot:
    */
 
   orr   r0, r0, #(SCTLR_CCP15BEN)
+#endif
 #endif
 
 #ifndef CONFIG_ARCH_LOWVECTORS
@@ -551,6 +680,7 @@ __cpu7_boot:
 #endif
 
 #ifdef CONFIG_ARM_CACHE_ROUND_ROBIN
+#ifndef CONFIG_ARCH_CORTEXA5
   /* Round Robin cache replacement
    *
    *   SCTLR_RR   Bit 14: Round-robin replacement strategy.
@@ -558,7 +688,9 @@ __cpu7_boot:
 
   orr   r0, r0, #(SCTLR_RR)
 #endif
+#endif
 
+#ifndef CONFIG_ARCH_HAVE_MMU
 #ifdef CONFIG_ARM_BACKGROUND_REGION
   /* Allow PL1 access to back region when MPU is enabled
    *
@@ -594,7 +726,31 @@ __cpu7_boot:
 
   orr   r0, r0, #(SCTLR_VE)
 #endif
+#endif /* !CONFIG_ARCH_HAVE_MMU */
 
+#ifdef CONFIG_ARCH_HAVE_MMU
+  /* In SMP configurations, the data cache will not be enabled until later
+   * after SMP cache coherency has been setup.
+   */
+
+#if !defined(CONFIG_ARM_DCACHE_DISABLE) && !defined(CONFIG_SMP)
+  /* Dcache enable
+   *
+   *   SCTLR_C    Bit 2:  DCache enable
+   */
+
+  orr  r0, r0, #(SCTLR_C)
+#endif
+
+#if !defined(CONFIG_ARM_ICACHE_DISABLE) && !defined(CONFIG_SMP)
+  /* Icache enable
+   *
+   *   SCTLR_I    Bit 12: ICache enable
+   */
+
+  orr  r0, r0, #(SCTLR_I)
+#endif
+#endif /* CONFIG_ARCH_HAVE_MMU */
 #ifdef CONFIG_ENDIAN_BIG
   /* Big endian mode
    *
@@ -604,6 +760,7 @@ __cpu7_boot:
   orr   r0, r0, #(SCTLR_EE)
 #endif
 
+#ifndef CONFIG_ARCH_HAVE_MMU
 #ifdef CONFIG_ARM_NONMASKABLE_FIQ
   /* Non-maskable FIQ support
    *
@@ -612,7 +769,19 @@ __cpu7_boot:
 
   orr   r0, r0, #(SCTLR_NMFI)
 #endif
+#endif
 
+#ifdef CONFIG_ARMV7A_AFE_ENABLE
+  /* AP[0:2] Permissions model
+   *
+   *   SCTLR_AFE  Bit 29: Full, legacy access permissions behavior (reset value).
+   *
+   * When AFE=1, the page table AP[0] is used as an access flag and AP[2:1]
+   * control.  When AFE=0, AP[2:0] control access permissions.
+   */
+
+  orr  r0, r0, #(SCTLR_AFE)
+#endif
   /* Then write the configured control register */
 
   mcr    CP15_SCTLR(r0)      /* Write control reg */
@@ -628,6 +797,14 @@ __cpu7_boot:
 /****************************************************************************
  * PC_Relative Data
  ****************************************************************************/
+#ifdef CONFIG_ARCH_HAVE_MMU
+  /* The physical base address of the page table */
+
+  .type  .LCppgtable, %object
+.LCppgtable:
+  .long  PGTABLE_BASE_PADDR  /* Physical start of page table */
+  .size  .LCppgtable, . -.LCppgtable
+#endif
 
   /* The start address of the second phase boot logic */
 
@@ -642,9 +819,9 @@ __cpu7_boot:
  * Name: .Lcpu_vstart
  *
  * Description:
- *   Continue initialization after the MPU has been enabled.
+ *   Continue initialization after the MMU/MPU has been enabled.
  *
- *   The following is executed after the MPU has been enabled. This uses
+ *   The following is executed after the MMU/MPU has been enabled. This uses
  *   absolute addresses; this is not position independent.
  *
  * On input:
@@ -659,20 +836,13 @@ __cpu7_boot:
 
 .Lcpu_vstart:
 
-#ifdef CONFIG_STACK_COLORATION
-  /* Write a known value to the IDLE thread stack to support stack
-   * monitoring logic
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+  /* Perform init the secure monitor runtime. As the following arm_boot may
+   * using smc to perform psci related func, so the secure monitor init
+   * procedure should be placed before arm_boot
    */
 
-  adr   r3, .Lstkinit
-  mov   r0, sp          /* R0 = end of IDLE stack */
-  ldmia r3, {r1, r2}    /* R1 = Size of stack; R2 = coloration */
-
-1:                      /* Top of the loop */
-  sub   r1, r1, #1      /* R1 = Number of words remaining */
-  cmp   r1, #0          /* Check (nwords == 0) */
-  str   r2, [r0, #-4]!  /* Save color word, increment stack address */
-  bne   1b              /* Bottom of the loop */
+  bl  arm_sm_init
 #endif
 
   /* Branch to continue C level CPU initialization */
@@ -687,20 +857,12 @@ __cpu7_boot:
  * Text-section constants
  ***************************************************************************/
 
-  /* Text-section constants: */
-
-#ifdef CONFIG_STACK_COLORATION
-  .type .Lstkinit, %object
-.Lstkinit:
-  .long SMP_STACK_WORDS - (XCPTCONTEXT_SIZE / 4)
-  .long STACK_COLOR       /* Stack coloration word */
-  .size .Lstkinit, . -.Lstkinit
-#endif
-
+#ifdef CONFIG_ARM_HAVE_EL2
 .Lhypvectorstart:
   .long _hyp_vector_start
 .Lsysvectorstart:
   .long _vector_start
+#endif
 
 /***************************************************************************
  * .noinit section data
@@ -789,5 +951,5 @@ g_cpu7_idlestack:
 #endif /* CONFIG_NCPUS > 3 */
 #endif /* CONFIG_NCPUS > 2 */
 #endif /* CONFIG_NCPUS > 1 */
-#endif /* CONFIG_SMP */
+#endif /* !CONFIG_UP */
   .end

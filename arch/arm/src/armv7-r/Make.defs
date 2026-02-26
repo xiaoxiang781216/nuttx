@@ -33,10 +33,6 @@ ifeq ($(CONFIG_BUILD_PROTECTED),y)
   CMN_CSRCS += arm_mpu.c
 endif
 
-ifeq ($(CONFIG_SMP),y)
-  CMN_ASRCS += arm_cpuhead.S
-endif
-
 ifeq ($(CONFIG_ARCH_ADDRENV),y)
   CMN_CSRCS += arm_addrenv.c
 endif

@@ -28,10 +28,6 @@ if(CONFIG_BUILD_PROTECTED)
   list(APPEND SRCS arm_mpu.c)
 endif()
 
-if(CONFIG_SMP)
-  list(APPEND SRCS arm_cpuhead.S)
-endif()
-
 if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS arm_addrenv.c)
 endif()

@@ -18,10 +18,6 @@
 #
 # ##############################################################################
 
-# Common assembly language files
-
-list(APPEND SRCS arm_cpuhead.S)
-
 # Common C source files
 
 list(APPEND SRCS arm_mmu.c)

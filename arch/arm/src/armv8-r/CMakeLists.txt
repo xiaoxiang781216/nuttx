@@ -32,10 +32,6 @@ if(CONFIG_ARM_MPU)
   list(APPEND SRCS arm_mpu.c)
 endif()
 
-if(NOT CONFIG_UP)
-  list(APPEND SRCS arm_cpuhead.S)
-endif()
-
 if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS arm_addrenv.c)
 endif()

@@ -23,10 +23,6 @@
 include common/Make.defs
 include arm_a_r/Make.defs
 
-# Common assembly language files
-
-CMN_ASRCS += arm_cpuhead.S
-
 # Common C source files
 
 CMN_CSRCS += arm_mmu.c

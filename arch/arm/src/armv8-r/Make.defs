@@ -37,10 +37,6 @@ ifeq ($(CONFIG_ARM_GIC_VERSION),3)
   CMN_CSRCS += arm_gicv3.c
 endif
 
-ifneq ($(CONFIG_UP),y)
-  CMN_ASRCS += arm_cpuhead.S
-endif
-
 ifeq ($(CONFIG_ARCH_ADDRENV),y)
   CMN_CSRCS += arm_addrenv.c
 endif
