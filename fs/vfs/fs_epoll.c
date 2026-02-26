@@ -77,7 +77,7 @@ struct epoll_head_s
 {
   int                   size;
   int                   crefs;
-  mutex_t               lock;
+  rmutex_t              lock;
   sem_t                 sem;
   struct list_node      setup;    /* The setup list, store all the setuped
                                    * epoll node.
@@ -197,14 +197,14 @@ static int epoll_do_open(FAR struct file *filep)
   FAR epoll_head_t *eph = filep->f_priv;
   int ret;
 
-  ret = nxmutex_lock(&eph->lock);
+  ret = nxrmutex_lock(&eph->lock);
   if (ret < 0)
     {
       return ret;
     }
 
   eph->crefs++;
-  nxmutex_unlock(&eph->lock);
+  nxrmutex_unlock(&eph->lock);
   return ret;
 }
 
@@ -215,7 +215,7 @@ static int epoll_do_close(FAR struct file *filep)
   FAR epoll_node_t *tmp;
   int ret;
 
-  ret = nxmutex_lock(&eph->lock);
+  ret = nxrmutex_lock(&eph->lock);
   if (ret < 0)
     {
       return ret;
@@ -245,13 +245,13 @@ static int epoll_do_close(FAR struct file *filep)
           fs_heap_free(epn);
         }
 
-      nxmutex_unlock(&eph->lock);
-      nxmutex_destroy(&eph->lock);
+      nxrmutex_unlock(&eph->lock);
+      nxrmutex_destroy(&eph->lock);
       fs_heap_free(eph);
     }
   else
     {
-      nxmutex_unlock(&eph->lock);
+      nxrmutex_unlock(&eph->lock);
     }
 
   return ret;
@@ -303,7 +303,7 @@ static int epoll_do_poll(FAR struct file *filep,
 
       spin_unlock_irqrestore(&eph->poll_lock, flags);
 
-      nxmutex_lock(&eph->lock);
+      nxrmutex_lock(&eph->lock);
 
       list_for_every_entry(&eph->setup, epn, epoll_node_t, node)
         {
@@ -320,7 +320,7 @@ static int epoll_do_poll(FAR struct file *filep,
             }
         }
 
-      nxmutex_unlock(&eph->lock);
+      nxrmutex_unlock(&eph->lock);
 
       epoll_notify(eph, eventset);
     }
@@ -368,7 +368,7 @@ static int epoll_do_create(int size, int flags)
     }
 
   eph->size = size;
-  nxmutex_init(&eph->lock);
+  nxrmutex_init(&eph->lock);
   nxsem_init(&eph->sem, 0, 0);
   spin_lock_init(&eph->poll_lock);
 
@@ -393,7 +393,7 @@ static int epoll_do_create(int size, int flags)
   fd = file_allocate_from_inode(&g_epoll_inode, flags, 0, eph, 0);
   if (fd < 0)
     {
-      nxmutex_destroy(&eph->lock);
+      nxrmutex_destroy(&eph->lock);
       fs_heap_free(eph);
       set_errno(-fd);
       return ERROR;
@@ -422,7 +422,7 @@ static int epoll_setup(FAR epoll_head_t *eph)
   FAR epoll_node_t *epn;
   int ret;
 
-  ret = nxmutex_lock(&eph->lock);
+  ret = nxrmutex_lock(&eph->lock);
   if (ret < 0)
     {
       return ret;
@@ -448,7 +448,7 @@ static int epoll_setup(FAR epoll_head_t *eph)
       list_add_tail(&eph->setup, &epn->node);
     }
 
-  nxmutex_unlock(&eph->lock);
+  nxrmutex_unlock(&eph->lock);
   return ret;
 }
 
@@ -477,7 +477,7 @@ static int epoll_teardown(FAR epoll_head_t *eph, FAR struct epoll_event *evs,
   FAR epoll_node_t *epn;
   int i = 0;
 
-  nxmutex_lock(&eph->lock);
+  nxrmutex_lock(&eph->lock);
 
   list_for_every_entry_safe(&eph->setup, epn, tepn, epoll_node_t, node)
     {
@@ -512,7 +512,7 @@ static int epoll_teardown(FAR epoll_head_t *eph, FAR struct epoll_event *evs,
         }
     }
 
-  nxmutex_unlock(&eph->lock);
+  nxrmutex_unlock(&eph->lock);
   return i;
 }
 
@@ -641,7 +641,7 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
       return ERROR;
     }
 
-  ret = nxmutex_lock(&eph->lock);
+  ret = nxrmutex_lock(&eph->lock);
   if (ret < 0)
     {
       goto err_without_lock;
@@ -851,11 +851,11 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
     }
 
 out:
-  nxmutex_unlock(&eph->lock);
+  nxrmutex_unlock(&eph->lock);
   epoll_filep_close(filep);
   return OK;
 err:
-  nxmutex_unlock(&eph->lock);
+  nxrmutex_unlock(&eph->lock);
 err_without_lock:
   epoll_filep_close(filep);
   set_errno(-ret);
