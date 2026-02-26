@@ -101,5 +101,11 @@ ifeq ($(CONFIG_ARCH_HAVE_DEBUG),y)
   CMN_CSRCS += tricore_hwdebug.c
 endif
 
+ifneq ($(CONFIG_UP),y)
+ifeq ($(CONFIG_ARCH_HAVE_IRQTRIGGER),y)
+  CMN_CSRCS += tricore_cpucall.c
+endif
+endif
+
 CFLAGS += -DIFX_CFG_EXTEND_TRAP_HOOKS
 CFLAGS += -DIFX_USE_SW_MANAGED_INT

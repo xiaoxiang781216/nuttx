@@ -147,6 +147,49 @@ static inline_function void tricore_gpsrinitialize(void)
               IfxSrc_VmId_none);
 #endif
 }
+
+#  ifndef CONFIG_UP
+/****************************************************************************
+ * Name: tricore_cpucallinitialize
+ *
+ * Description:
+ *   Initialize the cpucall feature, attach cpu call handler to the event irq
+ *
+ ****************************************************************************/
+
+static inline_function void tricore_cpucallinitialize(void)
+{
+  volatile Ifx_SRC_SRCR *src;
+  int cpu = up_cpu_index();
+  int irq;
+
+  /* Use GPSR{cpu}_SR7 for cpucall instead of GPSR7_SR{cpu}.
+   * TC48X/TC4ZX do not have GPSR7, but all TC4XX chips have SR7
+   * in each GPSR group, so this works across all variants.
+   */
+
+  src = TRICORE_CPUCALL_SRC(cpu);
+  irq = TRICORE_SRC2IRQ(src);
+
+#ifdef CONFIG_ARCH_CHIP_TC3XX
+  IfxSrc_init(src, tricore_gettos(cpu), IRQ_TO_NDX(irq));
+#else
+  IfxSrc_init(src, tricore_gettos(cpu), IRQ_TO_NDX(irq),
+              IfxSrc_VmId_none);
+#endif
+
+  /* Each CPU attaches one handler to GPSR{cpu}_SR7. */
+
+  if (irq_attach(irq, nxsched_cpu_call_handler, NULL) >= 0)
+    {
+      up_enable_irq(irq);
+    }
+  else
+    {
+      PANIC();
+    }
+}
+#  endif
 #endif
 
 /****************************************************************************
@@ -174,6 +217,9 @@ void up_irqinitialize(void)
 {
 #ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
   tricore_gpsrinitialize();
+#  ifndef CONFIG_UP
+  tricore_cpucallinitialize();
+#  endif
 #endif
 
   tricore_region_csainit((void *)up_get_intstackbase(up_cpu_index()),

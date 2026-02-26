@@ -90,6 +90,10 @@ if(CONFIG_ARCH_HAVE_DEBUG)
   list(APPEND SRCS tricore_hwdebug.c)
 endif()
 
+if(NOT CONFIG_UP AND CONFIG_ARCH_HAVE_IRQTRIGGER)
+  list(APPEND SRCS tricore_cpucall.c)
+endif()
+
 set(IFXFLAGS -DIFX_CFG_EXTEND_TRAP_HOOKS -DIFX_USE_SW_MANAGED_INT)
 
 target_sources(arch PRIVATE ${SRCS})
