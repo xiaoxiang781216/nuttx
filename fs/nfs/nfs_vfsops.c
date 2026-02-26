@@ -75,6 +75,7 @@
 
 #include "fs_heap.h"
 
+#include "inode/inode.h"
 #include "nfs.h"
 #include "rpc.h"
 #include "nfs_proto.h"
@@ -144,6 +145,7 @@ static ssize_t nfs_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t nfs_write(FAR struct file *filep, FAR const char *buffer,
                    size_t buflen);
 static off_t   nfs_seek(FAR struct file *filep, off_t offset, int whence);
+static int     nfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 static int     nfs_sync(FAR struct file *filep);
 static int     nfs_dup(FAR const struct file *oldp, FAR struct file *newp);
 static int     nfs_fsinfo(FAR struct nfsmount *nmp);
@@ -209,7 +211,7 @@ const struct mountpt_operations g_nfs_operations =
   nfs_read,                     /* read */
   nfs_write,                    /* write */
   nfs_seek,                     /* seek */
-  NULL,                         /* ioctl */
+  nfs_ioctl,                    /* ioctl */
   nfs_truncate,                 /* truncate */
   NULL,                         /* poll */
   NULL,                         /* readv */
@@ -687,6 +689,7 @@ static int nfs_open(FAR struct file *filep, FAR const char *relpath,
 {
   FAR struct nfsmount *nmp;
   FAR struct nfsnode *np;
+  size_t len;
   int ret;
 
   /* Get the mountpoint inode reference from the file structure and the
@@ -696,9 +699,12 @@ static int nfs_open(FAR struct file *filep, FAR const char *relpath,
   nmp = filep->f_inode->i_private;
   DEBUGASSERT(nmp != NULL);
 
-  /* Pre-allocate the file private data to describe the opened file. */
+  /* Pre-allocate the file private data to describe the opened file.
+   * Allocate extra space for the relative path.
+   */
 
-  np = fs_heap_zalloc(sizeof(struct nfsnode));
+  len = strlen(relpath);
+  np = fs_heap_zalloc(sizeof(struct nfsnode) + len);
   if (!np)
     {
       ferr("ERROR: Failed to allocate private data\n");
@@ -763,6 +769,10 @@ static int nfs_open(FAR struct file *filep, FAR const char *relpath,
   /* Attach the private data to the struct file instance */
 
   filep->f_priv = np;
+
+  /* Store the relative path */
+
+  memcpy(np->n_relpath, relpath, len + 1);
 
   /* In write/append mode, we need to set the file pointer to the end of
    * the file.
@@ -1330,6 +1340,70 @@ static off_t nfs_seek(FAR struct file *filep, off_t offset, int whence)
 static int nfs_sync(FAR struct file *filep)
 {
   return 0;
+}
+
+/****************************************************************************
+ * Name: nfs_ioctl
+ *
+ * Description:
+ *   Handle I/O control commands for NFS files.
+ *
+ ****************************************************************************/
+
+static int nfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
+{
+  FAR struct nfsmount *nmp;
+  FAR struct nfsnode *np;
+  int ret;
+
+  finfo("cmd: %d arg: %08lx\n", cmd, arg);
+
+  /* Sanity checks */
+
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+
+  /* Recover our private data from the struct file instance */
+
+  np  = filep->f_priv;
+  nmp = filep->f_inode->i_private;
+
+  DEBUGASSERT(nmp != NULL);
+
+  /* Take the lock */
+
+  ret = nxmutex_lock(&nmp->nm_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Handle the ioctl commands */
+
+  switch (cmd)
+    {
+      case FIOC_FILEPATH:
+        {
+          FAR char *path = (FAR char *)(uintptr_t)arg;
+
+          /* Get the mountpoint path from the inode */
+
+          ret = inode_getpath(filep->f_inode, path, PATH_MAX);
+          if (ret >= 0)
+            {
+              /* Append the relative path to the mountpoint path */
+
+              strlcat(path, np->n_relpath, PATH_MAX);
+            }
+        }
+        break;
+
+      default:
+        ret = -ENOTTY;
+        break;
+    }
+
+  nxmutex_unlock(&nmp->nm_lock);
+  return ret;
 }
 
 /****************************************************************************
