@@ -45,12 +45,16 @@
 #  define CONFIG_NET_FORWARD_NSTRUCT 4
 #endif
 
-#if defined(CONFIG_NET_CANFORWARD) && defined(CONFIG_NET_CAN_NBUFFERS)
-static_assert(CONFIG_IOB_NBUFFERS + CONFIG_NET_CAN_NBUFFERS >
+#if CONFIG_IOB_NPOOLS <= 1
+static_assert(CONFIG_IOB_NBUFFERS > CONFIG_NET_FORWARD_NSTRUCT,
+              "net forward may consume all the IOB and break netdev logic");
+#elif  CONFIG_IOB_NPOOLS <= 2
+static_assert(CONFIG_IOB_NBUFFERS + CONFIG_IOB_NBUFFERS2 >
               CONFIG_NET_FORWARD_NSTRUCT,
               "net forward may consume all the IOB and break netdev logic");
 #else
-static_assert(CONFIG_IOB_NBUFFERS > CONFIG_NET_FORWARD_NSTRUCT,
+static_assert(CONFIG_IOB_NBUFFERS + CONFIG_IOB_NBUFFERS2 +
+              CONFIG_IOB_NBUFFERS3 > CONFIG_NET_FORWARD_NSTRUCT,
               "net forward may consume all the IOB and break netdev logic");
 #endif
 

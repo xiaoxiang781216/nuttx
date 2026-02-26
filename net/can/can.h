@@ -58,10 +58,6 @@
 #define can_callback_free(dev,conn,cb) \
   devif_conn_callback_free(dev, cb, &conn->sconn.s_list, &conn->sconn.s_listtail)
 
-#ifndef CONFIG_NET_CAN_NBUFFERS
-#  define CONFIG_NET_CAN_NBUFFERS 0
-#endif
-
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
