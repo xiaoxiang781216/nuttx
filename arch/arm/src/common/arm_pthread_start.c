@@ -32,9 +32,6 @@
 
 #include "arm_internal.h"
 
-#if !defined(CONFIG_BUILD_FLAT) && defined(__KERNEL__) && \
-    !defined(CONFIG_DISABLE_PTHREAD)
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -74,5 +71,3 @@ void up_pthread_start(pthread_trampoline_t startup,
 
   PANIC();
 }
-
-#endif /* !CONFIG_BUILD_FLAT && __KERNEL__ && !CONFIG_DISABLE_PTHREAD */

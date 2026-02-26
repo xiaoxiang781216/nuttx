@@ -630,7 +630,7 @@ void up_schedule_sigaction(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_BUILD_FLAT) && defined(__KERNEL__)
+#if defined(CONFIG_LIB_SYSCALL) && defined(__KERNEL__)
 void up_task_start(main_t taskentry, int argc, FAR char *argv[])
        noreturn_function;
 #endif
@@ -660,7 +660,7 @@ void up_task_start(main_t taskentry, int argc, FAR char *argv[])
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_BUILD_FLAT) && defined(__KERNEL__) && \
+#if defined(CONFIG_LIB_SYSCALL) && defined(__KERNEL__) && \
     !defined(CONFIG_DISABLE_PTHREAD)
 void up_pthread_start(pthread_trampoline_t startup,
                       pthread_startroutine_t entrypt, void *arg)
@@ -1600,6 +1600,10 @@ void up_addrenv_leave_kernel(void);
 #else
 #  define up_addrenv_enter_kernel()
 #  define up_addrenv_leave_kernel()
+#endif
+
+#ifndef up_addrenv_is_kernel
+#  define up_addrenv_is_kernel() (true)
 #endif
 
 /****************************************************************************

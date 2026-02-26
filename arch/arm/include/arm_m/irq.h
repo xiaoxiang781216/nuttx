@@ -221,6 +221,10 @@
 #define CONTROL_SPSEL       (1 << 1) /* Bit 1: Stack-pointer select */
 #define CONTROL_NPRIV       (1 << 0) /* Bit 0: Not privileged */
 
+#ifdef CONFIG_LIB_SYSCALL
+#  define up_addrenv_is_kernel() ((getcontrol() & CONTROL_NPRIV) == 0)
+#endif
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/

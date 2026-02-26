@@ -260,14 +260,20 @@ int arm_svcall(int irq, void *context, void *arg)
        *   R3 = argv
        */
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifdef CONFIG_LIB_SYSCALL
       case SYS_task_start:
         {
           /* Set up to return to the user-space task start-up function in
            * unprivileged mode.
            */
 
+#  ifdef CONFIG_BUILD_PROTECTED
           regs[REG_PC]         = (uint32_t)USERSPACE->task_startup & ~1;
+#  else
+          /* In FLAT mode, use nxtask_startup directly */
+
+          regs[REG_PC]         = (uint32_t)nxtask_startup & ~1;
+#  endif
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
           /* Return unprivileged mode */
@@ -298,7 +304,7 @@ int arm_svcall(int irq, void *context, void *arg)
        *   R3 = arg
        */
 
-#if !defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_DISABLE_PTHREAD)
+#if defined(CONFIG_LIB_SYSCALL) && !defined(CONFIG_DISABLE_PTHREAD)
       case SYS_pthread_start:
         {
           /* Set up to return to the user-space pthread start-up function in

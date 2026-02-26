@@ -31,8 +31,6 @@
 
 #include "arm_internal.h"
 
-#ifndef CONFIG_BUILD_FLAT
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -71,5 +69,3 @@ void up_task_start(main_t taskentry, int argc, char *argv[])
 
   PANIC();
 }
-
-#endif /* !CONFIG_BUILD_FLAT */

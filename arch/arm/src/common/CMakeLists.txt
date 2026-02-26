@@ -70,8 +70,12 @@ if(CONFIG_LIB_PPCCALL)
   endif()
 endif()
 
-if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
-  list(APPEND SRCS arm_task_start.c arm_pthread_start.c)
+if(CONFIG_LIB_SYSCALL)
+  list(APPEND SRCS arm_task_start.c)
+
+  if(NOT CONFIG_DISABLE_PTHREAD)
+    list(APPEND SRCS arm_pthread_start.c)
+  endif()
 
   if(NOT CONFIG_DISABLE_SIGNALS)
     list(APPEND SRCS arm_signal_dispatch.c)
