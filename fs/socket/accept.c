@@ -38,9 +38,28 @@
 #include <nuttx/cancelpt.h>
 #include <nuttx/net/net.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/tls.h>
 #include <arch/irq.h>
 
 #include "fs_heap.h"
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: accept4_cleanup
+ *
+ * Description:
+ *   Cleanup function called when thread is terminated. This ensures that
+ *   the file pointer reference count is properly decremented.
+ *
+ ****************************************************************************/
+
+static void accept4_cleanup(FAR void *arg)
+{
+  file_put(*(FAR struct file **)arg);
+}
 
 /****************************************************************************
  * Public Functions
@@ -121,7 +140,7 @@ int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
 {
   FAR struct socket *psock = NULL;
   FAR struct socket *newsock;
-  FAR struct file *filep;
+  FAR struct file *filep = NULL;
   int oflags = O_RDWR;
   int errcode;
   int newfd;
@@ -136,6 +155,12 @@ int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
       errcode = EINVAL;
       goto errout;
     }
+
+  /* Push a cancellation point onto the stack.  This will be called if
+   * the thread is canceled.
+   */
+
+  tls_cleanup_push(tls_get_info(), accept4_cleanup, &filep);
 
   /* Get the underlying socket structure */
 
@@ -185,6 +210,7 @@ int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
     }
 
   file_put(filep);
+  tls_cleanup_pop(tls_get_info(), 0);
   leave_cancellation_point();
   return newfd;
 
@@ -196,6 +222,7 @@ errout_with_alloc:
 
 errout_with_filep:
   file_put(filep);
+  tls_cleanup_pop(tls_get_info(), 0);
 
 errout:
   leave_cancellation_point();
