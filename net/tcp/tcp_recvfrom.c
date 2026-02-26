@@ -873,6 +873,12 @@ ssize_t psock_tcp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
           break;
         }
 
+      if (nrecv > SSIZE_MAX - ret)
+        {
+          ret = -EOVERFLOW;
+          break;
+        }
+
       nrecv += ret;
     }
 
