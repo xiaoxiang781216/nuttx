@@ -242,7 +242,7 @@ cpu_boot:
 switch_el:
     switch_el x0, 3f, 2f, 1f
 3:
-#ifdef CONFIG_ARCH_HAVE_EL3
+#ifdef CONFIG_ARM64_HAVE_EL3
     PRINT(switch_el3, "- Boot from EL3\r\n")
 
     /* EL3 init */
@@ -317,7 +317,7 @@ __reset_prep_c:
 
     switch_el x0, 3f, 2f, 1f
 3:
-#ifdef CONFIG_ARCH_HAVE_EL3
+#ifdef CONFIG_ARM64_HAVE_EL3
     /* Reinitialize SCTLR from scratch in EL3 */
 
     ldr   w0, =(SCTLR_EL3_RES1 | SCTLR_SA_BIT)

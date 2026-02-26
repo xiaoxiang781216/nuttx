@@ -508,7 +508,7 @@ static int arm64_exception_handler(uint64_t *regs)
       break;
     }
 
-#ifdef CONFIG_ARCH_HAVE_EL3
+#ifdef CONFIG_ARM64_HAVE_EL3
     case MODE_EL3:
     {
       el_str = "MODE_EL3";

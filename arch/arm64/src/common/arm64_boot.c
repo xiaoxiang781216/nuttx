@@ -46,7 +46,7 @@ extern void *_vector_table[];
  * Public Functions
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_EL3
+#ifdef CONFIG_ARM64_HAVE_EL3
 
 /* Some ARM aarch64 Cortex-family processors have not EL3
  * these two function should never called

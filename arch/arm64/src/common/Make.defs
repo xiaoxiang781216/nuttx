@@ -76,7 +76,7 @@ ifneq ($(CONFIG_ARCH_HAVE_DEBUG),)
 CMN_CSRCS += arm64_hwdebug.c
 endif
 
-ifeq ($(CONFIG_ARCH_HAVE_EL3),y)
+ifeq ($(CONFIG_ARM64_HAVE_EL3),y)
 CMN_ASRCS += arm64_smccc.S
 endif
 

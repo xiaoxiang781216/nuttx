@@ -141,7 +141,7 @@ endchoice # ARM64 chip selection
 config ARCH_ARMV8A
 	bool
 	default n
-	select ARCH_HAVE_EL3
+	select ARM64_HAVE_EL3
 
 config ARCH_ARMV8R
 	bool
@@ -189,7 +189,7 @@ config ARM64_SMP_BUSY_WAIT_FLAG_ADDR
 	hex "Busy wait flag address"
 	depends on ARM64_SMP_BUSY_WAIT
 
-config ARCH_HAVE_EL3
+config ARM64_HAVE_EL3
 	bool
 	default n
 	---help---
