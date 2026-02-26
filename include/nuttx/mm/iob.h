@@ -81,7 +81,9 @@
 
 /* Default config of alignment and head padding size */
 
-#define IOB_ALIGNMENT    MAX(CONFIG_IOB_ALIGNMENT, MM_ALIGN)
+#define IOB_ALIGNMENT           MAX(CONFIG_IOB_ALIGNMENT, MM_ALIGN)
+#define IOB_ALIGN_SIZE(blksize) ALIGN_UP(sizeof(struct iob_s) + blksize - 1, \
+                                         IOB_ALIGNMENT)
 
 /* IOB helpers */
 
@@ -118,7 +120,7 @@
 #define IOB_FLAG_TEST(iob, flag) (IOB_FLAG_GET(iob) & (flag))
 
 #if CONFIG_IOB_NPOOLS > 1
-#  define IOB_BUFSIZE(p) ((p)->io_pool->blocksize - sizeof(struct iob_s) + 1)
+#  define IOB_BUFSIZE(p) ((p)->io_pool->blocksize - IOB_ALIGN_SIZE(sizeof(struct iob_s)))
 #else
 #  define IOB_BUFSIZE(p) CONFIG_IOB_BUFSIZE
 #endif

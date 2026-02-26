@@ -71,13 +71,13 @@ IOBPOOL_DEFINE(g_iob3, CONFIG_IOB_BUFSIZE3, CONFIG_IOB_NBUFFERS3);
 
 FAR struct mempool_s *g_iob_pool[CONFIG_IOB_NPOOLS] =
 {
-#if CONFIG_IOB_NPOOLS > 2
-  &g_iob3,
-#endif
+  &g_iob1,
 #if CONFIG_IOB_NPOOLS > 1
   &g_iob2,
 #endif
-  &g_iob1,
+#if CONFIG_IOB_NPOOLS > 2
+  &g_iob3,
+#endif
 };
 
 /****************************************************************************

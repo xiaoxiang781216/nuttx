@@ -50,9 +50,6 @@
 #  define iobinfo                _none
 #endif /* CONFIG_DEBUG_FEATURES && CONFIG_IOB_DEBUG */
 
-#define IOB_ALIGN_SIZE(blksize) ALIGN_UP(sizeof(struct iob_s) + blksize - 1, \
-                                         IOB_ALIGNMENT)
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
