@@ -62,7 +62,6 @@
 struct nfsnode
 {
   FAR struct nfsnode *n_next;       /* Retained in a singly linked list. */
-  uint8_t             n_crefs;      /* Reference count (for nfs_dup) */
   uint8_t             n_type;       /* File type */
   uint8_t             n_fhsize;     /* Size in bytes of the file handle */
   uint16_t            n_mode;       /* File mode for fstat() */

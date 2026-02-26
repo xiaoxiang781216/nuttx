@@ -697,7 +697,7 @@ static int nfs_open(FAR struct file *filep, FAR const char *relpath,
    */
 
   nmp = filep->f_inode->i_private;
-  DEBUGASSERT(nmp != NULL);
+  DEBUGASSERT(nmp != NULL && relpath != NULL);
 
   /* Pre-allocate the file private data to describe the opened file.
    * Allocate extra space for the relative path.
@@ -759,12 +759,6 @@ static int nfs_open(FAR struct file *filep, FAR const char *relpath,
           goto errout_with_lock;
         }
     }
-
-  /* Initialize the file private data (only need to initialize
-   * non-zero elements)
-   */
-
-  np->n_crefs = 1;
 
   /* Attach the private data to the struct file instance */
 
@@ -843,58 +837,40 @@ static int nfs_close(FAR struct file *filep)
       return ret;
     }
 
-  /* Decrement the reference count.  If the reference count would not
-   * decrement to zero, then that is all we have to do.
+  /* Find our file structure in the list of file structures
+   * contained in the mount structure and remove it.
    */
 
-  if (np->n_crefs > 1)
+  ret = -EINVAL;
+
+  for (prev = NULL, curr = nmp->nm_head;
+       curr;
+       prev = curr, curr = curr->n_next)
     {
-      np->n_crefs--;
-      ret = OK;
-    }
+      /* Check if this node is ours */
 
-  /* There are no more references to the file structure.  Now we need to
-   * free up all resources associated with the open file.
-   *
-   * First, find our file structure in the list of file structures
-   * contained in the mount structure.
-   */
-
-  else
-    {
-      /* Assume file structure won't be found. This should never happen. */
-
-      ret = -EINVAL;
-
-      for (prev = NULL, curr = nmp->nm_head;
-           curr;
-           prev = curr, curr = curr->n_next)
+      if (np == curr)
         {
-          /* Check if this node is ours */
+          /* Yes.. remove it from the list of file structures */
 
-          if (np == curr)
+          if (prev)
             {
-              /* Yes.. remove it from the list of file structures */
+              /* Remove from mid-list */
 
-              if (prev)
-                {
-                  /* Remove from mid-list */
-
-                  prev->n_next = np->n_next;
-                }
-              else
-                {
-                  /* Remove from the head of the list */
-
-                  nmp->nm_head = np->n_next;
-                }
-
-              /* Then deallocate the file structure and return success */
-
-              fs_heap_free(np);
-              ret = OK;
-              break;
+              prev->n_next = np->n_next;
             }
+          else
+            {
+              /* Remove from the head of the list */
+
+              nmp->nm_head = np->n_next;
+            }
+
+          /* Then deallocate the file structure and return success */
+
+          fs_heap_free(np);
+          ret = OK;
+          break;
         }
     }
 
@@ -1417,20 +1393,19 @@ static int nfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 static int nfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
   FAR struct nfsmount *nmp;
-  FAR struct nfsnode *np;
   int ret;
 
   finfo("Dup %p->%p\n", oldp, newp);
 
   /* Sanity checks */
 
-  DEBUGASSERT(oldp->f_priv != NULL && oldp->f_inode != NULL);
+  DEBUGASSERT(oldp->f_priv != NULL &&
+              newp->f_priv == NULL &&
+              newp->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 
-  nmp = oldp->f_inode->i_private;
-  np  = (FAR struct nfsnode *)oldp->f_priv;
-
+  nmp = newp->f_inode->i_private;
   DEBUGASSERT(nmp != NULL);
 
   ret = nxmutex_lock(&nmp->nm_lock);
@@ -1439,17 +1414,72 @@ static int nfs_dup(FAR const struct file *oldp, FAR struct file *newp)
       return ret;
     }
 
-  /* Increment the reference count on the NFS node structure */
+  /* Check if this is a directory dup (opendir via pathcache) */
 
-  DEBUGASSERT(np->n_crefs < 0xff);
-  np->n_crefs++;
+  if (oldp->f_oflags & O_DIRECTORY)
+    {
+      /* Directory dup: deep copy nfs_dir_s, reset iteration to start */
 
-  /* And save this as the file data for the new node */
+      FAR struct nfs_dir_s *olddir = oldp->f_priv;
+      FAR struct nfs_dir_s *newdir;
 
-  newp->f_priv = np;
+      newdir = fs_heap_malloc(sizeof(struct nfs_dir_s));
+      if (newdir == NULL)
+        {
+          ferr("ERROR: Failed to allocate dir private data\n");
+          ret = -ENOMEM;
+          goto errout_with_lock;
+        }
 
+      memcpy(newdir, olddir, sizeof(struct nfs_dir_s));
+
+      /* Reset nfs_cookie and nfs_verifier to zero so the dup'd fd always
+       * starts iteration from the beginning of the directory.
+       */
+
+      memset(newdir->nfs_cookie, 0, sizeof(newdir->nfs_cookie));
+      memset(newdir->nfs_verifier, 0, sizeof(newdir->nfs_verifier));
+
+      newp->f_priv = newdir;
+    }
+  else
+    {
+      /* File dup: allocate new nfsnode with independent state */
+
+      FAR struct nfsnode *oldnp = oldp->f_priv;
+      FAR struct nfsnode *newnp;
+      size_t len;
+
+      len = strlen(oldnp->n_relpath);
+      newnp = fs_heap_zalloc(sizeof(struct nfsnode) + len);
+      if (newnp == NULL)
+        {
+          ferr("ERROR: Failed to allocate private data\n");
+          ret = -ENOMEM;
+          goto errout_with_lock;
+        }
+
+      /* Deep copy: duplicate all fields from the old node except n_relpath */
+
+      memcpy(newnp, oldnp, sizeof(struct nfsnode) - 1);
+
+      /* Copy the relative path */
+
+      memcpy(newnp->n_relpath, oldnp->n_relpath, len + 1);
+
+      /* Insert the new node into the mount's linked list */
+
+      newnp->n_next = nmp->nm_head;
+      nmp->nm_head  = newnp;
+
+      newp->f_priv = newnp;
+    }
+
+  ret = OK;
+
+errout_with_lock:
   nxmutex_unlock(&nmp->nm_lock);
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
