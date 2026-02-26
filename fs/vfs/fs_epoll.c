@@ -117,6 +117,7 @@ static int epoll_do_poll(FAR struct file *filep,
 static int epoll_setup(FAR epoll_head_t *eph);
 static int epoll_teardown(FAR epoll_head_t *eph, FAR struct epoll_event *evs,
                           int maxevents);
+static void epoll_cleanup(FAR void *arg);
 
 /****************************************************************************
  * Private Data
@@ -156,11 +157,18 @@ static FAR epoll_head_t *epoll_head_from_fd(int fd, FAR struct file **filep)
 {
   int ret;
 
+  /* Push a cancellation point onto the stack.  This will be called if
+   * the thread is canceled.
+   */
+
+  tls_cleanup_push(tls_get_info(), epoll_cleanup, filep);
+
   /* Get file pointer by file descriptor */
 
   ret = file_get(fd, filep);
   if (ret < 0)
     {
+      tls_cleanup_pop(tls_get_info(), 0);
       set_errno(-ret);
       return NULL;
     }
@@ -170,11 +178,18 @@ static FAR epoll_head_t *epoll_head_from_fd(int fd, FAR struct file **filep)
   if ((*filep)->f_inode->u.i_ops != &g_epoll_ops)
     {
       file_put(*filep);
+      tls_cleanup_pop(tls_get_info(), 0);
       set_errno(EBADF);
       return NULL;
     }
 
   return (*filep)->f_priv;
+}
+
+static void epoll_filep_close(FAR struct file *filep)
+{
+  file_put(filep);
+  tls_cleanup_pop(tls_get_info(), 0);
 }
 
 static int epoll_do_open(FAR struct file *filep)
@@ -511,7 +526,7 @@ static int epoll_teardown(FAR epoll_head_t *eph, FAR struct epoll_event *evs,
 
 static void epoll_cleanup(FAR void *arg)
 {
-  file_put(arg);
+  file_put(*(FAR struct file **)arg);
 }
 
 /****************************************************************************
@@ -613,7 +628,7 @@ void epoll_close(int epfd)
 int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
 {
   FAR struct list_node *extend;
-  FAR struct file *filep;
+  FAR struct file *filep = NULL;
   FAR epoll_head_t *eph;
   FAR epoll_node_t *epn;
   int ret;
@@ -837,12 +852,12 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
 
 out:
   nxmutex_unlock(&eph->lock);
-  file_put(filep);
+  epoll_filep_close(filep);
   return OK;
 err:
   nxmutex_unlock(&eph->lock);
 err_without_lock:
-  file_put(filep);
+  epoll_filep_close(filep);
   set_errno(-ret);
   return ERROR;
 }
@@ -854,7 +869,7 @@ err_without_lock:
 int epoll_pwait(int epfd, FAR struct epoll_event *evs,
                 int maxevents, int timeout, FAR const sigset_t *sigmask)
 {
-  FAR struct file *filep;
+  FAR struct file *filep = NULL;
   FAR epoll_head_t *eph;
   sigset_t oldsigmask;
   int ret;
@@ -876,12 +891,6 @@ retry:
 
   nxsig_procmask(SIG_SETMASK, sigmask, &oldsigmask);
 
-  /* Push a cancellation point onto the stack.  This will be called if
-   * the thread is canceled.
-   */
-
-  tls_cleanup_push(tls_get_info(), epoll_cleanup, filep);
-
   if (timeout == 0)
     {
       ret = -ETIMEDOUT;
@@ -894,10 +903,6 @@ retry:
     {
       ret = nxsem_wait(&eph->sem);
     }
-
-  /* Pop the cancellation point */
-
-  tls_cleanup_pop(tls_get_info(), 0);
 
   nxsig_procmask(SIG_SETMASK, &oldsigmask, NULL);
   if (ret < 0 && ret != -ETIMEDOUT)
@@ -915,11 +920,12 @@ retry:
       ret = num;
     }
 
-  file_put(filep);
+  epoll_filep_close(filep);
+
   return ret;
 
 err:
-  file_put(filep);
+  epoll_filep_close(filep);
   set_errno(-ret);
 out:
   ferr("epoll wait failed:%d, timeout:%d\n", errno, timeout);
@@ -940,7 +946,7 @@ out:
 int epoll_wait(int epfd, FAR struct epoll_event *evs,
                int maxevents, int timeout)
 {
-  FAR struct file *filep;
+  FAR struct file *filep = NULL;
   FAR epoll_head_t *eph;
   int ret;
 
@@ -957,12 +963,6 @@ retry:
       goto err;
     }
 
-  /* Push a cancellation point onto the stack.  This will be called if
-   * the thread is canceled.
-   */
-
-  tls_cleanup_push(tls_get_info(), epoll_cleanup, filep);
-
   /* Wait the poll ready */
 
   if (timeout == 0)
@@ -977,10 +977,6 @@ retry:
     {
       ret = nxsem_wait(&eph->sem);
     }
-
-  /* Pop the cancellation point */
-
-  tls_cleanup_pop(tls_get_info(), 0);
 
   if (ret < 0 && ret != -ETIMEDOUT)
     {
@@ -997,11 +993,12 @@ retry:
       ret = num;
     }
 
-  file_put(filep);
+  epoll_filep_close(filep);
+
   return ret;
 
 err:
-  file_put(filep);
+  epoll_filep_close(filep);
   set_errno(-ret);
 out:
   ferr("epoll wait failed:%d, timeout:%d\n", errno, timeout);
