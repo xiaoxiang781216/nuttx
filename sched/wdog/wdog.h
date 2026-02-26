@@ -131,11 +131,14 @@ uint64_t wd_timer(const hrtimer_t *timer, uint64_t expired);
 #ifdef CONFIG_HRTIMER
 static inline_function void wd_timer_start(clock_t tick, bool in_expiration)
 {
-  DEBUGASSERT((uint64_t)tick <= UINT64_MAX / NSEC_PER_TICK);
   if (!in_expiration)
     {
-      hrtimer_start(&g_wdtimer, wd_timer,
-                    TICK2NSEC((uint64_t)tick), HRTIMER_MODE_ABS);
+      clock_t interval = clock_compare(g_wdexpired, tick) ?
+                         tick - g_wdexpired : 0u;
+      uint64_t nsec = interval <= HRTIMER_MAX_DELAY / NSEC_PER_TICK ?
+                      TICK2NSEC((uint64_t)tick) :
+                      TICK2NSEC(g_wdexpired) + HRTIMER_MAX_DELAY;
+      hrtimer_start(&g_wdtimer, wd_timer, nsec, HRTIMER_MODE_ABS);
     }
 }
 
