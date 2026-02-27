@@ -59,18 +59,18 @@ static const uintptr_t g_idle_stackalloc = (uintptr_t)_ebss;
 
 const uintptr_t g_idle_topstack[CONFIG_SMP_NCPUS] =
 {
-  (uintptr_t)g_idle_stackalloc + (1 * IDLE_STACK_SIZE) - 16,
+  (uintptr_t)g_idle_stackalloc + (1 * IDLE_STACK_SIZE),
 #if CONFIG_SMP_NCPUS > 1
-  (uintptr_t)g_idle_stackalloc + (2 * IDLE_STACK_SIZE) - 16,
+  (uintptr_t)g_idle_stackalloc + (2 * IDLE_STACK_SIZE),
 #endif
 #if CONFIG_SMP_NCPUS > 2
-  (uintptr_t)g_idle_stackalloc + (3 * IDLE_STACK_SIZE) - 16,
+  (uintptr_t)g_idle_stackalloc + (3 * IDLE_STACK_SIZE),
 #endif
 #if CONFIG_SMP_NCPUS > 3
-  (uintptr_t)g_idle_stackalloc + (4 * IDLE_STACK_SIZE) - 16,
+  (uintptr_t)g_idle_stackalloc + (4 * IDLE_STACK_SIZE),
 #endif
 #if CONFIG_SMP_NCPUS > 4
-  (uintptr_t)g_idle_stackalloc + (5 * IDLE_STACK_SIZE) - 16,
+  (uintptr_t)g_idle_stackalloc + (5 * IDLE_STACK_SIZE),
 #endif
 #if CONFIG_SMP_NCPUS > 5
 #  error missing logic
@@ -103,7 +103,7 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   board_autoled_on(LED_HEAPALLOCATE);
 
-  topstack = g_idle_topstack[CONFIG_SMP_NCPUS - 1] + 8;
+  topstack = g_idle_topstack[CONFIG_SMP_NCPUS - 1];
 
   /* Calculate the end of .bss section */
 
