@@ -54,6 +54,7 @@ struct virtio_driver
   uint32_t           device;   /* device id */
   CODE int         (*probe)(FAR struct virtio_device *vdev);
   CODE void        (*remove)(FAR struct virtio_device *vdev);
+  CODE void        (*dump)(FAR struct virtio_device *vdev);
   struct dq_entry_s  node;
 };
 #endif

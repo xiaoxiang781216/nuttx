@@ -150,6 +150,13 @@ static void virtio_dump(FAR const char *name)
 
           virtqueue_dump(vinfo->vq);
         }
+
+      /* Call driver-specific dump if available */
+
+      if (item->driver && item->driver->dump)
+        {
+          item->driver->dump(vdev);
+        }
     }
 
   if (count == 0)
