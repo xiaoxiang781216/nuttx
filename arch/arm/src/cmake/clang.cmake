@@ -215,6 +215,9 @@ endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
+  # Generate .debug_macro section for GDB macro support Use DWARF v4 for better
+  # readelf compatibility
+  add_compile_options(-gdwarf-4 -fdebug-macro)
 endif()
 
 # Thread pointer access method

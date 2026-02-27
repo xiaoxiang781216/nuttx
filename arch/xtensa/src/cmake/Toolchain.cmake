@@ -242,6 +242,11 @@ endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
+  # Generate .debug_macro section for GDB macro support (Clang only) Use DWARF
+  # v4 for better readelf compatibility
+  if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+    add_compile_options(-gdwarf-4 -fdebug-macro)
+  endif()
 endif()
 
 if(CONFIG_XTENSA_TOOLCHAIN_XCC OR CONFIG_XTENSA_TOOLCHAIN_XCLANG)
