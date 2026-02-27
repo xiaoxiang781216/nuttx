@@ -119,6 +119,23 @@ config RAMLOG_POLLTIMEOUT_MS
 		Default 0 to disable this feature, positive value (ms) to make ramlog trigger a
 		wdog to enable idle timeout notify poll waiter.
 
+config RAMLOG_PRESERVE_SIZE
+	int "Bytes to preserve in buffer (changeable via ioctl)"
+	default -1
+	---help---
+		Controls the buffer preservation behavior when the circular buffer
+		is full. The value determines how much old data to keep:
+		  -1: Overwrite mode (default). New data overwrites oldest data.
+		   0: No-overwrite mode. New data is discarded when buffer is full.
+		  >0: Preserve mode. Protects up to this many bytes of existing
+		      data; new data is discarded when it would encroach on the
+		      protected region. When buffer has less data than this
+		      value, all existing data is protected.
+		In non-overwrite modes (0 and above), clear-on-read is automatically
+		enabled: any reader consuming data advances the tail pointer, so
+		other readers whose read position falls behind tail will be clamped
+		on next read. This frees buffer space for new log data.
+		This default can be changed at runtime via SYSLOGIOC_SETPRESERVE ioctl.
 endif
 
 config SYSLOG_BUFFER

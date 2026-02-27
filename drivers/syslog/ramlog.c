@@ -67,6 +67,8 @@
 #define RAMLOG_MAGIC_INIT  0x12340000
 #define RAMLOG_MAGIC_READY (0x56780000 | sizeof(struct ramlog_header_s))
 
+#define RAMLOG_IS_OVERWRITE(priv) ((priv)->rl_preserve == (uint32_t)-1)
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -115,8 +117,7 @@ struct ramlog_dev_s
   FAR struct ramlog_header_s *rl_header;
 
   uint32_t                   rl_bufsize;     /* Size of the circular buffer */
-  bool                       rl_overwrite;   /* Overwrite old data when full */
-  bool                       rl_clearonread; /* Advance tail after read */
+  uint32_t                   rl_preserve;    /* Max old data bytes to protect */
   dq_queue_t                 rl_queue;       /* The dq of ramlog_user_s */
   struct ramlog_ratelimit_s  rl_ratelimit;   /* The ratelimit for ramlog */
 #if CONFIG_RAMLOG_POLLTIMEOUT_MS > 0
@@ -188,7 +189,7 @@ static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_sysdev) =
 {
   (FAR struct ramlog_header_s *)g_sysbuffer,            /* rl_header */
   sizeof(g_sysbuffer) - sizeof(struct ramlog_header_s), /* rl_bufsize */
-  true,                                                 /* rl_overwrite */
+  CONFIG_RAMLOG_PRESERVE_SIZE,                          /* rl_preserve */
 };
 #  define g_sysdev this_cpu_var_bmp(g_sysdev)
 #endif
@@ -618,12 +619,13 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
       buflen = priv->rl_bufsize;
     }
 
-  /* When overwrite is disabled, discard new data when buffer is full.
-   * Only effective with clearonread, since tail never advances otherwise.
-   */
+  uint32_t used = header->rl_head - header->rl_tail;
+  uint32_t free = priv->rl_bufsize - used;
 
-  if (!priv->rl_overwrite && priv->rl_clearonread &&
-      header->rl_head - header->rl_tail + buflen > priv->rl_bufsize)
+  /* Reject if new data would encroach on protected region */
+
+  if (!RAMLOG_IS_OVERWRITE(priv) &&
+      buflen + (priv->rl_preserve < used ? priv->rl_preserve : used) > free)
     {
       spin_unlock_irqrestore_nopreempt(&header->rl_lock, flags);
       return len;
@@ -780,9 +782,12 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
           upriv->rl_read += ncopy;
           nread += ncopy;
 
-          /* Advance tail after read if read-on-clear is enabled */
+          /* Clear-on-read: in non-overwrite mode, any reader consuming
+           * data advances rl_tail so other readers whose rl_read falls
+           * behind tail will be clamped on next read.
+           */
 
-          if (priv->rl_clearonread)
+          if (!RAMLOG_IS_OVERWRITE(priv))
             {
               header->rl_tail = upriv->rl_read;
             }
@@ -836,11 +841,8 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
       case SYSLOGIOC_CLEAR:
         ramlog_bufferflush(priv);
         break;
-      case SYSLOGIOC_CLEARONREAD:
-        priv->rl_clearonread = (bool)arg;
-        break;
-      case SYSLOGIOC_SETOVERWRITE:
-        priv->rl_overwrite = (bool)arg;
+      case SYSLOGIOC_SETPRESERVE:
+        priv->rl_preserve = (uint32_t)arg;
         break;
 
       case SYSLOGIOC_SETRATELIMIT:
@@ -1034,7 +1036,7 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
 
       priv->rl_bufsize = buflen - sizeof(struct ramlog_header_s);
       priv->rl_header = (FAR struct ramlog_header_s *)buffer;
-      priv->rl_overwrite = true;
+      priv->rl_preserve = CONFIG_RAMLOG_PRESERVE_SIZE;
 
       /* Initialize the ramlog header if it has not been initialized yet. */
 
