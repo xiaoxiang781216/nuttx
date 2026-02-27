@@ -94,6 +94,7 @@ static void virtio_blk_uninit(FAR struct virtio_blk_priv_s *priv);
 static void virtio_blk_done(FAR struct virtqueue *vq);
 static int  virtio_blk_probe(FAR struct virtio_device *vdev);
 static void virtio_blk_remove(FAR struct virtio_device *vdev);
+static void virtio_blk_dump(FAR struct virtio_device *vdev);
 
 /****************************************************************************
  * Private Data
@@ -104,6 +105,7 @@ static DEFINE_PER_CPU_BMP(struct virtio_driver, g_virtio_blk_driver) =
   VIRTIO_ID_BLOCK,   /* device id */
   virtio_blk_probe,  /* probe */
   virtio_blk_remove, /* remove */
+  virtio_blk_dump,   /* dump */
 };
 #define g_virtio_blk_driver this_cpu_var_bmp(g_virtio_blk_driver)
 
@@ -551,6 +553,25 @@ err_with_init:
 err_with_priv:
   kmm_free(priv);
   return ret;
+}
+
+/****************************************************************************
+ * Name: virtio_blk_dump
+ ****************************************************************************/
+
+static void virtio_blk_dump(FAR struct virtio_device *vdev)
+{
+  FAR struct virtio_blk_priv_s *priv = vdev->priv;
+  uint64_t capacity_mb = (priv->nsectors * priv->block_size) >> 20;
+
+  syslog(LOG_EMERG, "  BLK Info:\n");
+  syslog(LOG_EMERG, "    device   : %s\n", priv->name);
+  syslog(LOG_EMERG, "    sectors  : %" PRIu64 "\n", priv->nsectors);
+  syslog(LOG_EMERG, "    blksize  : %" PRIu32 " B\n", priv->block_size);
+  syslog(LOG_EMERG, "    capacity : %" PRIu64 " MB\n", capacity_mb);
+  syslog(LOG_EMERG, "    features : ro=%d flush=%d\n",
+         virtio_has_feature(vdev, VIRTIO_BLK_F_RO),
+         virtio_has_feature(vdev, VIRTIO_BLK_F_FLUSH));
 }
 
 /****************************************************************************
