@@ -281,6 +281,8 @@ struct binder_work
     BINDER_WORK_DEAD_BINDER                     = 6,
     BINDER_WORK_DEAD_BINDER_AND_CLEAR           = 7,
     BINDER_WORK_CLEAR_DEATH_NOTIFICATION        = 8,
+    BINDER_WORK_FROZEN_BINDER                   = 9,
+    BINDER_WORK_CLEAR_FREEZE_NOTIFICATION       = 10,
   } type;
 };
 

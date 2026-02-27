@@ -360,6 +360,13 @@ struct binder_frozen_status_info
   uint32_t async_recv;
 };
 
+struct binder_frozen_state_info
+{
+  binder_uintptr_t cookie;
+  uint32_t is_frozen;
+  uint32_t reserved;
+};
+
 /* struct binder_extened_error - extended error information
  * id:      identifier for the failed operation
  * command: command as defined by binder_driver_return_protocol
@@ -599,6 +606,9 @@ enum binder_driver_return_protocol
   BR_TRANSACTION_PENDING_FROZEN = BINDER_IO('r', 20),
 
   /* The target of the last async transaction is frozen.  No parameters. */
+
+  BR_FROZEN_BINDER = BINDER_IO('r', 21),
+  BR_CLEAR_FREEZE_NOTIFICATION_DONE = BINDER_IO('r', 22),
 };
 
 enum binder_driver_command_protocol
@@ -676,6 +686,11 @@ enum binder_driver_command_protocol
 
   BC_TRANSACTION_SG = BINDER_IOW('c', 17, struct binder_transaction_data_sg),
   BC_REPLY_SG       = BINDER_IOW('c', 18, struct binder_transaction_data_sg),
+  BC_REQUEST_FREEZE_NOTIFICATION = BINDER_IOW('c', 19,
+                                              struct binder_handle_cookie),
+  BC_CLEAR_FREEZE_NOTIFICATION = BINDER_IOW('c', 20,
+                                            struct binder_handle_cookie),
+  BC_FREEZE_NOTIFICATION_DONE = BINDER_IOW('c', 21, binder_uintptr_t),
 
   /* binder_transaction_data_sg: the sent command. */
 };
