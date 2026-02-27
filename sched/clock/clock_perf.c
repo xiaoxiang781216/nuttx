@@ -107,7 +107,7 @@ void perf_setup(void)
 clock_t perf_gettime(void)
 {
   FAR struct perf_s *perf = &g_perf;
-  irqstate_t flags = spin_lock_irqsave(&perf->lock);
+  irqstate_t flags = spin_lock_irqsave_notrace(&perf->lock);
   clock_t now = up_perf_gettime();
   clock_t result;
 
@@ -118,7 +118,7 @@ clock_t perf_gettime(void)
 
   perf->last = now;
   result = now | (perf->overflow << CONFIG_ARCH_PERF_COUNT_BITWIDTH);
-  spin_unlock_irqrestore(&perf->lock, flags);
+  spin_unlock_irqrestore_notrace(&perf->lock, flags);
   return result;
 }
 
