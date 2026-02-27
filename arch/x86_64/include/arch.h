@@ -60,7 +60,8 @@
 #define ARCH_PGT_MAX_LEVELS 4
 #define ARCH_SPGTS          (ARCH_PGT_MAX_LEVELS - 1)
 
-#define ARCH_TP_OFFSET (0)
+#define ARCH_TP_OFFSET      (0 * sizeof(uintptr_t))
+#define ARCH_TP_PADDING     (1 * sizeof(uintptr_t))
 
 /****************************************************************************
  * Inline functions

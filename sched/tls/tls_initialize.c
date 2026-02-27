@@ -55,17 +55,25 @@ extern uint8_t _etbss[];
  * Name: tls_size
  *
  * Description:
- *   Get TLS (sizeof(struct tls_info_s) + tdata + tbss) section size.
+ *
+ *   Get TLS size, including struct tls_info_s, thread local section (tdata
+ *   and tbss), plus arch specific offset/paddings around the thread local
+ *   section.
+ *
+ *   Arch should define:
+ *   - ARCH_TP_OFFSET for the gap between tls_info_s and _stdata
+ *   - ARCH_TP_PADDING for the padding after thread local section (e.g. x64)
  *
  * Returned Value:
- *   Size of (sizeof(struct tls_info_s) + tdata + tbss).
+ *
+ *   Size of thread local data (normally below stack_base_ptr).
  *
  ****************************************************************************/
 
 size_t tls_size(void)
 {
   return sizeof(struct tls_info_s) +
-         ARCH_TP_OFFSET + _etbss - _stdata;
+         ARCH_TP_OFFSET + _etbss - _stdata + ARCH_TP_PADDING;
 }
 
 /****************************************************************************

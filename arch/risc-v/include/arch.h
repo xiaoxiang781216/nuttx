@@ -56,7 +56,8 @@
 #  define ARCH_SPGTS          (ARCH_PGT_MAX_LEVELS - 1)
 #endif
 
-#define ARCH_TP_OFFSET (0)
+#define ARCH_TP_OFFSET        (0)
+#define ARCH_TP_PADDING       (0)
 
 /****************************************************************************
  * Public Types

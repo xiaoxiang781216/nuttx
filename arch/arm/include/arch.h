@@ -121,7 +121,8 @@ do { \
 #  define UP_SEV() __asm__ __volatile__ ("sev" : : : "memory")
 #endif
 
-#define ARCH_TP_OFFSET (2 * sizeof(void *))
+#define ARCH_TP_OFFSET  (2 * sizeof(void *))
+#define ARCH_TP_PADDING (0)
 
 /****************************************************************************
  * Inline functions

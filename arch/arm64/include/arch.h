@@ -134,7 +134,8 @@
     __val;                                       \
   })
 
-#define ARCH_TP_OFFSET (2 * sizeof(void *))
+#define ARCH_TP_OFFSET   (2 * sizeof(void *))
+#define ARCH_TP_PADDING  (0)
 
 /****************************************************************************
  * Inline functions
