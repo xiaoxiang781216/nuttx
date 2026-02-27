@@ -111,7 +111,7 @@
             struct note_counter_s counter; \
             counter.value = value_; \
             strlcpy(counter.name, name_, NAME_MAX); \
-            sched_note_event(tag, level, NOTE_DUMP_COUNTER, \
+            sched_note_event(tag, LOG_INFO, NOTE_DUMP_COUNTER, \
                              &counter, sizeof(counter)); \
           } \
         while (0)
@@ -121,7 +121,7 @@
           { \
             struct note_threadtime_s threadtime; \
             threadtime.elapsed = (_elapsed); \
-            sched_note_event(NOTE_TAG_SCHED, level, NOTE_DUMP_THREADTIME, \
+            sched_note_event(NOTE_TAG_SCHED, LOG_INFO, NOTE_DUMP_THREADTIME, \
                              &threadtime, sizeof(threadtime)); \
           } \
         while (0)
