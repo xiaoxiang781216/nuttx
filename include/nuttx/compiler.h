@@ -379,6 +379,12 @@
 
 #  define nosanitize_undefined __attribute__((no_sanitize("undefined")))
 
+#ifdef CONFIG_ARCH_SAFE_STACK
+#  define nosanitize_safestack __attribute__((no_sanitize("safe-stack")))
+#else
+#  define nosanitize_safestack
+#endif
+
 /* The nostackprotect_function attribute disables stack protection in
  * sensitive functions, e.g., stack coloration routines.
  */
