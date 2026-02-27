@@ -225,6 +225,9 @@ static syslog_channel_t g_default_channel =
 #  ifdef CONFIG_SYSLOG_IOCTL
   , "default"
 #  endif
+#  ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
+  , SYSLOG_CHANNEL_DISABLE
+#  endif
 };
 
 #  ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
