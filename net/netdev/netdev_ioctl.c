@@ -1052,6 +1052,47 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
           }
 #endif
 
+#ifdef CONFIG_NET_FORWARD
+
+        /* Is this a request to set the IFF_NOSRC_FORWARD flag? */
+
+        if (IFF_IS_NOSRC_FORWARD(req->ifr_flags)
+            != IFF_IS_NOSRC_FORWARD(dev->d_flags))
+           {
+             if (IFF_IS_NOSRC_FORWARD(req->ifr_flags))
+               {
+                 /* Yes. Set the IFF_NOSRC_FORWARD flag */
+
+                 IFF_SET_NOSRC_FORWARD(dev->d_flags);
+               }
+             else
+               {
+                 /* No. Clear the IFF_NOSRC_FORWARD flag */
+
+                 IFF_CLR_NOSRC_FORWARD(dev->d_flags);
+               }
+           }
+
+        /* Is this a request to set the IFF_NODST_FORWARD flag? */
+
+        if (IFF_IS_NODST_FORWARD(req->ifr_flags)
+            != IFF_IS_NODST_FORWARD(dev->d_flags))
+           {
+             if (IFF_IS_NODST_FORWARD(req->ifr_flags))
+               {
+                 /* Yes. Set the IFF_NODST_FORWARD flag */
+
+                 IFF_SET_NODST_FORWARD(dev->d_flags);
+               }
+             else
+               {
+                 /* No. Clear the IFF_NODST_FORWARD flag */
+
+                 IFF_CLR_NODST_FORWARD(dev->d_flags);
+               }
+           }
+#endif
+
         /* Is this a request to bring the interface up/down? */
 
         if (IFF_IS_UP(req->ifr_flags) != IFF_IS_UP(dev->d_flags))
