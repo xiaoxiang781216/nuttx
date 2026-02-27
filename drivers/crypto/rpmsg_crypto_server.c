@@ -445,6 +445,16 @@ static int rpmsg_crypto_read_mpi(FAR unsigned char **pos,
       return ret;
     }
 
+  /* Strip DER sign-extension: a leading 0x00 is only padding when the
+   * next byte has MSB set.
+   */
+
+  if (len > 1 && **pos == 0 && ((*pos)[1] & 0x80) != 0)
+    {
+      (*pos)++;
+      len--;
+    }
+
   rpmsg_crypto_read_binary(pos, buf, len);
   if (len != 1 || *buf != 0)
     {
@@ -452,7 +462,7 @@ static int rpmsg_crypto_read_mpi(FAR unsigned char **pos,
       mpi->crp_nbits = len * 8;
     }
 
-  return ALIGN_UP(len, 4); /* round up to aligend size */
+  return ALIGN_UP(len, 4); /* round up to aligned size */
 }
 
 static int
