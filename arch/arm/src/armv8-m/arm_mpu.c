@@ -95,27 +95,28 @@ static void mpu_reset_internal(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mpu_allocregion
+ * Name: mpu_allocregions
  *
  * Description:
- *   Allocate the next region
+ *   Allocate the regions
  *
  * Input Parameters:
- *   None
+ *   nregions - The number of regions to be allocated.
  *
  * Returned Value:
  *   The index of the allocated region.
  *
  ****************************************************************************/
 
-unsigned int mpu_allocregion(void)
+unsigned int mpu_allocregions(unsigned int nregions)
 {
   unsigned int i = ffs(~g_mpu_region) - 1;
 
   /* There are not enough regions to apply */
 
-  DEBUGASSERT(i < CONFIG_ARM_MPU_NREGIONS);
-  g_mpu_region |= 1 << i;
+  DEBUGASSERT((i + nregions - 1) < CONFIG_ARM_MPU_NREGIONS);
+  DEBUGASSERT(((g_mpu_region >> i) & ((1 << nregions) - 1)) == 0);
+  g_mpu_region |= ((1 << nregions) - 1) << i;
   return i;
 }
 

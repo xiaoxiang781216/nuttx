@@ -401,7 +401,7 @@ void mpu_modify_regions(unsigned int region, uintptr_t base, size_t size,
  *
  ****************************************************************************/
 
-void mpu_enable_region(unsigned int region, uint32_t enable);
+void mpu_enable_region(unsigned int region, bool enable);
 
 /****************************************************************************
  * Name: mpu_configure_region

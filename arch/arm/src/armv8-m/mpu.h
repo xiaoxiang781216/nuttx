@@ -231,6 +231,22 @@ extern "C"
 #endif
 
 /****************************************************************************
+ * Name: mpu_allocregions
+ *
+ * Description:
+ *   Allocate the regions
+ *
+ * Input Parameters:
+ *   nregions - The number of regions to be allocated.
+ *
+ * Returned Value:
+ *   The index of the allocated region.
+ *
+ ****************************************************************************/
+
+unsigned int mpu_allocregions(unsigned int nregions);
+
+/****************************************************************************
  * Name: mpu_allocregion
  *
  * Description:
@@ -244,7 +260,7 @@ extern "C"
  *
  ****************************************************************************/
 
-unsigned int mpu_allocregion(void);
+#define mpu_allocregion() mpu_allocregions(1)
 
 /****************************************************************************
  * Name: mpu_freeregion
