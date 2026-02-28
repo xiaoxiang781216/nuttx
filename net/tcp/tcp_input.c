@@ -1248,6 +1248,18 @@ found:
           else
             {
               conn->tx_unacked = unackseq - ackseq;
+
+#ifdef CONFIG_NET_TCP_WRITE_BUFFERS
+              /* Reset nrtx when ACK acknowledges new data, regardless
+               * of whether sndseq has advanced beyond ackseq due to
+               * continuous sending.
+               */
+
+              if (conn->tx_unacked < lasttxunacked)
+                {
+                  conn->nrtx = 0;
+                }
+#endif
             }
         }
       else
@@ -1300,7 +1312,6 @@ found:
                     tcp_getsequence(conn->sndseq), ackseq, unackseq,
                     (uint32_t)conn->tx_unacked);
               tcp_setsequence(conn->sndseq, ackseq);
-              conn->nrtx = 0;
             }
         }
 #endif
