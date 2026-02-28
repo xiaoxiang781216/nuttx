@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/arm_addrenv.c
+ * arch/arm/src/arm_m/arm_addrenv.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -118,10 +118,10 @@ static unsigned int g_addrenv_callee_region;
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_MM_TASK_HEAP
 static int addrenv_select_region(unsigned int *region,
                                  const arch_addrenv_t *addrenv)
 {
-#ifdef CONFIG_MM_TASK_HEAP
   if (*region == 0)
     {
       *region = mpu_allocregion();
@@ -143,19 +143,19 @@ static int addrenv_select_region(unsigned int *region,
       /* Heap include data or just have heap region */
 
       mpu_modify_region(*region, addrenv->heap, addrenv->heapsize,
-                        MPU_RBAR_AP_RWRW, 0);
+                        MPU_USER_INTSRAM);
     }
   else if (addrenv->data)
     {
       /* Just data region */
 
       mpu_modify_region(*region, addrenv->data, addrenv->datasize,
-                        MPU_RBAR_AP_RWRW, 0);
+                        MPU_USER_INTSRAM);
     }
-#endif
 
   return OK;
 }
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -538,14 +538,13 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
 
   if (g_addrenv_stack_region == 0)
     {
-      g_addrenv_stack_region = mpu_allocregion();
+      g_addrenv_stack_region = mpu_allocregions(MPU_ADDRENV_NREGIONS);
     }
 
-  mpu_modify_region(g_addrenv_stack_region,
-                    (uintptr_t)tcb->stack_alloc_ptr,
-                    tcb->adj_stack_size + tls->tl_size,
-                    MPU_RBAR_AP_RWRW, 0);
-
+  mpu_modify_regions(g_addrenv_stack_region,
+                     (uintptr_t)tcb->stack_alloc_ptr,
+                     tcb->adj_stack_size + tls->tl_size,
+                     MPU_USER_INTSRAM);
   return OK;
 }
 
@@ -575,11 +574,13 @@ int up_addrenv_kstackswitch(struct tcb_s *tcb)
 
   if (g_addrenv_stack_region == 0)
     {
-      g_addrenv_stack_region = mpu_allocregion();
+      g_addrenv_stack_region = mpu_allocregions(MPU_ADDRENV_NREGIONS);
     }
 
-  mpu_modify_region(g_addrenv_stack_region, start, size,
-                    MPU_RBAR_XN | MPU_RBAR_AP_RWRO, 0);
+  mpu_modify_regions(g_addrenv_stack_region,
+                     (uintptr_t)tcb->stack_alloc_ptr,
+                     tcb->adj_stack_size + tls->tl_size,
+                     MPU_PRIV_INTSRAM);
   return OK;
 }
 #  endif
