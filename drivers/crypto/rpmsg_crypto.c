@@ -715,13 +715,6 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   keybufsize = VIRTIO_CRYPTO_RSA_DER_MAX_BYTES(
                 keybits, krp->krp_keytype == CRYPTO_KEY_TYPE_PRIVATE);
   keybufsize = ALIGN_UP(keybufsize, 4);
-  if (sizeof(*msg) + keybufsize + keybits / 8 > space)
-    {
-      rpmsgerr("No share memory space for key\n");
-      rpmsg_release_tx_buffer(&rdev->ept, msg);
-      return -ENOMEM;
-    }
-
   memset(keybuf, 0, keybufsize);
   sid = rpmsg_crypto_get_session(rdev);
   session = &rdev->sessions[sid];
@@ -771,17 +764,32 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
 
   keylen = ALIGN_UP(keylen, 4); /* keysize align to 4 bytes */
   ctrl->op_flf.akcipher.key_len = keylen;
-  memcpy(msg->buf, keybuf + keybufsize - keylen, keylen);
-  data_len += keylen;
 
   /* Pad data header for passing data */
 
   src = &krp->krp_param[0];
   dst = &krp->krp_param[krp->krp_iparams + krp->krp_oparams - 1];
+
+  /* Calculate actual total data length and check before copying */
+
+  data_len = keylen + src->crp_nbits / 8;
+  if (krp->krp_optype == CRYPTO_OP_VERIFY)
+    {
+      data_len += dst->crp_nbits / 8;
+    }
+
+  if (sizeof(*msg) + data_len > space)
+    {
+      rpmsgerr("No share memory space for key\n");
+      rpmsg_crypto_put_session(rdev, sid);
+      rpmsg_release_tx_buffer(&rdev->ept, msg);
+      return -ENOMEM;
+    }
+
+  memcpy(msg->buf, keybuf + keybufsize - keylen, keylen);
   data->header.algo = virtio_crypto_asym_get_alg(krp->krp_op);
   data->header.flag = krp->krp_flags;
   memcpy(msg->buf + keylen, src->crp_p, src->crp_nbits / 8);
-  data_len += src->crp_nbits / 8;
   switch (krp->krp_optype)
     {
       case CRYPTO_OP_DECRYPT:
@@ -803,8 +811,8 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
         data->header.opcode = VIRTIO_CRYPTO_AKCIPHER_VERIFY;
         data->op_flf.akcipher.src_data_len = src->crp_nbits / 8;
         data->op_flf.akcipher.dst_data_len = dst->crp_nbits / 8;
-        memcpy(msg->buf + data_len, dst->crp_p, dst->crp_nbits / 8);
-        data_len += dst->crp_nbits / 8;
+        memcpy(msg->buf + keylen + src->crp_nbits / 8,
+               dst->crp_p, dst->crp_nbits / 8);
         break;
     }
 
