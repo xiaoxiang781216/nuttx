@@ -79,7 +79,7 @@
  *   section:  The section attribute of the mempool buffer,
  */
 
-#define MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, blksize, \
+#define MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, priv, blksize, \
                                                    prealloc, maxalloc, \
                                                    dynalloc, throttle, \
                                                    alignsize, ...) \
@@ -95,7 +95,7 @@
       (maxalloc), \
       (throttle), \
       true, \
-      NULL, \
+      priv, \
       STRINGIFY(name), \
       NULL, \
       NULL, \
@@ -103,8 +103,9 @@
     }
 
 #define MEMPOOL_DEFINE(name, blksize, prealloc, maxalloc, dynalloc) \
-  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, blksize, prealloc, \
-                                             maxalloc, dynalloc, 0, \
+  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, NULL, blksize, \
+                                             prealloc, maxalloc, \
+                                             dynalloc, 0, \
                                              MM_ALIGN)
 
 /* Static mempool definition related macros for bmp mode, in which:
@@ -119,7 +120,7 @@
  *   section:  The section attribute of the mempool buffer,
  */
 
-#define MEMPOOL_DEFINE_BMP_WITH_THROTTLE_ALIGN_SECTION(name, blksize,  \
+#define MEMPOOL_DEFINE_BMP_WITH_THROTTLE_ALIGN_SECTION(name, priv, blksize,  \
                                                        prealloc, maxalloc, \
                                                        dynalloc, throttle, \
                                                        alignsize, ...) \
@@ -135,7 +136,7 @@
       (maxalloc), \
       (throttle), \
       true, \
-      NULL, \
+      priv, \
       "bmp_" STRINGIFY(name), \
       NULL, \
       NULL, \
@@ -143,8 +144,9 @@
     }
 
 #define MEMPOOL_DEFINE_BMP(name, blksize, prealloc, maxalloc, dynalloc) \
-  MEMPOOL_DEFINE_BMP_WITH_THROTTLE_ALIGN_SECTION(name, blksize, prealloc, \
-                                                 maxalloc, dynalloc, 0, \
+  MEMPOOL_DEFINE_BMP_WITH_THROTTLE_ALIGN_SECTION(name, NULL, blksize, \
+                                                 prealloc, maxalloc, \
+                                                 dynalloc, 0, \
                                                  MM_ALIGN)
 
 /****************************************************************************

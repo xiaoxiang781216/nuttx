@@ -28,8 +28,10 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/compiler.h>
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <sys/param.h>
 #include <nuttx/mm/mm.h>
@@ -82,13 +84,13 @@
 /* Default config of alignment and head padding size */
 
 #define IOB_ALIGNMENT           MAX(CONFIG_IOB_ALIGNMENT, MM_ALIGN)
-#define IOB_ALIGN_SIZE(blksize) ALIGN_UP(sizeof(struct iob_s) + blksize - 1, \
-                                         IOB_ALIGNMENT)
+#define IOB_ALIGN_SIZE(blksize) ALIGN_UP(offsetof(struct iob_s, io_data) + \
+                                         blksize, IOB_ALIGNMENT)
 
 /* IOB helpers */
 
 #define IOB_DATA(p)      (&(p)->io_data[(p)->io_offset])
-#define IOB_FREESPACE(p) (CONFIG_IOB_BUFSIZE - (p)->io_len - (p)->io_offset)
+#define IOB_FREESPACE(p) (IOB_BUFSIZE(p) - (p)->io_len - (p)->io_offset)
 
 /* Queue helpers */
 
@@ -120,7 +122,7 @@
 #define IOB_FLAG_TEST(iob, flag) (IOB_FLAG_GET(iob) & (flag))
 
 #if CONFIG_IOB_NPOOLS > 1
-#  define IOB_BUFSIZE(p) ((p)->io_pool->blocksize - IOB_ALIGN_SIZE(sizeof(struct iob_s)))
+#  define IOB_BUFSIZE(p) ((size_t)(uintptr_t)(p)->io_pool->priv)
 #else
 #  define IOB_BUFSIZE(p) CONFIG_IOB_BUFSIZE
 #endif

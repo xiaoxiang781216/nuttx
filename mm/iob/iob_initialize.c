@@ -37,13 +37,17 @@
 
 #ifdef IOB_SECTION
 #  define IOBPOOL_DEFINE(name, blksize, blkcnt) \
-  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, IOB_ALIGN_SIZE(blksize), \
+  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, \
+                                             (FAR void *)(uintptr_t)blksize, \
+                                             IOB_ALIGN_SIZE(blksize), \
                                              blkcnt, 0, 0, \
                                              CONFIG_IOB_THROTTLE, \
                                              IOB_ALIGNMENT, IOB_SECTION);
 #else
 #  define IOBPOOL_DEFINE(name, blksize, blkcnt) \
-  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, IOB_ALIGN_SIZE(blksize), \
+  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, \
+                                             (FAR void *)(uintptr_t)blksize, \
+                                             IOB_ALIGN_SIZE(blksize), \
                                              blkcnt, 0, 0, \
                                              CONFIG_IOB_THROTTLE, \
                                              IOB_ALIGNMENT);

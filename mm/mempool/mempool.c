@@ -409,8 +409,8 @@ int mempool_init(FAR struct mempool_s *pool)
 
   if (!pool->init)
     {
-      if (pool->priv == NULL && pool->alloc == NULL &&
-          pool->free == NULL && pool->check == NULL)
+      if (pool->alloc == NULL && pool->free == NULL &&
+          pool->check == NULL)
         {
           /* Default dynamic expand feature */
 
