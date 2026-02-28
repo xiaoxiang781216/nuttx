@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/arm_mpu.c
+ * arch/arm/src/arm_m/arm_mpu.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <debug.h>
+#include <sys/param.h>
 
 #include <arch/barriers.h>
 
@@ -47,6 +48,7 @@
  * Private Data
  ****************************************************************************/
 
+#ifndef CONFIG_ARCH_ARMV8M
 /* These sets represent the set of disabled memory sub-regions.  A bit set
  * corresponds to a disabled sub-region; the LS bit corresponds to the first
  * region.
@@ -70,6 +72,7 @@ static const uint8_t g_ls_regionmask[9] =
 {
   0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff
 };
+#endif /* !CONFIG_ARCH_ARMV8M */
 
 /* The available region bitmap */
 
@@ -79,6 +82,7 @@ static unsigned int g_mpu_region;
  * Private Functions
  ****************************************************************************/
 
+#ifndef CONFIG_ARCH_ARMV8M
 /****************************************************************************
  * Name: mpu_subregion_ms
  *
@@ -193,6 +197,7 @@ static inline uint32_t mpu_subregion_ls(size_t offset, uint8_t l2size)
   nsrs    = aoffset >> (l2size - 3);  /* Number of subregions */
   return g_ls_regionmask[nsrs];
 }
+#endif /* !CONFIG_ARCH_ARMV8M */
 
 /****************************************************************************
  * Name: mpu_reset_internal
@@ -219,7 +224,7 @@ static void mpu_reset_internal(void)
   for (region = 0; region < regions; region++)
     {
       putreg32(region, MPU_RNR);
-      putreg32(0, MPU_RASR);
+      putreg32(0, MPU_ATTR);
       putreg32(0, MPU_RBAR);
     }
 
@@ -280,10 +285,49 @@ void mpu_freeregion(unsigned int region)
   /* Clear and disable the given MPU Region */
 
   putreg32(region, MPU_RNR);
-  putreg32(0, MPU_RASR);
+  putreg32(0, MPU_ATTR);
   putreg32(0, MPU_RBAR);
   g_mpu_region &= ~(1 << region);
   UP_MB();
+}
+
+/****************************************************************************
+ * Name: mpu_initialize
+ *
+ * Description:
+ *   Configure a region for privileged, strongly ordered memory
+ *
+ * Input Parameters:
+ *   table      - MPU initialization table.
+ *   count      - Initialize the number of entries in the region table.
+ *   hfnmiena   - A boolean indicating whether the MPU should enable the
+ *                HFNMIENA bit.
+ *   privdefena - A boolean indicating whether the MPU should enable the
+ *                PRIVDEFENA bit.
+ *
+ * Returned Value:
+ *   NULL.
+ *
+ ****************************************************************************/
+
+void mpu_initialize(const struct mpu_region_s *table, size_t count,
+                    bool hfnmiena, bool privdefena)
+{
+  const struct mpu_region_s *conf;
+  size_t index;
+
+  mpu_control(false, false, false);
+  for (index = 0; index < count; index++)
+    {
+      conf = &table[index];
+      mpu_configure_region(conf->base, conf->size, conf->flags
+#ifdef CONFIG_ARCH_ARMV8M
+                           , conf->flags2
+#endif
+                           );
+    }
+
+  mpu_control(true, hfnmiena, privdefena);
 }
 
 /****************************************************************************
@@ -342,6 +386,7 @@ uint8_t mpu_log2regionfloor(size_t size)
   return l2size;
 }
 
+#ifndef CONFIG_ARCH_ARMV8M
 /****************************************************************************
  * Name: mpu_subregion
  *
@@ -406,6 +451,7 @@ uint32_t mpu_subregion(uintptr_t base, size_t size, uint8_t l2size)
   ret |= mpu_subregion_ls(offset, l2size);
   return ret;
 }
+#endif /* !CONFIG_ARCH_ARMV8M */
 
 /****************************************************************************
  * Name: mpu_control
@@ -428,6 +474,17 @@ uint32_t mpu_subregion(uintptr_t base, size_t size, uint8_t l2size)
 void mpu_control(bool enable, bool hfnmiena, bool privdefena)
 {
   uint32_t regval = 0;
+
+#ifdef CONFIG_ARCH_ARMV8M
+  putreg32((MPU_MAIR_STRONGLY_ORDER <<  0) |
+           (MPU_MAIR_DEVICE         <<  8) |
+           (MPU_MAIR_NONCACHEABLE   << 16) |
+           (MPU_MAIR_WRITE_THROUGH  << 24),
+           MPU_MAIR0);
+
+  putreg32((MPU_MAIR_WRITE_BACK     <<  0),
+           MPU_MAIR1);
+#endif
 
   if (enable)
     {
@@ -458,10 +515,11 @@ void mpu_control(bool enable, bool hfnmiena, bool privdefena)
  *   Modify a region for privileged, strongly ordered memory
  *
  * Input Parameters:
- *   region - Region number to modify.
- *   base   - Base address of the region.
- *   size   - Size of the region.
- *   flags  - Flags to configure the region.
+ *   region - The index of the MPU region to modify.
+ *   base   - The base address of the region.
+ *   size   - The size of the region.
+ *   flags  - Flags to configure the region (RASR for v7m, RBAR for v8m).
+ *   flags2 - Additional flags for the region (RLAR, ARMv8-M only).
  *
  * Returned Value:
  *   None.
@@ -469,8 +527,40 @@ void mpu_control(bool enable, bool hfnmiena, bool privdefena)
  ****************************************************************************/
 
 void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
-                       uint32_t flags)
+                       uint32_t flags
+#ifdef CONFIG_ARCH_ARMV8M
+                       , uint32_t flags2
+#endif
+                       )
 {
+#ifdef CONFIG_ARCH_ARMV8M
+  uintptr_t limit;
+  uintptr_t rbase;
+
+  /* Check that the region is valid */
+
+  DEBUGASSERT(g_mpu_region & (1 << region));
+
+  /* Ensure the base address alignment
+   *
+   * ARMv8-M Architecture Reference Manual
+   * B3.5.8 MPU Region Base Address Register, MPU_RBAR
+   * "Software must ensure that the value written to the ADDR field
+   * aligns with the size of the selected region."
+   */
+
+  limit = (base + size - 1) & MPU_RLAR_LIMIT_MASK;
+  rbase = base & MPU_RBAR_BASE_MASK;
+
+  /* Select the region */
+
+  putreg32(region, MPU_RNR);
+
+  /* Set the region base, limit and attribute */
+
+  putreg32(rbase | flags, MPU_RBAR);
+  putreg32(limit | flags2 | MPU_RLAR_ENABLE, MPU_RLAR);
+#else /* ARMv7-M / ARMv6-M */
   uint32_t     regval;
   uint8_t      l2size;
   uint8_t      subregions;
@@ -518,17 +608,21 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
            ((uint32_t)subregions << MPU_RASR_SRD_SHIFT) | /* Sub-regions    */
            flags;
   putreg32(regval, MPU_RASR);
+#endif
 
   /* Ensure MPU setting take effects */
 
   UP_MB();
 }
 
+#ifndef CONFIG_ARCH_ARMV8M
 /****************************************************************************
  * Name: mpu_modify_regions
  *
  * Description:
- *   Configure multi regions for privileged, strongly ordered memory
+ *   Configure multi regions for privileged, strongly ordered memory.
+ *   This may use up to 2 MPU regions due to power-of-2
+ *   alignment constraints.
  *
  * Input Parameters:
  *   region  - First region number to modify.
@@ -580,12 +674,13 @@ void mpu_modify_regions(unsigned int region, uintptr_t base, size_t size,
       UP_ISB();
     }
 }
+#endif /* !CONFIG_ARCH_ARMV8M */
 
 /****************************************************************************
  * Name: mpu_enable_region
  *
  * Description:
- *   Contrl a region enable or disable
+ *   Control a region enable or disable
  *
  * Input Parameters:
  *   region - The index of the MPU region to modify.
@@ -603,14 +698,14 @@ void mpu_enable_region(unsigned int region, bool enable)
   /* Select the region */
 
   putreg32(region, MPU_RNR);
-  limit = getreg32(MPU_RASR);
+  limit = getreg32(MPU_ATTR);
   if (enable)
     {
-      putreg32(limit | MPU_RASR_ENABLE, MPU_RASR);
+      putreg32(limit | MPU_ATTR_ENABLE, MPU_ATTR);
     }
   else
     {
-      putreg32(limit & ~MPU_RASR_ENABLE, MPU_RASR);
+      putreg32(limit & ~MPU_ATTR_ENABLE, MPU_ATTR);
     }
 
   /* Ensure MPU setting take effects */
@@ -625,9 +720,10 @@ void mpu_enable_region(unsigned int region, bool enable)
  *   Configure a region for privileged, strongly ordered memory
  *
  * Input Parameters:
- *   base  - Base address of the region.
- *   size  - Size of the region.
- *   flags - Flags to configure the region.
+ *   base   - The base address of the region.
+ *   size   - The size of the region.
+ *   flags  - Flags to configure the region (RASR for v7m, RBAR for v8m).
+ *   flags2 - Additional flags for the region (RLAR, ARMv8-M only).
  *
  * Returned Value:
  *   The region number allocated for the configured region.
@@ -635,46 +731,19 @@ void mpu_enable_region(unsigned int region, bool enable)
  ****************************************************************************/
 
 unsigned int mpu_configure_region(uintptr_t base, size_t size,
-                                  uint32_t flags)
+                                  uint32_t flags
+#ifdef CONFIG_ARCH_ARMV8M
+                                  , uint32_t flags2
+#endif
+                                  )
 {
   unsigned int region = mpu_allocregion();
-  mpu_modify_region(region, base, size, flags);
+  mpu_modify_region(region, base, size, flags
+#ifdef CONFIG_ARCH_ARMV8M
+                    , flags2
+#endif
+                    );
   return region;
-}
-
-/****************************************************************************
- * Name: mpu_initialize
- *
- * Description:
- *   Configure a region for privileged, strongly ordered memory
- *
- * Input Parameters:
- *   table      - MPU initialization table.
- *   count      - Initialize the number of entries in the region table.
- *   hfnmiena   - A boolean indicating whether the MPU should enable the
- *                HFNMIENA bit.
- *   privdefena - A boolean indicating whether the MPU should enable the
- *                PRIVDEFENA bit.
- *
- * Returned Value:
- *   NULL.
- *
- ****************************************************************************/
-
-void mpu_initialize(const struct mpu_region_s *table, size_t count,
-                    bool hfnmiena, bool privdefena)
-{
-  const struct mpu_region_s *conf;
-  size_t index;
-
-  mpu_control(false, false, false);
-  for (index = 0; index < count; index++)
-    {
-      conf = &table[index];
-      mpu_configure_region(conf->base, conf->size, conf->flags);
-    }
-
-  mpu_control(true, hfnmiena, privdefena);
 }
 
 /****************************************************************************
@@ -695,9 +764,13 @@ void mpu_dump_region(void)
 {
   int i;
   int count = 0;
-  uint32_t rasr;
-  uint32_t rbar;
   uint32_t ctrl;
+  uint32_t rbar;
+#ifdef CONFIG_ARCH_ARMV8M
+  uint32_t rlar;
+#else
+  uint32_t rasr;
+#endif
 
   /* Get free region */
 
@@ -708,16 +781,32 @@ void mpu_dump_region(void)
   for (i = 0; i < CONFIG_ARM_MPU_NREGIONS; i++)
     {
       putreg32(i, MPU_RNR);
-      rasr = getreg32(MPU_RASR);
       rbar = getreg32(MPU_RBAR);
-      _info("MPU-%d, alignedbase=%08"PRIx32" l2size=%"PRIu32" SRD=%"PRIx32""
-            "AP=%"PRIx32" XN=%"PRIu32"\n", i, rbar & MPU_RBAR_ADDR_MASK,
+
+#ifdef CONFIG_ARCH_ARMV8M
+      rlar = getreg32(MPU_RLAR);
+      _info("MPU-%d, 0x%08"PRIx32"-0x%08"PRIx32" SH=%"PRIx32
+            " AP=%"PRIx32" XN=%"PRIu32" ENABLE%"PRIu32"\n",
+            i, rbar & MPU_RBAR_BASE_MASK,
+            rlar & MPU_RLAR_LIMIT_MASK, rbar & MPU_RBAR_SH_MASK,
+            rbar & MPU_RBAR_AP_MASK, rbar & MPU_RBAR_XN,
+            rlar & MPU_RLAR_ENABLE);
+      if (rlar & MPU_RLAR_ENABLE)
+        {
+          count++;
+        }
+#else /* ARMv7-M / ARMv6-M */
+      rasr = getreg32(MPU_RASR);
+      _info("MPU-%d, alignedbase=%08"PRIx32" l2size=%"PRIu32
+            " SRD=%"PRIx32" AP=%"PRIx32" XN=%"PRIu32"\n",
+            i, rbar & MPU_RBAR_ADDR_MASK,
             rasr & MPU_RASR_SIZE_MASK, rasr & MPU_RASR_SRD_MASK,
             rasr & MPU_RASR_AP_MASK, rasr & MPU_RASR_XN);
       if (rasr & MPU_RASR_ENABLE)
         {
           count++;
         }
+#endif
     }
 
   _info("Total Use Region:%d, Remaining Available:%d\n", count,

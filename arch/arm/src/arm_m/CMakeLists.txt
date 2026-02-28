@@ -93,4 +93,8 @@ if(CONFIG_ARCH_KERNEL_STACK)
   list(APPEND SRCS arm_addrenv_kstack.c)
 endif()
 
+if(CONFIG_ARM_MPU OR CONFIG_ARM_MPU_EARLY_RESET)
+  list(APPEND SRCS arm_mpu.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})
