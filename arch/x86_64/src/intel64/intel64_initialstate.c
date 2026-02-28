@@ -173,14 +173,9 @@ void up_initial_state(struct tcb_s *tcb)
  */
 
 #ifdef CONFIG_SCHED_THREAD_LOCAL
-  xcp->regs[REG_FSBASE] = ((uintptr_t)tcb->stack_alloc_ptr +
-                           sizeof(struct tls_info_s) +
-                           (_END_TBSS - _START_TDATA));
-
-  *(uint64_t *)(xcp->regs[REG_FSBASE]) = xcp->regs[REG_FSBASE];
-
   /* Do not write FSBASE now. This task is not running yet! */
 
+  xcp->regs[REG_FSBASE] = x86_64_tp_addr(tcb);
 #else
   xcp->regs[REG_FSBASE] = 0;
 #endif

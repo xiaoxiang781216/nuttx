@@ -87,6 +87,14 @@ void *up_stack_frame(struct tcb_s *tcb, size_t frame_size)
   ret = tcb->stack_base_ptr;
   memset(ret, 0, frame_size);
 
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+  /* Arch specific tls init hook would be ideal but it is dropped.
+   * So do threadlocal initialization here.
+   */
+
+  x86_64_tp_init(tcb);
+#endif
+
   /* Save the adjusted stack values in the struct tcb_s */
 
   tcb->stack_base_ptr  = (uint8_t *)tcb->stack_base_ptr + frame_size;

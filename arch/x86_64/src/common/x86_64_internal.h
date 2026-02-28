@@ -34,6 +34,7 @@
 #  include <arch/io.h>
 #  include <arch/irq.h>
 #  include <arch/multiboot2.h>
+#  include <tls/tls.h>
 #endif
 
 /****************************************************************************
@@ -302,6 +303,53 @@ static inline_function unsigned int up_apic_cpu_id(void)
 {
   return apic_read(APIC_ID);
 }
+
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+
+/* X86_64 thread pointer is a self-pointing pointer in TLS frame of
+ * thread stack. Here we define some helpers for it.
+ *
+ * See tls_size() for general layout of thread local storage
+ */
+
+/* TCB thread pointer address offset */
+
+static inline_function uintptr_t x86_64_tp_offset(void)
+{
+  return tls_size() - ARCH_TP_PADDING;
+}
+
+/* The thread pointer address for a TCB */
+
+static inline_function uintptr_t x86_64_tp_addr(struct tcb_s *tcb)
+{
+  DEBUGASSERT(tcb && tcb->stack_alloc_ptr && tcb->stack_base_ptr);
+  return (uintptr_t)(tcb->stack_alloc_ptr + x86_64_tp_offset());
+}
+
+/* TCB specific thread local zone initialization */
+
+static inline_function void x86_64_tp_init(struct tcb_s *tcb)
+{
+  uintptr_t *tp = (uintptr_t *)x86_64_tp_addr(tcb);
+
+  if (!*tp)  /* Do only once */
+    {
+      *tp = (uintptr_t)tp;
+    }
+}
+
+/* Boot time thread pointer init with fsbase */
+
+static inline_function void x86_64_tp_boot(int cpu)
+{
+  uintptr_t fsbase  = g_idle_topstack[cpu] - CONFIG_IDLETHREAD_STACKSIZE;
+
+  fsbase += x86_64_tp_offset();
+  *(uintptr_t *)fsbase = fsbase;
+  write_fsbase(fsbase);
+}
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
