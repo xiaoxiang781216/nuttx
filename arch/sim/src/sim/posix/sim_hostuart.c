@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
@@ -90,7 +91,7 @@ static void restoremode(void)
 
 void host_uart_start(void)
 {
-  int flags;
+  int nonblock = 1;
 
   /* Get the current stdin terminal mode */
 
@@ -100,21 +101,13 @@ void host_uart_start(void)
 
   host_uninterruptible_no_return(setrawmode, 0);
 
-  flags = host_uninterruptible(fcntl, 0, F_GETFL, 0);
-  if (flags > 0)
-    {
-      host_uninterruptible_no_return(fcntl, 0, F_SETFL, flags | O_NONBLOCK);
-    }
+  host_uninterruptible_no_return(ioctl, 0, FIONBIO, &nonblock);
 
   /* Set stdout to non-blocking to prevent write(1, ...) from blocking
    * the entire sim process when the host pipe buffer is full.
    */
 
-  flags = host_uninterruptible(fcntl, 1, F_GETFL, 0);
-  if (flags > 0)
-    {
-      host_uninterruptible_no_return(fcntl, 1, F_SETFL, flags | O_NONBLOCK);
-    }
+  host_uninterruptible_no_return(ioctl, 1, FIONBIO, &nonblock);
 
   /* Restore the original terminal mode before exit */
 

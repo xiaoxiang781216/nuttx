@@ -115,20 +115,9 @@ static void sockaddr_to_nuttx(const struct sockaddr *naddr,
 
 static void sock_nonblock(int socket, int enable)
 {
-  int flags = host_uninterruptible(fcntl, socket, F_GETFL);
+  int nonblock = !!enable;
 
-  if (enable)
-    {
-      host_uninterruptible_no_return(fcntl, socket,
-                                     F_SETFL,
-                                     flags | O_NONBLOCK);
-    }
-  else
-    {
-      host_uninterruptible_no_return(fcntl, socket,
-                                     F_SETFL,
-                                     flags & ~O_NONBLOCK);
-    }
+  host_uninterruptible_no_return(ioctl, socket, FIONBIO, &nonblock);
 }
 
 static int optname_to_native(int optname)
