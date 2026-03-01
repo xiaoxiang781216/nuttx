@@ -1,5 +1,5 @@
 # ##############################################################################
-# libs/libc/machine/arm/armv8-m/CMakeLists.txt
+# libs/libc/machine/arm/arm_m/CMakeLists.txt
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -26,31 +26,31 @@ if(CONFIG_LIBC_ARCH_ELF)
   list(APPEND SRCS arch_elf.c)
 endif()
 
-if(CONFIG_ARMV8M_MEMCHR)
+if(CONFIG_ARM_M_MEMCHR)
   list(APPEND SRCS arch_memchr.S)
 endif()
 
-if(CONFIG_ARMV8M_MEMCPY)
+if(CONFIG_ARM_M_MEMCPY)
   list(APPEND SRCS arch_memcpy.S)
 endif()
 
-if(CONFIG_ARMV8M_MEMSET)
+if(CONFIG_ARM_M_MEMSET)
   list(APPEND SRCS arch_memset.S)
 endif()
 
-if(CONFIG_ARMV8M_MEMMOVE)
+if(CONFIG_ARM_M_MEMMOVE)
   list(APPEND SRCS arch_memmove.S)
 endif()
 
-if(CONFIG_ARMV8M_STRCMP)
+if(CONFIG_ARM_M_STRCMP)
   list(APPEND SRCS arch_strcmp.S)
 endif()
 
-if(CONFIG_ARMV8M_STRCPY)
+if(CONFIG_ARM_M_STRCPY)
   list(APPEND SRCS arch_strcpy.S)
 endif()
 
-if(CONFIG_ARMV8M_STRLEN)
+if(CONFIG_ARM_M_STRLEN)
   list(APPEND SRCS arch_strlen.S)
 endif()
 

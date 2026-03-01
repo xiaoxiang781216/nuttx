@@ -16,16 +16,8 @@ if ARCH_ARMV7R
 source "libs/libc/machine/arm/armv7-r/Kconfig"
 endif
 
-if ARCH_ARMV6M
-source "libs/libc/machine/arm/armv6-m/Kconfig"
-endif
-
-if ARCH_ARMV7M
-source "libs/libc/machine/arm/armv7-m/Kconfig"
-endif
-
-if ARCH_ARMV8M
-source "libs/libc/machine/arm/armv8-m/Kconfig"
+if ARCH_ARM_M
+source "libs/libc/machine/arm/arm_m/Kconfig"
 endif
 
 if ARCH_ARMV8R

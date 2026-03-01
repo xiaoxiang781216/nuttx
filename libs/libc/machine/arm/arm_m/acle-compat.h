@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/armv8-m/acle-compat.h
+ * libs/libc/machine/arm/arm_m/acle-compat.h
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2014 ARM Ltd
@@ -28,8 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ****************************************************************************/
 
-#ifndef __LIBS_LIBC_MACHINE_ARM_ARMV7M_GNU_ACLE_COMPAT_H
-#define __LIBS_LIBC_MACHINE_ARM_ARMV7M_GNU_ACLE_COMPAT_H
+#ifndef __LIBS_LIBC_MACHINE_ARM_ARM_M_GNU_ACLE_COMPAT_H
+#define __LIBS_LIBC_MACHINE_ARM_ARM_M_GNU_ACLE_COMPAT_H
 
 #ifndef __ARM_ARCH
 
@@ -180,4 +180,4 @@
 
 #endif
 
-#endif /* __LIBS_LIBC_MACHINE_ARM_ARMV7M_GNU_ACLE_COMPAT_H */
+#endif /* __LIBS_LIBC_MACHINE_ARM_ARM_M_GNU_ACLE_COMPAT_H */

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/armv7-m/arch_memcpy.S
+ * libs/libc/machine/arm/arm_m/arch_memcpy.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2013 ARM Ltd
@@ -33,6 +33,15 @@
 
 #ifdef LIBC_BUILD_MEMCPY
 
+#ifndef __ARM_FEATURE_BTI_DEFAULT
+#  define __ARM_FEATURE_BTI_DEFAULT 0
+#endif
+
+#ifndef __ARM_FEATURE_PAC_DEFAULT
+#  define __ARM_FEATURE_PAC_DEFAULT 0
+#endif
+
+#ifndef __ARM_FEATURE_MVE
 /* This memcpy routine is optimised for Cortex-M3/M4 cores with/without
    unaligned access.
 
@@ -91,10 +100,10 @@
 #endif
 
 #define END_UNROLL .endr
+#endif
 
 	.syntax unified
 	.text
-	.section .text.memcpy, "ax"
 	.align	2
 	.global	ARCH_LIBCFUN(memcpy)
 	.thumb
@@ -104,6 +113,32 @@ ARCH_LIBCFUN(memcpy):
 	@ r0: dst
 	@ r1: src
 	@ r2: len
+	.cfi_sections .debug_frame
+	.cfi_startproc
+#if __ARM_FEATURE_PAC_DEFAULT
+#  if __ARM_FEATURE_BTI_DEFAULT
+	pacbti	ip, lr, sp
+#  else
+	pac	ip, lr, sp
+#  endif /* __ARM_FEATURE_BTI_DEFAULT */
+	push	{ip}
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
+#ifdef __ARM_FEATURE_MVE
+	mov	r3, lr
+	.cfi_register lr,r3
+	wlstp.8	lr, r2, 2f
+	mov	r2, r0
+1:
+	vldrb.8	q0, [r1], #16
+	vstrb.8	q0, [r2], #16
+	letp	lr, 1b
+2:
+#if __ARM_FEATURE_PAC_DEFAULT
+	pop	{ip}
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
+	bx	r3
+#else
 #ifdef __ARM_FEATURE_UNALIGNED
 	/* In case of UNALIGNED access supported, ip is not used in
 	   function body.  */
@@ -212,6 +247,10 @@ ARCH_LIBCFUN(memcpy):
 #else
 	pop	{r0}
 #endif
+#if __ARM_FEATURE_PAC_DEFAULT
+	pop	{ip}
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 	.align 2
@@ -353,8 +392,13 @@ ARCH_LIBCFUN(memcpy):
 #else
 	pop	{r0}
 #endif
+#if __ARM_FEATURE_PAC_DEFAULT
+	pop	{ip}
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
-
+#endif
+	.cfi_endproc
 	.size	ARCH_LIBCFUN(memcpy), .-ARCH_LIBCFUN(memcpy)
 
 #endif

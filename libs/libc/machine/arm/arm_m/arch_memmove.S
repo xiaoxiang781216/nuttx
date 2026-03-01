@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/armv8-m/arch_memmove.S
+ * libs/libc/machine/arm/arm_m/arch_memmove.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2015 ARM Ltd

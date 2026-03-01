@@ -41,11 +41,11 @@ elseif(CONFIG_ARCH_ARMV7R) # All ARMv7-R
 elseif(CONFIG_ARCH_ARMV8R) # All ARMv8-R
   add_subdirectory(armv8-r)
 elseif(CONFIG_ARCH_ARMV6M) # All ARMv6-M
-  add_subdirectory(armv6-m)
+  add_subdirectory(arm_m)
 elseif(CONFIG_ARCH_ARMV7M) # All ARMv7-M
-  add_subdirectory(armv7-m)
+  add_subdirectory(arm_m)
 elseif(CONFIG_ARCH_ARMV8M) # All ARMv8-M
-  add_subdirectory(armv8-m)
+  add_subdirectory(arm_m)
 elseif(CONFIG_ARCH_ARMV8R) # All ARMv8-R
   add_subdirectory(armv8-r)
 endif()

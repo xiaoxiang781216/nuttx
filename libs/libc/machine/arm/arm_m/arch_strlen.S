@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/armv8-m/arch_strlen.S
+ * libs/libc/machine/arm/arm_m/arch_strlen.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2010-2011,2013 Linaro Limited, 2015 ARM Ltd.

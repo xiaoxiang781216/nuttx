@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/armv8-m/arch_strcmp.S
+ * libs/libc/machine/arm/arm_m/arch_strcmp.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2012-2014 ARM Ltd

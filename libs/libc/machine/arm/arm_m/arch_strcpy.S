@@ -1,5 +1,5 @@
 /***************************************************************************
- * libs/libc/machine/arm/armv8-m/arch_strcpy.S
+ * libs/libc/machine/arm/arm_m/arch_strcpy.S
  *
  * SPDX-License-Identifier: Apache-2.0
  *

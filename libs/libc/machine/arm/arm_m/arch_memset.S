@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/armv8-m/arch_memset.S
+ * libs/libc/machine/arm/arm_m/arch_memset.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2015 ARM Ltd,2008 The Android Open Source Project
