@@ -208,7 +208,6 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
         }
         break;
 
-#if CONFIG_NET_RECV_BUFSIZE > 0
       case SO_RCVBUF:
         {
           if (*value_len < sizeof(int))
@@ -216,13 +215,19 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
               return -EINVAL;
             }
 
+#if CONFIG_NET_RECV_BUFSIZE > 0
+          conn_lock(conn);
           *(FAR int *)value = conn->s_rcvbufs;
+          conn_unlock(conn);
+#elif defined(CONFIG_MM_IOB)
+          *(FAR int *)value = iob_navail(false) * CONFIG_IOB_BUFSIZE;
+#else
+          *(FAR int *)value = MAX_NETDEV_PKTSIZE;
+#endif
           *value_len = sizeof(int);
         }
         break;
-#endif
 
-#if CONFIG_NET_SEND_BUFSIZE > 0
       case SO_SNDBUF:
         {
           if (*value_len < sizeof(int))
@@ -230,11 +235,18 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
               return -EINVAL;
             }
 
+#if CONFIG_NET_SEND_BUFSIZE > 0
+          conn_lock(conn);
           *(FAR int *)value = conn->s_sndbufs;
+          conn_unlock(conn);
+#elif defined(CONFIG_MM_IOB)
+          *(FAR int *)value = iob_navail(true) * CONFIG_IOB_BUFSIZE;
+#else
+          *(FAR int *)value = MAX_NETDEV_PKTSIZE;
+#endif
           *value_len = sizeof(int);
         }
         break;
-#endif
 
       default:
         return -ENOPROTOOPT;
