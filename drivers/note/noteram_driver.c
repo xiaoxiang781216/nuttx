@@ -801,7 +801,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           {
             FAR struct noteram_dump_context_s *ctx = filep->f_priv;
 
-            ctx->mode = *(FAR unsigned int *)arg;
+            ctx->mode = arg;
             ret = OK;
           }
         break;
