@@ -312,7 +312,7 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
     break;
   }
 
-  if (dev->d_iob->io_pktlen < offset + payload_len)
+  if (dev->d_iob->io_pktlen != offset + payload_len)
     {
       nerr("ERROR: Invalid acf packet, pktlen %d, payload len %d\n",
             dev->d_iob->io_pktlen, payload_len);
@@ -320,7 +320,8 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
       goto out;
     }
 
-  while (payload_len - offset > sizeof(struct ieee1722acf_msg_hdr_s))
+  while (dev->d_iob->io_pktlen - offset >
+         sizeof(struct ieee1722acf_msg_hdr_s))
     {
       ret = iob_copyout((uint8_t *)&msg_hdr, dev->d_iob,
                         sizeof(struct ieee1722acf_msg_hdr_s), offset);
@@ -335,41 +336,41 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
       if (msg_hdr.acf_msg_type != IEEE1722ACF_TYPE_CAN &&
           msg_hdr.acf_msg_type != IEEE1722ACF_TYPE_CAN_BRIEF)
         {
-          nwarn("WARRNING: Not support acf msg type %d\n",
+          nwarn("WARNING: Not support acf msg type %d\n",
                 msg_hdr.acf_msg_type);
           ret = -ENOTSUP;
           goto out;
         }
 
-        can_iob = iob_tryalloc_with_size(NET_CAN_BUFSIZE, true);
-        if (can_iob == NULL)
-          {
-            nerr("ERROR: Failed to allocate CAN IOB\n");
-            ret = -ENOMEM;
-            goto out;
-          }
+      can_iob = iob_tryalloc_with_size(NET_CAN_BUFSIZE, true);
+      if (can_iob == NULL)
+        {
+          nerr("ERROR: Failed to allocate CAN IOB\n");
+          ret = -ENOMEM;
+          goto out;
+        }
 
 #ifdef CONFIG_NET_TIMESTAMP
-          if ((dev->d_features & NETDEV_RX_STAMP) == 0)
-            {
-              clock_gettime(CLOCK_REALTIME, &can_iob->io_time);
-            }
-          else
-            {
-              can_iob->io_time = dev->d_iob->io_time;
-            }
+      if ((dev->d_features & NETDEV_RX_STAMP) == 0)
+        {
+          clock_gettime(CLOCK_REALTIME, &can_iob->io_time);
+        }
+      else
+        {
+          can_iob->io_time = dev->d_iob->io_time;
+        }
 #endif
 
-        offset = ieee1722acf_can_parse(dev, can_iob, offset, &msg_hdr);
-        if (offset < 0)
-          {
-            nerr("ERROR: Failed to parse acf can payload\n");
-            iob_free_chain(can_iob);
-            ret = offset;
-            goto out;
-          }
+      offset = ieee1722acf_can_parse(dev, can_iob, offset, &msg_hdr);
+      if (offset < 0)
+        {
+          nerr("ERROR: Failed to parse acf can payload\n");
+          iob_free_chain(can_iob);
+          ret = offset;
+          goto out;
+        }
 
-          ieee1722acf_canforward(dev, can_iob);
+      ieee1722acf_canforward(dev, can_iob);
     }
 
 out:
