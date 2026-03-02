@@ -302,6 +302,19 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
         }
 #endif
 
+      /* If the connection is already in FIN_WAIT_2 state (e.g., after
+       * shutdown(SHUT_WR) followed by close()), start the FIN_WAIT2
+       * timeout now to prevent indefinite waiting for the peer's FIN.
+       * Only set the timeout if it hasn't been set already to avoid
+       * race conditions.
+       */
+
+      if (conn->tcpstateflags == TCP_FIN_WAIT_2 && conn->timer == 0)
+        {
+          tcp_update_retrantimer(conn,
+                      CONFIG_NET_TCP_FIN_WAIT2_TIMEOUT * HSEC_PER_SEC);
+        }
+
       /* Notify the device driver of the availability of TX data */
 
       netdev_txnotify_dev(conn->dev, TCP_POLL);

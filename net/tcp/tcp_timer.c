@@ -500,12 +500,20 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
    * out.
    */
 
-  if (conn->tcpstateflags == TCP_TIME_WAIT)
+  if (conn->tcpstateflags == TCP_TIME_WAIT ||
+      conn->tcpstateflags == TCP_FIN_WAIT_2)
     {
       /* Check if the timer exceeds the timeout value */
 
       if (conn->timer <= hsec)
         {
+          if (conn->tcpstateflags == TCP_FIN_WAIT_2)
+            {
+              /* Send RST to remote peer */
+
+              tcp_send(dev, conn, TCP_RST | TCP_ACK, hdrlen);
+            }
+
           /* Set the timer to zero value */
 
           conn->timer         = 0;

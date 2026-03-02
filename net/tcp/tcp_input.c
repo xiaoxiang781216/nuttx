@@ -1802,6 +1802,28 @@ skip_rtt:
           {
             conn->tcpstateflags = TCP_FIN_WAIT_2;
             ninfo("TCP state: TCP_FIN_WAIT_2\n");
+
+            /* Apply FIN_WAIT2 timeout only for orphaned connections.
+             *
+             * SHUT_DEAD flag indicates close() was called (socket is
+             * being closed). In this case, we apply a timeout to prevent
+             * indefinite waiting if the remote peer never sends FIN.
+             *
+             * For shutdown(SHUT_WR) operations (no SHUT_DEAD flag), we
+             * do NOT apply timeout. This aligns with Linux behavior
+             * where half-closed connections can wait indefinitely for
+             * the peer's FIN.
+             *
+             * This prevents resource leaks from orphaned connections
+             * while maintaining compatibility with applications that
+             * use shutdown() for graceful half-close scenarios.
+             */
+
+            if ((conn->shutdown & SHUT_DEAD) != 0)
+              {
+                tcp_update_retrantimer(conn,
+                        CONFIG_NET_TCP_FIN_WAIT2_TIMEOUT * HSEC_PER_SEC);
+              }
           }
 
         if (dev->d_len > 0)

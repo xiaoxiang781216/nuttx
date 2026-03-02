@@ -128,6 +128,24 @@ config NET_TCP_WAIT_TIMEOUT
 		TIME_WAIT Length of TCP/IP connections (all tasks).  In units
 		of seconds.
 
+config NET_TCP_FIN_WAIT2_TIMEOUT
+	int "FIN_WAIT2 timeout of TCP/IP connections"
+	default 60
+	range 1 240
+	---help---
+		FIN_WAIT2 timeout of TCP/IP connections (all tasks).  In units
+		of seconds. When an orphaned TCP connection (socket closed, not
+		just shutdown write) enters FIN_WAIT2 state and does not receive
+		FIN from remote peer within this timeout, the connection will be
+		closed by sending RST to release resources. Half-closed
+		connections (shutdown write only) will wait indefinitely for the
+		peer's FIN, aligning with Linux behavior.
+
+		This feature reuses the TCP keepalive timer infrastructure
+		(conn->keeptimer) but implements independent timeout logic.
+		The FIN_WAIT2 timeout is only applied when close() is called
+		(SHUT_DEAD flag set), not for shutdown(SHUT_WR) operations.
+
 config NET_MAX_LISTENPORTS
 	int "Number of listening ports"
 	default 20
