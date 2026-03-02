@@ -131,6 +131,7 @@ static int virtio_gpu_flush_resource(FAR struct virtio_gpu_priv_s *priv,
                                      int width, int height);
 static int virtio_gpu_probe(FAR struct virtio_device *vdev);
 static void virtio_gpu_remove(FAR struct virtio_device *vdev);
+static void virtio_gpu_dump(FAR struct virtio_device *vdev);
 static int virtio_gpu_getvideoinfo(FAR struct fb_vtable_s *vtable,
                                    FAR struct fb_videoinfo_s *vinfo);
 static int virtio_gpu_getplaneinfo(FAR struct fb_vtable_s *vtable,
@@ -155,6 +156,7 @@ static DEFINE_PER_CPU_BMP(struct virtio_driver, g_virtio_gpu_driver) =
   .device = VIRTIO_ID_GPU,     /* device id */
   .probe  = virtio_gpu_probe,  /* probe */
   .remove = virtio_gpu_remove, /* remove */
+  .dump   = virtio_gpu_dump,   /* dump */
 };
 #define g_virtio_gpu_driver this_cpu_var_bmp(g_virtio_gpu_driver)
 
@@ -773,6 +775,25 @@ static void virtio_gpu_remove(FAR struct virtio_device *vdev)
   g_virtio_gpu[priv->display] = NULL;
   virtio_free_buf(vdev, priv->fbmem);
   kmm_free(priv);
+}
+
+/****************************************************************************
+ * Name: virtio_gpu_dump
+ ****************************************************************************/
+
+static void virtio_gpu_dump(FAR struct virtio_device *vdev)
+{
+  FAR struct virtio_gpu_priv_s *priv = vdev->priv;
+
+  syslog(LOG_EMERG, "    display=%d, resolution=%dx%d, "
+         "stride=%d B, fblen=%zu B\n",
+         priv->display, priv->xres, priv->yres,
+         priv->stride, priv->fblen);
+  syslog(LOG_EMERG, "    fb_count=%d, bpp=%d, format=%s, "
+         "vsync=%d ms\n",
+         VIRTIO_GPU_FB_NUMS, VIRTIO_GPU_BPP,
+         VIRTIO_GPU_BPP == 16 ? "RGB565" : "RGB32",
+         VIRTIO_GPU_VSYNC_PERIOD);
 }
 
 /****************************************************************************
