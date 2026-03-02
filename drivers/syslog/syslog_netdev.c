@@ -172,7 +172,7 @@ ssize_t syslog_netdev_write(FAR syslog_channel_t *channel,
   if (!priv->pkt || buflen <= 0)
     {
       spin_unlock_irqrestore(&priv->lock, flags);
-      return 0;
+      return buflen;
     }
 
 try:
