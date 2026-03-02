@@ -23,13 +23,6 @@ config ARMV8M_DTCM
 	default n
 	depends on ARMV8M_HAVE_DTCM
 
-config ARMV8M_TARGET2_PREL
-	bool "R_ARM_TARGET2 is PC relative"
-	default CXX_EXCEPTION
-	depends on LIBC_ARCH_ELF
-	---help---
-		Perform a PC relative relocation for relocation type R_ARM_TARGET2
-
 choice
 	prompt "Select the stack protection Schema"
 	default ARMV8M_STACKCHECK_HARDWARE if DEBUG_FEATURES

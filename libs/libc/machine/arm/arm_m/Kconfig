@@ -3,6 +3,13 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
+config ARM_TARGET2_PREL
+	bool "R_ARM_TARGET2 is PC relative"
+	default CXX_EXCEPTION
+	depends on LIBC_ARCH_ELF
+	---help---
+		Perform a PC relative relocation for relocation type R_ARM_TARGET2
+
 if ARCH_ARMV7M || ARCH_ARMV8M
 
 config ARM_M_STRING_FUNCTION

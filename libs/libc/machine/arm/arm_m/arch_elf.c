@@ -187,7 +187,7 @@ int up_relocate(const Elf32_Rel *rel, const Elf32_Sym *sym, uintptr_t addr,
       }
       break;
 
-#if defined(CONFIG_ARMV7M_TARGET2_PREL) || defined(CONFIG_ARMV8M_TARGET2_PREL)
+#ifdef CONFIG_ARM_TARGET2_PREL
     case R_ARM_TARGET2:  /* TARGET2 is a platform-specific relocation: gcc-arm-none-eabi
                           * performs a self relocation */
       {

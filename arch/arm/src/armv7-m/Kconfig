@@ -41,13 +41,6 @@ config ARMV7M_DTCM
 	default n
 	depends on ARMV7M_HAVE_DTCM
 
-config ARMV7M_TARGET2_PREL
-	bool "R_ARM_TARGET2 is PC relative"
-	default CXX_EXCEPTION
-	depends on LIBC_ARCH_ELF
-	---help---
-		Perform a PC relative relocation for relocation type R_ARM_TARGET2
-
 config ARMV7M_HAVE_STACKCHECK
 	bool
 	default n
