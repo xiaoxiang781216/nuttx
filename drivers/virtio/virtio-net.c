@@ -32,6 +32,7 @@
 
 #include <nuttx/compiler.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/iob.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev_lowerhalf.h>
 #include <nuttx/percpu.h>
@@ -173,6 +174,7 @@ static void virtio_net_txpoll(FAR struct netdev_lowerhalf_s *dev);
 
 static int  virtio_net_probe(FAR struct virtio_device *vdev);
 static void virtio_net_remove(FAR struct virtio_device *vdev);
+static void virtio_net_dump(FAR struct virtio_device *vdev);
 
 /****************************************************************************
  * Private Data
@@ -183,6 +185,7 @@ static DEFINE_PER_CPU_BMP(struct virtio_driver, g_virtio_net_driver) =
   VIRTIO_ID_NETWORK, /* device id */
   virtio_net_probe,  /* probe */
   virtio_net_remove, /* remove */
+  virtio_net_dump,   /* dump */
 };
 #define g_virtio_net_driver this_cpu_var_bmp(g_virtio_net_driver)
 
@@ -761,6 +764,47 @@ static void virtio_net_remove(FAR struct virtio_device *vdev)
   wifi_sim_remove(&priv->lower);
 #endif
   kmm_free(priv);
+}
+
+/****************************************************************************
+ * Name: virtio_net_dump
+ ****************************************************************************/
+
+static void virtio_net_dump(FAR struct virtio_device *vdev)
+{
+  FAR struct virtio_net_priv_s *priv = vdev->priv;
+  FAR struct netdev_lowerhalf_s *netdev =
+    (FAR struct netdev_lowerhalf_s *)&priv->lower;
+  FAR struct net_driver_s *dev = &netdev->netdev;
+  FAR uint8_t *mac = dev->d_mac.ether.ether_addr_octet;
+
+  syslog(LOG_EMERG, "    name=%s, "
+         "mac=%02x:%02x:%02x:%02x:%02x:%02x\n",
+         dev->d_ifname,
+         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  syslog(LOG_EMERG, "    bufnum=%d, iob_free=%d, "
+         "quota: rx=%d tx=%d"
+#ifdef CONFIG_NET_IPv4
+         ", ipv4=%u.%u.%u.%u"
+#endif
+#ifdef CONFIG_NET_IPv6
+         ", ipv6=%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x"
+#endif
+         "\n",
+         priv->bufnum, iob_navail(false),
+         netdev_lower_quota_load(netdev, NETPKT_RX),
+         netdev_lower_quota_load(netdev, NETPKT_TX)
+#ifdef CONFIG_NET_IPv4
+         , ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
+         ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr)
+#endif
+#ifdef CONFIG_NET_IPv6
+         , dev->d_ipv6addr[0], dev->d_ipv6addr[1],
+         dev->d_ipv6addr[2], dev->d_ipv6addr[3],
+         dev->d_ipv6addr[4], dev->d_ipv6addr[5],
+         dev->d_ipv6addr[6], dev->d_ipv6addr[7]
+#endif
+         );
 }
 
 /****************************************************************************
