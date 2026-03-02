@@ -138,6 +138,9 @@
 #define NUTTX_SO_TIMESTAMPING       9
 #define NUTTX_SO_RCVTIMEO           10
 #define NUTTX_SO_SNDTIMEO           11
+
+#define NUTTX__SO_PROTOCOL          11
+
 #define NUTTX_SO_RCVBUF             64
 #define NUTTX_SO_RCVLOWAT           65
 #define NUTTX_SO_SNDBUF             66
@@ -163,8 +166,6 @@
 #define NUTTX_SOL_SCO               17
 #define NUTTX_SOL_RFCOMM            18
 
-#define NUTTX___SO_PROTOCOL         16
-
 #define NUTTX_SHUT_RD               1
 #define NUTTX_SHUT_WR               2
 #define NUTTX_SHUT_RDWR             3
@@ -172,6 +173,13 @@
 #define NUTTX_SCM_RIGHTS            0x01
 #define NUTTX_SCM_CREDENTIALS       0x02
 #define NUTTX_SCM_SECURITY          0x03
+
+#define NUTTX_TCP_NODELAY               (NUTTX__SO_PROTOCOL + 0)  /* Avoid coalescing of small segments */
+#define NUTTX_TCP_KEEPIDLE              (NUTTX__SO_PROTOCOL + 1)  /* Start keepalives after this IDLE period */
+#define NUTTX_TCP_KEEPINTVL             (NUTTX__SO_PROTOCOL + 2)  /* Interval between keepalives */
+#define NUTTX_TCP_KEEPCNT               (NUTTX__SO_PROTOCOL + 3)  /* Number of keepalives before death */
+#define NUTTX_TCP_MAXSEG                (NUTTX__SO_PROTOCOL + 4)  /* The maximum segment size */
+#define NUTTX_TCP_CORK                  (NUTTX__SO_PROTOCOL + 5)  /* Coalescing of small segments */
 
 #define NUTTX_IP_MULTICAST_IF           (NUTTX__SO_PROTOCOL + 1)
 #define NUTTX_IP_MULTICAST_TTL          (NUTTX__SO_PROTOCOL + 2)
