@@ -70,6 +70,7 @@ static ssize_t virtio_rng_read(FAR struct file *filep, FAR char *buffer,
 
 static int virtio_rng_probe(FAR struct virtio_device *vdev);
 static void virtio_rng_remove(FAR struct virtio_device *vdev);
+static void virtio_rng_dump(FAR struct virtio_device *vdev);
 
 /****************************************************************************
  * Private Data
@@ -80,6 +81,7 @@ static DEFINE_PER_CPU_BMP(struct virtio_driver, g_virtio_rng_driver) =
   VIRTIO_ID_ENTROPY, /* device id */
   virtio_rng_probe,  /* probe */
   virtio_rng_remove, /* remove */
+  virtio_rng_dump,   /* dump */
 };
 #define g_virtio_rng_driver this_cpu_var_bmp(g_virtio_rng_driver)
 
@@ -261,6 +263,17 @@ static void virtio_rng_remove(FAR struct virtio_device *vdev)
   virtio_reset_device(vdev);
   virtio_delete_virtqueues(vdev);
   kmm_free(priv);
+}
+
+/****************************************************************************
+ * Name: virtio_rng_dump
+ ****************************************************************************/
+
+static void virtio_rng_dump(FAR struct virtio_device *vdev)
+{
+  FAR struct virtio_rng_priv_s *priv = vdev->priv;
+
+  syslog(LOG_EMERG, "    name=%s\n", priv->name);
 }
 
 /****************************************************************************
