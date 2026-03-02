@@ -126,6 +126,21 @@ static uint16_t icmp_datahandler(FAR struct net_driver_s *dev,
   uint16_t buflen;
   int ret;
 
+#if CONFIG_NET_RECV_BUFSIZE > 0
+  /* Check if adding this packet would exceed receive buffer limit */
+
+  if ((iob_get_queue_size(&conn->readahead) + dev->d_iob->io_pktlen) >
+      conn->sconn.s_rcvbufs)
+    {
+      nwarn("WARNING: Full read-ahead buffer, "
+            "dropping ICMP packet: %u bytes\n", dev->d_iob->io_pktlen);
+#ifdef CONFIG_NET_STATISTICS
+      g_netstats.icmp.drop++;
+#endif
+      return -ENOMEM;
+    }
+#endif
+
   iob = iob_tryalloc(false);
   if (iob == NULL)
     {
