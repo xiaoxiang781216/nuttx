@@ -10,7 +10,7 @@ config ARM_TARGET2_PREL
 	---help---
 		Perform a PC relative relocation for relocation type R_ARM_TARGET2
 
-if ARCH_ARMV7M || ARCH_ARMV8M
+if ARCH_ARM_M
 
 config ARM_M_STRING_FUNCTION
 	bool "Enable optimized ARM-M specific string functions"

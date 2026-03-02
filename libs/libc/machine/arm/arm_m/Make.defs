@@ -24,6 +24,10 @@ ifeq ($(CONFIG_LIBC_ARCH_ELF),y)
 CSRCS += arch_elf.c
 endif
 
+ifeq ($(CONFIG_ARCH_ARMV6M),y)
+include $(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)machine$(DELIM)arm$(DELIM)arm_m$(DELIM)thumb1$(DELIM)Make.defs
+else
+
 ifeq ($(CONFIG_ARM_M_MEMCHR),y)
 ASRCS += arch_memchr.S
 endif
@@ -54,3 +58,5 @@ endif
 
 DEPPATH += --dep-path machine/arm/arm_m
 VPATH += :machine/arm/arm_m
+
+endif
