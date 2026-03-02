@@ -78,7 +78,7 @@ static void restoremode(void)
 {
   /* Restore the original terminal mode */
 
-  host_uninterruptible_no_return(tcsetattr, 0, TCSANOW, &g_cooked);
+  host_uninterruptible(tcsetattr, 0, TCSANOW, &g_cooked);
 }
 
 /****************************************************************************
@@ -95,23 +95,23 @@ void host_uart_start(void)
 
   /* Get the current stdin terminal mode */
 
-  host_uninterruptible_no_return(tcgetattr, 0, &g_cooked);
+  host_uninterruptible(tcgetattr, 0, &g_cooked);
 
   /* Put stdin into raw mode */
 
-  host_uninterruptible_no_return(setrawmode, 0);
+  host_uninterruptible(setrawmode, 0);
 
-  host_uninterruptible_no_return(ioctl, 0, FIONBIO, &nonblock);
+  host_uninterruptible(ioctl, 0, FIONBIO, &nonblock);
 
   /* Set stdout to non-blocking to prevent write(1, ...) from blocking
    * the entire sim process when the host pipe buffer is full.
    */
 
-  host_uninterruptible_no_return(ioctl, 1, FIONBIO, &nonblock);
+  host_uninterruptible(ioctl, 1, FIONBIO, &nonblock);
 
   /* Restore the original terminal mode before exit */
 
-  host_uninterruptible_no_return(atexit, restoremode);
+  host_uninterruptible(atexit, restoremode);
 }
 
 /****************************************************************************
@@ -127,7 +127,7 @@ int host_uart_open(const char *pathname)
     {
       /* keep raw mode */
 
-      host_uninterruptible_no_return(setrawmode, fd);
+      host_uninterruptible(setrawmode, fd);
     }
   else
     {

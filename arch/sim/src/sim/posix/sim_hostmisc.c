@@ -80,12 +80,12 @@ void host_abort(int status)
 #ifndef CONFIG_COVERAGE_NONE
   /* Dump gcov data. */
 
-  host_uninterruptible_no_return(__gcov_dump);
+  host_uninterruptible(__gcov_dump);
 #endif
 
   /* exit the simulation */
 
-  host_uninterruptible_no_return(exit, status);
+  host_uninterruptible(exit, status);
 }
 
 /****************************************************************************
@@ -110,7 +110,7 @@ void host_reset(int status)
 #ifndef CONFIG_COVERAGE_NONE
   /* Dump gcov data. */
 
-  host_uninterruptible_no_return(__gcov_dump);
+  host_uninterruptible(__gcov_dump);
 #endif
 
   /* Get and restart with the absolute path of the executable file */
@@ -118,16 +118,16 @@ void host_reset(int status)
 #ifdef CONFIG_HOST_LINUX
   len = host_uninterruptible(readlink, "/proc/self/exe", path, len);
 #elif defined (CONFIG_HOST_MACOS)
-  host_uninterruptible_no_return(_NSGetExecutablePath, path, &len);
+  host_uninterruptible(_NSGetExecutablePath, path, &len);
 #endif
 
   if (len > 0 && len < PATH_MAX)
     {
       path[len] = '\0';
-      host_uninterruptible_no_return(execv, path, g_argv);
+      host_uninterruptible(execv, path, g_argv);
     }
 
-  host_uninterruptible_no_return(execvp, g_argv[0], g_argv);
+  host_uninterruptible(execvp, g_argv[0], g_argv);
 }
 
 /****************************************************************************
@@ -218,13 +218,13 @@ void host_init_cwd(void)
   len = host_uninterruptible(readlink, "/proc/self/exe", path, len);
   if (len < 0)
     {
-      host_uninterruptible_no_return(perror, "readlink failed");
+      host_uninterruptible(perror, "readlink failed");
       return;
     }
 #  else
   if (_NSGetExecutablePath(path, &len) < 0)
     {
-      host_uninterruptible_no_return(perror, "_NSGetExecutablePath failed");
+      host_uninterruptible(perror, "_NSGetExecutablePath failed");
       return;
     }
 #  endif

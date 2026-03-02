@@ -166,7 +166,7 @@ static void host_libusb_ep0transfer_cb(struct libusb_transfer *transfer)
     {
       ERROR("host_libusb_ep0transfer_cb() fail: %s\n",
             host_uninterruptible(libusb_strerror,
-            LIBUSB_ERROR_INVALID_PARAM));
+                                 LIBUSB_ERROR_INVALID_PARAM));
       return;
     }
 
@@ -185,10 +185,10 @@ static void host_libusb_ep0transfer_cb(struct libusb_transfer *transfer)
       datareq->success = false;
     }
 
-  host_uninterruptible_no_return(free, buffer - LIBUSB_CONTROL_SETUP_SIZE);
+  host_uninterruptible(free, buffer - LIBUSB_CONTROL_SETUP_SIZE);
 
   host_libusb_fifopush(&dev->completed, datareq);
-  host_uninterruptible_no_return(libusb_free_transfer, transfer);
+  host_uninterruptible(libusb_free_transfer, transfer);
 }
 
 static void host_libusb_bulktransfer_cb(struct libusb_transfer *transfer)
@@ -200,7 +200,7 @@ static void host_libusb_bulktransfer_cb(struct libusb_transfer *transfer)
     {
       ERROR("host_libusb_bulktransfer_cb() fail: %s\n",
             host_uninterruptible(libusb_strerror,
-            LIBUSB_ERROR_INVALID_PARAM));
+                                 LIBUSB_ERROR_INVALID_PARAM));
       return;
     }
 
@@ -220,12 +220,12 @@ static void host_libusb_bulktransfer_cb(struct libusb_transfer *transfer)
       goto transfer_end;
     }
 
-  host_uninterruptible_no_return(libusb_fill_bulk_transfer,
-                                 transfer, dev->handle, datareq->addr,
-                                 datareq->data + datareq->xfer,
-                                 datareq->len - datareq->xfer,
-                                 host_libusb_bulktransfer_cb,
-                                 datareq, 0);
+  host_uninterruptible(libusb_fill_bulk_transfer,
+                       transfer, dev->handle, datareq->addr,
+                       datareq->data + datareq->xfer,
+                       datareq->len - datareq->xfer,
+                       host_libusb_bulktransfer_cb,
+                       datareq, 0);
   if (host_uninterruptible(libusb_submit_transfer, transfer) !=
       LIBUSB_SUCCESS)
     {
@@ -237,7 +237,7 @@ static void host_libusb_bulktransfer_cb(struct libusb_transfer *transfer)
 
 transfer_end:
   host_libusb_fifopush(&dev->completed, datareq);
-  host_uninterruptible_no_return(libusb_free_transfer, transfer);
+  host_uninterruptible(libusb_free_transfer, transfer);
 }
 
 static void host_libusb_inttransfer_cb(struct libusb_transfer *transfer)
@@ -249,7 +249,7 @@ static void host_libusb_inttransfer_cb(struct libusb_transfer *transfer)
     {
       ERROR("host_libusb_inttransfer_cb() fail: %s\n",
             host_uninterruptible(libusb_strerror,
-            LIBUSB_ERROR_INVALID_PARAM));
+                                 LIBUSB_ERROR_INVALID_PARAM));
       return;
     }
 
@@ -266,7 +266,7 @@ static void host_libusb_inttransfer_cb(struct libusb_transfer *transfer)
     }
 
   host_libusb_fifopush(&dev->completed, datareq);
-  host_uninterruptible_no_return(libusb_free_transfer, transfer);
+  host_uninterruptible(libusb_free_transfer, transfer);
 }
 
 #ifndef CONFIG_USBHOST_ISOC_DISABLE
@@ -282,7 +282,7 @@ static void host_libusb_isotransfer_cb(struct libusb_transfer *transfer)
     {
       ERROR("host_libusb_isotransfer_cb() fail: %s\n",
             host_uninterruptible(libusb_strerror,
-            LIBUSB_ERROR_INVALID_PARAM));
+                                 LIBUSB_ERROR_INVALID_PARAM));
       return;
     }
 
@@ -304,8 +304,8 @@ static void host_libusb_isotransfer_cb(struct libusb_transfer *transfer)
       callback(datareq->priv, length);
     }
 
-  host_uninterruptible_no_return(free, datareq);
-  host_uninterruptible_no_return(libusb_free_transfer, transfer);
+  host_uninterruptible(free, datareq);
+  host_uninterruptible(libusb_free_transfer, transfer);
 }
 #endif
 
@@ -326,7 +326,8 @@ static int host_libusb_ep0inhandle(struct host_libusb_hostdev_s *dev,
     }
 
   buffer = host_uninterruptible(malloc,
-               LIBUSB_CONTROL_SETUP_SIZE + ctrlreq->wLength);
+                                LIBUSB_CONTROL_SETUP_SIZE +
+                                ctrlreq->wLength);
   if (!buffer)
     {
       ERROR("control data buffer malloc() fail: %s\n",
@@ -343,14 +344,14 @@ static int host_libusb_ep0inhandle(struct host_libusb_hostdev_s *dev,
       goto err_with_buffer;
     }
 
-  host_uninterruptible_no_return(libusb_fill_control_setup,
-                                 buffer, ctrlreq->bRequestType,
-                                 ctrlreq->bRequest, ctrlreq->wValue,
-                                 ctrlreq->wIndex, ctrlreq->wLength);
-  host_uninterruptible_no_return(libusb_fill_control_transfer,
-                                 transfer, dev->handle, buffer,
-                                 host_libusb_ep0transfer_cb,
-                                 datareq, timeout);
+  host_uninterruptible(libusb_fill_control_setup,
+                       buffer, ctrlreq->bRequestType,
+                       ctrlreq->bRequest, ctrlreq->wValue,
+                       ctrlreq->wIndex, ctrlreq->wLength);
+  host_uninterruptible(libusb_fill_control_transfer,
+                       transfer, dev->handle, buffer,
+                       host_libusb_ep0transfer_cb,
+                       datareq, timeout);
 
   ret = host_uninterruptible(libusb_submit_transfer, transfer);
   if (ret != LIBUSB_SUCCESS)
@@ -361,10 +362,10 @@ static int host_libusb_ep0inhandle(struct host_libusb_hostdev_s *dev,
   return LIBUSB_SUCCESS;
 
 err_with_transfer:
-  host_uninterruptible_no_return(libusb_free_transfer, transfer);
+  host_uninterruptible(libusb_free_transfer, transfer);
 
 err_with_buffer:
-  host_uninterruptible_no_return(free, buffer);
+  host_uninterruptible(free, buffer);
 
   return ret;
 }
@@ -393,7 +394,8 @@ static int host_libusb_ep0outhandle(struct host_libusb_hostdev_s *dev,
               if (ret == LIBUSB_SUCCESS)
                 {
                   ret = host_uninterruptible(libusb_set_configuration,
-                                             dev->handle, ctrlreq->wValue);
+                                             dev->handle,
+                                             ctrlreq->wValue);
                   ret |= host_uninterruptible(libusb_claim_interface,
                                               dev->handle, 0);
                 }
@@ -464,15 +466,15 @@ host_libusb_bulktransfer(struct host_libusb_hostdev_s *dev, uint8_t addr,
       return LIBUSB_ERROR_NO_MEM;
     }
 
-  host_uninterruptible_no_return(libusb_fill_bulk_transfer,
-                                 transfer, dev->handle, addr,
-                                 datareq->data, datareq->len,
-                                 host_libusb_bulktransfer_cb,
-                                 datareq, 0);
+  host_uninterruptible(libusb_fill_bulk_transfer,
+                       transfer, dev->handle, addr,
+                       datareq->data, datareq->len,
+                       host_libusb_bulktransfer_cb,
+                       datareq, 0);
   ret = host_uninterruptible(libusb_submit_transfer, transfer);
   if (ret != LIBUSB_SUCCESS)
     {
-      host_uninterruptible_no_return(libusb_free_transfer, transfer);
+      host_uninterruptible(libusb_free_transfer, transfer);
     }
 
   return ret;
@@ -493,15 +495,15 @@ host_libusb_inttransfer(struct host_libusb_hostdev_s *dev, uint8_t addr,
       return LIBUSB_ERROR_NO_MEM;
     }
 
-  host_uninterruptible_no_return(libusb_fill_interrupt_transfer,
-                                 transfer, dev->handle, addr,
-                                 datareq->data, datareq->len,
-                                 host_libusb_inttransfer_cb,
-                                 datareq, 0);
+  host_uninterruptible(libusb_fill_interrupt_transfer,
+                       transfer, dev->handle, addr,
+                       datareq->data, datareq->len,
+                       host_libusb_inttransfer_cb,
+                       datareq, 0);
   ret = host_uninterruptible(libusb_submit_transfer, transfer);
   if (ret != LIBUSB_SUCCESS)
     {
-      host_uninterruptible_no_return(libusb_free_transfer, transfer);
+      host_uninterruptible(libusb_free_transfer, transfer);
     }
 
   return ret;
@@ -523,23 +525,22 @@ host_libusb_isotransfer(struct host_libusb_hostdev_s *dev, uint8_t addr,
   if (!transfer)
     {
       ERROR("libusb_alloc_transfer() fail: %s\n",
-            host_uninterruptible(libusb_strerror,
-            LIBUSB_ERROR_NO_MEM));
+            host_uninterruptible(libusb_strerror, LIBUSB_ERROR_NO_MEM));
       return LIBUSB_ERROR_NO_MEM;
     }
 
-  host_uninterruptible_no_return(libusb_fill_iso_transfer,
-                                 transfer, dev->handle, addr,
-                                 datareq->data, datareq->len,
-                                 num_iso_pack, host_libusb_isotransfer_cb,
-                                 datareq, 0);
-  host_uninterruptible_no_return(libusb_set_iso_packet_lengths,
-                                 transfer, max_packet_size);
+  host_uninterruptible(libusb_fill_iso_transfer,
+                       transfer, dev->handle, addr,
+                       datareq->data, datareq->len,
+                       num_iso_pack, host_libusb_isotransfer_cb,
+                       datareq, 0);
+  host_uninterruptible(libusb_set_iso_packet_lengths,
+                       transfer, max_packet_size);
 
   ret = host_uninterruptible(libusb_submit_transfer, transfer);
   if (ret != LIBUSB_SUCCESS)
     {
-      host_uninterruptible_no_return(libusb_free_transfer, transfer);
+      host_uninterruptible(libusb_free_transfer, transfer);
     }
 
   return ret;
@@ -550,8 +551,7 @@ static void *host_libusb_event_handle(void *arg)
 {
   while (1)
     {
-      host_uninterruptible_no_return(libusb_handle_events,
-                                     g_libusb_context);
+      host_uninterruptible(libusb_handle_events, g_libusb_context);
     }
 
   return NULL;
@@ -615,8 +615,7 @@ static bool host_libusb_connectdevice(void)
         }
     }
 
-  host_uninterruptible_no_return(libusb_free_device_list,
-                                 g_libusb_dev_list, 1);
+  host_uninterruptible(libusb_free_device_list, g_libusb_dev_list, 1);
   g_libusb_dev_list = NULL;
   return false;
 }
@@ -742,8 +741,8 @@ int host_usbhost_open(void)
 
   dev->config_desc = (struct libusb_config_descriptor **)
                       host_uninterruptible(malloc,
-                      dev->dev_desc.bNumConfigurations
-                      *(sizeof(struct libusb_config_descriptor *)));
+                        dev->dev_desc.bNumConfigurations *
+                        sizeof(struct libusb_config_descriptor *));
   if (!dev->config_desc)
     {
       ERROR("host_libusb_devinit() malloc failed: %s\n",
@@ -782,20 +781,19 @@ void host_usbhost_close(void)
 
   if (dev->config_desc)
     {
-      host_uninterruptible_no_return(free, dev->config_desc);
+      host_uninterruptible(free, dev->config_desc);
       dev->config_desc = NULL;
     }
 
   if (dev->handle)
     {
-      host_uninterruptible_no_return(libusb_close, dev->handle);
+      host_uninterruptible(libusb_close, dev->handle);
       dev->handle = NULL;
     }
 
   if (g_libusb_dev_list)
     {
-      host_uninterruptible_no_return(libusb_free_device_list,
-                                     g_libusb_dev_list, 1);
+      host_uninterruptible(libusb_free_device_list, g_libusb_dev_list, 1);
       g_libusb_dev_list = NULL;
     }
 }

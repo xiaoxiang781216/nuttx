@@ -117,7 +117,7 @@ static void sock_nonblock(int socket, int enable)
 {
   int nonblock = !!enable;
 
-  host_uninterruptible_no_return(ioctl, socket, FIONBIO, &nonblock);
+  host_uninterruptible(ioctl, socket, FIONBIO, &nonblock);
 }
 
 static int optname_to_native(int optname)

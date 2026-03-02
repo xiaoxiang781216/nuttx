@@ -254,7 +254,7 @@ static void host_raw_fifodelete(struct usb_raw_fifo_s *fifo)
 {
   fifo->write = 0;
   fifo->read = 0;
-  host_uninterruptible_no_return(free, fifo->elems);
+  host_uninterruptible(free, fifo->elems);
 }
 
 static uint8_t *host_raw_fiforead(struct usb_raw_fifo_s *fifo)
@@ -299,7 +299,7 @@ static void host_raw_close(int fd)
 {
   if (fd >= 0)
     {
-      host_uninterruptible_no_return(close, fd);
+      host_uninterruptible(close, fd);
     }
 }
 
@@ -307,12 +307,8 @@ static void host_raw_init(int fd, enum usb_device_speed speed,
                           const char *driver, const char *device)
 {
   struct usb_raw_init_s arg;
-  host_uninterruptible_no_return(strcpy,
-                                 (char *)&arg.driver_name[0],
-                                 driver);
-  host_uninterruptible_no_return(strcpy,
-                                 (char *)&arg.device_name[0],
-                                 device);
+  host_uninterruptible(strcpy, (char *)&arg.driver_name[0], driver);
+  host_uninterruptible(strcpy, (char *)&arg.device_name[0], device);
   arg.speed = speed;
   int rv = host_uninterruptible(ioctl, fd, USB_RAW_IOCTL_INIT, &arg);
   if (rv < 0)
@@ -477,8 +473,7 @@ static int host_raw_connecthandle(struct usb_raw_gadget_dev_t *dev)
   struct usb_raw_eps_info_s *info = &dev->eps_info;
   int i;
 
-  host_uninterruptible_no_return(memset, info, 0,
-                                 sizeof(struct usb_raw_eps_info_s));
+  host_uninterruptible(memset, info, 0, sizeof(struct usb_raw_eps_info_s));
 
   dev->eps_num = host_raw_epsinfo(dev->fd, info);
   for (i = 0; i < dev->eps_num; i++)
@@ -572,10 +567,7 @@ static int host_raw_ctrlhandle(struct usb_raw_gadget_dev_t *dev,
           return ret;
         }
 
-      host_uninterruptible_no_return(memcpy,
-                                     host_ctrl_req->data,
-                                     io->data,
-                                     ret);
+      host_uninterruptible(memcpy, host_ctrl_req->data, io->data, ret);
     }
 
   USB_RAW_FIFO_PUSH(&entry->fifo);
@@ -590,9 +582,9 @@ static void *host_raw_ep0handle(void *arg)
   struct usb_raw_control_event_s event;
   struct sigaction action;
 
-  host_uninterruptible_no_return(memset, &action, 0, sizeof(action));
+  host_uninterruptible(memset, &action, 0, sizeof(action));
   action.sa_handler = host_raw_handle_signal;
-  host_uninterruptible_no_return(sigaction, SIGUSR2, &action, NULL);
+  host_uninterruptible(sigaction, SIGUSR2, &action, NULL);
 
   while (!dev->loop_stop)
     {
@@ -630,9 +622,9 @@ static void *host_raw_ephandle(void *arg)
   struct usb_raw_data_io_s *io;
   struct sigaction action;
 
-  host_uninterruptible_no_return(memset, &action, 0, sizeof(action));
+  host_uninterruptible(memset, &action, 0, sizeof(action));
   action.sa_handler = host_raw_handle_signal;
-  host_uninterruptible_no_return(sigaction, SIGUSR2, &action, NULL);
+  host_uninterruptible(sigaction, SIGUSR2, &action, NULL);
 
   while (!dev->loop_stop)
     {
@@ -727,16 +719,14 @@ int host_usbdev_deinit(void)
   for (i = 0; i < USB_RAW_EPS_NUM_MAX &&
               dev->eps_entry[i].ep_thread > 0; i++)
     {
-      host_uninterruptible_no_return(pthread_kill,
-                                     dev->eps_entry[i].ep_thread,
-                                     SIGUSR2);
-      host_uninterruptible_no_return(pthread_join,
-                                     dev->eps_entry[i].ep_thread,
-                                     NULL);
+      host_uninterruptible(pthread_kill,
+                           dev->eps_entry[i].ep_thread,
+                           SIGUSR2);
+      host_uninterruptible(pthread_join, dev->eps_entry[i].ep_thread, NULL);
     }
 
-  host_uninterruptible_no_return(pthread_kill, dev->ep0_thread, SIGUSR2);
-  host_uninterruptible_no_return(pthread_join, dev->ep0_thread, NULL);
+  host_uninterruptible(pthread_kill, dev->ep0_thread, SIGUSR2);
+  host_uninterruptible(pthread_join, dev->ep0_thread, NULL);
   host_raw_close(dev->fd);
   dev->fd = -1;
 
@@ -892,7 +882,7 @@ int host_usbdev_epwrite(uint8_t epno, uint8_t flags,
       ret = host_raw_epwrite(dev->fd, io);
     }
 
-  host_uninterruptible_no_return(free, io);
+  host_uninterruptible(free, io);
 
   return ret;
 }

@@ -364,7 +364,7 @@ void sim_tapdev_send(int devidx, unsigned char *buf, unsigned int buflen)
   if (ret < 0)
     {
       syslog(LOG_ERR, "TAPDEV: write failed: %d\n", -ret);
-      host_uninterruptible_no_return(exit, 1);
+      host_uninterruptible(exit, 1);
     }
 
   dump_ethhdr("write", buf, buflen);

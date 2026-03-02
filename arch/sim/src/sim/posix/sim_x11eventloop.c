@@ -111,7 +111,7 @@ void sim_x11events(void)
        * pending events)
        */
 
-      host_uninterruptible_no_return(XNextEvent, g_display, &event);
+      host_uninterruptible(XNextEvent, g_display, &event);
 
       /* Then process the event */
 

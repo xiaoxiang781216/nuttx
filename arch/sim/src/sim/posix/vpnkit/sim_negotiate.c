@@ -101,7 +101,7 @@ int negotiate(int fd, struct vif_info *vif)
     }
 
   INFO("Server reports %s", txt);
-  host_uninterruptible_no_return(free, txt);
+  host_uninterruptible(free, txt);
 
   if (write_command(fd, &command) == -1)
     {

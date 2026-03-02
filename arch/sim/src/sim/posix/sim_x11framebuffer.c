@@ -112,7 +112,7 @@ static inline Display *sim_x11createframe(void)
   XTextProperty iconprop;
   XSizeHints hints;
 
-  host_uninterruptible_no_return(XInitThreads);
+  host_uninterruptible(XInitThreads);
   display = host_uninterruptible(XOpenDisplay, NULL);
   if (display == NULL)
     {
@@ -122,50 +122,51 @@ static inline Display *sim_x11createframe(void)
 
   g_screen = DefaultScreen(display);
   g_window = host_uninterruptible(XCreateSimpleWindow, display,
-                                 DefaultRootWindow(display),
-                                 0, 0, g_fbpixelwidth, g_fbpixelheight, 2,
-                                 BlackPixel(display, g_screen),
-                                 BlackPixel(display, g_screen));
+                                  DefaultRootWindow(display),
+                                  0, 0, g_fbpixelwidth,
+                                  g_fbpixelheight, 2,
+                                  BlackPixel(display, g_screen),
+                                  BlackPixel(display, g_screen));
 
-  host_uninterruptible_no_return(XStringListToTextProperty,
-                                 &winname, 1, &winprop);
-  host_uninterruptible_no_return(XStringListToTextProperty,
-                                 &iconname, 1, &iconprop);
+  host_uninterruptible(XStringListToTextProperty, &winname, 1, &winprop);
+  host_uninterruptible(XStringListToTextProperty, &iconname, 1, &iconprop);
 
   hints.flags  = PSize | PMinSize | PMaxSize;
   hints.width  = hints.min_width  = hints.max_width  = g_fbpixelwidth;
   hints.height = hints.min_height = hints.max_height = g_fbpixelheight;
 
-  host_uninterruptible_no_return(XSetWMProperties, display, g_window,
-                                 &winprop, &iconprop, argv, 1,
-                                 &hints, NULL, NULL);
-  host_uninterruptible_no_return(XFree, winprop.value);
-  host_uninterruptible_no_return(XFree, iconprop.value);
+  host_uninterruptible(XSetWMProperties, display, g_window,
+                       &winprop, &iconprop, argv, 1,
+                       &hints, NULL, NULL);
+  host_uninterruptible(XFree, winprop.value);
+  host_uninterruptible(XFree, iconprop.value);
 
   /* Select window input events */
 
 #if defined(CONFIG_SIM_AJOYSTICK)
-  host_uninterruptible_no_return(XSelectInput, display, g_window,
-               ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
+  host_uninterruptible(XSelectInput, display, g_window,
+                       ButtonPressMask | ButtonReleaseMask |
+                       PointerMotionMask);
 #else
-  host_uninterruptible_no_return(XSelectInput, display, g_window,
-               ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
-               KeyPressMask | KeyReleaseMask);
+  host_uninterruptible(XSelectInput, display, g_window,
+                       ButtonPressMask | ButtonReleaseMask |
+                       PointerMotionMask |
+                       KeyPressMask | KeyReleaseMask);
 #endif
 
   /* Release queued events on the display */
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
-  host_uninterruptible_no_return(XAllowEvents, display, AsyncBoth,
-                                 CurrentTime);
+  host_uninterruptible(XAllowEvents, display, AsyncBoth, CurrentTime);
 
   /* Grab mouse button 1, enabling mouse-related events */
 
-  host_uninterruptible_no_return(XGrabButton, display, Button1, AnyModifier,
-              g_window, 1,
-              ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
-              GrabModeAsync, GrabModeAsync, None, None);
+  host_uninterruptible(XGrabButton, display, Button1, AnyModifier,
+                       g_window, 1,
+                       ButtonPressMask | ButtonReleaseMask |
+                       ButtonMotionMask,
+                       GrabModeAsync, GrabModeAsync, None, None);
 #endif
 
   gcval.graphics_exposures = 0;
@@ -195,7 +196,7 @@ static int sim_x11errorhandler(Display *display, XErrorEvent *event)
 static void sim_x11traperrors(void)
 {
   g_xerror = 0;
-  host_uninterruptible_no_return(XSetErrorHandler, sim_x11errorhandler);
+  host_uninterruptible(XSetErrorHandler, sim_x11errorhandler);
 }
 #endif
 
@@ -206,8 +207,8 @@ static void sim_x11traperrors(void)
 #ifndef CONFIG_SIM_X11NOSHM
 static int sim_x11untraperrors(Display *display)
 {
-  host_uninterruptible_no_return(XSync, display, 0);
-  host_uninterruptible_no_return(XSetErrorHandler, NULL);
+  host_uninterruptible(XSync, display, 0);
+  host_uninterruptible(XSetErrorHandler, NULL);
   return g_xerror;
 }
 #endif
@@ -226,7 +227,7 @@ static void sim_x11uninit(void)
 #ifndef CONFIG_SIM_X11NOSHM
   if (g_shmcheckpoint > 4)
     {
-      host_uninterruptible_no_return(XShmDetach, g_display, &g_xshminfo);
+      host_uninterruptible(XShmDetach, g_display, &g_xshminfo);
     }
 
   if (g_shmcheckpoint > 3)
@@ -245,18 +246,18 @@ static void sim_x11uninit(void)
 #ifdef CONFIG_SIM_X11NOSHM
       g_image->data = g_framebuffer;
 #endif
-      host_uninterruptible_no_return(XDestroyImage, g_image);
+      host_uninterruptible(XDestroyImage, g_image);
     }
 
   /* Un-grab the mouse buttons */
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
-  host_uninterruptible_no_return(XUngrabButton, g_display, Button1,
-                                 AnyModifier, g_window);
+  host_uninterruptible(XUngrabButton, g_display, Button1,
+                       AnyModifier, g_window);
 #endif
 
-  host_uninterruptible_no_return(XCloseDisplay, g_display);
+  host_uninterruptible(XCloseDisplay, g_display);
 }
 
 /****************************************************************************
@@ -270,7 +271,7 @@ static void sim_x11uninitialize(void)
     {
       if (!b_useshm && g_framebuffer)
         {
-          host_uninterruptible_no_return(free, g_framebuffer);
+          host_uninterruptible(free, g_framebuffer);
           g_framebuffer = 0;
         }
     }
@@ -453,7 +454,7 @@ int sim_x11initialize(unsigned short width, unsigned short height,
 
   /* Determine the supported pixel bpp of the current window */
 
-  host_uninterruptible_no_return(XGetWindowAttributes, display,
+  host_uninterruptible(XGetWindowAttributes, display,
                        DefaultRootWindow(display),
                        &windowattributes);
 
@@ -529,8 +530,8 @@ int sim_x11openwindow(void)
       return -ENODEV;
     }
 
-  host_uninterruptible_no_return(XMapWindow, g_display, g_window);
-  host_uninterruptible_no_return(XSync, g_display, 0);
+  host_uninterruptible(XMapWindow, g_display, g_window);
+  host_uninterruptible(XSync, g_display, 0);
 
   return 0;
 }
@@ -546,8 +547,8 @@ int sim_x11closewindow(void)
       return -ENODEV;
     }
 
-  host_uninterruptible_no_return(XUnmapWindow, g_display, g_window);
-  host_uninterruptible_no_return(XSync, g_display, 0);
+  host_uninterruptible(XUnmapWindow, g_display, g_window);
+  host_uninterruptible(XSync, g_display, 0);
 
   return 0;
 }
@@ -634,16 +635,16 @@ int sim_x11update(void)
 #ifndef CONFIG_SIM_X11NOSHM
   if (b_useshm)
     {
-      host_uninterruptible_no_return(XShmPutImage, g_display, g_window,
-                   g_gc, g_image, 0, 0, 0, 0,
-                   g_fbpixelwidth, g_fbpixelheight, 0);
+      host_uninterruptible(XShmPutImage, g_display, g_window,
+                           g_gc, g_image, 0, 0, 0, 0,
+                           g_fbpixelwidth, g_fbpixelheight, 0);
     }
   else
 #endif
     {
-      host_uninterruptible_no_return(XPutImage, g_display, g_window,
-                g_gc, g_image, 0, 0, 0, 0,
-                g_fbpixelwidth, g_fbpixelheight);
+      host_uninterruptible(XPutImage, g_display, g_window,
+                           g_gc, g_image, 0, 0, 0, 0,
+                           g_fbpixelwidth, g_fbpixelheight);
     }
 
   if (g_fbbpp == 32 && CONFIG_SIM_FBBPP == 16)
@@ -653,7 +654,7 @@ int sim_x11update(void)
                          g_trans_framebuffer + g_offset);
     }
 
-  host_uninterruptible_no_return(XSync, g_display, 0);
+  host_uninterruptible(XSync, g_display, 0);
 
   return 0;
 }

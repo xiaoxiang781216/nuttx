@@ -397,7 +397,7 @@ struct host_gpiochip_dev *host_gpiochip_alloc(const char *filename)
   if (dev->file < 0)
     {
       gpioerr("Failed to open %s: %d", filename, dev->file);
-      host_uninterruptible_no_return(free, dev);
+      host_uninterruptible(free, dev);
       return NULL;
     }
 
@@ -418,7 +418,7 @@ struct host_gpiochip_dev *host_gpiochip_alloc(const char *filename)
 void host_gpiochip_free(struct host_gpiochip_dev *priv)
 {
   host_uninterruptible(close, priv->file);
-  host_uninterruptible_no_return(free, priv);
+  host_uninterruptible(free, priv);
 }
 
 #else

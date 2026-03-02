@@ -97,7 +97,7 @@ int host_snd_pcm_hw_params(snd_pcm_t *pcm, snd_pcm_hw_params_t *hw_params)
 
 void host_snd_pcm_hw_params_free(snd_pcm_hw_params_t *hw_params)
 {
-  host_uninterruptible_no_return(snd_pcm_hw_params_free, hw_params);
+  host_uninterruptible(snd_pcm_hw_params_free, hw_params);
 }
 
 int host_snd_pcm_open(snd_pcm_t **pcm, const char *name,
@@ -177,7 +177,7 @@ int host_snd_mixer_load(snd_mixer_t *mixer)
 
 void host_snd_mixer_close(snd_mixer_t *mixer)
 {
-  host_uninterruptible_no_return(snd_mixer_close, mixer);
+  host_uninterruptible(snd_mixer_close, mixer);
 }
 
 int host_snd_mixer_selem_id_malloc(snd_mixer_selem_id_t **sid)
@@ -187,19 +187,19 @@ int host_snd_mixer_selem_id_malloc(snd_mixer_selem_id_t **sid)
 
 void host_snd_mixer_selem_id_free(snd_mixer_selem_id_t *sid)
 {
-  host_uninterruptible_no_return(snd_mixer_selem_id_free, sid);
+  host_uninterruptible(snd_mixer_selem_id_free, sid);
 }
 
 void host_snd_mixer_selem_id_set_index(snd_mixer_selem_id_t *sid,
                                        unsigned int index)
 {
-  host_uninterruptible_no_return(snd_mixer_selem_id_set_index, sid, index);
+  host_uninterruptible(snd_mixer_selem_id_set_index, sid, index);
 }
 
 void host_snd_mixer_selem_id_set_name(snd_mixer_selem_id_t *sid,
                                       const char *name)
 {
-  host_uninterruptible_no_return(snd_mixer_selem_id_set_name, sid, name);
+  host_uninterruptible(snd_mixer_selem_id_set_name, sid, name);
 }
 
 snd_mixer_elem_t *host_snd_mixer_find_selem(snd_mixer_t *mixer,

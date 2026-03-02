@@ -289,7 +289,7 @@ void host_sync(int fd)
 {
   /* Just call the sync routine */
 
-  host_uninterruptible_no_return(fsync, fd);
+  host_uninterruptible(fsync, fd);
 }
 
 /****************************************************************************
@@ -478,7 +478,7 @@ void host_rewinddir(void *dirp)
 {
   /* Just call the rewinddir routine */
 
-  host_uninterruptible_no_return(rewinddir, dirp);
+  host_uninterruptible(rewinddir, dirp);
 }
 
 /****************************************************************************

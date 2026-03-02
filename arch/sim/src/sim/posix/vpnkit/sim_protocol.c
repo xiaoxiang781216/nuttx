@@ -187,10 +187,8 @@ char *print_init_message(struct init_message *m)
   n = snprintf(buffer, 80, "version %d, commit %s", m->version, tmp);
   if (n < 0)
     {
-      host_uninterruptible_no_return(perror,
-                                     "Failed to format "
-                                     "init_message");
-      host_uninterruptible_no_return(exit, 1);
+      host_uninterruptible(perror, "Failed to format init_message");
+      host_uninterruptible(exit, 1);
     }
 
   return buffer;

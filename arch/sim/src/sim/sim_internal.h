@@ -150,22 +150,20 @@
 #  define sim_asan_finish_switch()
 #endif
 
+void up_irq_restore(uint64_t flags);
+
+static inline void host_uninterruptible_cleanup(uint64_t *flags)
+{
+  up_irq_restore(*flags);
+}
+
 #define host_uninterruptible(func, ...)                         \
     ({                                                          \
-        uint64_t flags_ = up_irq_save();                        \
-        typeof(func(__VA_ARGS__)) ret_ = func(__VA_ARGS__);     \
-        up_irq_restore(flags_);                                 \
-        ret_;                                                   \
-    })
-
-#define host_uninterruptible_no_return(func, ...)               \
-    do                                                          \
-      {                                                         \
-        uint64_t flags_ = up_irq_save();                        \
+        uint64_t flags_ __attribute__((cleanup(                 \
+            host_uninterruptible_cleanup))) = up_irq_save();    \
+        (void)flags_;                                           \
         func(__VA_ARGS__);                                      \
-        up_irq_restore(flags_);                                 \
-      }                                                         \
-    while (0)
+    })
 
 /* File System Definitions **************************************************/
 

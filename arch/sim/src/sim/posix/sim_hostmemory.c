@@ -169,7 +169,7 @@ void host_free(void *mem)
       return;
     }
 
-  host_uninterruptible_no_return(free, mem);
+  host_uninterruptible(free, mem);
 }
 
 void *host_realloc(void *oldmem, size_t size)
