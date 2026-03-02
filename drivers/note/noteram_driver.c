@@ -946,7 +946,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         else
           {
             flags = spin_lock_irqsave_notrace(&ctx->lock);
-            ctx->mode = *(FAR unsigned int *)arg;
+            ctx->mode = arg;
             spin_unlock_irqrestore_notrace(&ctx->lock, flags);
             ret = OK;
           }
