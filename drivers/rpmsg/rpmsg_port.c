@@ -96,12 +96,12 @@ static void rpmsg_port_post(FAR sem_t *sem)
  ****************************************************************************/
 
 static void rpmsg_port_add_node(FAR struct rpmsg_port_list_s *list,
-                                FAR struct list_node *node)
+                                FAR struct rpmsg_port_node_s *node)
 {
   irqstate_t flags;
 
   flags = spin_lock_irqsave(&list->lock);
-  list_add_tail(&list->head, node);
+  list_add_tail(&list->head, &node->node);
   list->num++;
   spin_unlock_irqrestore(&list->lock, flags);
 }
@@ -110,7 +110,7 @@ static void rpmsg_port_add_node(FAR struct rpmsg_port_list_s *list,
  * Name: rpmsg_port_remove_node
  ****************************************************************************/
 
-static FAR struct list_node *
+static FAR struct rpmsg_port_node_s *
 rpmsg_port_remove_node(FAR struct rpmsg_port_list_s *list)
 {
   FAR struct list_node *node;
@@ -124,7 +124,7 @@ rpmsg_port_remove_node(FAR struct rpmsg_port_list_s *list)
     }
 
   spin_unlock_irqrestore(&list->lock, flags);
-  return node;
+  return container_of(node, struct rpmsg_port_node_s, node);
 }
 
 /****************************************************************************
@@ -155,9 +155,9 @@ static int rpmsg_port_create_queue(FAR struct rpmsg_port_queue_s *queue,
                                    uint16_t count, uint16_t len,
                                    FAR void *buf)
 {
-  FAR struct list_node *node;
+  FAR struct rpmsg_port_node_s *node;
 
-  node = kmm_malloc(count * sizeof(struct list_node));
+  node = kmm_malloc(count * sizeof(struct rpmsg_port_node_s));
   if (node == NULL)
     {
       return -ENOMEM;
@@ -663,7 +663,7 @@ rpmsg_port_queue_get_available_buffer(FAR struct rpmsg_port_queue_s *queue,
 {
   FAR struct rpmsg_port_s *port = queue->port;
   FAR struct rpmsg_port_header_s *hdr;
-  FAR struct list_node *node;
+  FAR struct rpmsg_port_node_s *node;
   int ret;
 
   for (; ; )
@@ -703,7 +703,7 @@ rpmsg_port_queue_get_available_buffer(FAR struct rpmsg_port_queue_s *queue,
 FAR void rpmsg_port_queue_return_buffer(FAR struct rpmsg_port_queue_s *queue,
                                         FAR struct rpmsg_port_header_s *hdr)
 {
-  FAR struct list_node *node = RPMSG_PORT_BUF_TO_NODE(queue, hdr);
+  FAR struct rpmsg_port_node_s *node = RPMSG_PORT_BUF_TO_NODE(queue, hdr);
 
   rpmsg_port_add_node(&queue->free, node);
   rpmsg_port_post(&queue->free.sem);
@@ -716,7 +716,7 @@ FAR void rpmsg_port_queue_return_buffer(FAR struct rpmsg_port_queue_s *queue,
 FAR struct rpmsg_port_header_s *
 rpmsg_port_queue_get_buffer(FAR struct rpmsg_port_queue_s *queue, bool wait)
 {
-  FAR struct list_node *node;
+  FAR struct rpmsg_port_node_s *node;
 
   for (; ; )
     {
@@ -741,7 +741,7 @@ rpmsg_port_queue_get_buffer(FAR struct rpmsg_port_queue_s *queue, bool wait)
 void rpmsg_port_queue_add_buffer(FAR struct rpmsg_port_queue_s *queue,
                                  FAR struct rpmsg_port_header_s *hdr)
 {
-  FAR struct list_node *node = RPMSG_PORT_BUF_TO_NODE(queue, hdr);
+  FAR struct rpmsg_port_node_s *node = RPMSG_PORT_BUF_TO_NODE(queue, hdr);
 
   rpmsg_port_add_node(&queue->ready, node);
   rpmsg_port_post(&queue->ready.sem);
@@ -851,7 +851,7 @@ static void rpmsg_port_dump_buffer(FAR struct rpmsg_device *rdev,
                                    FAR struct rpmsg_port_queue_s *queue,
                                    bool rx)
 {
-  FAR struct list_node *node;
+  FAR struct rpmsg_port_node_s *node;
   irqstate_t flags = spin_lock_irqsave(&queue->ready.lock);
 
   syslog(LOG_EMERG, "rpmsg_port queue %s: {used: %u, avail: %u}\n",
@@ -859,7 +859,9 @@ static void rpmsg_port_dump_buffer(FAR struct rpmsg_device *rdev,
                     rpmsg_port_queue_nused(queue),
                     rpmsg_port_queue_navail(queue));
   syslog(LOG_EMERG, "rpmsg buffer list:\n");
-  list_for_every(&queue->ready.head, node)
+
+  list_for_every_entry(&queue->ready.head, node,
+                       struct rpmsg_port_node_s, node)
     {
       FAR struct rpmsg_port_header_s *hdr =
         RPMSG_PORT_NODE_TO_BUF(queue, node);
