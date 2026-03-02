@@ -556,6 +556,10 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
   mpu_modify_region(g_mpu_uset, g_addrenv_stack_region,
                     conf.base, conf.size, conf.uflags);
 #endif
+
+  mpu_modify_region(g_app_set, g_addrenv_stack_region,
+                    conf.base, conf.size, conf.kflags);
+
   return OK;
 }
 

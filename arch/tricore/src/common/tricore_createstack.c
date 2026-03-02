@@ -32,6 +32,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/arch.h>
+#include <nuttx/addrenv.h>
 #include <nuttx/tls.h>
 #include <nuttx/board.h>
 #include <nuttx/atomic.h>
@@ -85,15 +86,21 @@
 int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
 {
 #ifdef CONFIG_TLS_ALIGNED
+  size_t alignment = TLS_STACK_ALIGN;
+
   /* The allocated stack size must not exceed the maximum possible for the
    * TLS feature.
    */
 
   DEBUGASSERT(stack_size <= TLS_MAXSTACK);
-  if (stack_size >= TLS_MAXSTACK)
+  if (stack_size > TLS_MAXSTACK)
     {
       stack_size = TLS_MAXSTACK;
     }
+#elif CONFIG_STACK_ALIGN_SIZE > 0
+  size_t alignment = CONFIG_STACK_ALIGN_SIZE;
+#else
+  size_t alignment = sizeof(uintptr_t);
 #endif
 
   /* Is there already a stack allocated of a different size?  Because of
@@ -117,12 +124,20 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
        * If TLS is enabled, then we must allocate aligned stacks.
        */
 
-      tcb->stack_alloc_ptr =
-#ifdef CONFIG_TLS_ALIGNED
-        group_memalign(tcb->group, TLS_STACK_ALIGN, stack_size);
-#else /* CONFIG_TLS_ALIGNED */
-        group_malloc(tcb->group, stack_size);
-#endif /* CONFIG_TLS_ALIGNED */
+#if defined(CONFIG_ARCH_STACK_PROTECT)
+      if (tcb->group != NULL &&
+          tcb->group->tg_addrenv_own != NULL &&
+          tcb->group->tg_addrenv_own->addrenv.data)
+        {
+          tcb->stack_alloc_ptr =
+            mm_memalign(STK_HEAP, alignment, stack_size);
+        }
+      else
+#endif
+        {
+          tcb->stack_alloc_ptr =
+            group_memalign(tcb->group, alignment, stack_size);
+        }
 
 #ifdef CONFIG_DEBUG_FEATURES
       /* Was the allocation successful? */
