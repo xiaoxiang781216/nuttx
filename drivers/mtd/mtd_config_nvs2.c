@@ -120,6 +120,7 @@ struct nvs_fs
   uint64_t              data_wra;      /* Next data write address */
   mutex_t               nvs_lock;
   uint32_t              write_cnt;     /* Block write counter */
+  bool                  initialized;   /* NVS initialization flag */
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
   struct nvs_cache      cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
 #endif
@@ -3054,7 +3055,47 @@ static void mtdconfig_notify(FAR struct nvs_fs *fs, pollevent_t eventset)
 
 static int mtdconfig_open(FAR struct file *filep)
 {
-  FAR uint64_t *step_addr = (FAR uint64_t *)kmm_zalloc(8);
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct nvs_fs *fs = inode->i_private;
+  FAR uint64_t *step_addr;
+  int rc;
+
+  /* Only initialize on first open */
+
+  rc = nxmutex_lock(&fs->nvs_lock);
+  if (rc < 0)
+    {
+      return rc;
+    }
+
+  if (!fs->initialized)
+    {
+      rc = nvs_init(fs);
+      if (rc < 0)
+        {
+#ifdef CONFIG_MTD_CONFIG_AUTOFORMAT
+          fwarn("WARNING: nvs init failed: %d, autoformat\n", rc);
+          rc = nvs_clear(fs);
+          if (rc == 0)
+            {
+              rc = nvs_init(fs);
+            }
+
+          if (rc < 0)
+#endif
+            {
+              ferr("ERROR: nvs_init failed: %d\n", rc);
+              nxmutex_unlock(&fs->nvs_lock);
+              return rc;
+            }
+        }
+
+      fs->initialized = true;
+    }
+
+  nxmutex_unlock(&fs->nvs_lock);
+
+  step_addr = (FAR uint64_t *)kmm_zalloc(8);
   if (step_addr == NULL)
     {
       ferr("Failed to allocate memory for step_addr\n");
@@ -3259,25 +3300,6 @@ int mtdconfig_register_by_path(FAR struct mtd_dev_s *mtd,
     {
       ferr("ERROR: nvs mount failed: %d\n", rc);
       goto mutex_err;
-    }
-
-  rc = nvs_init(fs);
-  if (rc < 0)
-    {
-#ifdef CONFIG_MTD_CONFIG_AUTOFORMAT
-      fwarn("WARNING: nvs init failed: %d, autoformat\n", rc);
-      rc = nvs_clear(fs);
-      if (rc == 0)
-        {
-          rc = nvs_init(fs);
-        }
-
-      if (rc < 0)
-#endif
-        {
-          ferr("ERROR: nvs_init failed: %d\n", rc);
-          goto mutex_err;
-        }
     }
 
   rc = register_driver(path, &g_mtdconfig_fops, 0666, fs);
