@@ -178,7 +178,7 @@ static void retransmit_segment(FAR struct tcp_conn_s *conn,
 {
   /* Free any write buffers that have exceed the retry count */
 
-  if (++TCP_WBNRTX(wrb) >= TCP_MAXRTX)
+  if (TCP_WBNRTX(wrb)++ >= TCP_MAXRTX)
     {
       nwarn("WARNING: Expiring wrb=%p nrtx=%u\n",
             wrb, TCP_WBNRTX(wrb));
@@ -887,7 +887,7 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
           /* Increment the retransmit count on this write buffer. */
 
-          if (++TCP_WBNRTX(wrb) >= TCP_MAXRTX)
+          if (TCP_WBNRTX(wrb)++ >= TCP_MAXRTX)
             {
               nwarn("WARNING: Expiring wrb=%p nrtx=%u\n",
                     wrb, TCP_WBNRTX(wrb));

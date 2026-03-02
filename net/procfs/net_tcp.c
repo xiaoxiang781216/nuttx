@@ -96,7 +96,7 @@ static ssize_t netprocfs_tcpstats(FAR struct netprocfs_file_s *priv,
                       " %3" PRIx8 " %3" PRIu8
                       " %3" PRIu8
                       " %4" PRIu32
-                      " %3" PRIu8
+                      " %3" PRId8
 #if CONFIG_NET_SEND_BUFSIZE > 0
                       " %6" PRIu32
 #endif

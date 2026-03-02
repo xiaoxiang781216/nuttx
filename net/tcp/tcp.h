@@ -230,7 +230,7 @@ struct tcp_conn_s
   struct   work_s work;   /* TCP timer handle */
   bool     timeout;       /* Trigger from timer expiry */
   uint8_t  timer;         /* The retransmission timer (units: half-seconds) */
-  uint8_t  nrtx;          /* The number of retransmissions for the last
+  int8_t   nrtx;          /* The number of retransmissions for the last
                            * segment sent */
 #ifdef CONFIG_NET_TCP_DELAYED_ACK
   uint8_t  rx_unackseg;   /* Number of un-ACKed received segments */

@@ -1466,7 +1466,10 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
   conn->tcpstateflags = TCP_SYN_SENT;
 
   conn->tx_unacked = 1;    /* TCP length of the SYN is one. */
-  conn->nrtx       = 0;
+  conn->nrtx       = -1;   /* The initial SYN packet is sent via tcp_timer,
+                            * but it should not be counted towards the number
+                            * of retransmissions, so it is initialized to -1
+                            */
   conn->timeout    = true; /* Send the SYN immediately. */
   conn->rto        = TCP_RTO;
   conn->sa         = 0;
