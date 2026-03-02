@@ -167,6 +167,9 @@ static int virtio_net_ioctl(FAR struct netdev_lowerhalf_s *dev,
                             int cmd, unsigned long arg);
 #endif
 static void virtio_net_txfree(FAR struct netdev_lowerhalf_s *dev);
+#ifdef CONFIG_NET_NETPOLL
+static void virtio_net_txpoll(FAR struct netdev_lowerhalf_s *dev);
+#endif
 
 static int  virtio_net_probe(FAR struct virtio_device *vdev);
 static void virtio_net_remove(FAR struct virtio_device *vdev);
@@ -196,7 +199,10 @@ static const struct netdev_ops_s g_virtio_net_ops =
 #ifdef CONFIG_NETDEV_IOCTL
   virtio_net_ioctl,
 #endif
-  virtio_net_txfree
+  virtio_net_txfree,
+#ifdef CONFIG_NET_NETPOLL
+  virtio_net_txpoll,
+#endif
 };
 
 #ifdef CONFIG_DRIVERS_WIFI_SIM
@@ -349,6 +355,33 @@ static void virtio_net_txfree(FAR struct netdev_lowerhalf_s *dev)
       vrtinfo("Free, hdr: %p, pkt: %p\n", hdr, hdr->pkt);
     }
 }
+
+/****************************************************************************
+ * Name: virtio_net_txpoll
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_NETPOLL
+static void virtio_net_txpoll(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct virtio_net_priv_s *priv = (FAR struct virtio_net_priv_s *)dev;
+  FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_NET_TX].vq;
+  FAR struct virtio_net_llhdr_s *hdr;
+
+  /* Busy-poll until at least one TX buffer completes. */
+
+  for (; ; )
+    {
+      hdr = virtqueue_get_buffer_lock(vq, NULL, NULL,
+                                      &priv->lock[VIRTIO_NET_TX]);
+      if (hdr != NULL)
+        {
+          netpkt_free(dev, hdr->pkt, NETPKT_TX);
+          vrtinfo("TxPoll free, hdr: %p, pkt: %p\n", hdr, hdr->pkt);
+          break;
+        }
+    }
+}
+#endif
 
 /****************************************************************************
  * Name: virtio_net_ifup
