@@ -32,6 +32,13 @@ config NET_USRSOCK_RPMSG_CPUNAME
 	string "The cpuname on which the RPMSG server runs"
 	depends on NET_USRSOCK_RPMSG
 
+config NET_USRSOCK_RPMSG_BLACKLIST
+	string "Usrsock RPMSG client CPU ID Blacklist"
+	depends on NET_USRSOCK_RPMSG && BMP
+	---help---
+		Comma-separated list of CPU IDs that should not use usrsock.
+		e.g.: "0,1"
+
 endmenu
 
 endif # NET_USRSOCK

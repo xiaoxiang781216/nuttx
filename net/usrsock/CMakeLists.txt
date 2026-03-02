@@ -45,3 +45,9 @@ if(CONFIG_NET_USRSOCK)
             usrsock_listen.c
             usrsock_ioctl.c)
 endif()
+
+if(NOT "${CONFIG_NET_USRSOCK_RPMSG_BLACKLIST}" STREQUAL "")
+  target_compile_definitions(
+    net
+    PRIVATE -DNET_USRSOCK_RPMSG_BLACKLIST=${CONFIG_NET_USRSOCK_RPMSG_BLACKLIST})
+endif()

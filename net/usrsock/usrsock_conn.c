@@ -340,6 +340,48 @@ void usrsock_state_release(FAR void *state)
 }
 
 /****************************************************************************
+ * Name: usrsock_is_disabled()
+ *
+ * Description:
+ *   Check if usrsock should be disabled on the current CPU.
+ *   This includes the RPMSG server CPU and any blacklisted CPUs.
+ *
+ * Returned Value:
+ *   true if usrsock should be disabled on this CPU, false otherwise.
+ *
+ ****************************************************************************/
+
+bool usrsock_is_disabled(void)
+{
+#ifdef NET_USRSOCK_RPMSG_BLACKLIST
+  int blacklist[] =
+    {
+      NET_USRSOCK_RPMSG_BLACKLIST
+    };
+
+  int cpuid = this_cpu();
+  int i;
+
+  for (i = 0; i < nitems(blacklist); i++)
+    {
+      if (blacklist[i] == cpuid)
+        {
+          return true;
+        }
+    }
+#endif
+
+#ifdef CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID
+  if (this_cpu() == CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID)
+    {
+      return true;
+    }
+#endif
+
+  return false;
+}
+
+/****************************************************************************
  * Name: usrsock_initialize()
  *
  * Description:
@@ -350,14 +392,10 @@ void usrsock_state_release(FAR void *state)
 
 void usrsock_initialize(void)
 {
-#ifdef CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID
-  if (this_cpu() == CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID)
+  if (usrsock_is_disabled())
     {
-      /* Don't allow to register usrsock under rpmsg server CPU */
-
       return;
     }
-#endif
 
   /* Register /dev/usrsock character device. */
 

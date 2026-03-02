@@ -159,6 +159,20 @@ EXTERN const struct sock_intf_s g_usrsock_sockif;
 void usrsock_initialize(void);
 
 /****************************************************************************
+ * Name: usrsock_is_disabled()
+ *
+ * Description:
+ *   Check if usrsock should be disabled on the current CPU.
+ *   This includes the RPMSG server CPU and any blacklisted CPUs.
+ *
+ * Returned Value:
+ *   true if usrsock should be disabled on this CPU, false otherwise.
+ *
+ ****************************************************************************/
+
+bool usrsock_is_disabled(void);
+
+/****************************************************************************
  * Name: usrsock_alloc()
  *
  * Description:

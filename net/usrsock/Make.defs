@@ -24,6 +24,10 @@
 
 ifeq ($(CONFIG_NET_USRSOCK),y)
 
+ifneq ($(CONFIG_NET_USRSOCK_RPMSG_BLACKLIST),"")
+CFLAGS += -DNET_USRSOCK_RPMSG_BLACKLIST=${CONFIG_NET_USRSOCK_RPMSG_BLACKLIST}
+endif
+
 NET_CSRCS += usrsock_close.c usrsock_conn.c usrsock_bind.c usrsock_connect.c
 NET_CSRCS += usrsock_getpeername.c usrsock_devif.c usrsock_shutdown.c
 NET_CSRCS += usrsock_event.c usrsock_getsockname.c usrsock_getsockopt.c
