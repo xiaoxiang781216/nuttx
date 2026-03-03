@@ -259,7 +259,7 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
   mm_addregion(*heap, config->start, config->size);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-#  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+#  if !defined(CONFIG_BUILD_KERNEL) || defined(__KERNEL__)
   (*heap)->mm_procfs = procfs_register_meminfo(config->name, *heap,
                                                NULL, NULL);
 #  endif
