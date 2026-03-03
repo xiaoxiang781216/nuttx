@@ -42,8 +42,7 @@
  * Private Functions
  ****************************************************************************/
 
-static inline FAR struct mempool_s *
-iob_find_mempool(size_t size, FAR int *idx)
+static inline FAR struct mempool_s *iob_find_mempool(size_t size)
 {
   int i = CONFIG_IOB_NPOOLS - 1;
 
@@ -53,7 +52,6 @@ iob_find_mempool(size_t size, FAR int *idx)
     }
   else if (CONFIG_IOB_NPOOLS == 1)
     {
-      *idx = 0;
       return g_iob_pool[0];
     }
 
@@ -61,7 +59,6 @@ iob_find_mempool(size_t size, FAR int *idx)
     {
       if (IOB_ALIGN_SIZE(size) <= g_iob_pool[i]->blocksize)
         {
-          *idx = i;
           return g_iob_pool[i];
         }
     }
@@ -83,27 +80,16 @@ static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
 {
   FAR struct mempool_s *mempool;
   FAR struct iob_s *iob;
-  int init_idx;
-  int idx;
 
-  mempool = iob_find_mempool(size, &idx);
+  mempool = iob_find_mempool(size);
   if (mempool == NULL)
     {
       return NULL;
     }
 
-  init_idx = idx;
   if (timeout == 0)
     {
-      do
-        {
-          iob = mempool_tryallocate_throttled(mempool, throttled);
-          if (iob != NULL)
-            {
-              break;
-            }
-        }
-      while (--idx >= 0 && (mempool = g_iob_pool[idx]) != NULL);
+      iob = mempool_tryallocate_throttled(mempool, throttled);
     }
   else
     {
@@ -131,12 +117,6 @@ static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
 
       DEBUGASSERT((uintptr_t)iob % IOB_ALIGNMENT == 0);
       DEBUGASSERT((uintptr_t)iob->io_data % IOB_ALIGNMENT == 0);
-
-      if (idx != init_idx)
-        {
-          iobwarn("Warning: From other iob pools:%zu allocate iob:%zu!!",
-                  (size_t)IOB_BUFSIZE(iob), size);
-        }
     }
 
   return iob;
