@@ -185,11 +185,11 @@ static int iob_copyin_internal(FAR struct iob_s *iob, FAR const uint8_t *src,
 
           if (can_block)
             {
-              next = iob_alloc(throttled);
+              next = iob_alloc_with_size(IOB_BUFSIZE(iob), throttled);
             }
           else
             {
-              next = iob_tryalloc(throttled);
+              next = iob_tryalloc_with_size(IOB_BUFSIZE(iob), throttled);
             }
 
           if (next == NULL)

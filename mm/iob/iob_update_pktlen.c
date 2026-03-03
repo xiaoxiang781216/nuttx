@@ -127,7 +127,8 @@ int iob_update_pktlen(FAR struct iob_s *iob, unsigned int pktlen,
 
       while (next != NULL && nrequire > ninqueue)
         {
-          next->io_flink = iob_tryalloc(throttled);
+          next->io_flink = iob_tryalloc_with_size(IOB_BUFSIZE(iob),
+                                                  throttled);
           next = IOB_LINK_GET(next);
           ninqueue++;
         }
