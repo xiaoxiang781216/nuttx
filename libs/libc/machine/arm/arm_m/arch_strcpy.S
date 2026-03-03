@@ -208,11 +208,15 @@ ARCH_LIBCFUN(strcpy):
 .Loffset_3:
     ands    tmp3, tmp1, MASK_3
     beq     .Lcopy_done
+#if BYTE_3_SHIFT != 0
     lsrs    tmp3, BYTE_3_SHIFT
+#endif
     strb    tmp3, [dst], #1
     ands    tmp3, tmp2, MASK_0
     beq     .Lcopy_done
+#if BYTE_0_SHIFT != 0
     lsrs    tmp3, BYTE_0_SHIFT
+#endif
     strb    tmp3, [dst], #1
     ands    tmp3, tmp2, MASK_1
     beq     .Lcopy_done
