@@ -104,6 +104,9 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
       irq_dispatch(irq, regs);
 #endif
+
+      up_irq_save();
+
 #ifndef CONFIG_DISABLE_SIGNALS
       if (tcb && tcb->sigdeliver && !tcb->xcp.saved_regs)
         {
@@ -112,8 +115,6 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
           up_schedule_sigaction(tcb);
         }
 #endif
-
-      up_irq_save();
     }
   else
     {
