@@ -537,9 +537,10 @@ errout_with_pathbuffer:
 
 int pathcache_close(FAR struct file *filep, FAR const char *path)
 {
+  FAR struct inode *inode;
   FAR char *pathbuffer;
   FAR char *abspath;
-  int ret;
+  int ret = OK;
 
   DEBUGASSERT(filep != NULL && path != NULL);
 
@@ -567,12 +568,35 @@ int pathcache_close(FAR struct file *filep, FAR const char *path)
       goto errout_with_pathbuffer;
     }
 
-  /* Remove the old cache entry first */
+  /* Sync (flush) the file before snapshotting it into the cache.
+   *
+   * pathcache_close() is called from file_close() BEFORE the underlying
+   * i_ops->close() which is where the filesystem (e.g. littlefs) would
+   * normally run its final sync and update on-disk metadata such as
+   * ctz.size.  If we dup the file before that sync, the cached copy
+   * captures a pre-flush state (e.g. lfs_file_t.ctz.size == 0 even
+   * though 16 KB was written), causing every subsequent read from the
+   * cached descriptor to hit EOF immediately.
+   *
+   * By explicitly calling i_mops->sync here we force the file to be
+   * flushed now so that the dup inside pathcache_create sees the correct
+   * final state.  The redundant flush that happens later inside
+   * i_ops->close() is a no-op because there is nothing left to flush.
+   */
+
+  inode = filep->f_inode;
+  if (inode->u.i_mops->sync != NULL)
+    {
+      ret = inode->u.i_mops->sync(filep);
+      if (ret < 0)
+        {
+          goto errout_with_pathbuffer;
+        }
+    }
+
+  /* Remove the old cache entry and create a fresh one. */
 
   lru_cache_remove(&g_pathcache, abspath);
-
-  /* Create a new cache entry with the updated file content. */
-
   pathcache_create(filep, abspath);
 
 errout_with_pathbuffer:
