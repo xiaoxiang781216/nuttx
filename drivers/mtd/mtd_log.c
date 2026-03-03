@@ -692,7 +692,7 @@ static int mtdlog_detect(FAR struct mtdlog_s *mtdlog)
           max_blkseq_idx = i;
           max_blkseq_grp = block_info.blkgrp;
         }
-      else if ((last_blkseq + 1) != block_info.blkseq)
+      else if ((uint16_t)(last_blkseq + 1) != block_info.blkseq)
         {
           found_break = 1;
           min_blkseq = block_info.blkseq;
@@ -700,6 +700,8 @@ static int mtdlog_detect(FAR struct mtdlog_s *mtdlog)
           min_blkseq_grp = block_info.blkgrp;
           break;
         }
+
+      last_blkseq = block_info.blkseq;
 
       if (block_info.blkseq < min_blkseq)
         {
@@ -949,11 +951,10 @@ static int mtdlog_write_log_entry(FAR struct mtdlog_s *mtdlog,
   uint32_t len_write;
   struct mtdlog_entry_s entry_info;
 
-  blk_remain = mtdlog->tailpos.entryoff -
-    mtdlog->tailpos.dataoff;
-  blk_remain -= MTDLOG_ALIGN(mtdlog, sizeof(struct mtdlog_entry_s));
+  blk_remain = (mtdlog->tailpos.entryoff > mtdlog->tailpos.dataoff) ?
+    (mtdlog->tailpos.entryoff - mtdlog->tailpos.dataoff) : 0;
   if ((MTDLOG_ALIGN(mtdlog, len) +
-       MTDLOG_ALIGN(mtdlog, sizeof(struct mtdlog_entry_s))) > blk_remain)
+       MTDLOG_ALIGN(mtdlog, sizeof(struct mtdlog_entry_s)) * 2) > blk_remain)
     {
       ret = mtdlog_move_tail_to_nextblk(mtdlog,
                                           mtdlog->tailpos.blkgrp);
