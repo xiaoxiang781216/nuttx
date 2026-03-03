@@ -832,9 +832,6 @@ errout_with_lock:
 static int lrofs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
   FAR struct lrofs_mountpt_s *lm;
-  FAR struct lrofs_file_s *old_lf;
-  FAR struct lrofs_file_s *new_lf;
-  size_t len;
   int ret;
 
   DEBUGASSERT(oldp->f_priv != NULL &&
@@ -857,44 +854,69 @@ static int lrofs_dup(FAR const struct file *oldp, FAR struct file *newp)
       goto errout_with_lock;
     }
 
-  /* Recover the old private data from the old struct file instance */
-
-  old_lf = oldp->f_priv;
-
-  /* Create an new instance of the file private data to describe the new
-   * dup'ed file.
-   */
-
-  len    = strlen(old_lf->lf_path);
-  new_lf = fs_heap_malloc(sizeof(struct lrofs_file_s) + len);
-  if (!new_lf)
+  if (oldp->f_oflags & O_DIRECTORY)
     {
-      ferr("ERROR: Failed to allocate private data\n");
-      ret = -ENOMEM;
-      goto errout_with_lock;
+      /* Directory dup: deep copy lrofs_dir_s, reset iteration to start */
+
+      FAR struct lrofs_dir_s *old_ldir = oldp->f_priv;
+      FAR struct lrofs_dir_s *new_ldir;
+
+      new_ldir = fs_heap_malloc(sizeof(struct lrofs_dir_s));
+      if (!new_ldir)
+        {
+          ferr("ERROR: Failed to allocate dir private data\n");
+          ret = -ENOMEM;
+          goto errout_with_lock;
+        }
+
+      memcpy(new_ldir, old_ldir, sizeof(struct lrofs_dir_s));
+
+      /* Reset currnode to firstnode so the newp always starts
+       * iteration from the beginning of the directory.
+       */
+
+      new_ldir->currnode = new_ldir->firstnode;
+      newp->f_priv = new_ldir;
+    }
+  else
+    {
+      /* File dup: allocate new lrofs_file_s with independent buffer */
+
+      FAR struct lrofs_file_s *old_lf = oldp->f_priv;
+      FAR struct lrofs_file_s *new_lf;
+      size_t len;
+
+      len    = strlen(old_lf->lf_path);
+      new_lf = fs_heap_malloc(sizeof(struct lrofs_file_s) + len);
+      if (!new_lf)
+        {
+          ferr("ERROR: Failed to allocate private data\n");
+          ret = -ENOMEM;
+          goto errout_with_lock;
+        }
+
+      /* Copy all file private data (except for the buffer) */
+
+      new_lf->lf_ln          = old_lf->lf_ln;
+      new_lf->lf_startoffset = old_lf->lf_startoffset;
+      new_lf->lf_size        = old_lf->lf_size;
+      new_lf->lf_type        = old_lf->lf_type;
+      new_lf->lf_dirty       = false;
+      memcpy(new_lf->lf_path, old_lf->lf_path, len + 1);
+
+      /* Configure buffering to support access to this file */
+
+      ret = lrofs_fileconfigure(lm, new_lf);
+      if (ret < 0)
+        {
+          fs_heap_free(new_lf);
+          ferr("ERROR: Failed configure buffering: %d\n", ret);
+          goto errout_with_lock;
+        }
+
+      newp->f_priv = new_lf;
     }
 
-  /* Copy all file private data (except for the buffer) */
-
-  new_lf->lf_ln          = old_lf->lf_ln;
-  new_lf->lf_startoffset = old_lf->lf_startoffset;
-  new_lf->lf_size        = old_lf->lf_size;
-  new_lf->lf_type        = old_lf->lf_type;
-  memcpy(new_lf->lf_path, old_lf->lf_path, len + 1);
-
-  /* Configure buffering to support access to this file */
-
-  ret = lrofs_fileconfigure(lm, new_lf);
-  if (ret < 0)
-    {
-      fs_heap_free(new_lf);
-      ferr("ERROR: Failed configure buffering: %d\n", ret);
-      goto errout_with_lock;
-    }
-
-  /* Attach the new private date to the new struct file instance */
-
-  newp->f_priv = new_lf;
   lm->lm_refs++;
 
 errout_with_lock:
