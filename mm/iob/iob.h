@@ -41,9 +41,15 @@
  ****************************************************************************/
 
 #if defined(CONFIG_DEBUG_FEATURES) && defined(CONFIG_IOB_DEBUG)
-#  define ioberr                 _err
-#  define iobwarn                _warn
-#  define iobinfo                _info
+#  ifdef CONFIG_SYSLOG_NETDEV
+#    define ioberr               lowsyslog
+#    define iobwarn              lowsyslog
+#    define iobinfo              lowsyslog
+#  else
+#    define ioberr               _err
+#    define iobwarn              _warn
+#    define iobinfo              _info
+#  endif
 #else
 #  define ioberr                 _none
 #  define iobwarn                _none

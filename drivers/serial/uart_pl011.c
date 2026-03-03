@@ -1088,6 +1088,15 @@ void up_putc(int ch)
 
   pl011_putc(dev, ch);
 }
+
+#  ifdef CONFIG_ARCH_LOWPUTC
+void up_lowputc(int ch)
+{
+  FAR struct uart_dev_s *dev = &CONSOLE_DEV;
+
+  pl011_putc(dev, ch);
+}
+#  endif
 #endif
 
 #endif /* CONFIG_UART_PL011 */
