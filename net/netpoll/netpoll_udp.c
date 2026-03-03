@@ -76,8 +76,9 @@ static void netpoll_udp_build_header(FAR struct netpoll_s *np,
 
   offset += ETH_HDRLEN;
   ipv4   = (FAR struct ipv4_hdr_s *)&data[offset];
-  ipv4_build_header(ipv4, pkt->io_len, IP_PROTO_UDP, &lower->netdev.d_ipaddr,
-                    &np->destipaddr, IP_TTL_DEFAULT, 0, NULL);
+  ipv4_build_header(ipv4, pkt->io_pktlen, IP_PROTO_UDP,
+                    &lower->netdev.d_ipaddr, &np->destipaddr,
+                    IP_TTL_DEFAULT, 0, NULL);
 
   /* Fill UDP header */
 
@@ -86,7 +87,7 @@ static void netpoll_udp_build_header(FAR struct netpoll_s *np,
 
   udp->srcport   = np->srcport;
   udp->destport  = np->destport;
-  udp->udplen    = htons(pkt->io_len - IPv4_HDRLEN);
+  udp->udplen    = htons(pkt->io_pktlen - IPv4_HDRLEN);
   udp->udpchksum = 0;
 }
 
