@@ -693,9 +693,6 @@ static int romfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 static int romfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
   FAR struct romfs_mountpt_s *rm;
-  FAR struct romfs_file_s *oldrf;
-  FAR struct romfs_file_s *newrf;
-  size_t len;
   int ret;
 
   finfo("Dup %p->%p\n", oldp, newp);
@@ -728,43 +725,71 @@ static int romfs_dup(FAR const struct file *oldp, FAR struct file *newp)
       goto errout_with_lock;
     }
 
-  /* Recover the old private data from the old struct file instance */
-
-  oldrf = oldp->f_priv;
-
-  /* Create an new instance of the file private data to describe the new
-   * dup'ed file.
-   */
-
-  len   = strlen(oldrf->rf_path);
-  newrf = fs_heap_malloc(sizeof(struct romfs_file_s) + len);
-  if (!newrf)
+  if (oldp->f_oflags & O_DIRECTORY)
     {
-      ferr("ERROR: Failed to allocate private data\n");
-      ret = -ENOMEM;
-      goto errout_with_lock;
+      /* Directory dup: deep copy romfs_dir_s (all value-type fields, safe) */
+
+      FAR struct romfs_dir_s *oldrdir = oldp->f_priv;
+      FAR struct romfs_dir_s *newrdir;
+
+      newrdir = fs_heap_malloc(sizeof(struct romfs_dir_s));
+      if (!newrdir)
+        {
+          ferr("ERROR: Failed to allocate dir private data\n");
+          ret = -ENOMEM;
+          goto errout_with_lock;
+        }
+
+      memcpy(newrdir, oldrdir, sizeof(struct romfs_dir_s));
+
+      /* Reset iteration state to start of directory regardless of how far
+       * the cached entry has been advanced by prior readdir() calls.
+       */
+
+#ifdef CONFIG_FS_ROMFS_CACHE_NODE
+      newrdir->currnode = newrdir->firstnode;
+#else
+      newrdir->curroffset = newrdir->firstoffset;
+#endif
+      newp->f_priv = newrdir;
+    }
+  else
+    {
+      /* File dup: allocate new romfs_file_s with independent rf_buffer */
+
+      FAR struct romfs_file_s *oldrf = oldp->f_priv;
+      FAR struct romfs_file_s *newrf;
+      size_t len;
+
+      len   = strlen(oldrf->rf_path);
+      newrf = fs_heap_malloc(sizeof(struct romfs_file_s) + len);
+      if (!newrf)
+        {
+          ferr("ERROR: Failed to allocate private data\n");
+          ret = -ENOMEM;
+          goto errout_with_lock;
+        }
+
+      /* Copy all file private data (except for the buffer) */
+
+      newrf->rf_startoffset = oldrf->rf_startoffset;
+      newrf->rf_size        = oldrf->rf_size;
+      newrf->rf_type        = oldrf->rf_type;
+      memcpy(newrf->rf_path, oldrf->rf_path, len + 1);
+
+      /* Configure buffering to support access to this file. */
+
+      ret = romfs_fileconfigure(rm, newrf);
+      if (ret < 0)
+        {
+          fs_heap_free(newrf);
+          ferr("ERROR: Failed configure buffering: %d\n", ret);
+          goto errout_with_lock;
+        }
+
+      newp->f_priv = newrf;
     }
 
-  /* Copy all file private data (except for the buffer) */
-
-  newrf->rf_startoffset = oldrf->rf_startoffset;
-  newrf->rf_size        = oldrf->rf_size;
-  newrf->rf_type        = oldrf->rf_type;
-  memcpy(newrf->rf_path, oldrf->rf_path, len + 1);
-
-  /* Configure buffering to support access to this file */
-
-  ret = romfs_fileconfigure(rm, newrf);
-  if (ret < 0)
-    {
-      fs_heap_free(newrf);
-      ferr("ERROR: Failed configure buffering: %d\n", ret);
-      goto errout_with_lock;
-    }
-
-  /* Attach the new private date to the new struct file instance */
-
-  newp->f_priv = newrf;
   rm->rm_refs++;
 
 errout_with_lock:
