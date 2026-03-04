@@ -29,20 +29,4 @@ config ARM_M_LIBM
 	---help---
 		Enable ARM-M specific floating point optimizations.
 
-# Backward compatibility: old ARMv7-M config name
-
-config ARMV7M_LIBM
-	bool "Architecture specific FPU optimizations (deprecated, use ARM_M_LIBM)"
-	default n
-	depends on ARCH_FPU && LIBM && ARCH_ARMV7M
-	select ARM_M_LIBM
-
-# Backward compatibility: old ARMv8-M config name
-
-config ARMV8M_LIBM
-	bool "Architecture specific optimizations (deprecated, use ARM_M_LIBM)"
-	default n
-	depends on ARCH_FPU && LIBM && ARCH_ARMV8M
-	select ARM_M_LIBM
-
 endif
