@@ -255,6 +255,7 @@ static inline_function void up_irq_disable(void)
   setmodp(REG_MODP_DISABLE);
 }
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags = getmodp();
@@ -267,6 +268,7 @@ static inline_function void up_irq_enable(void)
   setmodp(REG_MODP_ENABLE);
 }
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   setmodp(flags);

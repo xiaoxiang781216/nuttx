@@ -408,6 +408,7 @@ static inline_function void up_irq_disable(void)
 
 /* Save the current primask state & disable IRQs */
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   unsigned short primask;
@@ -436,6 +437,7 @@ static inline_function void up_irq_enable(void)
 
 /* Restore saved primask state */
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   /* If bit 0 of the primask is 0, then we need to restore
@@ -459,6 +461,7 @@ static inline_function void up_irq_disable(void)
 
 /* Save the current primask state & disable IRQs */
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   /* Probably raising priority */
@@ -480,6 +483,7 @@ static inline_function void up_irq_enable(void)
 
 /* Restore saved primask state */
 
+noinstrument_function
 static inline_function
 void up_irq_restore(irqstate_t flags)
 {

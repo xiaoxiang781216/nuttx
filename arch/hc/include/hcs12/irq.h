@@ -197,6 +197,7 @@ static inline_function irqstate_t up_getccr(void)
 
 /* Save the current interrupt enable state & disable IRQs */
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t ccr;
@@ -212,6 +213,7 @@ static inline_function irqstate_t up_irq_save(void)
 
 /* Restore saved interrupt state */
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   /* Should interrupts be enabled? */

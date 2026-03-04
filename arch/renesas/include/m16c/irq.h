@@ -316,6 +316,7 @@ extern "C"
 
 /* Return the current interrupt enable state and disable IRQs */
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags;
@@ -331,6 +332,7 @@ static inline_function irqstate_t up_irq_save(void)
 
 /* Restore saved IRQ state */
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   __asm__ __volatile__

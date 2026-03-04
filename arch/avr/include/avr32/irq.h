@@ -189,6 +189,7 @@ static inline_function uint32_t up_getsp(void)
 
 /* Return the current interrupt enable state and disable all interrupts */
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t sr = (irqstate_t)avr32_sr();
@@ -204,6 +205,7 @@ static inline_function irqstate_t up_irq_save(void)
 
 /* Restore saved interrupt state */
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   if ((flags & AVR32_SR_GM_MASK) == 0)

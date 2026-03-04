@@ -194,6 +194,7 @@ static inline_function void up_irq_disabled()
 
 /* Save the current interrupt enable state & disable all interrupts */
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t sreg;
@@ -208,6 +209,7 @@ static inline_function irqstate_t up_irq_save(void)
 
 /* Restore saved interrupt state */
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   asm volatile ("out __SREG__, %0" : : "r" (flags) :);

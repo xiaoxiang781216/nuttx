@@ -181,6 +181,7 @@ DECLARE_PER_CPU(volatile bool, g_interrupt_context);
 
 /* Save the current interrupt enable state & disable IRQs. */
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   unsigned int flags;
@@ -198,6 +199,7 @@ static inline_function irqstate_t up_irq_save(void)
 
 /* Restore saved IRQ & FIQ state */
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   __asm__ __volatile__

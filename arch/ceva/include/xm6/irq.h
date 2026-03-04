@@ -245,6 +245,7 @@ static inline_function void up_irq_disable(void)
   setmoda(REG_MODA_DISABLE);
 }
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags = getmoda();
@@ -257,6 +258,7 @@ static inline_function void up_irq_enable(void)
   setmoda(REG_MODA_ENABLE);
 }
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   setmoda(flags);

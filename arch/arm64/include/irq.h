@@ -333,6 +333,7 @@ static inline_function irqstate_t irqstate(void)
 
 /* Disable IRQs and return the previous IRQ state */
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags;
@@ -378,11 +379,13 @@ static inline_function irqstate_t up_irq_enable(void)
 
 /* Restore saved IRQ & FIQ state */
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   __asm__ __volatile__("msr daif, %0" :: "r" (flags): "memory");
 }
 
+noinstrument_function
 static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP

@@ -303,6 +303,7 @@ static inline_function void up_irq_enable(void)
 
 /* Disable interrupts, but return previous interrupt state */
 
+noinstrument_function
 static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags = irqflags();
@@ -312,6 +313,7 @@ static inline_function irqstate_t up_irq_save(void)
 
 /* Conditionally disable interrupts */
 
+noinstrument_function
 static inline_function void up_irq_restore(irqstate_t flags)
 {
   if (up_irq_enabled(flags))
