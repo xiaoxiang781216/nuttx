@@ -617,8 +617,6 @@ static int arm64pmu_request_irq(int irq, FAR struct arm64_pmu_s *arm64pmu)
       return err;
     }
 
-  up_enable_irq(irq);
-
   return OK;
 }
 
@@ -733,16 +731,23 @@ static inline void pmuv3_disable_counter(uint32_t mask)
 static inline void pmuv3_disable_event_counter(
                      FAR struct perf_event_s *event)
 {
+  FAR struct pmu_hw_events_s *hw_events =
+                              to_arm64_pmu(event->pmu)->hw_events;
   uint32_t mask = BIT(PMU_IDX_TO_COUNTER(event->hw.idx));
 
   pmuv3_disable_counter(mask);
+  up_disable_irq(hw_events->irq);
 }
 
 static inline void pmuv3_enable_event_irq(
                      FAR struct perf_event_s *event)
 {
+  FAR struct pmu_hw_events_s *hw_events =
+                              to_arm64_pmu(event->pmu)->hw_events;
+
   uint32_t counter = PMU_IDX_TO_COUNTER(event->hw.idx);
   write_pmintenset(BIT(counter));
+  up_enable_irq(hw_events->irq);
 }
 
 static inline void pmuv3_disable_intens(uint32_t mask)
