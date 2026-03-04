@@ -359,7 +359,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
 
   /* Delay the deallocation until a more appropriate time. */
 
-  flags = up_irq_save();
+  flags = irq_save();
 
   tmp->flink  = delay->head;
   tmp->cb     = cb;
@@ -379,7 +379,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
       UNUSED(size);
     }
 
-  up_irq_restore(flags);
+  irq_restore(flags);
 #endif
 }
 
@@ -433,7 +433,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   /* Move the delay list to local */
 
-  flags = up_irq_save();
+  flags = irq_save();
 
   tmp = delay->head;
 
@@ -441,7 +441,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
   if (tmp == NULL || (!force &&
       delay->delaycount < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
-      up_irq_restore(flags);
+      irq_restore(flags);
       return false;
     }
 
@@ -450,7 +450,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   delay->head = NULL;
 
-  up_irq_restore(flags);
+  irq_restore(flags);
 
   /* Test if the delayed is empty */
 

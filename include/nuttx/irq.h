@@ -128,6 +128,20 @@
 
 #define IRQ_WAKE_THREAD 1
 
+/****************************************************************************
+ * Name: irq_save / irq_restore
+ *
+ * Description:
+ *   Wrapper around up_irq_save/up_irq_restore with optional instrumentation
+ *   for IRQ disabled duration monitoring.
+ *
+ ****************************************************************************/
+
+#ifndef __ASSEMBLY__
+#  define irq_save()          up_irq_save()
+#  define irq_restore(flags)  up_irq_restore(flags)
+#endif
+
 /* Scheduling monitor */
 
 #ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD

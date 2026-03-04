@@ -68,7 +68,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
 
   /* Delay the deallocation until a more appropriate time. */
 
-  flags = up_irq_save();
+  flags = irq_save();
   bypass = kasan_bypass(true);
 
 #ifdef CONFIG_DEBUG_ASSERTIONS
@@ -102,7 +102,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
     }
 
   kasan_bypass(bypass);
-  up_irq_restore(flags);
+  irq_restore(flags);
 #endif
 }
 

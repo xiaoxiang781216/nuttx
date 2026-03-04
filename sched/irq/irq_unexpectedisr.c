@@ -52,7 +52,7 @@ int irq_unexpected_isr(int irq, FAR void *context, FAR void *arg)
   UNUSED(arg);
 
 #ifdef CONFIG_IRQ_UNEXPECTED_PANIC
-  up_irq_save();
+  irq_save();
   _err("ERROR irq: %d\n", irq);
   PANIC();
 #else

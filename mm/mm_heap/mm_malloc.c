@@ -68,7 +68,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   /* Move the delay list to local */
 
-  flags = up_irq_save();
+  flags = irq_save();
   bypass = kasan_bypass(true);
 
   tmp = delay->head;
@@ -77,7 +77,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
   if (tmp == NULL || (!force &&
       delay->delaycount < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
-      up_irq_restore(flags);
+      irq_restore(flags);
       return false;
     }
 
@@ -87,7 +87,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
   delay->head = NULL;
 
   kasan_bypass(bypass);
-  up_irq_restore(flags);
+  irq_restore(flags);
 
   /* Test if the delayed is empty */
 

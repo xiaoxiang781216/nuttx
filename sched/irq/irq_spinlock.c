@@ -59,7 +59,7 @@
  *     with kernel APIs which suspend a caller thread. (e.g. nxsem_wait)
  *
  *   If SMP is not enabled:
- *     This function is equivalent to up_irq_save().
+ *     This function is equivalent to irq_save().
  *
  * Input Parameters:
  *   lock - Caller specific spinlock, not NULL.
@@ -73,7 +73,7 @@
 irqstate_t read_lock_irqsave(FAR rwlock_t *lock)
 {
   irqstate_t ret;
-  ret = up_irq_save();
+  ret = irq_save();
 
   read_lock(lock);
 
@@ -90,7 +90,7 @@ irqstate_t read_lock_irqsave(FAR rwlock_t *lock)
  *     read_lock_irqsave(lock).
  *
  *   If SMP is not enabled:
- *     This function is equivalent to up_irq_restore().
+ *     This function is equivalent to irq_restore().
  *
  * Input Parameters:
  *   lock - Caller specific spinlock, not NULL.
@@ -106,7 +106,7 @@ irqstate_t read_lock_irqsave(FAR rwlock_t *lock)
 void read_unlock_irqrestore(rwlock_t *lock, irqstate_t flags)
 {
   read_unlock(lock);
-  up_irq_restore(flags);
+  irq_restore(flags);
 }
 
 /****************************************************************************
@@ -123,7 +123,7 @@ void read_unlock_irqrestore(rwlock_t *lock, irqstate_t flags)
  *     with kernel APIs which suspend a caller thread. (e.g. nxsem_wait)
  *
  *   If SMP is not enabled:
- *     This function is equivalent to up_irq_save().
+ *     This function is equivalent to irq_save().
  *
  * Input Parameters:
  *   lock - Caller specific spinlock, not NULL.
@@ -137,7 +137,7 @@ void read_unlock_irqrestore(rwlock_t *lock, irqstate_t flags)
 irqstate_t write_lock_irqsave(rwlock_t *lock)
 {
   irqstate_t ret;
-  ret = up_irq_save();
+  ret = irq_save();
 
   write_lock(lock);
 
@@ -154,7 +154,7 @@ irqstate_t write_lock_irqsave(rwlock_t *lock)
  *     write_lock_irqsave(lock).
  *
  *   If SMP is not enabled:
- *     This function is equivalent to up_irq_restore().
+ *     This function is equivalent to irq_restore().
  *
  * Input Parameters:
  *   lock - Caller specific spinlock, not NULL.
@@ -171,7 +171,7 @@ void write_unlock_irqrestore(rwlock_t *lock, irqstate_t flags)
 {
   write_unlock(lock);
 
-  up_irq_restore(flags);
+  irq_restore(flags);
 }
 #endif /* CONFIG_RW_SPINLOCK */
 

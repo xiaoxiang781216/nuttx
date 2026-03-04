@@ -335,12 +335,12 @@ static inline void atomic_unlock(irqstate_t flags)
 #else
 static inline irqstate_t atomic_lock(void)
 {
-  return up_irq_save();
+  return irq_save();
 }
 
 static inline void atomic_unlock(irqstate_t flags)
 {
-  up_irq_restore(flags);
+  irq_restore(flags);
 }
 #endif
 

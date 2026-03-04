@@ -373,7 +373,7 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
   while ((magic = atomic_read_acquire(&dev->rl_header->rl_magic)) !=
          RAMLOG_MAGIC_READY)
     {
-      flags = up_irq_save();
+      flags = irq_save();
       while (magic != RAMLOG_MAGIC_INIT &&
              atomic_cmpxchg_relaxed(&dev->rl_header->rl_magic, &magic,
                                     RAMLOG_MAGIC_INIT))
@@ -387,7 +387,7 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
 #endif
         }
 
-        up_irq_restore(flags);
+        irq_restore(flags);
     }
 }
 

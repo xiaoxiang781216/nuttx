@@ -267,7 +267,7 @@ static inline_function FAR struct tcb_s *this_task(void)
    * the following operations.
    */
 
-  flags = up_irq_save();
+  flags = irq_save();
 
   /* Obtain the TCB which is current running on this CPU */
 
@@ -275,7 +275,7 @@ static inline_function FAR struct tcb_s *this_task(void)
 
   /* Enable local interrupts */
 
-  up_irq_restore(flags);
+  irq_restore(flags);
   return tcb;
 }
 #endif
