@@ -40,6 +40,14 @@ ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_NULL),)
 CSRCS += cpufreq.c
 endif
 
+ifeq ($(CONFIG_DEVFREQ_RPMSG),y)
+CSRCS += devfreq_rpmsg.c
+endif
+
+ifeq ($(CONFIG_DEVFREQ_RPMSG_SERVER),y)
+CSRCS += devfreq_rpmsg_server.c
+endif
+
 DEPPATH += --dep-path devfreq
 VPATH += devfreq
 

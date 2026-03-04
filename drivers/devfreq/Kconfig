@@ -118,6 +118,23 @@ config DEVFREQ_QLEARNING_ACTION_OFFSET
 
 endif
 
+config DEVFREQ_RPMSG
+	bool "devfreq rpmsg client"
+	default n
+	depends on RPMSG
+	---help---
+		Enable devfreq rpmsg client support. This allows a remote CPU
+		to add/update/remove QoS requests, get frequency, suspend and
+		resume devfreq devices on the server CPU via rpmsg.
+
+config DEVFREQ_RPMSG_SERVER
+	bool "devfreq rpmsg server"
+	default n
+	depends on RPMSG
+	---help---
+		Enable devfreq rpmsg server support. Run this on the CPU that
+		owns the actual devfreq hardware to serve remote QoS requests.
+
 choice
 	prompt "cpufreq default governor"
 	default CPUFREQ_DEFAULT_GOV_NULL

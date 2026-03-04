@@ -38,5 +38,13 @@ if(CONFIG_DEVFREQ)
     list(APPEND SRCS cpufreq.c)
   endif()
 
+  if(CONFIG_DEVFREQ_RPMSG)
+    list(APPEND SRCS devfreq_rpmsg.c)
+  endif()
+
+  if(CONFIG_DEVFREQ_RPMSG_SERVER)
+    list(APPEND SRCS devfreq_rpmsg_server.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
 endif()

@@ -29,6 +29,7 @@
 #include <nuttx/crypto/crypto.h>
 #include <nuttx/crypto/rpmsg_crypto.h>
 #include <nuttx/devfreq.h>
+#include <nuttx/devfreq/devfreq_rpmsg.h>
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/drivers/rpmsgdev.h>
 #include <nuttx/drivers/rpmsgblk.h>
@@ -148,6 +149,10 @@ void drivers_initialize(void)
 
 #if defined(CONFIG_DEVFREQ_PROCFS)
   devfreq_procfs_initialize();
+#endif
+
+#if defined(CONFIG_DEVFREQ_RPMSG_SERVER)
+  devfreq_rpmsg_server_init();
 #endif
 
 #if defined(CONFIG_DEV_NULL)
