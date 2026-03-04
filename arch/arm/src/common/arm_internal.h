@@ -496,6 +496,10 @@ int arm_dbgmonitor(int irq, void *context, void *arg);
 #  define arm_dbgmonitor(i, c, a)
 #endif
 
+#ifdef CONFIG_PERF_EVENTS
+int arm_pmu_initialize(void);
+#endif
+
 #undef EXTERN
 #ifdef __cplusplus
 }

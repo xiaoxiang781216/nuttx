@@ -142,3 +142,7 @@ if(NOT CONFIG_BUILD_FLAT AND CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
   target_sources(arch_interface PRIVATE arm_perf.c)
   target_include_directories(arch_interface PRIVATE ${NUTTX_CHIP_ABS_DIR})
 endif()
+
+if(CONFIG_ARM_PMUV2)
+  target_sources(arch PRIVATE arm_pmuv2.c)
+endif()

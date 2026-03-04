@@ -87,6 +87,10 @@ void up_initialize(void)
     }
 #endif
 
+#ifdef CONFIG_PERF_EVENTS
+  arm_pmu_initialize();
+#endif
+
   /* Initialize the serial device driver */
 
 #ifdef USE_SERIALDRIVER

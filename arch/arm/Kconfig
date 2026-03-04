@@ -912,6 +912,7 @@ config ARCH_ARMV7A
 	select ARCH_HAVE_PERF_EVENTS_USER_ACCESS if !SMP
 	select ARM_HAVE_WFE_SEV
 	select ARM_DECODEFIQ if ARCH_TRUSTZONE_SECURE || ARCH_HIPRI_INTERRUPT
+	select ARM_PMUV2 if PERF_EVENTS
 
 config ARCH_CORTEXA5
 	bool
@@ -959,6 +960,7 @@ config ARCH_ARMV7R
 	select ARCH_HAVE_CPUINFO
 	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_PERF_EVENTS_USER_ACCESS if !SMP
+	select ARM_PMUV2 if PERF_EVENTS
 
 config ARCH_CORTEXR4
 	bool
@@ -1812,6 +1814,10 @@ config ARM_MONITOR_STACK_SIZE
 if ARCH_ARM_A_R
 source "arch/arm/src/arm_a_r/Kconfig"
 endif
+
+config ARM_PMUV2
+	bool
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif
