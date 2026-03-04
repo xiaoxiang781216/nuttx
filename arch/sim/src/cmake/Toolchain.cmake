@@ -172,6 +172,7 @@ if(CONFIG_SIM_UBSAN)
 else()
   if(CONFIG_MM_UBSAN_ALL)
     add_compile_options(${CONFIG_MM_UBSAN_OPTION})
+    add_link_options(${CONFIG_MM_UBSAN_OPTION})
   endif()
 
   if(CONFIG_MM_UBSAN_TRAP_ON_ERROR)
