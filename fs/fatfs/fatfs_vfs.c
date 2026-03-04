@@ -1297,6 +1297,7 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
   return OK;
 
 errout_with_open:
+  f_unmount(path);
   nxmutex_destroy(&fs->lock);
   if (driver->u.i_bops->close)
     {
