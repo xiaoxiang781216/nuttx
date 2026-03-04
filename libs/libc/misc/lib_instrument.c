@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/atomic.h>
 #include <nuttx/instrument.h>
 
 /****************************************************************************
@@ -40,7 +41,7 @@
 
 /* Use static to avoid instrument bootstrap */
 
-static volatile uint32_t g_magic;
+static atomic_t g_magic;
 static sq_queue_t g_instrument_queue;
 
 /****************************************************************************
@@ -57,8 +58,14 @@ __cyg_profile_func_enter(FAR void *this_fn, FAR void *call_site)
   FAR struct instrument_s *instrument;
   FAR sq_entry_t *entry;
 
-  if (g_magic != MAIGC_NUMBMER)
+  /* Atomically increment g_magic and check the old value.
+   * If old value != MAGIC, either not initialized or already in a
+   * callback (recursion). Restore and return immediately.
+   */
+
+  if (atomic_add_relaxed(&g_magic, 1) != MAIGC_NUMBMER)
     {
+      atomic_sub_relaxed(&g_magic, 1);
       return;
     }
 
@@ -70,6 +77,8 @@ __cyg_profile_func_enter(FAR void *this_fn, FAR void *call_site)
           instrument->enter(this_fn, call_site, instrument->arg);
         }
     }
+
+  atomic_sub_relaxed(&g_magic, 1);
 }
 
 /****************************************************************************
@@ -82,8 +91,14 @@ __cyg_profile_func_exit(FAR void *this_fn, FAR void *call_site)
   FAR struct instrument_s *instrument;
   FAR sq_entry_t *entry;
 
-  if (g_magic != MAIGC_NUMBMER)
+  /* Atomically increment g_magic and check the old value.
+   * If old value != MAGIC, either not initialized or already in a
+   * callback (recursion). Restore and return immediately.
+   */
+
+  if (atomic_add_relaxed(&g_magic, 1) != MAIGC_NUMBMER)
     {
+      atomic_sub_relaxed(&g_magic, 1);
       return;
     }
 
@@ -95,6 +110,8 @@ __cyg_profile_func_exit(FAR void *this_fn, FAR void *call_site)
           instrument->leave(this_fn, call_site, instrument->arg);
         }
     }
+
+  atomic_sub_relaxed(&g_magic, 1);
 }
 
 /****************************************************************************
@@ -118,6 +135,6 @@ instrument_register(FAR struct instrument_s *entry)
   if (entry != NULL)
     {
       sq_addlast((FAR sq_entry_t *)entry, &g_instrument_queue);
-      g_magic = MAIGC_NUMBMER;
+      atomic_set(&g_magic, MAIGC_NUMBMER);
     }
 }
