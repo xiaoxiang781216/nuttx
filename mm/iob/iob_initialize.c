@@ -35,23 +35,13 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef IOB_SECTION
-#  define IOBPOOL_DEFINE(name, blksize, blkcnt) \
+#define IOBPOOL_DEFINE(name, blksize, blkcnt, ...) \
   MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, \
                                              (FAR void *)(uintptr_t)blksize, \
                                              IOB_ALIGN_SIZE(blksize), \
                                              blkcnt, 0, 0, \
                                              CONFIG_IOB_THROTTLE, \
-                                             IOB_ALIGNMENT, IOB_SECTION);
-#else
-#  define IOBPOOL_DEFINE(name, blksize, blkcnt) \
-  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, \
-                                             (FAR void *)(uintptr_t)blksize, \
-                                             IOB_ALIGN_SIZE(blksize), \
-                                             blkcnt, 0, 0, \
-                                             CONFIG_IOB_THROTTLE, \
-                                             IOB_ALIGNMENT);
-#endif
+                                             IOB_ALIGNMENT, ##__VA_ARGS__)
 
 /****************************************************************************
  * Private Data
@@ -59,12 +49,29 @@
 
 /* Static buffer for IOB mempool. */
 
+#ifdef IOB_SECTION
+IOBPOOL_DEFINE(g_iob1, CONFIG_IOB_BUFSIZE, CONFIG_IOB_NBUFFERS,
+               IOB_SECTION);
+#else
 IOBPOOL_DEFINE(g_iob1, CONFIG_IOB_BUFSIZE, CONFIG_IOB_NBUFFERS);
+#endif
+
 #if CONFIG_IOB_NPOOLS > 1
+#ifdef IOB_SECTION2
+IOBPOOL_DEFINE(g_iob2, CONFIG_IOB_BUFSIZE2, CONFIG_IOB_NBUFFERS2,
+               IOB_SECTION2);
+#else
 IOBPOOL_DEFINE(g_iob2, CONFIG_IOB_BUFSIZE2, CONFIG_IOB_NBUFFERS2);
 #endif
+#endif
+
 #if CONFIG_IOB_NPOOLS > 2
+#ifdef IOB_SECTION3
+IOBPOOL_DEFINE(g_iob3, CONFIG_IOB_BUFSIZE3, CONFIG_IOB_NBUFFERS3,
+               IOB_SECTION3);
+#else
 IOBPOOL_DEFINE(g_iob3, CONFIG_IOB_BUFSIZE3, CONFIG_IOB_NBUFFERS3);
+#endif
 #endif
 
 /****************************************************************************

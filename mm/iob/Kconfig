@@ -101,10 +101,31 @@ config IOB_ALIGNMENT
 		specified by this configuration.
 
 config IOB_SECTION
-	string "The section where iob buffer is located"
+	string "The section where iob buffer is located (Level 1)"
+	default ""
 	---help---
-		The section where iob buffer is located.
+		The section where iob buffer (Level 1) is located.
 		The section must be zero-initialized on system boot.
+		If IOB_SECTION2/IOB_SECTION3 are not set, this section
+		will be used for all IOB pools.
+
+config IOB_SECTION2
+	string "The section where iob buffer is located (Level 2)"
+	default IOB_SECTION
+	depends on IOB_NPOOLS > 1
+	---help---
+		The section where iob buffer (Level 2) is located.
+		The section must be zero-initialized on system boot.
+		If not set, IOB_SECTION will be used.
+
+config IOB_SECTION3
+	string "The section where iob buffer is located (Level 3)"
+	default IOB_SECTION2
+	depends on IOB_NPOOLS > 2
+	---help---
+		The section where iob buffer (Level 3) is located.
+		The section must be zero-initialized on system boot.
+		If not set, IOB_SECTION2 will be used.
 
 config IOB_THROTTLE
 	int "I/O buffer throttle value"
