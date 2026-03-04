@@ -104,7 +104,7 @@ void perf_setup(void)
  * perf_gettime
  ****************************************************************************/
 
-clock_t perf_gettime(void)
+clock_t noinstrument_function perf_gettime(void)
 {
   FAR struct perf_s *perf = &g_perf;
   irqstate_t flags = spin_lock_irqsave_notrace(&perf->lock);
@@ -137,7 +137,7 @@ void perf_setup(void)
 {
 }
 
-clock_t perf_gettime(void)
+clock_t noinstrument_function perf_gettime(void)
 {
   return up_perf_gettime();
 }
@@ -156,7 +156,7 @@ void perf_setup(void)
  * perf_gettime
  ****************************************************************************/
 
-clock_t perf_gettime(void)
+clock_t noinstrument_function perf_gettime(void)
 {
   return clock_systime_ticks();
 }

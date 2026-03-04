@@ -62,7 +62,7 @@ void up_perf_convert(clock_t elapsed, struct timespec *ts)
 }
 #endif
 
-clock_t up_perf_gettime(void)
+clock_t noinstrument_function up_perf_gettime(void)
 {
   return (clock_t)IfxCpu_getClockCounter();
 }
