@@ -198,8 +198,6 @@ bool nxsched_switch_running(int cpu, bool switch_equal)
 
           per_cpu_var_smp(g_assignedtasks, cpu) = btcb;
           up_update_task(btcb);
-          nxsched_suspend_scheduler(rtcb);
-          nxsched_resume_scheduler(btcb);
 
           btcb->cpu = cpu;
           btcb->task_state = TSTATE_TASK_RUNNING;

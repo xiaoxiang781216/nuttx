@@ -71,28 +71,39 @@ void nxsched_process_delivered(int cpu)
   priority = per_cpu_var_smp(g_delivertasks, cpu);
   per_cpu_var_smp(g_delivertasks, cpu) = SWITCH_NONE;
 
-  if (priority != SWITCH_NONE &&
-      !nxsched_switch_running(cpu, priority == SWITCH_EQUAL))
+  if (priority != SWITCH_NONE)
     {
-      /* Manage the (rare) case that task delivery to this CPU was not
-       * successful. This can happen in two cases:
-       * 1) The currently running task on this CPU just entered sched_lock
-       * 2) This CPU just picked a higher priority task to execute
-       *    before this SMP call was executed
-       * To avoid schedule latency/priority inversion, just check once more
-       * if there is another CPU eglible to run the delivered task, and
-       * pass it forward.
-       */
+      FAR struct tcb_s *prev = current_task(cpu);
 
-      FAR struct tcb_s *tcb = (FAR struct tcb_s *)dq_peek(list_readytorun());
-      if (tcb)
+      if (nxsched_switch_running(cpu, priority == SWITCH_EQUAL))
         {
-          int target_cpu = tcb->flags & TCB_FLAG_CPU_LOCKED ?
-            tcb->cpu : nxsched_select_cpu(tcb->affinity);
-          if (target_cpu != cpu &&
-              current_task(target_cpu)->sched_priority < tcb->sched_priority)
+          nxsched_suspend_scheduler(prev);
+          nxsched_resume_scheduler(current_task(cpu));
+        }
+      else
+        {
+          /* Manage the (rare) case that task delivery to this CPU was not
+           * successful. This can happen in two cases:
+           * 1 The currently running task on this CPU just entered sched_lock
+           * 2 This CPU just picked a higher priority task to execute
+           *    before this SMP call was executed
+           * To avoid schedule latency/priority inversion, just check once
+           * more if there is another CPU eglible to run the delivered task,
+           * and pass it forward.
+           */
+
+          FAR struct tcb_s *tcb =
+            (FAR struct tcb_s *)dq_peek(list_readytorun());
+          if (tcb)
             {
-              nxsched_deliver_task(cpu, target_cpu, priority);
+              int target_cpu = tcb->flags & TCB_FLAG_CPU_LOCKED ?
+                tcb->cpu : nxsched_select_cpu(tcb->affinity);
+              if (target_cpu != cpu &&
+                  current_task(target_cpu)->sched_priority <
+                  tcb->sched_priority)
+                {
+                  nxsched_deliver_task(cpu, target_cpu, priority);
+                }
             }
         }
     }
