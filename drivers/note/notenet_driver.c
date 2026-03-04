@@ -189,7 +189,7 @@ static void note_netdev_add(FAR struct note_driver_s *driver,
 
   if (!drv->pkt)
     {
-      spin_unlock_irqrestore(&drv->lock, flags);
+      spin_unlock_irqrestore_notrace(&drv->lock, flags);
       return;
     }
 
