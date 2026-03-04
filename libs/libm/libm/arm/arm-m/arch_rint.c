@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/armv8-m/arch_ceilf.c
+ * libs/libm/libm/arm/arm-m/arch_rint.c
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2011, 2012 ARM Ltd.
@@ -40,11 +40,11 @@
  * Public Functions
  ****************************************************************************/
 
-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-float ceilf(float x)
+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__)
+double rint(double x)
 {
-  float result;
-  asm volatile("vrintp.f32\t%0, %1" : "=t"(result) : "t"(x));
+  double result;
+  asm volatile ("vrintx.f64\t%P0, %P1" : "=w" (result) : "w" (x));
   return result;
 }
 #endif

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/armv8-m/arch_floorf.c
+ * libs/libm/libm/arm/arm-m/arch_truncf.c
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2011, 2012 ARM Ltd.
@@ -41,10 +41,10 @@
  ****************************************************************************/
 
 #if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-float floorf(float x)
+float truncf(float x)
 {
   float result;
-  asm volatile("vrintm.f32\t%0, %1" : "=t"(result) : "t"(x));
+  asm volatile ("vrintz.f32\t%0, %1" : "=t" (result) : "t" (x));
   return result;
 }
 #endif

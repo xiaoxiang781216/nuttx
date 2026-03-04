@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/armv8-m/arch_nearbyintf.c
+ * libs/libm/libm/arm/arm-m/arch_ceilf.c
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2011, 2012 ARM Ltd.
@@ -41,10 +41,10 @@
  ****************************************************************************/
 
 #if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-float nearbyintf(float x)
+float ceilf(float x)
 {
   float result;
-  asm volatile ("vrintr.f32\t%0, %1" : "=t" (result) : "t" (x));
+  asm volatile("vrintp.f32\t%0, %1" : "=t"(result) : "t"(x));
   return result;
 }
 #endif

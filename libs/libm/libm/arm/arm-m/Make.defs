@@ -1,5 +1,5 @@
 ############################################################################
-# libs/libm/libm/arm/armv8-m/Make.defs
+# libs/libm/libm/arm/arm-m/Make.defs
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -19,6 +19,14 @@
 # under the License.
 #
 ############################################################################
+
+ifeq ($(CONFIG_LIBM_ARCH_FABSF),y)
+CSRCS += arch_fabsf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_SQRTF),y)
+CSRCS += arch_sqrtf.c
+endif
 
 ifeq ($(CONFIG_LIBM_ARCH_CEIL),y)
 CSRCS += arch_ceil.c
@@ -68,5 +76,5 @@ ifeq ($(CONFIG_LIBM_ARCH_TRUNC),y)
 CSRCS += arch_trunc.c
 endif
 
-DEPPATH += --dep-path libm/arm/armv8-m
-VPATH += :libm/arm/armv8-m
+DEPPATH += --dep-path libm/arm/arm-m
+VPATH += :libm/arm/arm-m

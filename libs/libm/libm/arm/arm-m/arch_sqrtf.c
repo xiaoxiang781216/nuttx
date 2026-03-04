@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/armv7-m/arch_fabsf.c
+ * libs/libm/libm/arm/arm-m/arch_sqrtf.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -32,10 +32,10 @@
  ****************************************************************************/
 
 #if (__ARM_ARCH >= 7) && (__ARM_FP >= 4)
-float fabsf(float x)
+float sqrtf(float x)
 {
   float result;
-  asm volatile ("vabs.f32\t%0, %1" : "=t" (result) : "t" (x));
+  asm volatile ("vsqrt.f32\t%0, %1" : "=t" (result) : "t" (x));
   return result;
 }
 #endif

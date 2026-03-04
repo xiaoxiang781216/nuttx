@@ -20,10 +20,8 @@
 #
 ############################################################################
 
-ifeq ($(CONFIG_ARCH_ARMV7M),y)
-include $(TOPDIR)/libs/libm/libm/arm/armv7-m/Make.defs
-else ifeq ($(CONFIG_ARCH_ARMV8M),y)
-include $(TOPDIR)/libs/libm/libm/arm/armv8-m/Make.defs
+ifeq ($(CONFIG_ARM_M_LIBM),y)
+include $(TOPDIR)/libs/libm/libm/arm/arm-m/Make.defs
 endif
 
 DEPPATH += --dep-path libm/arm
