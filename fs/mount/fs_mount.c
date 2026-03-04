@@ -506,7 +506,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
 
   INODE_SET_MOUNTPT(mountpt_inode);
 #ifdef CONFIG_FS_PATHCACHE
-  if (data != NULL && strstr(data, "pathcache") != NULL)
+  if (mountflags & MS_PATHCACHE)
     {
       INODE_ENABLE_PATHCACHE(mountpt_inode);
     }

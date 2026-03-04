@@ -50,6 +50,7 @@
 #define MS_REMOUNT      O_RESERVE17 /* Alter flags of a mounted FS */
 #define MS_MANDLOCK     O_RESERVE19 /* Allow mandatory locks on an FS */
 #define MS_NOEXEC       O_RESERVE20 /* Disallow program execution */
+#define MS_PATHCACHE    O_RESERVE21 /* Enable path cache for this mount */
 
 /* Un-mount flags
  *

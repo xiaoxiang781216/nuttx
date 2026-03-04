@@ -64,6 +64,7 @@
 #define O_NOATIME    (1 << 18)       /* Don't update the file last access time */
 #define O_RESERVE19  (1 << 19)       /* reserved and used by mount flag : MS_MANDLOCK in mount.h */
 #define O_RESERVE20  (1 << 20)       /* reserved and used by mount flag : MS_NOEXEC in mount.h */
+#define O_RESERVE21  (1 << 21)       /* reserved and used by mount flag : MS_PATHCACHE in mount.h */
 
 /* Unsupported, but required open flags */
 
