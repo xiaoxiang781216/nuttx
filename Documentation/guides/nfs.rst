@@ -115,11 +115,13 @@ command line.
 
 .. code-block::
 
-  nfsmount <server-address> <mount-point> <remote-path> [udp]
+  nfsmount [-o <options>] <server-address> <mount-point> <remote-path>
 
 **Synopsis**. The ``nfsmount`` command mounts a network file system in
 the NuttX pseudo filesystem. The ``nfsmount`` will use NFSv3 UDP
-protocol to mount the remote file system.
+protocol to mount the remote file system. The ``-o`` flag accepts
+comma-separated options: ``udp`` to use UDP transport, ``pathcache``
+to enable path cache for the mount point.
 
 **Command Line Arguments**. The ``nfsmount`` takes three arguments:
 

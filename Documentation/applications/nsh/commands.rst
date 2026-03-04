@@ -1262,11 +1262,12 @@ system.
 
 **Command Syntax**::
 
-  nfsmount <server-address> <mount-point> <remote-path>
+  nfsmount [-o <options>] <server-address> <mount-point> <remote-path>
 
-**Synopsis**. Mount the remote NFS server directory<remote-path>
+**Synopsis**. Mount the remote NFS server directory <remote-path>
 at <mount-point> on the target machine. <server-address> is the IP
-address of the remote server.
+address of the remote server. The ``-o`` flag accepts comma-separated
+options such as ``udp`` and ``pathcache``.
 
 .. _cmdnslookup:
 
