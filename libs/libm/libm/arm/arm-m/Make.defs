@@ -28,6 +28,14 @@ ifeq ($(CONFIG_LIBM_ARCH_SQRTF),y)
 CSRCS += arch_sqrtf.c
 endif
 
+ifeq ($(CONFIG_LIBM_ARCH_FABS),y)
+CSRCS += arch_fabs.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_SQRT),y)
+CSRCS += arch_sqrt.c
+endif
+
 ifeq ($(CONFIG_LIBM_ARCH_CEIL),y)
 CSRCS += arch_ceil.c
 endif

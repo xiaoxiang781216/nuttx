@@ -74,7 +74,15 @@ config LIBM_ARCH_FABSF
 	bool
 	default n
 
+config LIBM_ARCH_FABS
+	bool
+	default n
+
 config LIBM_ARCH_SQRTF
+	bool
+	default n
+
+config LIBM_ARCH_SQRT
 	bool
 	default n
 

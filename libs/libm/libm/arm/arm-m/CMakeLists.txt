@@ -31,6 +31,14 @@ if(CONFIG_ARM_M_LIBM)
     list(APPEND SRCS arch_sqrtf.c)
   endif()
 
+  if(CONFIG_LIBM_ARCH_FABS)
+    list(APPEND SRCS arch_fabs.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_SQRT)
+    list(APPEND SRCS arch_sqrt.c)
+  endif()
+
   if(CONFIG_LIBM_ARCH_CEIL)
     list(APPEND SRCS arch_ceil.c)
   endif()
