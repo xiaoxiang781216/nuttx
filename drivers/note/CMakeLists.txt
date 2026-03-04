@@ -62,5 +62,15 @@ if(CONFIG_DRIVERS_NOTERPMSG)
   list(APPEND SRCS noterpmsg_driver.c)
 endif()
 
-target_sources(drivers PRIVATE ${SRCS})
+# Disable instrumentation for note driver to avoid infinite recursion.
+# sched_note_event_ip is called by __cyg_profile_func_enter/exit callbacks.
+if(CONFIG_ARCH_INSTRUMENT_ALL AND SRCS)
+  nuttx_add_aux_library(note_aux ${SRCS})
+  target_include_directories(note_aux PRIVATE ${NUTTX_DIR}/sched)
+  target_compile_options(note_aux PRIVATE -fno-instrument-functions)
+  target_link_libraries(drivers PRIVATE note_aux)
+else()
+  target_sources(drivers PRIVATE ${SRCS})
+endif()
+
 target_include_directories(drivers PRIVATE ${NUTTX_DIR}/sched)

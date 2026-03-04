@@ -22,45 +22,56 @@
 
 CFLAGS += ${INCDIR_PREFIX}${TOPDIR}/sched
 
+NOTE_CSRCS =
+
 ifeq ($(CONFIG_DRIVERS_NOTE),y)
-  CSRCS += note_driver.c
-  CSRCS += note_initialize.c
+  NOTE_CSRCS += note_driver.c
+  NOTE_CSRCS += note_initialize.c
 endif
 
 ifneq ($(CONFIG_DRIVERS_NOTEFILE)$(CONFIG_DRIVERS_NOTELOWEROUT),)
-  CSRCS += notestream_driver.c
+  NOTE_CSRCS += notestream_driver.c
 endif
 
 ifeq ($(CONFIG_DRIVERS_NOTERAM),y)
-  CSRCS += noteram_driver.c
+  NOTE_CSRCS += noteram_driver.c
 endif
 
 ifeq ($(CONFIG_DRIVERS_NOTELOG),y)
-  CSRCS += notelog_driver.c
+  NOTE_CSRCS += notelog_driver.c
 endif
 
 ifeq ($(CONFIG_DRIVERS_NOTECTL),y)
-  CSRCS += notectl_driver.c
+  NOTE_CSRCS += notectl_driver.c
 endif
 
 ifeq ($(CONFIG_DRIVERS_NOTESNAP),y)
-  CSRCS += notesnap_driver.c
+  NOTE_CSRCS += notesnap_driver.c
 endif
 
 ifeq ($(CONFIG_DRIVERS_NOTEITM),y)
-  CSRCS += noteitm_driver.c
+  NOTE_CSRCS += noteitm_driver.c
 endif
 
 ifeq ($(CONFIG_DRIVERS_NOTERPMSG_SERVER),y)
-  CSRCS += noterpmsg_server.c
+  NOTE_CSRCS += noterpmsg_server.c
 endif
 
 ifeq ($(CONFIG_DRIVERS_NOTERPMSG),y)
-  CSRCS += noterpmsg_driver.c
+  NOTE_CSRCS += noterpmsg_driver.c
 endif
+
+CSRCS += $(NOTE_CSRCS)
 
 ifneq ($(CONFIG_DRIVERS_NOTERAM_SECTION),"")
   CFLAGS += ${DEFINE_PREFIX}DRIVERS_NOTERAM_SECTION
+endif
+
+# Disable instrumentation for note driver to avoid infinite recursion.
+# sched_note_event_ip is called by __cyg_profile_func_enter/exit callbacks.
+
+ifeq ($(CONFIG_ARCH_INSTRUMENT_ALL),y)
+$(foreach src, $(NOTE_CSRCS), $(eval note/$(src)_CFLAGS += -fno-instrument-functions))
 endif
 
 DEPPATH += --dep-path note
