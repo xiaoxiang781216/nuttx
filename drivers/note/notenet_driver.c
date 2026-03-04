@@ -271,10 +271,9 @@ static int netdev_note_panic_callback(FAR struct notifier_block *nb,
 int notenet_init(FAR struct netdev_lowerhalf_s *dev)
 {
   FAR struct notenet_driver_s *note = &g_notenet;
+  FAR netpkt_t                *pkt;
   irqstate_t                   flags;
   int                          ret;
-
-  flags = spin_lock_irqsave_notrace(&note->lock);
 
   /* Initialize netpoll */
 
@@ -285,19 +284,21 @@ int notenet_init(FAR struct netdev_lowerhalf_s *dev)
                          CONFIG_DRIVERS_NOTENET_MAC);
   if (ret < 0)
     {
-      goto errout;
+      return ret;
     }
+
+  /* Allocate iob */
+
+  pkt = netpoll_udp_pkt_alloc(&note->np);
 
   /* Register panic notifier */
 
   note->nb.notifier_call = netdev_note_panic_callback;
   panic_notifier_chain_register(&note->nb);
 
-  /* Allocate iob */
-
-  note->pkt = netpoll_udp_pkt_alloc(&note->np);
-
-errout:
+  flags = spin_lock_irqsave_notrace(&note->lock);
+  note->pkt = pkt;
   spin_unlock_irqrestore_notrace(&note->lock, flags);
-  return ret;
+
+  return 0;
 }
