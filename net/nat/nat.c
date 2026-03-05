@@ -43,7 +43,7 @@
  * Private Data
  ****************************************************************************/
 
-static DEFINE_PER_CPU_BMP(mutex_t, g_nat_lock) = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(rmutex_t, g_nat_lock) = NXRMUTEX_INITIALIZER;
 #define g_nat_lock this_cpu_var_bmp(g_nat_lock)
 
 /****************************************************************************
@@ -423,7 +423,7 @@ uint32_t nat_expire_time(uint8_t protocol)
 
 void nat_lock(void)
 {
-  nxmutex_lock(&g_nat_lock);
+  nxrmutex_lock(&g_nat_lock);
 }
 
 /****************************************************************************
@@ -436,7 +436,7 @@ void nat_lock(void)
 
 void nat_unlock(void)
 {
-  nxmutex_unlock(&g_nat_lock);
+  nxrmutex_unlock(&g_nat_lock);
 }
 
 #endif /* CONFIG_NET_NAT */
