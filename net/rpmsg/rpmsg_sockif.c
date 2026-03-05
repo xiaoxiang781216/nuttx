@@ -46,6 +46,7 @@
 #include <netpacket/rpmsg.h>
 
 #include "socket/socket.h"
+#include "utils/utils.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -277,6 +278,7 @@ static FAR struct rpmsg_socket_conn_s *rpmsg_socket_alloc(void)
       return NULL;
     }
 
+  conn_init(&conn->sconn);
   nxmutex_init(&conn->polllock);
   nxmutex_init(&conn->sendlock);
   nxmutex_init(&conn->recvlock);
@@ -298,6 +300,7 @@ static void rpmsg_socket_free(FAR struct rpmsg_socket_conn_s *conn)
   nxmutex_destroy(&conn->sendlock);
   nxsem_destroy(&conn->sendsem);
   nxsem_destroy(&conn->recvsem);
+  conn_uninit(&conn->sconn);
 
   kmm_free(conn);
 }
