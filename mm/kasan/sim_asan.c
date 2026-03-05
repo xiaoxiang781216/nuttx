@@ -64,9 +64,10 @@ bool kasan_bypass(bool state)
   return false;
 }
 
-void kasan_register(FAR void *addr, FAR size_t *size)
+FAR void *kasan_register(FAR void *addr, FAR size_t *size)
 {
   kasan_poison(addr, *size);
+  return NULL;
 }
 
 void kasan_unregister(FAR void *addr, size_t size)

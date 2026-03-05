@@ -38,6 +38,7 @@
 #include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Private Functions
@@ -98,7 +99,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
       memset(mem, MM_FREE_MAGIC, size);
 #endif
       UNUSED(size);
-      kasan_poison(mem, size);
+      kasan_poison2(heap->mm_kasan, mem, size);
     }
 
   kasan_bypass(bypass);
@@ -142,7 +143,7 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
   memset(mem, MM_FREE_MAGIC, nodesize);
 #endif
-  kasan_poison(mem, nodesize);
+  kasan_poison2(heap->mm_kasan, mem, nodesize);
 
   /* Map the memory chunk into a free node */
 

@@ -38,6 +38,7 @@
 #include <nuttx/trace.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Private Functions
@@ -339,7 +340,8 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   if (ret)
     {
-      ret = kasan_unpoison(ret, nodesize - MM_ALLOCNODE_OVERHEAD);
+      ret = kasan_unpoison2(heap->mm_kasan, ret,
+                            nodesize - MM_ALLOCNODE_OVERHEAD);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(ret, MM_ALLOC_MAGIC, alignsize - MM_ALLOCNODE_OVERHEAD);
 #endif

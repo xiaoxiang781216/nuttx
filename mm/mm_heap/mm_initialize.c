@@ -36,6 +36,7 @@
 #include <nuttx/mm/kasan.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -169,7 +170,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 
   if (!heap->mm_nokasan)
     {
-      kasan_register((void *)heapbase, &heapsize);
+      KASAN_REGISTER(heap, idx, (FAR void *)heapbase, &heapsize);
     }
 
   heapend  = MM_ALIGN_DOWN((uintptr_t)heapbase + (uintptr_t)heapsize);

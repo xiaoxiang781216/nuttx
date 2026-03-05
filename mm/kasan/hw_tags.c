@@ -82,11 +82,12 @@ FAR void *kasan_unpoison(FAR const void *addr, size_t size)
   return kasan_poison_tag(addr, size, tag);
 }
 
-void kasan_register(FAR void *addr, FAR size_t *size)
+FAR void *kasan_register(FAR void *addr, FAR size_t *size)
 {
   uint8_t tag = up_memtag_get_random_tag(addr);
 
   kasan_poison_tag(addr, *size, tag);
+  return NULL;
 }
 
 void kasan_unregister(FAR void *addr, size_t size)

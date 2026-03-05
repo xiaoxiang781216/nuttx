@@ -30,6 +30,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "kasan/kasan.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -44,22 +46,10 @@
   (sizeof(struct kasan_region_s) + KASAN_SHADOW_SIZE(size))
 
 /****************************************************************************
- * Private Types
- ****************************************************************************/
-
-struct kasan_region_s
-{
-  uintptr_t begin;
-  uintptr_t end;
-  uint8_t   shadow[1];
-};
-
-/****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static FAR struct kasan_region_s *g_region[CONFIG_MM_KASAN_REGIONS];
-static int g_region_count;
+static FAR struct list_node g_region = LIST_INITIAL_VALUE(g_region);
 static spinlock_t g_lock;
 
 /****************************************************************************
@@ -78,25 +68,63 @@ static inline uint8_t kasan_random_tag(void)
 }
 
 static inline_function FAR uint8_t *
+kasan_region_shadow(FAR struct kasan_region_s *region,
+                    uintptr_t addr, size_t size)
+{
+  if (addr >= region->begin && addr < region->end)
+    {
+      DEBUGASSERT(addr + size <= region->end);
+      addr -= region->begin;
+      return &region->shadow[addr / KASAN_SHADOW_SCALE];
+    }
+
+  return NULL;
+}
+
+static inline_function FAR uint8_t *
 kasan_mem_to_shadow(FAR const void *ptr, size_t size)
 {
+  struct kasan_region_s *r;
+  FAR uint8_t *p = NULL;
+  uintptr_t addr;
+  irqstate_t flags;
+
+  addr =  (uintptr_t)kasan_clear_tag(ptr);
+
+  flags = spin_lock_irqsave_notrace(&g_lock);
+  list_for_every_entry(&g_region, r, struct kasan_region_s, node)
+    {
+      p = kasan_region_shadow(r, addr, size);
+      if (p)
+        {
+          break;
+        }
+    }
+
+  spin_unlock_irqrestore_notrace(&g_lock, flags);
+  return p;
+}
+
+static inline_function FAR uint8_t *
+kasan_mem_to_shadow2(FAR struct kasan_region_s *region[],
+                    FAR const void *ptr, size_t size)
+{
+  FAR uint8_t *p = NULL;
   uintptr_t addr;
   int i;
 
   addr = (uintptr_t)kasan_clear_tag(ptr);
 
-  for (i = 0; i < g_region_count; i++)
+  for (i = 0; i < CONFIG_MM_REGIONS && region[i]; i++)
     {
-      if (g_region[i] &&
-          addr >= g_region[i]->begin && addr < g_region[i]->end)
+      p = kasan_region_shadow(region[i], addr, size);
+      if (p)
         {
-          DEBUGASSERT(addr + size <= g_region[i]->end);
-          addr -= g_region[i]->begin;
-          return &g_region[i]->shadow[addr / KASAN_SHADOW_SCALE];
+          break;
         }
     }
 
-  return NULL;
+  return p;
 }
 
 static inline_function bool
@@ -132,17 +160,9 @@ kasan_is_poisoned(FAR const void *addr, size_t size)
   return false;
 }
 
-static void kasan_set_poison(FAR const void *addr,
-                             size_t size, uint8_t value)
+static void kasan_do_poison(FAR uint8_t *p, size_t size, uint8_t value)
 {
   irqstate_t flags;
-  FAR uint8_t *p;
-
-  p = kasan_mem_to_shadow(addr, size);
-  if (p == NULL)
-    {
-      return;
-    }
 
   size = KASAN_SHADOW_SIZE(size);
   flags = spin_lock_irqsave(&g_lock);
@@ -153,6 +173,31 @@ static void kasan_set_poison(FAR const void *addr,
     }
 
   spin_unlock_irqrestore(&g_lock, flags);
+}
+
+static void kasan_set_poison(FAR const void *addr,
+                             size_t size, uint8_t value)
+{
+  FAR uint8_t *p;
+
+  p = kasan_mem_to_shadow(addr, size);
+  if (p)
+    {
+      kasan_do_poison(p, size, value);
+    }
+}
+
+static void kasan_set_poison2(FAR struct kasan_region_s *region[],
+                              FAR const void *addr,
+                              size_t size, uint8_t value)
+{
+  FAR uint8_t *p;
+
+  p = kasan_mem_to_shadow2(region, addr, size);
+  if (p)
+    {
+      kasan_do_poison(p, size, value);
+    }
 }
 
 /****************************************************************************
@@ -168,6 +213,21 @@ FAR void *kasan_set_tag(FAR const void *addr, uint8_t tag)
 void kasan_poison(FAR const void *addr, size_t size)
 {
   kasan_set_poison(addr, size, 0xff);
+}
+
+void kasan_poison2(FAR struct kasan_region_s *region[],
+                   FAR const void *addr, size_t size)
+{
+  kasan_set_poison2(region, addr, size, 0xff);
+}
+
+FAR void *kasan_unpoison2(FAR struct kasan_region_s *region[],
+                          FAR const void *addr, size_t size)
+{
+  uint8_t tag = kasan_random_tag();
+
+  kasan_set_poison2(region, addr, size, tag);
+  return kasan_set_tag(addr, tag);
 }
 
 FAR void *kasan_clear_tag(FAR const void *addr)
@@ -194,24 +254,22 @@ FAR void *kasan_unpoison(FAR const void *addr, size_t size)
   return kasan_set_tag(addr, tag);
 }
 
-void kasan_register(FAR void *addr, FAR size_t *size)
+FAR void *kasan_register(FAR void *addr, FAR size_t *size)
 {
   FAR struct kasan_region_s *region;
   uintptr_t start = (uintptr_t)addr;
   uintptr_t end = start + *size;
-  irqstate_t flags;
-  size_t i;
+  irqstate_t flags = spin_lock_irqsave(&g_lock);
 
-  for (i = 0; i < g_region_count; i++)
+  list_for_every_entry(&g_region, region, struct kasan_region_s, node)
     {
-      if (g_region[i] &&
-          start >= g_region[i]->begin &&
-          end <= g_region[i]->end)
+      if (start >= region->begin && end <= region->end)
         {
           /* Already registered */
 
+          spin_unlock_irqrestore(&g_lock, flags);
           kasan_poison(addr, *size);
-          return;
+          return region;
         }
     }
 
@@ -221,31 +279,26 @@ void kasan_register(FAR void *addr, FAR size_t *size)
   region->begin = start;
   region->end   = region->begin + *size;
 
-  flags = spin_lock_irqsave(&g_lock);
-
-  DEBUGASSERT(g_region_count < CONFIG_MM_KASAN_REGIONS);
-  g_region[g_region_count++] = region;
-
+  list_add_tail(&g_region, &region->node);
   spin_unlock_irqrestore(&g_lock, flags);
 
   kasan_start();
   kasan_poison(addr, *size);
   *size -= KASAN_REGION_SIZE(*size);
+  return region;
 }
 
 void kasan_unregister(FAR void *addr, size_t size)
 {
+  struct kasan_region_s *region;
   irqstate_t flags;
-  size_t i;
 
   flags = spin_lock_irqsave(&g_lock);
-  for (i = 0; i < g_region_count; i++)
+  list_for_every_entry(&g_region, region, struct kasan_region_s, node)
     {
-      if (g_region[i]->begin == (uintptr_t)addr)
+      if (region->begin == (uintptr_t)addr)
         {
-          g_region_count--;
-          memmove(&g_region[i], &g_region[i + 1],
-                  (g_region_count - i) * sizeof(g_region[0]));
+          list_delete(&region->node);
           spin_unlock_irqrestore(&g_lock, flags);
           return;
         }

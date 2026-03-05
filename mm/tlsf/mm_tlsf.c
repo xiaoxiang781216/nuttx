@@ -49,6 +49,7 @@
 #include <nuttx/pgalloc.h>
 
 #include "tlsf/tlsf.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -107,6 +108,9 @@ struct mm_heap_s
 
   FAR void *mm_heapstart[CONFIG_MM_REGIONS];
   FAR void *mm_heapend[CONFIG_MM_REGIONS];
+#if defined(CONFIG_MM_KASAN_GENERIC) || defined(CONFIG_MM_KASAN_SW_TAGS)
+  FAR struct kasan_region_s *mm_kasan[CONFIG_MM_REGIONS];
+#endif
 
 #if CONFIG_MM_REGIONS > 1
   int mm_nregions;
@@ -376,7 +380,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
 #  ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(mem, MM_FREE_MAGIC, size);
 #  endif
-      kasan_poison(mem, size);
+      kasan_poison2(heap->mm_kasan, mem, size);
       UNUSED(size);
     }
 
@@ -422,7 +426,7 @@ static void forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
   memset(mem, MM_FREE_MAGIC, size);
 #endif
-  kasan_poison(mem, size);
+  kasan_poison2(heap->mm_kasan, mem, size);
 
   /* Update heap statistics */
 
@@ -670,7 +674,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 
   if (!heap->mm_nokasan)
     {
-      kasan_register(heapstart, &heapsize);
+      KASAN_REGISTER(heap, idx, heapstart, &heapsize);
     }
 
   DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
@@ -1544,7 +1548,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       memdump_backtrace(heap, buf);
 #endif
 
-      ret = kasan_unpoison(ret, nodesize);
+      ret = kasan_unpoison2(heap->mm_kasan, ret, nodesize);
 
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(ret, MM_ALLOC_MAGIC, nodesize);
@@ -1629,7 +1633,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
       memdump_backtrace(heap, buf);
 #endif
-      ret = kasan_unpoison(ret, nodesize);
+      ret = kasan_unpoison2(heap->mm_kasan, ret, nodesize);
     }
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0

@@ -271,6 +271,9 @@ struct mm_heap_s
 
   FAR struct mm_allocnode_s *mm_heapstart[CONFIG_MM_REGIONS];
   FAR struct mm_allocnode_s *mm_heapend[CONFIG_MM_REGIONS];
+#if defined(CONFIG_MM_KASAN_SW_TAGS) || defined(CONFIG_MM_KASAN_GENERIC)
+  FAR struct kasan_region_s *mm_kasan[CONFIG_MM_REGIONS];
+#endif
   size_t mm_regionsize[CONFIG_MM_REGIONS];
 
 #if CONFIG_MM_REGIONS > 1

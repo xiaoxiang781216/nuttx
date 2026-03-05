@@ -38,6 +38,7 @@
 #include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Public Functions
@@ -161,9 +162,10 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
         {
           heap->mm_curused += newsize - oldsize;
           mm_shrinkchunk(heap, oldnode, newsize);
-          kasan_poison((FAR char *)oldnode + MM_SIZEOF_NODE(oldnode) +
-                       sizeof(mmsize_t) - CONFIG_MM_NODE_GUARDSIZE,
-                       oldsize - MM_SIZEOF_NODE(oldnode));
+          kasan_poison2(heap->mm_kasan,
+                        (FAR char *)oldnode + MM_SIZEOF_NODE(oldnode) +
+                        sizeof(mmsize_t) - CONFIG_MM_NODE_GUARDSIZE,
+                        oldsize - MM_SIZEOF_NODE(oldnode));
         }
 
       /* Then return the original address */
@@ -405,8 +407,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       kasan_bypass(bypass);
       DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 
-      newmem = kasan_unpoison(newmem, size - MM_ALLOCNODE_OVERHEAD);
-
+      newmem = kasan_unpoison2(heap->mm_kasan, newmem,
+                               size - MM_ALLOCNODE_OVERHEAD);
       oldmem = kasan_set_tag(oldmem, kasan_get_tag(newmem));
       if (newmem != oldmem)
         {

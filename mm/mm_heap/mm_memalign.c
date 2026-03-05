@@ -34,6 +34,7 @@
 #include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Public Functions
@@ -140,8 +141,8 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
       return NULL;
     }
 
-  kasan_poison((FAR void *)rawchunk,
-               mm_malloc_size(heap, (FAR void *)rawchunk));
+  kasan_poison2(heap->mm_kasan, (FAR void *)rawchunk,
+                mm_malloc_size(heap, (FAR void *)rawchunk));
 
   rawchunk = (uintptr_t)kasan_clear_tag((FAR void *)rawchunk);
 
@@ -287,8 +288,9 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   kasan_bypass(bypass);
   DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 
-  alignedchunk = (uintptr_t)kasan_unpoison((FAR const void *)alignedchunk,
-                                           size - MM_ALLOCNODE_OVERHEAD);
+  alignedchunk = (uintptr_t)kasan_unpoison2(heap->mm_kasan,
+                                            (FAR const void *)alignedchunk,
+                                            size - MM_ALLOCNODE_OVERHEAD);
   DEBUGASSERT(alignedchunk % alignment == 0);
   minfo("Aligned %"PRIxPTR" to %"PRIxPTR", size %zu\n",
         rawchunk, alignedchunk, size);

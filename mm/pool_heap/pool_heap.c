@@ -62,6 +62,9 @@ struct mm_heap_s
   FAR void *mm_heapstart[CONFIG_MM_REGIONS];
   FAR void *mm_heapend[CONFIG_MM_REGIONS];
   FAR void *mm_heapnext[CONFIG_MM_REGIONS];
+#if defined(CONFIG_MM_KASAN_GENERIC) || defined(CONFIG_MM_KASAN_SW_TAGS)
+  FAR struct kasan_region_s *mm_kasan[CONFIG_MM_REGIONS];
+#endif
 
 #if CONFIG_MM_REGIONS > 1
   int mm_nregions;
@@ -195,7 +198,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 
   if (!heap->mm_nokasan)
     {
-      kasan_register(heapstart, &heapsize);
+      KASAN_REGISTER(heap, idx, heapstart, &heapsize);
     }
 
   DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
