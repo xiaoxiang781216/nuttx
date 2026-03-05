@@ -18,6 +18,19 @@
 #
 ############################################################################
 
+# Common ARM files
+
+include common/Make.defs
+
+# Toolchain configuration
+# NOTE: Toolchain.defs is included by board Make.defs, not here.
+# Including it here would cause common/Toolchain.defs to be processed
+# twice, appending --fixed-r10 to CFLAGS after the board has already
+# set CFLAGS :=, breaking PIC builds (e.g. lx_cpu) that use
+# -mpic-register=r10.
+
+VPATH += arm_m
+
 # Common ARM_M files
 
 CMN_ASRCS += arm_exception.S arm_saveusercontext.S

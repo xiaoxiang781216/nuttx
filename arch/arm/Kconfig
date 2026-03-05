@@ -1781,20 +1781,11 @@ config ARM_HAVE_EL2
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif
-if ARCH_ARMV6M
-source "arch/arm/src/armv6-m/Kconfig"
-endif
 if ARCH_ARMV7A
 source "arch/arm/src/armv7-a/Kconfig"
 endif
-if ARCH_ARMV7M
-source "arch/arm/src/armv7-m/Kconfig"
-endif
 if ARCH_ARMV7R
 source "arch/arm/src/armv7-r/Kconfig"
-endif
-if ARCH_ARMV8M
-source "arch/arm/src/armv8-m/Kconfig"
 endif
 if ARCH_ARMV8R
 source "arch/arm/src/armv8-r/Kconfig"

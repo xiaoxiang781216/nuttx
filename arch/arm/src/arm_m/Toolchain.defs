@@ -1,0 +1,380 @@
+############################################################################
+# arch/arm/src/arm_m/Toolchain.defs
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+############################################################################
+
+# Unified Cortex-M toolchain definitions for ARMv6-M, ARMv7-M, ARMv8-M
+
+############################################################################
+# ARMv6-M Toolchain
+############################################################################
+
+ifeq ($(CONFIG_ARCH_ARMV6M),y)
+
+LLVM_ARCHTYPE := thumbv6m
+LLVM_CPUTYPE  := cortex-m0
+
+ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+  TOOLCHAIN_MTUNE  := -cpu=cortexm0
+else
+  TOOLCHAIN_MTUNE  := -mcpu=cortex-m0 -mthumb
+endif
+
+# Clang Configuration files
+
+ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
+  LDFLAGS += --cpu=Cortex-M0
+endif
+
+############################################################################
+# ARMv7-M Toolchain
+############################################################################
+
+else ifeq ($(CONFIG_ARCH_ARMV7M),y)
+
+# LLVM
+
+ifeq ($(CONFIG_ARCH_CORTEXM3),y)
+  LLVM_ARCHTYPE := thumbv7m
+  LLVM_CPUTYPE  := cortex-m3
+else
+  LLVM_ARCHTYPE := thumbv7em
+  ifeq ($(CONFIG_ARCH_CORTEXM4),y)
+    LLVM_CPUTYPE := cortex-m4
+  else ifeq ($(CONFIG_ARCH_CORTEXM7),y)
+    LLVM_CPUTYPE := cortex-m7
+  endif
+endif
+
+# Parametrization for ARCHCPUFLAGS
+
+ifeq ($(CONFIG_ARCH_CORTEXM4),y)
+  TOOLCHAIN_ARM7EM   := y
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+    TOOLCHAIN_MTUNE  := -cpu=cortexm4
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      ifeq ($(CONFIG_ARCH_DPFPU),y)
+        TOOLCHAIN_MFLOAT := -fpu=vfpv4
+      else
+        TOOLCHAIN_MFLOAT := -fpu=vfpv4_d16
+      endif
+    endif
+  else
+    TOOLCHAIN_MTUNE    := -mtune=cortex-m4
+    TOOLCHAIN_MARCH    := -march=armv7e-m
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      TOOLCHAIN_MFLOAT := -mfpu=fpv4-sp-d16
+    endif
+  endif
+else ifeq ($(CONFIG_ARCH_CORTEXM7),y)
+  TOOLCHAIN_ARM7EM   := y
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+    TOOLCHAIN_MTUNE  := -cpu=cortexm7
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      ifeq ($(CONFIG_ARCH_DPFPU),y)
+        TOOLCHAIN_MFLOAT := -fpu=vfpv5
+      else
+        TOOLCHAIN_MFLOAT := -fpu=vfpv5_d16
+      endif
+    endif
+  else
+    TOOLCHAIN_MTUNE  := -mtune=cortex-m7
+    TOOLCHAIN_MARCH  := -march=armv7e-m
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      ifeq ($(CONFIG_ARCH_DPFPU),y)
+        TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16
+      else
+        TOOLCHAIN_MFLOAT := -mfpu=fpv5-sp-d16
+      endif
+    endif
+  endif
+else # ifeq ($(CONFIG_ARCH_CORTEXM3),y)
+  TOOLCHAIN_ARM7EM   := n
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+    TOOLCHAIN_MTUNE  := -cpu=cortexm3
+  else
+    TOOLCHAIN_MTUNE  := -mtune=cortex-m3
+    TOOLCHAIN_MARCH  := -march=armv7-m
+  endif
+endif
+
+# Clang Configuration files
+
+ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
+
+  ifeq ($(CONFIG_ARCH_CORTEXM4),y)
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      LDFLAGS += --cpu=Cortex-M4
+    else
+      LDFLAGS += --cpu=Cortex-M4.no_fp
+    endif
+  else ifeq ($(CONFIG_ARCH_CORTEXM7),y)
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      ifeq ($(CONFIG_ARCH_DPFPU),y)
+        LDFLAGS += --cpu=Cortex-M7
+      else
+        LDFLAGS += --cpu=Cortex-M7.fp.sp
+      endif
+    else
+      LDFLAGS += --cpu=Cortex-M7.no_fp
+    endif
+  else # ifeq ($(CONFIG_ARCH_CORTEXM3),y)
+    LDFLAGS += --cpu=Cortex-M3
+  endif
+
+else ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+  MKDEP = $(TOPDIR)$(DELIM)tools$(DELIM)mknulldeps.sh
+
+  undefine PREPROCESS
+  define PREPROCESS
+    $(ECHO_BEGIN)"CPP: $1->$2 "
+    $(Q) $(CPP) $(CPPFLAGS) $($(strip $1)_CPPFLAGS) -filetype.cpp $1 -o $2
+    $(ECHO_END)
+  endef
+
+  undefine ARCHIVE
+  define ARCHIVE
+    $(AR) $2 -archive -o $1
+  endef
+
+endif
+
+ifeq ($(CONFIG_ARMV7M_STACKCHECK),y)
+  ARCHOPTIMIZATION += -finstrument-functions -ffixed-r10
+endif
+
+############################################################################
+# ARMv8-M Toolchain
+############################################################################
+
+else ifeq ($(CONFIG_ARCH_ARMV8M),y)
+
+# Parametrization for ARCHCPUFLAGS
+
+ifeq ($(CONFIG_ARM_DSP),y)
+  EXTCPUFLAGS = +dsp
+endif
+
+ifeq ($(CONFIG_ARM_PACBTI),y)
+  EXTCPUFLAGS := $(EXTCPUFLAGS)+pacbti
+
+  # Protects branches using pointer authentication and Branch Target Identification.
+  #
+  # The default is -mbranch-protection=none.
+  #
+  # -mbranch-protection=standard:
+  #   Enables all types of branch protection to their standard values.
+  #   The standard protection is equivalent to -mbranch-protection=bti+pac-ret.
+  #
+  # -mbranch-protection=bti:
+  #   Enables branch protection using Branch Target Identification.
+  #
+  # -mbranch-protection=pac-ret:
+  #   Enables branch protection using pointer authentication using key A.
+  #
+  #   +leaf:
+  #   Enables pointer authentication on all leaf functions, including the leaf
+  #   functions that do not save the LR on the stack.
+  #
+  #   +b-key:
+  #   Enables pointer authentication with Key B, rather than Key A.
+
+  ARCHOPTIMIZATION += -mbranch-protection=standard
+endif
+
+ifeq ($(CONFIG_ARM_HAVE_MVE),y)
+  EXTCPUFLAGS := $(EXTCPUFLAGS)+mve.fp+fp.dp
+endif
+
+ifeq ($(CONFIG_ARCH_CORTEXM23),y)
+  LLVM_CPUTYPE       := cortex-m23
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+    TOOLCHAIN_MTUNE  := -cpu=cortexm23
+  else
+    TOOLCHAIN_MTUNE  := -mtune=cortex-m23
+    TOOLCHAIN_MARCH  := -march=armv8-m.main
+  endif
+else ifeq ($(CONFIG_ARCH_CORTEXM33),y)
+  LLVM_CPUTYPE       := cortex-m33
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+    TOOLCHAIN_MTUNE  := -cpu=cortexm33
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      TOOLCHAIN_MFLOAT := -fpu=fpv5_d16
+    endif
+  else
+    TOOLCHAIN_MTUNE  := -mtune=cortex-m33
+    TOOLCHAIN_MARCH  := -march=armv8-m.main$(EXTCPUFLAGS)
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      TOOLCHAIN_MFLOAT := -mfpu=fpv5-sp-d16
+    endif
+  endif
+else ifeq ($(CONFIG_ARCH_CORTEXM35P),y)
+  LLVM_CPUTYPE       := cortex-m35p
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+    TOOLCHAIN_MTUNE  := -cpu=cortexm35p
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      TOOLCHAIN_MFLOAT := -fpu=fpv5_d16
+    endif
+  else
+    TOOLCHAIN_MTUNE  := -mtune=cortex-m35p
+    TOOLCHAIN_MARCH  := -march=armv8-m.main$(EXTCPUFLAGS)
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      TOOLCHAIN_MFLOAT := -mfpu=fpv5-sp-d16
+    endif
+  endif
+else ifeq ($(CONFIG_ARCH_CORTEXM55),y)
+  LLVM_CPUTYPE       := cortex-m55
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+    TOOLCHAIN_MTUNE  := -cpu=cortexm55
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      TOOLCHAIN_MFLOAT := -fpu=fpv5
+    endif
+  else
+    TOOLCHAIN_MTUNE  := -mtune=cortex-m55
+    TOOLCHAIN_MARCH  := -march=armv8.1-m.main$(EXTCPUFLAGS)
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      ifeq ($(CONFIG_ARCH_TOOLCHAIN_GCC),y)
+        TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16
+      else ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+        TOOLCHAIN_MFLOAT := -mfpu=fp-armv8-fullfp16-d16
+      endif
+    endif
+  endif
+else ifeq ($(CONFIG_ARCH_CORTEXM85),y)
+  LLVM_CPUTYPE       := cortex-m85
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+    TOOLCHAIN_MTUNE  := -cpu=cortexm85
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      TOOLCHAIN_MFLOAT := -fpu=fpv5
+    endif
+  else
+    TOOLCHAIN_MTUNE  := -mtune=cortex-m85
+    TOOLCHAIN_MARCH  := -march=armv8.1-m.main$(EXTCPUFLAGS)
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      ifeq ($(CONFIG_ARCH_TOOLCHAIN_GCC),y)
+        TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16
+      else ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+        TOOLCHAIN_MFLOAT := -mfpu=fp-armv8-fullfp16-d16
+      endif
+    endif
+  endif
+endif
+
+LLVM_ARCHTYPE := thumbv8m.main$(EXTCPUFLAGS)
+
+# Clang Configuration files
+
+ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
+
+  ifeq ($(CONFIG_ARCH_CORTEXM23),y)
+    LDFLAGS += --cpu=Cortex-M23
+  else ifeq ($(CONFIG_ARCH_CORTEXM33),y)
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      LDFLAGS += --cpu=Cortex-M33
+    else
+      LDFLAGS += --cpu=Cortex-M33.no_fp
+    endif
+  else ifeq ($(CONFIG_ARCH_CORTEXM35P),y)
+    ifeq ($(CONFIG_ARCH_FPU),y)
+      LDFLAGS += --cpu=Cortex-M35P
+    else
+      LDFLAGS += --cpu=Cortex-M35P.no_fp
+    endif
+  else ifeq ($(CONFIG_ARCH_CORTEXM55),y)
+    ifeq ($(CONFIG_ARM_HAVE_MVE),y)
+      ifeq ($(CONFIG_ARCH_FPU),y)
+        LDFLAGS += --cpu=Cortex-M55
+      else
+        LDFLAGS += --cpu=Cortex-M55.no_fp
+      endif
+    else
+      ifeq ($(CONFIG_ARCH_FPU),y)
+        LDFLAGS += --cpu=Cortex-M55.no_mve
+      else
+        LDFLAGS += --cpu=Cortex-M55.no_mve.no_fp
+      endif
+    endif
+  else ifeq ($(CONFIG_ARCH_CORTEXM85),y)
+    ifeq ($(CONFIG_ARM_HAVE_MVE),y)
+      ifeq ($(CONFIG_ARCH_FPU),y)
+        LDFLAGS += --cpu=Cortex-M85
+      else
+        LDFLAGS += --cpu=Cortex-M85.no_fp
+      endif
+    else
+      ifeq ($(CONFIG_ARCH_FPU),y)
+        LDFLAGS += --cpu=Cortex-M85.no_mve
+      else
+        LDFLAGS += --cpu=Cortex-M85.no_mve.no_fp
+      endif
+    endif
+  endif
+
+endif
+
+ifeq ($(CONFIG_ARMV8M_STACKCHECK),y)
+  ARCHOPTIMIZATION += -finstrument-functions -ffixed-r10
+endif
+
+# ARMv8-M Security Extensions
+
+ifeq ($(CONFIG_ARMV8M_CMSE),y)
+  ARCHCPUFLAGS += -mcmse
+endif
+
+endif # CONFIG_ARCH_ARMV6M / CONFIG_ARCH_ARMV7M / CONFIG_ARCH_ARMV8M
+
+############################################################################
+# Common: LLVM ABI type
+############################################################################
+
+ifeq ($(CONFIG_ARCH_FPU),y)
+  LLVM_ABITYPE := eabihf
+else
+  LLVM_ABITYPE := eabi
+endif
+
+############################################################################
+# Common: Float ABI
+############################################################################
+
+ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+  ifeq ($(CONFIG_ARCH_FPU),y)
+    ifeq ($(CONFIG_ARM_FPU_ABI_SOFT),y)
+      TOOLCHAIN_MFLOAT += -fsoft
+    else ifeq ($(CONFIG_ARCH_DPFPU),y)
+      TOOLCHAIN_MFLOAT += -fhard
+    else
+      TOOLCHAIN_MFLOAT += -fsingle
+    endif
+  else
+    TOOLCHAIN_MFLOAT += -fsoft
+  endif
+else
+  ifeq ($(CONFIG_ARCH_FPU),y)
+    ifeq ($(CONFIG_ARM_FPU_ABI_SOFT),y)
+      TOOLCHAIN_MFLOAT += -mfloat-abi=softfp
+    else
+      TOOLCHAIN_MFLOAT += -mfloat-abi=hard
+    endif
+  else
+    TOOLCHAIN_MFLOAT += -mfloat-abi=soft
+  endif
+endif
+
+include $(TOPDIR)/arch/arm/src/common/Toolchain.defs
