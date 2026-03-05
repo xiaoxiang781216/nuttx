@@ -50,6 +50,12 @@ if(CONFIG_LIBC_NETDB)
     lib_proto.c
     lib_protor.c)
 
+  # Add async getaddrinfo (getaddrinfo_a) support
+
+  if(NOT CONFIG_DISABLE_PTHREAD)
+    list(APPEND SRCS lib_getaddrinfo_a.c)
+  endif()
+
   # Add host file support
 
   if(CONFIG_NETDB_HOSTFILE)
