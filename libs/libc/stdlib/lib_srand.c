@@ -166,7 +166,7 @@ static inline unsigned long fgenerate3(void)
 
   randint    = (RND3_CONSTK1 * info->ta_randint1 +
                 RND3_CONSTK2 * info->ta_randint2 +
-                RND3_CONSTK2 * info->ta_randint3) % RND3_CONSTP;
+                RND3_CONSTK3 * info->ta_randint3) % RND3_CONSTP;
 
   info->ta_randint3 = info->ta_randint2;
   info->ta_randint2 = info->ta_randint1;
