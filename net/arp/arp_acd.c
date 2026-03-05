@@ -135,6 +135,7 @@ static void arp_acd_try_announce(FAR void *net_dev)
 
   if (dev == NULL || dev->d_acd.state != ARP_ACD_STATE_ANNOUNCING)
     {
+      nwarn("WARNING: ACD announce skipped, dev=%p\n", dev);
       return;
     }
 
