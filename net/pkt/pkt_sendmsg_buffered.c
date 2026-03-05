@@ -341,19 +341,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
       ethhdr->type = addr->sll_protocol;
     }
 
-  ret = iob_tryadd_queue(iob, &conn->write_q);
-  if (ret < 0 && !nonblock)
-    {
-      conn_dev_unlock(&conn->sconn, dev);
-      ret = iob_add_queue(iob, &conn->write_q);
-      conn_dev_lock(&conn->sconn, dev);
-    }
-
-  if (ret < 0)
-    {
-      nerr("ERROR: Failed to add buffer to w_queue\n");
-      goto errout_with_iob;
-    }
+  iob_add_queue(iob, &conn->write_q);
 
   /* Allocate resource to receive a callback */
 

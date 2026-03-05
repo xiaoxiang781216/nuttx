@@ -279,18 +279,17 @@ static void ip_fragin_timerwork(FAR void *arg)
                 }
 #endif
 
-              if (iob_tryadd_queue(dev->d_iob, &dev->d_fragout) == 0)
-                {
-                  netdev_iob_clear(dev);
+              iob_add_queue(dev->d_iob, &dev->d_fragout);
 
-                  /* Send ICMP Time Exceeded message via dev->d_fragout
-                   * queue
-                   */
+              netdev_iob_clear(dev);
 
-                  ninfo("Send Time Exceeded ICMP%s Message to source "
-                        "host\n", node->frags->isipv4 ? "v4" : "v6");
-                  netdev_txnotify_dev(dev, IPFRAG_POLL);
-                }
+              /* Send ICMP Time Exceeded message via dev->d_fragout
+               * queue
+               */
+
+              ninfo("Send Time Exceeded ICMP%s Message to source "
+                    "host\n", node->frags->isipv4 ? "v4" : "v6");
+              netdev_txnotify_dev(dev, IPFRAG_POLL);
 
               netdev_unlock(dev);
             }
@@ -522,11 +521,7 @@ ip_fragout_allocfragbuf(FAR struct iob_queue_s *fragq)
   iob = iob_tryalloc(false);
   if (iob != NULL)
     {
-      if (iob_tryadd_queue(iob, fragq) < 0)
-        {
-          iob_free(iob);
-          iob = NULL;
-        }
+      iob_add_queue(iob, fragq);
     }
 
   return iob;
@@ -872,10 +867,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
       head->io_pktlen = mtu;
       iob->io_len     = nreside;
 
-      if (iob_tryadd_queue(head, fragq) < 0)
-        {
-          goto allocfail;
-        }
+      iob_add_queue(head, fragq);
 
       head = NULL;
       nfrags++;

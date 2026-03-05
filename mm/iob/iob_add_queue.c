@@ -42,7 +42,7 @@
  *
  ****************************************************************************/
 
-int iob_add_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq)
+void iob_add_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq)
 {
   FAR struct iob_s *last;
 
@@ -79,24 +79,6 @@ int iob_add_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq)
       IOB_FLAG_SET(iobq->qh_tail, iob, IOB_CHAIN_END);
       iobq->qh_tail = last;
     }
-
-  return 0;
-}
-
-/****************************************************************************
- * Name: iob_tryadd_queue
- *
- * Description:
- *   Add one I/O buffer chain to the end of a queue without waiting for
- *   resources to become free.
- *
- ****************************************************************************/
-
-int iob_tryadd_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq)
-{
-  /* No resource allocation needed, just call iob_add_queue */
-
-  return iob_add_queue(iob, iobq);
 }
 
 /****************************************************************************
@@ -107,8 +89,8 @@ int iob_tryadd_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq)
  *
  ****************************************************************************/
 
-int iob_concat_queue(FAR struct iob_queue_s *dest,
-                     FAR struct iob_queue_s *src)
+void iob_concat_queue(FAR struct iob_queue_s *dest,
+                      FAR struct iob_queue_s *src)
 {
   FAR struct iob_s *iob;
   FAR struct iob_s *tail;
@@ -138,6 +120,4 @@ int iob_concat_queue(FAR struct iob_queue_s *dest,
           dest->qh_tail = tail;
         }
     }
-
-  return 0;
 }

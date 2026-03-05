@@ -413,18 +413,7 @@ void iob_free_chain(FAR struct iob_s *iob);
  *
  ****************************************************************************/
 
-int iob_add_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq);
-
-/****************************************************************************
- * Name: iob_tryadd_queue
- *
- * Description:
- *   Add one I/O buffer chain to the end of a queue without waiting for
- *   resources to become free.
- *
- ****************************************************************************/
-
-int iob_tryadd_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq);
+void iob_add_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq);
 
 /****************************************************************************
  * Name: iob_concat_queue
@@ -434,8 +423,8 @@ int iob_tryadd_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq);
  *
  ****************************************************************************/
 
-int iob_concat_queue(FAR struct iob_queue_s *dest,
-                     FAR struct iob_queue_s *src);
+void iob_concat_queue(FAR struct iob_queue_s *dest,
+                      FAR struct iob_queue_s *src);
 
 /****************************************************************************
  * Name: iob_remove_queue

@@ -296,7 +296,7 @@ static inline void wlan_cache_txpkt_tail(struct wlan_priv_s *priv)
 {
   if (priv->dev.d_iob)
     {
-      iob_tryadd_queue(priv->dev.d_iob, &priv->txb);
+      iob_add_queue(priv->dev.d_iob, &priv->txb);
     }
 
   netdev_iob_clear(&priv->dev);
@@ -459,14 +459,8 @@ static int wlan_rx_done(struct wlan_priv_s *priv, void *buffer,
     }
 
   flags = spin_lock_irqsave(&priv->lock);
-  ret = iob_tryadd_queue(iob, &priv->rxb);
+  iob_add_queue(iob, &priv->rxb);
   spin_unlock_irqrestore(&priv->lock, flags);
-
-  if (ret < 0)
-    {
-      ret = -ENOBUFS;
-      goto out;
-    }
 
 out:
 

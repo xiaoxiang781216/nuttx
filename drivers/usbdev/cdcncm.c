@@ -725,13 +725,7 @@ static ssize_t cdcmbim_write(FAR struct file *filep, FAR const char *buffer,
       goto errout;
     }
 
-  ret = iob_tryadd_queue(iob, &self->tx_queue);
-  if (ret < 0)
-    {
-      iob_free_chain(iob);
-      uerr("CDCMBIM add tx queue failed: %d\n", ret);
-      goto errout;
-    }
+  iob_add_queue(iob, &self->tx_queue);
 
   uinfo("wrote %zd bytes\n", buflen);
   DEBUGASSERT(self->ncmdriver.notify == NCM_NOTIFY_RESPONSE_AVAILABLE);
@@ -986,12 +980,7 @@ static int cdcncm_packet_handler(FAR struct cdcncm_driver_s *self,
       return ret;
     }
 
-  ret = netpkt_tryadd_queue(pkt, &self->rx_queue);
-  if (ret != 0)
-    {
-      netpkt_free(&self->dev, pkt, NETPKT_RX);
-    }
-
+  netpkt_add_queue(pkt, &self->rx_queue);
   return ret;
 }
 
@@ -2782,13 +2771,7 @@ static int cdcncm_setup(FAR struct usbdevclass_driver_s *driver,
                   return ret;
                 }
 
-              ret = iob_tryadd_queue(iob, &mbim->rx_queue);
-              if (ret < 0)
-                {
-                  iob_free_chain(iob);
-                  uerr("CDCMBIM add rx queue failed: %d\n", ret);
-                  return ret;
-                }
+              iob_add_queue(iob, &mbim->rx_queue);
 
               nxsem_post(&mbim->read_sem);
               poll_notify(mbim->fds, CDC_MBIM_NPOLLWAITERS, POLLIN);

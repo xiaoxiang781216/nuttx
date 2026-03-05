@@ -602,7 +602,7 @@ int netpkt_to_iov(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt,
                   FAR struct iovec *iov, int iovcnt);
 
 /****************************************************************************
- * Name: netpkt_tryadd_queue
+ * Name: netpkt_add_queue
  *
  * Description:
  *   Add one net packet to the end of a queue without waiting for resources
@@ -612,12 +612,9 @@ int netpkt_to_iov(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt,
  *   pkt   - The packet to add
  *   queue - The queue to add the packet to
  *
- * Returned Value:
- *   0:Success; negated errno on failure
- *
  ****************************************************************************/
 
-#define netpkt_tryadd_queue(pkt, queue) iob_tryadd_queue(pkt, queue)
+#define netpkt_add_queue(pkt, queue) iob_add_queue(pkt, queue)
 
 /****************************************************************************
  * Name: netpkt_remove_queue

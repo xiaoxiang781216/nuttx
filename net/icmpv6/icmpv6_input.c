@@ -157,16 +157,8 @@ static uint16_t icmpv6_datahandler(FAR struct net_driver_s *dev,
    * without waiting).
    */
 
-  ret = iob_tryadd_queue(iob, &conn->readahead);
-  if (ret < 0)
-    {
-      nerr("ERROR: Failed to queue the I/O buffer chain: %d\n", ret);
-      iob_free_chain(iob);
-    }
-  else
-    {
-      ninfo("Buffered %d bytes\n", buflen);
-    }
+  iob_add_queue(iob, &conn->readahead);
+  ninfo("Buffered %d bytes\n", buflen);
 
   return buflen;
 }

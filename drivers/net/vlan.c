@@ -421,7 +421,6 @@ int vlan_dispatch(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt)
 {
   FAR struct vlan_device_s *vlan = (FAR struct vlan_device_s *)dev;
   irqstate_t flags;
-  int ret;
 
   /* Need to remove the 4 octet VLAN Tag, by moving src and dest addresses
    * 4 octets to the right, and then read the actual ethertype.
@@ -434,19 +433,10 @@ int vlan_dispatch(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt)
   /* Enqueue the packet to the VLAN device's RX queue */
 
   flags = spin_lock_irqsave(&vlan->rxlock);
-  ret = iob_tryadd_queue(pkt, &vlan->rxq);
+  iob_add_queue(pkt, &vlan->rxq);
   spin_unlock_irqrestore(&vlan->rxlock, flags);
 
-  if (ret < 0)
-    {
-      /* Failed to enqueue, drop the packet */
-
-      nerr("ERROR: VLAN RX queue full, dropping packet\n");
-      netpkt_free(dev, pkt, NETPKT_RX);
-      NETDEV_RXDROPPED(&dev->netdev);
-    }
-
-  return ret;
+  return 0;
 }
 
 #endif /* CONFIG_NET_VLAN */

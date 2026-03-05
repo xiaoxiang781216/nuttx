@@ -378,20 +378,7 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
   /* Add the write buffer to the write queue */
 
-  if (nonblock)
-    {
-      ret = iob_tryadd_queue(wb_iob, &conn->write_q);
-    }
-  else
-    {
-      ret = iob_add_queue(wb_iob, &conn->write_q);
-    }
-
-  if (ret < 0)
-    {
-      nerr("ERROR: Failed to add buffer to w_queue\n");
-      goto errout_with_wrb;
-    }
+  iob_add_queue(wb_iob, &conn->write_q);
 
   /* The new write buffer lies at the head of the write queue.
    * Set up for the next packet transfer.

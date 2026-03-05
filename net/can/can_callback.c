@@ -182,39 +182,29 @@ int can_datahandler(FAR struct net_driver_s *dev,
       nwarn("WARNNING: There are no free recive buffer to retain the data. "
             "Recive buffer number:%d, recived frames:%u \n",
             bufnum, iob_get_queue_entry_count(&conn->readahead));
+      netdev_iob_release(dev);
       goto errout;
     }
 #endif
 
   /* Concat the iob to readahead */
 
-  ret = iob_tryadd_queue(iob, &conn->readahead);
-  if (ret >= 0)
-    {
+  iob_add_queue(iob, &conn->readahead);
 #ifdef CONFIG_NET_CAN_NOTIFIER
-      /* Provide notification(s) that additional CAN read-ahead data is
-       * available.
-       */
+  /* Provide notification(s) that additional CAN read-ahead data is
+   * available.
+   */
 
-      can_readahead_signal(conn);
+  can_readahead_signal(conn);
 #endif
-      ret = iob->io_pktlen;
 
-      /* Device buffer has been enqueued, clear the handle */
+  ret = iob->io_pktlen;
 
-      netdev_iob_clear(dev);
-    }
-  else
-    {
-      nerr("ERROR: Failed to queue the I/O buffer chain: %d\n", ret);
-      goto errout;
-    }
+  /* Device buffer has been enqueued, clear the handle */
 
-  conn_unlock(&conn->sconn);
-  return ret;
+  netdev_iob_clear(dev);
 
 errout:
-  netdev_iob_release(dev);
   conn_unlock(&conn->sconn);
   return ret;
 }

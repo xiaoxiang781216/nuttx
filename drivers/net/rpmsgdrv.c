@@ -471,7 +471,6 @@ static int net_rpmsg_drv_transfer_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct netdev_lowerhalf_s *dev = &drv->dev;
   FAR netpkt_t *pkt;
   irqstate_t flags;
-  int ret;
 
   if (transfer->length > len - sizeof(*transfer))
     {
@@ -512,13 +511,8 @@ static int net_rpmsg_drv_transfer_handler(FAR struct rpmsg_endpoint *ept,
 #endif
 
   flags = spin_lock_irqsave(&drv->lock);
-  ret = netpkt_tryadd_queue(pkt, &drv->rxqueue);
+  netpkt_add_queue(pkt, &drv->rxqueue);
   spin_unlock_irqrestore(&drv->lock, flags);
-  if (ret < 0)
-    {
-      nerr("ERROR: Failed to add pkt to queue!\n");
-      goto free;
-    }
 
   netdev_lower_rxready(dev);
   return 0;

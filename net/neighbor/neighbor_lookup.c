@@ -278,19 +278,15 @@ int neighbor_queue_iob(FAR struct net_driver_s *dev,
           if (memcmp(&entry->ne_addr.u.na_ethernet, &g_zero_ethaddr,
                      sizeof(struct ether_addr)) == 0)
             {
-              if (iob_tryadd_queue(iob, &entry->ne_queue) == 0)
+              iob_add_queue(iob, &entry->ne_queue);
+              if (work_available(&entry->ne_work))
                 {
-                  if (work_available(&entry->ne_work))
-                    {
-                      work_queue(LPWORK, &entry->ne_work,
-                                 neighbor_unreach_work,
-                                 entry, NEIGHBOR_INPROGRESS_TICK);
-                    }
-
-                  return OK;
+                  work_queue(LPWORK, &entry->ne_work,
+                             neighbor_unreach_work,
+                             entry, NEIGHBOR_INPROGRESS_TICK);
                 }
 
-              return -ENOMEM;
+              return OK;
             }
         }
     }

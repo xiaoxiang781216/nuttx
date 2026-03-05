@@ -90,20 +90,11 @@ static uint16_t pkt_datahandler(FAR struct net_driver_s *dev,
    */
 
   conn_lock(&conn->sconn);
-  ret = iob_tryadd_queue(iob, iobq);
+  iob_add_queue(iob, iobq);
   conn_unlock(&conn->sconn);
 
-  if (ret < 0)
-    {
-      nerr("ERROR: Failed to queue the I/O buffer chain: %d\n", ret);
-      goto errout;
-    }
-  else
-    {
-      ninfo("Buffered %d bytes\n", dev->d_len);
-      return dev->d_len;
-    }
-
+  ninfo("Buffered %d bytes\n", dev->d_len);
+  return dev->d_len;
 errout:
   iob_free_chain(iob);
   return 0;

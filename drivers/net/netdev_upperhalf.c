@@ -420,17 +420,10 @@ static void netdev_upper_txavail_work(FAR struct netdev_upperhalf_s *upper)
 static void netdev_upper_queue_tx(FAR struct net_driver_s *dev)
 {
   FAR struct netdev_upperhalf_s *upper = dev->d_private;
-  int ret;
 
-  if ((ret = iob_tryadd_queue(dev->d_iob, &upper->txq)) >= 0)
-    {
-      netdev_iob_clear(dev);
-      netdev_upper_txavail(dev);
-    }
-  else
-    {
-      nwarn("WARNING: Failed to queue TX packet, dropping: %d\n", ret);
-    }
+  iob_add_queue(dev->d_iob, &upper->txq);
+  netdev_iob_clear(dev);
+  netdev_upper_txavail(dev);
 }
 #endif
 

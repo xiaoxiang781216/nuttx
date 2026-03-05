@@ -263,7 +263,7 @@ static int wlan_ioctl(struct net_driver_s *dev, int cmd,
 
 static inline void wlan_cache_txpkt_tail(struct wlan_priv_s *priv)
 {
-  iob_tryadd_queue(priv->dev.d_iob, &priv->txb);
+  iob_add_queue(priv->dev.d_iob, &priv->txb);
   netdev_iob_clear(&priv->dev);
 }
 
@@ -429,14 +429,8 @@ static int wlan_rx_done(struct wlan_priv_s *priv, void *buffer,
     }
 
   flags = enter_critical_section();
-  ret = iob_tryadd_queue(iob, &priv->rxb);
+  iob_add_queue(iob, &priv->rxb);
   leave_critical_section(flags);
-
-  if (ret < 0)
-    {
-      ret = -ENOBUFS;
-      goto out;
-    }
 
   if (eb != NULL)
     {

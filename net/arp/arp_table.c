@@ -695,18 +695,14 @@ int arp_queue_iob(FAR struct net_driver_s *dev, in_addr_t ipaddr,
   if (tabptr && memcmp(&tabptr->at_ethaddr, &g_zero_ethaddr,
                        sizeof(tabptr->at_ethaddr)) == 0)
     {
-      if (iob_tryadd_queue(iob, &tabptr->at_queue) == 0)
+      iob_add_queue(iob, &tabptr->at_queue);
+      if (work_available(&tabptr->at_work))
         {
-          if (work_available(&tabptr->at_work))
-            {
-              work_queue(LPWORK, &tabptr->at_work, arp_unreach_work,
-                         tabptr, ARP_INPROGRESS_TICK);
-            }
-
-          return OK;
+          work_queue(LPWORK, &tabptr->at_work, arp_unreach_work,
+                     tabptr, ARP_INPROGRESS_TICK);
         }
 
-      return -ENOMEM;
+      return OK;
     }
 
   return -ENOENT;
