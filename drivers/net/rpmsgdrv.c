@@ -240,6 +240,12 @@ static int net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
       netdev_restorelock(&dev->netdev, count);
     }
 
+  if (transfer == NULL)
+    {
+      nerr("ERROR: Failed to get TX buffer\n");
+      return -ENOMEM;
+    }
+
   if (len < sizeof(*transfer) + datalen)
     {
       nerr("ERROR: Buffer is too small for xmit\n");
