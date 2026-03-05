@@ -59,7 +59,7 @@ struct pressure_file_s
  ****************************************************************************/
 
 static dq_queue_t g_pressure_memory_queue;
-static spinlock_t g_pressure_lock;
+static spinlock_t g_pressure_lock = SP_UNLOCKED;
 static size_t g_remaining;
 static size_t g_largest;
 
