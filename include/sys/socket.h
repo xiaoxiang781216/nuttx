@@ -289,6 +289,9 @@
 #define SHUT_RDWR       3 /* Bits 0+1: Disables further send and receive
                            * operations
                            */
+#define SHUT_DEAD       4 /* Bit 2: Internal flag to distinguish close() from
+                           * shutdown()
+                           */
 
 /* The maximum backlog queue length */
 

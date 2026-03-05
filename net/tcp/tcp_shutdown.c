@@ -171,6 +171,11 @@ int tcp_shutdown(FAR struct socket *psock, int how)
   conn = psock->s_conn;
   DEBUGASSERT(conn != NULL);
 
+  /* Note: shutdown() performs a graceful close by sending FIN without
+   * closing the socket. This is different from close() which sets the
+   * SHUT_DEAD flag to indicate immediate connection termination.
+   */
+
   if (!(how & SHUT_RDWR))
     {
       return -EOPNOTSUPP;

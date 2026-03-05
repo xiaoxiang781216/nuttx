@@ -241,6 +241,10 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
 
   conn->crefs = 0;
 
+  /* Set SHUT_DEAD flag to distinguish close() from shutdown() */
+
+  conn->shutdown |= SHUT_DEAD;
+
   /* TCP_ESTABLISHED
    *   We need to initiate an active close and wait for its completion.
    *
