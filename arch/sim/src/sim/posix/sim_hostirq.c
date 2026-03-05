@@ -200,6 +200,27 @@ void up_disable_irq(int irq)
 
 void host_irqinitialize(void)
 {
+  struct sigaction act;
+
+  /* Modify ASan/sanitizer signal handlers to block NuttX IRQ signals.
+   * This prevents signal nesting issues where SIGALRM interrupts
+   * ASan's SIGSEGV/SIGBUS handlers, causing stack pointer corruption.
+   */
+
+  if (sigaction(SIGSEGV, NULL, &act) == 0 &&
+      act.sa_sigaction != NULL)
+    {
+      sigaddset(&act.sa_mask, SIGALRM);
+      sigaction(SIGSEGV, &act, NULL);
+    }
+
+  if (sigaction(SIGBUS, NULL, &act) == 0 &&
+      act.sa_sigaction != NULL)
+    {
+      sigaddset(&act.sa_mask, SIGALRM);
+      sigaction(SIGBUS, &act, NULL);
+    }
+
   /* Default ignore SIGPIPE */
 
   signal(SIGPIPE, SIG_IGN);
