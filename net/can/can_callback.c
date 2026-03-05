@@ -169,7 +169,7 @@ int can_datahandler(FAR struct net_driver_s *dev,
                          FAR struct can_conn_s *conn)
 {
   FAR struct iob_s *iob = dev->d_iob;
-  int ret = 0;
+  int ret;
 
   conn_lock(&conn->sconn);
 #if CONFIG_NET_RECV_BUFSIZE > 0
@@ -177,13 +177,14 @@ int can_datahandler(FAR struct net_driver_s *dev,
 
   /* Check the frame count pending on conn->readahead */
 
-  if (iob_get_queue_entry_count(&conn->readahead) >= bufnum)
+  ret = iob_get_queue_entry_count(&conn->readahead);
+  if (ret >= bufnum)
     {
       nwarn("WARNNING: There are no free recive buffer to retain the data. "
-            "Recive buffer number:%d, recived frames:%u \n",
-            bufnum, iob_get_queue_entry_count(&conn->readahead));
+            "Recive buffer number:%d, recived frames:%u \n", bufnum, ret);
       netdev_iob_release(dev);
-      goto errout;
+      conn_unlock(&conn->sconn);
+      return 0;
     }
 #endif
 
@@ -203,8 +204,6 @@ int can_datahandler(FAR struct net_driver_s *dev,
   /* Device buffer has been enqueued, clear the handle */
 
   netdev_iob_clear(dev);
-
-errout:
   conn_unlock(&conn->sconn);
   return ret;
 }

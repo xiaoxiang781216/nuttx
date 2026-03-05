@@ -114,17 +114,7 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
   else
     {
-      uint32_t write_q_len;
       FAR struct iob_s *iob;
-
-      /* Copy the packet data into the device packet buffer and send it */
-
-      write_q_len = iob_get_queue_entry_count(&conn->write_q);
-
-      if (write_q_len == 0)
-        {
-          return flags;
-        }
 
       /* Peek at the head of the write queue (but don't remove anything
        * from the write queue yet).  We know from the above test that
@@ -132,7 +122,10 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
        */
 
       iob = iob_remove_queue(&conn->write_q);
-      DEBUGASSERT(iob != NULL);
+      if (iob == NULL)
+        {
+          return flags;
+        }
 
       /* Then set-up to send that amount of data with the offset
        * corresponding to the size of the IP-dependent address structure.
@@ -151,7 +144,7 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       dev->d_len = dev->d_sndlen;
       ninfo("wrb=%p sndlen=%d\n", iob, dev->d_sndlen);
 
-      if (write_q_len > 1)
+      if (iob_peek_queue(&conn->write_q) != NULL)
         {
           /* Set up for the next packet transfer
            * next packet now at the header of the write buffer queue.

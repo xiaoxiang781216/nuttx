@@ -792,7 +792,7 @@ static int cdcmbim_poll(FAR struct file *filep, FAR struct pollfd *fds,
        * the POLLIN event if there is a buffered message.
        */
 
-      if (iob_get_queue_entry_count(&self->rx_queue))
+      if (iob_peek_queue(&self->rx_queue))
         {
           poll_notify(&fds, 1, POLLIN);
         }
