@@ -518,14 +518,14 @@ FAR void *mempool_tryallocate_throttled(FAR struct mempool_s *pool,
 
   mempool_try_init(pool);
 
-  flags = spin_lock_irqsave(&pool->lock);
+  flags = spin_lock_irqsave_notrace(&pool->lock);
 
   /* Check throttle limit */
 
   if (throttled && pool->throttle &&
       (pool->ntotal - pool->nalloc <= pool->throttle))
     {
-      spin_unlock_irqrestore(&pool->lock, flags);
+      spin_unlock_irqrestore_notrace(&pool->lock, flags);
       minfo("INFO: mempool_tryallocate: free:%zu throttle=%zu\n",
             pool->ntotal - pool->nalloc, pool->throttle);
       return NULL;
@@ -540,7 +540,7 @@ FAR void *mempool_tryallocate_throttled(FAR struct mempool_s *pool,
     {
       pool->nalloc++;
       kasan_bypass(bypass);
-      spin_unlock_irqrestore(&pool->lock, flags);
+      spin_unlock_irqrestore_notrace(&pool->lock, flags);
 
 #ifdef CONFIG_MM_RECORD
       record = mempool_get_record_from_block(blk);
@@ -556,7 +556,7 @@ FAR void *mempool_tryallocate_throttled(FAR struct mempool_s *pool,
   else
     {
       kasan_bypass(bypass);
-      spin_unlock_irqrestore(&pool->lock, flags);
+      spin_unlock_irqrestore_notrace(&pool->lock, flags);
     }
 
   return blk;
@@ -602,11 +602,11 @@ FAR void *mempool_allocate_throttled(FAR struct mempool_s *pool,
   do
     {
       retry = false;
-      flags = spin_lock_irqsave(&pool->lock);
+      flags = spin_lock_irqsave_notrace(&pool->lock);
       if (pool->throttle && throttled &&
           (pool->ntotal - pool->nalloc <= pool->throttle))
         {
-          spin_unlock_irqrestore(&pool->lock, flags);
+          spin_unlock_irqrestore_notrace(&pool->lock, flags);
           minfo("INFO: mempool_allocate: free:%zu throttle=%zu\n",
                 pool->ntotal - pool->nalloc, pool->throttle);
         }
@@ -623,12 +623,12 @@ FAR void *mempool_allocate_throttled(FAR struct mempool_s *pool,
                 {
                   merr("ERROR: mempool_allocate: maxalloc=%zu\n",
                        pool->maxalloc);
-                  spin_unlock_irqrestore(&pool->lock, flags);
+                  spin_unlock_irqrestore_notrace(&pool->lock, flags);
                   break;
                 }
 
               kasan_bypass(bypass);
-              spin_unlock_irqrestore(&pool->lock, flags);
+              spin_unlock_irqrestore_notrace(&pool->lock, flags);
               if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
                 {
                   size_t nexpand = (pool->expandsize -
@@ -641,7 +641,7 @@ FAR void *mempool_allocate_throttled(FAR struct mempool_s *pool,
                     {
                       kasan_poison(base, size);
 
-                      flags = spin_lock_irqsave(&pool->lock);
+                      flags = spin_lock_irqsave_notrace(&pool->lock);
                       bypass = kasan_bypass(true);
 
                       mempool_add_queue(pool, &pool->queue,
@@ -685,7 +685,7 @@ FAR void *mempool_allocate_throttled(FAR struct mempool_s *pool,
       mempool_record(pool, record, MEMPOOL_MAGIC_ALLOC);
 #endif
       kasan_bypass(bypass);
-      spin_unlock_irqrestore(&pool->lock, flags);
+      spin_unlock_irqrestore_notrace(&pool->lock, flags);
 
       blk = kasan_unpoison(blk, pool->blocksize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
@@ -764,7 +764,7 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
   mempool_record(pool, record, MEMPOOL_MAGIC_FREE);
 #endif
 
-  flags = spin_lock_irqsave(&pool->lock);
+  flags = spin_lock_irqsave_notrace(&pool->lock);
 
   pool->nalloc--;
 
@@ -776,7 +776,7 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 
   kasan_poison(blk, pool->blocksize);
   kasan_bypass(bypass);
-  spin_unlock_irqrestore(&pool->lock, flags);
+  spin_unlock_irqrestore_notrace(&pool->lock, flags);
   if (pool->wait && pool->expandsize == 0u)
     {
       int semcount = 0;
@@ -812,7 +812,7 @@ size_t mempool_navail_throttled(FAR struct mempool_s *pool, bool throttled)
   DEBUGASSERT(pool != NULL);
   mempool_try_init(pool);
 
-  flags = spin_lock_irqsave(&pool->lock);
+  flags = spin_lock_irqsave_notrace(&pool->lock);
   ret = pool->ntotal - pool->nalloc;
   if (throttled && pool->throttle)
     {
@@ -826,7 +826,7 @@ size_t mempool_navail_throttled(FAR struct mempool_s *pool, bool throttled)
         }
     }
 
-  spin_unlock_irqrestore(&pool->lock, flags);
+  spin_unlock_irqrestore_notrace(&pool->lock, flags);
   return ret;
 }
 
