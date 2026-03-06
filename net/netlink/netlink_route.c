@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <inttypes.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
@@ -666,6 +667,8 @@ static int netlink_get_devlist(NETLINK_HANDLE handle,
   ret = netdev_foreach(netlink_device_callback, &info);
   if (ret < 0)
     {
+      nerr("ERROR: Failed to enumerate network devices"
+           " for netlink: %d\n", ret);
       return ret;
     }
 
@@ -977,6 +980,7 @@ static int netlink_ipv4route_callback(FAR struct net_route_ipv4_s *route,
   resp = netlink_get_ipv4_route(route, RTM_NEWROUTE, info->req);
   if (resp == NULL)
     {
+      nerr("ERROR: Failed to allocate IPv4 route response\n");
       return -ENOENT;
     }
 
@@ -1096,6 +1100,7 @@ static int netlink_ipv6route_callback(FAR struct net_route_ipv6_s *route,
   resp = netlink_get_ipv6_route(route, RTM_NEWROUTE, info->req);
   if (resp == NULL)
     {
+      nerr("ERROR: Failed to allocate IPv6 route response\n");
       return -ENOENT;
     }
 
@@ -1161,11 +1166,15 @@ static int netlink_new_ipv4addr(NETLINK_HANDLE handle,
                     &extack);
   if (ret < 0)
     {
+      nerr("ERROR: Failed to parse netlink new IPv4 address attributes:"
+           " %d\n", ret);
       return ret;
     }
 
   if (ifm->ifa_prefixlen > 32 || !tb[IFA_LOCAL])
     {
+      nwarn("WARNING: Invalid IPv4 address attributes: "
+            "prefixlen=%d local=%p\n", ifm->ifa_prefixlen, tb[IFA_LOCAL]);
       return -EINVAL;
     }
 
@@ -1173,6 +1182,8 @@ static int netlink_new_ipv4addr(NETLINK_HANDLE handle,
 
   if (dev == NULL)
     {
+      nerr("ERROR: No device found for ifindex %" PRId32 "\n",
+           ifm->ifa_index);
       return -ENODEV;
     }
 
@@ -1210,11 +1221,15 @@ static int netlink_new_ipv6addr(NETLINK_HANDLE handle,
                     &extack);
   if (ret < 0)
     {
+      nerr("ERROR: Failed to parse netlink new IPv6 address attributes:"
+           " %d\n", ret);
       return ret;
     }
 
   if (ifm->ifa_prefixlen > 128 || !tb[IFA_LOCAL])
     {
+      nwarn("WARNING: Invalid IPv6 address attributes: "
+            "prefixlen=%d local=%p\n", ifm->ifa_prefixlen, tb[IFA_LOCAL]);
       return -EINVAL;
     }
 
@@ -1222,6 +1237,8 @@ static int netlink_new_ipv6addr(NETLINK_HANDLE handle,
 
   if (dev == NULL)
     {
+      nerr("ERROR: No device found for ifindex %" PRId32 " "
+           "(new IPv6 addr)\n", ifm->ifa_index);
       return -ENODEV;
     }
 
@@ -1261,6 +1278,8 @@ static int netlink_del_ipv4addr(NETLINK_HANDLE handle,
                     &extack);
   if (ret < 0)
     {
+      nerr("ERROR: Failed to parse netlink del IPv4 address attributes:"
+           " %d\n", ret);
       return ret;
     }
 
@@ -1268,12 +1287,15 @@ static int netlink_del_ipv4addr(NETLINK_HANDLE handle,
 
   if (dev == NULL)
     {
+      nerr("ERROR: No device found for ifindex %" PRId32 " "
+           "(del IPv4 addr)\n", ifm->ifa_index);
       return -ENODEV;
     }
 
   netdev_lock(dev);
   if (tb[IFA_LOCAL] && dev->d_ipaddr != nla_get_in_addr(tb[IFA_LOCAL]))
     {
+      nwarn("WARNING: IPv4 address mismatch on delete\n");
       netdev_unlock(dev);
       return -EADDRNOTAVAIL;
     }
@@ -1310,11 +1332,15 @@ static int netlink_del_ipv6addr(NETLINK_HANDLE handle,
                     &extack);
   if (ret < 0)
     {
+      nerr("ERROR: Failed to parse netlink del IPv6 address attributes:"
+           " %d\n", ret);
       return ret;
     }
 
   if (!tb[IFA_LOCAL] || ifm->ifa_prefixlen > 128)
     {
+      nwarn("WARNING: Invalid IPv6 del address attributes: "
+            "local=%p prefixlen=%d\n", tb[IFA_LOCAL], ifm->ifa_prefixlen);
       return -EINVAL;
     }
 
@@ -1322,12 +1348,15 @@ static int netlink_del_ipv6addr(NETLINK_HANDLE handle,
 
   if (dev == NULL)
     {
+      nerr("ERROR: No device found for ifindex %" PRId32 " "
+           "(del IPv6 addr)\n", ifm->ifa_index);
       return -ENODEV;
     }
 
   netdev_lock(dev);
   if (!NETDEV_IS_MY_V6ADDR(dev, nla_data(tb[IFA_LOCAL])))
     {
+      nwarn("WARNING: IPv6 address not found on device for delete\n");
       netdev_unlock(dev);
       return -EADDRNOTAVAIL;
     }
@@ -1418,6 +1447,8 @@ static int netlink_get_addr(NETLINK_HANDLE handle,
   ret = netdev_foreach(netlink_addr_callback, &info);
   if (ret < 0)
     {
+      nerr("ERROR: Failed to enumerate device addresses"
+           " for netlink: %d\n", ret);
       return ret;
     }
 
@@ -2058,6 +2089,7 @@ static int netlink_new_ipv4route(FAR const struct nlmsghdr *nlmsg)
 
   if (nlmsg->nlmsg_len < NLMSG_LENGTH(sizeof(struct rtmsg)))
     {
+      nwarn("WARNING: netlink_new_ipv4route: message too short\n");
       return -EINVAL;
     }
 
@@ -2149,6 +2181,8 @@ static int netlink_new_ipv4route(FAR const struct nlmsghdr *nlmsg)
       return OK;
     }
 
+  nwarn("WARNING: No device found for oif_index %d "
+        "(new IPv4 route)\n", oif_index);
   return -ENODEV;
 }
 #endif /* CONFIG_NET_IPv4 */
@@ -2176,6 +2210,7 @@ static int netlink_new_ipv6route(FAR const struct nlmsghdr *nlmsg)
 
   if (nlmsg->nlmsg_len < NLMSG_LENGTH(sizeof(struct rtmsg)))
     {
+      nwarn("WARNING: netlink_new_ipv6route: message too short\n");
       return -EINVAL;
     }
 
@@ -2266,6 +2301,8 @@ static int netlink_new_ipv6route(FAR const struct nlmsghdr *nlmsg)
       return OK;
     }
 
+  nwarn("WARNING: No device found for oif_index %d "
+        "(new IPv6 route)\n", oif_index);
   return -ENODEV;
 }
 #endif /* CONFIG_NET_IPv6 */
@@ -2512,6 +2549,8 @@ ssize_t netlink_route_sendto(NETLINK_HANDLE handle,
 #endif /* !CONFIG_NETLINK_DISABLE_DELROUTE */
 
       default:
+        nwarn("WARNING: Unsupported netlink route message type: %d\n",
+              nlmsg->nlmsg_type);
         ret = -ENOSYS;
         break;
     }

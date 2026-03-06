@@ -138,6 +138,7 @@ static int netlink_setup(FAR struct socket *psock)
 #endif
 
       default:
+        nwarn("WARNING: Unsupported netlink protocol: %d\n", proto);
         return -EPROTONOSUPPORT;
     }
 
@@ -170,6 +171,8 @@ static int netlink_setup(FAR struct socket *psock)
       return OK;
     }
 
+  nwarn("WARNING: Unsupported socket domain/type combination:"
+        " domain=%d type=%d\n", domain, type);
   return -EPROTONOSUPPORT;
 }
 
@@ -589,6 +592,7 @@ static ssize_t netlink_sendmsg(FAR struct socket *psock,
 
   if (msg->msg_iovlen != 1)
     {
+      nwarn("WARNING: sendmsg with multiple iovecs not supported\n");
       return -ENOTSUP;
     }
 
@@ -638,6 +642,8 @@ static ssize_t netlink_sendmsg(FAR struct socket *psock,
 #endif
 
       default:
+       nwarn("WARNING: Unsupported netlink protocol in sendmsg: %d\n",
+             psock->s_proto);
        ret = -EOPNOTSUPP;
        break;
     }
@@ -681,6 +687,7 @@ static ssize_t netlink_recvmsg(FAR struct socket *psock,
 
   if (msg->msg_iovlen != 1)
     {
+      nwarn("WARNING: recvmsg with multiple iovecs not supported\n");
       return -ENOTSUP;
     }
 

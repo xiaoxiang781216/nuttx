@@ -173,6 +173,10 @@ FAR struct netlink_conn_s *netlink_alloc(void)
 
       dq_addlast(&conn->sconn.s_node, &g_active_netlink_connections);
     }
+  else
+    {
+      nerr("ERROR: Failed to allocate netlink connection structure\n");
+    }
 
   netlink_unlock();
   return conn;
