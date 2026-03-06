@@ -30,6 +30,7 @@
 #include <string.h>
 #include <strings.h>
 
+#include <debug.h>
 #include <sys/param.h>
 
 #include <nuttx/kmalloc.h>
@@ -169,12 +170,15 @@ static int get_info(FAR struct ip6t_getinfo *get, FAR socklen_t *len)
 
   if (*len != sizeof(*get))
     {
+      nwarn("WARNING: ip6t get_info invalid length: %u (expected %zu)\n",
+            *len, sizeof(*get));
       return -EINVAL;
     }
 
   repl = ip6t_table_repl(get->name);
   if (repl == NULL)
     {
+      nwarn("WARNING: ip6t table '%s' not found\n", get->name);
       return -ENOENT;
     }
 
@@ -204,17 +208,22 @@ static int get_entries(FAR struct ip6t_get_entries *get, FAR socklen_t *len)
 
   if (*len < sizeof(*get) || *len != sizeof(*get) + get->size)
     {
+      nwarn("WARNING: ip6t get_entries invalid length: %u\n", *len);
       return -EINVAL;
     }
 
   repl = ip6t_table_repl(get->name);
   if (repl == NULL)
     {
+      nwarn("WARNING: ip6t table '%s' not found for get_entries\n",
+            get->name);
       return -ENOENT;
     }
 
   if (get->size != repl->size)
     {
+      nwarn("WARNING: ip6t get_entries size mismatch: "
+            "requested %u, actual %u\n", get->size, repl->size);
       return -EAGAIN;
     }
 
@@ -247,12 +256,16 @@ static int check_replace(FAR const struct ip6t_replace *repl)
       entry_count++;
       if (entry->next_offset == 0)
         {
+          nwarn("WARNING: ip6t entry %u has zero next_offset\n",
+                entry_count);
           return -EINVAL;
         }
     }
 
   if (entry_count != repl->num_entries)
     {
+      nwarn("WARNING: ip6t entry count mismatch: "
+            "found %u, expected %u\n", entry_count, repl->num_entries);
       return -EINVAL;
     }
 
@@ -281,12 +294,16 @@ static int replace_entries(FAR const struct ip6t_replace *repl,
 
   if (table == NULL || table->repl == NULL)
     {
+      nwarn("WARNING: ip6t replace_entries table '%s' not found\n",
+            repl->name);
       return -ENOENT;
     }
 
   if (len < sizeof(*repl) || len != sizeof(*repl) + repl->size ||
       repl->valid_hooks != table->repl->valid_hooks)
     {
+      nwarn("WARNING: ip6t replace_entries invalid params for table '%s'\n",
+            repl->name);
       return -EINVAL;
     }
 
@@ -301,6 +318,8 @@ static int replace_entries(FAR const struct ip6t_replace *repl,
   new_repl = kmm_malloc(sizeof(*new_repl) + repl->size);
   if (new_repl == NULL)
     {
+      nerr("ERROR: Failed to allocate ip6t replace for table '%s'\n",
+           repl->name);
       return -ENOMEM;
     }
 
@@ -312,6 +331,7 @@ static int replace_entries(FAR const struct ip6t_replace *repl,
 
   if (ret == OK)
     {
+      ninfo("ip6t table '%s' replaced successfully\n", repl->name);
       memcpy(new_repl, repl, sizeof(*repl) + repl->size);
       SWAP_PTR(table->repl, new_repl);
     }
@@ -369,6 +389,7 @@ FAR struct ip6t_replace *ip6t_alloc_table(FAR const char *table,
   repl = kmm_zalloc(sizeof(*repl) + entry_size);
   if (repl == NULL)
     {
+      nerr("ERROR: Failed to allocate ip6t table '%s'\n", table);
       return NULL;
     }
 

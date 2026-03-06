@@ -30,6 +30,7 @@
 #include <string.h>
 #include <strings.h>
 
+#include <debug.h>
 #include <sys/param.h>
 
 #include <nuttx/kmalloc.h>
@@ -170,12 +171,15 @@ static int get_info(FAR struct ipt_getinfo *get, FAR socklen_t *len)
 
   if (*len != sizeof(*get))
     {
+      nerr("ERROR: ipt get_info invalid length: %u (expected %zu)\n",
+            *len, sizeof(*get));
       return -EINVAL;
     }
 
   repl = ipt_table_repl(get->name);
   if (repl == NULL)
     {
+      nerr("ERROR: ipt table '%s' not found\n", get->name);
       return -ENOENT;
     }
 
@@ -205,17 +209,22 @@ static int get_entries(FAR struct ipt_get_entries *get, FAR socklen_t *len)
 
   if (*len < sizeof(*get) || *len != sizeof(*get) + get->size)
     {
+      nerr("ERROR: ipt get_entries invalid length: %u\n", *len);
       return -EINVAL;
     }
 
   repl = ipt_table_repl(get->name);
   if (repl == NULL)
     {
+      nerr("ERROR: ipt table '%s' not found for get_entries\n",
+            get->name);
       return -ENOENT;
     }
 
   if (get->size != repl->size)
     {
+      nerr("ERROR: ipt get_entries size mismatch: "
+           "requested %u, actual %u\n", get->size, repl->size);
       return -EAGAIN;
     }
 
@@ -248,12 +257,16 @@ static int check_replace(FAR const struct ipt_replace *repl)
       entry_count++;
       if (entry->next_offset == 0)
         {
+          nerr("ERROR: ipt entry %u has zero next_offset\n",
+                entry_count);
           return -EINVAL;
         }
     }
 
   if (entry_count != repl->num_entries)
     {
+      nerr("ERROR: ipt entry count mismatch: "
+           "found %u, expected %u\n", entry_count, repl->num_entries);
       return -EINVAL;
     }
 
@@ -281,12 +294,16 @@ static int replace_entries(FAR const struct ipt_replace *repl, socklen_t len)
 
   if (table == NULL || table->repl == NULL)
     {
+      nerr("ERROR: ipt replace_entries table '%s' not found\n",
+            repl->name);
       return -ENOENT;
     }
 
   if (len < sizeof(*repl) || len != sizeof(*repl) + repl->size ||
       repl->valid_hooks != table->repl->valid_hooks)
     {
+      nerr("ERROR: ipt replace_entries invalid params for table '%s'\n",
+            repl->name);
       return -EINVAL;
     }
 
@@ -301,6 +318,8 @@ static int replace_entries(FAR const struct ipt_replace *repl, socklen_t len)
   new_repl = kmm_malloc(sizeof(*new_repl) + repl->size);
   if (new_repl == NULL)
     {
+      nerr("ERROR: Failed to allocate ipt replace for table '%s'\n",
+           repl->name);
       return -ENOMEM;
     }
 
@@ -312,6 +331,7 @@ static int replace_entries(FAR const struct ipt_replace *repl, socklen_t len)
 
   if (ret == OK)
     {
+      ninfo("ipt table '%s' replaced successfully\n", repl->name);
       memcpy(new_repl, repl, sizeof(*repl) + repl->size);
       SWAP_PTR(table->repl, new_repl);
     }
@@ -369,6 +389,7 @@ FAR struct ipt_replace *ipt_alloc_table(FAR const char *table,
   repl = kmm_zalloc(sizeof(*repl) + entry_size);
   if (repl == NULL)
     {
+      nerr("ERROR: Failed to allocate ipt table '%s'\n", table);
       return NULL;
     }
 
