@@ -261,6 +261,11 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
           pkt_callback_free(dev, conn, state.snd_cb);
         }
+      else
+        {
+          nwarn("WARNING: pkt_sendmsg: "
+               "failed to allocate send callback\n");
+        }
     }
 
   nxsem_destroy(&state.snd_sem);

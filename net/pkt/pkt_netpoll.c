@@ -209,6 +209,9 @@ int pkt_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
     {
       if (++info >= &conn->pollinfo[CONFIG_NET_PKT_NPOLLWAITERS])
         {
+          nerr("ERROR: pkt_pollsetup: "
+               "no available poll info slots (max=%d)\n",
+               CONFIG_NET_PKT_NPOLLWAITERS);
           ret = -ENOMEM;
           goto errout_with_lock;
         }
@@ -219,6 +222,7 @@ int pkt_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
   cb = pkt_callback_alloc(dev, conn);
   if (cb == NULL)
     {
+      nerr("ERROR: pkt_pollsetup: failed to allocate callback\n");
       ret = -EBUSY;
       goto errout_with_lock;
     }

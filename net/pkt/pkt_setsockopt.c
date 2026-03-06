@@ -81,6 +81,7 @@ int pkt_setsockopt(FAR struct socket *psock, int level, int option,
 
   if (level != SOL_PACKET)
     {
+      nerr("ERROR: pkt_setsockopt: unsupported level %d\n", level);
       return -ENOPROTOOPT;
     }
 
@@ -101,6 +102,8 @@ int pkt_setsockopt(FAR struct socket *psock, int level, int option,
 
           if (value == NULL || value_len < sizeof(struct packet_mreq))
             {
+              nerr("ERROR: pkt_setsockopt: "
+                   "invalid membership request parameters\n");
               return -EINVAL;
             }
 
@@ -108,6 +111,9 @@ int pkt_setsockopt(FAR struct socket *psock, int level, int option,
           dev = netdev_findbyindex(mreq->mr_ifindex);
           if (dev == NULL)
             {
+              nerr("ERROR: pkt_setsockopt: "
+                   "no device found for ifindex %d\n",
+                   mreq->mr_ifindex);
               return -ENODEV;
             }
 

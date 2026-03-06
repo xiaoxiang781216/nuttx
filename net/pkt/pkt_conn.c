@@ -112,6 +112,10 @@ FAR struct pkt_conn_s *pkt_alloc(void)
 
       dq_addlast(&conn->sconn.s_node, &g_active_pkt_connections);
     }
+  else
+    {
+      nwarn("WARNING: Failed to allocate packet connection structure\n");
+    }
 
   pkt_conn_list_unlock();
   return conn;
@@ -265,15 +269,13 @@ int pkt_sendmsg_is_valid(FAR struct socket *psock,
 
   if (msg->msg_iovlen != 1)
     {
+      nwarn("WARNING: pkt_sendmsg_is_valid: "
+             "multiple iovecs not supported (iovlen=%d)\n",
+             (int)msg->msg_iovlen);
       return -ENOTSUP;
     }
 
   /* Verify that the sockfd corresponds to valid, allocated socket */
-
-  if (psock == NULL || psock->s_conn == NULL)
-    {
-      return -EBADF;
-    }
 
   if (psock->s_type == SOCK_DGRAM)
     {
@@ -281,6 +283,8 @@ int pkt_sendmsg_is_valid(FAR struct socket *psock,
           msg->msg_namelen < sizeof(struct sockaddr_ll) ||
           addr->sll_halen < ETHER_ADDR_LEN)
         {
+          nwarn("WARNING: pkt_sendmsg_is_valid: "
+                 "invalid SOCK_DGRAM address parameters\n");
           return -EINVAL;
         }
 
@@ -292,6 +296,8 @@ int pkt_sendmsg_is_valid(FAR struct socket *psock,
     {
       if (msg->msg_name != NULL)
         {
+          nwarn("WARNING: pkt_sendmsg_is_valid: "
+                 "SOCK_RAW does not support destination address\n");
           return -EAFNOSUPPORT;
         }
 
@@ -301,11 +307,15 @@ int pkt_sendmsg_is_valid(FAR struct socket *psock,
     }
   else
     {
+      nwarn("WARNING: pkt_sendmsg_is_valid: "
+            "unsupported socket type %d\n", psock->s_type);
       return -ENOTSUP;
     }
 
   if (*dev == NULL)
     {
+      nwarn("WARNING: pkt_sendmsg_is_valid: "
+           "no network device found for packet send\n");
       return -ENODEV;
     }
 

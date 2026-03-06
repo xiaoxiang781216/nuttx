@@ -168,6 +168,8 @@ static int pkt_setup(FAR struct socket *psock)
     }
   else
     {
+      nerr("ERROR: pkt_setup: unsupported socket type %d\n",
+            psock->s_type);
       return -EPROTONOSUPPORT;
     }
 }
@@ -245,7 +247,8 @@ static int pkt_bind(FAR struct socket *psock,
 
   if (addr->sa_family != AF_PACKET || addrlen < sizeof(struct sockaddr_ll))
     {
-      nerr("ERROR: Invalid address length: %d < %zu\n",
+      nerr("ERROR: Invalid address: family=%u (expected %u), "
+           "addrlen=%d (min %zu)\n", addr->sa_family, AF_PACKET, \
            addrlen, sizeof(struct sockaddr_ll));
       return -EBADF;
     }
@@ -267,6 +270,8 @@ static int pkt_bind(FAR struct socket *psock,
       dev = netdev_findbyindex(ifindex);
       if (dev == NULL)
         {
+          nerr("ERROR: pkt_bind: no device found for ifindex %d\n",
+               ifindex);
           return -EADDRNOTAVAIL;
         }
 
@@ -282,6 +287,8 @@ static int pkt_bind(FAR struct socket *psock,
     }
   else
     {
+      nerr("ERROR: pkt_bind: unsupported socket type %d\n",
+            psock->s_type);
       return -EBADF;
     }
 }
@@ -447,6 +454,8 @@ static int pkt_close(FAR struct socket *psock)
         }
 
       default:
+        nerr("ERROR: pkt_close: unsupported socket type %d\n",
+              psock->s_type);
         return -EBADF;
     }
 }

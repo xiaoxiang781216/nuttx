@@ -83,6 +83,7 @@ int pkt_getsockopt(FAR struct socket *psock, int level, int option,
 
   if (level != SOL_PACKET)
     {
+      nerr("ERROR: pkt_getsockopt: unsupported level %d\n", level);
       return -ENOPROTOOPT;
     }
 

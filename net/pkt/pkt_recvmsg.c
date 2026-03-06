@@ -516,11 +516,16 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   if (from != NULL && *fromlen < sizeof(struct sockaddr_ll))
     {
+      nerr("ERROR: pkt_recvmsg: 'from' buffer too small "
+           "(%d < %zu)\n", *fromlen, sizeof(struct sockaddr_ll));
       return -EINVAL;
     }
 
   if (msg->msg_iovlen != 1)
     {
+      nwarn("WARNING: pkt_recvmsg: "
+            "multiple iovecs not supported (iovlen=%d)\n",
+            (int)msg->msg_iovlen);
       return -ENOTSUP;
     }
 
@@ -535,6 +540,7 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   dev  = pkt_find_device(conn);
   if (dev == NULL)
     {
+      nerr("ERROR: pkt_recvmsg: no device found for connection\n");
       return -ENODEV;
     }
 
@@ -627,6 +633,7 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
         }
       else
         {
+          nerr("ERROR: pkt_recvmsg: failed to allocate callback\n");
           ret = -EBUSY;
         }
     }

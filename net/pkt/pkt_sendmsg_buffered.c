@@ -255,6 +255,8 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
                                    &conn->sconn, dev);
       if (ret < 0)
         {
+          nerr("ERROR: Packet send buffer wait interrupted"
+                " or timed out: %d\n", ret);
           goto errout_with_lock;
         }
     }
