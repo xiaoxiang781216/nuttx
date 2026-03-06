@@ -188,10 +188,8 @@ FAR static DEFINE_PER_CPU_BMP(note_drivers_t, g_note_drivers) =
 };
 #define g_note_drivers this_cpu_var_bmp(g_note_drivers)
 
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER)
 static DEFINE_PER_CPU_BSS_BMP(spinlock_t, g_note_lock);
-#  define g_note_lock this_cpu_var_bmp(g_note_lock)
-#endif
+#define g_note_lock this_cpu_var_bmp(g_note_lock)
 
 #if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
 static DEFINE_PER_CPU_BSS_BMP(clock_t, g_note_perf_offset);
@@ -244,6 +242,7 @@ static void note_drivers_initialize(void)
 
 static int note_driver_fs_register(FAR struct note_driver_s *driver)
 {
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   char devpath[32];
   int ret = 0;
 
@@ -257,6 +256,9 @@ static int note_driver_fs_register(FAR struct note_driver_s *driver)
     }
 
   return ret;
+#else
+  return 0;
+#endif
 }
 
 /****************************************************************************
@@ -269,10 +271,12 @@ static int note_driver_fs_register(FAR struct note_driver_s *driver)
 
 static void note_driver_fs_unregister(FAR struct note_driver_s *driver)
 {
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   char devpath[32];
 
   snprintf(devpath, sizeof(devpath), "/dev/note/%s", driver->name);
   unregister_driver(devpath);
+#endif
 }
 
 /****************************************************************************
