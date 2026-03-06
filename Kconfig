@@ -3030,6 +3030,10 @@ config DEBUG_LINK_MAP
 		and debugging magic section games, and for seeing which
 		pieces of code get eliminated with DEBUG_OPT_UNUSED_SECTIONS.
 
+config DEBUG_LINK_ORPHAN_WARN
+	bool "Warn on orphan section handling"
+	default n
+
 config CCACHE
 	bool "Use ccache"
 	default n
