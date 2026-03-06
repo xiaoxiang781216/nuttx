@@ -151,6 +151,8 @@ int icmp_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
 
   if (!conn || !fds)
     {
+      nwarn("WARNING: Invalid ICMP poll parameters conn=%p fds=%p\n",
+           conn, fds);
       return -EINVAL;
     }
 
@@ -165,6 +167,7 @@ int icmp_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
     {
       if (++info >= &conn->pollinfo[CONFIG_NET_ICMP_NPOLLWAITERS])
         {
+          nwarn("WARNING: No available ICMP poll info slots\n");
           ret = -ENOMEM;
           goto errout_with_lock;
         }
@@ -175,6 +178,7 @@ int icmp_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
   cb = icmp_callback_alloc(conn->dev, conn);
   if (cb == NULL)
     {
+      nwarn("WARNING: Failed to allocate ICMP poll callback\n");
       ret = -EBUSY;
       goto errout_with_lock;
     }

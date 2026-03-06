@@ -171,6 +171,7 @@ static uint16_t icmp_datahandler(FAR struct net_driver_s *dev,
                           0, iob, 0, true, false);
   if (ret < 0)
     {
+      nerr("ERROR: Failed to clone ICMP echo reply IOB: %d\n", ret);
       iob_free_chain(iob);
       return ret;
     }

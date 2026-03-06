@@ -111,6 +111,10 @@ FAR struct icmp_conn_s *icmp_alloc(void)
 
       dq_addlast(&conn->sconn.s_node, &g_active_icmp_connections);
     }
+  else
+    {
+      nerr("ERROR: Failed to allocate ICMP connection\n");
+    }
 
   icmp_conn_list_unlock();
 

@@ -299,6 +299,7 @@ ssize_t icmp_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   if (msg->msg_iovlen != 1)
     {
+      nwarn("WARNING: ICMP recvmsg only supports single iov\n");
       return -ENOTSUP;
     }
 
@@ -306,6 +307,7 @@ ssize_t icmp_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   if (len < ICMP_HDRLEN)
     {
+      nwarn("WARNING: ICMP receive buffer too small: %zu\n", len);
       return -EINVAL;
     }
 
@@ -317,6 +319,7 @@ ssize_t icmp_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
     {
       if (fromlen == NULL || *fromlen < sizeof(struct sockaddr_in))
         {
+          nwarn("WARNING: ICMP 'from' address buffer too small\n");
           return -EINVAL;
         }
     }
@@ -331,6 +334,7 @@ ssize_t icmp_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
       if (dev == NULL)
         {
+          nwarn("WARNING: ICMP no device bound to connection\n");
           ret = -EPROTO;
           goto errout;
         }
@@ -387,6 +391,10 @@ ssize_t icmp_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
             }
 
           icmp_callback_free(dev, conn, state.recv_cb);
+        }
+      else
+        {
+          nwarn("WARNING: Failed to allocate ICMP recv callback\n");
         }
 
       nxsem_destroy(&state.recv_sem);

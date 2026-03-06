@@ -150,6 +150,7 @@ void icmp_reply(FAR struct net_driver_s *dev, int type, int code)
 
       if (netdev_iob_prepare(dev, false, 0) != OK)
         {
+          nwarn("WARNING: Failed to prepare IOB for ICMP reply\n");
           dev->d_len = 0;
           dev->d_iob = iob;
           netdev_iob_release(dev);
@@ -161,6 +162,7 @@ void icmp_reply(FAR struct net_driver_s *dev, int type, int code)
       if (iob_trycopyin(dev->d_iob, (FAR void *)ipv4,
                         IPv4_HDRLEN, 0, false) != IPv4_HDRLEN)
         {
+          nwarn("WARNING: Failed to copy IPv4 header for ICMP reply\n");
           dev->d_len = 0;
           netdev_iob_release(dev);
           iob_free_chain(iob);

@@ -153,6 +153,8 @@ static int icmp_setup(FAR struct socket *psock)
     }
   else
     {
+      nwarn("WARNING: Unsupported ICMP socket type: %d proto: %d\n",
+           psock->s_type, psock->s_proto);
       return -EPROTONOSUPPORT;
     }
 }

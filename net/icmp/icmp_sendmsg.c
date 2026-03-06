@@ -283,6 +283,7 @@ ssize_t icmp_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
   if (msg->msg_iovlen != 1)
     {
+      nwarn("WARNING: ICMP sendmsg only supports single iov\n");
       return -ENOTSUP;
     }
 
@@ -294,6 +295,7 @@ ssize_t icmp_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
        * connection-oriented data transfer.
        */
 
+      nwarn("WARNING: Destination address required for ICMP sendmsg\n");
       return -EDESTADDRREQ;
     }
 
@@ -303,6 +305,8 @@ ssize_t icmp_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
   if (len < ICMP_HDRLEN || tolen < sizeof(struct sockaddr_in))
     {
+      nwarn("WARNING: Invalid ICMP message length %zu or "
+            "address length %d\n", len, tolen);
       return -EINVAL;
     }
 
