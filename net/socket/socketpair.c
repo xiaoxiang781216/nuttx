@@ -32,6 +32,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <debug.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
@@ -69,6 +70,7 @@ int psock_socketpair(int domain, int type, int protocol,
   ret = psock_socket(domain, type, protocol, psocks[0]);
   if (ret < 0)
     {
+      nwarn("WARNING: Failed to create first socket of pair: %d\n", ret);
       return ret;
     }
 
@@ -81,6 +83,7 @@ int psock_socketpair(int domain, int type, int protocol,
   ret = psock_socket(domain, type, protocol, psocks[1]);
   if (ret < 0)
     {
+      nwarn("WARNING: Failed to create second socket of pair: %d\n", ret);
       goto errsock;
     }
 
@@ -92,6 +95,7 @@ int psock_socketpair(int domain, int type, int protocol,
       return ret;
     }
 
+  nwarn("WARNING: Failed to establish socket pair connection: %d\n", ret);
   psock_close(psocks[1]);
 errsock:
   psock_close(psocks[0]);

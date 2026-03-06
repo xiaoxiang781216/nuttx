@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <debug.h>
 
 #include <nuttx/net/net.h>
 
@@ -65,6 +66,7 @@ int psock_mmap(FAR struct socket *psock, FAR struct mm_map_entry_s *map)
   DEBUGASSERT(psock->s_sockif != NULL);
   if (psock->s_sockif->si_mmap == NULL)
     {
+      nwarn("WARNING: si_mmap not supported for this socket type\n");
       return -EOPNOTSUPP;
     }
 

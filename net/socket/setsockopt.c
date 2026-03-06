@@ -407,6 +407,7 @@ int psock_setsockopt(FAR struct socket *psock, int level, int option,
 
   if (!value)
     {
+      nwarn("WARNING: NULL value pointer provided\n");
       return -EFAULT;
     }
 
@@ -414,6 +415,7 @@ int psock_setsockopt(FAR struct socket *psock, int level, int option,
 
   if (psock == NULL || psock->s_conn == NULL)
     {
+      nwarn("WARNING: Invalid socket or connection\n");
       return -EBADF;
     }
 

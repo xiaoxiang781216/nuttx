@@ -338,6 +338,7 @@ int psock_getsockopt(FAR struct socket *psock, int level, int option,
 
   if (value == NULL || value_len == NULL || *value_len == 0)
     {
+      nwarn("WARNING: Invalid value or value_len argument\n");
       return -EINVAL;
     }
 
@@ -345,6 +346,7 @@ int psock_getsockopt(FAR struct socket *psock, int level, int option,
 
   if (psock == NULL || psock->s_conn == NULL)
     {
+      nwarn("WARNING: Invalid socket or connection\n");
       return -EBADF;
     }
 

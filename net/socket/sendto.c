@@ -117,6 +117,7 @@ ssize_t psock_sendto(FAR struct socket *psock, FAR const void *buf,
 
   if (tolen != 0 && to == NULL)
     {
+      nwarn("WARNING: Non-zero tolen with NULL destination address\n");
       return -EINVAL;
     }
 
@@ -221,6 +222,8 @@ ssize_t sendto(int sockfd, FAR const void *buf, size_t len, int flags,
     {
       /* Out of memory */
 
+      nwarn("WARNING: Failed to allocate kernel send buffer (size: %u)\n",
+           (unsigned int)len);
       ret = -ENOMEM;
       goto errout_with_cancelpt;
     }

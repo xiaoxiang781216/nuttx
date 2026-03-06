@@ -78,7 +78,7 @@ int psock_listen(FAR struct socket *psock, int backlog)
 
   if (psock == NULL || psock->s_conn == NULL)
     {
-      nerr("ERROR: Invalid or unconnected socket\n");
+      nwarn("WARNING: Invalid or unconnected socket\n");
       return -EINVAL;
     }
 
@@ -87,6 +87,7 @@ int psock_listen(FAR struct socket *psock, int backlog)
   DEBUGASSERT(psock->s_sockif != NULL);
   if (psock->s_sockif->si_listen == NULL)
     {
+      nwarn("WARNING: si_listen not supported for this socket type\n");
       return -EOPNOTSUPP;
     }
 

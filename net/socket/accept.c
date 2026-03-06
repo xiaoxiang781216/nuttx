@@ -126,7 +126,7 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
 
   if (psock == NULL || psock->s_conn == NULL)
     {
-      nerr("ERROR: Socket invalid or not opened\n");
+      nwarn("WARNING: Socket invalid or not opened\n");
       return -EINVAL;
     }
 
@@ -135,7 +135,7 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
   conn = psock->s_conn;
   if (!_SS_ISLISTENING(conn->s_flags))
     {
-      nerr("ERROR: Socket is not listening for a connection.\n");
+      nwarn("WARNING: Socket is not listening for a connection.\n");
       return -EINVAL;
     }
 
@@ -144,6 +144,7 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
   DEBUGASSERT(psock->s_sockif != NULL);
   if (psock->s_sockif->si_accept == NULL)
     {
+      nwarn("WARNING: si_accept not supported for this socket type\n");
       return -EOPNOTSUPP;
     }
 
@@ -162,7 +163,7 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
     }
   else
     {
-      nerr("ERROR: si_accept failed: %d\n", ret);
+      nwarn("WARNING: si_accept failed: %d\n", ret);
     }
 
   return ret;

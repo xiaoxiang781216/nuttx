@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <debug.h>
 
 #include <nuttx/net/net.h>
 
@@ -64,6 +65,7 @@ int psock_poll(FAR struct socket *psock, FAR struct pollfd *fds, bool setup)
   DEBUGASSERT(psock->s_sockif != NULL);
   if (psock->s_sockif->si_poll == NULL)
     {
+      nwarn("WARNING: si_poll not supported\n");
       return -EOPNOTSUPP;
     }
 

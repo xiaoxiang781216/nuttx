@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <debug.h>
 
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
@@ -81,11 +82,13 @@ ssize_t psock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   if (msg == NULL || msg->msg_iov == NULL || msg->msg_iov->iov_base == NULL)
     {
+      nwarn("WARNING: Invalid message structure or iov pointer\n");
       return -EINVAL;
     }
 
   if (msg->msg_name != NULL && msg->msg_namelen <= 0)
     {
+      nwarn("WARNING: Invalid msg_name length: %d\n", msg->msg_namelen);
       return -EINVAL;
     }
 
@@ -93,6 +96,7 @@ ssize_t psock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   if (psock == NULL || psock->s_conn == NULL)
     {
+      nwarn("WARNING: Invalid socket or connection\n");
       return -EBADF;
     }
 

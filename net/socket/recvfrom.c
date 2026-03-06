@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <debug.h>
 
 #include <nuttx/cancelpt.h>
 #include <nuttx/kmalloc.h>
@@ -177,6 +178,8 @@ ssize_t recvfrom(int sockfd, FAR void *buf, size_t len, int flags,
     {
       /* Out of memory */
 
+      nwarn("WARNING: Failed to allocate kernel receive buffer (size: %u)\n",
+           (unsigned int)len);
       ret = -ENOMEM;
       goto errout_with_cancelpt;
     }

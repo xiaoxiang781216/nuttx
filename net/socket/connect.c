@@ -127,6 +127,7 @@ int psock_connect(FAR struct socket *psock, FAR const struct sockaddr *addr,
 
   if (psock == NULL || psock->s_conn == NULL)
     {
+      nwarn("WARNING: Invalid socket or connection\n");
       return -EBADF;
     }
 
@@ -134,6 +135,7 @@ int psock_connect(FAR struct socket *psock, FAR const struct sockaddr *addr,
 
   if (addr == NULL)
     {
+      nwarn("WARNING: NULL address provided\n");
       return -EFAULT;
     }
 
@@ -142,6 +144,7 @@ int psock_connect(FAR struct socket *psock, FAR const struct sockaddr *addr,
   DEBUGASSERT(psock->s_sockif != NULL);
   if (psock->s_sockif->si_connect == NULL)
     {
+      nwarn("WARNING: si_connect not supported\n");
       return -EOPNOTSUPP;
     }
 

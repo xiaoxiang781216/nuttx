@@ -70,6 +70,7 @@ int psock_close(FAR struct socket *psock)
 
   if (psock == NULL)
     {
+      nwarn("WARNING: Invalid socket\n");
       return -EBADF;
     }
 

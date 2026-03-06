@@ -28,6 +28,7 @@
 
 #include <errno.h>
 #include <sys/socket.h>
+#include <debug.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
@@ -76,6 +77,7 @@ int psock_shutdown(FAR struct socket *psock, int how)
 
   if (psock == NULL || psock->s_conn == NULL)
     {
+      nwarn("WARNING: Invalid socket or connection\n");
       return -EBADF;
     }
 
@@ -86,6 +88,7 @@ int psock_shutdown(FAR struct socket *psock, int how)
       return psock->s_sockif->si_shutdown(psock, how);
     }
 
+  nwarn("WARNING: si_shutdown not supported\n");
   return -EOPNOTSUPP;
 }
 

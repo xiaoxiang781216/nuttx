@@ -32,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <debug.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
@@ -86,6 +87,7 @@ int psock_getpeername(FAR struct socket *psock, FAR struct sockaddr *addr,
 
   if (psock == NULL || psock->s_conn == NULL)
     {
+      nwarn("WARNING: Invalid socket or connection\n");
       return -EBADF;
     }
 
@@ -95,6 +97,7 @@ int psock_getpeername(FAR struct socket *psock, FAR struct sockaddr *addr,
 
   if (addr == NULL || addrlen == NULL || *addrlen <= 0)
     {
+      nwarn("WARNING: Invalid addr or addrlen argument\n");
       return -EINVAL;
     }
 
@@ -103,6 +106,7 @@ int psock_getpeername(FAR struct socket *psock, FAR struct sockaddr *addr,
   DEBUGASSERT(psock->s_sockif != NULL);
   if (psock->s_sockif->si_getpeername == NULL)
     {
+      nwarn("WARNING: si_getpeername not supported\n");
       return -EOPNOTSUPP;
     }
 

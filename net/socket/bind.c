@@ -85,6 +85,7 @@ int psock_bind(FAR struct socket *psock, const struct sockaddr *addr,
 
   if (!psock || psock->s_conn == NULL)
     {
+      nwarn("WARNING: Invalid socket or connection\n");
       return -EBADF;
     }
 
@@ -92,6 +93,7 @@ int psock_bind(FAR struct socket *psock, const struct sockaddr *addr,
 
   if (addr == NULL)
     {
+      nwarn("WARNING: NULL address provided\n");
       return -EFAULT;
     }
 
@@ -100,6 +102,7 @@ int psock_bind(FAR struct socket *psock, const struct sockaddr *addr,
   DEBUGASSERT(psock->s_sockif != NULL);
   if (psock->s_sockif->si_bind == NULL)
     {
+      nwarn("WARNING: si_bind not supported\n");
       return -EOPNOTSUPP;
     }
 

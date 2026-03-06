@@ -196,6 +196,7 @@ static int ctrl_getsockopt(FAR struct socket *psock, int level, int option,
 #endif
 
       default:
+        nwarn("WARNING: Unsupported getsockopt level: %d\n", level);
         return -ENOPROTOOPT;
     }
 }
@@ -215,6 +216,7 @@ static int ctrl_setsockopt(FAR struct socket *psock, int level, int option,
         return ipv6_setsockopt(psock, option, value, value_len);
 #endif
       default:
+        nwarn("WARNING: Unsupported setsockopt level: %d\n", level);
         return -ENOPROTOOPT;
     }
 }
