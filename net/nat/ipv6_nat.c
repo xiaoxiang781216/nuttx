@@ -683,6 +683,8 @@ int ipv6_nat_outbound(FAR struct net_driver_s *dev,
         {
           /* Outbound entry creation failed, should have entry. */
 
+          nwarn("WARNING: Failed to create IPv6 NAT outbound entry "
+                "for proto=%u\n", ipv6->proto);
           return -ENOENT;
         }
     }

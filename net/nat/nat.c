@@ -86,6 +86,8 @@ static uint16_t nat_port_select_without_stack(
         {
           /* We have looped back, failed. */
 
+          nwarn("WARNING: No available port for NAT "
+                "(proto=%" PRIu8 ")\n", protocol);
           return 0;
         }
     }
