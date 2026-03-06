@@ -222,7 +222,7 @@ ieee1722acf_update_header(FAR void *src_msg,
   FAR struct can_frame *msg = (struct can_frame *)src_msg;
   uint8_t data_len = msg->can_dlc;
 #endif
-  uint8_t aligned_len;
+  uint16_t aligned_len;
 
   can_hdr->esi = (msg->flags & CANFD_ESI) ? 1 : 0;
 #ifdef CONFIG_NET_CAN_CANFD
