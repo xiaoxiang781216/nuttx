@@ -1649,7 +1649,20 @@ static void imx9_widebus(struct sdio_dev_s *dev, bool wide)
   regval &= ~USDHC_PROCTL_DTW_MASK;
   if (wide)
     {
-      regval |= USDHC_PROCTL_DTW_4BIT;
+      /* Only USDHC1 supports 8-bit data width. USDHC2 is limited to
+       * 4-bit according to chip spec.
+       */
+
+#ifdef CONFIG_IMX9_USDHC1_WIDTH_D1_D8
+      if (priv->addr == IMX9_USDHC1_BASE)
+        {
+          regval |= USDHC_PROCTL_DTW_8BIT;
+        }
+      else
+#endif
+        {
+          regval |= USDHC_PROCTL_DTW_4BIT;
+        }
     }
   else
     {
