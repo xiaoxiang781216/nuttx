@@ -505,6 +505,7 @@ static int netprocfs_readdir(FAR struct fs_dirent_s *dir,
             {
               /* There are no more... one must have been unregistered */
 
+              ferr("ERROR: No more network device ifindex available\n");
               return -ENOENT;
             }
 
@@ -523,6 +524,8 @@ static int netprocfs_readdir(FAR struct fs_dirent_s *dir,
             {
               /* What happened? */
 
+              ferr("ERROR: Network device not found for ifindex %d\n",
+                   ifindex);
               return -ENOENT;
             }
 

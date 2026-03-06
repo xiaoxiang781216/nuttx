@@ -544,6 +544,7 @@ static ssize_t route_read(FAR struct file *filep, FAR char *buffer,
 #endif
 
      default:
+      ferr("ERROR: Unrecognized route node type: %u\n", procfile->node);
       ret = -EINVAL;
       break;
     }
@@ -592,6 +593,7 @@ static int route_opendir(FAR const char *relpath,
         }
 #endif
 
+      ferr("ERROR: Unrecognized route path \"%s\"\n", relpath);
       return -ENOENT;
     }
 
@@ -732,6 +734,7 @@ static int route_stat(const char *relpath, struct stat *buf)
   else
 #endif
     {
+      ferr("ERROR: No matching route entry for path \"%s\"\n", relpath);
       return -ENOENT;
     }
 
