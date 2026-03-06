@@ -27,10 +27,6 @@ include arm_a_r/Make.defs
 
 # Common C source files
 
-ifeq ($(CONFIG_ARM_MPU),y)
-  CMN_CSRCS += arm_mpu.c
-endif
-
 ifeq ($(CONFIG_ARM_GIC_VERSION),3)
   CMN_CSRCS += arm_gicv3.c
 endif

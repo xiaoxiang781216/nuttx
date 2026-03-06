@@ -26,10 +26,6 @@ if(CONFIG_ARM_GIC_VERSION EQUAL 3)
   list(APPEND SRCS arm_gicv3.c)
 endif()
 
-if(CONFIG_ARM_MPU)
-  list(APPEND SRCS arm_mpu.c)
-endif()
-
 if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS arm_addrenv.c)
 endif()

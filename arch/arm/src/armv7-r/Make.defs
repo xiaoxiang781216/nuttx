@@ -27,10 +27,6 @@ include arm_a_r/Make.defs
 
 # Common C source files
 
-ifeq ($(CONFIG_BUILD_PROTECTED),y)
-  CMN_CSRCS += arm_mpu.c
-endif
-
 ifeq ($(CONFIG_ARCH_ADDRENV),y)
   CMN_CSRCS += arm_addrenv.c
 endif

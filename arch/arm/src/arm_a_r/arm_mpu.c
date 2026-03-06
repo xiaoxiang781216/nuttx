@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-r/arm_mpu.c
+ * arch/arm/src/arm_a_r/arm_mpu.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -27,6 +27,8 @@
 #include <stdint.h>
 #include <assert.h>
 #include <debug.h>
+#include <sys/param.h>
+#include <arch/barriers.h>
 
 #include "mpu.h"
 #include "arm_internal.h"
@@ -45,6 +47,7 @@
  * Private Data
  ****************************************************************************/
 
+#ifndef CONFIG_ARCH_ARMV8R
 /* These sets represent the set of disabled memory sub-regions.  A bit set
  * corresponds to a disabled sub-region; the LS bit corresponds to the first
  * region.
@@ -68,15 +71,18 @@ static const uint8_t g_ls_regionmask[9] =
 {
   0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff
 };
+#endif /* !CONFIG_ARCH_ARMV8R */
 
 /* The available region bitmap */
 
-static unsigned int g_mpu_region;
+static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_mpu_region);
+#define g_mpu_region this_cpu_var_bmp(g_mpu_region)
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
+#ifndef CONFIG_ARCH_ARMV8R
 /****************************************************************************
  * Name: mpu_subregion_ms
  *
@@ -115,7 +121,7 @@ static inline uint32_t mpu_subregion_ms(size_t size, uint8_t l2size)
 
   if (l2size < 32)
     {
-      mask  = ((1 << l2size)-1) >> 3; /* Shifted mask */
+      mask  = ((1 << l2size) - 1) >> 3; /* Shifted mask */
     }
 
   /* The 4Gb region size is a special case */
@@ -141,7 +147,7 @@ static inline uint32_t mpu_subregion_ms(size_t size, uint8_t l2size)
  *   Given (1) the offset to the beginning of data in the region and (2) the
  *   log2 size of the mapping to use, determine the minimal sub-region set
  *   to span that memory region sub-region set at the to be disabled at the
- *   higher end of the region
+ *   lower end of the region
  *
  * Assumption:
  *   l2size has the same properties as the return value from
@@ -173,7 +179,7 @@ static inline uint32_t mpu_subregion_ls(size_t offset, uint8_t l2size)
 
   if (l2size < 32)
     {
-      mask  = ((1 << l2size)-1) >> 3; /* Shifted mask */
+      mask  = ((1 << l2size) - 1) >> 3; /* Shifted mask */
     }
 
   /* The 4Gb region size is a special case */
@@ -184,13 +190,14 @@ static inline uint32_t mpu_subregion_ls(size_t offset, uint8_t l2size)
        * input.
        */
 
-      mask = 0x1fffffff;           /* Shifted mask */
+      mask = 0x1fffffff;             /* Shifted mask */
     }
 
   aoffset = offset & ~mask;          /* Adjusted offset */
   nsrs    = aoffset >> (l2size - 3); /* Number of subregions */
   return g_ls_regionmask[nsrs];
 }
+#endif /* !CONFIG_ARCH_ARMV8R */
 
 /****************************************************************************
  * Name: mpu_reset_internal
@@ -198,7 +205,7 @@ static inline uint32_t mpu_subregion_ls(size_t offset, uint8_t l2size)
  * Description:
  *   Resets the MPU to disabled.
  *
- * * Input Parameters:
+ * Input Parameters:
  *   None.
  *
  * Returned Value:
@@ -211,17 +218,24 @@ static void mpu_reset_internal(void)
 {
   int region;
   int regions;
-  regions = (getreg32(MPU_TYPE) & MPU_TYPE_DREGION_MASK)
+  regions = (CP15_GET(MPUIR) & MPU_TYPE_DREGION_MASK)
                                   >> MPU_TYPE_DREGION_SHIFT;
 
   for (region = 0; region < regions; region++)
     {
-      putreg32(region, MPU_RNR);
-      putreg32(0, MPU_RASR);
-      putreg32(0, MPU_RBAR);
+#ifdef CONFIG_ARCH_ARMV8R
+      CP15_SET(PRSELR, region);
+      CP15_SET(PRBAR, 0);
+      CP15_SET(PRLAR, 0);
+#else
+      CP15_SET(RGNR, region);
+      CP15_SET(DRBAR, 0);
+      CP15_SET(DRACR, 0);
+      CP15_SET(DRSR, 0);
+#endif
     }
 
-  putreg32(0, MPU_CTRL);
+  UP_MB();
 }
 #endif
 
@@ -233,7 +247,7 @@ static void mpu_reset_internal(void)
  * Name: mpu_allocregions
  *
  * Description:
- *   Allocate the regions
+ *   Allocate the next region(s)
  *
  * Input Parameters:
  *   nregions - The number of regions to be allocated.
@@ -275,14 +289,71 @@ void mpu_freeregion(unsigned int region)
 
   /* Clear and disable the given MPU Region */
 
-  mpu_set_rgnr(region);
-  mpu_set_drbar(0);
-  mpu_set_dracr(0);
-  mpu_set_drsr(0);
+#ifdef CONFIG_ARCH_ARMV8R
+  CP15_SET(PRSELR, region);
+  CP15_SET(PRBAR, 0);
+  CP15_SET(PRLAR, 0);
+#else
+  CP15_SET(RGNR, region);
+  CP15_SET(DRBAR, 0);
+  CP15_SET(DRACR, 0);
+  CP15_SET(DRSR, 0);
+#endif
   g_mpu_region &= ~(1 << region);
   UP_MB();
 }
 
+/****************************************************************************
+ * Name: mpu_control
+ *
+ * Description:
+ *   Configure and enable (or disable) the MPU
+ *
+ * Input Parameters:
+ *   enable     - Flag indicating whether to enable the MPU.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void mpu_control(bool enable)
+{
+  uint32_t regval = 0;
+
+#ifdef CONFIG_ARCH_ARMV8R
+  CP15_SET(MAIR0, (MPU_MAIR_STRONGLY_ORDER <<  0) |
+                  (MPU_MAIR_DEVICE         <<  8) |
+                  (MPU_MAIR_NONCACHEABLE   << 16) |
+                  (MPU_MAIR_WRITE_THROUGH  << 24));
+
+  CP15_SET(MAIR1, (MPU_MAIR_WRITE_BACK     <<  0));
+#endif
+
+  /* Set/clear the following bits in the SCTLR:
+   *
+   * SCTLR_M   Bit 0:  MPU enable bit
+   * SCTLR_BR  Bit 17: Background Region bit (not cleared)
+   */
+
+  regval = CP15_GET(SCTLR);
+  if (enable)
+    {
+      regval |= (SCTLR_M | SCTLR_BR);
+    }
+  else
+    {
+      regval &= ~SCTLR_M;
+    }
+
+  CP15_SET(SCTLR, regval);
+
+  /* Ensure MPU setting take effects */
+
+  UP_MB();
+}
+
+#ifndef CONFIG_ARCH_ARMV8R
 /****************************************************************************
  * Name: mpu_log2regionceil
  *
@@ -403,6 +474,7 @@ uint32_t mpu_subregion(uintptr_t base, size_t size, uint8_t l2size)
   ret |= mpu_subregion_ls(offset, l2size);
   return ret;
 }
+#endif /* !CONFIG_ARCH_ARMV8R */
 
 /****************************************************************************
  * Name: mpu_modify_region
@@ -411,10 +483,11 @@ uint32_t mpu_subregion(uintptr_t base, size_t size, uint8_t l2size)
  *   Modify a region for privileged, strongly ordered memory
  *
  * Input Parameters:
- *   region - Region number to modify.
- *   base   - Base address of the region.
- *   size   - Size of the region.
- *   flags  - Flags to configure the region.
+ *   region - The index of the MPU region to modify.
+ *   base   - The base address of the region.
+ *   size   - The size of the region.
+ *   flags  - Additional flags for PRBAR (v8r) or DRACR (v7r).
+ *   flags2 - Additional flags for PRLAR (v8r only, ignored on v7r).
  *
  * Returned Value:
  *   None.
@@ -422,12 +495,34 @@ uint32_t mpu_subregion(uintptr_t base, size_t size, uint8_t l2size)
  ****************************************************************************/
 
 void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
-                       uint32_t flags)
+                       uint32_t flags
+#ifdef CONFIG_ARCH_ARMV8R
+                       , uint32_t flags2
+#endif
+                       )
 {
-  uint32_t regval;
-  uint8_t l2size;
-  uint8_t subregions;
-  uintptr_t alignedbase;
+#ifdef CONFIG_ARCH_ARMV8R
+  uintptr_t limit;
+  uintptr_t rbase;
+
+  /* Ensure the base address alignment */
+
+  limit = (base + size - 1) & MPU_RLAR_LIMIT_MASK;
+  rbase = base & MPU_RBAR_BASE_MASK;
+
+  /* Select the region */
+
+  CP15_SET(PRSELR, region);
+
+  /* Set the region base, limit and attribute */
+
+  CP15_SET(PRBAR, rbase | flags);
+  CP15_SET(PRLAR, limit | flags2 | MPU_RLAR_ENABLE);
+#else /* ARMv7-R */
+  uint32_t     regval;
+  uint8_t      l2size;
+  uint8_t      subregions;
+  uintptr_t    alignedbase;
 
   /* Check that the region is valid */
 
@@ -446,11 +541,11 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
 
   /* Select the region */
 
-  mpu_set_rgnr(region);
+  CP15_SET(RGNR, region);
 
   /* Select the region base address */
 
-  mpu_set_drbar(alignedbase & MPU_RBAR_ADDR_MASK);
+  CP15_SET(DRBAR, alignedbase & MPU_RBAR_ADDR_MASK);
 
   /* Select the region size and the sub-region map */
 
@@ -459,42 +554,26 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
 
   /* Configure the Region */
 
-  mpu_set_dracr(flags);
+  CP15_SET(DRACR, flags);
   regval = MPU_RASR_ENABLE                              | /* Enable region */
            MPU_RASR_RSIZE_LOG2(l2size)                  | /* Region size   */
            (subregions << MPU_RASR_SRD_SHIFT);            /* Sub-regions   */
-  mpu_set_drsr(regval);
+  CP15_SET(DRSR, regval);
+#endif
+
+  /* Ensure MPU setting take effects */
+
+  UP_MB();
 }
 
-/****************************************************************************
- * Name: mpu_configure_region
- *
- * Description:
- *   Configure a region.
- *
- * Input Parameters:
- *   base - Base address of the region.
- *   size - Size of the region.
- *   flags - Flags to configure the region.
- *
- * Returned Value:
- *   The region number allocated for the configured region.
- *
- ****************************************************************************/
-
-unsigned int mpu_configure_region(uintptr_t base, size_t size,
-                                  uint32_t flags)
-{
-  unsigned int region = mpu_allocregion();
-  mpu_modify_region(region, base, size, flags);
-  return region;
-}
-
+#ifndef CONFIG_ARCH_ARMV8R
 /****************************************************************************
  * Name: mpu_modify_regions
  *
  * Description:
- *   Configure multi regions for privileged, strongly ordered memory
+ *   Configure multi regions for privileged, strongly ordered memory.
+ *   This may use up to 2 MPU regions due to power-of-2
+ *   alignment constraints.
  *
  * Input Parameters:
  *   region  - First region number to modify.
@@ -538,11 +617,45 @@ void mpu_modify_regions(unsigned int region, uintptr_t base, size_t size,
     }
   else
     {
-      mpu_set_rgnr(region + 1);
-      mpu_set_drbar(0);
-      mpu_set_dracr(0);
-      mpu_set_drsr(0);
+      CP15_SET(RGNR, region + 1);
+      CP15_SET(DRBAR, 0);
+      CP15_SET(DRACR, 0);
+      CP15_SET(DRSR, 0);
     }
+}
+#endif /* !CONFIG_ARCH_ARMV8R */
+
+/****************************************************************************
+ * Name: mpu_configure_region
+ *
+ * Description:
+ *   Configure a region for privileged, strongly ordered memory
+ *
+ * Input Parameters:
+ *   base   - The base address of the region.
+ *   size   - The size of the region.
+ *   flags  - Additional flags for the region.
+ *   flags2 - Additional flags for the region (v8r only).
+ *
+ * Returned Value:
+ *   The region number allocated for the configured region.
+ *
+ ****************************************************************************/
+
+unsigned int mpu_configure_region(uintptr_t base, size_t size,
+                                  uint32_t flags
+#ifdef CONFIG_ARCH_ARMV8R
+                                  , uint32_t flags2
+#endif
+                                  )
+{
+  unsigned int region = mpu_allocregion();
+  mpu_modify_region(region, base, size, flags
+#ifdef CONFIG_ARCH_ARMV8R
+                    , flags2
+#endif
+                    );
+  return region;
 }
 
 /****************************************************************************
@@ -552,8 +665,8 @@ void mpu_modify_regions(unsigned int region, uintptr_t base, size_t size,
  *   Configure a region for privileged, strongly ordered memory
  *
  * Input Parameters:
- *   table - MPU Initiaze table.
- *   count - Initialize the number of entries in the region table.
+ *   table      - MPU initialization table.
+ *   count      - Initialize the number of entries in the region table.
  *
  * Returned Value:
  *   NULL.
@@ -569,7 +682,11 @@ void mpu_initialize(const struct mpu_region_s *table, size_t count)
   for (index = 0; index < count; index++)
     {
       conf = &table[index];
-      mpu_configure_region(conf->base, conf->size, conf->flags);
+      mpu_configure_region(conf->base, conf->size, conf->flags
+#ifdef CONFIG_ARCH_ARMV8R
+                           , conf->flags2
+#endif
+                           );
     }
 
   mpu_control(true);
@@ -593,21 +710,39 @@ void mpu_dump_region(void)
 {
   int i;
   int count = 0;
-  uint32_t dracr;
-  uint32_t drbar;
-  uint32_t drsr;
-  uint32_t sctrl;
+  uint32_t ctrl;
 
   /* Get free region */
 
-  sctrl = cp15_rdsctlr();
-  _info("MPU-SCTRL Enable:%" PRIu32 "\n", sctrl & SCTLR_M);
+  ctrl = CP15_GET(SCTLR);
+  _info("MPU Enable:%" PRIu32 " Background Region:%" PRIu32 "\n",
+        ctrl & SCTLR_M, ctrl & SCTLR_BR);
   for (i = 0; i < CONFIG_ARM_MPU_NREGIONS; i++)
     {
-      mpu_set_rgnr(i);
-      drbar = mpu_get_drbar();
-      dracr = mpu_get_dracr();
-      drsr = mpu_get_drsr();
+#ifdef CONFIG_ARCH_ARMV8R
+      uint32_t rbar;
+      uint32_t rlar;
+
+      CP15_SET(PRSELR, i);
+      rlar = CP15_GET(PRLAR);
+      rbar = CP15_GET(PRBAR);
+      _info("MPU-%d, 0x%08"PRIx32"-0x%08"PRIx32" SH=%"PRIx32" AP=%"PRIx32""
+            "XN=%"PRIu32"\n", i, rbar & MPU_RBAR_BASE_MASK,
+            rlar & MPU_RLAR_LIMIT_MASK, rbar & MPU_RBAR_SH_MASK,
+            rbar & MPU_RBAR_AP_MASK, rbar & MPU_RBAR_XN);
+      if (rlar & MPU_RLAR_ENABLE)
+        {
+          count++;
+        }
+#else /* ARMv7-R */
+      uint32_t dracr;
+      uint32_t drbar;
+      uint32_t drsr;
+
+      CP15_SET(RGNR, i);
+      drbar = CP15_GET(DRBAR);
+      dracr = CP15_GET(DRACR);
+      drsr = CP15_GET(DRSR);
       _info("MPU-%d, base=0%08X l2size=%"PRIu32" bufferable=%u"
             "cacheable=%u shareable=%u\n", i, drbar & MPU_RBAR_ADDR_MASK,
             drsr & MPU_RASR_RSIZE_MASK, dracr & MPU_RACR_B,
@@ -616,6 +751,7 @@ void mpu_dump_region(void)
         {
           count++;
         }
+#endif
     }
 
   _info("Total Use Region:%d, Remaining Available:%d\n", count,

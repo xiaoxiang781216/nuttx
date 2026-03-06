@@ -77,6 +77,10 @@ ifneq ($(CONFIG_UP),y)
   CMN_ASRCS += arm_cpuhead.S
 endif
 
+ifeq ($(CONFIG_ARM_MPU),y)
+  CMN_CSRCS += arm_mpu.c
+endif
+
 ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
   CMN_UCSRCS += arm_perf.c
 endif

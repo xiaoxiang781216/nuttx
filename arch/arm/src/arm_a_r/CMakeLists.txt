@@ -83,6 +83,10 @@ list(
   cp15_cacheops.c
   arm_perf.c)
 
+if(CONFIG_ARM_MPU)
+  list(APPEND CSRCS arm_mpu.c)
+endif()
+
 target_sources(arch PRIVATE ${CSRCS})
 
 if(NOT CONFIG_BUILD_FLAT AND CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
