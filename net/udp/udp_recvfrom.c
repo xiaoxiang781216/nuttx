@@ -832,6 +832,7 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
         }
       else
         {
+          nwarn("WARNING: Failed to allocate UDP recv callback\n");
           ret = -EBUSY;
         }
     }

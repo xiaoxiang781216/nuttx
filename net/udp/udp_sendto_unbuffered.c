@@ -274,6 +274,8 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
        * already connected.
        */
 
+      nwarn("WARNING: Socket already connected, destination"
+            " address ignored\n");
       return -EISCONN;
     }
 
@@ -287,6 +289,8 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
        * address is set.
        */
 
+      nwarn("WARNING: Destination address required for"
+            " unconnected socket\n");
       return -EDESTADDRREQ;
     }
 
