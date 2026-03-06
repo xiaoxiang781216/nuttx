@@ -281,6 +281,7 @@ devif_callback_alloc(FAR struct net_driver_s *dev,
 
   if (dev && !netdev_verify(dev))
     {
+      nwarn("WARNING: Device verification failed during callback alloc\n");
       return NULL;
     }
 
@@ -366,6 +367,7 @@ void devif_conn_callback_free(FAR struct net_driver_s *dev,
     {
       /* The device reference is longer valid */
 
+      nwarn("WARNING: Device no longer valid during conn callback free\n");
       dev = NULL;
     }
 
@@ -418,6 +420,7 @@ void devif_dev_callback_free(FAR struct net_driver_s *dev,
     {
       /* The device reference is longer valid */
 
+      nwarn("WARNING: Device no longer valid during dev callback free\n");
       dev  = NULL;
       list_head = NULL;
       list_tail = NULL;

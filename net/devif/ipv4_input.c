@@ -152,6 +152,8 @@ static int ipv4_check_opt(FAR struct ipv4_hdr_s *ipv4)
           int len = opt[1];
           if (len < 2 || len > optlen)
             {
+              nwarn("WARNING: IPv4 option length %d exceeds remaining %d\n",
+                    len, optlen);
               return -EINVAL;
             }
 
@@ -219,6 +221,7 @@ static int ipv4_check_opt(FAR struct ipv4_hdr_s *ipv4)
         }
       else
         {
+          nwarn("WARNING: Malformed IPv4 option at end of header\n");
           return -EINVAL;
         }
     }
@@ -373,7 +376,6 @@ static int ipv4_in(FAR struct net_driver_s *dev)
 #ifdef CONFIG_NET_STATISTICS
       g_netstats.ipv4.drop++;
 #endif
-      nwarn("WARNING: IP options error\n");
       goto drop;
     }
 
