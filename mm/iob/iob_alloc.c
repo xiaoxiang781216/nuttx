@@ -42,31 +42,6 @@
  * Private Functions
  ****************************************************************************/
 
-static inline FAR struct mempool_s *iob_find_mempool(size_t size)
-{
-  int i = CONFIG_IOB_NPOOLS - 1;
-
-  if (size > CONFIG_IOB_BUFSIZE)
-    {
-      return NULL;
-    }
-  else if (CONFIG_IOB_NPOOLS == 1)
-    {
-      return g_iob_pool[0];
-    }
-
-  do
-    {
-      if (IOB_ALIGN_SIZE(size) <= g_iob_pool[i]->blocksize)
-        {
-          return g_iob_pool[i];
-        }
-    }
-  while (--i >= 0);
-
-  return NULL;
-}
-
 /****************************************************************************
  * Name: iob_alloc_internal
  *

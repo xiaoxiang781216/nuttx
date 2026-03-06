@@ -92,5 +92,44 @@ extern FAR struct mempool_s *g_iob_pool[];
 void iob_notifier_signal(void);
 #endif
 
+/****************************************************************************
+ * Name: iob_find_mempool
+ *
+ * Description:
+ *  Allocate an I/O buffer by taking the buffer at the head of the free list.
+ *  This wait will be terminated when the specified timeout expires.
+ *
+ * Input Parameters:
+ *   throttled  - An indication of the IOB allocation is "throttled"
+ *   timeout    - Timeout value in milliseconds.
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR struct mempool_s *iob_find_mempool(size_t size)
+{
+  int i = CONFIG_IOB_NPOOLS - 1;
+
+  if (size > CONFIG_IOB_BUFSIZE)
+    {
+      return NULL;
+    }
+  else if (CONFIG_IOB_NPOOLS == 1)
+    {
+      return g_iob_pool[0];
+    }
+
+  do
+    {
+      if (IOB_ALIGN_SIZE(size) <= g_iob_pool[i]->blocksize)
+        {
+          return g_iob_pool[i];
+        }
+    }
+  while (--i >= 0);
+
+  return NULL;
+}
+
 #endif /* CONFIG_MM_IOB */
 #endif /* __MM_IOB_IOB_H */

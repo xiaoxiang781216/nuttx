@@ -37,6 +37,7 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 
+#include <nuttx/net/can.h>
 #include <nuttx/net/dns.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev_lowerhalf.h>
@@ -982,8 +983,22 @@ net_rpmsg_drv_alloc(FAR const char *devname, enum net_lltype_e lltype)
     }
 
   netdev = &drv->dev;
-  netdev->quota[NETPKT_RX] = CONFIG_IOB_NBUFFERS /
-                             NET_RPMSG_DRV_MAX_NIOB / 4;
+
+#ifdef CONFIG_NET_CAN
+  if (lltype == NET_LL_CAN)
+    {
+      int niobs = iob_navail_with_size(NET_CAN_BUFSIZE, false);
+      netdev->quota[NETPKT_RX] = niobs > 0 ? niobs / 4 : 1;
+    }
+  else
+#endif
+    {
+      netdev->quota[NETPKT_RX] = CONFIG_IOB_NBUFFERS /
+                                 NET_RPMSG_DRV_MAX_NIOB / 4;
+    }
+
+  netdev->quota[NETPKT_RX] = MAX(netdev->quota[NETPKT_RX], 1);
+
   netdev->quota[NETPKT_TX] = 1;
   netdev->ops = &g_net_rpmsg_drv_ops;
 

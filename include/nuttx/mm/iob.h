@@ -306,6 +306,16 @@ FAR struct iob_s *iob_alloc_with_size(uint16_t size, bool throttled)
 }
 
 /****************************************************************************
+ * Name: iob_navail_with_size
+ *
+ * Description:
+ *   Return the number of available IOBs.
+ *
+ ****************************************************************************/
+
+int iob_navail_with_size(size_t size, bool throttled);
+
+/****************************************************************************
  * Name: iob_navail
  *
  * Description:
@@ -313,7 +323,11 @@ FAR struct iob_s *iob_alloc_with_size(uint16_t size, bool throttled)
  *
  ****************************************************************************/
 
-int iob_navail(bool throttled);
+static inline_function
+int iob_navail(bool throttled)
+{
+  return iob_navail_with_size(CONFIG_IOB_BUFSIZE, throttled);
+}
 
 /****************************************************************************
  * Name: iob_free

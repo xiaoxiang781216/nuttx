@@ -38,14 +38,22 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: iob_navail
+ * Name: iob_navail_with_size
  *
  * Description:
  *   Return the number of available IOBs.
  *
  ****************************************************************************/
 
-int iob_navail(bool throttled)
+int iob_navail_with_size(size_t size, bool throttled)
 {
-  return mempool_navail_throttled(g_iob_pool[0], throttled);
+  FAR struct mempool_s *mempool;
+
+  mempool = iob_find_mempool(size);
+  if (!mempool)
+    {
+      return -EINVAL;
+    }
+
+  return mempool_navail_throttled(mempool, throttled);
 }
