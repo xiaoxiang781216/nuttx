@@ -149,6 +149,13 @@ int netdev_unregister(FAR struct net_driver_s *dev)
 
           curr->flink = NULL;
         }
+      else
+        {
+          nerr("ERROR: Device %s not found in device list\n",
+               dev->d_ifname);
+          netdev_list_unlock();
+          return -ENODEV;
+        }
 
 #ifdef CONFIG_NETDEV_IFINDEX
       free_ifindex(dev->d_ifindex);

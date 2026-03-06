@@ -2169,6 +2169,11 @@ int netdev_ifup(FAR struct net_driver_s *dev)
 
               netlink_device_notify(dev);
             }
+          else
+            {
+              nerr("ERROR: Failed to bring up %s: %d\n",
+                   dev->d_ifname, ret);
+            }
         }
       else
         {
@@ -2228,6 +2233,11 @@ int netdev_ifdown(FAR struct net_driver_s *dev)
 
               netdown_notifier_signal(dev);
 #endif
+            }
+          else
+            {
+              nerr("ERROR: Failed to take down %s: %d\n",
+                   dev->d_ifname, ret);
             }
         }
       else

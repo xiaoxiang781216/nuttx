@@ -65,6 +65,7 @@ void netdev_carrier_on(FAR struct net_driver_s *dev)
       netdev_lock(dev);
       if (!IFF_IS_RUNNING(dev->d_flags))
         {
+          ninfo("Carrier on for %s\n", dev->d_ifname);
           dev->d_flags |= IFF_RUNNING;
           netlink_device_notify(dev);
         }
@@ -92,6 +93,7 @@ void netdev_carrier_off(FAR struct net_driver_s *dev)
       netdev_lock(dev);
       if (IFF_IS_RUNNING(dev->d_flags))
         {
+          ninfo("Carrier off for %s\n", dev->d_ifname);
           dev->d_flags &= ~IFF_RUNNING;
           netlink_device_notify(dev);
 

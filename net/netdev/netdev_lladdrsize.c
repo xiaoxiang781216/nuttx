@@ -28,6 +28,7 @@
 
 #include <string.h>
 #include <assert.h>
+#include <debug.h>
 #include <errno.h>
 
 #include <net/if.h>
@@ -73,6 +74,7 @@ static inline int netdev_pktradio_addrlen(FAR struct net_driver_s *dev)
   ret = radio->r_properties(radio, &properties);
   if (ret < 0)
     {
+      nwarn("WARNING: Failed to get radio address length: %d\n", ret);
       return ret;
     }
 

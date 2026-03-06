@@ -26,6 +26,8 @@
 
 #include <nuttx/config.h>
 
+#include <debug.h>
+
 #include <nuttx/net/netdev.h>
 
 #include "utils/utils.h"
@@ -77,6 +79,7 @@ int netdev_input(FAR struct net_driver_s *dev,
   ret = netdev_iob_prepare(dev, false, 0);
   if (ret != OK)
     {
+      nwarn("WARNING: Failed to prepare IOB for network input: %d\n", ret);
       return ret;
     }
 
