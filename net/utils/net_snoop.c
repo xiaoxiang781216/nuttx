@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <string.h>
+#include <debug.h>
 
 #include <sys/param.h>
 
@@ -316,6 +317,7 @@ int snoop_open(FAR struct snoop_s *snoop, FAR const char *filename,
 
   if (!snoop)
     {
+      nerr("ERROR: NULL snoop structure in snoop_open\n");
       return -EINVAL;
     }
 
@@ -366,6 +368,8 @@ int snoop_open(FAR struct snoop_s *snoop, FAR const char *filename,
                   0666);
   if (ret < 0)
     {
+      nerr("ERROR: Failed to open snoop capture file %s: %d\n",
+           filename, ret);
       return ret;
     }
 
@@ -417,6 +421,7 @@ int snoop_dump(FAR struct snoop_s *snoop, FAR const void *buf,
 
   if (!snoop)
     {
+      nerr("ERROR: NULL snoop structure in snoop_dump\n");
       return -EINVAL;
     }
 
@@ -449,12 +454,15 @@ int snoop_dump(FAR struct snoop_s *snoop, FAR const void *buf,
       ret = snoop_flush(snoop);
       if (ret < 0)
         {
+          nerr("ERROR: Failed to flush snoop buffer before write: %d\n",
+               ret);
           goto out_unlock;
         }
 
       ret = file_write(&snoop->filep, &header, sizeof(header));
       if (ret < 0)
         {
+          nerr("ERROR: Failed to write snoop packet header: %d\n", ret);
           goto out_unlock;
         }
       else if (ret != sizeof(header))
@@ -466,6 +474,7 @@ int snoop_dump(FAR struct snoop_s *snoop, FAR const void *buf,
       ret = file_write(&snoop->filep, buf, nbytes);
       if (ret < 0)
         {
+          nerr("ERROR: Failed to write snoop packet data: %d\n", ret);
           goto out_unlock;
         }
       else if (ret != nbytes)
@@ -501,6 +510,7 @@ int snoop_sync(FAR struct snoop_s *snoop)
 {
   if (!snoop)
     {
+      nwarn("WARNING: NULL snoop structure in snoop_sync\n");
       return -EINVAL;
     }
 
@@ -527,6 +537,7 @@ int snoop_close(FAR struct snoop_s *snoop)
 {
   if (!snoop)
     {
+      nwarn("WARNING: NULL snoop structure in snoop_close\n");
       return -EINVAL;
     }
 
