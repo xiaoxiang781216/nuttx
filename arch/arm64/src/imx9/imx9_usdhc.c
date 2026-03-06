@@ -2848,7 +2848,7 @@ static sdio_eventset_t imx9_eventwait(struct sdio_dev_s *dev)
     }
 
   /* In case of timeout or task cancellation, we need to reset the semaphore;
-   * it might have been double-posted if interrupt occured at the same time
+   * it might have been double-posted if interrupt occurred at the same time
    */
 
   if (ret < 0 ||
@@ -3354,9 +3354,16 @@ struct sdio_dev_s *imx9_usdhc_initialize(int slotno)
 
       /* Enable clocks */
 
-      imx9_ccm_configure_root_clock(CCM_CR_USDHC2, SYS_PLL1PFD1, 4);
+#if defined(CONFIG_IMX9_CLK_OVER_SCMI)
+      /* On imx95, the System Manager owns USDHC clock roots; direct CCM
+       * writes are silently dropped. U-Boot configures the clock rate via
+       * SCMI before handoff, so no clock setup is needed here.
+       */
+#else
+      imx9_ccm_configure_root_clock(CCM_CR_USDHC1, SYS_PLL1PFD1, 4);
 
       imx9_ccm_gate_on(CCM_LPCG_USDHC1, true);
+#endif
 
       break;
 #endif
@@ -3389,9 +3396,16 @@ struct sdio_dev_s *imx9_usdhc_initialize(int slotno)
 
       /* Enable clocks */
 
+#if defined(CONFIG_IMX9_CLK_OVER_SCMI)
+      /* On imx95, the System Manager owns USDHC clock roots; direct CCM
+       * writes are silently dropped. U-Boot configures the clock rate via
+       * SCMI before handoff, so no clock setup is needed here.
+       */
+#else
       imx9_ccm_configure_root_clock(CCM_CR_USDHC2, SYS_PLL1PFD1, 4);
 
       imx9_ccm_gate_on(CCM_LPCG_USDHC2, true);
+#endif
 
       mcinfo("Enabled clocks\n");
 
