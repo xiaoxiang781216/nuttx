@@ -29,6 +29,7 @@ ENTRY(__start)
 PHDRS
 {
   text PT_LOAD ;
+  tls PT_TLS ;
 }
 
 SECTIONS
@@ -105,13 +106,13 @@ SECTIONS
       _stdata = ABSOLUTE(.);
       *(.tdata .tdata.* .gnu.linkonce.td.*);
       _etdata = ABSOLUTE(.);
-  } :text
+  } :text :tls
 
   .tbss : {
       _stbss = ABSOLUTE(.);
       *(.tbss .tbss.* .gnu.linkonce.tb.* .tcommon);
       _etbss = ABSOLUTE(.);
-  } :text
+  } :text :tls
 
   _eronly = .;  /* End of read-only data */
 
