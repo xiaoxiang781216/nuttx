@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/include/armv7-a/cp14.h
+ * arch/arm/include/arm_a_r/cp14.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,8 +20,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_INCLUDE_ARMV7_A_CP14_H
-#define __ARCH_ARM_INCLUDE_ARMV7_A_CP14_H
+#ifndef __ARCH_ARM_INCLUDE_ARM_A_R_CP14_H
+#define __ARCH_ARM_INCLUDE_ARM_A_R_CP14_H
 
 /****************************************************************************
  * Included Files
@@ -473,4 +473,4 @@
 #define CP14_DBGDSCRINT_MOE_CFI_BREAKPOINT   0x3
 #define CP14_DBGDSCRINT_MOE_SYNC_WATCHPOINT  0xa
 
-#endif /* __ARCH_ARM_INCLUDE_ARMV7_A_CP14_H */
+#endif /* __ARCH_ARM_INCLUDE_ARM_A_R_CP14_H */

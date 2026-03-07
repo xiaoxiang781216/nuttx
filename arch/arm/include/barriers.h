@@ -25,16 +25,10 @@
  * Included Files
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_ARMV7A)
-#  include <arch/armv7-a/barriers.h>
-#elif defined(CONFIG_ARCH_ARMV7R)
-#  include <arch/armv7-r/barriers.h>
-#elif defined(CONFIG_ARCH_ARMV8R)
-#  include <arch/armv8-r/barriers.h>
+#if defined(CONFIG_ARCH_ARM_A_R)
+#  include <arch/arm_a_r/barriers.h>
 #elif defined(CONFIG_ARCH_ARM_M)
 #  include <arch/arm_m/barriers.h>
-#else
-#  include <arch/arm/barriers.h>
 #endif
 
 #define UP_MB() \
