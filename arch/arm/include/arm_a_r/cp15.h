@@ -27,8 +27,8 @@
  * ARM DDI 0406C.b (ID072512)
  */
 
-#ifndef __ARCH_ARM_SRC_ARM_A_R_CP15_H
-#define __ARCH_ARM_SRC_ARM_A_R_CP15_H
+#ifndef __ARCH_ARM_INCLUDE_ARM_A_R_CP15_H
+#define __ARCH_ARM_INCLUDE_ARM_A_R_CP15_H
 
 /****************************************************************************
  * Included Files
@@ -363,4 +363,4 @@
     __mpidr; \
   })
 
-#endif /* __ARCH_ARM_SRC_ARM_A_R_CP15_H */
+#endif /* __ARCH_ARM_INCLUDE_ARM_A_R_CP15_H */
