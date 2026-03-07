@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/armv7-a/arch_memchr.S
+ * libs/libc/machine/arm/arm_a_r/arch_memchr.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2010-2011, Linaro Limited, 2015 ARM Ltd
@@ -90,6 +90,8 @@
 #if defined (__ARM_NEON__) || defined (__ARM_NEON)
 #if __ARM_ARCH >= 8 && __ARM_ARCH_PROFILE == 'R'
 	.arch	armv8-r
+#elif __ARM_ARCH_PROFILE == 'R'
+	.arch	armv7-r
 #else
 	.arch	armv7-a
 #endif

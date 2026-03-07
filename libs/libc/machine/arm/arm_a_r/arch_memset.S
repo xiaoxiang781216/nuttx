@@ -1,7 +1,7 @@
 /****************************************************************************
- * libs/libc/machine/arm/armv7-r/arch_memset.S
+ * libs/libc/machine/arm/arm_a_r/arch_memset.S
  *
- * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier: BSD-2-Clause
  * SPDX-FileCopyrightText: 2013 The Android Open Source Project
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,8 @@
 	.global ARCH_LIBCFUN(memset)
 	.type	ARCH_LIBCFUN(memset), %function
 ARCH_LIBCFUN(memset):
+	.cfi_sections .debug_frame
+	.cfi_startproc
 
 #ifdef __ARM_NEON__
 	mov         r3, r0
@@ -156,7 +158,6 @@ ARCH_LIBCFUN(memset):
 	/* compute the offset to align the destination
 	 * offset = (4-(src&3))&3 = -src & 3
 	 */
-	.save       {r0, r4-r7, lr}
 	stmfd       sp!, {r0, r4-r7, lr}
 	rsb         r3, r0, #0
 	ands        r3, r3, #3
@@ -219,5 +220,6 @@ ARCH_LIBCFUN(memset):
 	ldmfd       sp!, {r0, r4-r7, pc}
 
 #endif
+	.cfi_endproc
 
 #endif

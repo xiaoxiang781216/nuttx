@@ -1,5 +1,5 @@
 # ##############################################################################
-# libs/libc/machine/arm/arm/CMakeLists.txt
+# libs/libc/machine/arm/arm_a_r/CMakeLists.txt
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -20,6 +20,34 @@
 #
 # ##############################################################################
 
-if(CONFIG_LIBC_ARCH_ELF)
-  target_sources(c PRIVATE arch_elf.c)
+set(SRCS)
+
+if(CONFIG_ARM_A_R_MEMCHR)
+  list(APPEND SRCS arch_memchr.S)
 endif()
+
+if(CONFIG_ARM_A_R_MEMCPY)
+  list(APPEND SRCS arch_memcpy.S)
+endif()
+
+if(CONFIG_ARM_A_R_MEMMOVE)
+  list(APPEND SRCS arch_memmove.S)
+endif()
+
+if(CONFIG_ARM_A_R_MEMSET)
+  list(APPEND SRCS arch_memset.S)
+endif()
+
+if(CONFIG_ARM_A_R_STRCMP)
+  list(APPEND SRCS arch_strcmp.S)
+endif()
+
+if(CONFIG_ARM_A_R_STRLEN)
+  list(APPEND SRCS arch_strlen.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_ELF)
+  list(APPEND SRCS arch_elf.c)
+endif()
+
+target_sources(c PRIVATE ${SRCS})

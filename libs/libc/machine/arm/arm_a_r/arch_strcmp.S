@@ -1,10 +1,8 @@
 /****************************************************************************
- * libs/libc/machine/arm/armv7-r/arch_strcmp.S
+ * libs/libc/machine/arm/arm_a_r/arch_strcmp.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2011 The Android Open Source Project,2008 ARM Ltd
- *
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

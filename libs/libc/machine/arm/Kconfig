@@ -3,25 +3,12 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-if ARCH_ARM7TDMI || ARCH_ARM920T || ARCH_ARM926EJS || \
-   ARCH_ARM1136J || ARCH_ARM1156T2 || ARCH_ARM1176JZ
-source "libs/libc/machine/arm/arm/Kconfig"
-endif
-
-if ARCH_ARMV7A
-source "libs/libc/machine/arm/armv7-a/Kconfig"
-endif
-
-if ARCH_ARMV7R
-source "libs/libc/machine/arm/armv7-r/Kconfig"
+if ARCH_ARM_A_R
+source "libs/libc/machine/arm/arm_a_r/Kconfig"
 endif
 
 if ARCH_ARM_M
 source "libs/libc/machine/arm/arm_m/Kconfig"
-endif
-
-if ARCH_ARMV8R
-source "libs/libc/machine/arm/armv8-r/Kconfig"
 endif
 
 config LIBC_ARCH_CRC32
