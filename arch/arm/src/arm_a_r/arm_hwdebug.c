@@ -31,7 +31,8 @@
 #include <string.h>
 #include <assert.h>
 #include <debug.h>
-#include <arch/arm_a_r/cp14.h>
+
+#include "cp14.h"
 
 /****************************************************************************
  * Pre-processor Definitions
