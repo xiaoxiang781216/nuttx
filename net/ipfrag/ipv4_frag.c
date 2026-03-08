@@ -423,6 +423,7 @@ int32_t ipv4_fragout(FAR struct net_driver_s *dev, uint16_t mtu)
 
       /* Enqueue this fragment to dev->d_fragout */
 
+      IOB_SET_OWNER(frag, "%s: ipv4_fragout", dev->d_ifname);
       iob_add_queue(frag, &dev->d_fragout);
       offset += frag->io_pktlen;
     }

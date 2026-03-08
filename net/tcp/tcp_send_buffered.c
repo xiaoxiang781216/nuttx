@@ -1587,6 +1587,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
             {
               DEBUGASSERT(TCP_WBSENT(wrb) == 0);
               DEBUGASSERT(TCP_WBPKTLEN(wrb) > 0);
+              IOB_SET_OWNER(TCP_WBIOB(wrb), "tcp writequeue");
               sq_addlast(&wrb->wb_node, &conn->write_q);
             }
           else
@@ -1627,6 +1628,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
        * conn->write_q
        */
 
+      IOB_SET_OWNER(TCP_WBIOB(wrb), "tcp writequeue");
       sq_addlast(&wrb->wb_node, &conn->write_q);
       ninfo("Queued WRB=%p pktlen=%u write_q(%p,%p)\n",
             wrb, TCP_WBPKTLEN(wrb),

@@ -334,8 +334,6 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
       ethhdr->type = addr->sll_protocol;
     }
 
-  iob_add_queue(iob, &conn->write_q);
-
   /* Allocate resource to receive a callback */
 
   if (conn->sndcb == NULL)
@@ -355,6 +353,9 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
     }
   else
     {
+      IOB_SET_OWNER(iob, "pkt writequeue");
+      iob_add_queue(iob, &conn->write_q);
+
       /* Set up the callback in the connection */
 
       conn->sndcb->flags = PKT_POLL;

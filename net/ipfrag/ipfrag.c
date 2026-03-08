@@ -160,7 +160,8 @@ ip_fragin_freelink(FAR struct ip_fraglink_s *fraglink);
 static void ip_fragin_check(FAR struct ip_fragsnode_s *fragsnode);
 static void ip_fragin_cachemonitor(FAR struct ip_fragsnode_s *curnode);
 static inline FAR struct iob_s *
-ip_fragout_allocfragbuf(FAR struct iob_queue_s *fragq);
+ip_fragout_allocfragbuf(FAR struct iob_queue_s *fragq,
+                        FAR const char *owner);
 
 /****************************************************************************
  * Private Functions
@@ -514,13 +515,15 @@ static void ip_fragin_cachemonitor(FAR struct ip_fragsnode_s *curnode)
  ****************************************************************************/
 
 static inline FAR struct iob_s *
-ip_fragout_allocfragbuf(FAR struct iob_queue_s *fragq)
+ip_fragout_allocfragbuf(FAR struct iob_queue_s *fragq,
+                        FAR const char *owner)
 {
   FAR struct iob_s *iob;
 
   iob = iob_tryalloc(false);
   if (iob != NULL)
     {
+      IOB_SET_OWNER(iob, "%s", owner);
       iob_add_queue(iob, fragq);
     }
 
@@ -816,6 +819,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
   FAR struct iob_s *orig = NULL;
   FAR struct iob_s *reorg = NULL;
   FAR struct iob_s *head = NULL;
+  FAR const char   *owner;
 
   if (iob == NULL || fragq == NULL)
     {
@@ -823,6 +827,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
       return 0;
     }
 
+  owner = IOB_GET_OWNER(iob);
   ASSERT(iob->io_pktlen > mtu);
 
 #ifdef CONFIG_NET_IPv4
@@ -874,7 +879,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
 
       if (leftlen == 0 && orig != NULL)
         {
-          reorg = ip_fragout_allocfragbuf(fragq);
+          reorg = ip_fragout_allocfragbuf(fragq, owner);
           GOTO_IF(reorg == NULL, allocfail);
 
           nfrags++;
@@ -897,7 +902,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
 
           while (leftlen > 0)
             {
-              reorg = ip_fragout_allocfragbuf(fragq);
+              reorg = ip_fragout_allocfragbuf(fragq, owner);
               GOTO_IF(reorg == NULL, allocfail);
 
               nfrags++;
@@ -950,7 +955,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
        * for all fragments
        */
 
-      reorg = ip_fragout_allocfragbuf(fragq);
+      reorg = ip_fragout_allocfragbuf(fragq, owner);
       GOTO_IF(reorg == NULL, allocfail);
 
       nfrags++;
@@ -1019,7 +1024,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
 
           if (expand)
             {
-              reorg = ip_fragout_allocfragbuf(fragq);
+              reorg = ip_fragout_allocfragbuf(fragq, owner);
               GOTO_IF(reorg == NULL, allocfail);
 
               nfrags++;

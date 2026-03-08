@@ -278,6 +278,8 @@ int neighbor_queue_iob(FAR struct net_driver_s *dev,
           if (memcmp(&entry->ne_addr.u.na_ethernet, &g_zero_ethaddr,
                      sizeof(struct ether_addr)) == 0)
             {
+              IOB_SET_OWNER(iob, "%s neighbor send",
+                            entry->ne_dev->d_ifname);
               iob_add_queue(iob, &entry->ne_queue);
               if (work_available(&entry->ne_work))
                 {

@@ -350,6 +350,8 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
           goto out;
         }
 
+      IOB_SET_OWNER(can_iob, "ieee1722acf forward");
+
 #ifdef CONFIG_NET_TIMESTAMP
       if ((dev->d_features & NETDEV_RX_STAMP) == 0)
         {

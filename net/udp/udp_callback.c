@@ -33,6 +33,7 @@
 #include <assert.h>
 #include <sys/time.h>
 
+#include <nuttx/mm/iob.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/netstats.h>
@@ -203,6 +204,7 @@ static uint16_t udp_datahandler(FAR struct net_driver_s *dev,
 
   /* Concat the iob to readahead */
 
+  IOB_SET_OWNER(iob, "udp readahead");
   net_iob_concat(&conn->readahead, &iob);
   conn_unlock(&conn->sconn);
 

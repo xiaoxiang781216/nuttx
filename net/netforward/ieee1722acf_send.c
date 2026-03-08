@@ -676,6 +676,7 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
 
               stream->iob = iob;
 
+              IOB_SET_OWNER(iob, "ieee1722acf send");
               if (stream->cycle_us != 0 &&
                   work_available(&stream->cycle_work))
                 {

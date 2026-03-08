@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <debug.h>
 
+#include <nuttx/mm/iob.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/can.h>
@@ -190,6 +191,7 @@ int can_datahandler(FAR struct net_driver_s *dev,
 
   /* Concat the iob to readahead */
 
+  IOB_SET_OWNER(iob, "can readahead");
   iob_add_queue(iob, &conn->readahead);
 #ifdef CONFIG_NET_CAN_NOTIFIER
   /* Provide notification(s) that additional CAN read-ahead data is

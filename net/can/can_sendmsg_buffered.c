@@ -364,6 +364,7 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
   /* Add the write buffer to the write queue */
 
+  IOB_SET_OWNER(wb_iob, "can writequeue");
   iob_add_queue(wb_iob, &conn->write_q);
 
   /* The new write buffer lies at the head of the write queue.

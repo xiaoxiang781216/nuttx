@@ -827,6 +827,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
   conn_lock(&conn->sconn);
   empty = sq_empty(&conn->write_q);
 
+  IOB_SET_OWNER(wrb->wb_iob, "udp writequeue");
   sq_addlast(&wrb->wb_node, &conn->write_q);
   ninfo("Queued WRB=%p pktlen=%u write_q(%p,%p)\n", wrb,
         wrb->wb_iob->io_pktlen, conn->write_q.head, conn->write_q.tail);

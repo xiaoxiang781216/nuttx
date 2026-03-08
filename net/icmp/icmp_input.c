@@ -181,6 +181,8 @@ static uint16_t icmp_datahandler(FAR struct net_driver_s *dev,
    * without waiting).
    */
 
+  IOB_SET_OWNER(iob, "icmp readahead");
+
   conn_lock(&conn->sconn);
   iob_add_queue(iob, &conn->readahead);
   ninfo("Buffered %d bytes\n", buflen);

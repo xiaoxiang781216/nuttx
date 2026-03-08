@@ -157,6 +157,7 @@ static uint16_t icmpv6_datahandler(FAR struct net_driver_s *dev,
    * without waiting).
    */
 
+  IOB_SET_OWNER(iob, "icmp6 readahead");
   iob_add_queue(iob, &conn->readahead);
   ninfo("Buffered %d bytes\n", buflen);
 

@@ -178,6 +178,7 @@ static int pkt_in_(FAR struct net_driver_s *dev, bool loopback)
         {
           if (pkt_datahandler(dev, conn, &conn->errahead) > 0)
             {
+              IOB_SET_OWNER(dev->d_iob, "pkt errahead");
               pkt_callback(dev, conn, PKT_NEWDATA);
             }
 
@@ -234,6 +235,8 @@ static int pkt_in_(FAR struct net_driver_s *dev, bool loopback)
               ret = -EAGAIN;
               break;
             }
+
+          IOB_SET_OWNER(dev->d_iob, "pkt readahead");
         }
     }
 
