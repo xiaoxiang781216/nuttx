@@ -28,6 +28,10 @@ elseif(CONFIG_ARCH_ARM_M) # All ARM-M
   add_subdirectory(arm_m)
 endif()
 
+if(CONFIG_LIBC_ARCH_ELF)
+  list(APPEND SRCS arch_elf.c)
+endif()
+
 list(APPEND SRCS aeabi_memclr.c aeabi_memclr4.c aeabi_memclr8.c)
 list(APPEND SRCS aeabi_memcpy.c aeabi_memcpy4.c aeabi_memcpy8.c)
 list(APPEND SRCS aeabi_memmove.c aeabi_memmove4.c aeabi_memmove8.c)

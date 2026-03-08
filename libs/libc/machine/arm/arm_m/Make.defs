@@ -20,10 +20,6 @@
 #
 ############################################################################
 
-ifeq ($(CONFIG_LIBC_ARCH_ELF),y)
-CSRCS += arch_elf.c
-endif
-
 ifeq ($(CONFIG_ARCH_ARMV6M),y)
 include $(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)machine$(DELIM)arm$(DELIM)arm_m$(DELIM)thumb1$(DELIM)Make.defs
 else

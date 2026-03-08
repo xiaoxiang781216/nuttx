@@ -46,8 +46,4 @@ if(CONFIG_ARM_A_R_STRLEN)
   list(APPEND SRCS arch_strlen.S)
 endif()
 
-if(CONFIG_LIBC_ARCH_ELF)
-  list(APPEND SRCS arch_elf.c)
-endif()
-
 target_sources(c PRIVATE ${SRCS})

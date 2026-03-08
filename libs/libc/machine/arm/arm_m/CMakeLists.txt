@@ -22,10 +22,6 @@
 
 set(SRCS)
 
-if(CONFIG_LIBC_ARCH_ELF)
-  list(APPEND SRCS arch_elf.c)
-endif()
-
 if(CONFIG_ARCH_ARMV6M)
   add_subdirectory(thumb1)
 else()
