@@ -24,11 +24,7 @@ set(SRCS)
 
 if(CONFIG_ARCH_ARM_A_R)
   add_subdirectory(arm_a_r)
-elseif(CONFIG_ARCH_ARMV6M) # All ARMv6-M
-  add_subdirectory(arm_m)
-elseif(CONFIG_ARCH_ARMV7M) # All ARMv7-M
-  add_subdirectory(arm_m)
-elseif(CONFIG_ARCH_ARMV8M) # All ARMv8-M
+elseif(CONFIG_ARCH_ARM_M) # All ARM-M
   add_subdirectory(arm_m)
 endif()
 

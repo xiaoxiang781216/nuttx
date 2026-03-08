@@ -30,11 +30,7 @@ ARCH_SUBDIR_ARM = arm_a_r
 else ifeq ($(CONFIG_ARCH_ARMV8R),y)     # ARMv8-R
 ARCH_SUBDIR = armv8-r
 ARCH_SUBDIR_ARM = arm_a_r
-else ifeq ($(CONFIG_ARCH_ARMV7M),y)     # ARMv7-M
-ARCH_SUBDIR = arm_m
-else ifeq ($(CONFIG_ARCH_ARMV8M),y)     # ARMv8-M
-ARCH_SUBDIR = arm_m
-else ifeq ($(CONFIG_ARCH_ARMV6M),y)     # ARMv6-M
+else ifeq ($(CONFIG_ARCH_ARM_M),y)      # ARM-M
 ARCH_SUBDIR = arm_m
 else                                    # ARM9, ARM7TDMI, etc.
 ARCH_SUBDIR = arm

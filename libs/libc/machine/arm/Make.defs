@@ -22,11 +22,7 @@
 
 ifeq ($(CONFIG_ARCH_ARM_A_R),y)          # All ARM A/R
 include $(TOPDIR)/libs/libc/machine/arm/arm_a_r/Make.defs
-else ifeq ($(CONFIG_ARCH_ARMV6M),y)     # All ARMv6-M
-include $(TOPDIR)/libs/libc/machine/arm/arm_m/Make.defs
-else ifeq ($(CONFIG_ARCH_ARMV7M),y)     # All ARMv7-M
-include $(TOPDIR)/libs/libc/machine/arm/arm_m/Make.defs
-else ifeq ($(CONFIG_ARCH_ARMV8M),y)     # All ARMv8-M
+else ifeq ($(CONFIG_ARCH_ARM_M),y)      # All ARM-M
 include $(TOPDIR)/libs/libc/machine/arm/arm_m/Make.defs
 endif
 
