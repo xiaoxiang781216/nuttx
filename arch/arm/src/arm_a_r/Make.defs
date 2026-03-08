@@ -81,6 +81,10 @@ ifeq ($(CONFIG_ARM_MPU),y)
   CMN_CSRCS += arm_mpu.c
 endif
 
+ifeq ($(CONFIG_ARCH_ADDRENV)$(CONFIG_ARM_MPU),yy)
+  CMN_CSRCS += arm_addrenv_mpu.c
+endif
+
 ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
   CMN_UCSRCS += arm_perf.c
 endif

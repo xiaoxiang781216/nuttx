@@ -27,8 +27,4 @@ include arm_a_r/Make.defs
 
 # Common C source files
 
-ifeq ($(CONFIG_ARCH_ADDRENV),y)
-  CMN_CSRCS += arm_addrenv.c
-endif
-
 VPATH += arm_a_r

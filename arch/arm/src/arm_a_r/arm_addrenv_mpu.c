@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_addrenv.c
+ * arch/arm/src/arm_a_r/arm_addrenv_mpu.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -321,15 +321,15 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
     {
       /* Heap include data or just have heap region */
 
-    mpu_modify_region(g_addrenv_heap_region, addrenv->heap,
-                      addrenv->heapsize,
-                      MPU_RBAR_XN | MPU_RBAR_AP_RWRW, 0);
+      mpu_modify_region(g_addrenv_heap_region, addrenv->heap,
+                        addrenv->heapsize, MPU_USER_INTSRAM);
     }
   else if (addrenv->data)
     {
+      /* Just data region */
+
       mpu_modify_region(g_addrenv_heap_region, addrenv->data,
-                        addrenv->datasize,
-                        MPU_RBAR_XN | MPU_RBAR_AP_RWRW, 0);
+                        addrenv->datasize, MPU_USER_INTSRAM);
     }
 #endif
 
@@ -495,7 +495,7 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
   mpu_modify_region(g_addrenv_stack_region,
                     (uintptr_t)tcb->stack_alloc_ptr,
                     tcb->adj_stack_size + tls->tl_size,
-                    MPU_RBAR_XN | MPU_RBAR_AP_RWRW, 0);
+                    MPU_USER_INTSRAM);
   return OK;
 }
 
@@ -531,7 +531,7 @@ int up_addrenv_kstackswitch(struct tcb_s *tcb)
   mpu_modify_region(g_addrenv_stack_region,
                     (uintptr_t)tcb->stack_alloc_ptr,
                     tcb->adj_stack_size + tls->tl_size,
-                    MPU_RBAR_XN | MPU_RBAR_AP_RWRW, 0);
+                    MPU_PRIV_INTSRAM);
   return OK;
 }
 #  endif

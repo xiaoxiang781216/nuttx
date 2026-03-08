@@ -31,8 +31,4 @@ ifeq ($(CONFIG_ARM_GIC_VERSION),3)
   CMN_CSRCS += arm_gicv3.c
 endif
 
-ifeq ($(CONFIG_ARCH_ADDRENV),y)
-  CMN_CSRCS += arm_addrenv.c
-endif
-
 VPATH += arm_a_r
