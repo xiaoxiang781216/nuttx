@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <sys/param.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/mempool.h>
@@ -91,6 +92,18 @@
 
 #define IOB_DATA(p)      (&(p)->io_data[(p)->io_offset])
 #define IOB_FREESPACE(p) (IOB_BUFSIZE(p) - (p)->io_len - (p)->io_offset)
+
+/* IOB owner tracking helpers */
+
+#ifdef CONFIG_DEBUG_IOB
+#  define IOB_OWNER_SIZE          24
+#  define IOB_SET_OWNER(iob, fmt, ...) \
+     snprintf((iob)->io_owner, IOB_OWNER_SIZE, fmt, ##__VA_ARGS__)
+#  define IOB_GET_OWNER(iob)      ((iob)->io_owner)
+#else
+#  define IOB_SET_OWNER(iob, fmt, ...)
+#  define IOB_GET_OWNER(iob)      ""
+#endif
 
 /* Queue helpers */
 
@@ -172,6 +185,10 @@ struct iob_s
   FAR struct mempool_s *io_pool; /* Reference to the mempool from which
                                   * this IOB was allocated
                                   */
+#endif
+
+#ifdef CONFIG_DEBUG_IOB
+  char io_owner[IOB_OWNER_SIZE]; /* Owner string for tracking */
 #endif
 
   uint8_t io_data[1] aligned_data(IOB_ALIGNMENT);

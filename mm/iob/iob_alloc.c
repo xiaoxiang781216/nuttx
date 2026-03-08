@@ -87,6 +87,9 @@ static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
       iob->io_offset = 0;    /* Offset to the beginning of data */
       iob->io_pktlen = 0;    /* Total length of the packet */
       iob->io_conn   = NULL;
+#ifdef CONFIG_DEBUG_IOB
+      iob->io_owner[0] = '\0';
+#endif
 
       /* Verify IOB and IOB data address alignment */
 

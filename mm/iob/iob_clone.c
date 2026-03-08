@@ -127,6 +127,8 @@ int iob_clone_partial(FAR struct iob_s *iob1, unsigned int len,
 
   iob2->io_conn = iob1->io_conn;
 
+  IOB_SET_OWNER(iob2, "%s", IOB_GET_OWNER(iob1));
+
   /* Copy the total packet size from the I/O buffer at the head of the
    * chain.
    */

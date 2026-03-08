@@ -433,6 +433,7 @@ int vlan_dispatch(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt)
   /* Enqueue the packet to the VLAN device's RX queue */
 
   flags = spin_lock_irqsave(&vlan->rxlock);
+  IOB_SET_OWNER(pkt, "%s", vlan->dev.netdev.d_ifname);
   iob_add_queue(pkt, &vlan->rxq);
   spin_unlock_irqrestore(&vlan->rxlock, flags);
 

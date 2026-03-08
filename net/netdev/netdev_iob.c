@@ -78,6 +78,7 @@ int netdev_iob_prepare(FAR struct net_driver_s *dev, bool throttled,
   /* Update l2 gruard size */
 
   iob_reserve(dev->d_iob, CONFIG_NET_LL_GUARDSIZE);
+  IOB_SET_OWNER(dev->d_iob, "%s", dev->d_ifname);
 
   /* Set the device buffer to l2 */
 
@@ -146,6 +147,7 @@ void netdev_iob_replace(FAR struct net_driver_s *dev, FAR struct iob_s *iob)
   dev->d_iob = iob;
   dev->d_buf = NETLLBUF;
   dev->d_len = iob->io_pktlen;
+  IOB_SET_OWNER(iob, "%s", dev->d_ifname);
 }
 
 /****************************************************************************
@@ -172,6 +174,7 @@ void netdev_iob_replace_l2(FAR struct net_driver_s *dev,
 
   dev->d_iob = iob;
   dev->d_len = iob->io_pktlen + NET_LL_HDRLEN(dev);
+  IOB_SET_OWNER(iob, "%s", dev->d_ifname);
 }
 
 /****************************************************************************

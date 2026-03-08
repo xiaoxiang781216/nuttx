@@ -115,6 +115,10 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
               next, next->io_pktlen, next->io_len);
     }
 
+#ifdef CONFIG_DEBUG_IOB
+  iob->io_owner[0] = '\0';
+#endif
+
   /* Free the I/O buffer using mempool */
 
 #if CONFIG_IOB_NPOOLS > 1

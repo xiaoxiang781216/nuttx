@@ -327,6 +327,7 @@ static int netdev_upper_txpoll(FAR struct net_driver_s *dev)
     }
   else
     {
+      IOB_SET_OWNER(pkt, "%s xmit", dev->d_ifname);
       ret = lower->ops->transmit(lower, pkt);
     }
 
@@ -434,6 +435,7 @@ static void netdev_upper_queue_tx(FAR struct net_driver_s *dev)
 {
   FAR struct netdev_upperhalf_s *upper = dev->d_private;
 
+  IOB_SET_OWNER(dev->d_iob, "%s txq", dev->d_ifname);
   iob_add_queue(dev->d_iob, &upper->txq);
   netdev_iob_clear(dev);
   netdev_upper_txavail(dev);
@@ -1913,6 +1915,8 @@ FAR netpkt_t *netpkt_alloc(FAR struct netdev_lowerhalf_s *dev,
       atomic_add(&dev->quota_ptr[type], 1);
       return NULL;
     }
+
+  IOB_SET_OWNER(pkt, "%s", dev->netdev.d_ifname);
 
   iob_reserve(pkt, CONFIG_NET_LL_GUARDSIZE);
   return pkt;
