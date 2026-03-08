@@ -91,6 +91,10 @@ if(CONFIG_ARCH_ADDRENV AND CONFIG_ARM_MPU)
   list(APPEND CSRCS arm_addrenv_mpu.c)
 endif()
 
+if(CONFIG_ARCH_ADDRENV AND CONFIG_ARCH_USE_MMU)
+  list(APPEND CSRCS arm_addrenv_mmu.c)
+endif()
+
 target_sources(arch PRIVATE ${CSRCS})
 
 if(NOT CONFIG_BUILD_FLAT AND CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)

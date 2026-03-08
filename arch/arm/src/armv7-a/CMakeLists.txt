@@ -31,14 +31,8 @@ if(CONFIG_ARCH_TRUSTZONE_SECURE)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)
-  list(
-    APPEND
-    SRCS
-    arm_addrenv.c
-    arm_addrenv_utils.c
-    arm_addrenv_perms.c
-    arm_pgalloc.c
-    arm_addrenv_pgmap.c)
+  list(APPEND SRCS arm_addrenv_utils.c arm_addrenv_perms.c arm_pgalloc.c
+       arm_addrenv_pgmap.c)
   if(CONFIG_ARCH_STACK_DYNAMIC)
     list(APPEND SRCS arm_addrenv_ustack.c)
   endif()
