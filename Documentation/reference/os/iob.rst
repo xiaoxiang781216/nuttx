@@ -55,15 +55,12 @@ Configuration Options
    denied to the read-ahead logic before TCP writes are halted.
    The default 0 if neither TCP write buffering nor TCP read-ahead
    buffering is enabled. Otherwise, the default is 8.
-``CONFIG_IOB_DEBUG``
+``CONFIG_DEBUG_IOB``
    Force I/O buffer debug. This option will force debug output
    from I/O buffer logic. This is not normally something that
    would want to do but is convenient if you are debugging the I/O
    buffer logic and do not want to get overloaded with other
-   un-related debug output. NOTE that this selection is not
-   available if DEBUG features are not enabled
-   (``CONFIG_DEBUG_FEATURES``) with IOBs are being used to syslog
-   buffering logic (``CONFIG_SYSLOG_BUFFER``).
+   un-related debug output.
 
 Throttling
 ==========

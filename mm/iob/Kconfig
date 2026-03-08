@@ -165,15 +165,5 @@ config IOB_NOTIFIER_DIV
 		a notification will be sent only when there are a multiple of 4 IOBs
 		available.
 
-config IOB_DEBUG
-	bool "Force I/O buffer debug"
-	default n
-	depends on DEBUG_FEATURES
-	---help---
-		This option will force debug output from I/O buffer logic.  This
-		is not normally something that would want to do but is convenient
-		if you are debugging the I/O buffer logic and do not want to get
-		overloaded with other un-related debug output.
-
 endif # MM_IOB
 endmenu # Common I/O buffer support

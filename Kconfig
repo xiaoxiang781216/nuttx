@@ -1038,6 +1038,41 @@ config DEBUG_MM_INFO
 
 endif # DEBUG_MM
 
+config DEBUG_IOB
+	bool "Force I/O buffer debug"
+	default n
+	depends on DEBUG_FEATURES
+	---help---
+		This option will force debug output from I/O buffer logic.  This
+		is not normally something that would want to do but is convenient
+		if you are debugging the I/O buffer logic and do not want to get
+		overloaded with other un-related debug output.
+
+if DEBUG_IOB
+
+config DEBUG_IOB_ERROR
+	bool "IOB Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable iob error output to SYSLOG.
+
+config DEBUG_IOB_WARN
+	bool "IOB Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable iob warning output to SYSLOG.
+
+config DEBUG_IOB_INFO
+	bool "IOB Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable iob informational output to SYSLOG.
+
+endif # DEBUG_IOB
+
 config DEBUG_SHM
 	bool "Shared Memory Debug Output"
 	default n

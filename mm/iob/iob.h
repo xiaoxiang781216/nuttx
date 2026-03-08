@@ -40,22 +40,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if defined(CONFIG_DEBUG_FEATURES) && defined(CONFIG_IOB_DEBUG)
-#  ifdef CONFIG_SYSLOG_NETDEV
-#    define ioberr               lowsyslog
-#    define iobwarn              lowsyslog
-#    define iobinfo              lowsyslog
-#  else
-#    define ioberr               _err
-#    define iobwarn              _warn
-#    define iobinfo              _info
-#  endif
-#else
-#  define ioberr                 _none
-#  define iobwarn                _none
-#  define iobinfo                _none
-#endif /* CONFIG_DEBUG_FEATURES && CONFIG_IOB_DEBUG */
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/

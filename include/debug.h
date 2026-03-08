@@ -1090,6 +1090,36 @@
 #  define ptpinfo    _none
 #endif
 
+#ifdef CONFIG_DEBUG_IOB_ERR
+#  ifdef CONFIG_SYSLOG_NETDEV
+#    define ioberr   lowsyslog
+#  else
+#    define ioberr   _err
+#  endif
+#else
+#    define ioberr   _none
+#endif
+
+#ifdef CONFIG_DEBUG_IOB_WARN
+#  ifdef CONFIG_SYSLOG_NETDEV
+#    define iobwarn  lowsyslog
+#  else
+#    define iobwarn  _warn
+#  endif
+#else
+#    define iobwarn  _none
+#endif
+
+#ifdef CONFIG_DEBUG_IOB_INFO
+#  ifdef CONFIG_SYSLOG_NETDEV
+#    define iobinfo  lowsyslog
+#  else
+#    define iobinfo  _info
+#  endif
+#else
+#    define iobinfo  _none
+#endif
+
 /* Buffer dumping macros do not depend on varargs */
 
 #ifdef CONFIG_DEBUG_ERROR
