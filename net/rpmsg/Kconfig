@@ -27,6 +27,12 @@ config NET_RPMSG_NPOLLWAITERS
 	---help---
 		Socket RPMSG number of poll waiters
 
+config NET_RPMSG_EPT_PRIORITY
+	int "RPMSG socket endpoint priority"
+	default 127
+	---help---
+		Used for unified priority of all rpmsg socket
+
 endif # NET_RPMSG
 
 endmenu # Rpmsg Domain Sockets
