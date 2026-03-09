@@ -43,8 +43,12 @@
  * Private Data
  ****************************************************************************/
 
-static DECLARE_HASHTABLE(g_nat44_inbound, CONFIG_NET_NAT_HASH_BITS);
-static DECLARE_HASHTABLE(g_nat44_outbound, CONFIG_NET_NAT_HASH_BITS);
+typedef hash_head_t nat44_hash_t[1 << CONFIG_NET_NAT_HASH_BITS];
+
+static DEFINE_PER_CPU_BMP(nat44_hash_t, g_nat44_inbound);
+static DEFINE_PER_CPU_BMP(nat44_hash_t, g_nat44_outbound);
+#define g_nat44_inbound this_cpu_var_bmp(g_nat44_inbound)
+#define g_nat44_outbound this_cpu_var_bmp(g_nat44_outbound)
 
 /****************************************************************************
  * Private Functions
