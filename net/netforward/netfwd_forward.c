@@ -32,7 +32,6 @@
 
 #include <net/if.h>
 
-#include <nuttx/mutex.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
@@ -46,7 +45,7 @@
 #include "netforward/netforward.h"
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -245,44 +244,6 @@ static inline_function int netfwd_forward_notify(FAR struct forward_s *fwd)
 }
 
 /****************************************************************************
- * Name: netfwd_forward_work
- *
- * Description:
- *   Perform the forwarding operation on the worker thread.
- *
- * Input Parameters:
- *   arg - An initialized instance of the common forwarding structure that
- *         includes everything needed to perform the forwarding operation.
- *
- ****************************************************************************/
-
-static void netfwd_forward_work(void *arg)
-{
-  FAR struct forward_s *fwd = (FAR struct forward_s *)arg;
-  FAR struct net_driver_s *fwddev = fwd->f_dev;
-  int ret;
-
-  netdev_lock(fwddev);
-
-  /* Notify the device driver of the availability of TX data */
-
-  ret = netfwd_forward_notify(fwd);
-
-  netdev_unlock(fwddev);
-
-  if (ret < 0)
-    {
-      nwarn("WARNING: Failed to notify forwarding device: %d\n", ret);
-      if (fwd->f_iob != NULL)
-        {
-          iob_free_chain(fwd->f_iob);
-        }
-
-      netfwd_free(fwd);
-    }
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -312,40 +273,46 @@ static void netfwd_forward_work(void *arg)
 int netfwd_forward(FAR struct net_driver_s *dev, FAR struct forward_s *fwd)
 {
   FAR struct net_driver_s *fwddev;
+  FAR struct iob_s *iob;
+  FAR uint8_t *buf;
+  unsigned int count;
+  int len;
   int ret;
 
   DEBUGASSERT(fwd != NULL && fwd->f_iob != NULL && fwd->f_dev != NULL);
 
   fwddev = fwd->f_dev;
 
-  if (nxrmutex_trylock(&fwddev->d_lock) != OK)
-    {
-      ret = work_queue(LPWORK, &fwd->f_work, netfwd_forward_work, fwd, 0);
-    }
-  else
-    {
-      FAR struct iob_s *iob = dev->d_iob;
-      FAR uint8_t *buf = dev->d_buf;
-      int len = dev->d_len;
+  /* Save the current state of the source device, avoid damaging the
+   * current d_iob and other resources when forwarding recursion.
+   */
 
-      /* Save the current state of the device, avoid damaging the
-       * current d_iob and other resources when forwarding recursion
-       */
+  iob = dev->d_iob;
+  buf = dev->d_buf;
+  len = dev->d_len;
 
-      dev->d_iob = NULL;
-      dev->d_buf = NULL;
-      dev->d_len = 0;
+  dev->d_iob = NULL;
+  dev->d_buf = NULL;
+  dev->d_len = 0;
 
-      /* Notify the device driver of the availability of TX data */
+  /* Break the source device lock to avoid AB-BA deadlock — two devices
+   * forwarding packets to each other could deadlock if both hold their
+   * own lock while trying to acquire the other's.
+   */
 
-      ret = netfwd_forward_notify(fwd);
+  netdev_breaklock(dev, &count);
+  netdev_lock(fwddev);
 
-      dev->d_iob = iob;
-      dev->d_buf = buf;
-      dev->d_len = len;
+  /* Notify the device driver of the availability of TX data */
 
-      nxrmutex_unlock(&fwddev->d_lock);
-    }
+  ret = netfwd_forward_notify(fwd);
+
+  netdev_unlock(fwddev);
+  netdev_restorelock(dev, count);
+
+  dev->d_iob = iob;
+  dev->d_buf = buf;
+  dev->d_len = len;
 
   return ret;
 }
