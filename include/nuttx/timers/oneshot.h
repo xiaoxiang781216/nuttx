@@ -460,9 +460,9 @@ int oneshot_start(FAR struct oneshot_lowerhalf_s *lower,
 {
   int ret = OK;
 #ifdef CONFIG_ONESHOT_COUNT
-  clkcnt_t freq = lower->frequency;
+  uint32_t freq = lower->frequency;
   clkcnt_t cnt  = clkcnt_delta_time2cnt(ts->tv_nsec, freq, NSEC_PER_SEC) +
-                  ts->tv_sec * freq;
+                  (uint64_t)ts->tv_sec * freq;
 
   lower->ops->start(lower, cnt);
 #else
@@ -484,6 +484,9 @@ int oneshot_start(FAR struct oneshot_lowerhalf_s *lower,
  * Returned Value:
  *   None.
  *
+ * Assumptions:
+ *   ts should be less than the maximum timespec of the timer.
+ *
  ****************************************************************************/
 
 static inline_function
@@ -493,7 +496,7 @@ int oneshot_start_absolute(FAR struct oneshot_lowerhalf_s *lower,
   int ret = OK;
 #ifdef CONFIG_ONESHOT_COUNT
   uint32_t freq     = lower->frequency;
-  clkcnt_t expected = ts->tv_sec * freq +
+  clkcnt_t expected = (uint64_t)ts->tv_sec * freq +
                       clkcnt_delta_time2cnt(ts->tv_nsec, freq, NSEC_PER_SEC);
 
   if (lower->ops->start_absolute)
@@ -559,9 +562,12 @@ int oneshot_tick_max_delay(FAR struct oneshot_lowerhalf_s *lower,
  * Input Parameters:
  *   ops - The oneshot interface.
  *   tick   - The delta time in ticks.
-
+ *
  * Returned Value:
  *   None.
+ *
+ * Assumptions:
+ *   tick should be less than the maximum available tick of the timer.
  *
  ****************************************************************************/
 
