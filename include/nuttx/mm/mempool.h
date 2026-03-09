@@ -542,6 +542,44 @@ static inline_function size_t mempool_navail(FAR struct mempool_s *pool)
 int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info);
 
 /****************************************************************************
+ * Name: mempool_foreach_used
+ *
+ * Description:
+ *   Iterate over all allocated (in-use) blocks in the mempool and invoke
+ *   the callback for each one. The pool lock is held during iteration.
+ *
+ * Input Parameters:
+ *   pool     - Address of the memory pool.
+ *   callback - Function called for each allocated block.
+ *   arg      - Opaque argument passed to callback.
+ *
+ ****************************************************************************/
+
+typedef void (*mempool_foreach_used_cb_t)(FAR void *blk, FAR void *arg);
+void mempool_foreach_used(FAR struct mempool_s *pool,
+                          mempool_foreach_used_cb_t callback,
+                          FAR void *arg);
+
+/****************************************************************************
+ * Name: mempool_foreach_free
+ *
+ * Description:
+ *   Iterate over all free blocks in the mempool and invoke
+ *   the callback for each one. The pool lock is held during iteration.
+ *
+ * Input Parameters:
+ *   pool     - Address of the memory pool.
+ *   callback - Function called for each free block.
+ *   arg      - Opaque argument passed to callback.
+ *
+ ****************************************************************************/
+
+typedef void (*mempool_foreach_free_cb_t)(FAR void *blk, FAR void *arg);
+void mempool_foreach_free(FAR struct mempool_s *pool,
+                          mempool_foreach_free_cb_t callback,
+                          FAR void *arg);
+
+/****************************************************************************
  * Name: mempool_memdump
  *
  * Description:

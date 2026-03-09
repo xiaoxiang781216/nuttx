@@ -701,6 +701,28 @@ int iob_update_pktlen(FAR struct iob_s *iob, unsigned int pktlen,
 int iob_count(FAR struct iob_s *iob);
 
 /****************************************************************************
+ * Name: iob_foreach
+ *
+ * Description:
+ *   Iterate over all allocated (in-use) IOBs across all IOB pools.
+ *   For each allocated IOB, the callback is invoked.
+ *
+ ****************************************************************************/
+
+typedef void (*iob_foreach_cb_t)(FAR struct iob_s *iob, FAR void *arg);
+void iob_foreach(iob_foreach_cb_t callback, FAR void *arg);
+
+/****************************************************************************
+ * Name: iob_pool_info
+ *
+ * Description:
+ *   Get pool summary information for the specified IOB pool index.
+ *
+ ****************************************************************************/
+
+int iob_pool_info(int poolidx, FAR struct mempoolinfo_s *info);
+
+/****************************************************************************
  * Name: iob_dump
  *
  * Description:

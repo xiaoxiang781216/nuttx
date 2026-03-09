@@ -50,9 +50,18 @@
  * Private Types
  ****************************************************************************/
 
-typedef void (*mempool_callback_t)(FAR struct mempool_s *pool,
-                                   FAR struct mempool_record_s *record,
-                                   FAR const void *input, FAR void *output);
+struct mempool_memdump_ctx
+{
+  FAR struct mempool_s *pool;
+  FAR const struct mm_memdump_s *dump;
+};
+
+struct mempool_info_task_ctx
+{
+  FAR struct mempool_s *pool;
+  FAR const struct malltask *task;
+  FAR struct mallinfo_task *info;
+};
 #endif
 
 /****************************************************************************
@@ -117,6 +126,32 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
     }
 }
 
+static bool mempool_is_used(FAR struct mempool_s *pool, FAR void *blkaddr)
+{
+#ifdef CONFIG_MM_RECORD
+  FAR struct mempool_record_s *record =
+    (FAR struct mempool_record_s *)blkaddr;
+  if (record->magic == MEMPOOL_MAGIC_ALLOC)
+    {
+      return true;
+    }
+
+  return false;
+#else
+  FAR sq_entry_t *fentry;
+
+  sq_for_every(&pool->queue, fentry)
+    {
+      if ((FAR void *)fentry == blkaddr)
+        {
+          return false;
+        }
+    }
+
+  return true;
+#endif
+}
+
 #ifdef CONFIG_MM_RECORD
 static inline void mempool_record(FAR struct mempool_s *pool,
                                   FAR struct mempool_record_s *record,
@@ -156,67 +191,30 @@ static inline void mempool_record(FAR struct mempool_s *pool,
 #  endif
 }
 
-static void mempool_foreach(FAR struct mempool_s *pool,
-                            mempool_callback_t callback,
-                            FAR const void *input, FAR void *output)
+#  ifdef CONFIG_MM_RECORD_PID
+static void mempool_info_task_callback(FAR void *blk, FAR void *arg)
 {
-  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
-  FAR struct mempool_record_s *record;
-  FAR sq_entry_t *entry;
-  FAR char *base;
-  size_t nblks;
-
-  sq_for_every(&pool->equeue, entry)
-    {
-      nblks = (pool->expandsize - MEMPOOL_HEADER_SIZE) / blocksize;
-      base = (FAR char *)entry - (nblks * blocksize);
-
-      while (nblks--)
-        {
-          record = (FAR struct mempool_record_s *)
-                   (base + nblks * blocksize);
-          callback(pool, record, input, output);
-        }
-    }
-}
-
-#ifdef CONFIG_MM_RECORD_PID
-static void mempool_info_task_callback(FAR struct mempool_s *pool,
-                                       FAR struct mempool_record_s *record,
-                                       FAR const void *input,
-                                       FAR void *output)
-{
-  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
-  FAR const struct malltask *task = input;
-  FAR struct mallinfo_task *info = output;
-
-  if (record->magic == MEMPOOL_MAGIC_FREE)
-    {
-      return;
-    }
+  FAR struct mempool_info_task_ctx *ctx = arg;
+  FAR const struct malltask *task = ctx->task;
+  FAR struct mempool_record_s *record = mempool_get_record_from_block(blk);
+  size_t blocksize = MEMPOOL_REALBLOCKSIZE(ctx->pool->blocksize);
 
   if ((MM_DUMP_ASSIGN(task, record) || MM_DUMP_ALLOC(task, record) ||
        MM_DUMP_LEAK(task, record)) && MM_DUMP_SEQNO(task, record))
     {
-      info->aordblks++;
-      info->uordblks += blocksize;
+      ctx->info->aordblks++;
+      ctx->info->uordblks += blocksize;
     }
 }
-#endif
+#  endif
 
-static void mempool_memdump_callback(FAR struct mempool_s *pool,
-                                     FAR struct mempool_record_s *record,
-                                     FAR const void *input, FAR void *output)
+static void mempool_memdump_callback(FAR void *blk, FAR void *arg)
 {
-  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
-  size_t overhead = blocksize - pool->blocksize;
-  FAR const struct mm_memdump_s *dump = input;
-  UNUSED(dump);
-
-  if (record->magic == MEMPOOL_MAGIC_FREE)
-    {
-      return;
-    }
+  FAR struct mempool_memdump_ctx *ctx = arg;
+  FAR const struct mm_memdump_s *dump = ctx->dump;
+  FAR struct mempool_record_s *record = mempool_get_record_from_block(blk);
+  size_t blocksize = MEMPOOL_REALBLOCKSIZE(ctx->pool->blocksize);
+  size_t overhead = blocksize - ctx->pool->blocksize;
 
   if ((MM_DUMP_ASSIGN(dump, record) || MM_DUMP_ALLOC(dump, record) ||
        MM_DUMP_LEAK(dump, record)) && MM_DUMP_SEQNO(dump, record))
@@ -236,60 +234,56 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
 #  endif
 
       syslog(LOG_INFO,
-#ifdef CONFIG_MM_RECORD_PID
+#  ifdef CONFIG_MM_RECORD_PID
              "%6d"
-#endif
+#  endif
              "%12zu%9zu"
-#ifdef CONFIG_MM_RECORD_SEQNO
+#  ifdef CONFIG_MM_RECORD_SEQNO
              "%12lu"
-#endif
+#  endif
              "%*p %s\n",
-#ifdef CONFIG_MM_RECORD_PID
+#  ifdef CONFIG_MM_RECORD_PID
              record->pid,
-#endif
+#  endif
              blocksize, overhead,
-#ifdef CONFIG_MM_RECORD_SEQNO
+#  ifdef CONFIG_MM_RECORD_SEQNO
              record->seqno,
-#endif
+#  endif
              BACKTRACE_PTR_FMT_WIDTH,
-             ((FAR char *)record - pool->blocksize), tmp);
+             ((FAR char *)record - ctx->pool->blocksize), tmp);
     }
 }
 
-static void
-mempool_memdump_free_callback(FAR struct mempool_s *pool,
-                              FAR struct mempool_record_s *record,
-                              FAR const void *input, FAR void *output)
+static void mempool_memdump_free_callback(FAR void *blk, FAR void *arg)
 {
-  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
-  size_t overhead = blocksize - pool->blocksize;
+  FAR struct mempool_memdump_ctx *ctx = arg;
+  FAR struct mempool_record_s *record = mempool_get_record_from_block(blk);
+  size_t blocksize = MEMPOOL_REALBLOCKSIZE(ctx->pool->blocksize);
+  size_t overhead = blocksize - ctx->pool->blocksize;
 
-  if (record->magic == MEMPOOL_MAGIC_FREE)
+#  ifdef CONFIG_MM_RECORD_STACK
+  char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)] = "";
+  FAR void **stack;
+  int stacksize;
+
+  stack = backtrace_get(record->freestack, &stacksize);
+  if (stack && stacksize)
     {
-#ifdef CONFIG_MM_RECORD_STACK
-      char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)] = "";
-      FAR void **stack;
-      int stacksize;
-
-      stack = backtrace_get(record->freestack, &stacksize);
-      if (stack && stacksize)
-        {
-          backtrace_format(tmp, sizeof(tmp), stack, stacksize);
-        }
-#else
-      FAR const char *tmp = "";
-#endif
-      syslog(LOG_INFO,
-#ifdef CONFIG_MM_RECORD_PID
-             "%6d"
-#endif
-             "%12zu%9zu%*p %s\n",
-#ifdef CONFIG_MM_RECORD_PID
-             record->freepid,
-#endif
-             blocksize, overhead, BACKTRACE_PTR_FMT_WIDTH,
-             mempool_get_block_from_record(record), tmp);
+      backtrace_format(tmp, sizeof(tmp), stack, stacksize);
     }
+#  else
+  FAR const char *tmp = "";
+#  endif
+  syslog(LOG_INFO,
+#  ifdef CONFIG_MM_RECORD_PID
+         "%6d"
+#  endif
+         "%12zu%9zu%*p %s\n",
+#  ifdef CONFIG_MM_RECORD_PID
+         record->freepid,
+#  endif
+         blocksize, overhead, BACKTRACE_PTR_FMT_WIDTH,
+         blk, tmp);
 }
 #endif
 
@@ -935,7 +929,12 @@ mempool_info_task(FAR struct mempool_s *pool,
 #ifdef CONFIG_MM_RECORD_PID
   else
     {
-      mempool_foreach(pool, mempool_info_task_callback, task, &info);
+      struct mempool_info_task_ctx ctx =
+        {
+          pool, task, &info
+        };
+
+      mempool_foreach_used(pool, mempool_info_task_callback, &ctx);
     }
 #endif
 
@@ -969,11 +968,21 @@ void mempool_memdump(FAR struct mempool_s *pool,
 #ifdef CONFIG_MM_RECORD
   if (dump->pid == PID_MM_FREE)
     {
-      mempool_foreach(pool, mempool_memdump_free_callback, NULL, NULL);
+      struct mempool_memdump_ctx ctx =
+        {
+          pool, dump
+        };
+
+      mempool_foreach_free(pool, mempool_memdump_free_callback, &ctx);
     }
   else
     {
-      mempool_foreach(pool, mempool_memdump_callback, dump, NULL);
+      struct mempool_memdump_ctx ctx =
+        {
+          pool, dump
+        };
+
+      mempool_foreach_used(pool, mempool_memdump_callback, &ctx);
     }
 #else
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
@@ -989,6 +998,102 @@ void mempool_memdump(FAR struct mempool_s *pool,
   syslog(LOG_INFO, "%12zu%9zu%*p skip block dump\n",
          blocksize, overhead, BACKTRACE_PTR_FMT_WIDTH, pool);
 #endif
+}
+
+/****************************************************************************
+ * Name: mempool_foreach_used
+ *
+ * Description:
+ *   Iterate over all allocated (in-use) blocks in the mempool and invoke
+ *   the callback for each one. The pool lock is held during iteration.
+ *
+ ****************************************************************************/
+
+void mempool_foreach_used(FAR struct mempool_s *pool,
+                          mempool_foreach_used_cb_t callback,
+                          FAR void *arg)
+{
+  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
+  FAR sq_entry_t *entry;
+  FAR char *base;
+  irqstate_t flags;
+  size_t nblks;
+  size_t n;
+
+  mempool_try_init(pool);
+
+  flags = spin_lock_irqsave(&pool->lock);
+
+  if (pool->initialbase != NULL && pool->initialsize > 0)
+    {
+      nblks = (pool->initialsize - MEMPOOL_HEADER_SIZE) / blocksize;
+      base = (FAR char *)pool->initialbase;
+
+      for (n = 0; n < nblks; n++)
+        {
+          FAR void *blkaddr = base + n * blocksize;
+
+          if (mempool_is_used(pool, blkaddr))
+            {
+#ifdef CONFIG_MM_RECORD
+              blkaddr += MEMPOOL_RECORD_SIZE;
+#endif
+              callback(blkaddr, arg);
+            }
+        }
+    }
+
+  sq_for_every(&pool->equeue, entry)
+    {
+      nblks = (pool->expandsize - MEMPOOL_HEADER_SIZE) / blocksize;
+      base = (FAR char *)entry - (nblks * blocksize);
+
+      for (n = 0; n < nblks; n++)
+        {
+          FAR char *blkaddr = base + n * blocksize;
+
+          if (mempool_is_used(pool, blkaddr))
+            {
+#ifdef CONFIG_MM_RECORD
+              blkaddr += MEMPOOL_RECORD_SIZE;
+#endif
+              callback(blkaddr, arg);
+            }
+        }
+    }
+
+  spin_unlock_irqrestore(&pool->lock, flags);
+}
+
+/****************************************************************************
+ * Name: mempool_foreach_free
+ *
+ * Description:
+ *   Iterate over all free blocks in the mempool and invoke
+ *   the callback for each one. The pool lock is held during iteration.
+ *
+ ****************************************************************************/
+
+void mempool_foreach_free(FAR struct mempool_s *pool,
+                          mempool_foreach_free_cb_t callback,
+                          FAR void *arg)
+{
+  FAR sq_entry_t *entry;
+  irqstate_t flags;
+  bool bypass;
+
+  mempool_try_init(pool);
+
+  flags = spin_lock_irqsave(&pool->lock);
+  bypass = kasan_bypass(true);
+
+  sq_for_every(&pool->queue, entry)
+    {
+      callback((FAR void *)entry, arg);
+    }
+
+  kasan_bypass(bypass);
+  spin_unlock_irqrestore(&pool->lock, flags);
 }
 
 /****************************************************************************

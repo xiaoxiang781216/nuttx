@@ -30,6 +30,7 @@ if(CONFIG_MM_IOB)
       iob_copyin.c
       iob_copyout.c
       iob_contig.c
+      iob_foreach.c
       iob_free.c
       iob_free_chain.c
       iob_free_queue.c
