@@ -292,8 +292,8 @@ target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
-target_include_directories(sim_head PUBLIC ${NUTTX_DIR}/sched)
-target_sources(sim_head PUBLIC sim_head.c sim_doirq.c)
+target_include_directories(sim_requiredobjs PUBLIC ${NUTTX_DIR}/sched)
+target_sources(sim_requiredobjs PUBLIC sim_head.c sim_doirq.c)
 
 target_include_directories(arch PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_sources(arch PRIVATE ${SRCS})

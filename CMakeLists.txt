@@ -531,23 +531,24 @@ if(WIN32)
 endif()
 
 if(CONFIG_ARCH_SIM)
-  # Create separate sim_head OBJECT library built as part of NuttX kernel It
-  # must be separated to allow for linking against the rest of NuttX libraries
+  # Create separate sim_requiredobjs OBJECT library built as part of NuttX
+  # kernel.  It must be separated to allow for linking against the rest of NuttX
+  # libraries
 
-  add_library(sim_head OBJECT)
-  nuttx_add_library_internal(sim_head)
+  add_library(sim_requiredobjs OBJECT)
+  nuttx_add_library_internal(sim_requiredobjs)
   get_property(
     definitions
     TARGET nuttx
     PROPERTY NUTTX_KERNEL_DEFINITIONS)
-  target_compile_definitions(sim_head PRIVATE ${definitions})
+  target_compile_definitions(sim_requiredobjs PRIVATE ${definitions})
 
   get_property(
     options
     TARGET nuttx
     PROPERTY NUTTX_KERNEL_COMPILE_OPTIONS)
-  target_compile_options(sim_head PRIVATE ${options})
-  target_compile_options(sim_head PRIVATE -fvisibility=default)
+  target_compile_options(sim_requiredobjs PRIVATE ${options})
+  target_compile_options(sim_requiredobjs PRIVATE -fvisibility=default)
 
   # We need the relocatable object to be first in the list of libraries to be
   # linked against final nuttx binary
@@ -767,7 +768,7 @@ elseif(WIN32)
     VERBATIM)
   add_custom_target(nuttx_all-lib DEPENDS ${CMAKE_BINARY_DIR}/nuttx_all.lib)
   add_dependencies(nuttx nuttx_all-lib)
-  target_link_libraries(nuttx PRIVATE $<TARGET_OBJECTS:sim_head>
+  target_link_libraries(nuttx PRIVATE $<TARGET_OBJECTS:sim_requiredobjs>
                                       ${CMAKE_BINARY_DIR}/nuttx_all.lib)
 else()
 
@@ -794,21 +795,21 @@ else()
       OUTPUT nuttx.rel
       COMMAND
         ${CMAKE_LINKER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
-        $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
-        ${nuttx_libs_paths} $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o
-        nuttx.rel
-      DEPENDS ${nuttx_libs} sim_head
+        $<TARGET_OBJECTS:sim_requiredobjs>
+        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group> ${nuttx_libs_paths}
+        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
+      DEPENDS ${nuttx_libs} sim_requiredobjs
       COMMAND_EXPAND_LISTS)
   else()
     add_custom_command(
       OUTPUT nuttx.rel
       COMMAND
         ${CMAKE_C_COMPILER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
-        $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
-        ${nuttx_libs_paths} $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o
-        nuttx.rel
+        $<TARGET_OBJECTS:sim_requiredobjs>
+        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group> ${nuttx_libs_paths}
+        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
       COMMAND ${CMAKE_OBJCOPY} --redefine-syms=nuttx-names.dat nuttx.rel
-      DEPENDS ${nuttx_libs} sim_head sim_redefine_symbols
+      DEPENDS ${nuttx_libs} sim_requiredobjs sim_redefine_symbols
       COMMAND_EXPAND_LISTS)
   endif()
   add_custom_target(nuttx-rel DEPENDS nuttx.rel
