@@ -62,6 +62,9 @@ extern const struct procfs_operations g_cpuload_operations;
 extern const struct procfs_operations g_critmon_operations;
 extern const struct procfs_operations g_fdt_operations;
 extern const struct procfs_operations g_irq_operations;
+#ifdef CONFIG_DEBUG_IOB
+extern const struct procfs_operations g_iobinfo_operations;
+#endif
 extern const struct procfs_operations g_meminfo_operations;
 extern const struct procfs_operations g_memdump_operations;
 extern const struct procfs_operations g_mempool_operations;
@@ -146,6 +149,10 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #  else
   { "irqs",         &g_irq_operations,      PROCFS_FILE_TYPE,   0444 },
 #  endif
+#endif
+
+#ifdef CONFIG_DEBUG_IOB
+  { "iobinfo",     &g_iobinfo_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMINFO

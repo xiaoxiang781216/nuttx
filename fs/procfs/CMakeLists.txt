@@ -43,6 +43,10 @@ if(NOT CONFIG_DISABLE_MOUNTPOINT)
       list(APPEND SRCS fs_procfssimple.c)
     endif()
 
+    if(CONFIG_DEBUG_IOB)
+      list(APPEND SRCS fs_procfsiobinfo.c)
+    endif()
+
     target_sources(fs PRIVATE ${SRCS})
 
   endif()
