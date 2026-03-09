@@ -30,7 +30,7 @@ It is built like this:
 
     .. code-block:: console
 
-        nuttx.rel : libarch$(LIBEXT) board/libboard$(LIBEXT) $(HOSTOS)-names.dat $(LINKOBJS)
+        nuttx.rel : libarch$(LIBEXT) board/libboard$(LIBEXT) $(HOSTOS)-names.dat $(REQUIREDOBJS)
             $(LD) -r $(LDLINKFLAGS) $(RELPATHS) $(EXTRA_LIBPATHS) -o $@ $(REQUIREDOBJS) --start-group $(RELLIBS) $(EXTRA_LIBS) --end-group
             $(OBJCOPY) --redefine-syms=$(HOSTOS)-names.dat $@
 

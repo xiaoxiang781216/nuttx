@@ -55,8 +55,7 @@ NUTTX = $(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx$(EXEEXT))
 # there are a fews that must be included because they
 # are called only from the host OS-specific logic(HOSTOBJS)
 
-LINKOBJS = sim_head$(OBJEXT)
-REQUIREDOBJS = $(LINKOBJS) sim_doirq$(OBJEXT)
+REQUIREDOBJS = sim_head$(OBJEXT) sim_doirq$(OBJEXT)
 ifeq ($(CONFIG_SIM_NETUSRSOCK),y)
   REQUIREDOBJS += sim_usrsock$(OBJEXT)
 endif
@@ -77,7 +76,7 @@ endif
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 
-CSRCS  = sim_initialize.c sim_idle.c sim_doirq.c sim_initialstate.c
+CSRCS  = sim_initialize.c sim_idle.c sim_initialstate.c
 CSRCS += sim_createstack.c sim_usestack.c sim_releasestack.c sim_stackframe.c
 CSRCS += sim_exit.c sim_switchcontext.c sim_ummheap.c
 CSRCS += sim_uart.c sim_copyfullstate.c sim_tcbinfo.c sim_cpuinfo.c
@@ -227,7 +226,6 @@ endif
 
 ifeq ($(CONFIG_SIM_NETUSRSOCK),y)
   HOSTSRCS += sim_hostusrsock.c
-  CSRCS += sim_usrsock.c
 endif
 
 ifeq ($(CONFIG_SIM_HCISOCKET),y)
@@ -358,7 +356,7 @@ all: sim_head$(OBJEXT) libarch$(LIBEXT)
 $(AOBJS): %$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
 
-$(COBJS) $(LINKOBJS): %$(OBJEXT): %.c
+$(COBJS) $(REQUIREDOBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(HOSTOBJS) $(HEADOBJ): %$(OBJEXT): %.c
@@ -432,7 +430,7 @@ endef
 # stuff doesn't work there as we expect.
 # Note: _stext stuff is for CONFIG_CXX_INITIALIZE_SINIT, which in not
 # necessary for macOS.
-nuttx$(EXEEXT): libarch$(LIBEXT) board/libboard$(LIBEXT) $(HEADOBJ) $(LINKOBJS) $(HOSTOBJS) nuttx-names.dat
+nuttx$(EXEEXT): libarch$(LIBEXT) board/libboard$(LIBEXT) $(HEADOBJ) $(REQUIREDOBJS) $(HOSTOBJS) nuttx-names.dat
 	$(Q) echo "LD:  nuttx$(EXEEXT)"
 	$(Q) $(LD) -r $(LDLINKFLAGS) $(RELPATHS) $(EXTRA_LIBPATHS) $(EXTRALINKCMDS) \
 	     -o nuttx.rel $(REQUIREDOBJS) $(LDSTARTGROUP) $(RELLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
