@@ -869,7 +869,7 @@ void sched_note_add(FAR const void *data, size_t len)
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
           if (note->nc_type > NOTE_DUMP_PRINTF &&
-              note->nc_type <= NOTE_DUMP_THREADTIME)
+              note->nc_type <= NOTE_DUMP_ASYNC_END)
             {
               FAR struct note_event_s *nev =
                   (FAR struct note_event_s *)note;

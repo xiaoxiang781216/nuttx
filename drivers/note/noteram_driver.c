@@ -1718,7 +1718,7 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
         FAR struct note_counter_s *counter;
         counter = (FAR struct note_counter_s *)nbi->nev_data;
         ret += noteram_dump_header(s, &nbi->nev_cmn, ctx);
-        ret += lib_sprintf(s, "tracing_mark_write: C|%d|%s|%ld\n",
+        ret += lib_sprintf(s, "tracing_mark_write: C|%d|%s|%" PRId64 "\n",
                            pid, counter->name, counter->value);
       }
       break;
@@ -1730,6 +1730,50 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
         ret += noteram_dump_header(s, &nev->nev_cmn, ctx);
         ret += lib_sprintf(s, "tracing_mark_write: I|%d|elapsed:%llu\n",
                           pid, (unsigned long long)nts->elapsed);
+      }
+      break;
+    case NOTE_DUMP_ASYNC_BEGIN:
+    case NOTE_DUMP_ASYNC_END:
+      {
+        FAR struct note_event_s *nev = (FAR struct note_event_s *)p;
+        FAR struct note_async_s *nas = (FAR struct note_async_s *)
+                                       nev->nev_data;
+        size_t total = note->nc_length - SIZEOF_NOTE_EVENT(0)
+                         - sizeof(struct note_async_s);
+        int32_t cookie;
+        size_t nlen;
+
+        if (note->nc_length <= SIZEOF_NOTE_EVENT(0)
+              + sizeof(struct note_async_s))
+          {
+            break;
+          }
+
+        cookie = nas->cookie;
+        nlen = strnlen(nas->names, total) + 1;
+        if (nlen > total)
+          {
+            nlen = total;
+          }
+
+        ret += noteram_dump_header(s, &nev->nev_cmn, ctx);
+        if (nlen < total)
+          {
+            ret += lib_sprintf(s, "tracing_mark_write: "
+                               "%c|%d|%s|%s|%" PRId32 "\n",
+                               note->nc_type == NOTE_DUMP_ASYNC_BEGIN
+                               ? 'G' : 'H',
+                               pid, nas->names,
+                               nas->names + nlen, cookie);
+          }
+        else
+          {
+            ret += lib_sprintf(s, "tracing_mark_write: "
+                               "%c|%d|%s|%" PRId32 "\n",
+                               note->nc_type == NOTE_DUMP_ASYNC_BEGIN
+                               ? 'S' : 'F',
+                               pid, nas->names, cookie);
+          }
       }
       break;
 #endif

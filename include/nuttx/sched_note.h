@@ -135,6 +135,15 @@
           } \
         while (0)
 
+#define sched_note_async_begin(tag, name, cookie) \
+        sched_note_async(tag, NOTE_DUMP_ASYNC_BEGIN, NULL, name, cookie)
+#define sched_note_async_end(tag, name, cookie) \
+        sched_note_async(tag, NOTE_DUMP_ASYNC_END, NULL, name, cookie)
+#define sched_note_async_begin_track(tag, track, name, cookie) \
+        sched_note_async(tag, NOTE_DUMP_ASYNC_BEGIN, track, name, cookie)
+#define sched_note_async_end_track(tag, track, name, cookie) \
+        sched_note_async(tag, NOTE_DUMP_ASYNC_END, track, name, cookie)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -178,6 +187,8 @@ enum note_type_e
   NOTE_DUMP_BINARY,
   NOTE_DUMP_COUNTER,
   NOTE_DUMP_THREADTIME,
+  NOTE_DUMP_ASYNC_BEGIN,
+  NOTE_DUMP_ASYNC_END,
 
   /* Always last */
 
@@ -348,13 +359,19 @@ struct note_event_s
 
 struct note_counter_s
 {
-  long int value;
+  int64_t value;
   char name[NAME_MAX];
 };
 
 struct note_threadtime_s
 {
   clock_t elapsed;
+};
+
+struct note_async_s
+{
+  int32_t cookie;
+  char names[];         /* [name\0][track\0] (track optional) */
 };
 
 /* Maximum note structure for temporary buffer when copying from byte stream.
@@ -493,37 +510,75 @@ void sched_note_printf_ip_ratelimit(uint8_t tag, uint8_t level,
                                     uint64_t type, ...) printf_like(4, 6);
 
 #define sched_note_event_ip_ratelimited(tag, level, ip, event, buf, len) \
-  ({                                                                     \
-    static DEFINE_RATELIMIT_STATE(_rs,                                   \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                            \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                              \
-    if (!ratelimit_islimited(&_rs))                                      \
-      {                                                                  \
-        sched_note_event_ip(tag, level, ip, event, buf, len);            \
-      }                                                                  \
-  })
+  do                                                                     \
+    {                                                                    \
+      static DEFINE_RATELIMIT_STATE(_rs,                                 \
+        CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                          \
+        CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                            \
+      if (!ratelimit_islimited(&_rs))                                    \
+        {                                                                \
+          sched_note_event_ip(tag, level, ip, event, buf, len);          \
+        }                                                                \
+    }                                                                    \
+  while (0)
 
 #define sched_note_vprintf_ip_ratelimited(tag, level, ip, fmt, type, va) \
-  ({                                                                     \
-    static DEFINE_RATELIMIT_STATE(_rs,                                   \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                            \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                              \
-    if (!ratelimit_islimited(&_rs))                                      \
-      {                                                                  \
-        sched_note_vprintf_ip(tag, level, ip, fmt, type, va);            \
-      }                                                                  \
-  })
+  do                                                                     \
+    {                                                                    \
+      static DEFINE_RATELIMIT_STATE(_rs,                                 \
+        CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                          \
+        CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                            \
+      if (!ratelimit_islimited(&_rs))                                    \
+        {                                                                \
+          sched_note_vprintf_ip(tag, level, ip, fmt, type, va);          \
+        }                                                                \
+    }                                                                    \
+  while (0)
 
 #define sched_note_printf_ip_ratelimited(tag, level, ip, fmt, type, ...) \
-  ({                                                                     \
-    static DEFINE_RATELIMIT_STATE(_rs,                                   \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                            \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                              \
-    if (!ratelimit_islimited(&_rs))                                      \
-      {                                                                  \
-        sched_note_printf_ip(tag, level, ip, fmt, type, ##__VA_ARGS__);  \
-      }                                                                  \
-  })
+  do                                                                     \
+    {                                                                    \
+      static DEFINE_RATELIMIT_STATE(_rs,                                 \
+        CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                          \
+        CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                            \
+      if (!ratelimit_islimited(&_rs))                                    \
+        {                                                                \
+          sched_note_printf_ip(tag, level, ip, fmt, type,                \
+                               ##__VA_ARGS__);                           \
+        }                                                                \
+    }                                                                    \
+  while (0)
+
+#define sched_note_async(tag, event, track, name, ck) \
+        do \
+          { \
+            struct note_max_s _tmp; \
+            FAR struct note_async_s *_d = \
+              (FAR struct note_async_s *)_tmp.data; \
+            size_t _max = sizeof(_tmp.data) - \
+                          sizeof(struct note_async_s); \
+            size_t _nlen; \
+            size_t _tlen = 0; \
+            _d->cookie = (ck); \
+            _nlen = strlcpy(_d->names, (name), _max) + 1; \
+            if (_nlen > _max) \
+              { \
+                _nlen = _max; \
+              } \
+            if ((track) != NULL && _nlen < _max) \
+              { \
+                _tlen = strlcpy(_d->names + _nlen, (track), \
+                                _max - _nlen) + 1; \
+                if (_tlen > _max - _nlen) \
+                  { \
+                    _tlen = _max - _nlen; \
+                  } \
+              } \
+            sched_note_event((tag), LOG_INFO, (event), \
+                             _d, sizeof(struct note_async_s) + \
+                             _nlen + _tlen); \
+          } \
+        while (0)
 
 #else
 #  define sched_note_event_ip(t,l,i,e,b,n)
@@ -535,6 +590,7 @@ void sched_note_printf_ip_ratelimit(uint8_t tag, uint8_t level,
 #  define sched_note_event_ip_ratelimited(t,l,i,e,b,n)
 #  define sched_note_vprintf_ip_ratelimited(t,l,i,f,p,va)
 #  define sched_note_printf_ip_ratelimited(t,l,i,f,p,...)
+#  define sched_note_async(t,e,r,n,c)
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP && CONFIG_DRIVERS_NOTE */
 
 #undef EXTERN

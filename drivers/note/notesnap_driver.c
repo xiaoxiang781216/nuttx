@@ -174,6 +174,8 @@ static FAR const char *g_notesnap_type[] =
   "NOTE_DUMP_BINARY",
   "NOTE_DUMP_COUNTER",
   "NOTE_DUMP_THREADTIME",
+  "NOTE_DUMP_ASYNC_BEGIN",
+  "NOTE_DUMP_ASYNC_END",
 };
 
 static_assert(
