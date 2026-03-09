@@ -107,6 +107,15 @@ static int usrsock_sockif_setup(FAR struct socket *psock)
       return -ENOTSUP;
     }
 
+  /* Check if SOCK_CTRL type is allowed for usrsock */
+
+#ifndef CONFIG_NET_USRSOCK_CTRL
+  if ((psock->s_type & SOCK_TYPE_MASK) == SOCK_CTRL)
+    {
+      return -ENOTSUP;
+    }
+#endif
+
   if (psock->s_domain != PF_INET && psock->s_domain != PF_INET6 &&
 #ifdef CONFIG_NET_USRSOCK_PKT
       psock->s_domain != PF_PACKET &&

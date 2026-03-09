@@ -101,5 +101,15 @@ config NET_USRSOCK_PKT
 		When disabled, PF_PACKET sockets will be handled by the
 		kernel networking stack directly.
 
+config NET_USRSOCK_CTRL
+	bool "User-space daemon provides CTRL sockets"
+	default y
+	---help---
+		Enable SOCK_CTRL socket offload to user-space daemon.
+		When enabled, SOCK_CTRL sockets will be handled by the
+		user-space networking daemon through usrsock interface.
+		When disabled, SOCK_CTRL sockets will be handled by the
+		kernel networking stack directly.
+
 endif # NET_USRSOCK
 endmenu # User-space networking stack API
