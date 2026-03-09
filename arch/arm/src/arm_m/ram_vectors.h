@@ -36,13 +36,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_ARMV6M
-#  define ARM_VECTAB_SIZE (ARMV6M_PERIPHERAL_INTERRUPTS + NVIC_IRQ_FIRST)
-#elif defined(CONFIG_ARCH_ARMV7M)
-#  define ARM_VECTAB_SIZE (ARMV7M_PERIPHERAL_INTERRUPTS + NVIC_IRQ_FIRST)
-#elif defined(CONFIG_ARCH_ARMV8M)
-#  define ARM_VECTAB_SIZE (ARMV8M_PERIPHERAL_INTERRUPTS + NVIC_IRQ_FIRST)
-#endif
+#define ARM_VECTAB_SIZE (ARM_PERIPHERAL_INTERRUPTS + NVIC_IRQ_FIRST)
 
 /* Vector Table Offset Register (VECTAB).  This mask seems to vary among
  * ARMv8-M implementations.  It may need to be redefined in some

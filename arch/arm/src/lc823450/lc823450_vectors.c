@@ -107,6 +107,6 @@ const void * const _vectors[] locate_data(".vectors")
   [(LC823450_IRQ_CPU_CALL_01 + 1) ... (LC823450_IRQ_CPU_CALL_11 - 1)]
                              = &exception_direct,
   [LC823450_IRQ_CPU_CALL_11] = &exception_common,
-  [(LC823450_IRQ_CPU_CALL_11 + 1) ... (15 + ARMV7M_PERIPHERAL_INTERRUPTS)]
+  [(LC823450_IRQ_CPU_CALL_11 + 1) ... (15 + ARM_PERIPHERAL_INTERRUPTS)]
                              = &exception_direct
 };

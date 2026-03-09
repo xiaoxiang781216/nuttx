@@ -33,12 +33,12 @@
 #include <arch/max326xx/chip.h>
 
 /* The common ARMv7-M vector handling logic expects the following definition
- * in this file.  ARMV7M_PERIPHERAL_INTERRUPTS provides the number of
+ * in this file.  ARM_PERIPHERAL_INTERRUPTS provides the number of
  * supported external interrupts which, for this architecture, is provided in
  * the arch/max326xx/irq.h header file.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS MAX326_IRQ_NEXTINT
+#define ARM_PERIPHERAL_INTERRUPTS MAX326_IRQ_NEXTINT
 
 /****************************************************************************
  * Pre-processor Definitions

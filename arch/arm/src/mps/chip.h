@@ -32,10 +32,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_ARMV7M
-#  define ARMV7M_PERIPHERAL_INTERRUPTS NR_IRQS
-#else
-#  define ARMV8M_PERIPHERAL_INTERRUPTS NR_IRQS
-#endif
+#define ARM_PERIPHERAL_INTERRUPTS NR_IRQS
 
 #endif /* __ARCH_ARM_SRC_MPS_CHIP_H */

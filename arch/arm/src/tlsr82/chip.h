@@ -31,7 +31,7 @@
 
 /* Include the chip capabilities file */
 
-#define ARMV6M_PERIPHERAL_INTERRUPTS NR_IRQS
+#define ARM_PERIPHERAL_INTERRUPTS NR_IRQS
 
 #define arm_fullcontextrestore() tc32_fullcontextrestore(this_task()->xcp.regs)
 

@@ -32,8 +32,8 @@
 
 extern uint8_t __stack[];
 #define IDLE_STACK      (__stack - 4)
-#ifndef ARMV8M_PERIPHERAL_INTERRUPTS
-#  error ARMV8M_PERIPHERAL_INTERRUPTS must be defined to the number of I/O interrupts to be supported
+#ifndef ARM_PERIPHERAL_INTERRUPTS
+#  error ARM_PERIPHERAL_INTERRUPTS must be defined to the number of I/O interrupts to be supported
 #endif
 
 /****************************************************************************
@@ -75,6 +75,6 @@ const void * const _vectors[] locate_data(".vectors") aligned_data(0x100) =
 
   /* Vectors 2 - n point directly at the generic handler */
 
-  [2 ...(15 + ARMV8M_PERIPHERAL_INTERRUPTS)] = exception_common
+  [2 ...(15 + ARM_PERIPHERAL_INTERRUPTS)] = exception_common
 };
 

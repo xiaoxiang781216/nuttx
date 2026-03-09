@@ -40,7 +40,7 @@
  * IRQ header file included by arch/lc823450/irq.h.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS  LC823450_IRQ_NEXTINT
+#define ARM_PERIPHERAL_INTERRUPTS LC823450_IRQ_NEXTINT
 
 /* Access to COREID register */
 

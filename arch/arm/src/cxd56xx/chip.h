@@ -35,7 +35,7 @@
 
 #include <arch/cxd56xx/chip.h>
 
-#define  ARMV7M_PERIPHERAL_INTERRUPTS 128
+#define ARM_PERIPHERAL_INTERRUPTS 128
 
 #include "hardware/cxd5602_memorymap.h"
 

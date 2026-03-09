@@ -47,7 +47,7 @@
  * arch/stm32wl5/chip.h header file.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS STM32WL5_IRQ_NEXTINTS
+#define ARM_PERIPHERAL_INTERRUPTS STM32WL5_IRQ_NEXTINTS
 
 /* Cache line sizes (in bytes) for the STM32WL5 */
 

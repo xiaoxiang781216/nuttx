@@ -35,7 +35,7 @@
 
 #include <arch/cxd32xx/chip.h>
 
-#define  ARMV7M_PERIPHERAL_INTERRUPTS 128
+#define ARM_PERIPHERAL_INTERRUPTS 128
 
 #include "hardware/cxd3277_clockfreq.h"
 #include "hardware/cxd3277_memorymap.h"

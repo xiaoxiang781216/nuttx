@@ -47,7 +47,7 @@
  * arch/stm32l4/chip.h header file.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS STM32L4_IRQ_NEXTINTS
+#define ARM_PERIPHERAL_INTERRUPTS STM32L4_IRQ_NEXTINTS
 
 /* Cache line sizes (in bytes) for the STM32L4 */
 

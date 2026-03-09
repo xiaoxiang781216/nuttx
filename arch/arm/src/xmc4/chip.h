@@ -46,6 +46,6 @@
  * arch/xmc4/chip.h header file.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS XMC4_IRQ_NEXTINTS
+#define ARM_PERIPHERAL_INTERRUPTS XMC4_IRQ_NEXTINTS
 
 #endif /* __ARCH_ARM_SRC_XMC4_CHIP_H */

@@ -102,6 +102,6 @@ const void * const _vectors[] locate_data(".vectors")
   [NVIC_IRQ_SYSTICK ... (CXD56_IRQ_CPU_CALL - 1)]
                           = &exception_direct,
   [CXD56_IRQ_CPU_CALL]    = &exception_common,
-  [(CXD56_IRQ_CPU_CALL + 1) ... (15 + ARMV7M_PERIPHERAL_INTERRUPTS)]
+  [(CXD56_IRQ_CPU_CALL + 1) ... (15 + ARM_PERIPHERAL_INTERRUPTS)]
                           = &exception_direct
 };

@@ -37,13 +37,12 @@
 
 /* The common ARMv6/7-M vector handling logic expects the following
  * definitions in this file.
- * ARMV6/7M_PERIPHERAL_INTERRUPTS provides the number of supported
+ * ARM_PERIPHERAL_INTERRUPTS provides the number of supported
  * external interrupts which, for this architecture, is provided in the
  * arch/s32k1xx/irq.h header file.
  */
 
-#define ARMV6M_PERIPHERAL_INTERRUPTS S32K1XX_IRQ_NEXTINT
-#define ARMV7M_PERIPHERAL_INTERRUPTS S32K1XX_IRQ_NEXTINT
+#define ARM_PERIPHERAL_INTERRUPTS S32K1XX_IRQ_NEXTINT
 
 /* Cache line sizes (in bytes)for the S32K14X */
 

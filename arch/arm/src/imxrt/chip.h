@@ -41,7 +41,7 @@
  * vectors external interrupts.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS IMXRT_IRQ_NEXTINT
+#define ARM_PERIPHERAL_INTERRUPTS IMXRT_IRQ_NEXTINT
 
 /* Cache line sizes (in bytes)for the i.MX RT */
 

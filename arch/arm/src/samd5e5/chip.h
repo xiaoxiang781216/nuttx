@@ -40,7 +40,7 @@
  * IRQ header file included by arch/sam34/irq.h.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS  SAM_IRQ_NEXTINT
+#define ARM_PERIPHERAL_INTERRUPTS SAM_IRQ_NEXTINT
 
 /****************************************************************************
  * Public Types

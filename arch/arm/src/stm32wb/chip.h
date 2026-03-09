@@ -47,7 +47,7 @@
  * arch/stm32wb/chip.h header file.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS STM32WB_IRQ_NEXTINTS
+#define ARM_PERIPHERAL_INTERRUPTS STM32WB_IRQ_NEXTINTS
 
 /* Cache line sizes (in bytes) for the STM32WB */
 

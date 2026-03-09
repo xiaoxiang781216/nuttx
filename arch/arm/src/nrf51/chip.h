@@ -32,6 +32,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ARMV6M_PERIPHERAL_INTERRUPTS NR_IRQS
+#define ARM_PERIPHERAL_INTERRUPTS NR_IRQS
 
 #endif /* __ARCH_ARM_SRC_NRF51_CHIP_H */

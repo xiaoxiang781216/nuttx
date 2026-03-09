@@ -50,14 +50,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_ARMV6M
-#  define ARM_PERIPHERAL_INTERRUPTS ARMV6M_PERIPHERAL_INTERRUPTS
-#elif defined(CONFIG_ARCH_ARMV7M)
-#  define ARM_PERIPHERAL_INTERRUPTS ARMV7M_PERIPHERAL_INTERRUPTS
-#elif defined(CONFIG_ARCH_ARMV8M)
-#  define ARM_PERIPHERAL_INTERRUPTS ARMV8M_PERIPHERAL_INTERRUPTS
-#endif
-
 #define IDLE_STACK      (_ebss + CONFIG_IDLETHREAD_STACKSIZE)
 
 #ifndef ARM_PERIPHERAL_INTERRUPTS

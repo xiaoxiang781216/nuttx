@@ -32,7 +32,7 @@
 
 #include <arch/stm32f0l0g0/chip.h>
 
-#define ARMV6M_PERIPHERAL_INTERRUPTS 32
+#define ARM_PERIPHERAL_INTERRUPTS 32
 
 /* Include the memory map file.
  * Other chip hardware files should then include this file for the proper

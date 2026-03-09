@@ -44,6 +44,6 @@
  * IRQ header file included by arch/efm32/irq.h.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS  EFM32_PERIPH_INTS
+#define ARM_PERIPHERAL_INTERRUPTS EFM32_PERIPH_INTS
 
 #endif /* __ARCH_ARM_SRC_EFM32_CHIP_H */

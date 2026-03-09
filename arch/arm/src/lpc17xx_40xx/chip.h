@@ -51,7 +51,7 @@
  * chip-specific IRQ header file included by arch/lpc17xx_40xx/irq.h.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS  LPC17_40_IRQ_NEXTINT
+#define ARM_PERIPHERAL_INTERRUPTS LPC17_40_IRQ_NEXTINT
 
 /* Vector Table Offset Register (VECTAB).  Redefine the mask defined in
  * arch/arm/src/armv7-m/nvic.h; The LPC178x/7x User manual definitions

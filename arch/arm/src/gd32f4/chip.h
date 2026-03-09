@@ -52,6 +52,6 @@
  * IRQ header file included by arch/gd32f4/irq.h.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS  GD32_IRQ_NEXTINT
+#define ARM_PERIPHERAL_INTERRUPTS GD32_IRQ_NEXTINT
 
 #endif /* __ARCH_ARM_SRC_GD32F4_CHIP_H */

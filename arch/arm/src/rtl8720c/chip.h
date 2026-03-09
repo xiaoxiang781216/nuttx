@@ -43,6 +43,6 @@
  * definition in this file that provides the number of
  * supported external interrupts.
  */
-#define ARMV8M_PERIPHERAL_INTERRUPTS  (CONFIG_AMEBA_NR_IRQS - 16)
+#define ARM_PERIPHERAL_INTERRUPTS (CONFIG_AMEBA_NR_IRQS - 16)
 
 #endif /* __ARCH_ARM_SRC_RTL8720C_CHIP_H */

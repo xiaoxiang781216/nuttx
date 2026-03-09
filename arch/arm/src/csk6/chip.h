@@ -39,6 +39,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ARMV8M_PERIPHERAL_INTERRUPTS (CSK6_NEXTINT)
+#define ARM_PERIPHERAL_INTERRUPTS (CSK6_NEXTINT)
 
 #endif /* __ARCH_ARM_SRC_CSK6_CHIP_H */

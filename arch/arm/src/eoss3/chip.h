@@ -28,7 +28,7 @@
 #include <nuttx/config.h>
 #include <arch/eoss3/chip.h>
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS 64
+#define ARM_PERIPHERAL_INTERRUPTS 64
 
 #include "hardware/eoss3_memorymap.h"
 

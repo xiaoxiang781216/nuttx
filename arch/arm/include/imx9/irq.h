@@ -75,6 +75,6 @@
 /* Chip-Specific External interrupts */
 
 #define IMX9_IRQ_EXTINT        (16) /* Vector number of the first ext int */
-#define ARMV7M_PERIPHERAL_INTERRUPTS IMX9_IRQ_NEXTINT
+#define ARM_PERIPHERAL_INTERRUPTS IMX9_IRQ_NEXTINT
 
 #endif /* __ARCH_ARM_INCLUDE_IMX9_IRQ_H */

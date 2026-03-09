@@ -52,6 +52,6 @@
  * IRQ header file included by arch/tiva/irq.h.
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS  TIVA_IRQ_NEXTINT
+#define ARM_PERIPHERAL_INTERRUPTS TIVA_IRQ_NEXTINT
 
 #endif /* __ARCH_ARM_SRC_TIVA_CHIP_H */

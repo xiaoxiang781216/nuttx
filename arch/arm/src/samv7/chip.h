@@ -42,7 +42,7 @@
  * as the number of peripheral identifiers).
  */
 
-#define ARMV7M_PERIPHERAL_INTERRUPTS NR_PIDS
+#define ARM_PERIPHERAL_INTERRUPTS NR_PIDS
 
 /* Cache line sizes (in bytes)for the SAMV71 */
 
