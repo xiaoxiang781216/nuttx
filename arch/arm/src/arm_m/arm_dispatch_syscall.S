@@ -100,6 +100,9 @@ arm_dispatch_syscall:
 	lsl r0, r0, #2                             /* R0=Offset of the stub for this syscall */
 	ldr r4, [r4, r0]                           /* R4=Address of the stub for this syscall */
 	blx r4                                     /* Call the stub (modifies lr) */
+	ldr r4, [sp, #0]                           /* Restore r4 */
+	ldr r5, [sp, #4]                           /* Restore r5 */
+	ldr r6, [sp, #8]                           /* Restore r6 */
 	ldr lr, [sp, #12]
 	add sp, sp, #32                            /* Destroy the stack frame */
 	mov r2, r0                                 /* R2=Save return value in R2 */
