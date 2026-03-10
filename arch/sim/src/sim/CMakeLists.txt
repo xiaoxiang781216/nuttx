@@ -42,7 +42,6 @@ list(
   sim_initialize.c
   sim_idle.c
   sim_cpuinfo.c
-  sim_doirq.c
   sim_initialstate.c
   sim_createstack.c
   sim_usestack.c
@@ -212,7 +211,7 @@ if(NOT ${CONFIG_SIM_WIFIDEV_NUMBER} EQUAL 0)
 endif()
 
 if(CONFIG_SIM_NETDEV_TAP)
-  list(APPEND SRCS sim_netdriver.c)
+  target_sources(sim_requiredobjs PUBLIC sim_netdriver.c)
 
   if(NOT CYGWIN)
     list(APPEND HOSTSRCS sim_tapdev.c)
@@ -222,7 +221,7 @@ if(CONFIG_SIM_NETDEV_TAP)
     list(APPEND STDLIBS /lib/w32api/libws2_32.a /lib/w32api/libiphlpapi.a)
   endif() # CONFIG_WINDOWS_CYGWIN != y
 elseif(CONFIG_SIM_NETDEV_VPNKIT)
-  list(APPEND SRCS sim_netdriver.c)
+  target_sources(sim_requiredobjs PUBLIC sim_netdriver.c)
   list(APPEND HOST_DEFINITIONS
        CONFIG_SIM_NETDEV_VPNKIT_PATH=\"${CONFIG_SIM_NETDEV_VPNKIT_PATH}\")
   list(APPEND HOSTSRCS sim_vpnkit.c vpnkit/sim_protocol.c
@@ -231,7 +230,7 @@ endif()
 
 if(CONFIG_SIM_NETUSRSOCK)
   list(APPEND HOSTSRCS sim_hostusrsock.c)
-  list(APPEND SRCS sim_usrsock.c)
+  target_sources(sim_requiredobjs PUBLIC sim_usrsock.c)
 endif()
 
 if(CONFIG_SIM_HCISOCKET)

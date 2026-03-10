@@ -210,7 +210,7 @@ ifeq ($(CONFIG_SIM_WIFIDEV_HOST),y)
 endif
 
 ifeq ($(CONFIG_SIM_NETDEV_TAP),y)
-  CSRCS += sim_netdriver.c
+  REQUIREDOBJS += sim_netdriver$(OBJEXT)
 ifneq ($(CONFIG_WINDOWS_CYGWIN),y)
   HOSTSRCS += sim_tapdev.c
 else # CONFIG_WINDOWS_CYGWIN != y
@@ -218,7 +218,7 @@ else # CONFIG_WINDOWS_CYGWIN != y
   STDLIBS = /lib/w32api/libws2_32.a /lib/w32api/libiphlpapi.a
 endif # CONFIG_WINDOWS_CYGWIN != y
 else ifeq ($(CONFIG_SIM_NETDEV_VPNKIT),y)
-  CSRCS += sim_netdriver.c
+  REQUIREDOBJS += sim_netdriver$(OBJEXT)
   HOSTSRCS += sim_vpnkit.c
   VPATH += :sim/posix/vpnkit
   HOSTSRCS += sim_protocol.c sim_negotiate.c
