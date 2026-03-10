@@ -98,7 +98,7 @@
 #  include <nuttx/irq.h>
 #endif
 
-#ifdef CONFIG_BOARDCTL_RESET_CAUSE
+#if defined(CONFIG_BOARDCTL_RESET_CAUSE) || defined(CONFIG_BOARDCTL_SLOT_INFO)
 #  include <sys/boardctl.h>
 #endif
 
@@ -335,6 +335,26 @@ int board_uniquekey(FAR uint8_t *uniquekey);
 
 #ifdef CONFIG_BOARDCTL_SWITCH_BOOT
 int board_switch_boot(FAR const char *system);
+#endif
+
+/****************************************************************************
+ * Name:  board_slot_info
+ *
+ * Description:
+ *   BOARDIOC_SLOT_INFO is required to get the boot information from
+ *   userspace, it can be used to get the system boot behavior.
+ *
+ * Input Parameters:
+ *   info - The pointer to receive the boot information
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success.  Otherwise a negated errno value is
+ *   returned indicating the nature of the failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_BOARDCTL_SLOT_INFO
+int board_slot_info(FAR struct boardioc_slot_info_s *info);
 #endif
 
 /****************************************************************************

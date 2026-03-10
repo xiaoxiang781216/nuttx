@@ -881,6 +881,36 @@ int boardctl(unsigned int cmd, uintptr_t arg)
         break;
 #endif
 
+#ifdef CONFIG_BOARDCTL_SLOT_INFO
+      /* CMD:           BOARDIOC_SLOT_INFO
+       * DESCRIPTION:   Get boot slot information for A/B partition.
+       *                The path field specifies the storage device,
+       *                and slot[] carries the A/B slot state.
+       * ARG:           A pointer to an instance of struct
+       *                boardioc_slot_info_s.
+       * CONFIGURATION: CONFIG_BOARDCTL_SLOT_INFO
+       * DEPENDENCIES:  Board logic must provide the
+       *                board_slot_info() interface.
+       */
+
+      case BOARDIOC_SLOT_INFO:
+        {
+          FAR struct boardioc_slot_info_s *info =
+            (FAR struct boardioc_slot_info_s *)arg;
+
+          DEBUGASSERT(info != NULL);
+          if (info == NULL)
+            {
+              ret = -EINVAL;
+            }
+          else
+            {
+              ret = board_slot_info(info);
+            }
+        }
+        break;
+#endif
+
        default:
          {
 #ifdef CONFIG_BOARDCTL_IOCTL

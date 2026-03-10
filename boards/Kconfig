@@ -4974,6 +4974,13 @@ config BOARDCTL_SWITCH_BOOT
 		once a firmware updated successfully, this boardctl can be used to
 		modify FLASH bank selection.
 
+config BOARDCTL_SLOT_INFO
+	bool "Enable get boot information"
+	default n
+	---help---
+		BOARDCTL_SLOT_INFO is required to get the boot status
+		from board for A/B boot.
+
 config BOARDCTL_BOOT_IMAGE
 	bool "Boot a new application firmware image"
 	default n

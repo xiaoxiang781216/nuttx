@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <nuttx/fs/ioctl.h>
 
@@ -197,6 +198,7 @@
 #define BOARDIOC_RESET_CAUSE       _BOARDIOC(0x0014)
 #define BOARDIOC_IRQ_AFFINITY      _BOARDIOC(0x0015)
 #define BOARDIOC_START_CPU         _BOARDIOC(0x0016)
+#define BOARDIOC_SLOT_INFO         _BOARDIOC(0x0017)
 
 /* If CONFIG_BOARDCTL_IOCTL=y, then board-specific commands will be support.
  * In this case, all commands not recognized by boardctl() will be forwarded
@@ -406,6 +408,40 @@ struct boardioc_boot_info_s
   uint32_t        header_size;    /* Size of the image header in bytes */
 };
 #endif
+
+#ifdef CONFIG_BOARDCTL_SLOT_INFO
+
+/* Describes one A/B boot slot */
+
+struct boardioc_boot_slot_s
+{
+  bool active;                    /* 0: inactive, 1: active */
+  bool bootable;                  /* mark the slot maybe can boot */
+  bool successful;                /* mark the slot was boot successed once */
+  uint8_t retrycnt;               /* retry count for this slot */
+};
+
+enum boardioc_active_slot_e
+{
+  BOARDIOC_ACTIVE_NONE = 0,
+  BOARDIOC_ACTIVE_SLOT_A = 1,
+  BOARDIOC_ACTIVE_SLOT_B = 2,
+};
+
+/* Structure containing the arguments to the CONFIG_BOARDCTL_SLOT_INFO */
+
+struct boardioc_slot_info_s
+{
+  FAR const char *target;              /* target storage who have AB slot */
+  struct boardioc_boot_slot_s slot[2]; /* slot A and slot B information */
+};
+
+#define BOARDIOC_ACTIVE_SLOT(info) \
+  (((info)->slot[0].active && !(info)->slot[1].active) ? \
+   BOARDIOC_ACTIVE_SLOT_A : \
+   ((!(info)->slot[0].active && (info)->slot[1].active) ? \
+    BOARDIOC_ACTIVE_SLOT_B : BOARDIOC_ACTIVE_NONE))
+#endif /* CONFIG_BOARDCTL_SLOT_INFO */
 
 /* Describes the reason of last reset */
 
