@@ -841,8 +841,52 @@ static void dump_mini_info(FAR uintptr_t *regs)
 {
   char out[32];
   int i;
+#ifdef CONFIG_ARCH_HAVE_TCBINFO
+  FAR const struct reginfo_s *r;
+  uintptr_t val;
+  ssize_t offset = 0;
+  int col = 0;
 
-  up_puts("Reset board on recursive assert:");
+  up_puts("Reset board on recursive assert:\r\n");
+
+  for (i = 0; i < g_tcbinfo.regs_num; i++)
+    {
+      r = &g_tcbinfo.u.reginfo[i];
+
+      /* Skip registers not provided by NuttX (REGINFO_OFFSET_INVALID) */
+
+      if (r->toffset != REGINFO_OFFSET_AUTO)
+        {
+          offset = r->toffset;
+        }
+
+      if (r->toffset != REGINFO_OFFSET_INVALID)
+        {
+          DEBUGASSERT(r->size <= sizeof(val));
+
+          val = 0;
+          memcpy(&val, (FAR const uint8_t *)regs + offset, r->size);
+
+          snprintf(out, sizeof(out),
+                   "%s:" DUMP_FORMAT " ", r->name, val);
+          up_puts(out);
+
+          if (++col >= 4)
+            {
+              up_puts("\r\n");
+              col = 0;
+            }
+        }
+
+      offset += r->size;
+    }
+
+  if (col > 0)
+    {
+      up_puts("\r\n");
+    }
+#else
+  up_puts("Reset board on recursive assert:\r\n");
 
   for (i = 0; i < XCPTCONTEXT_REGS; i++)
     {
@@ -855,6 +899,7 @@ static void dump_mini_info(FAR uintptr_t *regs)
       snprintf(out, sizeof(out), DUMP_FORMAT, regs[i]);
       up_puts(out);
     }
+#endif
 }
 #endif
 
