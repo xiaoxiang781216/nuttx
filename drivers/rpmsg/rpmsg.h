@@ -140,7 +140,7 @@ void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg);
 int rpmsg_init_wqueues(FAR struct rpmsg_s *rpmsg, uint8_t priority);
 void rpmsg_deinit_wqueues(FAR struct rpmsg_s *rpmsg);
 
-int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
+int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, int priority,
                      FAR struct work_s *work, worker_t worker,
                      FAR void *arg);
 void rpmsg_rx_worker(FAR void *arg);

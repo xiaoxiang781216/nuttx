@@ -29,6 +29,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <syslog.h>
+#include <sys/param.h>
 #include <time.h>
 
 #include <metal/sys.h>
@@ -362,7 +363,8 @@ void rpmsg_initialize(void)
   rpmsg_trace_initialize();
   rpmsg_procfs_initialize();
 #ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
-  rpmsg_create_wqueues(g_rpmsg_wqueues, "glb", CONFIG_RPMSG_WQUEUE_PRIORITY);
+  DEBUGVERIFY(rpmsg_create_wqueues(g_rpmsg_wqueues, "glb",
+              CONFIG_RPMSG_WQUEUE_PRIORITY) == 0);
 #endif
 }
 
@@ -1022,7 +1024,7 @@ void rpmsg_deinit_wqueues(FAR struct rpmsg_s *rpmsg)
 #endif
 }
 
-int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
+int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, int priority,
                      FAR struct work_s *work, worker_t worker, FAR void *arg)
 {
   FAR struct rpmsg_wqueue_s *wqueues = rpmsg_get_wqueues(rpmsg);
@@ -1033,6 +1035,7 @@ int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
   int i;
 
   priority = priority - RPMSG_PRIO_DEFAULT + rpmsg->priority;
+  priority = CLAMP(priority, SCHED_PRIORITY_MIN, SCHED_PRIORITY_MAX);
 
 #ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
   flags = spin_lock_irqsave(&g_rpmsg_wqueue_lock);
