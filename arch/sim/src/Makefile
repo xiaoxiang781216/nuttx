@@ -155,7 +155,8 @@ ifeq ($(CONFIG_STACK_COLORATION),y)
 endif
 
 ifeq ($(CONFIG_SMP),y)
-  CSRCS += sim_smpsignal.c sim_cpuidlestack.c
+  REQUIREDOBJS += sim_smpsignal$(OBJEXT)
+  CSRCS += sim_cpuidlestack.c
 endif
 
 ifeq ($(CONFIG_ARCH_HAVE_MULTICPU),y)
@@ -183,17 +184,17 @@ ifeq ($(CONFIG_HOST_MACOS),y)
 endif
   STDLIBS += -lX11 -lXext
 ifeq ($(CONFIG_SIM_TOUCHSCREEN),y)
-  CSRCS += sim_touchscreen.c
+  REQUIREDOBJS += sim_touchscreen$(OBJEXT)
   HOSTSRCS += sim_x11eventloop.c
 else ifeq ($(CONFIG_SIM_AJOYSTICK),y)
-  CSRCS += sim_ajoystick.c
+  REQUIREDOBJS += sim_ajoystick$(OBJEXT)
   HOSTSRCS += sim_x11eventloop.c
 else ifeq ($(CONFIG_SIM_BUTTONS),y)
   HOSTSRCS += sim_x11eventloop.c
 endif
 
 ifeq ($(CONFIG_SIM_KEYBOARD),y)
-  CSRCS += sim_keyboard.c
+  REQUIREDOBJS += sim_keyboard$(OBJEXT)
 endif
 endif
 
@@ -397,9 +398,6 @@ board/libboard$(LIBEXT):
 # Step 4 cheat the host there is no object to construct (glibc < 2.34)
 # Note: the destructor can be fixed in the same way.
 
-nuttx-names.dat: nuttx-names.in
-	$(call PREPROCESS, nuttx-names.in, nuttx-names.dat)
-
 # When multiple linking, these two additional linking objects will be included
 
 ifeq ($(CONFIG_MM_KASAN_GLOBAL),y)
@@ -432,11 +430,14 @@ endef
 # stuff doesn't work there as we expect.
 # Note: _stext stuff is for CONFIG_CXX_INITIALIZE_SINIT, which in not
 # necessary for macOS.
-nuttx$(EXEEXT): libarch$(LIBEXT) board/libboard$(LIBEXT) $(HEADOBJ) $(REQUIREDOBJS) $(HOSTOBJS) nuttx-names.dat
+nuttx$(EXEEXT): libarch$(LIBEXT) board/libboard$(LIBEXT) $(HEADOBJ) $(REQUIREDOBJS) $(HOSTOBJS)
 	$(Q) echo "LD:  nuttx$(EXEEXT)"
 	$(Q) $(LD) -r $(LDLINKFLAGS) $(RELPATHS) $(EXTRA_LIBPATHS) $(EXTRALINKCMDS) \
 	     -o nuttx.rel $(REQUIREDOBJS) $(LDSTARTGROUP) $(RELLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 ifneq ($(CONFIG_HOST_MACOS),y)
+	$(Q) $(ARCH_SRCDIR)/gen-nuttx-names.sh \
+	     "$(NM)" nuttx.rel nuttx-names.dat \
+	     $(REQUIREDOBJS) -- $(HOSTOBJS) $(HEADOBJ)
 	$(Q) $(OBJCOPY) --redefine-syms=nuttx-names.dat nuttx.rel
 	$(Q) $(CC) $(CFLAGS) -Wl,-verbose 2>&1 | \
 	     sed -e '/====/,/====/!d;//d' \

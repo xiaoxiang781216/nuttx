@@ -173,7 +173,8 @@ if(CONFIG_SIM_VIDEO_ENCODER)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS sim_smpsignal.c sim_cpuidlestack.c)
+  target_sources(sim_requiredobjs PUBLIC sim_smpsignal.c)
+  list(APPEND SRCS sim_cpuidlestack.c)
 endif()
 
 if(CONFIG_ARCH_HAVE_MULTICPU AND NOT WIN32)
@@ -193,17 +194,17 @@ if(CONFIG_SIM_X11FB)
   endif()
 
   if(CONFIG_SIM_TOUCHSCREEN)
-    list(APPEND SRCS sim_touchscreen.c)
+    target_sources(sim_requiredobjs PUBLIC sim_touchscreen.c)
     list(APPEND HOSTSRCS sim_x11eventloop.c)
   elseif(CONFIG_SIM_AJOYSTICK)
-    list(APPEND SRCS sim_ajoystick.c)
+    target_sources(sim_requiredobjs PUBLIC sim_ajoystick.c)
     list(APPEND HOSTSRCS sim_x11eventloop.c)
   elseif(CONFIG_SIM_BUTTONS)
     list(APPEND HOSTSRCS sim_x11eventloop.c)
   endif()
 
   if(CONFIG_SIM_KEYBOARD)
-    list(APPEND SRCS sim_keyboard.c)
+    target_sources(sim_requiredobjs PUBLIC sim_keyboard.c)
   endif()
 endif()
 
@@ -318,15 +319,29 @@ endforeach()
 
 set(HOSTSRCS ${WINHOSTSRCS})
 
-target_sources(nuttx PRIVATE ${HOSTSRCS})
+# Build host sources as a separate OBJECT library so that the .o files are
+# available for gen-nuttx-names.sh to extract undefined symbols before the final
+# nuttx link.
+
+add_library(sim_hostobjs OBJECT ${HOSTSRCS})
+target_include_directories(sim_hostobjs PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(sim_hostobjs PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(sim_hostobjs PRIVATE ${NUTTX_DIR}/sched)
 
 get_target_property(HOST_COMPILE_OPTIONS nuttx COMPILE_OPTIONS)
 if(HOST_COMPILE_OPTIONS)
   foreach(remove_item IN LISTS SIM_NO_HOST_OPTIONS)
     list(REMOVE_ITEM HOST_COMPILE_OPTIONS ${remove_item})
   endforeach()
-  set_target_properties(nuttx PROPERTIES COMPILE_OPTIONS
-                                         "${HOST_COMPILE_OPTIONS}")
+  target_compile_options(sim_hostobjs PRIVATE ${HOST_COMPILE_OPTIONS})
 endif()
 
-target_compile_definitions(nuttx PRIVATE ${HOST_DEFINITIONS})
+target_compile_definitions(sim_hostobjs PRIVATE ${HOST_DEFINITIONS})
+
+# Link host objects into the final nuttx binary
+target_sources(nuttx PRIVATE $<TARGET_OBJECTS:sim_hostobjs>)
+
+# Export HOSTSRCS list to parent scope for use in CMakeLists.txt
+set(SIM_HOSTOBJS_TARGET
+    sim_hostobjs
+    CACHE INTERNAL "")

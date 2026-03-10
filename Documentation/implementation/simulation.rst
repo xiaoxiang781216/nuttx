@@ -30,13 +30,16 @@ It is built like this:
 
     .. code-block:: console
 
-        nuttx.rel : libarch$(LIBEXT) board/libboard$(LIBEXT) $(HOSTOS)-names.dat $(REQUIREDOBJS)
+        nuttx.rel : libarch$(LIBEXT) board/libboard$(LIBEXT) $(HEADOBJ) $(REQUIREDOBJS) $(HOSTOBJS)
             $(LD) -r $(LDLINKFLAGS) $(RELPATHS) $(EXTRA_LIBPATHS) -o $@ $(REQUIREDOBJS) --start-group $(RELLIBS) $(EXTRA_LIBS) --end-group
-            $(OBJCOPY) --redefine-syms=$(HOSTOS)-names.dat $@
+            gen-nuttx-names.sh "$(NM)" nuttx.rel nuttx-names.dat $(REQUIREDOBJS) -- $(HOSTOBJS) $(HEADOBJ)
+            $(OBJCOPY) --redefine-syms=nuttx-names.dat $@
 
 The first ``$(LD)`` builds a partially linked, relocatable object (hence, the extension ``.rel``).  This contains all of the NuttX objects.  So ``nuttx.rel`` is the entire "fish bowl" that the NuttX simulation lives.
 
-The second ``$(OBJCOPY)`` line is the thing the irrevocable severs the NuttX "fish bowl" from the host environment.  It renames most of the symbols in ``nuttx.rel`` so that they do not collide with the symbols use by the host system.  Look in ``arch/sim/src/nuttx-names.dat``.  So ``open()`` becomes ``NXopen()``, ``close()`` becomes ``NXclose()``, read becomes ``NXread()``, etc.
+The ``gen-nuttx-names.sh`` script auto-generates ``nuttx-names.dat`` by using ``nm`` to discover all globally defined symbols in ``nuttx.rel`` and creating rename rules (``symbol`` → ``NXsymbol``).  Cross-domain symbols (defined in ``REQUIREDOBJS`` and referenced by ``HOSTOBJS``) are excluded so the host OS code can call them by their original names.
+
+The ``$(OBJCOPY)`` line is the thing that irrevocably severs the NuttX "fish bowl" from the host environment.  It renames most of the symbols in ``nuttx.rel`` so that they do not collide with the symbols used by the host system.  So ``open()`` becomes ``NXopen()``, ``close()`` becomes ``NXclose()``, ``read()`` becomes ``NXread()``, etc.
 
 The $(HOSTOBJ) Blob
 ===================

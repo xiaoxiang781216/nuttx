@@ -810,7 +810,6 @@ else()
   # host OS. Then, the names of symbols that conflict with libc symbols are
   # renamed. The final nuttx binary is built by linking the host-specific
   # objects with the relocatable binary.
-  include(nuttx_redefine_symbols)
 
   # TODO: do with single function call?
   set(nuttx_libs_paths)
@@ -843,9 +842,12 @@ else()
         $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group> ${nuttx_libs_paths}
         ${nuttx_extra_libs_paths} $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o
         nuttx.rel
+      COMMAND
+        bash ${NUTTX_DIR}/arch/sim/src/gen-nuttx-names.sh ${CMAKE_NM} nuttx.rel
+        nuttx-names.dat $<TARGET_OBJECTS:sim_requiredobjs> --
+        $<TARGET_OBJECTS:sim_hostobjs>
       COMMAND ${CMAKE_OBJCOPY} --redefine-syms=nuttx-names.dat nuttx.rel
-      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_requiredobjs
-              sim_redefine_symbols
+      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_requiredobjs sim_hostobjs
       COMMAND_EXPAND_LISTS)
   endif()
   add_custom_target(nuttx-rel DEPENDS nuttx.rel
