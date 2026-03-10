@@ -30,6 +30,13 @@ if("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
   endif()
 endif()
 
+# Set warning-as-error flag based on compiler type
+if(CONFIG_TRICORE_TOOLCHAIN_TASKING)
+  set(WERROR_FLAG --warnings-as-errors)
+else()
+  set(WERROR_FLAG -Werror)
+endif()
+
 # Cmake build provide absolute paths to compile files. If __FILE__ macros are
 # used in the source code(ASSERT), the binary will contain many invalid paths.
 # This saves some memory, stops exposing build systems locations in binaries,
@@ -50,6 +57,12 @@ endif()
 
 if(EXTRA_FLAGS)
   separate_arguments(EXTRA_FLAGS_LIST UNIX_COMMAND "${EXTRA_FLAGS}")
+  if(CONFIG_TRICORE_TOOLCHAIN_TASKING)
+    # TASKING uses numeric warning system (-W<number> for --warning-level), not
+    # GCC-style -W<name> flags. All GCC -W flags like -Wall, -Werror, -Wno-cpp
+    # are invalid for TASKING and must be removed.
+    list(FILTER EXTRA_FLAGS_LIST EXCLUDE REGEX "^-W")
+  endif()
   add_compile_options(${EXTRA_FLAGS_LIST})
 endif()
 
