@@ -908,7 +908,7 @@ void _assert(FAR const char *filename, int linenum,
   up_saveusercontext(this_cpu_var(g_last_regs));
   regs = this_cpu_var(g_last_regs);
 
-  if (OSINIT_IS_PANIC())
+  if (OSINIT_IS_PANIC() || !OSINIT_TASK_READY())
     {
       /* Already in fatal state, reset board directly. */
 
