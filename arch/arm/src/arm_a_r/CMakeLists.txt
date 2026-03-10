@@ -103,6 +103,35 @@ if(CONFIG_ARM_PSCI)
   list(APPEND CSRCS arm_cpu_psci.c arm_smccc.S)
 endif()
 
+if(CONFIG_ARCH_USE_MMU)
+  list(APPEND CSRCS arm_mmu.c)
+endif()
+
+if(CONFIG_LEGACY_PAGING)
+  list(APPEND CSRCS arm_pghead.S arm_pginitialize.c arm_va2pte.c)
+endif()
+
+if(CONFIG_ARCH_ADDRENV AND CONFIG_ARCH_USE_MMU)
+  list(APPEND CSRCS arm_addrenv_utils.c arm_addrenv_perms.c arm_pgalloc.c
+       arm_addrenv_pgmap.c)
+  if(CONFIG_ARCH_STACK_DYNAMIC)
+    list(APPEND CSRCS arm_addrenv_ustack.c)
+  endif()
+  if(CONFIG_ARCH_KERNEL_STACK)
+    list(APPEND CSRCS arm_addrenv_kstack.c)
+  endif()
+  if(CONFIG_ARCH_VMA_MAPPING)
+    list(APPEND CSRCS arm_addrenv_shm.c)
+  endif()
+endif()
+
+if(CONFIG_MM_PGALLOC)
+  list(APPEND CSRCS arm_physpgaddr.c)
+  if(CONFIG_ARCH_PGPOOL_MAPPING)
+    list(APPEND CSRCS arm_virtpgaddr.c)
+  endif()
+endif()
+
 target_sources(arch PRIVATE ${CSRCS})
 
 if(NOT CONFIG_BUILD_FLAT AND CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)

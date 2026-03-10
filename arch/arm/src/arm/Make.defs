@@ -23,12 +23,4 @@
 include common/Make.defs
 include arm_a_r/Make.defs
 
-HEAD_ASRC  = arm_head.S
-
-CMN_ASRCS += arm_cache.S arm_vectors.S
-
-ifeq ($(CONFIG_LEGACY_PAGING),y)
-  CMN_CSRCS += arm_pginitialize.c arm_va2pte.c
-endif
-
 VPATH += arm_a_r

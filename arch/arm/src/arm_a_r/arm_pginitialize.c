@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_virtpgaddr.c
+ * arch/arm/src/arm_a_r/arm_pginitialize.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,39 +24,45 @@
 
 #include <nuttx/config.h>
 
-#include "pgalloc.h"
+#include <debug.h>
 
-#ifdef CONFIG_MM_PGALLOC
+#include <nuttx/sched.h>
+#include <nuttx/page.h>
+
+#include "arm_internal.h"
+
+#ifdef CONFIG_LEGACY_PAGING
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_addrenv_pa_to_va
+ * Name: arm_pginitialize()
  *
  * Description:
- *   Check if the physical address lies in the page pool and, if so
- *   get the mapping to the virtual address in the user data area.
+ *  Initialize the MMU for on-demand paging support..
+ *
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   None.  This function will crash if any errors are detected during MMU
+ *   initialization
+ *
+ * Assumptions:
+ *   - Called early in the platform initialization sequence so that no
+ *     special concurrency protection is required.
  *
  ****************************************************************************/
 
-void *up_addrenv_pa_to_va(uintptr_t paddr)
+void arm_pginitialize(void)
 {
-  /* REVISIT: Not implemented correctly.  The reverse lookup from physical
-   * to virtual.  This will return a kernel accessible virtual address, but
-   * not an address usable by the user code.
-   *
-   * The correct solutions is complex and, perhaps, will never be needed.
+  /* None needed at present.  This file is just retained in case the need
+   * arises in the future.  Nothing calls arm_pginitialize() now.  If needed,
+   * if should be called early in arm_boot.c to assure that all paging is
+   * ready.
    */
-
-  if (paddr >= CONFIG_ARCH_PGPOOL_PBASE && paddr < CONFIG_ARCH_PGPOOL_PEND)
-    {
-      return (void *)(paddr - CONFIG_ARCH_PGPOOL_PBASE +
-                      CONFIG_ARCH_PGPOOL_VBASE);
-    }
-
-  return (void *)paddr;
 }
 
-#endif /* CONFIG_MM_PGALLOC */
+#endif /* CONFIG_LEGACY_PAGING */

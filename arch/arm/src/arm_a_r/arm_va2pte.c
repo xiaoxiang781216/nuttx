@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_pginitialize.c
+ * arch/arm/src/arm_a_r/arm_va2pte.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,11 +24,14 @@
 
 #include <nuttx/config.h>
 
+#include <stdint.h>
+#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/sched.h>
 #include <nuttx/page.h>
 
+#include "chip.h"
 #include "arm_internal.h"
 
 #ifdef CONFIG_LEGACY_PAGING
@@ -38,31 +41,53 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_pginitialize()
+ * Name: arm_va2pte
  *
  * Description:
- *  Initialize the MMU for on-demand paging support..
+ *  Convert a virtual address within the paged text region into a pointer to
+ *  the corresponding page table entry.
  *
  * Input Parameters:
- *   None.
+ *   vaddr - The virtual address within the paged text region.
  *
  * Returned Value:
- *   None.  This function will crash if any errors are detected during MMU
- *   initialization
+ *   A pointer to  the corresponding page table entry.
  *
  * Assumptions:
- *   - Called early in the platform initialization sequence so that no
- *     special concurrency protection is required.
+ *   - This function is called from the normal tasking context (but with
+ *     interrupts disabled).  The implementation must take whatever actions
+ *     are necessary to assure that the operation is safe within this
+ *     context.
  *
  ****************************************************************************/
 
-void arm_pginitialize(void)
+uint32_t *arm_va2pte(uintptr_t vaddr)
 {
-  /* None needed at present.  This file is just retained in case the need
-   * arises in the future.  Nothing calls arm_pginitialize() now.  If needed,
-   * if should be called early in arm_boot.c to assure that all paging is
-   * ready.
+  uint32_t L1;
+  uint32_t *L2;
+  unsigned int ndx;
+
+  /* The virtual address is expected to lie in the paged text region */
+
+  DEBUGASSERT(vaddr >= PG_PAGED_VBASE && vaddr < PG_PAGED_VEND);
+
+  /* Get the L1 table entry associated with this virtual address */
+
+  L1 = *(uint32_t *)PG_POOL_VA2L1VADDR(vaddr);
+
+  /* Get the address of the L2 page table from the L1 entry */
+
+  L2 = (uint32_t *)PG_POOL_L12VPTABLE(L1);
+
+  /* Get the index into the L2 page table.  Each L1 entry maps
+   * 256 x 4Kb or 1024 x 1Kb pages.
    */
+
+  ndx = (vaddr & 0x000fffff) >> PAGESHIFT;
+
+  /* Return true if this virtual address is mapped. */
+
+  return &L2[ndx];
 }
 
 #endif /* CONFIG_LEGACY_PAGING */

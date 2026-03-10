@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_addrenv_perms.c
+ * arch/arm/src/arm_a_r/arm_virtpgaddr.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,41 +24,39 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/arch.h>
-#include <nuttx/compiler.h>
+#include "pgalloc.h"
 
-#include <sys/mman.h>
+#ifdef CONFIG_MM_PGALLOC
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_addrenv_mprot
+ * Name: up_addrenv_pa_to_va
  *
  * Description:
- *   Modify access rights to an address range.
- *
- * Input Parameters:
- *   addrenv - The address environment to be modified.
- *   addr - Base address of the region.
- *   len - Size of the region.
- *   prot - Access right flags.
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
+ *   Check if the physical address lies in the page pool and, if so
+ *   get the mapping to the virtual address in the user data area.
  *
  ****************************************************************************/
 
-int up_addrenv_mprot(arch_addrenv_t *addrenv, uintptr_t addr, size_t len,
-                     int prot)
+void *up_addrenv_pa_to_va(uintptr_t paddr)
 {
-  /* Nothing needs to be done */
+  /* REVISIT: Not implemented correctly.  The reverse lookup from physical
+   * to virtual.  This will return a kernel accessible virtual address, but
+   * not an address usable by the user code.
+   *
+   * The correct solutions is complex and, perhaps, will never be needed.
+   */
 
-  UNUSED(addrenv);
-  UNUSED(addr);
-  UNUSED(len);
-  UNUSED(prot);
+  if (paddr >= CONFIG_ARCH_PGPOOL_PBASE && paddr < CONFIG_ARCH_PGPOOL_PEND)
+    {
+      return (void *)(paddr - CONFIG_ARCH_PGPOOL_PBASE +
+                      CONFIG_ARCH_PGPOOL_VBASE);
+    }
 
-  return OK;
+  return (void *)paddr;
 }
+
+#endif /* CONFIG_MM_PGALLOC */

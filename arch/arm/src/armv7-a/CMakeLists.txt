@@ -17,34 +17,3 @@
 # the License.
 #
 # ##############################################################################
-
-# Common C source files
-
-list(APPEND SRCS arm_mmu.c)
-
-if(CONFIG_LEGACY_PAGING)
-  list(APPEND SRCS arm_pginitialize.c arm_va2pte.c arm_pghead.S)
-endif()
-
-if(CONFIG_ARCH_ADDRENV)
-  list(APPEND SRCS arm_addrenv_utils.c arm_addrenv_perms.c arm_pgalloc.c
-       arm_addrenv_pgmap.c)
-  if(CONFIG_ARCH_STACK_DYNAMIC)
-    list(APPEND SRCS arm_addrenv_ustack.c)
-  endif()
-  if(CONFIG_ARCH_KERNEL_STACK)
-    list(APPEND SRCS arm_addrenv_kstack.c)
-  endif()
-  if(CONFIG_ARCH_VMA_MAPPING)
-    list(APPEND SRCS arm_addrenv_shm.c)
-  endif()
-endif()
-
-if(CONFIG_MM_PGALLOC)
-  list(APPEND SRCS arm_physpgaddr.c)
-  if(CONFIG_ARCH_PGPOOL_MAPPING)
-    list(APPEND SRCS arm_virtpgaddr.c)
-  endif()
-endif()
-
-target_sources(arch PRIVATE ${SRCS})

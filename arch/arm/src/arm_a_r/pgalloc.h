@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/pgalloc.h
+ * arch/arm/src/arm_a_r/pgalloc.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV7_A_PGALLOC_H
-#define __ARCH_ARM_SRC_ARMV7_A_PGALLOC_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_PGALLOC_H
+#define __ARCH_ARM_SRC_ARM_A_R_PGALLOC_H
 
 /****************************************************************************
  * Included Files
@@ -178,4 +178,4 @@ static inline uintptr_t get_l2_entry(uintptr_t *l2table, uintptr_t vaddr)
  ****************************************************************************/
 
 #endif /* CONFIG_MM_PGALLOC */
-#endif /* __ARCH_ARM_SRC_ARMV7_A_PGALLOC_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_PGALLOC_H */

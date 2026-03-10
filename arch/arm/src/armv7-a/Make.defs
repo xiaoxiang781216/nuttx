@@ -23,35 +23,4 @@
 include common/Make.defs
 include arm_a_r/Make.defs
 
-# Common C source files
-
-CMN_CSRCS += arm_mmu.c
-
-ifeq ($(CONFIG_LEGACY_PAGING),y)
-  CMN_CSRCS += arm_pginitialize.c
-  CMN_CSRCS += arm_va2pte.c
-  CMN_ASRCS += arm_pghead.S
-endif
-
-ifeq ($(CONFIG_ARCH_ADDRENV),y)
-  CMN_CSRCS += arm_addrenv_utils.c arm_addrenv_perms.c arm_pgalloc.c
-  CMN_CSRCS += arm_addrenv_pgmap.c
-  ifeq ($(CONFIG_ARCH_STACK_DYNAMIC),y)
-    CMN_CSRCS += arm_addrenv_ustack.c
-  endif
-  ifeq ($(CONFIG_ARCH_KERNEL_STACK),y)
-    CMN_CSRCS += arm_addrenv_kstack.c
-  endif
-  ifeq ($(CONFIG_ARCH_VMA_MAPPING),y)
-    CMN_CSRCS += arm_addrenv_shm.c
-  endif
-endif
-
-ifeq ($(CONFIG_MM_PGALLOC),y)
-  CMN_CSRCS += arm_physpgaddr.c
-  ifeq ($(CONFIG_ARCH_PGPOOL_MAPPING),y)
-    CMN_CSRCS += arm_virtpgaddr.c
-  endif
-endif
-
 VPATH += arm_a_r

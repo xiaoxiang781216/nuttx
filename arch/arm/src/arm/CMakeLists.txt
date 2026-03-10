@@ -17,13 +17,3 @@
 # the License.
 #
 # ##############################################################################
-
-target_sources(nuttx PRIVATE arm_head.S)
-
-list(APPEND SRCS arm_cache.S arm_vectors.S)
-
-if(CONFIG_PAGING)
-  list(APPEND SRCS arm_pginitialize.c arm_va2pte.c)
-endif()
-
-target_sources(arch PRIVATE ${SRCS})

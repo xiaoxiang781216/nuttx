@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_va2pte.c
+ * arch/arm/src/arm_a_r/arm_addrenv_perms.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,70 +24,41 @@
 
 #include <nuttx/config.h>
 
-#include <stdint.h>
-#include <assert.h>
-#include <debug.h>
+#include <nuttx/arch.h>
+#include <nuttx/compiler.h>
 
-#include <nuttx/sched.h>
-#include <nuttx/page.h>
-
-#include "chip.h"
-#include "arm_internal.h"
-
-#ifdef CONFIG_LEGACY_PAGING
+#include <sys/mman.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_va2pte
+ * Name: up_addrenv_mprot
  *
  * Description:
- *  Convert a virtual address within the paged text region into a pointer to
- *  the corresponding page table entry.
+ *   Modify access rights to an address range.
  *
  * Input Parameters:
- *   vaddr - The virtual address within the paged text region.
+ *   addrenv - The address environment to be modified.
+ *   addr - Base address of the region.
+ *   len - Size of the region.
+ *   prot - Access right flags.
  *
  * Returned Value:
- *   A pointer to  the corresponding page table entry.
- *
- * Assumptions:
- *   - This function is called from the normal tasking context (but with
- *     interrupts disabled).  The implementation must take whatever actions
- *     are necessary to assure that the operation is safe within this
- *     context.
+ *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-uint32_t *arm_va2pte(uintptr_t vaddr)
+int up_addrenv_mprot(arch_addrenv_t *addrenv, uintptr_t addr, size_t len,
+                     int prot)
 {
-  uint32_t L1;
-  uint32_t *L2;
-  unsigned int ndx;
+  /* Nothing needs to be done */
 
-  /* The virtual address is expected to lie in the paged text region */
+  UNUSED(addrenv);
+  UNUSED(addr);
+  UNUSED(len);
+  UNUSED(prot);
 
-  DEBUGASSERT(vaddr >= PG_PAGED_VBASE && vaddr < PG_PAGED_VEND);
-
-  /* Get the L1 table entry associated with this virtual address */
-
-  L1 = *(uint32_t *)PG_POOL_VA2L1VADDR(vaddr);
-
-  /* Get the address of the L2 page table from the L1 entry */
-
-  L2 = (uint32_t *)PG_POOL_L12VPTABLE(L1);
-
-  /* Get the index into the L2 page table.  Each L1 entry maps
-   * 256 x 4Kb or 1024 x 1Kb pages.
-   */
-
-  ndx = (vaddr & 0x000fffff) >> PAGESHIFT;
-
-  /* Return true if this virtual address is mapped. */
-
-  return &L2[ndx];
+  return OK;
 }
-
-#endif /* CONFIG_LEGACY_PAGING */
