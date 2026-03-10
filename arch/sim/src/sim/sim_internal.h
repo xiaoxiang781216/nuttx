@@ -126,9 +126,14 @@
     while (0)
 
 #  define sim_asan_start_switch(tcb)                            \
-    __sanitizer_start_switch_fiber(NULL,                        \
-                                   (tcb)->stack_base_ptr,       \
-                                   (tcb)->adj_stack_size)
+    do                                                          \
+      {                                                         \
+        void *__fake;                                           \
+        __sanitizer_start_switch_fiber(&__fake,                 \
+                                       (tcb)->stack_base_ptr,   \
+                                       (tcb)->adj_stack_size);  \
+      }                                                         \
+    while (0)
 
 #  define sim_asan_finish_switch()                              \
     __sanitizer_finish_switch_fiber(NULL, NULL, NULL)
