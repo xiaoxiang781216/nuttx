@@ -1778,6 +1778,17 @@ config ARM_HAVE_EL2
 		Selected by the configuration tool if the architecture supports
 		the ARM Exception Level 2 (EL2) execution mode.
 
+config ARM_AFE_ENABLE
+	bool "Enable Access Flag at __start"
+		default n
+
+config ARM_MONITOR_STACK_SIZE
+	int "monitor stack size"
+	default DEFAULT_TASK_STACKSIZE
+	depends on ARCH_TRUSTZONE_SECURE
+	---help---
+		The size of the monitor stack in armv7-a platform.
+
 if ARCH_ARM_M
 source "arch/arm/src/arm_m/Kconfig"
 endif

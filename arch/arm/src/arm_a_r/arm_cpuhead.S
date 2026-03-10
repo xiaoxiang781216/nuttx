@@ -749,7 +749,7 @@ __cpu7_boot:
 #endif
 #endif
 
-#ifdef CONFIG_ARMV7A_AFE_ENABLE
+#ifdef CONFIG_ARM_AFE_ENABLE
   /* AP[0:2] Permissions model
    *
    *   SCTLR_AFE  Bit 29: Full, legacy access permissions behavior (reset value).

@@ -47,7 +47,7 @@
 #define MONITOR_STACK_ALIGNMENT 64 /* (sizeof(long) * U(2)) */
 #define MONITOR_STACK_NSEC_SIZE ALIGN_UP(sizeof(struct arm_sm_nsec_ctx), \
                                          MONITOR_STACK_ALIGNMENT)
-#define MONITOR_STACK_SIZE      ALIGN_UP(CONFIG_ARMV7A_MONITOR_STACK_SIZE, \
+#define MONITOR_STACK_SIZE      ALIGN_UP(CONFIG_ARM_MONITOR_STACK_SIZE, \
                                          MONITOR_STACK_ALIGNMENT)
 
 typedef uint8_t monitor_stack_t[MONITOR_STACK_SIZE];
