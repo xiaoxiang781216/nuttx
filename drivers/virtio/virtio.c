@@ -138,9 +138,15 @@ static void virtio_dump(FAR const char *name)
 
       count++;
 
-      syslog(LOG_EMERG, "  Device: %s (id=%" PRIu32 ", vdev=%p)\n",
-             dev_name, vdev->id.device, vdev);
-      syslog(LOG_EMERG, "  Driver: %p Priv: %p\n", item->driver, vdev->priv);
+      syslog(LOG_EMERG, "  [%s] id=%" PRIu32 " vdev=%p driver=%p priv=%p\n",
+             dev_name, vdev->id.device, vdev, item->driver, vdev->priv);
+
+      /* Call driver-specific dump if available */
+
+      if (item->driver && item->driver->dump)
+        {
+          item->driver->dump(vdev);
+        }
 
       /* Dump virtqueue information */
 
@@ -149,13 +155,6 @@ static void virtio_dump(FAR const char *name)
           FAR struct virtio_vring_info *vinfo = &vdev->vrings_info[i];
 
           virtqueue_dump(vinfo->vq);
-        }
-
-      /* Call driver-specific dump if available */
-
-      if (item->driver && item->driver->dump)
-        {
-          item->driver->dump(vdev);
         }
     }
 
