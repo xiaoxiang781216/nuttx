@@ -33,11 +33,6 @@ ifeq ($(CONFIG_LEGACY_PAGING),y)
   CMN_ASRCS += arm_pghead.S
 endif
 
-ifeq ($(CONFIG_ARCH_TRUSTZONE_SECURE),y)
-  CMN_CSRCS += arm_sm_runtime.c
-  CMN_ASRCS += arm_sm_vector.S
-endif
-
 ifeq ($(CONFIG_ARCH_ADDRENV),y)
   CMN_CSRCS += arm_addrenv_utils.c arm_addrenv_perms.c arm_pgalloc.c
   CMN_CSRCS += arm_addrenv_pgmap.c
@@ -57,11 +52,6 @@ ifeq ($(CONFIG_MM_PGALLOC),y)
   ifeq ($(CONFIG_ARCH_PGPOOL_MAPPING),y)
     CMN_CSRCS += arm_virtpgaddr.c
   endif
-endif
-
-ifeq ($(CONFIG_ARM_PSCI),y)
-  CMN_ASRCS += arm_smccc.S
-  CMN_CSRCS += arm_cpu_psci.c
 endif
 
 VPATH += arm_a_r

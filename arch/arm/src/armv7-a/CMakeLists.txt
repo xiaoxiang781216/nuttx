@@ -26,10 +26,6 @@ if(CONFIG_LEGACY_PAGING)
   list(APPEND SRCS arm_pginitialize.c arm_va2pte.c arm_pghead.S)
 endif()
 
-if(CONFIG_ARCH_TRUSTZONE_SECURE)
-  list(APPEND SRCS arm_sm_runtime.c arm_sm_vector.S)
-endif()
-
 if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS arm_addrenv_utils.c arm_addrenv_perms.c arm_pgalloc.c
        arm_addrenv_pgmap.c)
@@ -49,10 +45,6 @@ if(CONFIG_MM_PGALLOC)
   if(CONFIG_ARCH_PGPOOL_MAPPING)
     list(APPEND SRCS arm_virtpgaddr.c)
   endif()
-endif()
-
-if(CONFIG_ARM_PSCI)
-  list(APPEND SRCS arm_cpu_psci.c arm_smccc.S)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

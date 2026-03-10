@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_cpu_psci.h
+ * arch/arm/src/arm_a_r/arm_cpu_psci.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV7_A_ARM_CPU_PSCI_H
-#define __ARCH_ARM_SRC_ARMV7_A_ARM_CPU_PSCI_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_ARM_CPU_PSCI_H
+#define __ARCH_ARM_SRC_ARM_A_R_ARM_CPU_PSCI_H
 
 /****************************************************************************
  * Included Files
@@ -163,4 +163,4 @@ int psci_sys_reset(void);
 #  define psci_sys_reset() ((void)PSCI_RET_NOT_SUPPORTED)
 #endif
 
-#endif /* __ARCH_ARM_SRC_ARMV7_A_ARM_CPU_PSCI_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_ARM_CPU_PSCI_H */

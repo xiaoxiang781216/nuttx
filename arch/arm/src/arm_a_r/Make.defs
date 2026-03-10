@@ -89,6 +89,16 @@ ifeq ($(CONFIG_ARCH_ADDRENV)$(CONFIG_ARCH_USE_MMU),yy)
   CMN_CSRCS += arm_addrenv_mmu.c
 endif
 
+ifeq ($(CONFIG_ARCH_TRUSTZONE_SECURE),y)
+  CMN_CSRCS += arm_sm_runtime.c
+  CMN_ASRCS += arm_sm_vector.S
+endif
+
+ifeq ($(CONFIG_ARM_PSCI),y)
+  CMN_ASRCS += arm_smccc.S
+  CMN_CSRCS += arm_cpu_psci.c
+endif
+
 ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
   CMN_UCSRCS += arm_perf.c
 endif

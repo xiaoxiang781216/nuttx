@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/sm.h
+ * arch/arm/src/arm_a_r/sm.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,8 +26,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV7_A_SM_H
-#define __ARCH_ARM_SRC_ARMV7_A_SM_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_SM_H
+#define __ARCH_ARM_SRC_ARM_A_R_SM_H
 
 /****************************************************************************
  * Included Files
@@ -294,4 +294,4 @@ void arm_vectorfiq_entry(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
 
 void arm_sm_switch_nsec(void);
 
-#endif /* __ARCH_ARM_SRC_ARMV7_A_SM_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_SM_H */
