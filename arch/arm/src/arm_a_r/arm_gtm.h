@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/gtm.h
+ * arch/arm/src/arm_a_r/arm_gtm.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -23,8 +23,8 @@
  *   0407I (ID091612).
  */
 
-#ifndef __ARCH_ARM_SRC_ARMV7_A_GTM_H
-#define __ARCH_ARM_SRC_ARMV7_A_GTM_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_ARM_GTM_H
+#define __ARCH_ARM_SRC_ARM_A_R_ARM_GTM_H
 
 /****************************************************************************
  * Included Files
@@ -116,4 +116,4 @@ extern "C"
 #endif /* __ASSEMBLY__ */
 
 #endif /* CONFIG_ARM_HAVE_GTM */
-#endif /* __ARCH_ARM_SRC_ARMV7_A_GTM_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_ARM_GTM_H */
