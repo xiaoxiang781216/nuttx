@@ -167,6 +167,7 @@ void group_leave(FAR struct tcb_s *tcb)
   FAR struct task_group_s *group;
 #ifdef HAVE_GROUP_MEMBERS
   irqstate_t flags;
+  bool last;
 #endif
 
   DEBUGASSERT(tcb);
@@ -181,11 +182,12 @@ void group_leave(FAR struct tcb_s *tcb)
 #ifdef HAVE_GROUP_MEMBERS
       flags = spin_lock_irqsave(&group->tg_lock);
       sq_rem(&tcb->member, &group->tg_members);
+      last = sq_empty(&group->tg_members);
       spin_unlock_irqrestore(&group->tg_lock, flags);
 
       /* Have all of the members left the group? */
 
-      if (sq_empty(&group->tg_members))
+      if (last)
 #endif
         {
           /* Yes.. Release all of the resource held by the task group */
