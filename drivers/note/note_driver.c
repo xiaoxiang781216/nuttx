@@ -1767,7 +1767,10 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   else
     {
       next = lib_bsprintf(note->npt_data, length, fmt, *va);
-      DEBUGASSERT(next < sizeof(data) - sizeof(*note));
+      if ((ssize_t)next < 0)
+        {
+          return;
+        }
     }
 
   length = SIZEOF_NOTE_PRINTF(next);
