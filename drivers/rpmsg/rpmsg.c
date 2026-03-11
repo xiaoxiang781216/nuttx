@@ -333,8 +333,9 @@ static int rpmsg_create_wqueues(FAR struct rpmsg_wqueue_s *wqueues,
       snprintf(wqname, sizeof(wqname), "rpmsg-%.*s-%d", RPMSG_NAME_SIZE,
                name, i);
       wqueue = &wqueues[i];
-      wqueue->kwqueue = work_queue_create(wqname, priority, NULL,
-                                          CONFIG_RPMSG_WQUEUE_STACKSIZE, 1);
+      wqueue->kwqueue = work_queue_create(wqname,
+          CONFIG_RPMSG_WQUEUE_PRIORITY - CONFIG_RPMSG_WQUEUE_NUMBER + i + 1,
+          NULL, CONFIG_RPMSG_WQUEUE_STACKSIZE, 1);
       if (wqueue->kwqueue == NULL)
         {
           rpmsgerr("rpmsg wqueue [%d] create failed\n", i);
