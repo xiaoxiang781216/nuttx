@@ -181,26 +181,26 @@ static int elf_fixup_loadbinary(FAR struct binary_s *binp,
 
           if (fixup->phdr[i].p_vaddr != fixup->phdr[i].p_paddr)
             {
-              /* Copy segment from load to virtual address */
+              /* Copy segment from load address to virtual address */
 
               memcpy((FAR void *)fixup->phdr[i].p_vaddr,
                      (FAR const void *)fixup->phdr[i].p_paddr,
                      fixup->phdr[i].p_filesz);
-
-              /* And zero out the uninitialized data segment */
-
-              memset((FAR void *)(fixup->phdr[i].p_vaddr +
-                      fixup->phdr[i].p_filesz), 0,
-                      fixup->phdr[i].p_memsz -
-                      fixup->phdr[i].p_filesz
-#ifdef CONFIG_MM_TASK_HEAP
-                      - ((fixup->phdr[i].p_vaddr <= fixup->heapstart &&
-                        fixup->phdr[i].p_vaddr + fixup->phdr[i].p_memsz
-                        > fixup->heapstart) ?
-                      binp->heapsize : 0)
-#endif
-                      );
             }
+
+          /* Zero out the uninitialized data segment (BSS) */
+
+          memset((FAR void *)(fixup->phdr[i].p_vaddr +
+                  fixup->phdr[i].p_filesz), 0,
+                  fixup->phdr[i].p_memsz -
+                  fixup->phdr[i].p_filesz
+#ifdef CONFIG_MM_TASK_HEAP
+                  - ((fixup->phdr[i].p_vaddr <= fixup->heapstart &&
+                    fixup->phdr[i].p_vaddr + fixup->phdr[i].p_memsz
+                    > fixup->heapstart) ?
+                  binp->heapsize : 0)
+#endif
+                  );
         }
 
 #ifdef CONFIG_ARCH_ADDRENV
