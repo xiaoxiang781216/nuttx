@@ -79,7 +79,9 @@ if(CONFIG_LIB_SYSCALL_WRAPPER OR CONFIG_LIB_SYSCALL)
 endif()
 
 if(CONFIG_LIB_SYSCALL)
-  add_subdirectory(proxies)
+  if(NOT CONFIG_BUILD_FLAT)
+    add_subdirectory(proxies)
+  endif()
   add_subdirectory(stubs)
 
   target_sources(stubs PRIVATE syscall_stublookup.c)

@@ -5,7 +5,7 @@
 
 menuconfig LIB_SYSCALL
 	bool "System call support"
-	depends on ARCH_HAVE_SYSCALL && !BUILD_FLAT
+	depends on ARCH_HAVE_SYSCALL
 	default n
 	---help---
 		Build in support for "system calls".  System calls are used to

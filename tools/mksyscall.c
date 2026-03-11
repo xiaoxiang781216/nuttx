@@ -780,11 +780,6 @@ static void generate_wrapper(int nfixed, int nparms)
   fprintf(stream, "#include <nuttx/compiler.h>\n");
   fprintf(stream, "#undef noreturn_function\n");
   fprintf(stream, "#define noreturn_function\n");
-
-  /* CONFIG_LIB_SYSCALL must be defined to get syscall number */
-
-  fprintf(stream, "#undef CONFIG_LIB_SYSCALL\n");
-  fprintf(stream, "#define CONFIG_LIB_SYSCALL\n");
   fprintf(stream, "#include <syscall.h>\n");
 
   /* Does this function have a variable number of parameters?  If so then the
@@ -982,30 +977,56 @@ static void generate_wrapper(int nfixed, int nparms)
     }
 
   fprintf(stream, ");\n\n");
-  fprintf(stream, "  up_addrenv_enter_kernel();\n");
 
-  /* Then call the wrapped (real) function.  Functions that have no return
-   * value are a special case.
+  /* Define PARM macros for type-safe parameter passing */
+
+  generate_return_ref(stream);
+
+  for (i = 0; i < nparms; i++)
+    {
+      get_actualparmtype(g_parm[PARM1_INDEX + i], actual);
+      get_formalparmtype(g_parm[PARM1_INDEX + i], formal);
+
+      if (is_union(formal) || is_struct(formal))
+        {
+          fprintf(stream,
+                  "#define PARM%d ((uintptr_t)(&parm%d))\n",
+                  i + 1, i + 1);
+        }
+      else
+        {
+          fprintf(stream,
+                  "#define PARM%d (sizeof(%s) > sizeof(uintptr_t) ?"
+                  " (uintptr_t)(&parm%d) : (uintptr_t)(parm%d))\n",
+                  i + 1, actual, i + 1, i + 1);
+        }
+    }
+
+  fprintf(stream, "\n");
+
+  /* Kernel branch: direct call wrapped with enter/leave.
+   * User SVC branches are emitted under CONFIG_LIB_SYSCALL only.
    */
+
+  fprintf(stream, "#ifdef CONFIG_LIB_SYSCALL\n");
+  fprintf(stream, "  if (up_addrenv_is_kernel())\n");
+  fprintf(stream, "#endif\n");
+  fprintf(stream, "    {\n");
+  fprintf(stream, "      up_addrenv_enter_kernel();\n");
 
   if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
       strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
     {
-      fprintf(stream, "  UP_REALSYM(%s)(", g_parm[NAME_INDEX]);
+      fprintf(stream, "      UP_REALSYM(%s)(", g_parm[NAME_INDEX]);
     }
   else
     {
-      fprintf(stream, "  result = UP_REALSYM(%s)(", g_parm[NAME_INDEX]);
+      fprintf(stream, "      result = UP_REALSYM(%s)(",
+              g_parm[NAME_INDEX]);
     }
-
-  /* The pass all of the system call parameters */
 
   for (i = 0; i < nparms; i++)
     {
-      /* Treat the first argument in the list differently from the others..
-       * It does not need a comma before it.
-       */
-
       if (i > 0)
         {
           fprintf(stream, ", ");
@@ -1014,9 +1035,72 @@ static void generate_wrapper(int nfixed, int nparms)
       fprintf(stream, "parm%d", i + 1);
     }
 
-  fprintf(stream, ");\n\n");
+  fprintf(stream, ");\n");
+  fprintf(stream, "      up_addrenv_leave_kernel();\n");
+  fprintf(stream, "    }\n");
 
-  fprintf(stream, "  up_addrenv_leave_kernel();\n");
+  fprintf(stream, "#ifdef CONFIG_LIB_SYSCALL\n");
+
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
+      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
+    {
+      fprintf(stream, "  else\n");
+      fprintf(stream, "    {\n");
+      fprintf(stream, "      sys_call%d(SYS_%s", nparms,
+              g_parm[NAME_INDEX]);
+
+      for (i = 0; i < nparms; i++)
+        {
+          fprintf(stream, ", PARM%d", i + 1);
+        }
+
+      fprintf(stream, ");\n");
+      fprintf(stream, "    }\n");
+    }
+  else if (nparms >= MAX_SYSCALL_PARMS)
+    {
+      fprintf(stream, "  else\n");
+      fprintf(stream, "    {\n");
+      fprintf(stream, "      result = (%s)sys_call%d(SYS_%s",
+              g_parm[RETTYPE_INDEX], nparms, g_parm[NAME_INDEX]);
+
+      for (i = 0; i < nparms; i++)
+        {
+          fprintf(stream, ", PARM%d", i + 1);
+        }
+
+      fprintf(stream, ");\n");
+      fprintf(stream, "    }\n");
+    }
+  else
+    {
+      fprintf(stream, "  else if (RET_REF)\n");
+      fprintf(stream, "    {\n");
+      fprintf(stream, "      sys_call%d(SYS_%s",
+              nparms + 1, g_parm[NAME_INDEX]);
+
+      for (i = 0; i < nparms; i++)
+        {
+          fprintf(stream, ", PARM%d", i + 1);
+        }
+
+      fprintf(stream, ", (uintptr_t)&result);\n");
+      fprintf(stream, "    }\n");
+      fprintf(stream, "  else\n");
+      fprintf(stream, "    {\n");
+      fprintf(stream, "      result = (%s)sys_call%d(SYS_%s",
+              g_parm[RETTYPE_INDEX], nparms, g_parm[NAME_INDEX]);
+
+      for (i = 0; i < nparms; i++)
+        {
+          fprintf(stream, ", PARM%d", i + 1);
+        }
+
+      fprintf(stream, ");\n");
+      fprintf(stream, "    }\n");
+    }
+
+  fprintf(stream, "#endif\n");
 
   /* Call system call leave hook function */
 
@@ -1046,6 +1130,17 @@ static void generate_wrapper(int nfixed, int nparms)
   else
     {
       fprintf(stream, "  return result;\n}\n");
+    }
+
+  if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") != 0 &&
+      strcmp(g_parm[RETTYPE_INDEX], "void") != 0)
+    {
+      fprintf(stream, "#undef RET_REF\n");
+    }
+
+  for (i = 0; i < nparms; i++)
+    {
+      fprintf(stream, "#undef PARM%d\n", i + 1);
     }
 
   if (g_parm[COND_INDEX][0] != '\0')

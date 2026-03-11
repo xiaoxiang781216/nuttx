@@ -66,6 +66,10 @@ ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
 NUTTXLIBS += staging$(DELIM)libwraps$(LIBEXT)
 endif
 
+ifeq ($(CONFIG_LIB_SYSCALL),y)
+NUTTXLIBS += staging$(DELIM)libstubs$(LIBEXT)
+endif
+
 # Add libraries for two pass build support.  The special directory pass1
 # may be populated so that application generated logic can be included into
 # the kernel build
