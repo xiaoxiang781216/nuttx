@@ -75,7 +75,9 @@ struct net_rpmsg_drv_s
 {
   char                  cpuname[RPMSG_NAME_SIZE];
   netpkt_queue_t        rxqueue; /* RX packet queue */
+  FAR netpkt_t         *txpkt;   /* Deferred TX packet (quota=1) */
   spinlock_t            lock;    /* Spinlock for protecting rxqueue */
+  struct work_s         txwork;  /* Deferred TX work */
   FAR void             *priv;    /* Private data for upper layer */
   net_rpmsg_drv_cb_t    cb;      /* IFUP/DOWN Callback function */
   sem_t                 wait;    /* Wait sem, used for preventing any
@@ -137,6 +139,7 @@ static int  net_rpmsg_drv_send_recv(struct netdev_lowerhalf_s *dev,
 static int  net_rpmsg_drv_ifup(FAR struct netdev_lowerhalf_s *dev);
 static int  net_rpmsg_drv_ifdown(FAR struct netdev_lowerhalf_s *dev);
 
+static void net_rpmsg_drv_deferred_tx(FAR void *arg);
 static int  net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
                                    FAR netpkt_t *pkt);
 static FAR netpkt_t *
@@ -201,57 +204,55 @@ static const struct netdev_ops_s g_net_rpmsg_drv_ops =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: net_rpmsg_drv_transmit
+ * Name: net_rpmsg_drv_do_transmit
  *
  * Description:
- *   Start hardware transmission.
+ *   Transmit a single pkt via rpmsg. Acquires the rpmsg TX buffer
+ *   internally. When delay == 0 the buffer allocation is non-blocking
+ *   (fast path from transmit); when delay != 0 it blocks (deferred worker).
+ *   On any transient failure the pkt is cached back and a worker is
+ *   scheduled with the given delay.
  *
  * Parameters:
- *   dev - Reference to the NuttX driver state structure
- *   pkt - The packet to be sent
+ *   drv   - Reference to the driver state structure
+ *   pkt   - The packet to be sent
+ *   delay - 0 for non-blocking try, >0 for blocking try and retry delay
  *
  * Returned Value:
  *   OK on success; a negated errno on failure
  *
- * Assumptions:
- *   The network is locked.
- *
  ****************************************************************************/
 
-static int net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
-                                  FAR netpkt_t *pkt)
+static int net_rpmsg_drv_do_transmit(FAR struct net_rpmsg_drv_s *drv,
+                                     FAR netpkt_t *pkt, clock_t delay)
 {
-  FAR struct net_rpmsg_drv_s *drv =
-                              container_of(dev, struct net_rpmsg_drv_s, dev);
+  FAR struct netdev_lowerhalf_s *dev = &drv->dev;
   FAR struct net_rpmsg_transfer_s *transfer;
+  uint32_t buflen;
 #ifdef CONFIG_NET_PRMSG_DRV_ZERO_COPY_TRANSFER
   unsigned int datalen = sizeof(FAR netpkt_t *);
 #else
   unsigned int datalen = netpkt_getdatalen(dev, pkt);
 #endif
-  uint32_t len;
-  int ret;
+  int ret = -EAGAIN;
 
-  transfer = rpmsg_get_tx_payload_buffer(&drv->ept, &len, false);
+  transfer = rpmsg_get_tx_payload_buffer(&drv->ept, &buflen, delay != 0);
   if (transfer == NULL)
     {
-      unsigned int count;
-      netdev_breaklock(&dev->netdev, &count);
-      transfer = rpmsg_get_tx_payload_buffer(&drv->ept, &len, true);
-      netdev_restorelock(&dev->netdev, count);
+      goto defer;
     }
 
-  if (transfer == NULL)
-    {
-      nerr("ERROR: Failed to get TX buffer\n");
-      return -ENOMEM;
-    }
-
-  if (len < sizeof(*transfer) + datalen)
+  if (buflen < sizeof(*transfer) + datalen)
     {
       nerr("ERROR: Buffer is too small for xmit\n");
       rpmsg_release_tx_buffer(&drv->ept, transfer);
-      return -ENOMEM;
+      if (delay != 0)
+        {
+          netpkt_free(dev, pkt, NETPKT_TX);
+          netdev_lower_txdone(dev);
+        }
+
+      return -EMSGSIZE;
     }
 
   transfer->header.command = NET_RPMSG_TRANSFER;
@@ -260,31 +261,74 @@ static int net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
   transfer->length         = datalen;
 
 #ifdef CONFIG_NET_PRMSG_DRV_ZERO_COPY_TRANSFER
-  /* Zero-Copy mode: send pkt address instead of data: store the pkt address
-   * in the transfer buffer
-   */
-
   *((FAR netpkt_t **)(transfer + 1)) = pkt;
-  pkt = NULL;
 #else
-
-  /* Normal copy mode: copy packet data */
-
   netpkt_copyout(dev, (FAR uint8_t *)(transfer + 1), pkt, datalen, 0);
 #endif
 
-  len = sizeof(*transfer) + datalen;
-  ret = rpmsg_send_nocopy(&drv->ept, transfer, len);
+  ret = rpmsg_send_nocopy(&drv->ept, transfer, sizeof(*transfer) + datalen);
   if (ret < 0)
     {
       nerr("ERROR: Failed to send packet\n");
       rpmsg_release_tx_buffer(&drv->ept, transfer);
-      return ret;
+      goto defer;
     }
 
+#ifndef CONFIG_NET_PRMSG_DRV_ZERO_COPY_TRANSFER
   netpkt_free(dev, pkt, NETPKT_TX);
+#endif
   netdev_lower_txdone(dev);
   return OK;
+
+defer:
+  drv->txpkt = pkt;
+  work_queue(LPWORK, &drv->txwork, net_rpmsg_drv_deferred_tx, drv, delay);
+  return OK;
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_drv_deferred_tx
+ *
+ * Description:
+ *   Worker function for deferred TX retry.
+ *
+ ****************************************************************************/
+
+static void net_rpmsg_drv_deferred_tx(FAR void *arg)
+{
+  FAR struct net_rpmsg_drv_s *drv = arg;
+  FAR netpkt_t *pkt = drv->txpkt;
+
+  drv->txpkt = NULL;
+
+  if (pkt != NULL)
+    {
+      net_rpmsg_drv_do_transmit(drv, pkt, TICK_PER_SEC);
+    }
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_drv_transmit
+ *
+ * Description:
+ *   Start hardware transmission. Called with the network lock held.
+ *
+ * Parameters:
+ *   dev - Reference to the NuttX driver state structure
+ *   pkt - The packet to be sent
+ *
+ * Returned Value:
+ *   OK on success; a negated errno on failure
+ *
+ ****************************************************************************/
+
+static int net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
+                                  FAR netpkt_t *pkt)
+{
+  FAR struct net_rpmsg_drv_s *drv =
+                              container_of(dev, struct net_rpmsg_drv_s, dev);
+
+  return net_rpmsg_drv_do_transmit(drv, pkt, 0);
 }
 
 static FAR netpkt_t *
@@ -614,6 +658,16 @@ static void net_rpmsg_drv_device_destroy(FAR struct rpmsg_device *rdev,
 
   if (!strcmp(drv->cpuname, rpmsg_get_cpuname(rdev)))
     {
+      /* Cancel any pending deferred TX and free the cached packet */
+
+      work_cancel_sync(LPWORK, &drv->txwork);
+      if (drv->txpkt != NULL)
+        {
+          netpkt_free(&drv->dev, drv->txpkt, NETPKT_TX);
+          drv->txpkt = NULL;
+          netdev_lower_txdone(&drv->dev);
+        }
+
       rpmsg_destroy_ept(&drv->ept);
     }
 }
