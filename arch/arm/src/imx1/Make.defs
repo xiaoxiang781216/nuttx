@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include arm/Make.defs
+include arm_a_r/Make.defs
 
 CHIP_ASRCS  = imx_lowputc.S
 CHIP_CSRCS  = imx_boot.c imx_gpio.c imx_allocateheap.c imx_irq.c

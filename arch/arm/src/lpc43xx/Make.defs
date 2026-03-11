@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 CHIP_CSRCS  = lpc43_allocateheap.c lpc43_cgu.c lpc43_clrpend.c lpc43_gpio.c
 CHIP_CSRCS += lpc43_irq.c lpc43_pinconfig.c lpc43_rgu.c lpc43_serial.c

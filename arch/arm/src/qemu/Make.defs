@@ -19,15 +19,15 @@
 ############################################################################
 
 ifeq ($(CONFIG_ARCH_ARMV7A),y)
-include armv7-a/Make.defs
+include arm_a_r/Make.defs
 endif
 
 ifeq ($(CONFIG_ARCH_ARMV7R),y)
-include armv7-r/Make.defs
+include arm_a_r/Make.defs
 endif
 
 ifeq ($(CONFIG_ARCH_ARMV8R),y)
-include armv8-r/Make.defs
+include arm_a_r/Make.defs
 endif
 
 # qemu-specific C source files

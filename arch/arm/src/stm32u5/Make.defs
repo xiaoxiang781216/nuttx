@@ -25,7 +25,7 @@ HEAD_ASRC =
 
 # Common ARM and Cortex-M4 files (copied from stm32/Make.defs)
 
-include armv8-m/Make.defs
+include arm_m/Make.defs
 
 # Required STM32U5 files
 

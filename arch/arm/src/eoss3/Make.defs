@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 CHIP_CSRCS  = eoss3_start.c eoss3_gpio.c eoss3_lowputc.c eoss3_clockconfig.c
 CHIP_CSRCS += eoss3_irq.c

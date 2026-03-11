@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv6-m/Make.defs
+include arm_m/Make.defs
 
 CHIP_CSRCS  = nrf51_start.c nrf51_irq.c nrf51_timer.c nrf51_allocateheap.c
 

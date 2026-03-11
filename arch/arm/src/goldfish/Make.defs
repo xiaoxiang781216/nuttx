@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv7-a/Make.defs
+include arm_a_r/Make.defs
 
 # goldfish-specific C source files
 CHIP_CSRCS  = goldfish_boot.c

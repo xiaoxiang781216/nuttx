@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include arm/Make.defs
+include arm_a_r/Make.defs
 
 HEAD_ASRC  = arm_nommuhead.S
 

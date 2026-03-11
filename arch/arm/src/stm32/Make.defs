@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 CHIP_CSRCS  = stm32_allocateheap.c stm32_start.c stm32_rcc.c stm32_lse.c
 CHIP_CSRCS += stm32_lsi.c stm32_gpio.c stm32_exti_gpio.c stm32_flash.c

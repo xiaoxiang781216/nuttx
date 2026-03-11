@@ -22,7 +22,7 @@
 
 include $(TOPDIR)/.config
 include $(TOPDIR)/tools/Config.mk
-include $(TOPDIR)/arch/arm/src/arm/Toolchain.defs
+include $(TOPDIR)/arch/arm/src/arm_a_r/Toolchain.defs
 
 ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)ea3152.ld
 

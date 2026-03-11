@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 CHIP_ASRCS +=
 

@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 CHIP_CSRCS  = gd32f4xx_allocateheap.c gd32f4xx_start.c gd32f4xx_rcu.c
 CHIP_CSRCS += gd32f4xx_serial.c gd32f4xx_lowputc.c

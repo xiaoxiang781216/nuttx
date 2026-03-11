@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv8-r/Make.defs
+include arm_a_r/Make.defs
 
 # fvp-specific C source files
 CHIP_CSRCS = fvp_boot.c fvp_serial.c fvp_irq.c fvp_timer.c

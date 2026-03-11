@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 CHIP_CSRCS  = lpc54_start.c lpc54_clockconfig.c lpc54_irq.c lpc54_clrpend.c
 CHIP_CSRCS += lpc54_allocateheap.c lpc54_lowputc.c lpc54_gpio.c lpc54_reset.c

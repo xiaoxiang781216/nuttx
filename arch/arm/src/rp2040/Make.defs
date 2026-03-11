@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv6-m/Make.defs
+include arm_m/Make.defs
 
 CFLAGS += -Wno-array-bounds
 

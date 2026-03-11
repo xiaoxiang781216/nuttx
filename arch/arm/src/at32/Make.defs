@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 CHIP_CSRCS  = at32_allocateheap.c at32_start.c at32_rcc.c at32_lse.c
 CHIP_CSRCS += at32_lsi.c at32_gpio.c at32_exti_gpio.c at32_flash.c

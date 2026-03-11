@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 ifneq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
   CHIP_CSRCS += tiva_idle.c

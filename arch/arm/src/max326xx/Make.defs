@@ -20,7 +20,7 @@
 
 # Common ARMv7-M Source Files
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 # Common MAX326XX Source Files
 

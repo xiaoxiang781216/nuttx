@@ -21,7 +21,7 @@
 #
 ############################################################################
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 # i.MX9-specific C source files
 

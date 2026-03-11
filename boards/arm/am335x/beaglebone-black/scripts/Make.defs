@@ -22,7 +22,7 @@
 
 include $(TOPDIR)/.config
 include $(TOPDIR)/tools/Config.mk
-include $(TOPDIR)/arch/arm/src/armv7-a/Toolchain.defs
+include $(TOPDIR)/arch/arm/src/arm_a_r/Toolchain.defs
 
 # Setup for the kind of memory that we are executing from
 

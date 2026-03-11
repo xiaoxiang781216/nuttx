@@ -22,7 +22,7 @@
 
 # Common ARM and Cortex-M7 files
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 # Required S32K3 files
 

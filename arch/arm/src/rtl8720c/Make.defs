@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include armv8-m/Make.defs
+include arm_m/Make.defs
 
 # arch/arm/src/rtl8720c
 #

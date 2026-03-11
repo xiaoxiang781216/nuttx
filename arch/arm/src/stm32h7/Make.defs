@@ -23,7 +23,7 @@
 
 # Common ARM and Cortex-M7 files
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 ifeq ($(CONFIG_STM32H7_PROGMEM),y)
 CHIP_CSRCS += stm32_flash.c

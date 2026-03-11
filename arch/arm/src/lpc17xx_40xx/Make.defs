@@ -20,7 +20,7 @@
 
 # Common ARM and Cortex-M3 files
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 # Required LPC17xx files
 

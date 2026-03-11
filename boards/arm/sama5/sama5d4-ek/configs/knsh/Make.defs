@@ -20,7 +20,7 @@
 
 include $(TOPDIR)/.config
 include $(TOPDIR)/tools/Config.mk
-include $(TOPDIR)/arch/arm/src/armv7-a/Toolchain.defs
+include $(TOPDIR)/arch/arm/src/arm_a_r/Toolchain.defs
 
 ifeq ($(CONFIG_SAMA5_BOOT_ISRAM),y)
   LDSCRIPT = isram.ld

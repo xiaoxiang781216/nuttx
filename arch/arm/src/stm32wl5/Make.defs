@@ -23,7 +23,7 @@
 
 # Common ARM and Cortex-M4 files (copied from stm32/Make.defs)
 
-include armv7-m/Make.defs
+include arm_m/Make.defs
 
 # Required STM32WL5 files
 
