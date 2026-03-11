@@ -189,6 +189,10 @@ pid_t x86_64_fork(const struct fork_s *context)
   child->xcp.regs[REG_RSP]    = newsp; /* Stack pointer */
   child->xcp.regs[REG_RBP]    = newfp; /* Like registers */
 
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+  child->xcp.regs[REG_FSBASE] = x86_64_tp_addr(child);
+#endif
+
   /* And, finally, start the child task.  On a failure, nxtask_start_fork()
    * will discard the TCB by calling nxtask_abort_fork().
    */
