@@ -120,9 +120,11 @@ static uint32_t pkt_poll_eventhandler(FAR struct net_driver_s *dev,
           eventset |= POLLIN;
         }
 
-      /* Check for loss of connection events. */
+      /* Check for loss of connection events. Only report POLLHUP when
+       * the interface is down (ifdown), not on carrier-loss.
+       */
 
-      if ((flags & NETDEV_DOWN) != 0)
+      if ((flags & NETDEV_DOWN) != 0 && !IFF_IS_UP(dev->d_flags))
         {
           eventset |= POLLHUP | POLLERR;
         }
