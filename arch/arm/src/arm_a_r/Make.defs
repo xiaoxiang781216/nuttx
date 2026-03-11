@@ -39,6 +39,10 @@ ifeq ($(CONFIG_ARM_GIC_VERSION),2)
   endif
 endif
 
+ifeq ($(CONFIG_ARM_GIC_VERSION),3)
+  CMN_CSRCS += arm_gicv3.c
+endif
+
 ifeq ($(CONFIG_ARM_HAVE_PTM),y)
   CMN_CSRCS += arm_timer.c
 endif

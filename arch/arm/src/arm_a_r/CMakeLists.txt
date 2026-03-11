@@ -49,6 +49,10 @@ if(CONFIG_ARM_GIC_VERSION EQUAL 2)
   endif()
 endif()
 
+if(CONFIG_ARM_GIC_VERSION EQUAL 3)
+  list(APPEND CSRCS arm_gicv3.c)
+endif()
+
 if(CONFIG_ARCH_FPU)
   list(APPEND CSRCS arm_fpucmp.c arm_fpuconfig.S)
 endif()
