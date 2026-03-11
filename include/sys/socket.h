@@ -339,12 +339,8 @@
 /* Desired design of maximum size and alignment (see RFC2553) */
 
 #define SS_MAXSIZE   128                 /* Implementation-defined maximum size. */
-#define SS_ALIGNSIZE (sizeof(uintptr_t)) /* Implementation-defined desired alignment. */
-
-/* Definitions used for sockaddr_storage structure paddings design */
-#define SS_PAD1SIZE (SS_ALIGNSIZE - sizeof(sa_family_t))
-#define SS_PAD2SIZE (SS_MAXSIZE - (sizeof(sa_family_t) + \
-                     SS_PAD1SIZE + SS_ALIGNSIZE))
+#define _SS_PADSIZE \
+  (SS_MAXSIZE - sizeof(sa_family_t) - sizeof(unsigned long))
 
 /* Network socket control */
 
@@ -355,30 +351,15 @@
  * Type Definitions
  ****************************************************************************/
 
-/* sockaddr_storage structure. This structure must be (1) large enough to
- * accommodate all supported protocol-specific address structures, and (2)
- * aligned at an appropriate boundary so that pointers to it can be cast
- * as pointers to protocol-specific address structures and used to access
- * the fields of those structures without alignment problems.
+/* Structure large enough to hold any socket address (with the historical
+ * exception of AF_UNIX).
  */
 
-struct aligned_data(SS_ALIGNSIZE) sockaddr_storage
+struct sockaddr_storage
 {
-  sa_family_t ss_family;       /* Address family */
-
-  /* Following fields are implementation-defined */
-
-  begin_packed_struct struct
-  {
-    char ss_pad1[SS_PAD1SIZE]; /* 6-byte pad; this is to make implementation-defined
-                                * pad up to alignment field that follows explicit in
-                                * the data structure */
-    int64_t ss_align;          /* Field to force desired structure storage alignment */
-    char ss_pad2[SS_PAD2SIZE]; /* 112-byte pad to achieve desired size, SS_MAXSIZE
-                                * value minus size of ss_family ss_pad1, ss_align
-                                * fields is 112. */
-  }
-  end_packed_struct ss_data[1];
+  sa_family_t ss_family;               /* Address family, etc.  */
+  char ss_data[_SS_PADSIZE];
+  unsigned long __ss_align;            /* Force desired alignment.  */
 };
 
 /* The sockaddr structure is used to define a socket address which is used
