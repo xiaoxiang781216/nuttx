@@ -152,7 +152,7 @@ static int pkt_in_(FAR struct net_driver_s *dev, bool loopback)
           continue;
         }
 
-#ifdef CONFIG_NET_TIMESTAMPING
+#ifdef CONFIG_NET_TIMESTAMP
 
       /* Handle hardware timestamp */
 

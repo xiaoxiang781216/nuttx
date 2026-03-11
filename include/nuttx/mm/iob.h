@@ -41,7 +41,7 @@
 #  include <nuttx/wqueue.h>
 #endif
 
-#if defined(CONFIG_NET_TIMESTAMP) || defined(CONFIG_NET_TIMESTAMPING)
+#ifdef CONFIG_NET_TIMESTAMP
 #  include <sys/time.h>
 #endif
 
@@ -157,7 +157,7 @@ struct iob_s
 
   FAR struct socket_conn_s *io_conn;
 
-#if defined(CONFIG_NET_TIMESTAMP) || defined(CONFIG_NET_TIMESTAMPING)
+#ifdef CONFIG_NET_TIMESTAMP
   /* timestamp of the packet.
    * d_features is the member of net_driver_s struct, if the NETDEV_RX_STAMP
    * bit of d_features is set, the timestamp is provided by hardware driver.
