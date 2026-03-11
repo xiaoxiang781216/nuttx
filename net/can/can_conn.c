@@ -106,6 +106,14 @@ FAR struct can_conn_s *can_alloc(void)
 
       conn_init(&conn->sconn);
 
+#if CONFIG_NET_CAN_SEND_BUFSIZE > 0
+      conn->sconn.s_sndbufs = CONFIG_NET_CAN_SEND_BUFSIZE;
+#endif
+
+#if CONFIG_NET_CAN_RECV_BUFSIZE > 0
+      conn->sconn.s_rcvbufs = CONFIG_NET_CAN_RECV_BUFSIZE;
+#endif
+
 #ifdef CONFIG_NET_CANPROTO_OPTIONS
       /* By default the filter is configured to catch all,
        * this is done in commented filter code below:

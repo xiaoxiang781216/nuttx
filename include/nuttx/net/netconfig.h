@@ -287,6 +287,10 @@
 #  define CONFIG_NET_SEND_BUFSIZE 0
 #endif
 
+#ifndef CONFIG_NET_CAN_SEND_BUFSIZE
+#  define CONFIG_NET_CAN_SEND_BUFSIZE CONFIG_NET_SEND_BUFSIZE
+#endif
+
 /* Layer 3/4 Configuration Options ******************************************/
 
 /* IP configuration options */

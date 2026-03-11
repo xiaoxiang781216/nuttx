@@ -41,6 +41,23 @@ config NET_CAN_WRITE_BUFFERS
 		You might want to disable CAN write buffering on a highly memory
 		memory constrained system where there are no performance issues.
 
+config NET_CAN_SEND_BUFSIZE
+	int "CAN send buffer size"
+	default NET_SEND_BUFSIZE
+	depends on NET_CAN_WRITE_BUFFERS
+	---help---
+		CAN specific send buffer size. Default inherits from
+		NET_SEND_BUFSIZE. Set to a different value to override
+		the send buffer size for CAN connections.
+
+config NET_CAN_RECV_BUFSIZE
+	int "CAN receive buffer size"
+	default NET_RECV_BUFSIZE
+	---help---
+		CAN specific receive buffer size. Default inherits from
+		NET_RECV_BUFSIZE. Set to a different value to override
+		the receive buffer size for CAN connections.
+
 config CAN_PREALLOC_CONNS
 	int "Preallocated CAN socket connections"
 	default 4
