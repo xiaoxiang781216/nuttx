@@ -162,6 +162,14 @@ while (0);
 
 #endif
 
+/****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+/* Add mpu.h later to avoid circular dependency of percpu */
+
+#include <arch/mpu.h>
+
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
