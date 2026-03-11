@@ -2822,6 +2822,8 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
     }
 #ifdef CONFIG_MMCSD_MMCSUPPORT
   else if (IS_MMC(priv->type) &&
+           (priv->buswidth & (MMCSD_SCR_BUSWIDTH_4BIT |
+                              MMCSD_SCR_BUSWIDTH_8BIT)) != 0 &&
            (priv->caps & SDIO_CAPS_1BIT_ONLY) == 0)
     {
       /* Configuring MMC - Use MMC_SWITCH access modes.
@@ -3126,6 +3128,12 @@ static int mmcsd_mmcinitialize(FAR struct mmcsd_state_s *priv)
         {
           ferr("ERROR: Failed to set wide bus operation: %d\n", ret);
         }
+    }
+  else if ((priv->caps & SDIO_CAPS_8BIT) != 0)
+    {
+      /* Select width (8-bit) bus operation */
+
+      priv->buswidth = MMCSD_SCR_BUSWIDTH_8BIT;
     }
 
   /* CSD Decoding for MMC should be done after entering in data-transfer mode
