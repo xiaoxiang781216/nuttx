@@ -140,7 +140,6 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
 #ifdef CONFIG_NET_TIMESTAMP
       case SO_TIMESTAMP:   /* Generates a timestamp in us for each incoming packet */
       case SO_TIMESTAMPNS: /* Generates a timestamp in ns for each incoming packet */
-      case SO_TIMESTAMPING: /* Timestamp all packets */
 #endif
         {
           int setting;
@@ -178,6 +177,49 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
           conn_unlock(conn);
         }
         break;
+
+#ifdef CONFIG_NET_TIMESTAMP
+      case SO_TIMESTAMPING: /* Timestamp TX/RX packets */
+        {
+          int flags;
+
+          if (value_len != sizeof(int))
+            {
+              return -EINVAL;
+            }
+
+          flags = *(FAR int *)value;
+
+          conn_lock(conn);
+
+          /* Map SOF_TIMESTAMPING_TX_* to s_options bit SO_TIMESTAMPING */
+
+          if (flags & SOF_TIMESTAMPING_TX_HARDWARE)
+            {
+              _SO_SETOPT(conn->s_options, SO_TIMESTAMPING);
+            }
+          else
+            {
+              _SO_CLROPT(conn->s_options, SO_TIMESTAMPING);
+            }
+
+          /* Map SOF_TIMESTAMPING_RX_* to s_options internal
+           * bit SO_TIMESTAMPING_RX
+           */
+
+          if (flags & SOF_TIMESTAMPING_RX_HARDWARE)
+            {
+              _SO_SETOPT(conn->s_options, SO_TIMESTAMPING_RX);
+            }
+          else
+            {
+              _SO_CLROPT(conn->s_options, SO_TIMESTAMPING_RX);
+            }
+
+          conn_unlock(conn);
+        }
+        break;
+#endif
 
 #ifdef CONFIG_NET_BINDTODEVICE
       /* Handle the SO_BINDTODEVICE socket-level option.

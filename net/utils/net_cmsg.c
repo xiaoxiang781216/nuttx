@@ -119,5 +119,16 @@ void cmsg_store_timestamp(FAR struct msghdr *msg,
       cmsg_append(msg, SOL_SOCKET, SO_TIMESTAMPNS, tstamp,
                   sizeof(struct timespec));
     }
+
+  if (_SO_GETOPT(opt, SO_TIMESTAMPING_RX))
+    {
+      struct timespec ts[3];
+
+      memset(&ts, 0, sizeof(ts));
+      ts[0] = *tstamp;
+      ts[2] = *tstamp;
+      cmsg_append(msg, SOL_SOCKET, SO_TIMESTAMPING, &ts,
+                  sizeof(ts));
+    }
 }
 #endif /* CONFIG_NET_TIMESTAMP */

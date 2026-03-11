@@ -150,7 +150,6 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
 #ifdef CONFIG_NET_TIMESTAMP
       case SO_TIMESTAMP:   /* Generates a timestamp in us for each incoming packet */
       case SO_TIMESTAMPNS: /* Generates a timestamp in ns for each incoming packet */
-      case SO_TIMESTAMPING: /* Timestamping options */
 #endif
         {
           sockopt_t optionset;
@@ -175,6 +174,35 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
           *value_len        = sizeof(int);
         }
         break;
+
+#ifdef CONFIG_NET_TIMESTAMP
+      case SO_TIMESTAMPING: /* Timestamping options */
+        {
+          sockopt_t optionset;
+          int flags = 0;
+
+          if (*value_len < sizeof(int))
+            {
+              return -EINVAL;
+            }
+
+          optionset = conn->s_options;
+
+          if (_SO_GETOPT(optionset, SO_TIMESTAMPING))
+            {
+              flags |= SOF_TIMESTAMPING_TX_HARDWARE;
+            }
+
+          if (_SO_GETOPT(optionset, SO_TIMESTAMPING_RX))
+            {
+              flags |= SOF_TIMESTAMPING_RX_HARDWARE;
+            }
+
+          *(FAR int *)value = flags;
+          *value_len        = sizeof(int);
+        }
+        break;
+#endif
 
       case SO_TYPE:       /* Reports the socket type */
         {

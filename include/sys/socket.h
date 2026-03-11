@@ -187,18 +187,20 @@
                             */
 #define SO_TIMESTAMPING  9 /* Generates timestamp for each output packet
                             */
-#define SO_RCVTIMEO     10 /* Sets the timeout value that specifies the maximum
+#define SO_TIMESTAMPING_RX 10
+                           /* Internal: SO_TIMESTAMPING RX direction */
+#define SO_RCVTIMEO     11 /* Sets the timeout value that specifies the maximum
                             * amount of time an input function waits until it
                             * completes (get/set).
                             * arg: struct timeval
                             */
-#define SO_SNDTIMEO     11 /* Sets the timeout value specifying the amount of
+#define SO_SNDTIMEO     12 /* Sets the timeout value specifying the amount of
                             * time that an output function blocks because flow
                             * control prevents data from being sent(get/set).
                             * arg: struct timeval
                             */
 
-#define __SO_PROTOCOL   11 /* Protocol-level socket options may begin with this
+#define __SO_PROTOCOL   12 /* Protocol-level socket options may begin with this
                             * value. The current value is determined by the option
                             * in SOL_SOCKET that uses the highest bit, which
                             * is SO_TIMESTAMPNS
@@ -246,10 +248,16 @@
 #define SO_RCVBUFFORCE  75
 #define SO_RXQ_OVFL     76
 
-/* Timestamp generation */
+/* Timestamp generation
+ *
+ * SOF_TIMESTAMPING_TX_* maps to s_options bit SO_TIMESTAMPING (9)
+ * SOF_TIMESTAMPING_RX_* maps to s_options internal bit SO_TIMESTAMPING_RX
+ */
 
 #define SOF_TIMESTAMPING_TX_HARDWARE  (1 << SO_TIMESTAMPING)
 #define SOF_TIMESTAMPING_TX_SOFTWARE  SOF_TIMESTAMPING_TX_HARDWARE
+#define SOF_TIMESTAMPING_RX_HARDWARE  (1 << SO_TIMESTAMPING_RX)
+#define SOF_TIMESTAMPING_RX_SOFTWARE  SOF_TIMESTAMPING_RX_HARDWARE
 
 /* Timestamp reporting */
 
