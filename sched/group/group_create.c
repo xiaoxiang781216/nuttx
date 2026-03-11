@@ -50,7 +50,10 @@
 
 /* Shared among kthreads */
 
-static DEFINE_PER_CPU_BSS_BMP(struct task_group_s, g_kthread_group);
+static DEFINE_PER_CPU_BMP(struct task_group_s, g_kthread_group) =
+{
+  .tg_flags = GROUP_FLAG_KERNEL,
+};
 #define g_kthread_group this_cpu_var_bmp(g_kthread_group)
 
 /****************************************************************************

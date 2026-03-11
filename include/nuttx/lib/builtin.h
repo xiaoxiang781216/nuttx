@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <stdbool.h>
 #include <sys/types.h>
 
 #ifdef CONFIG_BUILTIN
@@ -50,6 +51,9 @@ struct builtin_s
 #ifdef CONFIG_MM_TASK_HEAP
   size_t      heapsize;     /* Task heap size */
 #endif
+#ifdef CONFIG_LIB_SYSCALL
+  bool        kernel;       /* true: kernel app, false: user app */
+#endif
 };
 
 /****************************************************************************
@@ -64,21 +68,8 @@ extern "C"
 #define EXTERN extern
 #endif
 
-#if defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)
-/* In the PROTECTED build, We use USERSPACE to get builtin information. */
-
-#define g_builtins (USERSPACE->builtins)
-#define g_builtin_count (*USERSPACE->builtin_count)
-
-#else
-/* In the FLAT build, the builtin list is just a global global array and
- * count exported from user space via the backdoor left open by the FLAT
- * address space.  These globals must be provided the application layer.
- */
-
 EXTERN const struct builtin_s g_builtins[];
 EXTERN const int g_builtin_count;
-#endif
 
 /****************************************************************************
  * Public Function Prototypes

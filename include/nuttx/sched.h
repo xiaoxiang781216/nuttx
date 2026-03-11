@@ -116,7 +116,8 @@
 #define GROUP_FLAG_PRIVILEGED      (1 << 1)                      /* Bit 1: Group is privileged */
 #define GROUP_FLAG_DELETED         (1 << 2)                      /* Bit 2: Group has been deleted but not yet freed */
 #define GROUP_FLAG_EXITING         (1 << 3)                      /* Bit 3: Group exit is in progress */
-                                                                 /* Bits 4-7: Available */
+#define GROUP_FLAG_KERNEL          (1 << 4)                      /* Bit 4: Kernel task group (not user) */
+                                                                 /* Bits 5-7: Available */
 
 /* Values for struct child_status_s ch_flags */
 

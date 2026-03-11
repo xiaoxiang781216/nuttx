@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <elf.h>
 
@@ -50,6 +51,9 @@ struct elf_fixup_s
 #ifdef CONFIG_MM_TASK_HEAP
   size_t          heapstart;
   size_t          heapsize;
+#endif
+#ifdef CONFIG_LIB_SYSCALL
+  bool            kernel;
 #endif
   Elf_Phdr        phdr[CONFIG_ELF_FIXUP_NSEGMENTS];
 };

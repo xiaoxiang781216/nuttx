@@ -54,6 +54,24 @@
 
 FAR const struct builtin_s *builtin_for_index(int index)
 {
+#if defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)
+  /* The kernel-side table has a trailing {} sentinel entry; skip it so that
+   * the user-side table is reached for indices past the real kernel apps.
+   */
+
+  int kernel_count = g_builtin_count - 1;
+  if (index >= kernel_count)
+    {
+      index -= kernel_count;
+      if (index < *USERSPACE->builtin_count)
+        {
+          return &USERSPACE->builtins[index];
+        }
+
+      return NULL;
+    }
+#endif
+
   if (index < g_builtin_count)
     {
       return &g_builtins[index];

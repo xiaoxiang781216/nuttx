@@ -474,8 +474,8 @@ static void idle_group_initialize(void)
        */
 
       group_initialize(tcb);
-      atomic_set(&tcb->group->tg_flags,
-                 GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED);
+      atomic_or(&tcb->group->tg_flags,
+                GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED);
     }
 }
 #else
@@ -506,8 +506,8 @@ static void idle_group_initialize(void)
    */
 
   group_initialize(tcb);
-  atomic_set(&tcb->group->tg_flags,
-              GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED);
+  atomic_or(&tcb->group->tg_flags,
+            GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED);
 }
 #endif
 

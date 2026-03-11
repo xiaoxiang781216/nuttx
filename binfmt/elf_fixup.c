@@ -41,14 +41,24 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define FIXUP_TABLE \
+#define ELF_FIXUP_TABLE \
   ((FAR const struct elf_fixup_s *) \
   (CONFIG_ELF_FIXUP_FLASH_START + CONFIG_ELF_FIXUP_FLASH_SIZE) - 1)
+
+#ifdef CONFIG_ELF_FIXUP_KERNEL_ELF
+#  define ELF_FIXUP_KERNEL_TABLE \
+  ((FAR const struct elf_fixup_s *) \
+  (CONFIG_ELF_FIXUP_KERNEL_FLASH_START + \
+   CONFIG_ELF_FIXUP_KERNEL_FLASH_SIZE) - 1)
+#endif
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
+static int elf_fixup_search(FAR struct binary_s *binp,
+                            FAR const char *name,
+                            FAR const struct elf_fixup_s *fixup);
 static int elf_fixup_loadbinary(FAR struct binary_s *binp,
                                 FAR const char *filename,
                                 FAR const struct symtab_s *exports,
@@ -70,37 +80,18 @@ static struct binfmt_s g_elf_fixup_binfmt =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: elf_fixup_loadbinary
+ * Name: elf_fixup_search
  *
  * Description:
- *   Verify that the file is an elf fixup binary.
+ *   Search a fixup table for a named entry and populate binp if found.
  *
  ****************************************************************************/
 
-static int elf_fixup_loadbinary(FAR struct binary_s *binp,
-                                FAR const char *filename,
-                                FAR const struct symtab_s *exports,
-                                int nexports)
+static int elf_fixup_search(FAR struct binary_s *binp,
+                            FAR const char *name,
+                            FAR const struct elf_fixup_s *fixup)
 {
-  /* The fixup table is expected to be at the end of a reserved flash
-   * region.
-   */
-
-  FAR const struct elf_fixup_s *fixup = FIXUP_TABLE;
-  FAR const char *name;
   int i;
-
-  binfo("Loading file: %s\n", filename);
-
-  name = strrchr(filename, '/');
-  if (name == NULL)
-    {
-      name = filename;
-    }
-  else
-    {
-      name++;
-    }
 
   for (; fixup->entry != 0; fixup--)
     {
@@ -125,6 +116,9 @@ static int elf_fixup_loadbinary(FAR struct binary_s *binp,
       binp->heapsize  = fixup->heapsize ?
                         fixup->heapsize :
                         CONFIG_MM_TASK_HEAP_DEFAULT_SIZE;
+#endif
+#ifdef CONFIG_LIB_SYSCALL
+      binp->kernel    = fixup->kernel;
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -213,6 +207,44 @@ static int elf_fixup_loadbinary(FAR struct binary_s *binp,
 }
 
 /****************************************************************************
+ * Name: elf_fixup_loadbinary
+ *
+ * Description:
+ *   Verify that the file is an elf fixup binary.
+ *
+ ****************************************************************************/
+
+static int elf_fixup_loadbinary(FAR struct binary_s *binp,
+                                FAR const char *filename,
+                                FAR const struct symtab_s *exports,
+                                int nexports)
+{
+  FAR const char *name;
+
+  binfo("Loading file: %s\n", filename);
+
+  name = strrchr(filename, '/');
+  if (name == NULL)
+    {
+      name = filename;
+    }
+  else
+    {
+      name++;
+    }
+
+#ifdef CONFIG_ELF_FIXUP_KERNEL_ELF
+  int ret = elf_fixup_search(binp, name, ELF_FIXUP_KERNEL_TABLE);
+  if (ret == OK)
+    {
+      return OK;
+    }
+#endif
+
+  return elf_fixup_search(binp, name, ELF_FIXUP_TABLE);
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -276,7 +308,7 @@ void elf_fixup_uninitialize(void)
 
 uintptr_t elf_fixup_ramstart(void)
 {
-  FAR const struct elf_fixup_s *fixup = FIXUP_TABLE;
+  FAR const struct elf_fixup_s *fixup = ELF_FIXUP_TABLE;
   uintptr_t ramstart = UINTPTR_MAX;
   int i;
 

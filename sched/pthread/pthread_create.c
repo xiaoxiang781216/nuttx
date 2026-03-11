@@ -146,11 +146,21 @@ static void pthread_start(void)
 
   DEBUGASSERT(trampoline != NULL && pthread != NULL);
 
-#ifdef CONFIG_BUILD_FLAT
-  up_addrenv_leave_kernel();
-  trampoline(pthread, arg);
+  if (atomic_read(&ptcb->group->tg_flags) & GROUP_FLAG_KERNEL)
+    {
+      trampoline(pthread, arg);
+    }
+#if defined(CONFIG_LIB_SYSCALL)
+  else
+    {
+      up_pthread_start(trampoline, pthread, arg);
+    }
 #else
-  up_pthread_start(trampoline, pthread, arg);
+  else
+    {
+      up_addrenv_leave_kernel();
+      trampoline(pthread, arg);
+    }
 #endif
 
   /* The thread has returned (should never happen) */

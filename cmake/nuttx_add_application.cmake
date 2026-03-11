@@ -133,6 +133,7 @@ if(NOT COMMAND nuttx_add_elf_app)
       HEAPSIZE
       MODULE
       DYNLIB
+      KERNEL
       MULTI_VALUE
       COMPILE_FLAGS
       LINK_FLAGS
@@ -204,7 +205,15 @@ if(NOT COMMAND nuttx_add_elf_app)
                               nx_heapsize=${CONFIG_MM_TASK_HEAP_DEFAULT_SIZE})
         endif()
       endif()
+      if(CONFIG_LIB_SYSCALL AND KERNEL)
+        set(SYMBOL_KERNEL --add-symbol nx_kernel=1)
+      endif()
       get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
+      if(CONFIG_BUILD_PROTECTED AND KERNEL)
+        set(KERNEL_APP_ADDR_FLAGS
+            -Wl,-Ttext=${CONFIG_ELF_FIXUP_KERNEL_FLASH_START}
+            -Wl,-Tdata=${CONFIG_ELF_FIXUP_KERNEL_RAM_START})
+      endif()
       # Build ELF link command arguments once to avoid duplication
       set(ELF_LINK_ARGS
           # add default link option
@@ -212,6 +221,7 @@ if(NOT COMMAND nuttx_add_elf_app)
           ${NUTTX_EXTRA_FLAGS}
           -T
           ${CMAKE_BINARY_DIR}/gnu-elf.ld
+          ${KERNEL_APP_ADDR_FLAGS}
           # add global MOD link option if dynlib link
           $<$<BOOL:${DYNLIB_ELF_MODE}>:$<TARGET_PROPERTY:nuttx_global,NUTTX_MOD_APP_LINK_OPTIONS>>
           # add global ELF link option if m&kernel link
@@ -239,7 +249,7 @@ if(NOT COMMAND nuttx_add_elf_app)
         COMMAND ${ELF_LINK_ARGS}
         COMMAND
           ${CMAKE_OBJCOPY} ${SYMBOL_STACKSIZE} ${SYMBOL_PRIORITY} ${SYMBOL_UID}
-          ${SYMBOL_GID} ${SYMBOL_MODE} ${SYMBOL_HEAPSIZE}
+          ${SYMBOL_GID} ${SYMBOL_MODE} ${SYMBOL_HEAPSIZE} ${SYMBOL_KERNEL}
           ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME}
         COMMAND
           ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME}
@@ -380,6 +390,7 @@ function(nuttx_add_application)
     HEAPSIZE
     MODULE
     DYNLIB
+    KERNEL
     MULTI_VALUE
     COMPILE_FLAGS
     LINK_FLAGS
@@ -420,6 +431,8 @@ function(nuttx_add_application)
         ${MODULE}
         DYNLIB
         ${DYNLIB}
+        KERNEL
+        ${KERNEL}
         SRCS
         ${SRCS}
         PRIORITY
@@ -523,6 +536,10 @@ function(nuttx_add_application)
     endif()
   endif()
 
+  if(CONFIG_LIB_SYSCALL AND KERNEL)
+    set_target_properties(${TARGET} PROPERTIES KERNEL 1)
+  endif()
+
   # call target_ options only target is compilable
   if(NOT NO_COMPILABLE_TARGET)
     # compile options
@@ -535,6 +552,10 @@ function(nuttx_add_application)
 
     if(DEFINITIONS)
       target_compile_definitions(${TARGET} PRIVATE ${DEFINITIONS})
+    endif()
+
+    if(KERNEL)
+      target_compile_definitions(${TARGET} PRIVATE KERNEL)
     endif()
 
     if(INCLUDE_DIRECTORIES)

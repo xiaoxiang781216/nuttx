@@ -96,19 +96,22 @@ void nxtask_start(void)
    * we have to switch to user-mode before calling the task.
    */
 
-  if (ttype == TCB_FLAG_TTYPE_KERNEL)
+  if (atomic_read(&tcb->group->tg_flags) & GROUP_FLAG_KERNEL)
     {
       exitcode = entry_main(argc, argv);
     }
+#if defined(CONFIG_LIB_SYSCALL)
   else
     {
-#ifdef CONFIG_BUILD_FLAT
+      up_task_start(entry_main, argc, argv);
+    }
+#else
+  else
+    {
       up_addrenv_leave_kernel();
       nxtask_startup(entry_main, argc, argv);
-#else
-      up_task_start(entry_main, argc, argv);
-#endif
     }
+#endif
 
   /* Call _exit() if/when the task returns */
 

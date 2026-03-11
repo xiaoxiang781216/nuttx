@@ -210,6 +210,14 @@ static int elf_loadbinary(FAR struct binary_s *binp,
     }
 #endif
 
+#ifdef CONFIG_LIB_SYSCALL
+  ret = libelf_findsymbol(&loadinfo, "nx_kernel", &sym);
+  if (ret == 0)
+    {
+      binp->kernel = (sym.st_value != 0);
+    }
+#endif
+
   /* Add the ELF allocation to the alloc[] only if there is no address
    * environment.  If there is an address environment, it will automatically
    * be freed when the function exits

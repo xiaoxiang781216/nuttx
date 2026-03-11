@@ -99,6 +99,9 @@ struct binary_s
 #ifdef CONFIG_MM_TASK_HEAP
   size_t heapsize;                     /* Task Heap size */
 #endif
+#ifdef CONFIG_LIB_SYSCALL
+  bool kernel;                         /* true: kernel app, false: user app */
+#endif
 
 #ifndef CONFIG_BUILD_KERNEL
   FAR void *stackaddr;                 /* Task stack address */

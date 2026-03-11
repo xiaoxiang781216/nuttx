@@ -43,6 +43,7 @@
 #include <task/spawn.h>
 #include <nuttx/spawn.h>
 #include <nuttx/binfmt/binfmt.h>
+#include <nuttx/lib/builtin.h>
 
 #include "binfmt.h"
 
@@ -327,6 +328,13 @@ int exec_module(FAR struct binary_s *binp,
       berr("nxtask_init() failed: %d\n", ret);
       goto errout_with_addrenv;
     }
+
+#ifdef CONFIG_LIB_SYSCALL
+  if (binp->kernel)
+    {
+      atomic_or(&tcb->group->tg_flags, GROUP_FLAG_KERNEL);
+    }
+#endif
 
   /* The copied argv and envp can now be released */
 

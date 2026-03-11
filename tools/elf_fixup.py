@@ -710,6 +710,7 @@ def generate_fixup_src(args, in_dir, out_src: str):
         mode = ""
         heap_size = ""
         heap_start = ""
+        kernel = ""
         for symbol in rel_elf.symbols:
             if symbol.name == "nx_stacksize":
                 stacksize = f"    .stacksize=0x{symbol.value:x},\n"
@@ -723,6 +724,8 @@ def generate_fixup_src(args, in_dir, out_src: str):
                 mode = f"    .mode=0x{symbol.value:x},\n"
             elif symbol.name == "nx_heapsize":
                 heap_size = f"    .heapsize=0x{symbol.value:x},\n"
+            elif symbol.name == "nx_kernel":
+                kernel = f"    .kernel={(symbol.value != 0)},\n"
 
         # _sheap is relative to the exec ELF, so we need to get it from there
         for symbol in elf.symbols:
@@ -745,6 +748,7 @@ def generate_fixup_src(args, in_dir, out_src: str):
             f"{mode}"
             f"{heap_start}"
             f"{heap_size}"
+            f"{kernel}"
             f"{args.toolchain.get_phdr(args, elf)}"
             "  },\n"
         )

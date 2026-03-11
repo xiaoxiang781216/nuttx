@@ -81,6 +81,43 @@ config ELF_FIXUP_CUSTOM_LAYOUT
 		formatted as follows: app1, [app2, [app3]], flash start, flash size, ram start, ram size [, appX, flash startX, flash sizeX, ram startX, ram sizeX]
 		app1, app2, and app3 will allocate memory from flash start and ram start. Multiple app groups can be parsed.
 
+config ELF_FIXUP_KERNEL_FLASH_START
+	hex "Kernel flash start address for kernel app ELF fixup"
+	depends on !BUILD_FLAT
+	default FLASH_START
+	---help---
+		Start address of kernel flash region for ELF fixup of kernel apps.
+
+config ELF_FIXUP_KERNEL_FLASH_SIZE
+	int "Kernel flash size for kernel app ELF fixup"
+	depends on !BUILD_FLAT
+	default FLASH_SIZE
+	---help---
+		Size of kernel flash region for ELF fixup of kernel apps.
+
+config ELF_FIXUP_KERNEL_RAM_START
+	hex "Kernel RAM start address for kernel app ELF fixup"
+	depends on !BUILD_FLAT
+	default RAM_START
+	---help---
+		Start address of kernel RAM region for ELF fixup of kernel apps.
+
+config ELF_FIXUP_KERNEL_RAM_SIZE
+	int "Kernel RAM size for kernel app ELF fixup"
+	depends on !BUILD_FLAT
+	default RAM_SIZE
+	---help---
+		Size of kernel RAM region for ELF fixup of kernel apps.
+
+config ELF_FIXUP_KERNEL_ELF
+	bool "Enable kernel ELF fixup table"
+	depends on !BUILD_FLAT
+	default n
+	---help---
+		Enable the kernel ELF fixup table for kernel app ELF (m-mode) loading.
+		Only needed when kernel apps are built as loadable ELF modules
+		(m-mode), not when statically linked (y-mode).
+
 endif # ELF_FIXUP
 
 config NXFLAT

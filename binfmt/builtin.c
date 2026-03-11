@@ -113,6 +113,9 @@ static int builtin_loadbinary(FAR struct binary_s *binp,
   binp->gid       = builtin->gid;
   binp->mode      = builtin->mode;
 #endif
+#ifdef CONFIG_LIB_SYSCALL
+  binp->kernel    = builtin->kernel;
+#endif
 
   return OK;
 }
