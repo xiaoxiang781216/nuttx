@@ -101,6 +101,7 @@ struct mbstate_s
 
 typedef struct mbstate_s mbstate_s;
 #define mbstate_t mbstate_s
+#define __mbstate_t_defined 1
 
 /* FILE
  *   As described in <stdio.h>.
