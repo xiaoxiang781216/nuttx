@@ -116,9 +116,11 @@ static int netdev_upper_txavail(FAR struct net_driver_s *dev);
  *
  ****************************************************************************/
 
-static bool quota_is_valid(FAR struct netdev_lowerhalf_s *lower)
+static bool quota_is_valid(FAR struct netdev_lowerhalf_s *lower,
+                           enum net_lltype_e lltype)
 {
   int total = 0;
+  int bufnum;
   enum netpkt_type_e type;
 
   for (type = NETPKT_TX; type < NETPKT_TYPENUM; type++)
@@ -126,13 +128,24 @@ static bool quota_is_valid(FAR struct netdev_lowerhalf_s *lower)
       total += netdev_lower_quota_load(lower, type);
     }
 
-  if (total > NETPKT_BUFNUM)
+#ifdef CONFIG_NET_CAN
+  if (lltype == NET_LL_CAN)
+    {
+      bufnum = iob_navail_with_size(NET_CAN_BUFSIZE, false);
+    }
+  else
+#endif
+    {
+      bufnum = NETPKT_BUFNUM;
+    }
+
+  if (total > bufnum)
     {
       nerr("ERROR: Too big quota when registering device: %d\n", total);
       return false;
     }
 
-  if (total > NETPKT_BUFNUM / 2)
+  if (total > bufnum / 2)
     {
       nwarn("WARNING: The quota of the registering device may consume more "
             "than half of the network buffers, which may hurt performance. "
@@ -1524,7 +1537,7 @@ int netdev_lower_register(FAR struct netdev_lowerhalf_s *dev,
       dev->quota_ptr = dev->quota;
     }
 
-  if (quota_is_valid(dev) == false)
+  if (quota_is_valid(dev, lltype) == false)
     {
       return -EINVAL;
     }

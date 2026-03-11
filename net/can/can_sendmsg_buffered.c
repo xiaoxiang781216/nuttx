@@ -462,7 +462,7 @@ int psock_can_cansend(FAR struct socket *psock)
   conn = psock->s_conn;
 #endif
 
-  if (iob_navail(false) <= 0
+  if (iob_navail_with_size(NET_CAN_BUFSIZE, false) <= 0
 #if CONFIG_NET_SEND_BUFSIZE > 0
       || iob_get_queue_size(&conn->write_q) >= conn->sconn.s_sndbufs
 #endif
