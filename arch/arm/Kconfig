@@ -1107,16 +1107,6 @@ config ARCH_ARM_M
 
 config ARCH_FAMILY
 	string
-	default "arm"		if ARCH_ARM7TDMI || ARCH_ARM920T || ARCH_ARM926EJS || ARCH_ARM1136J || ARCH_ARM1156T2 || ARCH_ARM1176JZ
-	default "armv6-m"	if ARCH_ARMV6M
-	default "armv7-a"	if ARCH_ARMV7A
-	default "armv7-m"	if ARCH_ARMV7M
-	default "armv7-r"	if ARCH_ARMV7R
-	default "armv8-m"	if ARCH_ARMV8M
-	default "armv8-r"	if ARCH_ARMV8R
-
-config ARCH_FAMILY_COMMON
-	string
 	default "arm_a_r"	if ARCH_ARM_A_R
 	default "arm_m"		if ARCH_ARM_M
 
