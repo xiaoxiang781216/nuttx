@@ -40,6 +40,24 @@
 #include "socket/socket.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Helper macro to check if device is eligible for packet socket processing.
+ * Only Ethernet-like devices (Ethernet, IEEE802.11, Loopback) should feed
+ * frames into packet sockets when CONFIG_NET_PKT_ETHERNET_ONLY is enabled.
+ */
+
+#ifdef CONFIG_NET_PKT_ETHERNET_ONLY
+#  define NETDEV_PKT_INELIGIBLE(dev) \
+    ((dev)->d_lltype != NET_LL_ETHERNET && \
+     (dev)->d_lltype != NET_LL_IEEE80211 && \
+     (dev)->d_lltype != NET_LL_LOOPBACK)
+#else
+#  define NETDEV_PKT_INELIGIBLE(dev) (false)
+#endif
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -279,6 +297,13 @@ int pkt_input(FAR struct net_driver_s *dev)
   FAR uint8_t *buf;
   int ret;
 
+  if (NETDEV_PKT_INELIGIBLE(dev))
+    {
+      /* Not eligible for packet socket processing, skip loopback */
+
+      return OK;
+    }
+
   netdev_lock(dev);
 
   if (dev->d_iob != NULL)
@@ -327,6 +352,13 @@ int pkt_loopback(FAR struct net_driver_s *dev)
 {
   FAR uint8_t *buf;
   int ret;
+
+  if (NETDEV_PKT_INELIGIBLE(dev))
+    {
+      /* Not eligible for packet socket processing, skip loopback */
+
+      return OK;
+    }
 
   netdev_lock(dev);
 

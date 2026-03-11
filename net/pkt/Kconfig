@@ -74,6 +74,24 @@ config NET_PKT_MAX_CONNS
 		This is useful in case the system is under very heavy load (or
 		under attack), ensuring that the heap will not be exhausted.
 
+config NET_PKT_ETHERNET_ONLY
+	bool "Restrict packet socket processing to Ethernet-like devices"
+	default n
+	---help---
+		When enabled, packet socket processing (pkt_input/pkt_loopback)
+		will only be invoked for Ethernet-like devices (NET_LL_ETHERNET,
+		NET_LL_IEEE80211, NET_LL_LOOPBACK). Other device types such as
+		CAN (NET_LL_CAN) and MBIM will skip packet socket processing.
+
+		This avoids unnecessary processing overhead for non-Ethernet
+		devices and prevents potential issues when AF_PACKET sockets
+		are used with incompatible device types.
+
+		Note: Enabling this option will prevent AF_PACKET sockets from
+		receiving frames on non-Ethernet devices. Only enable if you
+		do not need packet socket support on CAN, MBIM, or other
+		non-Ethernet network interfaces.
+
 config NET_PKT_NPOLLWAITERS
 	int "Number of PKT poll waiters"
 	default 2
