@@ -170,6 +170,12 @@ void qemu_rv_start(int mhartid, const char *dtb)
 
   riscv_fpuconfig();
 
+  /* Configure VPU (Vector Processing Unit) if enabled */
+
+#ifdef CONFIG_ARCH_RV_ISA_V
+  riscv_vpuconfig();
+#endif
+
   if (mhartid > 0)
     {
       goto cpux;
