@@ -56,6 +56,7 @@ enum safety_module_e
   SAFETY_MODULE_SMU,          /* Safety Management & Fault control Unit */
   SAFETY_MODULE_REG,          /* Register monitoring module */
   SAFETY_MODULE_VOLTAGE,      /* Voltage monitoring module */
+  SAFETY_MODULE_WATCHDOG,     /* Watchdog timer monitoring module */
   SAFETY_MODULE_MAX
 };
 

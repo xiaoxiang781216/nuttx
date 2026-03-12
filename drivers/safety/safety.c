@@ -421,7 +421,8 @@ int safety_register(FAR struct safety_lowerhalf_s *lower,
     "error_report",
     "smu",
     "reg",
-    "voltage"
+    "voltage",
+    "watchdog"
   };
 
   static const struct file_operations g_safety_fops =
