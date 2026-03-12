@@ -23,7 +23,7 @@ target_sources(nuttx PRIVATE arm_vectortab.S)
 set(CSRCS arm_vectors.S arm_saveusercontext.S arm_head.S)
 
 if(NOT CONFIG_DISABLE_SIGNALS)
-  list(APPEND CSRCS arm_schedulesigaction.c arm_sigdeliver.c)
+  list(APPEND CSRCS arm_schedulesigaction.c)
 endif()
 
 if(CONFIG_ARCH_HAVE_DEBUG)
@@ -54,7 +54,7 @@ if(CONFIG_ARM_GIC_VERSION EQUAL 3)
 endif()
 
 if(CONFIG_ARCH_FPU)
-  list(APPEND CSRCS arm_fpucmp.c arm_fpuconfig.S)
+  list(APPEND CSRCS arm_fpuconfig.S)
 endif()
 
 if(CONFIG_ARCH_HIPRI_INTERRUPT)
@@ -72,7 +72,6 @@ endif()
 list(
   APPEND
   CSRCS
-  arm_tcbinfo.c
   arm_doirq.c
   arm_dataabort.c
   arm_syscall.c

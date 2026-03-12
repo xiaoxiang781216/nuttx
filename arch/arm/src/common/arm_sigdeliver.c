@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/arm_a_r/arm_sigdeliver.c
+ * arch/arm/src/common/arm_sigdeliver.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -53,9 +53,13 @@
 
 void arm_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task();
-  uint32_t *regs = rtcb->xcp.saved_regs;
+  struct tcb_s *rtcb;
   irqstate_t flags;
+  uint32_t *regs;
+
+  up_addrenv_enter_kernel();
+  rtcb = this_task();
+  regs = rtcb->xcp.saved_regs;
 
   board_autoled_on(LED_SIGNAL);
 
@@ -117,6 +121,7 @@ retry:
   g_running_task = NULL;
   rtcb->xcp.regs = rtcb->xcp.saved_regs;
   rtcb->xcp.saved_regs = NULL;
+  up_addrenv_leave_kernel();
   nxsched_switch(rtcb, NULL);
   UNUSED(regs);
 }

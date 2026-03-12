@@ -27,6 +27,7 @@ CMN_CSRCS += arm_getintstack.c arm_initialize.c arm_lowputs.c
 CMN_CSRCS += arm_nputs.c arm_releasestack.c arm_registerdump.c
 CMN_CSRCS += arm_stackframe.c arm_modifyreg.c
 CMN_CSRCS += arm_usestack.c arm_fork.c arm_poweroff.c
+CMN_CSRCS += arm_tcbinfo.c
 
 ifneq ($(CONFIG_ALARM_ARCH),y)
   ifneq ($(CONFIG_TIMER_ARCH),y)
@@ -80,6 +81,14 @@ endif
 
 ifeq ($(CONFIG_UNWINDER_ARM),y)
   CMN_CSRCS += arm_backtrace_unwind.c
+endif
+
+ifeq ($(CONFIG_ARCH_FPU),y)
+  CMN_CSRCS += arm_fpucmp.c
+endif
+
+ifneq ($(CONFIG_DISABLE_SIGNALS),y)
+  CMN_CSRCS += arm_sigdeliver.c
 endif
 
 CMN_ASRCS += fork.S

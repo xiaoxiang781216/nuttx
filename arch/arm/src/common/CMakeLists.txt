@@ -39,7 +39,16 @@ set(SRCS
     arm_usestack.c
     arm_fork.c
     arm_poweroff.c
+    arm_tcbinfo.c
     ${ARCH_TOOLCHAIN_PATH}/fork.S)
+
+if(CONFIG_ARCH_FPU)
+  list(APPEND SRCS arm_fpucmp.c)
+endif()
+
+if(NOT CONFIG_DISABLE_SIGNALS)
+  list(APPEND SRCS arm_sigdeliver.c)
+endif()
 
 if(NOT CONFIG_ALARM_ARCH AND NOT CONFIG_TIMER_ARCH)
   list(APPEND SRCS arm_mdelay.c arm_udelay.c)

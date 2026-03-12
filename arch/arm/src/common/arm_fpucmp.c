@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/arm_a_r/arm_fpucmp.c
+ * arch/arm/src/common/arm_fpucmp.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -36,7 +36,11 @@
 
 #ifdef CONFIG_ARCH_FPU
 
-#  define FPU_CALLEE_REGS   (16)
+/* Number of callee-saved FPU registers (S16-S31) */
+
+#ifndef SW_FPU_REGS
+#  define SW_FPU_REGS (16)
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -66,6 +70,6 @@ bool up_fpucmp(const void *saveregs1, const void *saveregs2)
    * need to be preserved.
    */
 
-  return memcmp(&regs1[REG_S16], &regs2[REG_S16], 4 * FPU_CALLEE_REGS) == 0;
+  return memcmp(&regs1[REG_S16], &regs2[REG_S16], 4 * SW_FPU_REGS) == 0;
 }
 #endif /* CONFIG_ARCH_FPU */

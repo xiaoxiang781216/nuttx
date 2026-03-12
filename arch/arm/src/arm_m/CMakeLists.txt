@@ -23,7 +23,6 @@ list(
   SRCS
   arm_exception.S
   arm_saveusercontext.S
-  arm_tcbinfo.c
   arm_busfault.c
   arm_hardfault.c
   arm_systemreset.c
@@ -54,7 +53,7 @@ if(CONFIG_ARCH_ARMV8M)
 endif()
 
 if(CONFIG_ARCH_FPU)
-  list(APPEND SRCS arm_fpuconfig.c arm_fpucmp.c)
+  list(APPEND SRCS arm_fpuconfig.c)
 endif()
 
 if(CONFIG_ARM_STACKCHECK)
@@ -66,7 +65,7 @@ if(CONFIG_ARM_SYSTICK)
 endif()
 
 if(NOT CONFIG_DISABLE_SIGNALS)
-  list(APPEND SRCS arm_sigdeliver.c arm_schedulesigaction.c)
+  list(APPEND SRCS arm_schedulesigaction.c)
 endif()
 
 if(CONFIG_LIB_SYSCALL)

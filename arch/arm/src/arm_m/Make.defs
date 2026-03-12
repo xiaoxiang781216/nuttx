@@ -44,7 +44,7 @@ ifeq ($(CONFIG_LIB_SYSCALL),y)
   CMN_ASRCS += arm_dispatch_syscall.S
 endif
 
-CMN_CSRCS += arm_tcbinfo.c arm_busfault.c arm_hardfault.c arm_initialstate.c
+CMN_CSRCS += arm_busfault.c arm_hardfault.c arm_initialstate.c
 CMN_CSRCS += arm_systemreset.c arm_trigger_irq.c arm_svcall.c arm_doirq.c
 
 ifneq ($(CONFIG_ARCH_ARMV6M),y)
@@ -61,7 +61,7 @@ ifeq ($(CONFIG_ARCH_ARMV8M),y)
 endif
 
 ifeq ($(CONFIG_ARCH_FPU),y)
-  CMN_CSRCS += arm_fpucmp.c arm_fpuconfig.c
+  CMN_CSRCS += arm_fpuconfig.c
 endif
 
 ifeq ($(CONFIG_ARM_STACKCHECK),y)
@@ -69,7 +69,7 @@ ifeq ($(CONFIG_ARM_STACKCHECK),y)
 endif
 
 ifneq ($(CONFIG_DISABLE_SIGNALS),y)
-  CMN_CSRCS += arm_schedulesigaction.c arm_sigdeliver.c
+  CMN_CSRCS += arm_schedulesigaction.c
 endif
 
 ifneq ($(CONFIG_ARCH_HAVE_CUSTOM_VECTORS),y)
