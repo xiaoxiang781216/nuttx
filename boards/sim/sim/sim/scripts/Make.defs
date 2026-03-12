@@ -87,8 +87,14 @@ ifneq ($(CONFIG_PROFILE_ALL)$(CONFIG_SIM_PROFILE),)
 endif
 
 ifneq ($(CONFIG_SIM_ASAN)$(CONFIG_MM_KASAN_SIM),)
-  ARCHOPTIMIZATION += -fsanitize=address -fsanitize-address-use-after-scope
+  # Note: Do NOT add -fsanitize-address-use-after-scope to ARCHOPTIMIZATION.
+  # SIM task stacks are heap-allocated (kumm_malloc) and SP is switched
+  # via setjmp/longjmp. ASan's scope poison/unpoison assumes SP points
+  # to a real thread stack, so it corrupts heap shadow memory on SIM.
+  # Only enable it for C (ARCHCFLAGS), not C++ (ARCHCXXFLAGS).
+  ARCHOPTIMIZATION += -fsanitize=address
   ARCHOPTIMIZATION += -fsanitize=pointer-compare -fsanitize=pointer-subtract
+  ARCHCFLAGS += -fsanitize-address-use-after-scope
 else ifeq ($(CONFIG_MM_KASAN_INSTRUMENT_ALL),y)
   ARCHOPTIMIZATION += -fsanitize=kernel-address
 endif

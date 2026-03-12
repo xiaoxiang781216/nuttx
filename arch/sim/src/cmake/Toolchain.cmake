@@ -128,11 +128,17 @@ if(CONFIG_PROFILE_ALL OR CONFIG_SIM_PROFILE)
 endif()
 
 if(CONFIG_SIM_ASAN OR CONFIG_MM_KASAN_SIM)
+  # Note: Do NOT add -fsanitize-address-use-after-scope to C++ compilation. SIM
+  # task stacks are heap-allocated (kumm_malloc) and SP is switched via
+  # setjmp/longjmp. ASan's scope poison/unpoison assumes SP points to a real
+  # thread stack, so it corrupts heap shadow memory on SIM. Only enable it for
+  # C, not C++.
   add_compile_options(-fsanitize=address)
   add_link_options(-fsanitize=address)
-  add_compile_options(-fsanitize-address-use-after-scope)
   add_compile_options(-fsanitize=pointer-compare)
   add_compile_options(-fsanitize=pointer-subtract)
+  add_compile_options(
+    $<$<COMPILE_LANGUAGE:C>:-fsanitize-address-use-after-scope>)
   add_link_options(-fsanitize=address)
 elseif(CONFIG_MM_KASAN_INSTRUMENT_ALL)
   add_compile_options(-fsanitize=kernel-address)
