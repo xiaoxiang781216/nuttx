@@ -135,9 +135,10 @@ static inline_function void wd_timer_start(clock_t tick, bool in_expiration)
     {
       clock_t interval = clock_compare(g_wdexpired, tick) ?
                          tick - g_wdexpired : 0u;
-      uint64_t nsec = interval <= HRTIMER_MAX_DELAY / NSEC_PER_TICK ?
-                      TICK2NSEC((uint64_t)tick) :
-                      TICK2NSEC(g_wdexpired) + HRTIMER_MAX_DELAY;
+      uint64_t nsec    = interval <= HRTIMER_MAX_DELAY / NSEC_PER_TICK ?
+                         TICK2NSEC((uint64_t)g_wdexpired + interval) :
+                         TICK2NSEC((uint64_t)g_wdexpired) +
+                         HRTIMER_MAX_DELAY;
       hrtimer_start(&g_wdtimer, wd_timer, nsec, HRTIMER_MODE_ABS);
     }
 }
