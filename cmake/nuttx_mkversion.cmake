@@ -50,7 +50,7 @@ if(${NUTTX_VERSION_LENGTH} LESS 3)
     RESULT_VARIABLE VERSION_STATUS)
 
   if(${VERSION_STATUS} EQUAL 0)
-    string(REPLACE "\n" ";" NUTTX_VERSION_LIST ${NUTTX_VERSION_LIST})
+    string(REPLACE "\n" ";" NUTTX_VERSION_LIST "${NUTTX_VERSION_LIST}")
     foreach(version ${NUTTX_VERSION_LIST})
       string(REGEX MATCH "nuttx-[0-9]+\.[0-9]+\.[0-9]+" NUTTX_CHECK_VERSION
                    ${version})
