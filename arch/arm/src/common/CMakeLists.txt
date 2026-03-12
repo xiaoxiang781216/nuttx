@@ -108,6 +108,10 @@ if(CONFIG_UNWINDER_ARM)
   list(APPEND SRCS arm_backtrace_unwind.c)
 endif()
 
+if(CONFIG_ARCH_KERNEL_STACK)
+  list(APPEND SRCS arm_addrenv_kstack.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})
 
 nuttx_add_aux_library(STARTUP_OBJS crt0.c)

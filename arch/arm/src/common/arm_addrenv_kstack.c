@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/arm_m/arm_addrenv_kstack.c
+ * arch/arm/src/common/arm_addrenv_kstack.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -58,7 +58,7 @@ int up_addrenv_kstackalloc(struct tcb_s *tcb)
 {
   binfo("tcb=%p stacksize=%u\n", tcb, ARCH_KERNEL_STACKSIZE);
 
-  DEBUGASSERT(tcb && tcb->xcp.kstack == 0);
+  DEBUGASSERT(tcb && tcb->xcp.kstack == NULL);
 
   /* Allocate the kernel stack */
 
@@ -99,7 +99,7 @@ int up_addrenv_kstackfree(struct tcb_s *tcb)
       /* Yes.. Free the kernel stack */
 
       kmm_free(tcb->xcp.kstack);
-      tcb->xcp.kstack = 0;
+      tcb->xcp.kstack = NULL;
     }
 
   return OK;

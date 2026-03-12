@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/arm_a_r/l2cc.h
+ * arch/arm/src/common/l2cc.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,14 +18,15 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARM_A_R_L2CC_H
-#define __ARCH_ARM_SRC_ARM_A_R_L2CC_H
+#ifndef __ARCH_ARM_SRC_COMMON_L2CC_H
+#define __ARCH_ARM_SRC_COMMON_L2CC_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/compiler.h>
 
 #ifdef CONFIG_ARCH_L2CACHE
 
@@ -49,26 +50,6 @@ extern "C"
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
-
-/****************************************************************************
- * Name: arm_l2ccinitialize
- *
- * Description:
- *   One time configuration of the L2 cache.  The L2 cache will be enabled
- *   upon return.
- *
- * Input Parameters:
- *   None.  The L2 cache configuration is controlled by configuration
- *   settings.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#if 0 /* Prototyped in arm_internal.h */
-void arm_l2ccinitialize(void);
-#endif
 
 /****************************************************************************
  * Name: l2cc_linesize
@@ -267,11 +248,11 @@ void l2cc_flush(uint32_t startaddr, uint32_t endaddr);
 #  define l2cc_disable()
 #  define l2cc_sync()
 #  define l2cc_invalidate_all()
-#  define l2cc_invalidate(s,e)
+#  define l2cc_invalidate(s,e) UNUSED(s)
 #  define l2cc_clean_all()
-#  define l2cc_clean(s,e)
+#  define l2cc_clean(s,e) UNUSED(s)
 #  define l2cc_flush_all()
-#  define l2cc_flush(s,e)
+#  define l2cc_flush(s,e) UNUSED(s)
 
 #endif /* CONFIG_ARCH_L2CACHE */
-#endif /* __ARCH_ARM_SRC_ARM_A_R_L2CC_H */
+#endif /* __ARCH_ARM_SRC_COMMON_L2CC_H */

@@ -88,10 +88,6 @@ ifeq ($(CONFIG_ARCH_TRUSTZONE_SECURE),y)
   CMN_CSRCS += arm_gen_nonsecfault.c
 endif
 
-ifeq ($(CONFIG_ARCH_KERNEL_STACK),y)
-  CMN_CSRCS += arm_addrenv_kstack.c
-endif
-
 ifneq ($(filter y,$(CONFIG_ARM_MPU) $(CONFIG_ARM_MPU_EARLY_RESET)),)
   CMN_CSRCS += arm_mpu.c
 endif

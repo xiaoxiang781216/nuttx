@@ -124,9 +124,6 @@ ifeq ($(CONFIG_ARCH_ADDRENV)$(CONFIG_ARCH_USE_MMU),yy)
   ifeq ($(CONFIG_ARCH_STACK_DYNAMIC),y)
     CMN_CSRCS += arm_addrenv_ustack.c
   endif
-  ifeq ($(CONFIG_ARCH_KERNEL_STACK),y)
-    CMN_CSRCS += arm_addrenv_kstack.c
-  endif
   ifeq ($(CONFIG_ARCH_VMA_MAPPING),y)
     CMN_CSRCS += arm_addrenv_shm.c
   endif
