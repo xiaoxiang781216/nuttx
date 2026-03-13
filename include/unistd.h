@@ -526,8 +526,6 @@ FAR char *crypt_r(FAR const char *, FAR const char *, FAR char *);
 static inline_function pid_t gettid(void)
 {
 #ifdef TLS_FROM_TCB
-  DEBUGASSERT(this_task()->pid ==
-              ((FAR struct tls_info_s *)tls_get_info())->tl_tid);
   return this_task()->pid;
 #else
   FAR struct tls_info_s *tls = tls_get_info();
