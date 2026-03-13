@@ -31,6 +31,8 @@
 
 #include "arm64_internal.h"
 #include "arm64_arch.h"
+#include "arm64_mpu.h"
+#include "arm64_mmu.h"
 
 /****************************************************************************
  * Public Data
@@ -222,6 +224,47 @@ void arm64_boot_el1_init(void)
 
 void arm64_boot_primary_c_routine(void)
 {
+#ifdef CONFIG_ARCH_HAVE_MPU
+  arm64_mpu_init(true);
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_MMU
+  /* MAP IO and DRAM, enable MMU. */
+
+  arm64_mmu_init(true);
+#endif
+
+#ifdef CONFIG_ARM64_MTE
+  arm64_mte_init();
+#endif
+
+#ifdef CONFIG_PERCPU_SECTION
+  /* Copy the percpu data segment of cpu0 to the other CPUs. */
+
+  for (int cpu = 1; cpu < CONFIG_NCPUS; cpu++)
+    {
+      memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
+             _ldata_percpu,
+             (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
+    }
+#endif
+
+#ifdef CONFIG_ARM64_PSCI
+#  if defined(CONFIG_ARCH_CHIP_QEMU_WITH_HV)
+  arm64_psci_init("hvc");
+#  elif CONFIG_ARCH_ARM64_EXCEPTION_LEVEL < 3
+  arm64_psci_init("smc");
+#  endif
+#endif
+
   arm64_chip_boot();
+
+#ifdef USE_EARLYSERIALINIT
+  /* Perform early serial initialization if we are going to use the serial
+   * driver.
+   */
+
+  arm64_earlyserialinit();
+#endif
   nx_start();
 }
