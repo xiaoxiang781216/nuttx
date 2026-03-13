@@ -285,7 +285,14 @@ FAR struct can_conn_s *can_active(FAR struct net_driver_s *dev,
 {
 #ifdef CONFIG_NET_CANPROTO_OPTIONS
   canid_t can_id;
-  memcpy(&can_id, NETLLBUF, sizeof(canid_t));
+
+  /* Use IOB_DATA instead of NETLLBUF because CAN frames have no L2
+   * header — the frame starts at io_offset, not io_offset - d_llhdrlen.
+   * This also allows cross-link-layer forwarding (e.g. ETH to CAN)
+   * to work without modifying d_llhdrlen on the source device.
+   */
+
+  memcpy(&can_id, IOB_DATA(dev->d_iob), sizeof(canid_t));
 #endif
 
   can_conn_list_lock();

@@ -246,9 +246,15 @@ int can_input(FAR struct net_driver_s *dev)
     {
       buf = dev->d_buf;
 
-      /* Set the device buffer to l2 */
+      /* Set the device buffer to the start of CAN frame data.
+       * Use IOB_DATA instead of NETLLBUF because CAN frames have no L2
+       * header — the frame starts at io_offset,
+       * not io_offset - d_llhdrlen.
+       * This also allows cross-link-layer forwarding (e.g. ETH to CAN)
+       * to work without modifying d_llhdrlen on the source device.
+       */
 
-      dev->d_buf = NETLLBUF;
+      dev->d_buf = (FAR uint8_t *)IOB_DATA(dev->d_iob);
       ret = can_in(dev);
 
       dev->d_buf = buf;

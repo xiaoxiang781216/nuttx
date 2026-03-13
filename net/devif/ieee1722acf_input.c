@@ -231,10 +231,8 @@ static inline void ieee1722acf_canforward(FAR struct net_driver_s *dev,
                                           FAR struct iob_s *can_iob)
 {
   FAR struct iob_s *o_iob = dev->d_iob;
-  uint8_t d_llhdrlen = dev->d_llhdrlen;
 
   dev->d_iob = can_iob;
-  dev->d_llhdrlen = 0;
 
   can_input(dev);
 
@@ -246,7 +244,6 @@ static inline void ieee1722acf_canforward(FAR struct net_driver_s *dev,
 
   dev->d_iob = o_iob;
   dev->d_len = o_iob->io_pktlen;
-  dev->d_llhdrlen = d_llhdrlen;
 }
 
 /****************************************************************************
@@ -349,6 +346,13 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
           ret = -ENOMEM;
           goto out;
         }
+
+      /* Reserve headroom equal to the source device's L2 header length so
+       * that IOB_DATA points to the CAN frame start, and d_llhdrlen on
+       * the device does not need to be modified.
+       */
+
+      can_iob->io_offset = dev->d_llhdrlen;
 
       IOB_SET_OWNER(can_iob, "ieee1722acf forward");
 
