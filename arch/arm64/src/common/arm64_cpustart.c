@@ -246,6 +246,8 @@ void arm64_boot_secondary_c_routine(void)
   arm64_mte_init();
 #endif
 
+  up_enable_dcache();
+
 #undef g_nx_initstate
   while (OSINIT_OS_INITIALIZING());
 

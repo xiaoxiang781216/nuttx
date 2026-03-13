@@ -238,6 +238,8 @@ void arm64_boot_primary_c_routine(void)
   arm64_mte_init();
 #endif
 
+  up_enable_dcache();
+
 #ifdef CONFIG_PERCPU_SECTION
   /* Copy the percpu data segment of cpu0 to the other CPUs. */
 
