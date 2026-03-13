@@ -29,12 +29,13 @@
 
 #include <nuttx/config.h>
 
+#include <limits.h>
+
 #ifndef __ASSEMBLY__
 #  include <sys/types.h>
 #  include <stdbool.h>
 #  include <stdio.h>
 #  include <stdlib.h>
-#  include <limits.h>
 #  include <ctype.h>
 #  include <semaphore.h>
 
@@ -164,50 +165,71 @@
 
 /* Nonzero if either x or y is not aligned on a "libc_data_t" boundary. */
 
-#ifndef __ASSEMBLY__
-#  define UNALIGNED_X(x) \
+#define UNALIGNED_X(x) \
   (((libc_data_t)(uintptr_t)(x) & (sizeof(libc_data_t) - 1)) != 0)
 
-#  define UNALIGNED(x, y) ((UNALIGNED_X(x)) | (UNALIGNED_X(y)))
+#define UNALIGNED(x, y) ((UNALIGNED_X(x)) | (UNALIGNED_X(y)))
 
-#  define ALIGNED(x) \
+#define ALIGNED(x) \
   (((libc_data_t)(uintptr_t)(x) & (sizeof(libc_data_t) - 1)) == 0)
 
 /* How many bytes are copied each iteration of the word copy loop. */
 
-#  define LITTLEBLOCKSIZE (sizeof(libc_data_t))
+#define LITTLEBLOCKSIZE (sizeof(libc_data_t))
 
 /* Threshhold for punting to the byte copier. */
 
-#  define TOO_SMALL(len) ((len) < LITTLEBLOCKSIZE)
+#define TOO_SMALL(len) ((len) < LITTLEBLOCKSIZE)
 
 /* Macros for detecting endchar */
 
-#  ifdef CONFIG_HAVE_LONG_LONG
-#    define DETECTNULL(x) (((x) - 0x0101010101010101LL) & ~(x) & 0x8080808080808080LL)
-#  elif LONG_MAX == 2147483647
-#    define DETECTNULL(x) (((x) - 0x01010101) & ~(x) & 0x80808080)
-#  elif LONG_MAX == 9223372036854775807
+#ifdef CONFIG_HAVE_LONG_LONG
+#  define DETECTNULL(x) \
+       (((x) - 0x0101010101010101LL) & ~(x) & 0x8080808080808080LL)
+#elif LONG_MAX == 2147483647
+#  define DETECTNULL(x) \
+       (((x) - 0x01010101) & ~(x) & 0x80808080)
+#elif LONG_MAX == 9223372036854775807
     /* Nonzero if x (a libc_data_t) contains a NULL byte. */
 
-#    define DETECTNULL(x) (((x) - 0x0101010101010101) & ~(x) & 0x8080808080808080)
-#  endif
+#  define DETECTNULL(x) \
+       (((x) - 0x0101010101010101) & ~(x) & 0x8080808080808080)
+#endif
+
+/* 32-bit helpers for the 4-byte middle path on 64-bit platforms.
+ * When libc_data_t is 8 bytes, pointers that are 4-byte aligned
+ * but not 8-byte aligned would otherwise fall back to byte-at-a-time.
+ */
+
+#define DETECTNULL32(x) \
+     (((x) - (uint32_t)0x01010101) & ~(x) & (uint32_t)0x80808080)
+
+#define UNALIGNED4(x, y) \
+     ((((uintptr_t)(x)) | ((uintptr_t)(y))) & 3)
+
+#define UNALIGNED4_X(x) (((uintptr_t)(x)) & 3)
+
+#define LITTLEBLOCKSIZE4 (sizeof(uint32_t))
+
+#define TOO_SMALL4(len) ((len) < LITTLEBLOCKSIZE4)
+
+#define DETECTCHAR32(x, mask) (DETECTNULL32((x) ^ (mask)))
+
+#ifndef __ASSEMBLY__
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
-#  ifdef CONFIG_HAVE_LONG_LONG
+#ifdef CONFIG_HAVE_LONG_LONG
 typedef unsigned long long libc_data_t;
-#  else
+#else
 typedef unsigned long libc_data_t;
-#  endif
-#endif /* __ASSEMBLY__ */
+#endif
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
-
-#ifndef __ASSEMBLY__
 
 #undef EXTERN
 #if defined(__cplusplus)
