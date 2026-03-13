@@ -297,9 +297,9 @@ static void noteram_timeout_handler(wdparm_t arg)
         }
     }
 
-  sched_unlock();
   noteram_timeout_reset(drv);
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
+  sched_unlock();
 }
 #else
 #  define noteram_timeout_reset(drv)
@@ -1042,6 +1042,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
   ctx = filep->f_priv;
 
   flags = spin_lock_irqsave_notrace(&drv->lock);
+  sched_lock();
 
   /* Ignore waits that do not include POLLIN */
 
@@ -1069,9 +1070,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
       dq_addlast(&ctx->poll_node, &drv->poll_list);
       if (noteram_unread_length(drv, ctx->read) >= ctx->threshold)
         {
-          sched_lock();
           poll_notify(&ctx->pfd, 1, POLLIN);
-          sched_unlock();
         }
     }
   else if (ctx->pfd != NULL) /* Tear it down */
@@ -1083,6 +1082,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
 errout:
   noteram_timeout_reset(drv);
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
+  sched_unlock();
   return ret;
 }
 
@@ -1119,6 +1119,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
   noteram_driver_initialize();
 
   flags = spin_lock_irqsave_notrace(&drv->lock);
+  sched_lock();
 
   /* Initialize the noteram header if it has not been initialized yet. */
 
@@ -1169,7 +1170,6 @@ static void noteram_add(FAR struct note_driver_s *driver,
     {
       FAR struct noteram_dump_context_s *ctx;
 
-      sched_lock();
       dq_for_every_entry(&drv->poll_list, ctx,
                           struct noteram_dump_context_s, poll_node)
         {
@@ -1186,13 +1186,12 @@ static void noteram_add(FAR struct note_driver_s *driver,
             }
         }
 
-      sched_unlock();
-
       noteram_timeout_reset(drv);
     }
 
 out:
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
+  sched_unlock();
 }
 
 /****************************************************************************
