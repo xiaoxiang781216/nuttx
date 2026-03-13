@@ -155,13 +155,16 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 
   /* Sanity check against double-frees */
 
-  if (MM_NODE_IS_ALLOC(node))
+  if (!MM_NODE_IS_ALLOC(node))
     {
       mm_trace_diag(DIAG_MM_FREE_FAIL, "address:%p, reason:%s",
                     mem, "double-free");
+      kasan_bypass(bypass);
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
+      DEBUGPANIC();
+      return;
     }
 
-  DEBUGASSERT(MM_NODE_IS_ALLOC(node));
   node->size &= ~MM_ALLOC_BIT;
 
   /* Update heap statistics */

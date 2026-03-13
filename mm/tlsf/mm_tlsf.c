@@ -44,6 +44,7 @@
 #include <nuttx/mm/kasan.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/trace.h>
 #include <nuttx/tls.h>
 #include <nuttx/pgalloc.h>
 
@@ -405,6 +406,18 @@ static void forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 #endif
 
   DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
+
+  /* Sanity check against double-frees */
+
+  if (tlsf_block_is_free(mem))
+    {
+      mm_trace_diag(DIAG_MM_FREE_FAIL, "address:%p, reason:%s",
+                    mem, "double-free");
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
+      DEBUGPANIC();
+      return;
+    }
+
   size = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
   memset(mem, MM_FREE_MAGIC, size);
