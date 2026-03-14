@@ -1287,6 +1287,10 @@
 
 #elif defined(__TASKING__)
 
+/* TASKING does not predefine __SIZEOF_SIZE_T__, needed by libc++ bitset */
+
+#  define __SIZEOF_SIZE_T__             4
+
 /* Define these here and allow specific architectures to override as needed */
 
 #  define CONFIG_HAVE_LONG_LONG         1
@@ -1571,13 +1575,53 @@ noreturn_function static inline void code_unreachable(void)
 
 #if defined(__TASKING__)
 
+/* TASKING/TriCore intrinsic mappings */
+
+#define __builtin_clz(x)             __clz((int)(x))
+#define __builtin_clzl(x)            __clz((int)(x))
+static inline int __builtin_clzll(unsigned long long x)
+{
+  return x >> 32 ? __clz((int)(x >> 32))
+                 : 32 + __clz((int)(unsigned int)x);
+}
+
+#define __builtin_labs(x)             __labs(x)
+#define __builtin_fabsf(x)            __fabsf(x)
+#define __builtin_fabs(x)             __fabs(x)
+#define __builtin_parity(x)           __parity(x)
+#define __builtin_popcount(x)         __popcntw((unsigned int)(x))
+#define __builtin_popcountl(x)        __popcntw((unsigned int)(x))
+static inline int __builtin_popcountll(unsigned long long x)
+{
+  return __popcntw((unsigned int)x) + __popcntw((unsigned int)(x >> 32));
+}
+
+/* Compiler/language utility mappings to NuttX libc or TASKING equivalents */
+
+extern void up_exit(int status);
+#define __builtin_abort()             up_exit(1)
+void __builtin_unreachable(void);
+
 int __builtin_strcmp(const char *s1, const char *s2);
-void __builtin_abort(void);
-long __builtin_labs(long x);
+void *__builtin_memchr(const void *s, int c, unsigned int n);
+unsigned int __builtin_strlen(const char *s);
+int __builtin_memcmp(const void *s1, const void *s2, unsigned int n);
+void *__builtin_memmove(void *dest, void *src, unsigned int n);
+
+#define __builtin_memmove(x, y, z) __builtin_memmove(x, (FAR void*)y, z)
+#define __builtin_memcpy __builtin_memmove
+
 long long __builtin_llabs(long long x);
-float __builtin_fabsf(float x);
-double __builtin_fabs(double x);
-long double __builtin_fabsl(long double x);
+
+int __builtin_isnan(double x);
+int __builtin_isnanf(float x);
+int __builtin_isnanl(long double x);
+int __builtin_fpclassify(int __class, ...);
+
+/* Math builtins mapped to TASKING libm.a */
+
+/* Trigonometric */
+
 float __builtin_acosf(float x);
 long double __builtin_acosl(long double x);
 float __builtin_asinf(float x);
@@ -1586,18 +1630,34 @@ float __builtin_atanf(float x);
 long double __builtin_atanl(long double x);
 float __builtin_atan2f(float y, float x);
 long double __builtin_atan2l(long double y, long double x);
-float __builtin_ceilf(float x);
-long double __builtin_ceill(long double x);
 float __builtin_cosf(float x);
-float __builtin_expf(float x);
-long double __builtin_expl(long double x);
-float __builtin_floorf(float x);
-long double __builtin_floorl(long double x);
-float __builtin_fmodf(float x, float y);
-long double __builtin_fmodl(long double x, long double y);
 long double __builtin_cosl(long double x);
+float __builtin_sinf(float x);
+long double __builtin_sinl(long double x);
+float __builtin_tanf(float x);
+long double __builtin_tanl(long double x);
+
+/* Hyperbolic */
+
+float __builtin_acoshf(float x);
+long double __builtin_acoshl(long double x);
+float __builtin_asinhf(float x);
+long double __builtin_asinhl(long double x);
+float __builtin_atanhf(float x);
+long double __builtin_atanhl(long double x);
 float __builtin_coshf(float x);
 long double __builtin_coshl(long double x);
+float __builtin_sinhf(float x);
+long double __builtin_sinhl(long double x);
+float __builtin_tanhf(float x);
+long double __builtin_tanhl(long double x);
+
+/* Exponential and logarithmic */
+
+float __builtin_expf(float x);
+long double __builtin_expl(long double x);
+float __builtin_expm1f(float x);
+long double __builtin_expm1l(long double x);
 float __builtin_frexpf(float x, int *exp);
 long double __builtin_frexpl(long double x, int *exp);
 float __builtin_ldexpf(float x, int exp);
@@ -1606,46 +1666,70 @@ float __builtin_logf(float x);
 long double __builtin_logl(long double x);
 float __builtin_log10f(float x);
 long double __builtin_log10l(long double x);
-float __builtin_modff(float x, float *iptr);
-long double __builtin_modfl(long double x, long double *iptr);
+float __builtin_log2f(float x);
+long double __builtin_log2l(long double x);
+
+/* Power and root */
+
 float __builtin_powf(float x, float y);
 long double __builtin_powl(long double x, long double y);
-float __builtin_sinf(float x);
-long double __builtin_sinl(long double x);
-float __builtin_sinhf(float x);
-long double __builtin_sinhl(long double x);
 float __builtin_sqrtf(float x);
 long double __builtin_sqrtl(long double x);
-float __builtin_tanf(float x);
-long double __builtin_tanl(long double x);
-float __builtin_tanhf(float x);
-long double __builtin_tanhl(long double x);
-float __builtin_acoshf(float x);
-long double __builtin_acoshl(long double x);
-float __builtin_asinhf(float x);
-long double __builtin_asinhl(long double x);
-float __builtin_atanhf(float x);
-long double __builtin_atanhl(long double x);
-float __builtin_cbrtf(float x);
-long double __builtin_cbrtl(long double x);
+
+/* Rounding and remainder */
+
+extern float ceilf(float);
+#define __builtin_ceilf(x)            ceilf(x)
+extern long double ceill(long double);
+#define __builtin_ceill(x)            ceill(x)
+float __builtin_floorf(float x);
+long double __builtin_floorl(long double x);
+float __builtin_fmodf(float x, float y);
+long double __builtin_fmodl(long double x, long double y);
+float __builtin_modff(float x, float *iptr);
+long double __builtin_modfl(long double x, long double *iptr);
+float __builtin_rintf(float x);
+long double __builtin_rintl(long double x);
+double __builtin_round(double x);
+long double __builtin_roundl(long double x);
+double __builtin_trunc(double x);
+long double __builtin_truncl(long double x);
+long long __builtin_llroundf(float x);
+long long __builtin_llroundl(long double x);
+long __builtin_lroundf(float x);
+long __builtin_lroundl(long double x);
+float __builtin_scalbnf(float x, int n);
+long double __builtin_scalbnl(long double x, int n);
+
+/* Absolute value, sign, min/max */
+
+long double __builtin_fabsl(long double x);
 float __builtin_copysignf(float x, float y);
 long double __builtin_copysignl(long double x, long double y);
+double __builtin_copysign(double x, double y);
+float __builtin_fmaxf(float x, float y);
+long double __builtin_fmaxl(long double x, long double y);
+double __builtin_fmax(double x, double y);
+float __builtin_fminf(float x, float y);
+long double __builtin_fminl(long double x, long double y);
+
+/* Error function */
+
 float __builtin_erff(float x);
 long double __builtin_erfl(long double x);
 float __builtin_erfcf(float x);
 long double __builtin_erfcl(long double x);
+
+/* Additional math builtins (also in TASKING libm.a) */
+
+float __builtin_cbrtf(float x);
+long double __builtin_cbrtl(long double x);
 float __builtin_exp2f(float x);
 long double __builtin_exp2l(long double x);
-float __builtin_expm1f(float x);
-long double __builtin_expm1l(long double x);
 float __builtin_fdimf(float x, float y);
 long double __builtin_fdiml(long double x, long double y);
 float __builtin_fmaf(float x, float y, float z);
 long double __builtin_fmal(long double x, long double y, long double z);
-float __builtin_fmaxf(float x, float y);
-long double __builtin_fmaxl(long double x, long double y);
-float __builtin_fminf(float x, float y);
-long double __builtin_fminl(long double x, long double y);
 float __builtin_hypotf(float x, float y);
 long double __builtin_hypotl(long double x, long double y);
 int __builtin_ilogbf(float x);
@@ -1654,18 +1738,12 @@ float __builtin_lgammaf(float x);
 long double __builtin_lgammal(long double x);
 long long __builtin_llrintf(float x);
 long long __builtin_llrintl(long double x);
-long long __builtin_llroundf(float x);
-long long __builtin_llroundl(long double x);
 float __builtin_log1pf(float x);
 long double __builtin_log1pl(long double x);
-float __builtin_log2f(float x);
-long double __builtin_log2l(long double x);
 float __builtin_logbf(float x);
 long double __builtin_logbl(long double x);
 long __builtin_lrintf(float x);
 long __builtin_lrintl(long double x);
-long __builtin_lroundf(float x);
-long __builtin_lroundl(long double x);
 float __builtin_nearbyintf(float x);
 long double __builtin_nearbyintl(long double x);
 float __builtin_nextafterf(float x, float y);
@@ -1676,41 +1754,10 @@ float __builtin_remainderf(float x, float y);
 long double __builtin_remainderl(long double x, long double y);
 float __builtin_remquof(float x, float y, int *quo);
 long double __builtin_remquol(long double x, long double y, int *quo);
-float __builtin_rintf(float x);
-long double __builtin_rintl(long double x);
-double __builtin_round(double x);
-long double __builtin_roundl(long double x);
 float __builtin_scalblnf(float x, long int n);
 long double __builtin_scalblnl(long double x, long int n);
-float __builtin_scalbnf(float x, int n);
-long double __builtin_scalbnl(long double x, int n);
-float __builtin_scalbnf(float x, int n);
-long double __builtin_scalbnl(long double x, int n);
-
 float __builtin_tgammaf(float x);
 long double __builtin_tgammal(long double x);
-double __builtin_trunc(double x);
-long double __builtin_truncl(long double x);
-double __builtin_copysign(double x, double y);
-double __builtin_fmax(double x, double y);
-
-void __builtin_unreachable(void);
-void *__builtin_memchr(const void *s, int c, unsigned int  n);
-unsigned int  __builtin_strlen(const char *s);
-int __builtin_memcmp(const void *s1, const void *s2, unsigned int n);
-void *__builtin_memchr(const void *s, int c, unsigned int  n);
-
-int __builtin_isnan(double x);
-int __builtin_isnanf(float x);
-int __builtin_isnanl(long double x);
-
-int __builtin_fpclassify(int __class, ...);
-
-void *__builtin_memmove(void *dest, void *src, unsigned int n);
-void *memcpy(void *dest, const void *src, unsigned int n);
-
-#  define __builtin_memmove(x, y, z) __builtin_memmove(x, (void*)y, z)
-#  define __builtin_memcpy memcpy
 
 #endif  // __TASKING__
 
