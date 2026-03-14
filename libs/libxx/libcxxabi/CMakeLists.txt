@@ -125,7 +125,7 @@ if(CONFIG_LIBCXXABI)
   # Fix GCC false positive -Warray-bounds in __builtin_memmove triggered by
   # libcxx constexpr_c_functions.h with -O3
   # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
-  if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
+  if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG AND NOT CONFIG_ARCH_TOOLCHAIN_TASKING)
     target_compile_options(libcxxabi PRIVATE -Wno-array-bounds
                                              -Wno-stringop-overflow)
   endif()
