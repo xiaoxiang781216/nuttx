@@ -54,6 +54,10 @@ if(CONFIG_RTC_PCF85263)
   list(APPEND SRCS pcf85263.c)
 endif()
 
+if(CONFIG_TIMER_SP804)
+  list(APPEND SRCS sp804.c)
+endif()
+
 if(CONFIG_RTC_PL031)
   list(APPEND SRCS pl031.c)
 endif()
