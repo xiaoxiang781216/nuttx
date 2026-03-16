@@ -59,6 +59,8 @@ NUTTXLIBS += staging$(DELIM)libkbuiltin$(LIBEXT)
 USERLIBS += staging$(DELIM)libbuiltin$(LIBEXT)
 endif
 
+NUTTXLIBS += staging$(DELIM)libkapps$(LIBEXT)
+
 # Add libraries for math support.
 
 ifeq ($(CONFIG_LIBM_TOOLCHAIN)$(CONFIG_LIBM_NONE),)

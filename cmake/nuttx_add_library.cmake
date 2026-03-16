@@ -29,11 +29,14 @@
 #    (*)  such as libc libmm split into libkc|libc libkmm|libmm
 # NUTTX_USER_LIBRARIES: user-space defined libraries
 # NUTTX_APPS_LIBRARIES: used for application linking typically added via `nuttx_add_application`
+# NUTTX_KAPPS_LIBRARIES: kernel apps in PROTECTED mode (BUILD_PROTECTED && LIB_SYSCALL),
+#                               linked into the kernel blob instead of the user blob
 # NUTTX_EXTRA_LIBRARIES: additional external static libraries such as `libgcc,libm`
 #
 # In FLAT mode: all libraries are linked together.
 # In PROTECTED mode: `NUTTX_KERNEL_LIBRARIES` and `NUTTX_EXTRA_LIBRARIES` link the kernel blob.
 #                    `NUTTX_SYSTEM_LIBRARIES`,`NUTTX_USER_LIBRARIES` and `NUTTX_APPS_LIBRARIES` link user blob.
+#                    `NUTTX_KAPPS_LIBRARIES` link the kernel blob (kernel apps only).
 # In KERNEL mode: `NUTTX_KERNEL_LIBRARIES` and `NUTTX_EXTRA_LIBRARIES` link the kernel blob.
 #                 link `NUTTX_APPS_LIBRARIES` to separate ELF file with 'NUTTX_SYSTEM_LIBRARIES' and 'NUTTX_USER_LIBRARIES'.
 #

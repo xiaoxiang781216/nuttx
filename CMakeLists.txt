@@ -518,6 +518,12 @@ if(CONFIG_BUILD_PROTECTED)
   nuttx_add_library_internal(nuttx_user)
 endif()
 
+get_property(_kapp_libs GLOBAL PROPERTY NUTTX_KAPPS_LIBRARIES)
+if(_kapp_libs)
+  nuttx_add_symtab(NAME kapps PREFIX kapps ARCHIVES ${_kapp_libs})
+  list(APPEND nuttx_kapp_libs symtab_kapps)
+endif()
+
 if(CONFIG_ALLSYMS OR CONFIG_MM_KASAN_GLOBAL)
   include(nuttx_multiple_link)
 endif()
@@ -721,8 +727,10 @@ if(CONFIG_BUILD_FLAT)
   get_property(nuttx_apps_libs GLOBAL PROPERTY NUTTX_APPS_LIBRARIES)
 endif()
 
+get_property(nuttx_kapp_libs GLOBAL PROPERTY NUTTX_KAPPS_LIBRARIES)
+
 set(nuttx_libs ${nuttx_apps_libs} ${nuttx_user_libs} ${nuttx_system_libs}
-               ${nuttx_kernel_libs})
+               ${nuttx_kapp_libs} ${nuttx_kernel_libs})
 
 # Remove executable suffix
 set(CMAKE_EXECUTABLE_SUFFIX "")
@@ -1052,7 +1060,11 @@ endif()
 
 if(CONFIG_ELF_FIXUP)
   get_target_property(NUTTX_INCLUDES nuttx NUTTX_INCLUDE_DIRECTORIES)
-  list(TRANSFORM NUTTX_INCLUDES PREPEND -I)
+  if(NUTTX_INCLUDES)
+    list(TRANSFORM NUTTX_INCLUDES PREPEND -I)
+  else()
+    set(NUTTX_INCLUDES "")
+  endif()
   get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
   set(CMAKE_C_ELF_FLAGS
       -I${CMAKE_SOURCE_DIR}/include -I${CMAKE_BINARY_DIR}/include
@@ -1077,4 +1089,27 @@ if(CONFIG_ELF_FIXUP)
       ${CMAKE_BINARY_DIR}/bin_fixup --output
       ${CMAKE_BINARY_DIR}/${FINNAL_ELF}.hex --custom
       ${CONFIG_ELF_FIXUP_CUSTOM_LAYOUT})
+
+  if(CONFIG_ELF_FIXUP_KERNEL_FLASH_START)
+    get_property(KELF_APPS GLOBAL PROPERTY NUTTX_KELF_APPS)
+    if(KELF_APPS)
+      list(JOIN KELF_APPS "," KELF_APPS_STR)
+      add_custom_command(
+        TARGET nuttx-hex
+        POST_BUILD
+        COMMAND
+          ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}; env
+          CFLAGS="${CMAKE_C_ELF_FLAGS}"; env LD=${CMAKE_LINKER}; env
+          CC=${CMAKE_C_COMPILER}; ${NUTTX_DIR}/tools/elf_fixup.py --indir
+          ${CMAKE_BINARY_DIR}/bin_debug --flash_start
+          ${CONFIG_ELF_FIXUP_KERNEL_FLASH_START} --flash_size
+          ${CONFIG_ELF_FIXUP_KERNEL_FLASH_SIZE} --ram_start
+          ${CONFIG_ELF_FIXUP_KERNEL_RAM_START} --ram_size
+          ${CONFIG_ELF_FIXUP_KERNEL_RAM_SIZE} --elf nuttx --outdir
+          ${CMAKE_BINARY_DIR}/bin_fixup_kernel --output
+          ${CMAKE_BINARY_DIR}/nuttx.hex --custom
+          ${KELF_APPS_STR},${CONFIG_ELF_FIXUP_KERNEL_FLASH_START},${CONFIG_ELF_FIXUP_KERNEL_FLASH_SIZE},${CONFIG_ELF_FIXUP_KERNEL_RAM_START},${CONFIG_ELF_FIXUP_KERNEL_RAM_SIZE}
+      )
+    endif()
+  endif()
 endif()

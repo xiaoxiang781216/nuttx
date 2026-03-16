@@ -665,6 +665,9 @@ def generate_elf_out(args):
         ram_size = int(tokens[i + 3], 0)
         i += 4
 
+        if flash_start + flash_size > args.fixup_addr:
+            flash_size = args.fixup_addr - flash_start
+
         # Handle wildcard: replace "*" with all remaining apps
         if "*" in app_names:
             app_names = [name for name in sorted(all_elf_files.keys())]
@@ -725,7 +728,7 @@ def generate_fixup_src(args, in_dir, out_src: str):
             elif symbol.name == "nx_heapsize":
                 heap_size = f"    .heapsize=0x{symbol.value:x},\n"
             elif symbol.name == "nx_kernel":
-                kernel = f"    .kernel={(symbol.value != 0)},\n"
+                kernel = f"    .kernel={'true' if symbol.value != 0 else 'false'},\n"
 
         # _sheap is relative to the exec ELF, so we need to get it from there
         for symbol in elf.symbols:

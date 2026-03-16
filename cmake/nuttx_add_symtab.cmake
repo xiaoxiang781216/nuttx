@@ -46,19 +46,26 @@ function(nuttx_add_symtab)
     MULTI_VALUE
     EXCLUDE
     BINARIES
+    ARCHIVES
     REQUIRED
     NAME
-    BINARIES
     ARGN
     ${ARGN})
 
-  # get path to binaries
+  # get path to binaries (ELF executables)
   set(BINARY_PATHS)
   foreach(binary ${BINARIES})
     # this way of getting the path will select the actual ELF binary, even when
     # this was built by means of an intermediate library on non-ELF platforms
     list(APPEND BINARY_PATHS $<TARGET_PROPERTY:${binary},ELF_BINARY>)
   endforeach()
+
+  # get path to archives (static libraries)
+  foreach(archive ${ARCHIVES})
+    list(APPEND BINARY_PATHS $<TARGET_FILE:${archive}>)
+  endforeach()
+
+  set(ALL_DEPS ${BINARIES} ${ARCHIVES})
 
   if(EXCLUDE)
     string(REPLACE ";" " " EXCLUDE_STRING ${EXCLUDE})
@@ -73,7 +80,7 @@ function(nuttx_add_symtab)
       if [ \"${EXCLUDE}\" != \"\" ]\; then fgrep -v -x ${EXCLUDE_STRING}
       symtab_${NAME}.dat > symtab_${NAME}.dat2\; mv symtab_${NAME}.dat2
       symtab_${NAME}.dat\; fi
-    DEPENDS ${BINARIES})
+    DEPENDS ${ALL_DEPS})
 
   add_custom_target(symtab_${NAME}_dat DEPENDS symtab_${NAME}.dat)
 

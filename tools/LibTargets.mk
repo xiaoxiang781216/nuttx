@@ -251,9 +251,14 @@ $(APPDIR)$(DELIM)libapps$(LIBEXT): pass2dep
 else
 $(APPDIR)$(DELIM)libapps$(LIBEXT): pass1dep
 endif
-	$(Q) $(MAKE) -C $(APPDIR) EXTRAFLAGS="$(EXTRAFLAGS)"
+	$(Q) $(MAKE) -C $(APPDIR) $(APPDIR)$(DELIM)libapps$(LIBEXT) $(APPDIR)$(DELIM)libkapps$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
+
+$(APPDIR)$(DELIM)libkapps$(LIBEXT): $(APPDIR)$(DELIM)libapps$(LIBEXT)
 
 staging$(DELIM)libapps$(LIBEXT): $(APPDIR)$(DELIM)libapps$(LIBEXT)
+	$(Q) $(call INSTALL_LIB,$<,$@)
+
+staging$(DELIM)libkapps$(LIBEXT): $(APPDIR)$(DELIM)libkapps$(LIBEXT)
 	$(Q) $(call INSTALL_LIB,$<,$@)
 
 syscall$(DELIM)libproxies$(LIBEXT): pass1dep

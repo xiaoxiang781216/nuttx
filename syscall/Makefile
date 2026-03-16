@@ -106,7 +106,7 @@ makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 depend: .depend
 
 .context: $(CSVFILE) $(PPCCSVFILE)
-ifneq ($(filter y,$(CONFIG_LIB_SYSCALL)$(CONFIG_LIB_SYSCALL_WRAPPER)),)
+ifneq ($(filter y,$(CONFIG_LIB_SYSCALL) $(CONFIG_LIB_SYSCALL_WRAPPER)),)
 	$(Q) $(MAKE) -C $(TOPDIR)$(DELIM)tools -f Makefile.host mksyscall
 	$(Q) $(MKSYSCALL) -l $(CSVFILE)
 	$(Q) cp syscall_lookup.h $(LOOKUPFILE)

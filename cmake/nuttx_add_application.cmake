@@ -209,7 +209,7 @@ if(NOT COMMAND nuttx_add_elf_app)
         set(SYMBOL_KERNEL --add-symbol nx_kernel=1)
       endif()
       get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
-      if(CONFIG_BUILD_PROTECTED AND KERNEL)
+      if(KERNEL AND CONFIG_ELF_FIXUP_KERNEL_FLASH_START)
         set(KERNEL_APP_ADDR_FLAGS
             -Wl,-Ttext=${CONFIG_ELF_FIXUP_KERNEL_FLASH_START}
             -Wl,-Tdata=${CONFIG_ELF_FIXUP_KERNEL_RAM_START})
@@ -260,6 +260,10 @@ if(NOT COMMAND nuttx_add_elf_app)
 
       # Save link command to .cmd file for elf_fixup.py
       nuttx_save_link_command(${ELF_NAME} "${ELF_LINK_ARGS}")
+
+      if(KERNEL)
+        set_property(GLOBAL APPEND PROPERTY NUTTX_KELF_APPS ${ELF_NAME})
+      endif()
     else()
       add_executable(${ELF_TARGET} ${SRCS})
       target_link_options(
@@ -463,14 +467,19 @@ function(nuttx_add_application)
       # create as library to be archived into libapps.a
       set(TARGET "apps_${NAME}")
       add_library(${TARGET} ${SRCS})
-
       nuttx_add_library_internal(${TARGET})
-      # add to list of application libraries
 
-      set_property(GLOBAL APPEND PROPERTY NUTTX_APPS_LIBRARIES ${TARGET})
+      if(KERNEL)
+        # Kernel apps archive into the kernel blob instead of the user blob.
+        set_property(GLOBAL APPEND PROPERTY NUTTX_KAPPS_LIBRARIES ${TARGET})
+      else()
+        set_property(GLOBAL APPEND PROPERTY NUTTX_APPS_LIBRARIES ${TARGET})
+      endif()
 
       if(NOT NO_MAIN_ALIAS)
-        # provide main() alias
+        # provide main() alias on the entry source only; broadening to the whole
+        # target collides with per-file -Dmain= overrides used by cmocka-style
+        # test wrappers (e.g. libssh torture tests).
         list(GET SRCS 0 MAIN_SRC)
         set_property(
           SOURCE ${MAIN_SRC}
