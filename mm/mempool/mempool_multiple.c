@@ -152,7 +152,7 @@ mempool_multiple_alloc_chunk(FAR struct mempool_multiple_s *mpool,
                                                             align);
         }
 
-      while (chunk == NULL || (size_t)((FAR char *)chunk->end - ret) < size)
+      while (chunk == NULL || (FAR char *)chunk->end < ret + size)
         {
           size_t chunksize;
           FAR char *tmp;
