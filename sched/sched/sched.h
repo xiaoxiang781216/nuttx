@@ -108,7 +108,7 @@
 #  define CRITMONITOR_PANIC(fmt, ...) _alert(fmt, ##__VA_ARGS__)
 #endif
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
 void restore_critical_section(uint16_t count);
 #else

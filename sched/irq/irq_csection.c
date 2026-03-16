@@ -49,7 +49,7 @@ DEFINE_PER_CPU_BMP(rspinlock_t, g_schedlock) = RSPINLOCK_INITIALIZER;
  * Public Functions
  ****************************************************************************/
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
 void restore_critical_section(uint16_t count)
 {

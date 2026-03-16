@@ -1097,11 +1097,11 @@ void rspin_unlock_irqrestore(FAR rspinlock_t *lock, irqstate_t flags)
   else
     {
       /* Not last unlock, irq_restore is not called, but we need to
-       * balance the crit_count that was incremented by irq_save()
+       * balance the irqdis_count that was incremented by irq_save()
        * in the corresponding rspin_lock_irqsave().
        */
 
-      nxsched_critmon_csection(false, false, return_address(0));
+      nxsched_critmon_irqdisable(false, false, return_address(0));
     }
 }
 #else
@@ -1140,7 +1140,7 @@ uint16_t rspin_breaklock(FAR rspinlock_t *lock)
        * enabled interrupt.
        */
 
-      nxsched_critmon_csection(false, true, return_address(0));
+      nxsched_critmon_irqdisable(false, true, return_address(0));
 
       oldcount        = RSPINLOCK_COUNT(val);
       lock->local_val = RSPINLOCK_VALUE(owner, 1u);
@@ -1164,7 +1164,7 @@ void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
        * disabled interrupt.
        */
 
-      nxsched_critmon_csection(true, true, return_address(0));
+      nxsched_critmon_irqdisable(true, true, return_address(0));
     }
 }
 #else
@@ -1177,10 +1177,10 @@ uint16_t rspin_breaklock(FAR rspinlock_t *lock)
 
   lock->local_val = 0u;
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0
   if (val != 0u)
     {
-      nxsched_critmon_csection(false, true, return_address(0));
+      nxsched_critmon_irqdisable(false, true, return_address(0));
     }
 #endif
 
@@ -1193,7 +1193,7 @@ void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
   if (count != 0u)
     {
       lock->local_val = count;
-      nxsched_critmon_csection(true, true, return_address(0));
+      nxsched_critmon_irqdisable(true, true, return_address(0));
     }
 }
 #endif
@@ -1612,7 +1612,7 @@ void write_unlock_irqrestore(FAR rwlock_t *lock, irqstate_t flags);
 #  define enter_critical_section_notrace() irq_save()
 #endif
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
 irqstate_t enter_critical_section(void) noinstrument_function;
 #else
@@ -1665,7 +1665,7 @@ irqstate_t enter_critical_section(void) noinstrument_function;
 #  define leave_critical_section_notrace(f) irq_restore(f)
 #endif
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
 void leave_critical_section(irqstate_t flags) noinstrument_function;
 #else
@@ -1686,7 +1686,7 @@ void leave_critical_section(irqstate_t flags) noinstrument_function;
  *
  ****************************************************************************/
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
 uint16_t break_critical_section(void);
 #else

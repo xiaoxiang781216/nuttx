@@ -251,7 +251,7 @@ and preemption operations. Only have instructions when scheduler triggers contex
 
 **IRQ disabled time (irq_save/irq_restore)**::
 
-  CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION=-1
+  CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE=-1
 
 * Default -1 to disable IRQ disabled time statistic.
 * >= 0 to enable IRQ disabled time statistic (covers all irq_save/irq_restore

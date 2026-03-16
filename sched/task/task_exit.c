@@ -119,8 +119,8 @@ int nxtask_exit(void)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
   sched_note_csection(dtcb, false);
 #endif
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-  nxsched_critmon_csection(false, false, return_address(0));
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0
+  nxsched_critmon_irqdisable(false, false, return_address(0));
 #endif
 
   sched_note_stop(dtcb);

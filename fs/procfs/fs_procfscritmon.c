@@ -188,11 +188,11 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
   clock_t *premp_max = &this_cpu_var(g_premp_max);
 #  endif
 #endif
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0
 #  ifdef CONFIG_SMP
-  clock_t *crit_max = &per_cpu_var_smp(g_crit_max, cpu);
+  clock_t *irqdis_max = &per_cpu_var_smp(g_irqdis_max, cpu);
 #  else
-  clock_t *crit_max = &this_cpu_var(g_crit_max);
+  clock_t *irqdis_max = &this_cpu_var(g_irqdis_max);
 #  endif
 #endif
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
@@ -256,12 +256,12 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
     }
 #endif
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0
   /* Convert and generate output for maximum time in a critical section */
 
-  if (*crit_max > 0)
+  if (*irqdis_max > 0)
     {
-      perf_convert(*crit_max, &maxtime);
+      perf_convert(*irqdis_max, &maxtime);
     }
   else
     {
@@ -271,7 +271,7 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 
   /* Reset the maximum */
 
-  *crit_max = 0;
+  *irqdis_max = 0;
 
   /* Generate output for maximum time in a critical section */
 
