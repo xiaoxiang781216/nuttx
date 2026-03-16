@@ -31,6 +31,7 @@
 #include <arch/barriers.h>
 #include <arch/irq.h>
 #include <arch/chip/chip.h>
+#include <arch/syscall.h>
 #include <sched/sched.h>
 
 #include "arm64_arch.h"
@@ -63,14 +64,14 @@
 #define IGROUPR_VAL  0xFFFFFFFFU
 #define INTBITS_ALL  GENMASK(GIC_NUM_INTR_PER_REG - 1, 0)
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+/* SGI group assignment bitmask:
+ *   IGROUPR_SGI_SECURE_VAL bit=1 -> G1NS (non-secure)
+ *   IGROUPR_SGI_SECURE_VAL bit=0 -> G1S  (secure)
+ * Default: SGI0-7 are G1NS (0xFF), SGI8-15 are G1S.
+ */
 
-/* Config SGI8 ~ SGI15 as group0, to signal fiq */
-
-#  define IGROUPR_SGI_VAL 0xFFFF00FFU
-#else
-#  define IGROUPR_SGI_VAL 0xFFFFFFFFU
-#endif
+#define IGROUPR_SGI_VAL 0xFFFFFFFFU
+#define IGROUPR_SGI_SECURE_VAL 0x000000FFU
 
 #define PENDING_GRP1NS_INTID 1021
 #define SPURIOUS_INT         1023
@@ -260,7 +261,7 @@ unsigned int arm64_gic_get_active_irq(void)
   return intid;
 }
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+#if defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 unsigned int arm64_gic_get_active_fiq(void)
 {
   int intid;
@@ -302,7 +303,7 @@ void aarm64_gic_eoi_irq(unsigned int intid)
   UP_ISB();
 }
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+#if defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 void arm64_gic_eoi_fiq(unsigned int intid)
 {
   /* Interrupt request deassertion from peripheral to GIC happens
@@ -353,7 +354,23 @@ static int arm64_gic_send_sgi(unsigned int sgi_id, uint64_t target_aff,
 
   if (regval & BIT(sgi_id))
     {
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+      /* In Secure state, ICC_SGI1R generates G1S (Secure Group 1).
+       * To send G1NS from Secure, use ICC_ASGI1R instead.
+       * Check IGROUPR_SGI_SECURE_VAL: bit=1 means G1NS for that SGI.
+       */
+
+      if (IGROUPR_SGI_SECURE_VAL & BIT(sgi_id))
+        {
+          write_sysreg(sgi_val, ICC_ASGI1R); /* G1NS from Secure */
+        }
+      else
+        {
+          write_sysreg(sgi_val, ICC_SGI1R);  /* G1S */
+        }
+#else
       write_sysreg(sgi_val, ICC_SGI1R);     /* Group 1 */
+#endif
     }
   else
     {
@@ -433,13 +450,27 @@ static void gicv3_cpuif_init(void)
 
   gic_wait_rwp(0);
 
-  /* Configure all SGIs/PPIs as G1S or G1NS depending on Zephyr
+  /* Configure all SGIs/PPIs as G1S or G1NS depending on
    * is run in EL1S or EL1NS respectively.
    * All interrupts will be delivered as irq
    */
 
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+  /* Secure state SGI/PPI group configuration:
+   *   IGROUPR_SGI_SECURE_VAL bit=1 -> G1NS (non-secure)
+   *   IGROUPR_SGI_SECURE_VAL bit=0 -> G1S  (secure, IRQ in S-EL1)
+   * Default: SGI0-7 G1NS, SGI8-15 G1S, all PPIs G1S.
+   *
+   * Per-interrupt overrides (e.g. PPI14 for NS timer) are handled
+   * separately via up_secure_irq() after init.
+   */
+
+  putreg32(IGROUPR_SGI_SECURE_VAL, IGROUPR(base, 0));
+  putreg32(~IGROUPR_SGI_SECURE_VAL, IGROUPMODR(base, 0));
+#else
   putreg32(IGROUPR_SGI_VAL, IGROUPR(base, 0));
   putreg32(INTBITS_ALL, IGROUPMODR(base, 0));
+#endif
 
   /* Configure default priorities for SGI 0:15 and PPI 0:15. */
 
@@ -520,7 +551,18 @@ static void gicv3_dist_init(void)
 
       putreg32(INTBITS_ALL, ICPENDR(base, idx));
       putreg32(IGROUPR_VAL, IGROUPR(base, idx));
+
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+      /* Secure state: default all SPIs to Group 1 Non-Secure
+       * (IGROUPR=1, IGROUPMODR=0) so that normal world can receive
+       * them. TEE-owned interrupts will be reconfigured to secure
+       * group when they are attached via up_secure_irq().
+       */
+
+      putreg32(0x00000000, IGROUPMODR(base, idx));
+#else
       putreg32(INTBITS_ALL, IGROUPMODR(base, idx));
+#endif
     }
 
   /* wait for rwp on GICD */
@@ -587,18 +629,25 @@ static void gicv3_dist_init(void)
 
   putreg32(regval, GICD_CTLR);
 
+#elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+  /* Secure state: enable ARE_S, Secure Group 1.
+   * Also enable non-secure group1 forwarding so that
+   * non-secure interrupts can be routed to normal world.
+   */
+
+  regval = BIT(GICD_CTRL_ARE_S) | BIT(GICD_CTLR_ENABLE_G1S) |
+           BIT(GICD_CTRL_ARE_NS) | BIT(GICD_CTLR_ENABLE_G1NS);
 #else
   /* Enable distributor with ARE */
 
   regval = BIT(GICD_CTRL_ARE_NS) | BIT(GICD_CTLR_ENABLE_G1NS);
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+#  ifdef CONFIG_ARCH_HIPRI_INTERRUPT
   regval |= BIT(GICD_CTLR_ENABLE_G0);
+#  endif
 #endif
 
   putreg32(regval, GICD_CTLR);
-#endif
-
 #ifdef CONFIG_SMP
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
@@ -631,18 +680,33 @@ void up_secure_irq(int irq, bool secure)
   uint32_t mask      = BIT(irq & (GIC_NUM_INTR_PER_REG - 1));
   uint32_t idx       = irq / GIC_NUM_INTR_PER_REG;
   unsigned long base = GET_DIST_BASE(irq);
-  unsigned int val   = getreg32(IGROUPR(base, idx));
+  unsigned int val;
+
+  val = getreg32(IGROUPR(base, idx));
 
   if (secure)
     {
-      val &= (~mask);  /* group 0 fiq */
+      val &= ~mask;   /* IGROUPR=0 */
     }
   else
     {
-      val |= mask;     /* group 1 irq */
+      val |= mask;    /* IGROUPR=1 */
     }
 
   putreg32(val, IGROUPR(base, idx));
+
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+  /* In dual security state, IGROUPMODR selects between:
+   *   secure:     IGROUPR=0, IGROUPMODR=1 -> Group 1 Secure (IRQ)
+   *   non-secure: IGROUPR=1, IGROUPMODR=1 -> Group 1 Non-secure
+   * Keep IGROUPMODR=1 for both cases so secure interrupts are
+   * delivered as IRQ (Group 1 Secure) rather than FIQ (Group 0).
+   */
+
+  val = getreg32(IGROUPMODR(base, idx));
+  val |= mask;
+  putreg32(val, IGROUPMODR(base, idx));
+#endif
 }
 #endif
 
