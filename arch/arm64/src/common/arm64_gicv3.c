@@ -63,7 +63,7 @@
 #define IGROUPR_VAL  0xFFFFFFFFU
 #define INTBITS_ALL  GENMASK(GIC_NUM_INTR_PER_REG - 1, 0)
 
-#ifdef CONFIG_ARM64_DECODEFIQ
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
 
 /* Config SGI8 ~ SGI15 as group0, to signal fiq */
 
@@ -260,7 +260,7 @@ unsigned int arm64_gic_get_active_irq(void)
   return intid;
 }
 
-#ifdef CONFIG_ARM64_DECODEFIQ
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
 unsigned int arm64_gic_get_active_fiq(void)
 {
   int intid;
@@ -302,7 +302,7 @@ void aarm64_gic_eoi_irq(unsigned int intid)
   UP_ISB();
 }
 
-#ifdef CONFIG_ARM64_DECODEFIQ
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
 void arm64_gic_eoi_fiq(unsigned int intid)
 {
   /* Interrupt request deassertion from peripheral to GIC happens
@@ -481,7 +481,7 @@ static void gicv3_cpuif_init(void)
 
   write_sysreg(1, ICC_IGRPEN1_EL1);
 
-#ifdef CONFIG_ARM64_DECODEFIQ
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
   write_sysreg(1, ICC_IGRPEN0_EL1);
 #endif
 
@@ -581,7 +581,7 @@ static void gicv3_dist_init(void)
 
   regval = BIT(GICD_CTRL_ARE_S) | BIT(GICD_CTLR_ENABLE_G1NS);
 
-#ifdef CONFIG_ARM64_DECODEFIQ
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
   regval |= BIT(GICD_CTLR_ENABLE_G0);
 #endif
 
@@ -592,7 +592,7 @@ static void gicv3_dist_init(void)
 
   regval = BIT(GICD_CTRL_ARE_NS) | BIT(GICD_CTLR_ENABLE_G1NS);
 
-#ifdef CONFIG_ARM64_DECODEFIQ
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
   regval |= BIT(GICD_CTLR_ENABLE_G0);
 #endif
 
@@ -776,7 +776,7 @@ uint64_t * arm64_decodeirq(uint64_t * regs)
   return regs;
 }
 
-#ifdef CONFIG_ARM64_DECODEFIQ
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
 uint64_t * arm64_decodefiq(uint64_t * regs)
 {
   int irq;

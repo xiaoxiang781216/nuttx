@@ -521,7 +521,7 @@ SECTION_FUNC(text, arm64_fiq_handler)
     .cfi_return_column 32
     .cfi_offset 32, 8 * REG_ELR - 8 * XCPTCONTEXT_REGS
 
-#ifndef CONFIG_ARM64_DECODEFIQ
+#ifndef CONFIG_ARCH_HIPRI_INTERRUPT
 
     mov    x0, sp
     adrp   x5, arm64_fatal_handler

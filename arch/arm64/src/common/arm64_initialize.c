@@ -64,7 +64,7 @@ INIT_STACK_ARRAY_DEFINE(g_cpu_idlestackalloc, CONFIG_NCPUS,
 INIT_STACK_ARRAY_DEFINE(g_interrupt_stack, CONFIG_NCPUS,
                         INTSTACK_SIZE);
 
-#ifdef CONFIG_ARM64_DECODEFIQ
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
 INIT_STACK_ARRAY_DEFINE(g_interrupt_fiq_stack, CONFIG_NCPUS,
                         INTSTACK_SIZE);
 #endif
