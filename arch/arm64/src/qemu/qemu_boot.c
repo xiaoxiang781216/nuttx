@@ -153,3 +153,9 @@ void arm64_chip_boot(void)
   up_perf_init((void *)0);
 #endif
 }
+
+#if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
+void arm64_netinitialize(void)
+{
+}
+#endif
