@@ -1527,6 +1527,36 @@ config ARM_STACKCHECK_BREAKPOINT
 
 endif
 
+config ARM_HAVE_VIC
+	bool
+	select ARCH_HAVE_IRQTRIGGER
+	select ARCH_HAVE_HIPRI_INTERRUPT
+	default n
+	---help---
+		Selected by the configuration tool if the architecture supports the
+		ARM PL190 Vector Interrupt Controller (VIC)
+
+config ARM_VIC_BASE
+	hex "VIC base address"
+	depends on ARM_HAVE_VIC
+	---help---
+		Base address of the primary VIC.
+
+config ARM_VIC_OFFSET
+	hex "VIC offset between instances"
+	default 0x20000
+	depends on ARM_HAVE_VIC
+	---help---
+		Address offset between VIC instances.
+
+config ARM_VIC_NLINES
+	int "Number of VIC interrupt lines"
+	default 64
+	depends on ARM_HAVE_VIC
+	---help---
+		Total number of interrupt lines across all VIC instances.
+		Must be a multiple of 32.
+
 config ARM_HAVE_GICv2
 	bool
 	select ARCH_HAVE_IRQTRIGGER

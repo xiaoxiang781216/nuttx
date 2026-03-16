@@ -38,6 +38,10 @@ CMN_CSRCS += arm_prefetchabort.c arm_cpuidlestack.c arm_initialstate.c
 CMN_CSRCS += arm_undefinedinsn.c arm_allocpage.c arm_perf.c
 CMN_CSRCS += arm_gicv2_dump.c arm_cache.c arm_cpuinfo.c cp15_cacheops.c
 
+ifeq ($(CONFIG_ARM_VIC),y)
+  CMN_CSRCS += arm_vic.c
+endif
+
 ifeq ($(CONFIG_ARM_GIC_VERSION),2)
   CMN_CSRCS += arm_gicv2.c
   ifeq ($(CONFIG_ARM_GICv2M),y)
