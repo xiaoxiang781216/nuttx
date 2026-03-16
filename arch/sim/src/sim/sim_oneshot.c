@@ -144,6 +144,9 @@ static int sim_timer_handler(int irq, void *context, void *arg)
                               struct sim_oneshot_lowerhalf_s, node);
       if ((int64_t)(curr - priv->expire_time) < 0)
         {
+#ifdef CONFIG_SIM_WALLTIME_SIGNAL
+          host_settimer(priv->expire_time);
+#endif
           break;
         }
 
