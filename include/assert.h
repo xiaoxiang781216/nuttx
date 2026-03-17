@@ -84,6 +84,14 @@
     }                                                                         \
   while(0)
 
+#define PANIC_WITH_MSG(msg)                                                   \
+  do                                                                          \
+    {                                                                         \
+      __assert(__ASSERT_FILE__, __ASSERT_LINE__, msg);                        \
+      code_unreachable();                                                     \
+    }                                                                         \
+  while(0)
+
 #define PANIC_WITH_REGS(msg, regs) _assert(__ASSERT_FILE__,                   \
                                            __ASSERT_LINE__, msg, regs, true)
 
