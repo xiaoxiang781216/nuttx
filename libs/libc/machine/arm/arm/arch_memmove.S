@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_a_r/arch_memmove.S
+ * libs/libc/machine/arm/arm/arch_memmove.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2015 ARM Ltd
@@ -33,7 +33,7 @@
 
 #ifdef LIBC_BUILD_MEMMOVE
 
-	.thumb
+	.arm
 	.syntax unified
 	.global ARCH_LIBCFUN(memmove)
 	.type	ARCH_LIBCFUN(memmove), %function
@@ -47,7 +47,8 @@ ARCH_LIBCFUN(memmove):
 	cmp	r0, r3
 	bcs	3f
 	adds	r1, r0, r2
-	cbz	r2, 2f
+	cmp	r2, #0
+	beq	2f
 	subs	r2, r3, r2
 1:
 	ldrb	r4, [r3, #-1]!

@@ -1,5 +1,5 @@
 /***************************************************************************
- * libs/libc/machine/arm/arm_m/arch_strcpy.S
+ * libs/libc/machine/arm/thumb2/arch_strcpy.S
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -234,103 +234,5 @@ ARCH_LIBCFUN(strcpy):
     aut     ip, lr, sp
 #endif /* __ARM_FEATURE_PAC_DEFAULT */
     bx      lr
-
-#if 0
-/* Pseudo Code of strcpy when dst/src not at same byte offset */
-
-/* Make dst aligned, so we won't write anything before dst.
- * If we attempt to write before dst, atomic read-write must
- * be ensured. Atomic operation complicates things.
- * So the solution here is byte by byte copy until dst aligned.
- */
-    if (dst & 3 == 0)
-        goto diff_offset_loop_begin;
-    ByteCopyUntilDstAligned();
-
-.diff_offset_loop_begin:
-/* src_offset mustn't be 0 here */
-    src_offset = src & 3;
-    src_offset = src_offset * 8;
-    src = src & 0xfffffffc;
-    tmp1 = *src;
-    src +=4;
-/* first word logic
- * prepend 0xff to make the algorithm simpler
- * only the first word needs to be prepended
- */
-    if (src_offset != 0)
-    {
-        tmp2 = 0xffffffff
-#if  big endian
-        tmp2 = tmp2 << (32 - src_offset)
-#else
-        tmp2 = tmp2 >> (32 - src_offset)
-#endif
-        tmp1 |= tmp2
-    }
-    if (HasZeroByte(tmp1))
-    {
-        goto .tail_copy;
-    }
-
-/* before loop, set tmp2=tmp1 to simplify the logic in the loop */
-    tmp2 = tmp1
-.diff_offset_loop:
-    tmp1 = tmp2;
-    tmp2 = *src;
-    src += 4;
-
- /* double word tail means we have to copy from tmp1 and tmp2 to dst */
-    if (HasZeroByte(tmp2))
-    {
-        goto .tail_copy;
-    }
-/* Now let's fill dst */
-#if  big endian
-    tmp1 = tmp1 << (src_offset);
-    tmp1 |= tmp2 >> (32 - src_offset);
-    *dst = tmp1;
-#else
-    tmp1 = tmp1 >> (src_offset);
-    tmp1 |= tmp2 << (32 - src_offset);
-    *dst = tmp1;
-#endif
-    dst +=4;
-    goto .diff_offset_loop;
-
-/* byte by byte copy at the tail */
-.tail_copy:
-    if (src_offset == 3)
-        goto offset_3;
-    if (src_offset == 2)
-        goto offset_2;
-
-/* src_offset mustn't be 0 here */
-/* default src_offset == 1 */
-    if (tmp1 & MASK_1 == 0)
-        goto cpy_done;
-    *dst++ = tmp1 & MASK_1;
-offset_2:
-    if (tmp1 & MASK_2 == 0)
-        goto cpy_done;
-    *dst++ = tmp1 & MASK_2;
-offset_3:
-    if (tmp1 & MASK_3 == 0)
-        goto cpy_done;
-    *dst++ = tmp1 & MASK_3;
-    if (tmp2 & MASK_0 == 0)
-        goto cpy_done;
-    *dst++ = tmp2 & MASK_0;
-    if (tmp2 & MASK_1 == 0)
-        goto cpy_done;
-    *dst++ = tmp2 & MASK_1;
-    if (tmp2 & MASK_2 == 0)
-        goto cpy_done;
-    *dst++ = tmp2 & MASK_2;
-/* tmp2 BYTE3 must be zero here */
-
-.cpy_done:
-    *dst++ = 0;
-#endif  /* Pseudo code end */
 
 #endif

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_a_r/arch_memcpy.S
+ * libs/libc/machine/arm/arm/arch_memcpy.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText:  2013, Linaro Limited
@@ -60,27 +60,16 @@
 
 #ifdef __ARM_NEON__
 
-	.fpu	neon
-#if __ARM_ARCH >= 8 && __ARM_ARCH_PROFILE == 'R'
-	.arch	armv8-r
-#elif __ARM_ARCH_PROFILE == 'R'
-	.arch	armv7-r
-#else
-	.arch	armv7-a
-#endif
 # define FRAME_SIZE	4
 # define USE_VFP
 # define USE_NEON
 
 #elif !defined (__SOFTFP__)
 
-	.arch	armv6
-	.fpu	vfpv2
 # define FRAME_SIZE	32
 # define USE_VFP
 
 #else
-	.arch	armv6
 # define FRAME_SIZE    32
 
 #endif

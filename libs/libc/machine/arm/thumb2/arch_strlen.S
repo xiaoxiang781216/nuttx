@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_m/arch_strlen.S
+ * libs/libc/machine/arm/thumb2/arch_strlen.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2010-2011,2013 Linaro Limited, 2015 ARM Ltd.
@@ -93,11 +93,6 @@
 #endif
 
 	/* This code requires Thumb.  */
-#if __ARM_ARCH_PROFILE == 'M'
-	.arch   armv7e-m
-#else
-	.arch	armv6t2
-#endif
 	.eabi_attribute Tag_ARM_ISA_use, 0
 	.thumb
 	.syntax unified

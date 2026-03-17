@@ -1,8 +1,8 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_a_r/arch_strlen.S
+ * libs/libc/machine/arm/arm/arch_strlen.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2010-2011,2013 Linaro Limited,215 ARM Ltd.
+ * SPDX-FileCopyrightText: 2010-2011,2013 Linaro Limited, 2015 ARM Ltd.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Assumes:
- * ARMv6T2 or ARMv7E-M, AArch32
+ * ARMv6T2, AArch32, ARM state
  *
  * Copyright (c) 2015 ARM Ltd.
  * All rights reserved.
@@ -84,14 +84,7 @@
 #define S2HI		lsl
 #endif
 
-	/* This code requires Thumb.  */
-#if __ARM_ARCH_PROFILE == 'M'
-	.arch   armv7e-m
-#else
-	.arch	armv6t2
-#endif
-	.eabi_attribute Tag_ARM_ISA_use, 0
-	.thumb
+	.arm
 	.syntax unified
 
 /* Parameters and result.  */
@@ -114,7 +107,7 @@ def_fn	ARCH_LIBCFUN(strlen) p2align=6
 	mvn	const_m1, #0
 	ands	tmp1, srcin, #7		/* (8 - bytes) to alignment.  */
 	pld	[src, #32]
-	bne.w	.Lmisaligned8
+	bne	.Lmisaligned8
 	mov	const_0, #0
 	mov	result, #-8
 .Lloop_aligned:
@@ -127,7 +120,8 @@ def_fn	ARCH_LIBCFUN(strlen) p2align=6
 	sel	data1a, const_0, const_m1	/* Select based on GE<0:3>.  */
 	uadd8	data1b, data1b, const_m1
 	sel	data1b, data1a, const_m1	/* Only used if d1a == 0.  */
-	cbnz	data1b, .Lnull_found
+	cmp	data1b, #0
+	bne	.Lnull_found
 
 	/* Bytes 8-15.  */
 	ldrd	data1a, data1b, [src, #8]
@@ -136,7 +130,8 @@ def_fn	ARCH_LIBCFUN(strlen) p2align=6
 	sel	data1a, const_0, const_m1	/* Select based on GE<0:3>.  */
 	uadd8	data1b, data1b, const_m1
 	sel	data1b, data1a, const_m1	/* Only used if d1a == 0.  */
-	cbnz	data1b, .Lnull_found
+	cmp	data1b, #0
+	bne	.Lnull_found
 
 	/* Bytes 16-23.  */
 	ldrd	data1a, data1b, [src, #16]
@@ -145,7 +140,8 @@ def_fn	ARCH_LIBCFUN(strlen) p2align=6
 	sel	data1a, const_0, const_m1	/* Select based on GE<0:3>.  */
 	uadd8	data1b, data1b, const_m1
 	sel	data1b, data1a, const_m1	/* Only used if d1a == 0.  */
-	cbnz	data1b, .Lnull_found
+	cmp	data1b, #0
+	bne	.Lnull_found
 
 	/* Bytes 24-31.  */
 	ldrd	data1a, data1b, [src, #24]
@@ -179,10 +175,10 @@ def_fn	ARCH_LIBCFUN(strlen) p2align=6
 	tst	tmp1, #4
 	pld	[src, #64]
 	S2HI	tmp2, const_m1, tmp2
-	orn	data1a, data1a, tmp2
-	itt	ne
-	ornne	data1b, data1b, tmp2
-	movne	data1a, const_m1
+	mvn	tmp2, tmp2
+	orr	data1a, data1a, tmp2
+	orrne	data1b, data1b, tmp2
+	mvnne	data1a, #0
 	mov	const_0, #0
 	b	.Lstart_realigned
 	.size	ARCH_LIBCFUN(strlen), . - ARCH_LIBCFUN(strlen)

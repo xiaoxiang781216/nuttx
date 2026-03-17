@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_m/thumb1/arch_strlen.S
+ * libs/libc/machine/arm/thumb/arch_strlen.S
  *
  * SPDX-License-Identifier: Apache-2.0
  *

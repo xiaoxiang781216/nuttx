@@ -20,10 +20,42 @@
 #
 ############################################################################
 
-ifeq ($(CONFIG_ARCH_ARM_A_R),y)          # All ARM A/R
-include $(TOPDIR)/libs/libc/machine/arm/arm_a_r/Make.defs
-else ifeq ($(CONFIG_ARCH_ARM_M),y)      # All ARM-M
-include $(TOPDIR)/libs/libc/machine/arm/arm_m/Make.defs
+ifneq ($(CONFIG_ARM_THUMB),y)
+ARM_SUBDIR = arm
+else ifeq ($(CONFIG_ARCH_ARMV6M),y)
+ARM_SUBDIR = thumb
+else
+ARM_SUBDIR = thumb2
+endif
+
+AFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)machine$(DELIM)arm
+
+ifeq ($(CONFIG_LIBC_ARCH_MEMCHR),y)
+ASRCS += arch_memchr.S
+endif
+
+ifeq ($(CONFIG_LIBC_ARCH_MEMCPY),y)
+ASRCS += arch_memcpy.S
+endif
+
+ifeq ($(CONFIG_LIBC_ARCH_MEMSET),y)
+ASRCS += arch_memset.S
+endif
+
+ifeq ($(CONFIG_LIBC_ARCH_MEMMOVE),y)
+ASRCS += arch_memmove.S
+endif
+
+ifeq ($(CONFIG_LIBC_ARCH_STRCMP),y)
+ASRCS += arch_strcmp.S
+endif
+
+ifeq ($(CONFIG_LIBC_ARCH_STRCPY),y)
+ASRCS += arch_strcpy.S
+endif
+
+ifeq ($(CONFIG_LIBC_ARCH_STRLEN),y)
+ASRCS += arch_strlen.S
 endif
 
 ifeq ($(CONFIG_LIBC_ARCH_ELF),y)
@@ -69,5 +101,7 @@ CSRCS += arm_tls.c
 endif
 endif
 
+DEPPATH += --dep-path machine/arm/$(ARM_SUBDIR)
 DEPPATH += --dep-path machine/arm
+VPATH += :machine/arm/$(ARM_SUBDIR)
 VPATH += :machine/arm

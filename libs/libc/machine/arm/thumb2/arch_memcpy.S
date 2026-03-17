@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_m/arch_memcpy.S
+ * libs/libc/machine/arm/thumb2/arch_memcpy.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2013 ARM Ltd
@@ -173,11 +173,11 @@ ARCH_LIBCFUN(memcpy):
 	.align 2
 .Lbig_block_loop:
 	BEGIN_UNROLL_BIG_BLOCK
-#ifdef __ARM_ARCH_7EM__
+#ifdef __ARM_FEATURE_DSP
 	ldr	r3, [r1], #4
 	str	r3, [r0], #4
 	END_UNROLL
-#else /* __ARM_ARCH_7M__ */
+#else
 	ldr	r3, [r1, \offset]
 	str	r3, [r0, \offset]
 	END_UNROLL
@@ -195,11 +195,11 @@ ARCH_LIBCFUN(memcpy):
 	.align 2
 .Lmid_block_loop:
 	BEGIN_UNROLL_MID_BLOCK
-#ifdef __ARM_ARCH_7EM__
+#ifdef __ARM_FEATURE_DSP
 	ldr	r3, [r1], #4
 	str	r3, [r0], #4
 	END_UNROLL
-#else /* __ARM_ARCH_7M__ */
+#else
 	ldr	r3, [r1, \offset]
 	str	r3, [r0, \offset]
 	END_UNROLL

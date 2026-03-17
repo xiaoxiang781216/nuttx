@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_m/arch_strcmp.S
+ * libs/libc/machine/arm/thumb2/arch_strcmp.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2012-2014 ARM Ltd
@@ -162,101 +162,6 @@ def_fn ARCH_LIBCFUN(strcmp)
 	aut	ip, lr, sp
 #endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
-
-
-#if 0
-	/* The assembly code below is based on the following algorithm.	 */
-#ifdef __ARM_BIG_ENDIAN
-#define RSHIFT <<
-#define LSHIFT >>
-#else
-#define RSHIFT >>
-#define LSHIFT <<
-#endif
-
-#define body(shift)							\
-  mask = 0xffffffffU RSHIFT shift;					\
-  data1 = *src1++;							\
-  data2 = *src2++;							\
-  do									\
-    {									\
-      tmp2 = data1 & mask;						\
-      if (__builtin_expect(tmp2 != data2 RSHIFT shift, 0))		\
-	{								\
-	  data2 RSHIFT= shift;						\
-	  break;							\
-	}								\
-      if (__builtin_expect(((data1 - b1) & ~data1) & (b1 << 7), 0))	\
-	{								\
-	  /* See comment in assembler below re syndrome on big-endian */\
-	  if ((((data1 - b1) & ~data1) & (b1 << 7)) & mask)		\
-	    data2 RSHIFT= shift;					\
-	  else								\
-	    {								\
-	      data2 = *src2;						\
-	      tmp2 = data1 RSHIFT (32 - shift);				\
-	      data2 = (data2 LSHIFT (32 - shift)) RSHIFT (32 - shift);	\
-	    }								\
-	  break;							\
-	}								\
-      data2 = *src2++;							\
-      tmp2 ^= data1;							\
-      if (__builtin_expect(tmp2 != data2 LSHIFT (32 - shift), 0))	\
-	{								\
-	  tmp2 = data1 >> (32 - shift);					\
-	  data2 = (data2 << (32 - shift)) RSHIFT (32 - shift);		\
-	  break;							\
-	}								\
-      data1 = *src1++;							\
-    } while (1)
-
-  const unsigned* src1;
-  const unsigned* src2;
-  unsigned data1, data2;
-  unsigned mask;
-  unsigned shift;
-  unsigned b1 = 0x01010101;
-  char c1, c2;
-  unsigned tmp2;
-
-  while (((unsigned) s1) & 3)
-    {
-      c1 = *s1++;
-      c2 = *s2++;
-      if (c1 == 0 || c1 != c2)
-	return c1 - (int)c2;
-    }
-  src1 = (unsigned*) (((unsigned)s1) & ~3);
-  src2 = (unsigned*) (((unsigned)s2) & ~3);
-  tmp2 = ((unsigned) s2) & 3;
-  if (tmp2 == 1)
-    {
-      body(8);
-    }
-  else if (tmp2 == 2)
-    {
-      body(16);
-    }
-  else
-    {
-      body (24);
-    }
-
-  do
-    {
-#ifdef __ARM_BIG_ENDIAN
-      c1 = (char) tmp2 >> 24;
-      c2 = (char) data2 >> 24;
-#else /* not  __ARM_BIG_ENDIAN */
-      c1 = (char) tmp2;
-      c2 = (char) data2;
-#endif /* not  __ARM_BIG_ENDIAN */
-      tmp2 RSHIFT= 8;
-      data2 RSHIFT= 8;
-    } while (c1 != 0 && c1 == c2);
-  return c1 - c2;
-#endif /* 0 */
-
 
 	/* First of all, compare bytes until src1(sp1) is word-aligned. */
 .Lstrcmp_unaligned:

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_m/thumb1/arch_memset.S
+ * libs/libc/machine/arm/thumb/arch_memset.S
  *
  * SPDX-License-Identifier: Apache-2.0
  *

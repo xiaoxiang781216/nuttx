@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_a_r/arch_memchr.S
+ * libs/libc/machine/arm/thumb2/arch_memchr.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2010-2011, Linaro Limited, 2015 ARM Ltd
@@ -70,6 +70,14 @@
 
 #ifdef LIBC_BUILD_MEMCHR
 
+#ifndef __ARM_FEATURE_BTI_DEFAULT
+#  define __ARM_FEATURE_BTI_DEFAULT 0
+#endif
+
+#ifndef __ARM_FEATURE_PAC_DEFAULT
+#  define __ARM_FEATURE_PAC_DEFAULT 0
+#endif
+
 @ 2011-02-07 david.gilbert@linaro.org
 @    Extracted from local git a5b438d861
 @ 2011-07-14 david.gilbert@linaro.org
@@ -86,17 +94,7 @@
 
 #include "acle-compat.h"
 
-@ NOTE: This ifdef MUST match the one in memchr-stub.c
-#if defined (__ARM_NEON__) || defined (__ARM_NEON)
-#if __ARM_ARCH >= 8 && __ARM_ARCH_PROFILE == 'R'
-	.arch	armv8-r
-#elif __ARM_ARCH_PROFILE == 'R'
-	.arch	armv7-r
-#else
-	.arch	armv7-a
-#endif
-	.fpu	neon
-
+#ifdef __ARM_NEON__
 
 /* Arguments */
 #define srcin		r0
@@ -147,6 +145,13 @@
 ARCH_LIBCFUN(memchr):
 	.cfi_sections .debug_frame
 	.cfi_startproc
+#if __ARM_FEATURE_PAC_DEFAULT
+#  if __ARM_FEATURE_BTI_DEFAULT
+	pacbti	ip, lr, sp
+#  else
+	pac	ip, lr, sp
+#  endif /* __ARM_FEATURE_BTI_DEFAULT */
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	/* Use a simple loop if there are less than 8 bytes to search.  */
 	cmp	cntin, #7
 	bhi	.Llargestr
@@ -160,8 +165,10 @@ ARCH_LIBCFUN(memchr):
 	bne	.Lsmallstr	/* Loop again if not found.  */
 	/* Otherwise fixup address and return.  */
 	sub	result, result, #1
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
-
 
 .Llargestr:
 	vdup.8	vrepchr, chrin	/* Duplicate char across all lanes. */
@@ -205,7 +212,6 @@ ARCH_LIBCFUN(memchr):
 	/* Have we found something already? */
 	cbnz		synd, .Ltail
 
-
 .Lloopintro:
 	vpush	{vend}
 	/* 264/265 correspond to d8/d9 for q4 */
@@ -245,7 +251,6 @@ ARCH_LIBCFUN(memchr):
 	cbz		synd, .Lnotfound
 	bhi		.Ltail
 
-
 .Lmasklast:
 	/* Clear the (-cntin) upper bits to avoid out-of-bounds matches. */
 	neg	cntin, cntin
@@ -253,7 +258,6 @@ ARCH_LIBCFUN(memchr):
 	lsrs	synd, synd, cntin
 	it	eq
 	moveq	src, #0	/* If no match, set src to 0 so the retval is 0. */
-
 
 .Ltail:
 	/* Count the trailing zeros using bit reversing */
@@ -264,24 +268,23 @@ ARCH_LIBCFUN(memchr):
 	clz	synd, synd
 	/* Compute the potential result and return */
 	add	result, src, synd
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
-
 
 .Lnotfound:
 	/* Set result to NULL if not found and return */
 	mov	result, #0
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 	.cfi_endproc
 	.size	ARCH_LIBCFUN(memchr), . - ARCH_LIBCFUN(memchr)
 
-#elif __ARM_ARCH_ISA_THUMB >= 2 && defined (__ARM_FEATURE_DSP)
-
-#if __ARM_ARCH_PROFILE == 'M'
-       .arch armv7e-m
-#else
-       .arch armv6t2
-#endif
+#elif defined(__ARM_FEATURE_DSP)
 
 @ this lets us check a flag in a 00/ff byte easily in either endianness
 #ifdef __ARMEB__
@@ -303,6 +306,13 @@ ARCH_LIBCFUN(memchr):
 	@ r1 = character to look for
 	@ r2 = length
 	@ returns r0 = pointer to character or NULL if not found
+#if __ARM_FEATURE_PAC_DEFAULT
+#  if __ARM_FEATURE_BTI_DEFAULT
+	pacbti	ip, lr, sp
+#  else
+	pac	ip, lr, sp
+#  endif /* __ARM_FEATURE_BTI_DEFAULT */
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	and	r1,r1,#0xff	@ Don't trust the caller to pass a char
 
 	cmp	r2,#16		@ If short don't bother with anything clever
@@ -361,10 +371,16 @@ ARCH_LIBCFUN(memchr):
 
 40:
 	movs	r0,#0		@ not found
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 50:
 	subs	r0,r0,#1	@ found
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 60:  @ We're here because the fast path found a hit
@@ -391,9 +407,10 @@ ARCH_LIBCFUN(memchr):
 61:
 	pop	{r4,r5,r6,r7}
 	subs	r0,r0,#1
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
-#else
-  /* Defined in memchr-stub.c.  */
 #endif
 
 #endif

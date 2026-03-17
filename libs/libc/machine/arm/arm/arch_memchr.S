@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_m/arch_memchr.S
+ * libs/libc/machine/arm/arm/arch_memchr.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2010-2011, Linaro Limited, 2015 ARM Ltd
@@ -70,39 +70,13 @@
 
 #ifdef LIBC_BUILD_MEMCHR
 
-#ifndef __ARM_FEATURE_BTI_DEFAULT
-#  define __ARM_FEATURE_BTI_DEFAULT 0
-#endif
-
-#ifndef __ARM_FEATURE_PAC_DEFAULT
-#  define __ARM_FEATURE_PAC_DEFAULT 0
-#endif
-
-@ 2011-02-07 david.gilbert@linaro.org
-@    Extracted from local git a5b438d861
-@ 2011-07-14 david.gilbert@linaro.org
-@    Import endianness fix from local git ea786f1b
-@ 2011-10-11 david.gilbert@linaro.org
-@    Import from cortex-strings bzr rev 63
-@    Flip to ldrd (as suggested by Greta Yorsh)
-@    Make conditional on CPU type
-@    tidy
-
-@ This code requires armv6t2 or later.  Uses Thumb2.
+@ This code requires armv6t2 or later.  ARM state.
 
 	.syntax unified
 
 #include "acle-compat.h"
 
-@ NOTE: This ifdef MUST match the one in memchr-stub.c
-#if defined (__ARM_NEON__) || defined (__ARM_NEON)
-#if __ARM_ARCH >= 8 && __ARM_ARCH_PROFILE == 'R'
-	.arch	armv8-r
-#else
-	.arch	armv7-a
-#endif
-	.fpu	neon
-
+#ifdef __ARM_NEON__
 
 /* Arguments */
 #define srcin		r0
@@ -144,22 +118,15 @@
  */
 
 	.text
-	.thumb_func
 	.align 4
 	.p2align 4,,15
 	.global ARCH_LIBCFUN(memchr)
 	.type ARCH_LIBCFUN(memchr),%function
 
+	.arm
 ARCH_LIBCFUN(memchr):
 	.cfi_sections .debug_frame
 	.cfi_startproc
-#if __ARM_FEATURE_PAC_DEFAULT
-#  if __ARM_FEATURE_BTI_DEFAULT
-	pacbti	ip, lr, sp
-#  else
-	pac	ip, lr, sp
-#  endif /* __ARM_FEATURE_BTI_DEFAULT */
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	/* Use a simple loop if there are less than 8 bytes to search.  */
 	cmp	cntin, #7
 	bhi	.Llargestr
@@ -173,11 +140,7 @@ ARCH_LIBCFUN(memchr):
 	bne	.Lsmallstr	/* Loop again if not found.  */
 	/* Otherwise fixup address and return.  */
 	sub	result, result, #1
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
-
 
 .Llargestr:
 	vdup.8	vrepchr, chrin	/* Duplicate char across all lanes. */
@@ -219,8 +182,8 @@ ARCH_LIBCFUN(memchr):
 	/* The first block can also be the last */
 	bls		.Lmasklast
 	/* Have we found something already? */
-	cbnz		synd, .Ltail
-
+	cmp		synd, #0
+	bne		.Ltail
 
 .Lloopintro:
 	vpush	{vend}
@@ -258,9 +221,9 @@ ARCH_LIBCFUN(memchr):
 	vpadd.i8	vdata0_0, vdata0_0, vdata1_0
 	vpadd.i8	vdata0_0, vdata0_0, vdata0_0
 	vmov		synd, vdata0_0[0]
-	cbz		synd, .Lnotfound
+	cmp		synd, #0
+	beq		.Lnotfound
 	bhi		.Ltail
-
 
 .Lmasklast:
 	/* Clear the (-cntin) upper bits to avoid out-of-bounds matches. */
@@ -269,7 +232,6 @@ ARCH_LIBCFUN(memchr):
 	lsrs	synd, synd, cntin
 	it	eq
 	moveq	src, #0	/* If no match, set src to 0 so the retval is 0. */
-
 
 .Ltail:
 	/* Count the trailing zeros using bit reversing */
@@ -280,30 +242,17 @@ ARCH_LIBCFUN(memchr):
 	clz	synd, synd
 	/* Compute the potential result and return */
 	add	result, src, synd
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
-
 
 .Lnotfound:
 	/* Set result to NULL if not found and return */
 	mov	result, #0
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 	.cfi_endproc
 	.size	ARCH_LIBCFUN(memchr), . - ARCH_LIBCFUN(memchr)
 
-#elif __ARM_ARCH_ISA_THUMB >= 2 && defined (__ARM_FEATURE_DSP)
-
-#if __ARM_ARCH_PROFILE == 'M'
-       .arch armv7e-m
-#else
-       .arch armv6t2
-#endif
+#elif defined(__ARM_FEATURE_DSP)
 
 @ this lets us check a flag in a 00/ff byte easily in either endianness
 #ifdef __ARMEB__
@@ -312,10 +261,9 @@ ARCH_LIBCFUN(memchr):
 #define CHARTSTMASK(c) 1<<(c*8)
 #endif
 	.text
-	.thumb
+	.arm
 
 @ ---------------------------------------------------------------------------
-	.thumb_func
 	.align 2
 	.p2align 4,,15
 	.global ARCH_LIBCFUN(memchr)
@@ -325,13 +273,6 @@ ARCH_LIBCFUN(memchr):
 	@ r1 = character to look for
 	@ r2 = length
 	@ returns r0 = pointer to character or NULL if not found
-#if __ARM_FEATURE_PAC_DEFAULT
-#  if __ARM_FEATURE_BTI_DEFAULT
-	pacbti	ip, lr, sp
-#  else
-	pac	ip, lr, sp
-#  endif /* __ARM_FEATURE_BTI_DEFAULT */
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	and	r1,r1,#0xff	@ Don't trust the caller to pass a char
 
 	cmp	r2,#16		@ If short don't bother with anything clever
@@ -347,7 +288,8 @@ ARCH_LIBCFUN(memchr):
 	cmp	r3, r1
 	beq	50f		@ If it matches exit found
 	tst	r0, #7
-	cbz	r2, 40f		@ If we run off the end, exit not found
+	cmp	r2, #0
+	beq	40f		@ If we run off the end, exit not found
 	bne	5b		@ If not aligned yet then do next byte
 
 10:
@@ -355,23 +297,25 @@ ARCH_LIBCFUN(memchr):
 	push	{r4,r5,r6,r7}
 	orr	r1, r1, r1, lsl #8	@ expand the match word across all bytes
 	orr	r1, r1, r1, lsl #16
-	bic	r4, r2, #7	@ Number of double words to work with * 8
-	mvns	r7, #0		@ all F's
-	movs	r3, #0
+	bic	r6, r2, #7	@ Number of double words to work with * 8
+	mvn	r7, #0		@ all F's
+	mov	r3, #0
 
 15:
-	ldrd    r5,r6,[r0],#8
-	subs	r4, r4, #8
-	eor	r5,r5, r1	@ r5,r6 have 00's where bytes match the target
-	eor	r6,r6, r1
+	ldrd    r4,r5,[r0],#8
+	subs	r6, r6, #8
+	eor	r4,r4, r1	@ r4,r5 have 00's where bytes match the target
+	eor	r5,r5, r1
+	uadd8	r4, r4, r7	@ Par add 0xff - sets GE bits for bytes!=0
+	sel	r4, r3, r7	@ bytes are 00 for none-00 bytes,
+				@ or ff for 00 bytes - NOTE INVERSION
 	uadd8	r5, r5, r7	@ Par add 0xff - sets GE bits for bytes!=0
-	sel	r5, r3, r7	@ bytes are 00 for none-00 bytes,
+	sel	r5, r4, r7	@ chained....bytes are 00 for none-00 bytes
 				@ or ff for 00 bytes - NOTE INVERSION
-	uadd8	r6, r6, r7	@ Par add 0xff - sets GE bits for bytes!=0
-	sel	r6, r5, r7	@ chained....bytes are 00 for none-00 bytes
-				@ or ff for 00 bytes - NOTE INVERSION
-	cbnz	r6, 60f
-	bne	15b		@ (Flags from the subs above)
+	cmp	r5, #0
+	bne	60f
+	cmp	r6, #0
+	bne	15b
 
 	pop	{r4,r5,r6,r7}
 	and	r1,r1,#0xff	@ r1 back to a single character
@@ -379,27 +323,24 @@ ARCH_LIBCFUN(memchr):
 				@ after the double words have been done
 
 20:
-	cbz	r2, 40f		@ 0 length or hit the end already then not found
+	cmp	r2, #0
+	beq	40f		@ 0 length or hit the end already then not found
 
 21:  @ Post aligned section, or just a short call
 	ldrb	r3,[r0],#1
 	subs	r2,r2,#1
 	eor	r3,r3,r1	@ r3 = 0 if match - doesn't break flags from sub
-	cbz	r3, 50f
-	bne	21b		@ on r2 flags
+	cmp	r3, #0
+	beq	50f
+	cmp	r2, #0
+	bne	21b
 
 40:
-	movs	r0,#0		@ not found
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
+	mov	r0,#0		@ not found
 	bx	lr
 
 50:
-	subs	r0,r0,#1	@ found
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
+	sub	r0,r0,#1	@ found
 	bx	lr
 
 60:  @ We're here because the fast path found a hit
@@ -425,13 +366,8 @@ ARCH_LIBCFUN(memchr):
 
 61:
 	pop	{r4,r5,r6,r7}
-	subs	r0,r0,#1
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
+	sub	r0,r0,#1
 	bx	lr
-#else
-  /* Defined in memchr-stub.c.  */
 #endif
 
 #endif

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_a_r/arch_strcmp.S
+ * libs/libc/machine/arm/arm/arch_strcmp.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2011 The Android Open Source Project,2008 ARM Ltd
@@ -123,13 +123,7 @@ ARCH_LIBCFUN(strcmp):
 	sub	r0, r0, r3, lsr #24
 #else
 	and	r3, r3, #255
-	/* No RSB instruction in Thumb2 */
-#ifdef __thumb2__
-	lsr	r0, r0, #24
-	sub	r0, r0, r3
-#else
 	rsb	r0, r3, r0, lsr #24
-#endif
 #endif
 	ldr	r4, [sp], #4
 	bx	lr

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm/arm_m/thumb1/arch_strcpy.S
+ * libs/libc/machine/arm/thumb/arch_strcmp.S
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,54 +20,57 @@
  *
  ****************************************************************************/
 
-/* Optimized strcpy for ARMv6-M (Thumb-1 only, e.g. Cortex-M0/M0+/M1).
+/* Optimized strcmp for ARMv6-M (Thumb-1 only, e.g. Cortex-M0/M0+/M1).
  *
  * Algorithm:
- *   Step 1: Byte copy until both src and dst are word-aligned
- *   Step 2: Word-at-a-time copy with NUL detection
- *   Step 3: Byte copy for the tail containing NUL
+ *   Step 1: Byte compare until both pointers are word-aligned
+ *   Step 2: Word-at-a-time compare using zero-byte detection
+ *   Step 3: When a difference or NUL is found, byte compare to get result
  *
- * When src and dst have different alignment, falls back to byte copy.
+ * When both strings have the same alignment, we can use word loads.
+ * Otherwise we fall back to byte-by-byte comparison.
  */
 
 #include "libc.h"
 
-#ifdef LIBC_BUILD_STRCPY
+#ifdef LIBC_BUILD_STRCMP
 
 	.syntax unified
 	.text
 	.align	2
-	.global	ARCH_LIBCFUN(strcpy)
+	.global	ARCH_LIBCFUN(strcmp)
 	.thumb
 	.thumb_func
-	.type	ARCH_LIBCFUN(strcpy), %function
-ARCH_LIBCFUN(strcpy):
-	@ r0: dst
-	@ r1: src
+	.type	ARCH_LIBCFUN(strcmp), %function
+ARCH_LIBCFUN(strcmp):
+	@ r0: s1
+	@ r1: s2
 	.cfi_sections .debug_frame
 	.cfi_startproc
-	push	{r0, r4, r5, lr}
-	.cfi_def_cfa_offset 16
+	push	{r4, r5, lr}
+	.cfi_def_cfa_offset 12
 	.cfi_offset 14, -4
 
-	@ Check if both have same alignment
+	@ Check if both pointers have the same alignment
 	movs	r2, r0
 	eors	r2, r1
 	movs	r3, #3
 	tst	r2, r3
-	bne	.Lbyte_copy
+	bne	.Lbyte_compare
 
 	@ Same alignment - align to word boundary
 	tst	r0, r3
 	beq	.Lword_setup
 
 .Lalign_loop:
-	ldrb	r2, [r1, #0]
-	adds	r1, #1
-	strb	r2, [r0, #0]
+	ldrb	r2, [r0, #0]
+	ldrb	r3, [r1, #0]
 	adds	r0, #1
+	adds	r1, #1
 	cmp	r2, #0
-	beq	.Ldone
+	beq	.Lreturn_diff
+	cmp	r2, r3
+	bne	.Lreturn_diff
 	movs	r3, #3
 	tst	r0, r3
 	bne	.Lalign_loop
@@ -83,46 +86,79 @@ ARCH_LIBCFUN(strcpy):
 	lsls	r5, r4, #7	@ r5 = 0x80808080
 
 .Lword_loop:
-	ldr	r2, [r1, #0]
+	ldr	r2, [r0, #0]	@ word from s1
+	ldr	r3, [r1, #0]	@ word from s2
+
+	@ Check if words differ first (most common exit)
+	cmp	r2, r3
+	bne	.Lhas_diff
 
 	@ Check for NUL using bics: ((x - 0x01010101) & ~x & 0x80808080)
 	subs	r3, r2, r4	@ r3 = x - 0x01010101
 	bics	r3, r2		@ r3 = (x - 0x01010101) & ~x
 	tst	r3, r5		@ test & 0x80808080
-	bne	.Lword_has_nul
+	bne	.Lhas_nul
 
-	@ No NUL - store word and advance both pointers
-	@ Fall into tight loop: store, load next, check, repeat
-	@ Single branch (beq back) avoids extra pipeline flush
-
+	@ Tight loop: single branch (beq) avoids extra pipeline flush
 .Lword_fast:
-	stmia	r0!, {r2}	@ *dst++ (word)
-	ldr	r2, [r1, #4]	@ load next src word
-	adds	r1, #4		@ advance src
+	ldr	r2, [r0, #4]	@ next word from s1
+	ldr	r3, [r1, #4]	@ next word from s2
+	adds	r0, #4
+	adds	r1, #4
+	cmp	r2, r3
+	bne	.Lhas_diff
 	subs	r3, r2, r4	@ r3 = x - 0x01010101
 	bics	r3, r2		@ r3 = (x - 0x01010101) & ~x
 	tst	r3, r5		@ test & 0x80808080
-	beq	.Lword_fast	@ loop if no NUL
+	beq	.Lword_fast
 
-.Lword_has_nul:
-	@ NUL found in this word - store the whole word.
-	@ Both pointers are word-aligned, so this is safe.
-	@ Bytes past NUL are don't-care in the destination.
-	str	r2, [r0, #0]
-	b	.Ldone
+.Lhas_nul:
+	@ Words are equal and contain NUL — return 0
+	movs	r0, #0
+	pop	{r4, r5, pc}
 
-.Lbyte_copy:
-	@ Different alignment - byte by byte
-	ldrb	r2, [r1, #0]
-	adds	r1, #1
-	strb	r2, [r0, #0]
-	adds	r0, #1
+.Lhas_diff:
+	@ Found NUL or difference - compare byte by byte
+	ldrb	r2, [r0, #0]
+	ldrb	r3, [r1, #0]
 	cmp	r2, #0
-	bne	.Lbyte_copy
+	beq	.Lreturn_diff
+	cmp	r2, r3
+	bne	.Lreturn_diff
 
-.Ldone:
-	pop	{r0, r4, r5, pc}
+	ldrb	r2, [r0, #1]
+	ldrb	r3, [r1, #1]
+	cmp	r2, #0
+	beq	.Lreturn_diff
+	cmp	r2, r3
+	bne	.Lreturn_diff
+
+	ldrb	r2, [r0, #2]
+	ldrb	r3, [r1, #2]
+	cmp	r2, #0
+	beq	.Lreturn_diff
+	cmp	r2, r3
+	bne	.Lreturn_diff
+
+	ldrb	r2, [r0, #3]
+	ldrb	r3, [r1, #3]
+	b	.Lreturn_diff
+
+.Lbyte_compare:
+	@ Different alignment - byte by byte
+	ldrb	r2, [r0, #0]
+	ldrb	r3, [r1, #0]
+	adds	r0, #1
+	adds	r1, #1
+	cmp	r2, #0
+	beq	.Lreturn_diff
+	cmp	r2, r3
+	beq	.Lbyte_compare
+
+.Lreturn_diff:
+	subs	r0, r2, r3
+	pop	{r4, r5, pc}
 	.cfi_endproc
-	.size	ARCH_LIBCFUN(strcpy), . - ARCH_LIBCFUN(strcpy)
+	.size	ARCH_LIBCFUN(strcmp), . - ARCH_LIBCFUN(strcmp)
 
 #endif

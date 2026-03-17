@@ -3,13 +3,80 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-if ARCH_ARM_A_R
-source "libs/libc/machine/arm/arm_a_r/Kconfig"
-endif
+config ARM_TARGET2_PREL
+	bool "R_ARM_TARGET2 is PC relative"
+	default CXX_EXCEPTION
+	depends on LIBC_ARCH_ELF
+	---help---
+		Perform a PC relative relocation for relocation type R_ARM_TARGET2
 
-if ARCH_ARM_M
-source "libs/libc/machine/arm/arm_m/Kconfig"
-endif
+config ARM_STRING_FUNCTION
+	bool "Enable optimized ARM specific string functions"
+	default n
+	depends on ARCH_TOOLCHAIN_GNU
+	select ARM_MEMCHR
+	select ARM_MEMCPY
+	select ARM_MEMSET
+	select ARM_MEMMOVE
+	select ARM_STRCMP
+	select ARM_STRCPY
+	select ARM_STRLEN
+
+config ARM_MEMCHR
+	bool "Enable optimized memchr() for ARM"
+	default n
+	select LIBC_ARCH_MEMCHR
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific memchr() library function
+
+config ARM_MEMCPY
+	bool "Enable optimized memcpy() for ARM"
+	default n
+	select LIBC_ARCH_MEMCPY
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific memcpy() library function
+
+config ARM_MEMSET
+	bool "Enable optimized memset() for ARM"
+	default n
+	select LIBC_ARCH_MEMSET
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific memset() library function
+
+config ARM_MEMMOVE
+	bool "Enable optimized memmove() for ARM"
+	default n
+	select LIBC_ARCH_MEMMOVE
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific memmove() library function
+
+config ARM_STRCMP
+	bool "Enable optimized strcmp() for ARM"
+	default n
+	select LIBC_ARCH_STRCMP
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific strcmp() library function
+
+config ARM_STRCPY
+	bool "Enable optimized strcpy() for ARM"
+	default n
+	select LIBC_ARCH_STRCPY
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific strcpy() library function
+
+config ARM_STRLEN
+	bool "Enable optimized strlen() for ARM"
+	default n
+	select LIBC_ARCH_STRLEN
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific strlen() library function
 
 config LIBC_ARCH_CRC32
 	bool "Enable optimized crc32 for ARM"

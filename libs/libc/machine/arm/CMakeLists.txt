@@ -22,10 +22,40 @@
 
 set(SRCS)
 
-if(CONFIG_ARCH_ARM_A_R)
-  add_subdirectory(arm_a_r)
-elseif(CONFIG_ARCH_ARM_M) # All ARM-M
-  add_subdirectory(arm_m)
+if(NOT CONFIG_ARM_THUMB)
+  set(ARM_SUBDIR arm)
+elseif(CONFIG_ARCH_ARMV6M)
+  set(ARM_SUBDIR thumb)
+else()
+  set(ARM_SUBDIR thumb2)
+endif()
+
+if(CONFIG_LIBC_ARCH_MEMCHR)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_memchr.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_MEMCPY)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_memcpy.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_MEMSET)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_memset.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_MEMMOVE)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_memmove.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_STRCMP)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_strcmp.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_STRCPY)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_strcpy.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_STRLEN)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_strlen.S)
 endif()
 
 if(CONFIG_LIBC_ARCH_ELF)
@@ -69,4 +99,5 @@ if(CONFIG_SCHED_THREAD_LOCAL AND CONFIG_ARCH_ARM_M)
   list(APPEND SRCS arm_tls.c)
 endif()
 
+target_include_directories(c PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 target_sources(c PRIVATE ${SRCS})
