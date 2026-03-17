@@ -263,6 +263,11 @@
 
 #  define is_constexpr(x) __builtin_constant_p(x)
 
+/* Check if two types are compatible at compile time */
+
+#  define is_types_compatible(x, type) \
+     __builtin_types_compatible_p(typeof(x), type)
+
 /* Assume the condition is satisfied.
  * We can use this to perform more aggressive compiler optimizations.
  * Please use this with caution, as it may cause runtime errors if you fail
@@ -1519,6 +1524,10 @@
 
 #  define memory_barrier()
 
+#endif
+
+#ifndef is_types_compatible
+#  define is_types_compatible(x, type) (0)
 #endif
 
 #ifndef CONFIG_HAVE_LONG_LONG
