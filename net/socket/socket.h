@@ -125,6 +125,24 @@
 #endif /* CONFIG_NET_SOCKOPTS */
 
 /****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: sockfd_put_cleanup
+ *
+ * Description:
+ *   Cleanup function called when thread is terminated. This ensures that
+ *   the file pointer reference count is properly decremented.
+ *
+ ****************************************************************************/
+
+static inline void sockfd_put_cleanup(FAR void *arg)
+{
+  file_put(*(FAR struct file **)arg);
+}
+
+/****************************************************************************
  * Public Data
  ****************************************************************************/
 

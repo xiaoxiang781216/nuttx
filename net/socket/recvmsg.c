@@ -32,6 +32,7 @@
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
+#include <nuttx/tls.h>
 
 #include "socket/socket.h"
 
@@ -163,12 +164,18 @@ ssize_t psock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 ssize_t recvmsg(int sockfd, FAR struct msghdr *msg, int flags)
 {
   FAR struct socket *psock;
-  FAR struct file *filep;
+  FAR struct file *filep = NULL;
   ssize_t ret;
 
   /* recvmsg() is a cancellation point */
 
   enter_cancellation_point();
+
+  /* Push a cancellation point onto the stack.  This will be called if
+   * the thread is canceled.
+   */
+
+  tls_cleanup_push(tls_get_info(), sockfd_put_cleanup, &filep);
 
   /* Get the underlying socket structure */
 
@@ -181,6 +188,8 @@ ssize_t recvmsg(int sockfd, FAR struct msghdr *msg, int flags)
       ret = psock_recvmsg(psock, msg, flags);
       file_put(filep);
     }
+
+  tls_cleanup_pop(tls_get_info(), 0);
 
   if (ret < 0)
     {

@@ -33,6 +33,7 @@
 #include <nuttx/cancelpt.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/net/net.h>
+#include <nuttx/tls.h>
 
 #include "socket/socket.h"
 
@@ -155,7 +156,7 @@ ssize_t recvfrom(int sockfd, FAR void *buf, size_t len, int flags,
                  FAR struct sockaddr *from, FAR socklen_t *fromlen)
 {
   FAR struct socket *psock;
-  FAR struct file *filep;
+  FAR struct file *filep = NULL;
   ssize_t ret;
 #ifdef CONFIG_BUILD_KERNEL
   struct sockaddr_storage kaddr;
@@ -193,6 +194,7 @@ ssize_t recvfrom(int sockfd, FAR void *buf, size_t len, int flags,
 
   /* Get the underlying socket structure */
 
+  tls_cleanup_push(tls_get_info(), sockfd_put_cleanup, &filep);
   ret = sockfd_socket(sockfd, &filep, &psock);
 
   /* Then let psock_recvfrom() do all of the work */
@@ -202,6 +204,8 @@ ssize_t recvfrom(int sockfd, FAR void *buf, size_t len, int flags,
       ret = psock_recvfrom(psock, buf, len, flags, from, fromlen);
       file_put(filep);
     }
+
+  tls_cleanup_pop(tls_get_info(), 0);
 
 #ifdef CONFIG_BUILD_KERNEL
   memcpy(ubuf, buf, len);

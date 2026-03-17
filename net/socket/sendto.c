@@ -37,6 +37,7 @@
 #include <nuttx/cancelpt.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/net/net.h>
+#include <nuttx/tls.h>
 
 #include "socket/socket.h"
 
@@ -201,7 +202,7 @@ ssize_t sendto(int sockfd, FAR const void *buf, size_t len, int flags,
                FAR const struct sockaddr *to, socklen_t tolen)
 {
   FAR struct socket *psock;
-  FAR struct file *filep;
+  FAR struct file *filep = NULL;
   ssize_t ret;
 #ifdef CONFIG_BUILD_KERNEL
   struct sockaddr_storage kaddr;
@@ -238,6 +239,7 @@ ssize_t sendto(int sockfd, FAR const void *buf, size_t len, int flags,
 
   /* Get the underlying socket structure */
 
+  tls_cleanup_push(tls_get_info(), sockfd_put_cleanup, &filep);
   ret = sockfd_socket(sockfd, &filep, &psock);
 
   /* And let psock_sendto do all of the work */
@@ -247,6 +249,8 @@ ssize_t sendto(int sockfd, FAR const void *buf, size_t len, int flags,
       ret = psock_sendto(psock, buf, len, flags, to, tolen);
       file_put(filep);
     }
+
+  tls_cleanup_pop(tls_get_info(), 0);
 
 #ifdef CONFIG_BUILD_KERNEL
   kmm_free(kbuf);

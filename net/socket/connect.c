@@ -37,6 +37,7 @@
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
+#include <nuttx/tls.h>
 
 #include "socket/socket.h"
 
@@ -232,12 +233,18 @@ int psock_connect(FAR struct socket *psock, FAR const struct sockaddr *addr,
 int connect(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen)
 {
   FAR struct socket *psock;
-  FAR struct file *filep;
+  FAR struct file *filep = NULL;
   int ret;
 
   /* accept() is a cancellation point */
 
   enter_cancellation_point();
+
+  /* Push a cancellation point onto the stack.  This will be called if
+   * the thread is canceled.
+   */
+
+  tls_cleanup_push(tls_get_info(), sockfd_put_cleanup, &filep);
 
   /* Get the underlying socket structure */
 
@@ -250,6 +257,8 @@ int connect(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen)
       ret = psock_connect(psock, addr, addrlen);
       file_put(filep);
     }
+
+  tls_cleanup_pop(tls_get_info(), 0);
 
   if (ret < 0)
     {
