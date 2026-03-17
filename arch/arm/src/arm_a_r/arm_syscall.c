@@ -615,10 +615,6 @@ uint32_t *arm_syscall(uint32_t *regs)
   tpidr = (uintptr_t)tcb->stack_alloc_ptr + sizeof(struct tls_info_s);
   CP15_SET(TPIDRURW, tpidr);
 
-  /* Resume the scheduler for the new task */
-
-  nxsched_resume_scheduler(tcb);
-
   /* Set irq flag */
 
   up_set_interrupt_context(false);
