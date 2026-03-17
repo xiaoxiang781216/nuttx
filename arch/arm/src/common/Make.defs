@@ -91,3 +91,7 @@ endif
 
 CMN_ASRCS += fork.S
 
+ifeq ($(CONFIG_ARCH_JUMP_LABEL),y)
+  CMN_CSRCS += arm_jump_label.c
+endif
+

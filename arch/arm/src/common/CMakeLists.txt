@@ -108,6 +108,10 @@ if(CONFIG_ARCH_KERNEL_STACK)
   list(APPEND SRCS arm_addrenv_kstack.c)
 endif()
 
+if(CONFIG_ARCH_JUMP_LABEL)
+  list(APPEND SRCS arm_jump_label.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})
 
 nuttx_add_aux_library(STARTUP_OBJS crt0.c)

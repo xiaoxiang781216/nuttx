@@ -1205,6 +1205,7 @@ config ARCH_CHIP
 config ARM_THUMB
 	bool "Thumb Mode"
 	default n
+	select ARCH_HAVE_JUMP_LABEL
 
 config ARM_HAVE_PSCI
 	bool "ARM PSCI (Power State Coordination Interface) Support"

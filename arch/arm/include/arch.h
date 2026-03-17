@@ -39,6 +39,9 @@
 #if defined(CONFIG_ARCH_ARM_A_R)
 #  include <arch/arm_a_r/arch.h>
 #endif
+#ifdef CONFIG_ARCH_JUMP_LABEL
+#  include <arch/jump_label.h>
+#endif
 
 /****************************************************************************
  * Pre-processor Prototypes
