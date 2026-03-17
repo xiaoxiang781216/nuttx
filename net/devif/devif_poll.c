@@ -322,6 +322,10 @@ devif_poll_can_connections(FAR struct net_driver_s *dev,
                       can_input(dev);
                       netdev_iob_release(dev);
                     }
+                  else
+                    {
+                      iob_free_chain(iob);
+                    }
                 }
               else
                 {
