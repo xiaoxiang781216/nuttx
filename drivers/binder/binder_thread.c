@@ -224,41 +224,6 @@ static void binder_free_buf(FAR struct binder_proc *proc,
   mm_free(proc->alloc.heap, buffer);
 }
 
-/****************************************************************************
- * Name: binder_get_txn_from
- *
- * Description:
- *   safely extract the "from" thread in transaction.
- *
- *   Atomically return the "from" thread and increment the tmp_ref
- *   count for the thread to ensure it stays alive until
- *   binder_thread_dec_tmpref() is called.
- *
- * Input Parameters:
- *   t - binder transaction for t->from
- *
- * Returned Value:
- *   the value of t->from
- *
- ****************************************************************************/
-
-static struct binder_thread * binder_get_txn_from(
-  FAR struct binder_transaction *t)
-{
-  FAR struct binder_thread *from;
-
-  nxmutex_lock(&t->lock);
-  from = t->from;
-  if (from)
-    {
-      binder_inner_proc_lock(from->proc);
-      from->tmp_ref++;
-      binder_inner_proc_unlock(from->proc);
-    }
-  nxmutex_unlock(&t->lock);
-  return from;
-}
-
 static void binder_free_proc(FAR struct binder_proc *proc)
 {
   FAR struct binder_device *device;

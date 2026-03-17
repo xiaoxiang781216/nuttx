@@ -726,6 +726,8 @@ bool binder_has_work(FAR struct binder_thread *thread, bool do_proc_work);
 
 /* function prototype define for binder_trans.c */
 
+FAR struct binder_thread *binder_get_txn_from(
+  FAR struct binder_transaction *t);
 void binder_free_transaction(FAR struct binder_transaction *t);
 void binder_transaction(FAR struct binder_proc *proc,
                         FAR struct binder_thread *thread,

@@ -207,7 +207,7 @@ static size_t binder_get_object(FAR struct binder_proc *proc,
  *
  ****************************************************************************/
 
-static struct binder_thread * binder_get_txn_from(
+struct binder_thread * binder_get_txn_from(
   FAR struct binder_transaction *t)
 {
   FAR struct binder_thread *from;
