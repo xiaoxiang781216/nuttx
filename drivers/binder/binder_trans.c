@@ -708,7 +708,7 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
             {
               binder_debug(BINDER_DEBUG_ERROR,
                            "transaction release %d bad node %"PRIx64"\n",
-                           node->debug_id, fp->binder);
+                           buffer->debug_id, fp->binder);
               break;
             }
 
