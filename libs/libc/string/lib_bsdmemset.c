@@ -45,6 +45,7 @@ FAR void *memset(FAR void *m, int c, size_t n)
 {
   FAR libc_data_t *aligned_addr;
   FAR char *s = (FAR char *)m;
+  unsigned int d = (unsigned char)c;
   libc_data_t buffer;
   int i;
 
@@ -67,7 +68,7 @@ FAR void *memset(FAR void *m, int c, size_t n)
       /* If we get this far, we know that n is large and s is word-aligned. */
 
       aligned_addr = (FAR libc_data_t *)s;
-      buffer = ((unsigned int)c << 8) | c;
+      buffer = (d << 8) | d;
       buffer |= (buffer << 16);
       for (i = 32; i < LITTLEBLOCKSIZE * 8; i <<= 1)
         {
