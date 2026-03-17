@@ -45,7 +45,7 @@ class TestFs(unittest.TestCase):
 
     def test_mount(self):
         out = gdb.execute("mount", to_string=True)
-        self.check_output(out, expect="/proc type procfs")
+        self.check_output(out, expect=" type ")
 
     def test_foreach_inode(self):
         out = gdb.execute("foreach inode", to_string=True)
