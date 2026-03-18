@@ -485,6 +485,14 @@ int sim_bringup(void)
 #  endif
 #endif
 
+#ifdef CONFIG_RPMSG_PORT_UART
+#  ifdef CONFIG_SIM_RPMSG_MASTER
+  sim_rpmsg_port_uart_init("server2", "proxy2", "/dev/ttyVS0");
+#  else
+  sim_rpmsg_port_uart_init("proxy2", "server2", "/dev/ttyVS0");
+#  endif
+#endif
+
 #ifdef CONFIG_DEV_RPMSG
   rpmsgdev_register("server", "/dev/console", "/dev/server-console");
   rpmsgdev_register("server", "/dev/null", "/dev/server-null");

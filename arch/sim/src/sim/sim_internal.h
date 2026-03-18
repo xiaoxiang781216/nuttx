@@ -447,6 +447,13 @@ void sim_netdriver_setmtu(int devidx, int mtu);
 int sim_rptun_init(const char *shmemname, const char *cpuname, int master);
 #endif
 
+/* sim_rpmsg_port_uart.c ****************************************************/
+
+#ifdef CONFIG_RPMSG_PORT_UART
+int sim_rpmsg_port_uart_init(const char *localcpu, const char *remotecpu,
+                             const char *uartpath);
+#endif
+
 /* sim_hcisocket.c **********************************************************/
 
 #ifdef CONFIG_SIM_HCISOCKET
