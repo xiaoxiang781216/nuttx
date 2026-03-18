@@ -164,6 +164,7 @@ static int ieee1722acf_dev_send(FAR struct net_driver_s *dev,
   fwd->f_iob = stream->iob;  /* IOB chain to be forwarded */
 
   stream->iob = NULL;        /* Free acf stream buffer */
+  stream->stream_seq++;      /* Increase sequence number */
 
   /* Then set up to forward the packet according to the protocol. */
 
@@ -464,8 +465,6 @@ static void ieee1722acf_stream_cycle_work(FAR void *arg)
             {
               nwarn("WARNING: stream send failed: %d\n", ret);
             }
-
-          stream->stream_seq++;
         }
 
       work_queue_next(HPWORK, &stream->cycle_work,
@@ -500,8 +499,6 @@ ieee1722acf_stream_flush(FAR struct net_driver_s *dev,
     {
       nwarn("WARNING: stream send failed: %d\n", ret);
     }
-
-  stream->stream_seq++;
 
   if (stream->cycle_us != 0)
     {
