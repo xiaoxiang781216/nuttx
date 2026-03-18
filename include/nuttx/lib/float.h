@@ -266,7 +266,7 @@
 #endif
 
 #ifndef FLT_EVAL_METHOD
-#  define FLT_EVAL_METHOD 1
+#  define FLT_EVAL_METHOD 0
 #endif
 
 #endif /* __INCLUDE_NUTTX_LIB_FLOAT_H */
