@@ -272,9 +272,9 @@ int can_forward(FAR struct net_driver_s *dev)
       return -EOPNOTSUPP;
     }
 
-  if (dev->d_iob->io_conn != NULL)
+  if (dev->d_iob->io_conn != NULL || (frame->can_id & CAN_ERR_FLAG) != 0)
     {
-      /* Do not forward transmit confirmation frames */
+      /* Do not forward transmit confirmation frames & error frames */
 
       return OK;
     }
