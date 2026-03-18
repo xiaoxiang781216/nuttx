@@ -748,13 +748,6 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
   unsigned int i;
   uint32_t isr;
 
-  if (irq == 66)
-    {
-      sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
-                        "[IN] vmdev=%p irq=%d context=%p",
-                        vmdev, irq, context);
-    }
-
   isr = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_STATUS);
   metal_io_write32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_ACK, isr);
   if (isr & VIRTIO_MMIO_INTERRUPT_VRING)
@@ -762,29 +755,12 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
       for (i = 0; i < vmdev->vdev.vrings_num; i++)
         {
           vq = vrings_info[i].vq;
-          if (irq == 66)
-            {
-              sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
-                                "i=%d vq=%p callback=%p",
-                                i, vq, vq->callback);
-            }
 
           if (vq->callback != NULL && virtqueue_nused(vq) > 0)
             {
-              sched_note_printf(0xff, LOG_INFO, "s_mmio, cb %p\n",
-                                vq->callback);
               vq->callback(vq);
-              sched_note_printf(0xff, LOG_INFO, "e_mmio, cb %p\n",
-                                vq->callback);
             }
         }
-    }
-
-  if (irq == 66)
-    {
-      sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
-                        "[OUT] vmdev=%p irq=%d context=%p",
-                        vmdev, irq, context);
     }
 
   return OK;
@@ -874,9 +850,6 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
 
   vrtinfo("VIRTIO version: %"PRIu32" device: %"PRIu32" vendor: %"PRIx32"\n",
           vdev->id.version, vdev->id.device, vdev->id.vendor);
-  sched_note_printf(0xff, LOG_INFO,
-                    "virtio-mmio regs: %p irq: %d device: %"PRIu32"\n",
-                    regs, irq, vdev->id.device);
 
   /* Reset the virtio device and set ACK */
 
