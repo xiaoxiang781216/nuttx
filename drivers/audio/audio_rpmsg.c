@@ -507,19 +507,7 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
       if (apb->curbyte == apb->nbytes)
         {
           dq_remfirst(&aud->pendq);
-          if (aud->sharebuf)
-            {
-              dq_addlast(&apb->dq_entry, &aud->waitq);
-            }
-          else
-            {
-              audio_rpmsg_callback(aud, AUDIO_CALLBACK_DEQUEUE, apb);
-              if (apb->flags & AUDIO_APB_FINAL)
-                {
-                  audio_rpmsg_callback(aud, AUDIO_CALLBACK_COMPLETE, apb);
-                }
-            }
-
+          dq_addlast(&apb->dq_entry, &aud->waitq);
           aud->navail--;
         }
     }
@@ -768,10 +756,11 @@ static int audio_rpmsg_notify_avail_handler(FAR struct rpmsg_endpoint *ept,
 
   nxrmutex_lock(&aud->mutex);
   aud->navail++;
-  if (aud->sharebuf && !dq_empty(&aud->waitq))
+  if (!dq_empty(&aud->waitq))
     {
       apb = (FAR struct ap_buffer_s *)dq_peek(&aud->waitq);
-      if (up_addrenv_va_to_pa(apb->samp) == req->addr)
+      if (!aud->sharebuf ||
+          up_addrenv_va_to_pa(apb->samp) == req->addr)
         {
           dq_remfirst(&aud->waitq);
           audio_rpmsg_callback(aud, AUDIO_CALLBACK_DEQUEUE, apb);
