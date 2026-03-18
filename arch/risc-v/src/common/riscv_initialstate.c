@@ -165,12 +165,14 @@ void up_initial_state(struct tcb_s *tcb)
 
   xcp->regs[REG_EPC]     = (uintptr_t)tcb->start;
 
-  /* Setup thread local storage pointer */
+  /* Setup thread local storage pointer.
+   * Always set tp so that up_tls_info() works via tp register.
+   * When CONFIG_SCHED_THREAD_LOCAL is enabled, the compiler also
+   * uses tp to access __thread variables.
+   */
 
-#ifdef CONFIG_SCHED_THREAD_LOCAL
   xcp->regs[REG_TP]      = (uintptr_t)tcb->stack_alloc_ptr +
                                      sizeof(struct tls_info_s);
-#endif
 
   /* Set the initial value of the interrupt context register.
    *

@@ -31,6 +31,7 @@
 #include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/tls.h>
 #include <arch/barriers.h>
 #include <arch/board/board.h>
 #include <sched/sched.h>
@@ -151,6 +152,14 @@ static uintreg_t *riscv_doirq_top(int irq, uintreg_t *regs)
        */
 
       *running_task = tcb;
+
+      /* Update the TLS pointer in tp register.
+       * tp points past the tls_info_s structure so that compiler-generated
+       * TLS variable accesses work correctly.
+       */
+
+      tcb->xcp.regs[REG_TP] = (uintptr_t)tcb->stack_alloc_ptr +
+                                sizeof(struct tls_info_s);
     }
 
   /* Set irq flag */

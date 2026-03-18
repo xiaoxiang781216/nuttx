@@ -108,9 +108,7 @@ pid_t riscv_fork(const struct fork_s *context)
   uintptr_t newtop;
   uintptr_t stacktop;
   uintptr_t stackutil;
-#ifdef CONFIG_SCHED_THREAD_LOCAL
   uintptr_t tp;
-#endif
   UNUSED(context);
 
   /* Allocate and initialize a TCB for the child task. */
@@ -135,11 +133,9 @@ pid_t riscv_fork(const struct fork_s *context)
 
   memcpy((void *)newsp, (const void *)parent->xcp.sregs[REG_SP], stackutil);
 
-#ifdef CONFIG_SCHED_THREAD_LOCAL
   /* Save child's thread pointer */
 
   tp = child->xcp.regs[REG_TP];
-#endif
 
   /* Determine the integer context save area */
 
@@ -174,9 +170,7 @@ pid_t riscv_fork(const struct fork_s *context)
 
   child->xcp.regs[REG_A0] = 0;
   child->xcp.regs[REG_SP] = newsp;
-#ifdef CONFIG_SCHED_THREAD_LOCAL
   child->xcp.regs[REG_TP] = tp;
-#endif
 
   /* And, finally, start the child task.  On a failure, nxtask_start_fork()
    * will discard the TCB by calling nxtask_abort_fork().

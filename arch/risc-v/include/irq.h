@@ -748,6 +748,21 @@ static inline_function uintptr_t up_getsp(void)
 }
 
 /****************************************************************************
+ * Schedule acceleration macros
+ *
+ * The tp register stores the TLS pointer for the current thread.
+ * tp points to stack_alloc_ptr + sizeof(struct tls_info_s), so
+ * subtracting 1 (sizeof tls_info_s) gives the tls_info_s address.
+ ****************************************************************************/
+
+#define up_tls_info()                                       \
+  ({                                                        \
+    uintptr_t _tp;                                          \
+    __asm__ __volatile__("mv %0, tp" : "=r"(_tp));          \
+    (FAR struct tls_info_s *)(_tp) - 1;                     \
+  })
+
+/****************************************************************************
  * Public Data
  ****************************************************************************/
 
