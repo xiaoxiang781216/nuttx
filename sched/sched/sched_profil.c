@@ -22,19 +22,23 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/nuttx.h>
+
 #include <errno.h>
 #include <unistd.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/hrtimer.h>
+
 #include "sched/sched.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PROFTICK NSEC2TICK((clock_t)(NSEC_PER_SEC / CONFIG_SCHED_PROFILE_TICKSPERSEC))
+#define PROFTICK_NSEC (NSEC_PER_SEC / CONFIG_SCHED_PROFILE_TICKSPERSEC)
 
 /****************************************************************************
  * Private Types
@@ -46,7 +50,7 @@ struct profinfo_s
   uintptr_t lowpc;             /* Range to be profiled */
   uintptr_t highpc;            /* Range to be profiled */
   unsigned int scale;          /* Scale value of bins */
-  struct wdog_s timer;         /* Timer for profiling */
+  struct hrtimer_s timer;      /* High resolution timer */
   spinlock_t lock;             /* Lock for this structure */
 };
 
@@ -90,9 +94,11 @@ static int profil_timer_handler_cpu(FAR void *arg)
   return OK;
 }
 
-static void profil_timer_handler(wdparm_t arg)
+static uint64_t profil_timer_handler(FAR const hrtimer_t *timer,
+                                     uint64_t expired)
 {
-  FAR struct profinfo_s *prof = (FAR struct profinfo_s *)(uintptr_t)arg;
+  FAR struct profinfo_s *prof = container_of(timer,
+                                struct profinfo_s, timer);
 
 #ifdef CONFIG_SMP
   cpu_set_t cpus = (1 << CONFIG_SMP_NCPUS) - 1;
@@ -101,7 +107,8 @@ static void profil_timer_handler(wdparm_t arg)
 #endif
 
   profil_timer_handler_cpu(prof);
-  wd_start_next(&prof->timer, PROFTICK, profil_timer_handler, arg);
+
+  return PROFTICK_NSEC;
 }
 
 /****************************************************************************
@@ -158,12 +165,12 @@ int profil(FAR unsigned short *buf, size_t bufsiz,
           prof->scale   = scale;
           spin_unlock_irqrestore(&prof->lock, flags);
 
-          wd_start(&prof->timer, PROFTICK, profil_timer_handler,
-                   (wdparm_t)(uintptr_t)prof);
+          hrtimer_start(&prof->timer, profil_timer_handler, PROFTICK_NSEC,
+                        HRTIMER_MODE_REL);
         }
-      else
+        else
         {
-          wd_cancel(&prof->timer);
+          hrtimer_cancel(&prof->timer);
         }
     }
   else
