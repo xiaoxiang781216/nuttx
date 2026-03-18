@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/nuttx.h>
 
 #include <debug.h>
 #include <errno.h>
@@ -37,6 +38,7 @@
 #include <nuttx/perf.h>
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/hrtimer.h>
 
 #include "sched/sched.h"
 
@@ -2375,11 +2377,11 @@ static int perf_swevent_timer_handle_cpu(FAR void *arg)
   return ret;
 }
 
-static void perf_swevent_timer_handle(wdparm_t arg)
+static uint64_t perf_swevent_timer_handle(FAR const hrtimer_t *timer,
+                                          uint64_t expired)
 {
-  FAR struct perf_event_s *event = (FAR struct perf_event_s *)arg;
-  sclock_t period = NSEC2TICK(event->attr.sample_period);
-
+  FAR struct perf_event_s *event = container_of(timer, struct perf_event_s,
+                                                hw.timer);
 #ifdef CONFIG_SMP
   int cpu = this_cpu();
 
@@ -2401,7 +2403,7 @@ static void perf_swevent_timer_handle(wdparm_t arg)
     perf_swevent_timer_handle_cpu(event);
 #endif
 
-  wd_start_next(&event->hw.waitdog, period, perf_swevent_timer_handle, arg);
+  return event->attr.sample_period;
 }
 
 /****************************************************************************
@@ -2468,7 +2470,7 @@ static int perf_cpuclock_event_add(FAR struct perf_event_s *event,
 static void perf_cpuclock_event_del(FAR struct perf_event_s *event,
                                     int flags)
 {
-  wd_cancel(&event->hw.waitdog);
+  hrtimer_cancel_sync(&event->hw.timer);
 }
 
 /****************************************************************************
@@ -2489,9 +2491,9 @@ static void perf_cpuclock_event_del(FAR struct perf_event_s *event,
 static int perf_cpuclock_event_start(FAR struct perf_event_s *event,
                                      int flags)
 {
-  atomic64_set(&event->hw.prev_count, TICK2NSEC(clock_systime_ticks()));
-  wd_start(&event->hw.waitdog, NSEC2TICK(event->attr.sample_period),
-           perf_swevent_timer_handle, (wdparm_t)event);
+  atomic64_set(&event->hw.prev_count, clock_systime_nsec());
+  hrtimer_start(&event->hw.timer, perf_swevent_timer_handle,
+                event->attr.sample_period, HRTIMER_MODE_REL);
   return 0;
 }
 
@@ -2513,7 +2515,7 @@ static int perf_cpuclock_event_start(FAR struct perf_event_s *event,
 static int perf_cpuclock_event_stop(FAR struct perf_event_s *event,
                                     int flags)
 {
-  wd_cancel(&event->hw.waitdog);
+  hrtimer_cancel(&event->hw.timer);
   return 0;
 }
 
@@ -2533,7 +2535,7 @@ static int perf_cpuclock_event_stop(FAR struct perf_event_s *event,
 
 static int perf_cpuclock_event_read(FAR struct perf_event_s *event)
 {
-  uint64_t now = TICK2NSEC(clock_systime_ticks());
+  uint64_t now   = clock_systime_nsec();
   uint64_t delta = now - atomic64_xchg(&event->hw.prev_count, now);
   atomic64_set(&event->hw.last_period, delta);
   atomic64_add(&event->count, delta);

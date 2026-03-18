@@ -32,7 +32,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/circbuf.h>
-#include <nuttx/wdog.h>
+#include <nuttx/hrtimer.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -188,7 +188,7 @@ struct hw_perf_event_s
   atomic64_t prev_count;         /* Value of the previous count */
   atomic64_t last_period;        /* Last programmed period */
   atomic64_t left_period;        /* Remaining period until overflow */
-  struct wdog_s waitdog;
+  struct hrtimer_s timer;
 };
 
 struct perf_event_attr_s
