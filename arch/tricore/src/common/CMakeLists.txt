@@ -31,7 +31,6 @@ set(SRCS
     tricore_initialstate.c
     tricore_irq.c
     tricore_main.c
-    tricore_mdelay.c
     tricore_nputs.c
     tricore_perf.c
     tricore_registerdump.c
@@ -44,6 +43,10 @@ set(SRCS
     tricore_trapcall.c
     tricore_usestack.c
     tricore_fork.c)
+
+if(NOT CONFIG_ALARM_ARCH AND NOT CONFIG_TIMER_ARCH)
+  list(APPEND SRCS tricore_mdelay.c)
+endif()
 
 if(NOT CONFIG_DISABLE_SIGNALS)
   list(APPEND SRCS tricore_schedulesigaction.c tricore_sigdeliver.c)

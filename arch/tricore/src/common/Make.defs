@@ -34,7 +34,6 @@ CMN_CSRCS += tricore_initialize.c
 CMN_CSRCS += tricore_initialstate.c
 CMN_CSRCS += tricore_irq.c
 CMN_CSRCS += tricore_main.c
-CMN_CSRCS += tricore_mdelay.c
 CMN_CSRCS += tricore_nputs.c
 CMN_CSRCS += tricore_perf.c
 CMN_CSRCS += tricore_registerdump.c
@@ -47,6 +46,12 @@ CMN_CSRCS += tricore_tcbinfo.c
 CMN_CSRCS += tricore_trapcall.c
 CMN_CSRCS += tricore_usestack.c
 CMN_CSRCS += tricore_fork.c
+
+ifneq ($(CONFIG_ALARM_ARCH),y)
+  ifneq ($(CONFIG_TIMER_ARCH),y)
+    CMN_CSRCS += tricore_mdelay.c
+  endif
+endif
 
 ifneq ($(CONFIG_DISABLE_SIGNALS),y)
   CMN_CSRCS += tricore_schedulesigaction.c
