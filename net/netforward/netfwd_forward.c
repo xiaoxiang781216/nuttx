@@ -283,38 +283,47 @@ int netfwd_forward(FAR struct net_driver_s *dev, FAR struct forward_s *fwd)
 
   fwddev = fwd->f_dev;
 
-  /* Save the current state of the source device, avoid damaging the
-   * current d_iob and other resources when forwarding recursion.
-   */
+  if (fwddev == dev)
+    {
+      /* For 1722ACF cycle forwarding: no cross device, so no lock reordering
+       * or state save/restore needed since we already hold the device lock.
+       */
 
-  iob = dev->d_iob;
-  buf = dev->d_buf;
-  len = dev->d_len;
+      ret = netfwd_forward_notify(fwd);
+    }
+  else
+    {
+      /* Save the current state of the source device, avoid damaging the
+       * current d_iob and other resources when forwarding recursion.
+       */
 
-  dev->d_iob = NULL;
-  dev->d_buf = NULL;
-  dev->d_len = 0;
+      iob = dev->d_iob;
+      buf = dev->d_buf;
+      len = dev->d_len;
 
-  /* Break the source device lock to avoid AB-BA deadlock — two devices
-   * forwarding packets to each other could deadlock if both hold their
-   * own lock while trying to acquire the other's.
-   */
+      dev->d_iob = NULL;
+      dev->d_buf = NULL;
+      dev->d_len = 0;
 
-  netdev_breaklock(dev, &count);
-  netdev_lock(fwddev);
+      /* Break the source device lock to avoid AB-BA deadlock — two devices
+       * forwarding packets to each other could deadlock if both hold their
+       * own lock while trying to acquire the other's.
+       */
 
-  /* Notify the device driver of the availability of TX data */
+      netdev_breaklock(dev, &count);
+      netdev_lock(fwddev);
 
-  ret = netfwd_forward_notify(fwd);
+      /* Notify the device driver of the availability of TX data */
 
-  netdev_unlock(fwddev);
-  netdev_restorelock(dev, count);
+      ret = netfwd_forward_notify(fwd);
 
-  netdev_iob_release(dev);
+      netdev_unlock(fwddev);
+      netdev_restorelock(dev, count);
 
-  dev->d_iob = iob;
-  dev->d_buf = buf;
-  dev->d_len = len;
+      dev->d_iob = iob;
+      dev->d_buf = buf;
+      dev->d_len = len;
+    }
 
   return ret;
 }
