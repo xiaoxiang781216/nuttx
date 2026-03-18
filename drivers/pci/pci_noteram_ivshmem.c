@@ -31,7 +31,7 @@
 #include <nuttx/pci/pci_ivshmem.h>
 #include <nuttx/note/noteram_driver.h>
 
-#define NOTERAM_IVSHMEM_NAME "/dev/note/shm"
+#define NOTERAM_IVSHMEM_NAME "shm"
 
 /****************************************************************************
  * Private Types
