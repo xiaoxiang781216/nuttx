@@ -295,7 +295,7 @@ void weak_function arm_initialize_stack(void);
 
 /* Interrupt acknowledge and dispatch */
 
-#if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
+#ifdef CONFIG_ARCH_ARM_A_R
 #  define arm_ack_irq(i)
 #else
 void arm_ack_irq(int irq);
@@ -331,64 +331,37 @@ EXTERN const void * const _vectors[];
 
 int  arm_svcall(int irq, void *context, void *arg);
 int  arm_hardfault(int irq, void *context, void *arg);
-
-#  if defined(CONFIG_ARCH_ARMV7M) || defined(CONFIG_ARCH_ARMV8M)
-
 int  arm_memfault(int irq, void *context, void *arg);
 int  arm_busfault(int irq, void *context, void *arg);
 int  arm_usagefault(int irq, void *context, void *arg);
 int  arm_securefault(int irq, void *context, void *arg);
 
-#  endif /* CONFIG_ARCH_CORTEXM3,4,7 */
-
 /* Exception handling logic unique to the Cortex-A and Cortex-R families
 * (but should be back-ported to the ARM7 and ARM9 families).
  */
 
-#elif defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
+#else
 
 /* Interrupt acknowledge and dispatch */
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+#  ifdef CONFIG_ARCH_HIPRI_INTERRUPT
 uint32_t *arm_dofiq(int fiq, uint32_t *regs);
-#endif
+#  endif
 
 /* Paging support */
 
-#ifdef CONFIG_LEGACY_PAGING
+#  ifdef CONFIG_LEGACY_PAGING
 void arm_pginitialize(void);
 uint32_t *arm_va2pte(uintptr_t vaddr);
-#else /* CONFIG_LEGACY_PAGING */
-#  define arm_pginitialize()
-#endif /* CONFIG_LEGACY_PAGING */
+#  else /* CONFIG_LEGACY_PAGING */
+#    define arm_pginitialize()
+#  endif /* CONFIG_LEGACY_PAGING */
 
 /* Exception Handlers */
 
 uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr);
 uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr);
 uint32_t *arm_syscall(uint32_t *regs);
-
-/* Exception handling logic common to other ARM7 and ARM9 family. */
-
-#else /* ARM7 | ARM9 */
-
-/* Paging support (and exception handlers) */
-
-#ifdef CONFIG_LEGACY_PAGING
-void arm_pginitialize(void);
-uint32_t *arm_va2pte(uintptr_t vaddr);
-#else /* CONFIG_LEGACY_PAGING */
-#  define arm_pginitialize()
-#endif /* CONFIG_LEGACY_PAGING */
-
-uint32_t * arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr);
-
-/* Exception handlers */
-
-uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr);
-uint32_t *arm_syscall(uint32_t *regs);
-
-#endif /* CONFIG_ARCH_ARMV[6-8]M */
 
 uint32_t *arm_undefinedinsn(uint32_t *regs);
 void arm_vectorundefinsn(void);
@@ -398,6 +371,8 @@ void arm_vectordata(void);
 void arm_vectoraddrexcptn(void);
 void arm_vectorirq(void);
 void arm_vectorfiq(void);
+
+#endif
 
 /* Floating point unit ******************************************************/
 

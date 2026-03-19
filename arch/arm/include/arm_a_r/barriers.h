@@ -31,48 +31,47 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R) || \
-    defined(CONFIG_ARCH_ARMV8R)
+#ifdef CONFIG_ARCH_ARM_A_R
 
-/* ARMv7-A/R and ARMv8-R memory barriers */
+  /* ARMv7-A/R and ARMv8-R memory barriers */
 
-#define arm_dsb(n) __asm__ __volatile__ ("dsb " #n : : : "memory")
-#define arm_dmb(n) __asm__ __volatile__ ("dmb " #n : : : "memory")
-#define arm_isb()  __asm__ __volatile__ ("isb " : : : "memory")
-#define arm_nop()  __asm__ __volatile__ ("nop\n")
-#define arm_sev()  __asm__ __volatile__ ("sev\n")
+  #define arm_dsb(n) __asm__ __volatile__ ("dsb " #n : : : "memory")
+  #define arm_dmb(n) __asm__ __volatile__ ("dmb " #n : : : "memory")
+  #define arm_isb()  __asm__ __volatile__ ("isb " : : : "memory")
+  #define arm_nop()  __asm__ __volatile__ ("nop\n")
+  #define arm_sev()  __asm__ __volatile__ ("sev\n")
 
-#define UP_DSB()  arm_dsb(15)
-#define UP_DMB()  arm_dmb(15)
-#define UP_ISB()  arm_isb()
-#define UP_NOP()  arm_nop()
-#define UP_SEV()  arm_sev()
+  #define UP_DSB()  arm_dsb(15)
+  #define UP_DMB()  arm_dmb(15)
+  #define UP_ISB()  arm_isb()
+  #define UP_NOP()  arm_nop()
+  #define UP_SEV()  arm_sev()
 
-#if defined(CONFIG_ARCH_ARMV7A)
-#  define UP_RMB()  arm_dmb(3)
-#  define UP_WMB()  arm_dmb(2)
+#  ifdef CONFIG_ARCH_ARMV7A
+#    define UP_RMB()  arm_dmb(3)
+#    define UP_WMB()  arm_dmb(2)
+#  else
+#    define arm_rmb()  __asm__ __volatile__ ("dmb ishld" : : : "memory")
+#    define arm_wmb()  __asm__ __volatile__ ("dmb ishst" : : : "memory")
+#    define UP_RMB()  arm_rmb()
+#    define UP_WMB()  arm_wmb()
+#  endif
+
 #else
-#  define arm_rmb()  __asm__ __volatile__ ("dmb ishld" : : : "memory")
-#  define arm_wmb()  __asm__ __volatile__ ("dmb ishst" : : : "memory")
-#  define UP_RMB()  arm_rmb()
-#  define UP_WMB()  arm_wmb()
-#endif
 
-#else
+  /* ARM memory barriers, ARM926EJ-S, ARMv5TEJ have no
+   * barrier support, use compiler barrier only.
+   */
 
-/* ARM memory barriers, ARM926EJ-S, ARMv5TEJ have no
- * barrier support, use compiler barrier only.
- */
+  #define arm_mb()  __asm__ __volatile__ ("" : : : "memory")
+  #define arm_nop() __asm__ __volatile__ ("nop\n")
 
-#define arm_mb()  __asm__ __volatile__ ("" : : : "memory")
-#define arm_nop() __asm__ __volatile__ ("nop\n")
-
-#define UP_DSB() arm_mb()
-#define UP_ISB() arm_mb()
-#define UP_DMB() arm_mb()
-#define UP_RMB() arm_mb()
-#define UP_WMB() arm_mb()
-#define UP_NOP() arm_nop()
+  #define UP_DSB() arm_mb()
+  #define UP_ISB() arm_mb()
+  #define UP_DMB() arm_mb()
+  #define UP_RMB() arm_mb()
+  #define UP_WMB() arm_mb()
+  #define UP_NOP() arm_nop()
 
 #endif
 

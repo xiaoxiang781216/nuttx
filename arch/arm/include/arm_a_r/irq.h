@@ -375,29 +375,25 @@ static inline_function irqstate_t irqstate(void)
 /* Disable IRQs and return the previous IRQ state */
 
 noinstrument_function static inline_function irqstate_t up_irq_save(void)
-#if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
 {
   unsigned int cpsr;
 
+#ifdef CONFIG_ARCH_ARM_A_R
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#  ifdef CONFIG_ARCH_TRUSTZONE_SECURE
       "\tcpsid  f\n"
-#else
+#  else
       "\tcpsid  i\n"
-#endif
+#  endif
       : "=r" (cpsr)
       :
       : "memory"
     );
-
-  return cpsr;
-}
 #else
-{
-  unsigned int cpsr;
   unsigned int temp;
+
   __asm__ __volatile__
     (
      "\tmrs    %0, cpsr\n"
@@ -406,38 +402,33 @@ noinstrument_function static inline_function irqstate_t up_irq_save(void)
      : "=r" (cpsr), "=r" (temp)
      :
      : "cc", "memory");
+#endif
+
   return cpsr;
 }
-#endif
 
 /* Enable IRQs and return the previous IRQ state */
 
 static inline_function irqstate_t up_irq_enable(void)
-#if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
 {
   unsigned int cpsr;
 
-  __asm__ __volatile__
-    (
+#ifdef CONFIG_ARCH_ARM_A_R
+  __asm__ __volatile__(
       "\tmrs    %0, cpsr\n"
-#if defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#  if defined(CONFIG_ARCH_HIPRI_INTERRUPT)
       "\tcpsie  if\n"
-#elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+#  elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
       "\tcpsie  f\n"
-#else
+#  else
       "\tcpsie  i\n"
-#endif
-      : "=r" (cpsr)
+#  endif
+      : "=r"(cpsr)
       :
-      : "memory"
-    );
-
-  return cpsr;
-}
+      : "memory");
 #else
-{
-  unsigned int cpsr;
   unsigned int temp;
+
   __asm__ __volatile__
     (
      "\tmrs    %0, cpsr\n"
@@ -446,9 +437,10 @@ static inline_function irqstate_t up_irq_enable(void)
      : "=r" (cpsr), "=r" (temp)
      :
      : "cc", "memory");
+#endif
+
   return cpsr;
 }
-#endif
 
 /* Disable IRQs and return the previous IRQ state */
 
