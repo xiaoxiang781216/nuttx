@@ -31,6 +31,10 @@ if(CONFIG_ARM64_MTE)
   set(OPTION_MARCH_FEATURE ${OPTION_MARCH_FEATURE}+memtag)
 endif()
 
+# Set default LLVM arch/abi for all arm64 targets
+set(LLVM_ARCHTYPE aarch64)
+set(LLVM_ABITYPE aapcs64)
+
 if(CONFIG_ARCH_CORTEX_A53)
   set(LLVM_CPUTYPE cortex-a53${OPTION_MARCH_FEATURE})
   add_compile_options(-mcpu=cortex-a53${OPTION_MARCH_FEATURE})
