@@ -47,7 +47,8 @@
 
 static void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
                              FAR struct work_s *work, worker_t worker,
-                             FAR void *arg, clock_t expected)
+                             FAR void *arg, clock_t expected,
+                             clock_t delay)
 {
   bool retimer;
 
@@ -60,6 +61,16 @@ static void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
   work->worker = worker;   /* Work callback. non-NULL means queued */
   work->arg    = arg;      /* Callback argument */
   work->qtime  = expected; /* Expected time */
+
+  /* Track whether the pending queue contains delay works requiring
+   * sorted insertion. The sorted flag is cleared when the worker
+   * thread drains the pending queue.
+   */
+
+  if (delay != 0)
+    {
+      wqueue->sorted = true;
+    }
 
   /* Insert to the pending list of the wqueue. */
 
@@ -112,7 +123,8 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
     {
       ret   = OK;
       flags = spin_lock_irqsave(&wqueue->lock);
-      work_queue_start(wqueue, work, worker, arg, work->qtime + delay);
+      work_queue_start(wqueue, work, worker, arg,
+                       work->qtime + delay, delay);
       spin_unlock_irqrestore(&wqueue->lock, flags);
     }
 
@@ -169,7 +181,7 @@ int work_queue_wq(FAR struct kwork_wqueue_s *wqueue,
       expected = delay ? clock_delay2abstick(delay) :
                  clock_systime_ticks();
       flags    = spin_lock_irqsave(&wqueue->lock);
-      work_queue_start(wqueue, work, worker, arg, expected);
+      work_queue_start(wqueue, work, worker, arg, expected, delay);
       spin_unlock_irqrestore(&wqueue->lock, flags);
     }
 

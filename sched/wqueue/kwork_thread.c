@@ -107,6 +107,7 @@ DEFINE_PER_CPU_BMP(struct hp_wqueue_s, g_hpwork) =
     },
     CONFIG_SCHED_HPNTHREADS,
     false,
+    false,
     SEM_INITIALIZER(0),
   },
 };
@@ -138,6 +139,7 @@ DEFINE_PER_CPU_BMP(struct lp_wqueue_s, g_lpwork) =
       },
     },
     CONFIG_SCHED_LPNTHREADS,
+    false,
     false,
     SEM_INITIALIZER(0),
   }
@@ -223,6 +225,15 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
               nxsem_post(&wqueue->sem);
             }
         }
+    }
+
+  /* Reset sorted flag when pending queue is drained, so that
+   * subsequent delay=0 works can use O(1) tail insertion again.
+   */
+
+  if (list_is_empty(&wqueue->pending))
+    {
+      wqueue->sorted = false;
     }
 
   while (!list_is_empty(&wqueue->expired))

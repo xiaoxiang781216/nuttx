@@ -79,6 +79,7 @@ struct kwork_wqueue_s
   sem_t            sem;       /* The counting semaphore of the wqueue */
   struct wdog_s    timer;     /* Timer to pending. */
   uint8_t          nthreads;  /* Number of worker threads */
+  bool             sorted;    /* Pending queue has delay works (sorted) */
   bool             exit;      /* A flag to request the thread to exit */
   sem_t            exsem;     /* Sync waiting for thread exit */
 };
@@ -174,39 +175,35 @@ static inline_function
 bool work_insert_pending(FAR struct kwork_wqueue_s *wqueue,
                          FAR struct work_s         *work)
 {
-  FAR struct work_s *curr;
-  FAR struct work_s *head;
-
   DEBUGASSERT(wqueue != NULL && work != NULL);
 
-  /* Insert the work into the wait queue sorted by the expired time. */
-
-  head = list_first_entry(&wqueue->pending, struct work_s, node);
-
-  list_for_every_entry(&wqueue->pending, curr, struct work_s, node)
+  if (wqueue->sorted)
     {
-      if (!clock_compare(curr->qtime, work->qtime))
+      FAR struct work_s *curr;
+
+      list_for_every_entry(&wqueue->pending, curr, struct work_s, node)
         {
-          break;
+          if (!clock_compare(curr->qtime, work->qtime))
+            {
+              break;
+            }
         }
+
+      /* After the insertion, we do not violate the invariant that
+       * the wait queue is sorted by the expired time. Because
+       * curr->qtime > work->qtime.
+       * In the case of the wqueue is empty, we insert
+       * the work at the head of the wait queue.
+       */
+
+      list_add_before(&curr->node, &work->node);
+    }
+  else
+    {
+      list_add_tail(&wqueue->pending, &work->node);
     }
 
-  /* After the insertion, we do not violate the invariant that
-   * the wait queue is sorted by the expired time. Because
-   * curr->qtime > work->qtime.
-   * In the case of the wqueue is empty, we insert
-   * the work at the head of the wait queue.
-   */
-
-  list_add_before(&curr->node, &work->node);
-
-  /* Return list_is_head(&wqueue->pending, &work->node)
-   * However, there is fast path that we can check if `curr`
-   * is the `head` we cached before, which is cache-friendly and
-   * can reduce one memory access.
-   */
-
-  return curr == head;
+  return list_is_head(&wqueue->pending, &work->node);
 }
 
 /****************************************************************************
