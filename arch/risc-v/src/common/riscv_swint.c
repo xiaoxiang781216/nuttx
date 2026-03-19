@@ -98,7 +98,7 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
 
   /* Valid system call ? */
 
-  if (a0 > SYS_maxsyscall)
+  if (a0 > SYS_maxsyscall || a0 < CONFIG_SYS_RESERVED)
     {
       /* Nope, get out */
 
@@ -295,7 +295,15 @@ int riscv_swint(int irq, void *context, void *arg)
         }
         break;
       default:
+#ifdef CONFIG_LIB_SYSCALL
+        /* Allowing syscall from privileged mode */
+
+        dispatch_syscall(regs[REG_A0], regs[REG_A1], regs[REG_A2],
+                         regs[REG_A3], regs[REG_A4], regs[REG_A5],
+                         regs[REG_A6], context);
+#else
         DEBUGPANIC();
+#endif
         break;
     }
 
