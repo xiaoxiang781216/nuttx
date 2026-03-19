@@ -760,7 +760,7 @@ static int gic_validate_dist_version(void)
  *
  * Description:
  *   Perform common, one-time GIC initialization on CPU0 only.  Both
- *   arm_gic0_initialize() must be called on CPU0; arm_gic_initialize() must
+ *   arm_gic0_initialize() must be called on CPU0; arm64_gic_init() must
  *   be called for all CPUs.
  *
  * Input Parameters:
@@ -829,7 +829,7 @@ static void arm_gic0_initialize(void)
 }
 
 /****************************************************************************
- * Name: arm_gic_initialize
+ * Name: arm64_gic_init
  *
  * Description:
  *   Perform common GIC initialization for the current CPU (all CPUs)
@@ -842,7 +842,7 @@ static void arm_gic0_initialize(void)
  *
  ****************************************************************************/
 
-static void arm_gic_initialize(void)
+static void arm64_gic_init(void)
 {
   uint32_t iccicr;
   uint32_t icddcr;
@@ -1320,7 +1320,7 @@ int arm64_gic_initialize(void)
 
   /* CPU-generic initialization for GIC */
 
-  arm_gic_initialize();
+  arm64_gic_init();
 
   return 0;
 }
@@ -1345,7 +1345,7 @@ void arm64_gic_secondary_init(void)
 {
   /* CPU-generic initialization for GIC */
 
-  arm_gic_initialize();
+  arm64_gic_init();
 }
 
 #endif /* CONFIG_SMP */
