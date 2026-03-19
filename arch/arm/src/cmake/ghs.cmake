@@ -161,12 +161,6 @@ if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
   add_link_options(-delete)
 endif()
 
-# Debug --whole-archive
-
-if(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE)
-  add_link_options(-Wl,--whole-archive)
-endif()
-
 # Debug link map
 
 if(CONFIG_DEBUG_LINK_MAP)

@@ -206,10 +206,6 @@ if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
   add_compile_options(-ffunction-sections -fdata-sections)
 endif()
 
-if(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE)
-  add_link_options(-Wl,--whole-archive)
-endif()
-
 if(NOT CONFIG_LIBCXXTOOLCHAIN)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 endif()

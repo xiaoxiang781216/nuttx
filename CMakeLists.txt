@@ -706,7 +706,7 @@ if(CONFIG_BUILD_FLAT)
 endif()
 
 set(nuttx_libs ${nuttx_apps_libs} ${nuttx_user_libs} ${nuttx_system_libs}
-               ${nuttx_kernel_libs} ${nuttx_extra_libs})
+               ${nuttx_kernel_libs})
 
 # Remove executable suffix
 set(CMAKE_EXECUTABLE_SUFFIX "")
@@ -714,7 +714,8 @@ set(CMAKE_EXECUTABLE_SUFFIX "")
 if(NOT CONFIG_ARCH_SIM)
   # TODO: nostart/nodefault not applicable to nuttx toolchain
   if(CONFIG_ARCH_TOOLCHAIN_TASKING)
-    target_link_libraries(nuttx PRIVATE --lsl-file=${ldscript} ${nuttx_libs})
+    target_link_libraries(nuttx PRIVATE --lsl-file=${ldscript} ${nuttx_libs}
+                                        ${nuttx_extra_libs})
 
   else()
     get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
@@ -722,9 +723,13 @@ if(NOT CONFIG_ARCH_SIM)
                         ${LINK_OPTION_FLAG}${ldscript})
     target_link_libraries(
       nuttx
-      PRIVATE $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
-              ${nuttx_libs}
-              $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--end-group>)
+      PRIVATE
+        $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
+        $<$<BOOL:${CONFIG_DEBUG_LINK_WHOLE_ARCHIVE}>:-Wl,--whole-archive>
+        ${nuttx_libs}
+        $<$<BOOL:${CONFIG_DEBUG_LINK_WHOLE_ARCHIVE}>:-Wl,--no-whole-archive>
+        ${nuttx_extra_libs}
+        $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--end-group>)
   endif()
 
   # generate binary outputs in different formats (.bin, .hex, etc)
@@ -790,6 +795,11 @@ else()
     list(APPEND nuttx_libs_paths $<TARGET_FILE:${lib}>)
   endforeach()
 
+  set(nuttx_extra_libs_paths)
+  foreach(lib ${nuttx_extra_libs})
+    list(APPEND nuttx_extra_libs_paths $<TARGET_FILE:${lib}>)
+  endforeach()
+
   if(APPLE)
     add_custom_command(
       OUTPUT nuttx.rel
@@ -797,8 +807,9 @@ else()
         ${CMAKE_LINKER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
         $<TARGET_OBJECTS:sim_requiredobjs>
         $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group> ${nuttx_libs_paths}
-        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
-      DEPENDS ${nuttx_libs} sim_requiredobjs
+        ${nuttx_extra_libs_paths} $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o
+        nuttx.rel
+      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_requiredobjs
       COMMAND_EXPAND_LISTS)
   else()
     add_custom_command(
@@ -807,9 +818,11 @@ else()
         ${CMAKE_C_COMPILER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
         $<TARGET_OBJECTS:sim_requiredobjs>
         $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group> ${nuttx_libs_paths}
-        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
+        ${nuttx_extra_libs_paths} $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o
+        nuttx.rel
       COMMAND ${CMAKE_OBJCOPY} --redefine-syms=nuttx-names.dat nuttx.rel
-      DEPENDS ${nuttx_libs} sim_requiredobjs sim_redefine_symbols
+      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_requiredobjs
+              sim_redefine_symbols
       COMMAND_EXPAND_LISTS)
   endif()
   add_custom_target(nuttx-rel DEPENDS nuttx.rel
