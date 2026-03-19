@@ -114,7 +114,7 @@ static void        spi_setmode(struct spi_dev_s *dev,
 static void        spi_setbits(struct spi_dev_s *dev, int nbits);
 static uint8_t     spi_status(struct spi_dev_s *dev, uint32_t devid);
 static uint32_t    spi_send(struct spi_dev_s *dev, uint32_t word);
-static void        spi_exchange(struct spi_dev_s *dev,
+static int         spi_exchange(struct spi_dev_s *dev,
                                 const void *txbuffer, void *rxbuffer,
                                 size_t nwords);
 #ifndef CONFIG_SPI_EXCHANGE
@@ -759,11 +759,11 @@ static uint32_t spi_send(struct spi_dev_s *dev, uint32_t word)
  *              uint16_t's
  *
  * Returned Value:
- *   None
+ *   Returns zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                          void *rxbuffer, size_t nwords)
 {
   struct lpc31_spidev_s *priv = (struct lpc31_spidev_s *)dev;
@@ -856,6 +856,8 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
             }
         }
     }
+
+  return OK;
 }
 
 /****************************************************************************
@@ -882,7 +884,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
 static void spi_sndblock(struct spi_dev_s *dev,
                          const void *txbuffer, size_t nwords)
 {
-  return spi_exchange(dev, txbuffer, NULL, nwords);
+  spi_exchange(dev, txbuffer, NULL, nwords);
 }
 #endif
 
@@ -910,7 +912,7 @@ static void spi_sndblock(struct spi_dev_s *dev,
 static void spi_recvblock(struct spi_dev_s *dev, void *rxbuffer,
                           size_t nwords)
 {
-  return spi_exchange(dev, NULL, rxbuffer, nwords);
+  spi_exchange(dev, NULL, rxbuffer, nwords);
 }
 #endif
 

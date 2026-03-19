@@ -79,7 +79,7 @@ static int sim_spi_cmddata(struct spi_dev_s *dev, uint32_t devid,
 #endif
 static uint32_t sim_spi_send(struct spi_dev_s *dev, uint32_t wd);
 #ifdef CONFIG_SPI_EXCHANGE
-static void sim_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  sim_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                              void *rxbuffer, size_t nwords);
 #else
 static void sim_spi_sndblock(struct spi_dev_s *dev, const void *buffer,
@@ -284,7 +284,7 @@ static void sim_spi_transfer_worker(FAR void *arg)
  * Name: sim_spi_transfer
  ****************************************************************************/
 
-static void sim_spi_transfer(struct spi_dev_s *dev, const void *txbuffer,
+static int  sim_spi_transfer(struct spi_dev_s *dev, const void *txbuffer,
                              void *rxbuffer, size_t nwords)
 {
   struct sim_spi_dev_s *priv = (struct sim_spi_dev_s *)dev;
@@ -308,6 +308,8 @@ static void sim_spi_transfer(struct spi_dev_s *dev, const void *txbuffer,
 #else
   host_spi_transfer(priv->fd, txbuffer, rxbuffer, nwords);
 #endif
+
+  return OK;
 }
 
 /****************************************************************************
@@ -325,13 +327,30 @@ static uint32_t sim_spi_send(struct spi_dev_s *dev, uint32_t wd)
 
 /****************************************************************************
  * Name: sim_spi_exchange
+ *
+ * Description:
+ *   Exchange a block of data from SPI.
+ *
+ * Input Parameters:
+ *   dev      - Device-specific state data
+ *   txbuffer - A pointer to the buffer of data to be sent
+ *   rxbuffer - A pointer to the buffer in which to receive data
+ *   nwords   - The length of data that to be exchanged in units of words.
+ *              The wordsize is determined by the number of bits-per-word
+ *              selected for the SPI interface.  If nbits <= 8, the data is
+ *              packed into uint8_t's; if nbits > 8, the data is packed into
+ *              uint16_t's
+ *
+ * Returned Value:
+ *   Returns zero (OK) on success; a negated errno value on failure.
+ *
  ****************************************************************************/
 
 #ifdef CONFIG_SPI_EXCHANGE
-static void sim_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  sim_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                              void *rxbuffer, size_t nwords)
 {
-  sim_spi_transfer(dev, txbuffer, rxbuffer, nwords);
+  return sim_spi_transfer(dev, txbuffer, rxbuffer, nwords);
 }
 #endif
 

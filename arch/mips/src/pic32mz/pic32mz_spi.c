@@ -213,11 +213,11 @@ static uint32_t spi_setfrequency(struct spi_dev_s *dev,
 static void     spi_setmode(struct spi_dev_s *dev, enum spi_mode_e mode);
 static void     spi_setbits(struct spi_dev_s *dev, int nbits);
 static uint32_t spi_send(struct spi_dev_s *dev, uint32_t wd);
-static void     spi_exchange(struct spi_dev_s *dev,
+static int      spi_exchange(struct spi_dev_s *dev,
                              const void *txbuffer, void *rxbuffer,
                              size_t nwords);
 #ifdef CONFIG_PIC32MZ_SPI_DMA
-static void     spi_exchange_nodma(struct spi_dev_s *dev,
+static int      spi_exchange_nodma(struct spi_dev_s *dev,
                                    const void *txbuffer,
                                    void *rxbuffer,
                                    size_t nwords);
@@ -1508,16 +1508,16 @@ static uint32_t spi_send(struct spi_dev_s *dev, uint32_t wd)
  *              into uint32_t's.
  *
  * Returned Value:
- *   None
+ *   Returns zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_PIC32MZ_SPI_DMA
-static void spi_exchange_nodma(struct spi_dev_s *dev,
+static int  spi_exchange_nodma(struct spi_dev_s *dev,
                                const void *txbuffer,
                                void *rxbuffer, size_t nwords)
 #else
-static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                          void *rxbuffer, size_t nwords)
 #endif
 {
@@ -1543,10 +1543,12 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
       spi_exchange8(priv, (const uint8_t *)txbuffer,
                     (uint8_t *)rxbuffer, nwords);
     }
+
+  return OK;
 }
 
 #ifdef CONFIG_PIC32MZ_SPI_DMA
-static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                          void *rxbuffer, size_t nwords)
 {
   struct pic32mz_dev_s *priv = (struct pic32mz_dev_s *)dev;
@@ -1566,8 +1568,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
        nwords <= CONFIG_PIC32MZ_SPI_DMATHRESHOLD)
     {
       spiinfo("Non DMA transfer will be performed\n");
-      spi_exchange_nodma(dev, txbuffer, rxbuffer, nwords);
-      return;
+      return spi_exchange_nodma(dev, txbuffer, rxbuffer, nwords);
     }
 
   spiinfo("txbuffer=%p rxbuffer=%p nwords=%d\n", txbuffer, rxbuffer, nwords);
@@ -1705,14 +1706,14 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       spierr("ERROR: RX transfer config failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   ret = pic32mz_dma_chcfg(priv->txdma, &txcfg);
   if (ret < 0)
     {
       spierr("ERROR: RX transfer config failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   /* Then setup the transfers */
@@ -1721,7 +1722,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       spierr("ERROR: RX transfer setup failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   spi_rxdma_sample(priv, DMA_AFTER_SETUP);
@@ -1730,7 +1731,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       spierr("ERROR: TX transfer setup failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   spi_txdma_sample(priv, DMA_AFTER_SETUP);
@@ -1756,7 +1757,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       spierr("ERROR: RX DMA start failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   spi_rxdma_sample(priv, DMA_AFTER_START);
@@ -1765,7 +1766,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       spierr("ERROR: TX DMA start failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   spi_txdma_sample(priv, DMA_AFTER_START);
@@ -1803,7 +1804,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
       if (ret < 0 && ret != -EINTR)
         {
           DEBUGPANIC();
-          return;
+          return ret;
         }
 
       /* We might be awakened before the wait is over due to
@@ -1849,6 +1850,8 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
       up_invalidate_dcache((uintptr_t)dummy, (uintptr_t)dummy +
                            CONFIG_PIC32MZ_SPI_DMABUFFSIZE);
     }
+
+  return OK;
 }
 #endif /* CONFIG_PIC32MZ_SPI_DMA */
 

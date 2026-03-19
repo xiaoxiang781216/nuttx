@@ -267,11 +267,11 @@ static void spi_setmode(struct spi_dev_s *dev, enum spi_mode_e mode);
 static void spi_setbits(struct spi_dev_s *dev, int nbits);
 static uint32_t spi_send(struct spi_dev_s *dev, uint32_t wd);
 #if defined(CONFIG_SAMA5_SPI_DMA) || defined(CONFIG_SAMA5_SPI_XDMA)
-static void spi_exchange_nodma(struct spi_dev_s *dev,
+static int  spi_exchange_nodma(struct spi_dev_s *dev,
                                const void *txbuffer, void *rxbuffer,
                                size_t nwords);
 #endif
-static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                          void *rxbuffer, size_t nwords);
 #ifndef CONFIG_SPI_EXCHANGE
 static void spi_sndblock(struct spi_dev_s *dev,
@@ -1387,15 +1387,15 @@ static uint32_t spi_send(struct spi_dev_s *dev, uint32_t wd)
  *              uint16_t's
  *
  * Returned Value:
- *   None
+ *   Returns zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_SAMA5_SPI_DMA) || defined(CONFIG_SAMA5_SPI_XDMA)
-static void spi_exchange_nodma(struct spi_dev_s *dev, const void *txbuffer,
+static int  spi_exchange_nodma(struct spi_dev_s *dev, const void *txbuffer,
               void *rxbuffer, size_t nwords)
 #else
-static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
               void *rxbuffer, size_t nwords)
 #endif
 {
@@ -1500,10 +1500,12 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
           *rxptr++ = (uint8_t)data;
         }
     }
+
+  return OK;
 }
 
 #if defined(CONFIG_SAMA5_SPI_DMA) || defined(CONFIG_SAMA5_SPI_XDMA)
-static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                          void *rxbuffer, size_t nwords)
 {
   struct sam_spics_s *spics = (struct sam_spics_s *)dev;
@@ -1522,8 +1524,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
 
   if (!spics->candma || nwords <= CONFIG_SAMA5_SPI_DMATHRESHOLD)
     {
-      spi_exchange_nodma(dev, txbuffer, rxbuffer, nwords);
-      return;
+      return spi_exchange_nodma(dev, txbuffer, rxbuffer, nwords);
     }
 
   spiinfo("txbuffer=%p rxbuffer=%p nwords=%d\n", txbuffer, rxbuffer, nwords);
@@ -1621,7 +1622,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       dmaerr("ERROR: sam_dmarxsetup failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   spi_rxdma_sample(spics, DMA_AFTER_SETUP);
@@ -1634,7 +1635,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       dmaerr("ERROR: sam_dmatxsetup failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   spi_txdma_sample(spics, DMA_AFTER_SETUP);
@@ -1647,7 +1648,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       dmaerr("ERROR: RX sam_dmastart failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   spi_rxdma_sample(spics, DMA_AFTER_START);
@@ -1657,7 +1658,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
     {
       dmaerr("ERROR: TX sam_dmastart failed: %d\n", ret);
       sam_dmastop(spics->txdma);
-      return;
+      return ret;
     }
 
   spi_txdma_sample(spics, DMA_AFTER_START);
@@ -1693,7 +1694,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
       if (ret < 0)
         {
           DEBUGPANIC();
-          return;
+          return ret;
         }
 
       /* Not that we might be awkened before the wait is over due to
@@ -1722,6 +1723,8 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
     {
       spierr("ERROR: DMA failed with result: %d\n", spics->result);
     }
+
+  return spics->result;
 }
 #endif /* CONFIG_SAMA5_SPI_DMA */
 

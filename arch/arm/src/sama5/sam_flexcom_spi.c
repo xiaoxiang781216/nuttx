@@ -277,11 +277,11 @@ static void flex_spi_setbits(struct spi_dev_s *dev, int nbits);
 static uint32_t flex_spi_send(struct spi_dev_s *dev, uint32_t wd);
 
 #ifdef CONFIG_SAMA5_FLEXCOM_SPI_DMA
-static void flex_spi_exchange_nodma(struct spi_dev_s *dev,
+static int  flex_spi_exchange_nodma(struct spi_dev_s *dev,
                                     const void *txbuffer, void *rxbuffer,
                                     size_t nwords);
 #endif
-static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                               void *rxbuffer, size_t nwords);
 #ifndef CONFIG_SPI_EXCHANGE
 static void flex_spi_sndblock(struct spi_dev_s *dev,
@@ -1399,16 +1399,16 @@ static uint32_t flex_spi_send(struct spi_dev_s *dev, uint32_t wd)
  *              uint16_t's
  *
  * Returned Value:
- *   None
+ *   Returns zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_SAMA5_FLEXCOM_SPI_DMA
-static void flex_spi_exchange_nodma(struct spi_dev_s *dev,
+static int  flex_spi_exchange_nodma(struct spi_dev_s *dev,
                                     const void *txbuffer,
                                     void *rxbuffer, size_t nwords)
 #else
-static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                               void *rxbuffer, size_t nwords)
 #endif
 {
@@ -1515,10 +1515,12 @@ static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
           *rxptr++ = (uint8_t)data;
         }
     }
+
+  return OK;
 }
 
 #ifdef CONFIG_SAMA5_FLEXCOM_SPI_DMA
-static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
+static int  flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                               void *rxbuffer, size_t nwords)
 {
   struct sam_flex_spics_s *flex_spics = (struct sam_flex_spics_s *)dev;
@@ -1537,8 +1539,7 @@ static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
 
   if (!flex_spics->candma || nwords <= CONFIG_SAMA5_FLEXCOM_SPI_DMATHRESHOLD)
     {
-      flex_spi_exchange_nodma(dev, txbuffer, rxbuffer, nwords);
-      return;
+      return flex_spi_exchange_nodma(dev, txbuffer, rxbuffer, nwords);
     }
 
   spiinfo("txbuffer=%p rxbuffer=%p nwords=%d\n", txbuffer, rxbuffer, nwords);
@@ -1638,7 +1639,7 @@ static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       dmaerr("ERROR: sam_dmarxsetup failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   flex_spi_rxdma_sample(flex_spics, DMA_AFTER_SETUP);
@@ -1650,7 +1651,7 @@ static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       dmaerr("ERROR: sam_dmatxsetup failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   flex_spi_txdma_sample(flex_spics, DMA_AFTER_SETUP);
@@ -1663,7 +1664,7 @@ static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   if (ret < 0)
     {
       dmaerr("ERROR: RX sam_dmastart failed: %d\n", ret);
-      return;
+      return ret;
     }
 
   flex_spi_rxdma_sample(flex_spics, DMA_AFTER_START);
@@ -1674,7 +1675,7 @@ static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
     {
       dmaerr("ERROR: RX sam_dmastart failed: %d\n", ret);
       sam_dmastop(flex_spics->rxdma);
-      return;
+      return ret;
     }
 
   flex_spi_txdma_sample(flex_spics, DMA_AFTER_START);
@@ -1710,7 +1711,7 @@ static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
       if (ret < 0)
         {
           DEBUGPANIC();
-          return;
+          return ret;
         }
 
       /* Not that we might be awkened before the wait is over due to
@@ -1739,6 +1740,8 @@ static void flex_spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
     {
       spierr("ERROR: DMA failed with result: %d\n", flex_spics->result);
     }
+
+  return flex_spics->result;
 }
 #endif /* CONFIG_SAMA5_FLEXCOM_SPI_DMA */
 
