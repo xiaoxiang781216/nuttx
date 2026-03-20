@@ -45,10 +45,10 @@
  * Private Data
  ****************************************************************************/
 
-static IfxCpu_Trap g_trapinfo;
+static DEFINE_PER_CPU_BMP(IfxCpu_Trap, g_trapinfo);
+#define g_trapinfo this_cpu_var_bmp(g_trapinfo)
 
-/* Bus trap hook for safety test modules (e.g., BusMonTst).
- */
+/* Bus trap hook for safety test modules (e.g., BusMonTst). */
 
 static DEFINE_PER_CPU_BMP(tricore_bustrap_hook_t, g_bustrap_hook);
 #define g_bustrap_hook this_cpu_var_bmp(g_bustrap_hook)
