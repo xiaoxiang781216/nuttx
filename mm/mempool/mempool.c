@@ -539,14 +539,13 @@ FAR void *mempool_tryallocate_throttled(FAR struct mempool_s *pool,
   if (blk != NULL)
     {
       pool->nalloc++;
-      kasan_bypass(bypass);
-      spin_unlock_irqrestore_notrace(&pool->lock, flags);
-
 #ifdef CONFIG_MM_RECORD
       record = mempool_get_record_from_block(blk);
       DEBUGASSERT(record->magic == MEMPOOL_MAGIC_FREE);
       mempool_record(pool, record, MEMPOOL_MAGIC_ALLOC);
 #endif
+      kasan_bypass(bypass);
+      spin_unlock_irqrestore_notrace(&pool->lock, flags);
 
       blk = kasan_unpoison(blk, pool->blocksize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
