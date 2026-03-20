@@ -62,6 +62,66 @@ void __gcov_dump(void);
 extern int backtrace(void **array, int size);
 
 /****************************************************************************
+ * Name: __xsan_default_options
+ *
+ * Description:
+ *   This function may be optionally provided by user and should return
+ *   a string containing sanitizer runtime options.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_SIM_ASAN) || defined(CONFIG_MM_KASAN_SIM)
+__attribute__((used, retain, visibility("default"),
+              no_profile_instrument_function))
+const char *__asan_default_options(void)
+{
+  return "abort_on_error=1"
+         " alloc_dealloc_mismatch=0"
+         " allocator_frees_and_returns_null_on_realloc_zero=0"
+         " check_initialization_order=1"
+         " fast_unwind_on_malloc=0"
+         " strict_init_order=1"
+         " detect_stack_use_after_return=0";
+}
+
+__attribute__((used, retain, visibility("default"),
+              no_profile_instrument_function))
+const char *__lsan_default_options(void)
+{
+  /* The fast-unwind implementation of leak-sanitizer will obtain the
+   * current stack top/bottom and frame address(Stack Pointer) for
+   * backtrace calculation:
+   *
+   * https://github.com/gcc-mirror/gcc/blob/releases/gcc-13/libsanitizer/
+   *   lsan/lsan.cpp#L39-L42
+   *
+   * Since the scheduling mechanism of NuttX sim is coroutine
+   * (setjmp/longjmp), if the Stack Pointer is switched, the fast-unwind
+   * will unable to get the available address, so the memory leaks on the
+   * system/application side that cannot be caught normally. This PR will
+   * disable fast-unwind by default to avoid unwind failure.
+   */
+
+  return "detect_leaks=1"
+         " fast_unwind_on_malloc=0";
+}
+#endif
+
+#ifdef CONFIG_SIM_UBSAN
+__attribute__((used, retain, visibility("default"),
+              no_profile_instrument_function))
+const char *__ubsan_default_options(void)
+{
+#  ifdef CONFIG_SIM_UBSAN_DUMMY
+  return "";
+#  else
+  return "print_stacktrace=1"
+         " fast_unwind_on_malloc=0";
+#  endif
+}
+#endif
+
+/****************************************************************************
  * Name: host_abort
  *
  * Description:

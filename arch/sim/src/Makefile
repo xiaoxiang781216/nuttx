@@ -119,7 +119,7 @@ ifeq ($(CONFIG_FS_LARGEFILE),y)
 endif
 
 HOSTSRCS  = sim_hostirq.c sim_hostmemory.c sim_hostmisc.c sim_hosttime.c sim_hostuart.c
-HOSTSRCS += sim_hostfs.c sim_errno.c
+HOSTSRCS += sim_main.c sim_hostfs.c sim_errno.c
 
 hostfs.h: $(TOPDIR)/include/nuttx/fs/hostfs.h
 	@echo "CP:  $<"

@@ -529,5 +529,7 @@ void sim_stack_color(void *stackbase, size_t nbytes);
 struct ioexpander_dev_s *sim_gpiochip_initialize(const char *path);
 #endif
 
+int sim_main(int argc, char **argv, char **envp);
+
 #endif /* __ASSEMBLY__ */
 #endif /* __ARCH_SIM_SRC_SIM_INTERNAL_H */

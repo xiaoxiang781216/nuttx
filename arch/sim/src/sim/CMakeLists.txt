@@ -143,7 +143,8 @@ list(
   sim_hostmemory.c
   sim_hostmisc.c
   sim_hosttime.c
-  sim_hostuart.c)
+  sim_hostuart.c
+  sim_main.c)
 
 # Note: sim_macho_init.c is picky about the place in the object list for
 # linking. Namely, its constructor should be the first one in the executable.
