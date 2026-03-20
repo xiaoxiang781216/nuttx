@@ -32,9 +32,16 @@
 /* Include chip-specific IRQ definitions (including IRQ numbers) */
 
 #include <nuttx/config.h>
-#include <nuttx/percpu.h>
 
 #include <sys/types.h>
+
+/* arch/arch.h must be included before nuttx/percpu.h so that
+ * up_this_cpu_var (defined in arch.h) is visible when percpu.h
+ * selects between up_this_cpu_var and the default fallback path.
+ */
+
+#include <arch/arch.h>
+#include <nuttx/percpu.h>
 
 #include <arch/csr.h>
 #include <arch/chip/irq.h>

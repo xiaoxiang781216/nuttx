@@ -122,6 +122,14 @@ EXTERN uint8_t _etdata[];          /* End+1 of .tdata */
 EXTERN uint8_t _stbss[];           /* Start of .tbss */
 EXTERN uint8_t _etbss[];           /* End+1 of .tbss */
 
+#ifdef CONFIG_PERCPU_SECTION
+EXTERN uint8_t _ldata_percpu[];    /* Load address of .percpu_data */
+EXTERN uint8_t _sdata_percpu[];    /* Start of .percpu_data */
+EXTERN uint8_t _edata_percpu[];    /* End+1 of .percpu_data */
+EXTERN uint8_t _sbss_percpu[];     /* Start of .percpu_bss */
+EXTERN uint8_t _ebss_percpu[];     /* End+1 of .percpu_bss */
+#endif
+
 #endif /* __ASSEMBLY__ */
 
 #undef EXTERN

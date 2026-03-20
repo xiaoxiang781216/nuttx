@@ -56,31 +56,6 @@
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Public Types
- ****************************************************************************/
-
-/* Per CPU save area. Access to this structure can be gained via the scratch
- * ([m/s]scratch) register. Prior to this, every CPU that
- * wishes to access this information must call riscv_percpu_add_hart() which
- * will set up [m/s]scratch to point to the CPUs own area
- */
-
-union riscv_percpu_s
-{
-  union riscv_percpu_s *next;      /* For sl list linkage */
-  struct
-  {
-    struct tcb_s       *tcb;       /* Current thread TCB */
-    uintreg_t           hartid;    /* Hart ID */
-    uintreg_t           irq_stack; /* Interrupt stack */
-    uintreg_t           usp;       /* Area to store user sp */
-    uintreg_t           ksp;       /* Area to load kernel sp */
-  };
-};
-
-typedef union riscv_percpu_s riscv_percpu_t;
-
-/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 

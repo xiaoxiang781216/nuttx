@@ -37,10 +37,32 @@
 #endif
 
 #include <arch/barriers.h>
+#include <arch/csr.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#if defined(CONFIG_PERCPU_SECTION) && !defined(__ASSEMBLY__)
+#  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+extern struct riscv_percpu_s g_percpu;
+
+/* Cannot include arch/mode.h (arch/risc-v/include/mode.h) to use
+ * CSR_SCRATCH directly due to circular inclusion:
+ *   arch.h -> mode.h -> nuttx/irq.h -> arch/irq.h -> mode.h (guard)
+ * Use CSR_SSCRATCH/CSR_MSCRATCH from arch/csr.h directly instead.
+ */
+
+#    ifdef CONFIG_ARCH_USE_S_MODE
+#      define RISCV_PERCPU_SCRATCH CSR_SSCRATCH
+#    else
+#      define RISCV_PERCPU_SCRATCH CSR_MSCRATCH
+#    endif
+#    define up_this_cpu_var(v) \
+       (*(typeof(v) *)((READ_CSR(RISCV_PERCPU_SCRATCH) - \
+                        (uintptr_t)&g_percpu) + (uintptr_t)&(v)))
+#  endif
+#endif
 
 /* Provide the maximum amount of page table levels per MMU type */
 

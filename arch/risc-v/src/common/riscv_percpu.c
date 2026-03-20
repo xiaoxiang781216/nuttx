@@ -24,23 +24,53 @@
 
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
-#include <nuttx/queue.h>
-#include <nuttx/spinlock.h>
 
 #include <arch/barriers.h>
 #include <arch/mode.h>
 
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "riscv_internal.h"
 #include "riscv_percpu.h"
 
 /****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+/* Per CPU save area. Access to this structure can be gained via the scratch
+ * ([m/s]scratch) register. Prior to this, every CPU that
+ * wishes to access this information must call riscv_percpu_add_hart() which
+ * will set up [m/s]scratch to point to the CPUs own area
+ */
+
+struct riscv_percpu_s
+{
+  struct tcb_s       *tcb;       /* Current thread TCB */
+  uintreg_t           hartid;    /* Hart ID */
+  uintreg_t           irq_stack; /* Interrupt stack */
+  uintreg_t           usp;       /* Area to store user sp */
+  uintreg_t           ksp;       /* Area to load kernel sp */
+};
+
+typedef struct riscv_percpu_s riscv_percpu_t;
+
+/****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define HART_CNT    (CONFIG_SMP_NCPUS)
+/* Place g_percpu at the very beginning of the percpu section (offset 0).
+ * CSR_SCRATCH stores the actual address of each CPU's g_percpu, serving
+ * both as a direct riscv_percpu_t pointer (assembly) and as the percpu
+ * section base for up_this_cpu_var() offset calculation (C code).
+ */
+
+#ifdef CONFIG_PERCPU_SECTION
+#  define DEFINE_PER_CPU_FIRST(t, v) locate_data(".data..percpu..first") t v
+#else
+#  define DEFINE_PER_CPU_FIRST(t, v) t v[CONFIG_NCPUS]
+#endif
 
 static_assert(RISCV_PERCPU_TCB == offsetof(riscv_percpu_t, tcb),
               "RISCV_PERCPU_TCB offset is wrong");
@@ -57,63 +87,53 @@ static_assert(RISCV_PERCPU_KSP == offsetof(riscv_percpu_t, ksp),
  * Private Data
  ****************************************************************************/
 
-static riscv_percpu_t   g_percpu[HART_CNT];
-static sq_queue_t       g_freelist;
-static uintptr_t        g_initialized;
-static spinlock_t       g_percpu_spin;
+static bool g_initialized;
 
 /****************************************************************************
- * Private Functions
+ * Public Data
+ ****************************************************************************/
+
+/* g_percpu must be at percpu section offset 0. Assembly code in
+ * exception_common.S uses CSR_SCRATCH as a direct riscv_percpu_t pointer,
+ * while up_this_cpu_var() uses it as the percpu section base address.
+ * DEFINE_PER_CPU_FIRST guarantees this via .data..percpu..first section.
+ */
+
+DEFINE_PER_CPU_FIRST(riscv_percpu_t, g_percpu);
+
+/****************************************************************************
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
  * Name: riscv_percpu_init
  *
  * Description:
- *   Initialize the per CPU structures, the first to get here does the init.
+ *   Initialize percpu sections for all CPUs by copying .data and
+ *   clearing .bss for each CPU's percpu region.
  *
  ****************************************************************************/
 
 static void riscv_percpu_init(void)
 {
-  uintptr_t  i;
-  uintptr_t  initialized;
-  irqstate_t flags;
-
-  /* Need to lock access during configuration */
-
-  flags = spin_lock_irqsave(&g_percpu_spin);
-
-  /* Initialize if not done so already */
-
-  initialized = g_initialized;
-  g_initialized = 1;
-
-  if (initialized == 1)
+  if (g_initialized)
     {
-      goto out_with_lock;
+      return;
     }
 
-  sq_init(&g_freelist);
+  g_initialized = true;
 
-  for (i = 0; i < HART_CNT; i++)
+#ifdef CONFIG_PERCPU_SECTION
+  for (int cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
     {
-      /* Set interrupt stack (if any) */
-
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
-      g_percpu[i].irq_stack = (uintptr_t)g_intstacktop - i * INT_STACK_SIZE;
+      memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
+             (void *)_ldata_percpu,
+             (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
+      memset((void *)((uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu),
+             0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
+    }
 #endif
-
-      sq_addlast((struct sq_entry_s *) &g_percpu[i], &g_freelist);
-    }
-
-out_with_lock:
-  spin_unlock_irqrestore(&g_percpu_spin, flags);
 }
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: riscv_percpu_add_hart
@@ -128,25 +148,28 @@ out_with_lock:
 
 void riscv_percpu_add_hart(uintptr_t hartid)
 {
+  int cpu;
   riscv_percpu_t *percpu;
-  irqstate_t      flags;
-
-  /* Make sure we are initialized */
 
   riscv_percpu_init();
 
-  /* Get free entry for this hart, this must not fail */
+  cpu = riscv_hartid_to_cpuid(hartid);
+  percpu = &per_cpu_var_smp(g_percpu, cpu);
 
-  flags = spin_lock_irqsave(&g_percpu_spin);
-  percpu = (riscv_percpu_t *)sq_remfirst(&g_freelist);
-  spin_unlock_irqrestore(&g_percpu_spin, flags);
-  DEBUGASSERT(percpu);
-
-  /* Assign hartid, stack has already been assigned */
+  /* Assign hartid */
 
   percpu->hartid = hartid;
 
-  /* Set the scratch register value to point to the scratch area */
+  /* Set interrupt stack (if any) */
+
+#if CONFIG_ARCH_INTERRUPTSTACK > 15
+  percpu->irq_stack = (uintptr_t)g_intstacktop - cpu * INT_STACK_SIZE;
+#endif
+
+  /* Set the scratch register to point to this CPU's percpu area.
+   * Assembly code uses this as a direct pointer for fast access.
+   * up_this_cpu_var() computes the percpu offset from this.
+   */
 
   WRITE_CSR(CSR_SCRATCH, percpu);
 
@@ -170,10 +193,7 @@ void riscv_percpu_add_hart(uintptr_t hartid)
 uintptr_t riscv_percpu_get_hartid(void)
 {
   uintptr_t scratch = READ_CSR(CSR_SCRATCH);
-
-  DEBUGASSERT(scratch >= (uintptr_t) &g_percpu &&
-              scratch <  (uintptr_t) &g_percpu + sizeof(g_percpu));
-
+  DEBUGASSERT(scratch != 0);
   return ((riscv_percpu_t *)scratch)->hartid;
 }
 
@@ -191,10 +211,7 @@ uintptr_t riscv_percpu_get_hartid(void)
 uintptr_t riscv_percpu_get_irqstack(void)
 {
   uintptr_t scratch = READ_CSR(CSR_SCRATCH);
-
-  DEBUGASSERT(scratch >= (uintptr_t) &g_percpu &&
-              scratch <  (uintptr_t) &g_percpu + sizeof(g_percpu));
-
+  DEBUGASSERT(scratch != 0);
   return ((riscv_percpu_t *)scratch)->irq_stack;
 }
 
@@ -222,9 +239,7 @@ void riscv_percpu_set_kstack(uintptr_t ksp)
 
   flags   = up_irq_save();
   scratch = READ_CSR(CSR_SCRATCH);
-
-  DEBUGASSERT(scratch >= (uintptr_t) &g_percpu &&
-              scratch <  (uintptr_t) &g_percpu + sizeof(g_percpu));
+  DEBUGASSERT(scratch != 0);
 
   ((riscv_percpu_t *)scratch)->ksp = ksp;
   up_irq_restore(flags);
@@ -254,9 +269,7 @@ void riscv_percpu_set_thread(struct tcb_s *tcb)
 
   flags   = up_irq_save();
   scratch = READ_CSR(CSR_SCRATCH);
-
-  DEBUGASSERT(scratch >= (uintptr_t) &g_percpu &&
-              scratch <  (uintptr_t) &g_percpu + sizeof(g_percpu));
+  DEBUGASSERT(scratch != 0);
 
   ((riscv_percpu_t *)scratch)->tcb = tcb;
   up_irq_restore(flags);
