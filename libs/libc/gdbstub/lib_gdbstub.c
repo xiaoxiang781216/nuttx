@@ -60,7 +60,6 @@ static int gdb_panic_callback(FAR struct notifier_block *nb,
   FAR struct gdb_state_s *state =
     container_of(nb, struct gdb_state_s, nb);
   clock_t base;
-  char c;
   ssize_t ret;
 
   UNUSED(data);
@@ -79,7 +78,8 @@ static int gdb_panic_callback(FAR struct notifier_block *nb,
       base = clock_systime_ticks();
       while (clock_systime_ticks() - base < SEC2TICK(state->panic_timeout))
         {
-          ret = state->recv(state->priv, &c, 1);
+          ret = state->recv(state->priv,
+                            state->rx_buf, state->rx_size);
           if (ret > 0)
             {
               break;
@@ -97,7 +97,8 @@ static int gdb_panic_callback(FAR struct notifier_block *nb,
     {
       for (; ; )
         {
-          ret = state->recv(state->priv, &c, 1);
+          ret = state->recv(state->priv,
+                            state->rx_buf, state->rx_size);
           if (ret > 0)
             {
               break;
