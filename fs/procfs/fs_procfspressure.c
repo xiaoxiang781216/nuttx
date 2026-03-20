@@ -34,6 +34,7 @@
 #include <nuttx/fs/procfs.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mm.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/queue.h>
 #include <nuttx/spinlock.h>
@@ -60,8 +61,6 @@ struct pressure_file_s
 
 static dq_queue_t g_pressure_memory_queue;
 static spinlock_t g_pressure_lock = SP_UNLOCKED;
-static size_t g_remaining;
-static size_t g_largest;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -112,7 +111,7 @@ static int pressure_open(FAR struct file *filep, FAR const char *relpath,
                          int oflags, mode_t mode)
 {
   FAR struct pressure_file_s *priv;
-  uint32_t flags;
+  irqstate_t flags;
 
   if (strcmp(relpath, "pressure/memory") != 0)
     {
@@ -141,7 +140,7 @@ static int pressure_open(FAR struct file *filep, FAR const char *relpath,
 static int pressure_close(FAR struct file *filep)
 {
   FAR struct pressure_file_s *priv = filep->f_priv;
-  uint32_t flags;
+  irqstate_t flags;
 
   flags = spin_lock_irqsave(&g_pressure_lock);
   dq_rem(&priv->entry, &g_pressure_memory_queue);
@@ -158,16 +157,13 @@ static ssize_t pressure_read(FAR struct file *filep, FAR char *buffer,
                              size_t buflen)
 {
   char buf[128];
-  uint32_t flags;
   size_t remain;
   size_t largest;
   off_t offset;
   ssize_t ret;
 
-  flags   = spin_lock_irqsave(&g_pressure_lock);
-  remain  = g_remaining;
-  largest = g_largest;
-  spin_unlock_irqrestore(&g_pressure_lock, flags);
+  largest = mm_heapfree_largest(USR_HEAP);
+  remain  = mm_heapfree(USR_HEAP);
 
   ret = procfs_snprintf(buf, sizeof(buf), "remaining %zu, largest:%zu\n",
                         remain, largest);
@@ -195,7 +191,7 @@ static ssize_t pressure_write(FAR struct file *filep, FAR const char *buffer,
   FAR char *endptr;
   size_t threshold;
   clock_t interval;
-  uint32_t flags;
+  irqstate_t flags;
 
   if (buffer == NULL)
     {
@@ -241,7 +237,7 @@ static int pressure_poll(FAR struct file *filep, FAR struct pollfd *fds,
 {
   FAR struct pressure_file_s *priv = filep->f_priv;
   clock_t current = clock_systime_ticks();
-  uint32_t flags;
+  irqstate_t flags;
 
   flags = spin_lock_irqsave(&g_pressure_lock);
   if (setup)
@@ -254,15 +250,26 @@ static int pressure_poll(FAR struct file *filep, FAR struct pollfd *fds,
           /* If the remaining memory is less than the threshold and
            * lasttick is CLOCK_MAX, it means the event is triggered for
            * the first time and we should always send a notification.
+           * Query accurate memory state here instead of relying on the
+           * cached values which may not have been updated yet.
            */
 
-          if (g_remaining <= priv->threshold && (priv->lasttick ==
-              CLOCK_MAX || current - priv->lasttick >= priv->interval))
+          if (priv->lasttick == CLOCK_MAX ||
+              current - priv->lasttick >= priv->interval)
             {
-              priv->lasttick = current;
+              size_t largest;
+
               spin_unlock_irqrestore(&g_pressure_lock, flags);
-              poll_notify(&priv->fds, 1, POLLPRI);
-              return OK;
+              largest = mm_heapfree_largest(USR_HEAP);
+              flags   = spin_lock_irqsave(&g_pressure_lock);
+
+              if (largest <= priv->threshold)
+                {
+                  priv->lasttick = current;
+                  spin_unlock_irqrestore(&g_pressure_lock, flags);
+                  poll_notify(&priv->fds, 1, POLLPRI);
+                  return OK;
+                }
             }
         }
       else
@@ -359,19 +366,29 @@ static int pressure_rewinddir(FAR struct fs_dirent_s *dir)
  ****************************************************************************/
 
 /****************************************************************************
- * mm_notify_pressure
+ * Name: mm_notify_pressure
  ****************************************************************************/
 
-void mm_notify_pressure(size_t remaining, size_t largest)
+void mm_notify_pressure(FAR struct mm_heap_s *heap)
 {
-  clock_t current = clock_systime_ticks();
   FAR dq_entry_t *entry;
   FAR dq_entry_t *tmp;
-  uint32_t flags;
+  irqstate_t flags;
+  clock_t current;
+  size_t largest;
 
-  flags       = spin_lock_irqsave(&g_pressure_lock);
-  g_remaining = remaining;
-  g_largest   = largest;
+  /* First level filter: no listeners, skip everything */
+
+  if (dq_empty(&g_pressure_memory_queue))
+    {
+      return;
+    }
+
+  /* Slow path: compute largest block and notify listeners */
+
+  largest = mm_heapfree_largest(heap);
+  current = clock_systime_ticks();
+  flags   = spin_lock_irqsave(&g_pressure_lock);
 
   dq_for_every_safe(&g_pressure_memory_queue, entry, tmp)
     {
@@ -414,4 +431,3 @@ void mm_notify_pressure(size_t remaining, size_t largest)
 
   spin_unlock_irqrestore(&g_pressure_lock, flags);
 }
-
