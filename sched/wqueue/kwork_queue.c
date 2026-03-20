@@ -166,7 +166,8 @@ int work_queue_wq(FAR struct kwork_wqueue_s *wqueue,
   if (wqueue && work && worker && delay <= WDOG_MAX_DELAY)
     {
       ret      = OK;
-      expected = clock_delay2abstick(delay);
+      expected = delay ? clock_delay2abstick(delay) :
+                 clock_systime_ticks();
       flags    = spin_lock_irqsave(&wqueue->lock);
       work_queue_start(wqueue, work, worker, arg, expected);
       spin_unlock_irqrestore(&wqueue->lock, flags);
