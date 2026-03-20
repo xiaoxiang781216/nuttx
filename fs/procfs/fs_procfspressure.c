@@ -61,6 +61,7 @@ struct pressure_file_s
 
 static dq_queue_t g_pressure_memory_queue;
 static spinlock_t g_pressure_lock = SP_UNLOCKED;
+static size_t g_max_threshold; /* Maximum threshold among all listeners */
 
 /****************************************************************************
  * Private Function Prototypes
@@ -140,10 +141,29 @@ static int pressure_open(FAR struct file *filep, FAR const char *relpath,
 static int pressure_close(FAR struct file *filep)
 {
   FAR struct pressure_file_s *priv = filep->f_priv;
+  FAR struct pressure_file_s *pressure;
+  FAR dq_entry_t *entry;
   irqstate_t flags;
 
   flags = spin_lock_irqsave(&g_pressure_lock);
   dq_rem(&priv->entry, &g_pressure_memory_queue);
+
+  if (priv->threshold == g_max_threshold)
+    {
+      size_t max_threshold = 0;
+
+      dq_for_every(&g_pressure_memory_queue, entry)
+        {
+          pressure = container_of(entry, struct pressure_file_s, entry);
+          if (pressure->threshold > max_threshold)
+            {
+              max_threshold = pressure->threshold;
+            }
+        }
+
+      g_max_threshold = max_threshold;
+    }
+
   spin_unlock_irqrestore(&g_pressure_lock, flags);
   fs_heap_free(priv);
   return OK;
@@ -224,6 +244,14 @@ static ssize_t pressure_write(FAR struct file *filep, FAR const char *buffer,
   priv->lasttick  = CLOCK_MAX;
   priv->threshold = threshold;
   priv->interval  = interval;
+
+  /* Update the global maximum threshold */
+
+  if (threshold > g_max_threshold)
+    {
+      g_max_threshold = threshold;
+    }
+
   spin_unlock_irqrestore(&g_pressure_lock, flags);
   return buflen;
 }
@@ -373,6 +401,7 @@ void mm_notify_pressure(FAR struct mm_heap_s *heap)
 {
   FAR dq_entry_t *entry;
   FAR dq_entry_t *tmp;
+  size_t remaining;
   irqstate_t flags;
   clock_t current;
   size_t largest;
@@ -384,7 +413,17 @@ void mm_notify_pressure(FAR struct mm_heap_s *heap)
       return;
     }
 
-  /* Slow path: compute largest block and notify listeners */
+  /* Filter: check total free memory against maximum threshold.
+   * Cheaper than mm_heapfree_largest which traverses free lists.
+   */
+
+  remaining = mm_heapfree(heap);
+  if (remaining > g_max_threshold)
+    {
+      return;
+    }
+
+  /* Slow path: total free is near threshold, compute largest block. */
 
   largest = mm_heapfree_largest(heap);
   current = clock_systime_ticks();
