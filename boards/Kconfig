@@ -3108,6 +3108,13 @@ config ARCH_BOARD_VERDIN_MX8MP
 	---help---
 		Toradex Verdin i.MX8MP
 
+config ARCH_BOARD_VERSATILE_PB
+	bool "ARM Versatile Platform Baseboard"
+	depends on ARCH_CHIP_VERSATILE
+	---help---
+		ARM Versatile Platform Baseboard (VersatilePB) with ARM926EJ-S
+		processor.  Supports QEMU emulation via qemu-system-arm -M versatilepb.
+
 config ARCH_BOARD_Z16F2800100ZCOG
 	bool "Zilog Z16F2800100ZCOG Development Kit"
 	depends on ARCH_CHIP_Z16F2811
@@ -3632,6 +3639,7 @@ config ARCH_BOARD
 	default "xmc4700-relax"             if ARCH_BOARD_XMC4700RELAX
 	default "xmc4800-relax"             if ARCH_BOARD_XMC4800RELAX
 	default "verdin-mx8mp"              if ARCH_BOARD_VERDIN_MX8MP
+	default "versatile-pb"              if ARCH_BOARD_VERSATILE_PB
 	default "z16f2800100zcog"           if ARCH_BOARD_Z16F2800100ZCOG
 	default "z20x"                      if ARCH_BOARD_Z20X
 	default "z80sim"                    if ARCH_BOARD_Z80SIM
@@ -3762,6 +3770,9 @@ source "boards/arm/nrf51/nrf51-microbit/Kconfig"
 endif
 if ARCH_BOARD_QEMU_ARMV7A
 source "boards/arm/qemu/qemu-armv7a/Kconfig"
+endif
+if ARCH_BOARD_VERSATILE_PB
+source "boards/arm/versatile/versatile-pb/Kconfig"
 endif
 if ARCH_BOARD_QEMU_ARMV8A
 source "boards/arm64/qemu/qemu-armv8a/Kconfig"

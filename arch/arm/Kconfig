@@ -625,6 +625,14 @@ config ARCH_CHIP_TIVA
 	---help---
 		TI Tiva TM4C architectures (ARM Cortex-M4)
 
+config ARCH_CHIP_VERSATILE
+	bool "ARM Versatile"
+	select ARCH_ARM926EJS
+	select ARCH_HAVE_LOWVECTORS
+	select ARM_HAVE_VIC
+	---help---
+		ARM Versatile Platform Baseboard (ARM926EJ-S)
+
 config ARCH_CHIP_XMC4
 	bool "Infineon XMC4xxx"
 	select ARCH_CORTEXM4
@@ -1174,6 +1182,7 @@ config ARCH_CHIP
 	default "stm32wl5"	if ARCH_CHIP_STM32WL5
 	default "str71x"	if ARCH_CHIP_STR71X
 	default "tms570"	if ARCH_CHIP_TMS570
+	default "versatile"	if ARCH_CHIP_VERSATILE
 	default "xmc4"		if ARCH_CHIP_XMC4
 	default "mx8mp"		if ARCH_CHIP_MX8MP
 	default "cxd56xx"	if ARCH_CHIP_CXD56XX
@@ -1955,6 +1964,9 @@ source "arch/arm/src/str71x/Kconfig"
 endif
 if ARCH_CHIP_TMS570
 source "arch/arm/src/tms570/Kconfig"
+endif
+if ARCH_CHIP_VERSATILE
+source "arch/arm/src/versatile/Kconfig"
 endif
 if ARCH_CHIP_XMC4
 source "arch/arm/src/xmc4/Kconfig"

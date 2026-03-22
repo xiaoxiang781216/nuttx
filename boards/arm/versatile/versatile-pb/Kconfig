@@ -1,0 +1,2 @@
+if ARCH_BOARD_VERSATILE_PB
+endif

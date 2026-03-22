@@ -1,0 +1,16 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_CHIP_VERSATILE
+comment "Versatile Configuration Options"
+
+config VERSATILE_TIMER_CLOCK
+	int "SP804 Timer clock frequency (Hz)"
+	default 1000000
+	---help---
+		Clock frequency of the SP804 timer in Hz.
+		QEMU defaults to 1 MHz. Real hardware typically uses 24 MHz.
+
+endif # ARCH_CHIP_VERSATILE
