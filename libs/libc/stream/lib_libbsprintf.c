@@ -192,6 +192,11 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
         {
           size_t len;
           var->s = va_arg(va, FAR char *);
+          if (var->s == NULL)
+            {
+              var->s = "null";
+            }
+
           len = strlen(var->s) + 1;
           if (next + len > length)
             {
