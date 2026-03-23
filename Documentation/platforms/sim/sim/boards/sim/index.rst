@@ -1901,6 +1901,18 @@ read-only mode.
 
 Additionally, SocketCAN ``candump`` and ``cansend`` utils are enabled.
 
+nxscope
+-------
+
+Configuration demonstrating NxScope stream over simulated UART interface.
+
+The simulated UART must be created on host before running NuttX::
+
+  socat PTY,link=/dev/ttySIM0 PTY,link=/dev/ttyNX0
+
+See :doc:`/applications/examples/nxscope/index` and
+:doc:`/applications/logging/nxscope/index` for more details.
+
 README.txt
 ==========
 

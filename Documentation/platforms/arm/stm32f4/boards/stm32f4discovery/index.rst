@@ -2180,3 +2180,10 @@ NOTES:
    Host Compiler:  I use the MingW compiler which can be downloaded from
    http://www.mingw.org/.  If you are using GNUWin32, then it is recommended
    the you not install the optional MSYS components as there may be conflicts.
+
+nxscope_cdcacm
+--------------
+
+Configuration demonstrating NxScope stream over CDC-ACM interface.
+See :doc:`/applications/examples/nxscope/index` and
+:doc:`/applications/logging/nxscope/index` for more details.
