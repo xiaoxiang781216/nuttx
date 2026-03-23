@@ -52,7 +52,8 @@ list(
   lib_mutex.c
   lib_semaphore.c
   lib_lrucache.c
-  lib_dynamic.c)
+  lib_dynamic.c
+  lib_can_isotp.c)
 
 if(CONFIG_LIBC_TEMPBUFFER)
   list(APPEND SRCS lib_tempbuffer.c)
