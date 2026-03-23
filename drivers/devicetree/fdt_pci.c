@@ -230,11 +230,12 @@ int fdt_pci_ecam_register_domain(FAR const void *fdt, uint16_t domain)
           return rc;
         }
 
-      if (d == domain)
+      rc = fdt_pci_ecam_register_offset(fdt, offset);
+      if (rc < 0 && rc != -EEXIST)
         {
-          return fdt_pci_ecam_register_offset(fdt, offset);
+          return rc;
         }
     }
 
-  return -EINVAL;
+  return OK;
 }

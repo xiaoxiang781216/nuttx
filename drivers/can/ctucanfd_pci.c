@@ -270,10 +270,10 @@ static DEFINE_PER_CPU_BMP(struct pci_driver_s, g_ctucanfd_drv) =
 };
 #define g_ctucanfd_drv this_cpu_var_bmp(g_ctucanfd_drv)
 
-#ifdef CONFIG_CAN_CTUCANFD_CHARDEV
 static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_ctucanfd_count);
 #define g_ctucanfd_count this_cpu_var_bmp(g_ctucanfd_count)
-#endif
+
+static const int g_ctucanfd_canid_map[] = CTUCANFD_CANID_MAP;
 
 /*****************************************************************************
  * Private Functions
@@ -2031,8 +2031,8 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
   FAR struct ctucanfd_driver_s  *priv   = NULL;
   uint8_t                        i      = 0;
   int                            ret;
-#ifdef CONFIG_CAN_CTUCANFD_CHARDEV
   uint8_t                        count;
+#ifdef CONFIG_CAN_CTUCANFD_CHARDEV
   char                           devpath[PATH_MAX];
 #endif
 
@@ -2116,9 +2116,14 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       priv->devs[i].base     = priv->canfd_base + (CTUCANFD_CTUCAN_REGS * i);
       priv->devs[i].pcidev   = dev;
       priv->devs[i].txbufcnt = CTUCANFD_TXBUF_CNT;
+      count = g_ctucanfd_count++;
+      if (count >= nitems(g_ctucanfd_canid_map) ||
+           g_ctucanfd_canid_map[count] != up_cpu_index())
+        {
+          continue;
+        }
 
 #ifdef CONFIG_CAN_CTUCANFD_CHARDEV
-      count = g_ctucanfd_count++;
 
       /* Get devpath for this CTUCANFD device */
 
@@ -2147,6 +2152,8 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       netdev->quota[NETPKT_TX] = CTUCANFD_TX_QUOTA;
       netdev->quota[NETPKT_RX] = CTUCANFD_RX_QUOTA;
       netdev->ops = &g_ctucanfd_net_ops;
+
+      snprintf(netdev->netdev.d_ifname, IFNAMSIZ, "can%d", count);
 
       /* Set the IFF Loopback flag */
 
