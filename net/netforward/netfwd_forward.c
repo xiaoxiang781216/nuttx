@@ -320,6 +320,8 @@ int netfwd_forward(FAR struct net_driver_s *dev, FAR struct forward_s *fwd)
       netdev_unlock(fwddev);
       netdev_restorelock(dev, count);
 
+      netdev_iob_release(dev);
+
       dev->d_iob = iob;
       dev->d_buf = buf;
       dev->d_len = len;
