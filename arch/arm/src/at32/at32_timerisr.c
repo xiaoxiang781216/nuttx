@@ -84,7 +84,7 @@
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_ARMV7M_SYSTICK) && !defined(CONFIG_TIMER_ARCH)
+#if !defined(CONFIG_ARM_SYSTICK) && !defined(CONFIG_TIMER_ARCH)
 static int at32_timerisr(int irq, uint32_t *regs, void *arg)
 {
   /* Process timer interrupt */
@@ -130,7 +130,7 @@ void up_timer_initialize(void)
   putreg32(regval, NVIC_SYSTICK_CTRL);
 #endif
 
-#if defined(CONFIG_ARMV7M_SYSTICK) && defined(CONFIG_TIMER_ARCH)
+#if defined(CONFIG_ARM_SYSTICK) && defined(CONFIG_TIMER_ARCH)
   up_timer_set_lowerhalf(systick_initialize(true, AT32_HCLK_FREQUENCY, -1));
 #else
   /* Configure SysTick to interrupt at the requested rate */

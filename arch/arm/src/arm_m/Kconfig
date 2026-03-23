@@ -50,13 +50,6 @@ endif # ARM_SYSTICK_IRQ_WQUEUE
 
 if ARCH_ARMV7M
 
-config ARMV7M_SYSTICK
-	bool "SysTick timer driver"
-	depends on TIMER
-	select ARM_SYSTICK
-	---help---
-		Enable SysTick timer driver.
-
 config ARMV7M_BASEPRI_WAR
 	bool "Cortex-M7 r0p1 Errata 837070 Workaround"
 	default n
@@ -79,13 +72,6 @@ config ARMV7M_BASEPRI_WAR
 endif # ARCH_ARMV7M
 
 if ARCH_ARMV8M
-
-config ARMV8M_SYSTICK
-	bool "SysTick timer driver"
-	depends on TIMER
-	select ARM_SYSTICK
-	---help---
-		Enable SysTick timer driver.
 
 config ARMV8M_STACKCHECK_HARDWARE
 	bool "Check for stack overflow by stack pointer limit register"

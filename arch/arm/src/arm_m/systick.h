@@ -66,7 +66,7 @@ struct timer_lowerhalf_s *systick_initialize(bool coreclk, unsigned int freq,
                                              int minor);
 #else
 #  define systick_initialize(coreclk, freq, minor) NULL
-#endif /* CONFIG_ARMV8M_SYSTICK */
+#endif /* CONFIG_ARM_SYSTICK */
 
 #undef EXTERN
 #ifdef __cplusplus

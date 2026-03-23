@@ -325,7 +325,7 @@ struct timer_lowerhalf_s *systick_initialize(bool coreclk,
 #ifdef CONFIG_ARM_SYSTICK_IRQ_WQUEUE
   irq_attach_wqueue(NVIC_IRQ_SYSTICK, systick_isr_handle,
                     systick_interrupt, lower,
-                    CONFIG_ARMV7M_SYSTICK_IRQ_WQUEUE_PRIORITY);
+                    CONFIG_ARM_SYSTICK_IRQ_WQUEUE_PRIORITY);
 #else
   irq_attach(NVIC_IRQ_SYSTICK, systick_interrupt, lower);
 #endif

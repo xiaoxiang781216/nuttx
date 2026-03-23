@@ -579,7 +579,7 @@ void up_timer_initialize(void)
   STM32_TIM_ACKINT(g_tickless.tch, ~0);
   STM32_TIM_ENABLEINT(g_tickless.tch, 0);
 
-#if defined(CONFIG_ARMV7M_SYSTICK) && defined(CONFIG_CPULOAD_PERIOD)
+#if defined(CONFIG_ARM_SYSTICK) && defined(CONFIG_CPULOAD_PERIOD)
   nxsched_period_extclk(systick_initialize(true,
                                            STM32_CPUCLK_FREQUENCY, -1));
 #endif

@@ -399,7 +399,7 @@ config NRF53_SYSTIMER_SYSTICK
 	bool "SysTick"
 	select TIMER_ARCH
 	select TIMER
-	select ARMV8M_SYSTICK
+	select ARM_SYSTICK
 	---help---
 		Use ARM SysTick. It can be used for tickless and
 		non-tickless mode.

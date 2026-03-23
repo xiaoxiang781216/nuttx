@@ -76,7 +76,7 @@
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_ARMV7M_SYSTICK) && !defined(CONFIG_TIMER_ARCH)
+#if !defined(CONFIG_ARM_SYSTICK) && !defined(CONFIG_TIMER_ARCH)
 static int gd32_timerisr(int irq, uint32_t *regs, void *arg)
 {
   /* Process timer interrupt */
@@ -112,7 +112,7 @@ void up_timer_initialize(void)
 
   /* Make sure that the SYSTICK clock source is set correctly */
 
-#if defined(CONFIG_ARMV7M_SYSTICK) && defined(CONFIG_TIMER_ARCH)
+#if defined(CONFIG_ARM_SYSTICK) && defined(CONFIG_TIMER_ARCH)
   up_timer_set_lowerhalf(systick_initialize(true, GD32_SYSCLK_FREQUENCY,
                                              -1));
 #else
