@@ -136,7 +136,7 @@
 
 /* Check internal SRAM configuration */
 
-#ifdef CONFIG_ARMV7M_DTCM
+#ifdef CONFIG_ARCH_DTCM
 #  define SRAM_BASE SAM_DTCM_BASE
 #else
 #  define SRAM_BASE SAM_SRAM_BASE

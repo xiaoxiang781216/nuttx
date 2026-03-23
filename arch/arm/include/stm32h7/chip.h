@@ -92,12 +92,12 @@
 #    define STM32H7_SRAM3_SIZE            (32*1024)   /*  32Kb SRAM3 on AHB bus Matrix (D2) */
 #    define STM32H7_SRAM123_SIZE          (288*1024)  /* 128Kb SRAM123 on AHB bus Matrix (D2) */
 #    define STM32H7_SRAM4_SIZE            (64*1024)   /*  64Kb SRAM2 on AHB bus Matrix (D3) */
-#  if defined(CONFIG_ARMV7M_HAVE_DTCM)
+#  if defined(CONFIG_ARCH_HAVE_DTCM)
 #      define STM32H7_DTCM_SRAM_SIZE      (128*1024)  /* 128Kb DTCM SRAM on TCM interface */
 #  else
 #      define STM32H7_DTCM_SRAM_SIZE      (0)         /* No DTCM SRAM on TCM interface */
 #  endif
-#  if defined(CONFIG_ARMV7M_HAVE_ITCM)
+#  if defined(CONFIG_ARCH_HAVE_ITCM)
 #      define STM32H7_ITCM_SRAM_SIZE      (64*1024)   /*  64b ITCM SRAM on TCM interface */
 #  else
 #      define STM32H7_ITCM_SRAM_SIZE      (0)         /* No ITCM SRAM on TCM interface */
@@ -144,12 +144,12 @@
 #    define STM32H7_SRAM3_SIZE            (0*1024)    /*     No SRAM3 on AHB bus Matrix (D2) */
 #    define STM32H7_SRAM123_SIZE          (128*1024)  /*  128Kb SRAM123 on AHB bus Matrix (D2) */
 #    define STM32H7_SRAM4_SIZE            (32*1024)   /*   32Kb SRAM2 on AHB bus Matrix (D3) */
-#  if defined(CONFIG_ARMV7M_HAVE_DTCM)
+#  if defined(CONFIG_ARCH_HAVE_DTCM)
 #      define STM32H7_DTCM_SRAM_SIZE      (128*1024)  /* 128Kb DTCM SRAM on TCM interface */
 #  else
 #      define STM32H7_DTCM_SRAM_SIZE      (0)         /* No DTCM SRAM on TCM interface */
 #  endif
-#  if defined(CONFIG_ARMV7M_HAVE_ITCM)
+#  if defined(CONFIG_ARCH_HAVE_ITCM)
 #      define STM32H7_ITCM_SRAM_SIZE      (64*1024)   /*  64b ITCM SRAM on TCM interface */
 #  else
 #      define STM32H7_ITCM_SRAM_SIZE      (0)         /* No ITCM SRAM on TCM interface */
@@ -198,12 +198,12 @@
 #    define STM32H7_SRAM3_SIZE            (32*1024)   /*  32Kb SRAM3 on AHB bus Matrix (D2) */
 #    define STM32H7_SRAM123_SIZE          (288*1024)  /* 128Kb SRAM123 on AHB bus Matrix (D2) */
 #    define STM32H7_SRAM4_SIZE            (64*1024)   /*  64Kb SRAM2 on AHB bus Matrix (D3) */
-#  if defined(CONFIG_ARMV7M_HAVE_DTCM)
+#  if defined(CONFIG_ARCH_HAVE_DTCM)
 #      define STM32H7_DTCM_SRAM_SIZE      (128*1024)  /* 128Kb DTCM SRAM on TCM interface */
 #  else
 #      define STM32H7_DTCM_SRAM_SIZE      (0)         /* No DTCM SRAM on TCM interface */
 #  endif
-#  if defined(CONFIG_ARMV7M_HAVE_ITCM)
+#  if defined(CONFIG_ARCH_HAVE_ITCM)
 #      define STM32H7_ITCM_SRAM_SIZE      (64*1024)   /*  64b ITCM SRAM on TCM interface */
 #  else
 #      define STM32H7_ITCM_SRAM_SIZE      (0)         /* No ITCM SRAM on TCM interface */

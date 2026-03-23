@@ -75,24 +75,6 @@ config ARMV7M_BASEPRI_WAR
 		limited to the next instruction. Subsequent instructions are
 		guaranteed to see the new boosted priority.
 
-config ARMV7M_HAVE_ITCM
-	bool
-	default n
-
-config ARMV7M_HAVE_DTCM
-	bool
-	default n
-
-config ARMV7M_ITCM
-	bool "Use ITCM"
-	default n
-	depends on ARMV7M_HAVE_ITCM
-
-config ARMV7M_DTCM
-	bool "Use DTCM"
-	default n
-	depends on ARMV7M_HAVE_DTCM
-
 config ARMV7M_HAVE_STACKCHECK
 	bool
 	default n
@@ -137,24 +119,6 @@ config ARMV8M_SYSTICK
 	select ARM_SYSTICK
 	---help---
 		Enable SysTick timer driver.
-
-config ARMV8M_HAVE_ITCM
-	bool
-	default n
-
-config ARMV8M_HAVE_DTCM
-	bool
-	default n
-
-config ARMV8M_ITCM
-	bool "Use ITCM"
-	default n
-	depends on ARMV8M_HAVE_ITCM
-
-config ARMV8M_DTCM
-	bool "Use DTCM"
-	default n
-	depends on ARMV8M_HAVE_DTCM
 
 choice
 	prompt "Select the stack protection Schema"

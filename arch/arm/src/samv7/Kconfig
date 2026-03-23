@@ -128,8 +128,8 @@ config ARCH_CHIP_SAME70
 	default n
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU # REVISIT
-	select ARMV7M_HAVE_ITCM
-	select ARMV7M_HAVE_DTCM
+	select ARCH_HAVE_ITCM
+	select ARCH_HAVE_DTCM
 
 config ARCH_CHIP_SAME70Q
 	bool
@@ -177,8 +177,8 @@ config ARCH_CHIP_SAMV71
 	default n
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU # REVISIT
-	select ARMV7M_HAVE_ITCM
-	select ARMV7M_HAVE_DTCM
+	select ARCH_HAVE_ITCM
+	select ARCH_HAVE_DTCM
 	select SAMV7_HAVE_MEDIALB
 
 config ARCH_CHIP_SAMV71Q

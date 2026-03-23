@@ -174,8 +174,8 @@ config ARCH_FAMILY_S32K3XX_BASE
 	bool
 	select ARCH_CORTEXM7
 	select ARCH_HAVE_FPU
-	select ARMV7M_HAVE_ITCM
-	select ARMV7M_HAVE_DTCM
+	select ARCH_HAVE_ITCM
+	select ARCH_HAVE_DTCM
 
 # Chip Capabilities
 

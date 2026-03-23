@@ -406,6 +406,24 @@ config ARCH_DCACHE_LOCK
 	depends on ARCH_DCACHE
 	default n
 
+config ARCH_HAVE_ITCM
+	bool
+	default n
+
+config ARCH_ITCM
+	bool "Use ITCM"
+	default n
+	depends on ARCH_HAVE_ITCM
+
+config ARCH_HAVE_DTCM
+	bool
+	default n
+
+config ARCH_DTCM
+	bool "Use DTCM"
+	default n
+	depends on ARCH_HAVE_DTCM
+
 config ARCH_L2CACHE
 	bool
 	default n

@@ -112,7 +112,7 @@ static inline void imx9_tcmenable(void)
 
   /* Enabled/disabled ITCM */
 
-#ifdef CONFIG_ARMV7M_ITCM
+#ifdef CONFIG_ARCH_ITCM
   regval  = NVIC_TCMCR_EN | NVIC_TCMCR_RMW | NVIC_TCMCR_RETEN;
 #else
   regval  = getreg32(NVIC_ITCMCR);
@@ -122,7 +122,7 @@ static inline void imx9_tcmenable(void)
 
   /* Enabled/disabled DTCM */
 
-#ifdef CONFIG_ARMV7M_DTCM
+#ifdef CONFIG_ARCH_DTCM
   regval  = NVIC_TCMCR_EN | NVIC_TCMCR_RMW | NVIC_TCMCR_RETEN;
 #else
   regval  = getreg32(NVIC_DTCMCR);

@@ -182,7 +182,7 @@ static inline void rcc_enableahb1(void)
   regval |= RCC_AHB1ENR_BKPSRAMEN;
 #endif
 
-#ifdef CONFIG_ARMV7M_DTCM
+#ifdef CONFIG_ARCH_DTCM
   /* DTCM data RAM clock enable */
 
   regval |= RCC_AHB1ENR_DTCMRAMEN;

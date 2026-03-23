@@ -67,7 +67,7 @@ if(CONFIG_BUILD_PROTECTED)
   list(APPEND SRCS stm32_userspace.c)
 endif()
 
-if(CONFIG_ARMV7M_DTCM)
+if(CONFIG_ARCH_DTCM)
   list(APPEND SRCS stm32_dtcm.c)
 endif()
 

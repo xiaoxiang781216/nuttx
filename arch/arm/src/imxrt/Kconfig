@@ -102,8 +102,8 @@ config ARCH_FAMILY_IMXRT102x
 	default n
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU # REVISIT
-	select ARMV7M_HAVE_ITCM
-	select ARMV7M_HAVE_DTCM
+	select ARCH_HAVE_ITCM
+	select ARCH_HAVE_DTCM
 
 config ARCH_FAMILY_MIMXRT105xDVL6A
 	bool
@@ -124,8 +124,8 @@ config ARCH_FAMILY_IMXRT105x
 	default n
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU # REVISIT
-	select ARMV7M_HAVE_ITCM
-	select ARMV7M_HAVE_DTCM
+	select ARCH_HAVE_ITCM
+	select ARCH_HAVE_DTCM
 
 config ARCH_FAMILY_MXRT106xDVL6A
 	bool
@@ -146,8 +146,8 @@ config ARCH_FAMILY_IMXRT117x
 	default n
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU # REVISIT
-	select ARMV7M_HAVE_ITCM
-	select ARMV7M_HAVE_DTCM
+	select ARCH_HAVE_ITCM
+	select ARCH_HAVE_DTCM
 	select IMXRT_HIGHSPEED_GPIO
 	select IMXRT_HAVE_FLEXSPI2
 	select IMXRT_ADC_VER2
@@ -166,8 +166,8 @@ config ARCH_FAMILY_IMXRT106x
 	default n
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU # REVISIT
-	select ARMV7M_HAVE_ITCM
-	select ARMV7M_HAVE_DTCM
+	select ARCH_HAVE_ITCM
+	select ARCH_HAVE_DTCM
 	select IMXRT_HIGHSPEED_GPIO
 	select IMXRT_HAVE_FLEXSPI2
 	select IMXRT_HAVE_FLEXIO3
@@ -2447,12 +2447,12 @@ config IMXRT_INIT_FLEXRAM
 config IMXRT_DTCM
 	int "FLEXRAM DTCM Size in K"
 	default 128
-	depends on ARMV7M_HAVE_DTCM
+	depends on ARCH_HAVE_DTCM
 
 config IMXRT_ITCM
 	int "FLEXRAM ITCM Size in K"
 	default 128
-	depends on ARMV7M_HAVE_ITCM
+	depends on ARCH_HAVE_ITCM
 
 config IMXRT_SEMC_SDRAM
 	bool "External SDRAM installed"

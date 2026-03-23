@@ -644,8 +644,8 @@ config ARCH_CHIP_MX8MP
 	select ARCH_HAVE_RAMFUNCS
 	select ARCH_HAVE_I2CRESET
 	select ARM_HAVE_MPU_UNIFIED
-	select ARMV7M_HAVE_ITCM
-	select ARMV7M_HAVE_DTCM
+	select ARCH_HAVE_ITCM
+	select ARCH_HAVE_DTCM
 	select ARMV7M_HAVE_STACKCHECK
 	---help---
 		NXP i.MX8MP (ARM Cortex-M7) architectures
