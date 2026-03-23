@@ -134,4 +134,8 @@ if(CONFIG_ARCH_USE_S_MODE)
   add_subdirectory(supervisor)
 endif()
 
+if(CONFIG_RISCV_PMU)
+  list(APPEND SRCS riscv_pmu.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})

@@ -134,3 +134,7 @@ endif
 ifeq ($(CONFIG_ARCH_USE_S_MODE),y)
 include common/supervisor/Make.defs
 endif
+
+ifeq ($(CONFIG_RISCV_PMU),y)
+CMN_CSRCS += riscv_pmu.c
+endif

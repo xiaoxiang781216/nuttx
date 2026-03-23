@@ -305,6 +305,12 @@ void riscv_pminitialize(void);
 #  define riscv_pminitialize()
 #endif
 
+/* PMU **********************************************************************/
+
+#ifdef CONFIG_RISCV_PMU
+int riscv_pmu_initialize(void);
+#endif
+
 /* DMA **********************************************************************/
 
 #ifdef CONFIG_ARCH_DMA

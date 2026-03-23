@@ -98,4 +98,8 @@ void up_initialize(void)
   riscv_netinitialize();
 
   board_autoled_on(LED_IRQSENABLED);
+
+#ifdef CONFIG_RISCV_PMU
+  riscv_pmu_initialize();
+#endif
 }

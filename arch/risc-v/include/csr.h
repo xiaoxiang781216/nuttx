@@ -268,6 +268,8 @@
 
 /* Machine Counter Setup */
 
+#define CSR_MCOUNTINHIBIT   0x320
+
 #define CSR_MPHEVENT3       0x323
 #define CSR_MPHEVENT4       0x324
 #define CSR_MPHEVENT5       0x325

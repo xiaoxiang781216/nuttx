@@ -845,6 +845,15 @@ endif
 if ARCH_CHIP_RV32M1
 source "arch/risc-v/src/rv32m1/Kconfig"
 endif
+
+config RISCV_PMU
+	bool "RISC-V PMU driver"
+	default n
+	---help---
+		Enable the RISC-V Performance Monitoring Unit driver.
+		This provides hardware performance counters (mcycle, minstret)
+		via the perf_events framework.
+
 if ARCH_CHIP_QEMU_RV
 source "arch/risc-v/src/qemu-rv/Kconfig"
 endif
