@@ -26,8 +26,6 @@
 
 #include <nuttx/config.h>
 
-#include <errno.h>
-
 #include <nuttx/gdbstub.h>
 #include <nuttx/net/netdev_gdbstub.h>
 #include <nuttx/net/netpoll.h>
@@ -44,6 +42,16 @@ struct netdev_gdbstub_s
 {
   FAR struct gdb_state_s *state;
   struct netpoll_s        np;
+
+  /* Send data via netpoll */
+
+  CODE int (*send)(FAR struct netpoll_s *np,
+                   FAR const void *buf, size_t len);
+
+  /* Receive data via netpoll */
+
+  CODE ssize_t (*recv)(FAR struct netpoll_s *np,
+                       FAR void *buf, size_t len);
 };
 
 /****************************************************************************
@@ -77,7 +85,7 @@ static ssize_t netdev_gdbstub_recv(FAR void *priv, FAR void *buf, size_t len)
 {
   FAR struct netdev_gdbstub_s *gdbstub = priv;
 
-  return netpoll_udp_recv(&gdbstub->np, buf, len);
+  return gdbstub->recv(&gdbstub->np, buf, len);
 }
 
 /****************************************************************************
@@ -93,7 +101,7 @@ static ssize_t netdev_gdbstub_send(FAR void *priv, FAR const void *buf,
 {
   FAR struct netdev_gdbstub_s *gdbstub = priv;
 
-  return netpoll_udp_send(&gdbstub->np, buf, len);
+  return gdbstub->send(&gdbstub->np, buf, len);
 }
 
 /****************************************************************************
@@ -118,15 +126,57 @@ int netdev_gdbstub_init(FAR struct netdev_lowerhalf_s *dev)
 {
   FAR struct netdev_gdbstub_s *gdbstub = &g_netdev_gdbstub;
   struct gdb_state_init_s      init;
+  size_t                       pkt_size;
   int                          ret;
 
-  /* Initialize netpoll */
+  /* Initialize netpoll based on link-layer type */
 
-  ret = netpoll_udp_init(&gdbstub->np, dev, CONFIG_GDBSTUB_NETDEV_PORT,
-                         0, 0, NULL);
-  if (ret < 0)
+#ifdef CONFIG_NET_UDP
+  if (dev->netdev.d_lltype == NET_LL_ETHERNET)
     {
-      return ret;
+      gdbstub->send = netpoll_udp_send;
+      gdbstub->recv = netpoll_udp_recv;
+
+      ret = netpoll_udp_init(&gdbstub->np, dev, CONFIG_GDBSTUB_NETDEV_PORT,
+                             0, 0, NULL);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      /* UDP: one netpoll frame carries one gdb packet. */
+
+      pkt_size = netpoll_get_maxlen(&gdbstub->np);
+    }
+  else
+#endif
+
+#ifdef CONFIG_NET_CAN
+  if (dev->netdev.d_lltype == NET_LL_CAN)
+    {
+      gdbstub->send = netpoll_isotp_send;
+      gdbstub->recv = netpoll_isotp_recv;
+
+      ret = netpoll_isotp_init(&gdbstub->np, dev,
+                               CONFIG_GDBSTUB_NETDEV_PORT,
+                               CONFIG_GDBSTUB_NETDEV_PORT + 1);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      /* ISO-TP reassembles multi-frame messages up to 4095 bytes.
+       * Netpoll's per-frame maxlen (8 or 64) would truncate gdb packets.
+       * 0 tells gdbstub to use CONFIG_LIB_GDBSTUB_PKTSIZE.
+       */
+
+      pkt_size = 0;
+    }
+  else
+#endif
+
+    {
+      return -EINVAL;
     }
 
   /* Initialize GDB handler */
@@ -135,7 +185,7 @@ int netdev_gdbstub_init(FAR struct netdev_lowerhalf_s *dev)
   init.recv          = netdev_gdbstub_recv;
   init.monitor       = NULL;
   init.packet        = true;
-  init.pkt_size      = netpoll_get_maxlen(&gdbstub->np);
+  init.pkt_size      = pkt_size;
 #ifdef CONFIG_GDBSTUB_NETDEV_WAIT_CONNECT
   init.wait          = CONFIG_GDBSTUB_NETDEV_WAIT_CONNECT;
 #else

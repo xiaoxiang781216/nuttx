@@ -828,6 +828,7 @@ endif # NET_IGC
 config GDBSTUB_NETDEV
 	bool "GDBSTUB to netdev"
 	depends on LIB_GDBSTUB && NETDEVICES && NET_NETPOLL
+	depends on NET_UDP || NET_CAN
 	default n
 	---help---
 		Use the netdev as a GDBSTUB device
@@ -836,16 +837,22 @@ if GDBSTUB_NETDEV
 
 config GDBSTUB_NETDEV_INTF
 	string "GDBSTUB netdev interface"
-	default "eth0"
+	default "eth0" if NET_UDP
+	default "can0" if NET_CAN
 	---help---
 		Network interface used for netdev GDBSTUB.
 		Comma-separated list for multiple interfaces, e.g. "eth0.65,eth0.47".
+		For Ethernet: UDP transport is used.
+		For CAN: ISO-TP transport is used automatically.
 
 config GDBSTUB_NETDEV_PORT
-	int "GDBSTUB netdev port"
-	default 31337
+	int "GDBSTUB netdev port / CAN TX ID"
+	default 31337 if NET_UDP
+	default 1888 if NET_CAN
 	---help---
-		UDP port for GDBSTUB output.
+		For UDP: UDP port for GDBSTUB.
+		For CAN ISO-TP: TX CAN ID used by NuttX to send GDB replies.
+		The RX CAN ID is GDBSTUB_NETDEV_PORT + 1.
 
 config GDBSTUB_NETDEV_PANIC_TIMEOUT
 	int "GDBSTUB netdev panic timeout"
