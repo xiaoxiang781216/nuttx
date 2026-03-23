@@ -31,8 +31,6 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <imx9_gpiobase.c>
-
 #include "chip.h"
 #include "arm64_internal.h"
 #include "imx9_iomuxc.h"
