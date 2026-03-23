@@ -36,7 +36,6 @@
 #include <sched/sched.h>
 
 #include "arm_internal.h"
-#include "gic.h"
 
 /****************************************************************************
  * Public Functions
@@ -81,7 +80,6 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
   if (regs != tcb->xcp.regs)
     {
       struct tcb_s **running_task = &g_running_task;
-      uintptr_t tpidr;
 
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -94,6 +92,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
       tcb = this_task();
 #endif
 
+#if __ARM_ARCH >= 7
       /* Update the TLS pointer.
        * The TLS pointer must skip over the
        * tls_info_s structure to align with compiler-generated TLS
@@ -105,8 +104,12 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
        * location, bypassing our internal bookkeeping structure.
        */
 
-      tpidr = (uintptr_t)tcb->stack_alloc_ptr + sizeof(struct tls_info_s);
-      CP15_SET(TPIDRURW, tpidr);
+        {
+          uintptr_t tpidr = (uintptr_t)tcb->stack_alloc_ptr +
+                            sizeof(struct tls_info_s);
+          CP15_SET(TPIDRURW, tpidr);
+        }
+#endif
 
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting

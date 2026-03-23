@@ -76,11 +76,14 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
   pginfo("VADDR: %08" PRIx32 " VBASE: %08" PRIx32 " VEND: %08" PRIx32 "n",
          regs[REG_PC], (uint32_t)PG_PAGED_VBASE, (uint32_t)PG_PAGED_VEND);
 
+#if __ARM_ARCH >= 7
   if (FSR_FAULT(ifsr) == FSR_FAULT_DEBUG)
     {
       arm_dbgmonitor(0, (void *)regs[REG_PC], regs);
     }
-  else if (regs[REG_R15] >= PG_PAGED_VBASE && regs[REG_R15] < PG_PAGED_VEND)
+  else
+#endif
+  if (regs[REG_R15] >= PG_PAGED_VBASE && regs[REG_R15] < PG_PAGED_VEND)
     {
       /* Save the offending PC as the fault address in the TCB of the
        * currently executing task.  This value is, of course, already known
@@ -133,11 +136,13 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
   _alert("Prefetch abort. PC: %08" PRIx32 " IFAR: %08" PRIx32 " IFSR: %08"
          PRIx32 "\n", regs[REG_PC], ifar, ifsr);
 
+#if __ARM_ARCH >= 7
   if (FSR_FAULT(ifsr) == FSR_FAULT_DEBUG)
     {
       arm_dbgmonitor(0, (void *)regs[REG_PC], regs);
     }
   else
+#endif
     {
       PANIC_WITH_REGS("panic", regs);
     }

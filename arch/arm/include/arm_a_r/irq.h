@@ -378,7 +378,7 @@ noinstrument_function static inline_function irqstate_t up_irq_save(void)
 {
   unsigned int cpsr;
 
-#ifdef CONFIG_ARCH_ARM_A_R
+#if __ARM_ARCH >= 6
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
@@ -413,7 +413,7 @@ static inline_function irqstate_t up_irq_enable(void)
 {
   unsigned int cpsr;
 
-#ifdef CONFIG_ARCH_ARM_A_R
+#if __ARM_ARCH >= 6
   __asm__ __volatile__(
       "\tmrs    %0, cpsr\n"
 #  if defined(CONFIG_ARCH_HIPRI_INTERRUPT)

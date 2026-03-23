@@ -132,6 +132,120 @@
 #endif
 
 /****************************************************************************
+ * Name: exception_entry
+ *
+ * Description:
+ *   Common exception entry.  Saves the processor state into an xcptcontext
+ *   frame on the SYS mode stack.
+ *
+ *   ARMv7+: uses srsdb/cpsid for atomic LR+SPSR save and mode switch.
+ *   ARMv5:  uses msr cpsr_c for mode switching, explicit str for each reg.
+ *
+ * Parameters:
+ *   exc_mode  - The PSR mode of the exception (e.g. PSR_MODE_IRQ)
+ *   lr_offset - The LR correction value (4 for IRQ/prefetch, 8 for data
+ *               abort, 0 for SVC/undefined instruction)
+ *
+ ****************************************************************************/
+
+	.macro	exception_entry, exc_mode, lr_offset
+#if __ARM_ARCH >= 7
+.if \lr_offset
+	sub		lr, lr, #\lr_offset
+.endif
+	srsdb		sp!, #PSR_MODE_SYS
+
+#  if defined(CONFIG_ARM_DECODEFIQ) && !defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+	cpsid		if, #PSR_MODE_SYS
+#  else
+	cpsid		i, #PSR_MODE_SYS
+#  endif
+#else /* __ARM_ARCH < 7 */
+	/* Switch to SYS mode first to save r0-r12 before clobbering any.
+	 * We use r13 (banked in SYS mode) as scratch since we'll set sp next.
+	 */
+
+	mov		r13, #(PSR_MODE_SYS | PSR_I_BIT)
+	msr		cpsr_c, r13
+
+	/* Reserve space for {PC, CPSR} at top of frame, will fill later */
+
+	sub		sp, sp, #8
+#endif /* __ARM_ARCH >= 7 */
+
+	stmdb		sp!, {r0-r12}
+
+	add		r1, sp, #(XCPTCONTEXT_SIZE-4*REG_R0)
+	stmdb		sp!, {r1, r14}
+
+#if __ARM_ARCH < 7
+	/* Now r0-r12 are saved, switch back to exc_mode to read lr and spsr */
+
+	mov		r0, #(\exc_mode | PSR_I_BIT)
+	msr		cpsr_c, r0
+
+.if \lr_offset
+	sub		lr, lr, #\lr_offset
+.endif
+	mov		r3, lr
+	mrs		r4, spsr
+
+	/* Switch back to SYS mode and store {PC, CPSR} into reserved slot */
+
+	mov		r0, #(PSR_MODE_SYS | PSR_I_BIT)
+	msr		cpsr_c, r0
+
+	str		r3, [sp, #(4*(REG_R15-REG_R13))]
+	str		r4, [sp, #(4*(REG_CPSR-REG_R13))]
+#endif /* __ARM_ARCH < 7 */
+
+#ifdef CONFIG_ARCH_FPU
+	savefpu		sp, r1
+#endif
+	.endm
+
+/****************************************************************************
+ * Name: exception_exit
+ *
+ * Description:
+ *   Common exception exit.  Restores the processor state from the
+ *   xcptcontext pointed to by r0 and returns from exception.
+ *
+ *   ARMv7+: uses cps to switch back to exception mode, rfeia to return.
+ *   ARMv5:  uses msr cpsr_c, restores spsr manually, ldmia {r15}^.
+ *
+ * Parameters:
+ *   exc_mode - The PSR mode to switch back to before return
+ *
+ ****************************************************************************/
+
+	.macro	exception_exit, exc_mode
+#ifdef CONFIG_ARCH_FPU
+	restorefpu	r0, r2
+#endif
+
+#if __ARM_ARCH >= 7
+	cps		#\exc_mode
+#else /* __ARM_ARCH < 7 */
+	mov		r4, #(\exc_mode | PSR_I_BIT)
+	msr		cpsr_c, r4
+
+	ldr		r1, [r0, #(4*(REG_CPSR-REG_R13))]
+	msr		spsr_cxsf, r1
+#endif /* __ARM_ARCH >= 7 */
+
+	ldmia		r0, {r13, r14}^
+	add		r14, r0, #8
+	ldmia		r14!, {r0-r12}
+
+#if __ARM_ARCH >= 7
+	rfeia		r14
+#else /* __ARM_ARCH < 7 */
+	ldmia		r14, {r15}^
+#endif /* __ARM_ARCH >= 7 */
+	.endm
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -159,37 +273,9 @@ arm_vectorirq:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
 
-	/* Save the LR and SPSR onto the SYS mode stack before switch. */
+	/* On entry: IRQ mode, spsr = SVC CPSR, lr = SVC PC */
 
-	sub		lr, lr, #4
-	srsdb		sp!, #PSR_MODE_SYS
-
-	/* Switch to SYS mode */
-
-#if defined(CONFIG_ARM_DECODEFIQ) && !defined(CONFIG_ARCH_HIPRI_INTERRUPT)
-	cpsid		if, #PSR_MODE_SYS
-#else
-	cpsid		i, #PSR_MODE_SYS
-#endif
-
-	/* Create a context structure.  First set aside a stack frame
-	 * and store r0-r12 into the frame.
-	 */
-
-	stmdb		sp!, {r0-r12}			/* Save the SYS mode regs */
-
-	/* Get the correct values of USR/SYS r13(sp) in r1 and
-	 * save r13 and r14 into the frame.
-	 */
-
-	add		r1, sp, #(XCPTCONTEXT_SIZE-4*REG_R0)
-	stmdb		sp!, {r1, r14}
-
-#ifdef CONFIG_ARCH_FPU
-	/* Save the state of the floating point registers. */
-
-	savefpu		sp, r1
-#endif
+	exception_entry PSR_MODE_IRQ, 4
 
 	/* Then call the IRQ handler with interrupts disabled. */
 
@@ -227,31 +313,7 @@ arm_vectorirq:
 	bl		arm_decodeirq			/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
-#ifdef CONFIG_ARCH_FPU
-	/* Restore the state of the floating point registers. */
-
-	restorefpu	r0, r2
-#endif
-
-	/* Switch back IRQ mode and return with shadow SPSR */
-
-	cps		#PSR_MODE_IRQ
-
-	/* Upon return from arm_decodeirq, r0 holds the pointer to the register
-	 * state save area to use to restore the registers.  This may or may not
-	 * be the same value that was passed to arm_decodeirq:  It will differ if a
-	 * context switch is required.
-	 */
-
-	/* Life is simple when everything is IRQ mode */
-
-	ldmia		r0, {r13, r14}^			/* Restore user mode r13 and r14 */
-	add		r14, r0, #8
-	ldmia		r14!, {r0-r12}			/* Restore common r0-r12 */
-
-	/* Restore the CPSR, SYS mode registers and return. */
-
-	rfeia		r14
+	exception_exit PSR_MODE_IRQ
 
 #if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 .Lirqstacktop:
@@ -278,36 +340,9 @@ arm_vectorsvc:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
 
-	/* Save the LR and SPSR onto the SYS mode stack before switch. */
+	/* On entry: SVC mode, spsr = SVC CPSR, lr = SVC PC */
 
-	srsdb		sp!, #PSR_MODE_SYS
-
-	/* Switch to SYS mode */
-
-#if defined(CONFIG_ARM_DECODEFIQ) && !defined(CONFIG_ARCH_HIPRI_INTERRUPT)
-	cpsid		if, #PSR_MODE_SYS
-#else
-	cpsid		i, #PSR_MODE_SYS
-#endif
-
-	/* Create a context structure.  First set aside a stack frame
-	 * and store r0-r12 into the frame.
-	 */
-
-	stmdb		sp!, {r0-r12}			/* Save the SYS mode regs */
-
-	/* Get the correct values of USR/SYS r13(sp) in r1 and
-	 * save r13 and r14 into the frame.
-	 */
-
-	add		r1, sp, #(XCPTCONTEXT_SIZE-4*REG_R0)
-	stmdb		sp!, {r1, r14}
-
-#ifdef CONFIG_ARCH_FPU
-	/* Save the state of the floating point registers. */
-
-	savefpu		sp, r1
-#endif
+	exception_entry PSR_MODE_SVC, 0
 
 	/* Then call the SVC handler with interrupts disabled.
 	 * void arm_syscall(struct xcptcontext *xcp)
@@ -347,31 +382,7 @@ arm_vectorsvc:
 	bl		arm_syscall			/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
-#ifdef CONFIG_ARCH_FPU
-	/* Restore the state of the floating point registers. */
-
-	restorefpu	r0, r2
-#endif
-
-	/* Switch back SVC mode and return with shadow SPSR */
-
-	cps		#PSR_MODE_SVC
-
-	/* Upon return from arm_syscall, r0 holds the pointer to the register
-	 * state save area to use to restore the registers.  This may or may not
-	 * be the same value that was passed to arm_syscall:  It will differ if a
-	 * context switch is required.
-	 */
-
-	/* Life is simple when everything is SVC mode */
-
-	ldmia		r0, {r13, r14}^			/* Restore user mode r13 and r14 */
-	add		r14, r0, #8
-	ldmia		r14!, {r0-r12}			/* Restore common r0-r12 */
-
-	/* Restore the CPSR, SYS mode registers and return. */
-
-	rfeia		r14
+	exception_exit PSR_MODE_SVC
 	.cfi_endproc
 	.size	arm_vectorsvc, . - arm_vectorsvc
 
@@ -396,37 +407,9 @@ arm_vectordata:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
 
-	/* Save the LR and SPSR onto the SYS mode stack before switch. */
+	/* On entry: ABT mode, spsr = SVC CPSR, lr = SVC PC */
 
-	sub		lr, lr, #8
-	srsdb		sp!, #PSR_MODE_SYS
-
-	/* Switch to SYS mode */
-
-#if defined(CONFIG_ARM_DECODEFIQ) && !defined(CONFIG_ARCH_HIPRI_INTERRUPT)
-	cpsid		if, #PSR_MODE_SYS
-#else
-	cpsid		i, #PSR_MODE_SYS
-#endif
-
-	/* Create a context structure.  First set aside a stack frame
-	 * and store r0-r12 into the frame.
-	 */
-
-	stmdb		sp!, {r0-r12}			/* Save the SYS mode regs */
-
-	/* Get the correct values of USR/SYS r13(sp) in r1 and
-	 * save r13 and r14 into the frame.
-	 */
-
-	add		r1, sp, #(XCPTCONTEXT_SIZE-4*REG_R0)
-	stmdb		sp!, {r1, r14}
-
-#ifdef CONFIG_ARCH_FPU
-	/* Save the state of the floating point registers. */
-
-	savefpu		sp, r1
-#endif
+	exception_entry PSR_MODE_ABT, 8
 
 	/* Then call the data abort handler with interrupts disabled.
 	 * void arm_dataabort(struct xcptcontext *xcp)
@@ -445,31 +428,7 @@ arm_vectordata:
 	bl		arm_dataabort			/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
-#ifdef CONFIG_ARCH_FPU
-	/* Restore the state of the floating point registers. */
-
-	restorefpu	r0, r2
-#endif
-
-	/* Switch back ABT mode and return with shadow SPSR */
-
-	cps		#PSR_MODE_ABT
-
-	/* Upon return from arm_dataabort, r0 holds the pointer to the register
-	 * state save area to use to restore the registers.  This may or may not
-	 * be the same value that was passed to arm_dataabort:  It will differ if a
-	 * context switch is required.
-	 */
-
-	/* Life is simple when everything is ABT mode */
-
-	ldmia		r0, {r13, r14}^			/* Restore user mode r13 and r14 */
-	add		r14, r0, #8
-	ldmia		r14!, {r0-r12}			/* Restore common r0-r12 */
-
-	/* Restore the CPSR, SYS mode registers and return. */
-
-	rfeia		r14
+	exception_exit PSR_MODE_ABT
 	.cfi_endproc
 	.size	arm_vectordata, . - arm_vectordata
 
@@ -494,31 +453,9 @@ arm_vectorprefetch:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
 
-	/* Save the LR and SPSR onto the SYS mode stack before switch. */
+	/* On entry: ABT mode, spsr = SVC CPSR, lr = SVC PC */
 
-	sub		lr, lr, #4
-	srsdb		sp!, #PSR_MODE_SYS
-
-	cpsid		if, #PSR_MODE_SYS		/* Switch to SYS mode */
-
-	/* Create a context structure.  First set aside a stack frame
-	 * and store r0-r12 into the frame.
-	 */
-
-	stmdb		sp!, {r0-r12}			/* Save the SYS mode regs */
-
-	/* Get the correct values of USR/SYS r13(sp) in r1 and
-	 * save r13 and r14 into the frame.
-	 */
-
-	add		r1, sp, #(XCPTCONTEXT_SIZE-4*REG_R0)
-	stmdb		sp!, {r1, r14}
-
-#ifdef CONFIG_ARCH_FPU
-	/* Save the state of the floating point registers. */
-
-	savefpu		sp, r1
-#endif
+	exception_entry PSR_MODE_ABT, 4
 
 	/* Then call the prefetch abort handler with interrupts disabled.
 	 * void arm_prefetchabort(struct xcptcontext *xcp)
@@ -537,31 +474,7 @@ arm_vectorprefetch:
 	bl		arm_prefetchabort		/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
-#ifdef CONFIG_ARCH_FPU
-	/* Restore the state of the floating point registers. */
-
-	restorefpu	r0, r2
-#endif
-
-	/* Switch back ABT mode and return with shadow SPSR */
-
-	cps		#PSR_MODE_ABT
-
-	/* Upon return from arm_prefetchabort, r0 holds the pointer to the register
-	 * state save area to use to restore the registers.  This may or may not
-	 * be the same value that was passed to arm_prefetchabort:  It will differ if a
-	 * context switch is required.
-	 */
-
-	/* Life is simple when everything is ABT mode */
-
-	ldmia		r0, {r13, r14}^			/* Restore user mode r13 and r14 */
-	add		r14, r0, #8
-	ldmia		r14!, {r0-r12}			/* Restore common r0-r12 */
-
-	/* Restore the CPSR, SYS mode registers and return. */
-
-	rfeia		r14
+	exception_exit PSR_MODE_ABT
 	.cfi_endproc
 	.size	arm_vectorprefetch, . - arm_vectorprefetch
 
@@ -584,30 +497,9 @@ arm_vectorundefinsn:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
 
-	/* Save the LR and SPSR onto the SYS mode stack before switch. */
+	/* On entry: UND mode, spsr = SVC CPSR, lr = SVC PC */
 
-	srsdb		sp!, #PSR_MODE_SYS
-
-	cpsid		if, #PSR_MODE_SYS		/* Switch to SYS mode */
-
-	/* Create a context structure.  First set aside a stack frame
-	 * and store r0-r12 into the frame.
-	 */
-
-	stmdb		sp!, {r0-r12}			/* Save the SYS mode regs */
-
-	/* Get the correct values of USR/SYS r13(sp) in r1 and
-	 * save r13 and r14 into the frame.
-	 */
-
-	add		r1, sp, #(XCPTCONTEXT_SIZE-4*REG_R0)
-	stmdb		sp!, {r1, r14}
-
-#ifdef CONFIG_ARCH_FPU
-	/* Save the state of the floating point registers. */
-
-	savefpu		sp, r1
-#endif
+	exception_entry PSR_MODE_UND, 0
 
 	/* Then call the undef insn handler with interrupts disabled.
 	 * void arm_undefinedinsn(struct xcptcontext *xcp)
@@ -624,31 +516,7 @@ arm_vectorundefinsn:
 	bl		arm_undefinedinsn		/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
-#ifdef CONFIG_ARCH_FPU
-	/* Restore the state of the floating point registers. */
-
-	restorefpu	r0, r2
-#endif
-
-	/* Switch back UND mode and return with shadow SPSR */
-
-	cps		#PSR_MODE_UND
-
-	/* Upon return from arm_undefinedinsn, r0 holds the pointer to the register
-	 * state save area to use to restore the registers.  This may or may not
-	 * be the same value that was passed to arm_undefinedinsn:  It will differ if a
-	 * context switch is required.
-	 */
-
-	/* Life is simple when everything is UND mode */
-
-	ldmia		r0, {r13, r14}^			/* Restore user mode r13 and r14 */
-	add		r14, r0, #8
-	ldmia		r14!, {r0-r12}			/* Restore common r0-r12 */
-
-	/* Restore the CPSR, SYS mode registers and return. */
-
-	rfeia		r14
+	exception_exit PSR_MODE_UND
 	.cfi_endproc
 	.size	arm_vectorundefinsn, . - arm_vectorundefinsn
 
@@ -674,31 +542,9 @@ arm_vectorfiq:
 	.cfi_startproc
 #ifdef CONFIG_ARM_DECODEFIQ
 
-	/* Save the LR and SPSR onto the SYS mode stack before switch. */
+	/* On entry: FIQ mode, spsr = SVC CPSR, lr = SVC PC */
 
-	sub		lr, lr, #4
-	srsdb		sp!, #PSR_MODE_SYS
-
-	cpsid		if, #PSR_MODE_SYS		/* Switch to SYS mode */
-
-	/* Create a context structure.  First set aside a stack frame
-	 * and store r0-r12 into the frame.
-	 */
-
-	stmdb		sp!, {r0-r12}			/* Save the SYS mode regs */
-
-	/* Get the correct values of USR/SYS r13(sp) in r1 and
-	 * save r13 and r14 into the frame.
-	 */
-
-	add		r1, sp, #(XCPTCONTEXT_SIZE-4*REG_R0)
-	stmdb		sp!, {r1, r14}
-
-#ifdef CONFIG_ARCH_FPU
-	/* Save the state of the floating point registers. */
-
-	savefpu		sp, r1
-#endif
+	exception_entry PSR_MODE_FIQ, 4
 
 	/* Then call the FIQ handler with interrupts disabled. */
 

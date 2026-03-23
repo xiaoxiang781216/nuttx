@@ -104,8 +104,10 @@ _vector_end:
  * Name: _hyp_vector_start
  *
  * Description:
- *   Vector initialization block
+ *   Vector initialization block (ARMv7+ only, requires HYP mode support)
  ****************************************************************************/
+
+#if __ARM_ARCH >= 7
 
 	.section	.hyp_vectors, "ax"
 	.globl		_hyp_vector_start
@@ -127,4 +129,6 @@ _hyp_vector_start:
 
 _hyp_vector_end:
 	.size	_hyp_vector_start, . - _hyp_vector_start
+
+#endif /* __ARM_ARCH >= 7 */
 	.end

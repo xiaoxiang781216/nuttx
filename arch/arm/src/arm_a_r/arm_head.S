@@ -37,6 +37,12 @@
 #  include "cp15_cacheops.h"
 #endif
 
+#if __ARM_ARCH < 7
+/* ARMv5 does not have the isb instruction, define as empty */
+
+#  define isb
+#endif
+
 #ifndef IDLE_STACK_BASE
   #ifdef CONFIG_BOOT_SDRAM_DATA
     #define IDLE_STACK_BASE IDLE_STACK_VBASE
@@ -220,12 +226,13 @@
 	.type	__start, #function
 
 __start:
+
+#if __ARM_ARCH >= 7 && CONFIG_NCPUS > 1
 	/* Get cpuindex, cpu0 continue boot, others wait event from cpu0 */
 
 	mrc		CP15_MPIDR(r0)
 	and		r0, r0, #0x7
 	cmp		r0, #0
-#if CONFIG_NCPUS > 1
 	beq		__cpu0_start
 
 #ifdef CONFIG_ARM_BUSY_WAIT
@@ -293,8 +300,9 @@ __cpu0_start:
 #ifdef CONFIG_ARM_HAVE_EL2
 	cpsid		if
 #else
-	cpsid		if, #PSR_MODE_SYS
-#endif
+	mov		r0, #(PSR_MODE_SYS | PSR_I_BIT | PSR_F_BIT)
+	msr		cpsr_c, r0
+#endif /* CONFIG_ARM_HAVE_EL2 */
 
 	/* Set up the stack pointer and clear the frame pointer. */
 
@@ -455,9 +463,12 @@ __cpu0_start:
 	 */
 
 	mov		r0, #0
+
+#if __ARM_ARCH >= 7
 	mcr		CP15_TPIDRPRW(r0)	/* Initialize percpu reg TPIDRPRW */
 	mcr		CP15_TPIDRURW(r0)	/* Initialize percpu reg TPIDRURW */
 	mcr		CP15_TPIDRURO(r0)	/* Initialize percpu reg TPIDRURO */
+#endif
 #ifdef CONFIG_ARM_HAVE_MPCORE
 	mcr		CP15_TLBIALLIS(r0)	/* Invalidate the entire unified TLB */
 	mcr		CP15_BPIALLIS(r0)	/* Invalidate entire branch prediction array */

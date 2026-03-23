@@ -154,7 +154,6 @@ uint32_t *arm_syscall(uint32_t *regs)
 #ifndef CONFIG_BUILD_FLAT
   uint32_t cpsr;
 #endif
-  uintptr_t tpidr;
 
   /* Nested interrupts are not supported */
 
@@ -612,8 +611,13 @@ uint32_t *arm_syscall(uint32_t *regs)
    * location, bypassing our internal bookkeeping structure.
    */
 
-  tpidr = (uintptr_t)tcb->stack_alloc_ptr + sizeof(struct tls_info_s);
-  CP15_SET(TPIDRURW, tpidr);
+#if __ARM_ARCH >= 7
+  {
+    uintptr_t tpidr = (uintptr_t)tcb->stack_alloc_ptr +
+                      sizeof(struct tls_info_s);
+    CP15_SET(TPIDRURW, tpidr);
+  }
+#endif
 
   /* Set irq flag */
 

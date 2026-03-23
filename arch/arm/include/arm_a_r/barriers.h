@@ -31,9 +31,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_ARM_A_R
+#if __ARM_ARCH >= 7
 
-  /* ARMv7-A/R and ARMv8-R memory barriers */
+  /* ARMv7-A/R and ARMv8-R memory barriers (dmb/dsb/isb are ARMv7+) */
 
   #define arm_dsb(n) __asm__ __volatile__ ("dsb " #n : : : "memory")
   #define arm_dmb(n) __asm__ __volatile__ ("dmb " #n : : : "memory")
@@ -59,8 +59,8 @@
 
 #else
 
-  /* ARM memory barriers, ARM926EJ-S, ARMv5TEJ have no
-   * barrier support, use compiler barrier only.
+  /* ARMv5/ARMv6 and earlier have no dmb/dsb/isb instructions,
+   * use compiler barrier only (ARM926EJ-S, ARM920T, etc.)
    */
 
   #define arm_mb()  __asm__ __volatile__ ("" : : : "memory")
