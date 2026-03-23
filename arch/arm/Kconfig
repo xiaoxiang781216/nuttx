@@ -933,6 +933,9 @@ config ARCH_CORTEXA7
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	select ARCH_HAVE_FPU
+	select ARCH_HAVE_IRQTRIGGER
+	select ARCH_HAVE_IRQPRIO
+	select ARCH_HAVE_HIPRI_INTERRUPT
 	select ARM_HAVE_MPCORE
 
 config ARCH_CORTEXA8
@@ -952,6 +955,9 @@ config ARCH_CORTEXA9
 	select ARCH_ICACHE
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
+	select ARCH_HAVE_IRQTRIGGER
+	select ARCH_HAVE_IRQPRIO
+	select ARCH_HAVE_HIPRI_INTERRUPT
 	select ARM_HAVE_MPCORE
 
 config ARCH_ARMV7R
@@ -977,6 +983,9 @@ config ARCH_CORTEXR5
 	select ARCH_DCACHE
 	select ARCH_ICACHE
 	select ARCH_HAVE_MPU
+	select ARCH_HAVE_IRQTRIGGER
+	select ARCH_HAVE_IRQPRIO
+	select ARCH_HAVE_HIPRI_INTERRUPT
 
 config ARCH_CORTEXR7
 	bool
@@ -991,6 +1000,9 @@ config ARCH_CORTEXR52
 	default n
 	select ARCH_ARMV8R
 	select ARCH_HAVE_MPU
+	select ARCH_HAVE_IRQTRIGGER
+	select ARCH_HAVE_IRQPRIO
+	select ARCH_HAVE_HIPRI_INTERRUPT
 
 config ARCH_ARMV8M
 	bool
@@ -1089,9 +1101,10 @@ config ARCH_ARMV8R
 config ARM_GIC_VERSION
 	int "GIC version"
 	default 3 if ARCH_ARMV8R
+	default 1 if ARCH_CORTEXA5 || ARCH_CORTEXA8
 	default 2
-	range 2 4
-	depends on ARCH_ARMV7A || ARCH_ARMV7R || ARCH_ARMV8R
+	range 1 4
+	depends on ARCH_ARM_A_R
 	---help---
 		Version of Generic Interrupt Controller (GIC) supported.
 
@@ -1559,16 +1572,6 @@ config ARM_VIC_NLINES
 		Total number of interrupt lines across all VIC instances.
 		Must be a multiple of 32.
 
-config ARM_HAVE_GICv2
-	bool
-	select ARCH_HAVE_IRQTRIGGER
-	select ARCH_HAVE_IRQPRIO
-	select ARCH_HAVE_HIPRI_INTERRUPT
-	default n
-	---help---
-		Selected by the configuration tool if the architecture supports the
-		Generic Interrupt Controller (GIC)
-
 config ARM_GICv2M
 	bool "gic support msi irq"
 	depends on PCI_MSIX
@@ -1605,7 +1608,7 @@ config ARM_GIC_SPI_EDGE
 config ARM_GICV2_LEGACY_IRQ
 	string "Legacy IRQ bases list for PCI domains"
 	default "35"
-	depends on PCI && ARM_HAVE_GICv2
+	depends on PCI && ARM_GIC_VERSION = 2
 	---help---
 		Colon separated list of legacy IRQ bases for PCI domains.
 		Default value "35" is for QEMU arm/virt. Use -1 if a domain

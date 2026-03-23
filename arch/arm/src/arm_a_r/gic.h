@@ -947,7 +947,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARM_HAVE_GICv2
+#if CONFIG_ARM_GIC_VERSION == 2
 static inline unsigned int arm_gic_nlines(void)
 {
   uint32_t regval;

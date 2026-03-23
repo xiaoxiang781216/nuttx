@@ -31,7 +31,7 @@
 #include "arm_internal.h"
 #include "gic.h"
 
-#if defined(CONFIG_ARM_HAVE_GICv2) && defined(CONFIG_DEBUG_IRQ_INFO)
+#ifdef CONFIG_DEBUG_IRQ_INFO
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -304,4 +304,4 @@ void arm_gic_dump(const char *msg, bool all, int irq)
   arm_gic_dump_distributor(all, irq, nlines);
 }
 
-#endif /* CONFIG_ARM_HAVE_GICv2 && CONFIG_DEBUG_IRQ_INFO */
+#endif /* CONFIG_DEBUG_IRQ_INFO */

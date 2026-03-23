@@ -47,7 +47,7 @@ if(CONFIG_ARM_VIC)
 endif()
 
 if(CONFIG_ARM_GIC_VERSION EQUAL 2)
-  list(APPEND CSRCS arm_gicv2.c)
+  list(APPEND CSRCS arm_gicv2.c arm_gicv2_dump.c)
   if(CONFIG_ARM_GICv2M)
     list(APPEND CSRCS arm_gicv2m.c)
   endif()
@@ -84,7 +84,6 @@ list(
   arm_undefinedinsn.c
   arm_allocpage.c
   arm_prefetchabort.c
-  arm_gicv2_dump.c
   arm_cache.c
   arm_cpuinfo.c
   cp15_cacheops.c
