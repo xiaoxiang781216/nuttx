@@ -149,8 +149,8 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   board_autoled_off(LED_INIRQ);
 
-#ifdef CONFIG_ARMV8M_TRUSTZONE_HYBRID
-  if (((1 << this_cpu()) & CONFIG_ARMV8M_TRUSTZONE_CPU_BITMASK) == 0)
+#ifdef CONFIG_ARCH_TRUSTZONE_HYBRID
+  if (((1 << this_cpu()) & CONFIG_ARCH_TRUSTZONE_CPU_BITMASK) == 0)
     {
       regs[REG_EXC_RETURN] &=
         ~(EXC_RETURN_EXC_SECURE | EXC_RETURN_SECURE_STACK);

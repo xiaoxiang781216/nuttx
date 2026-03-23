@@ -89,22 +89,6 @@ config ARMV8M_STACKCHECK_HARDWARE
 		In an ARMv8-M Baseline implementation with the Security Extension
 		the MSPLIM, PSPLIM registers have only Secure instances.
 
-config ARMV8M_TRUSTZONE_HYBRID
-	bool "Hybrid with secure and non-secure."
-	default n
-	depends on SMP
-	---help---
-		Enable the hybrid with secure and non-secure domain.
-		In SMP mode, you can enable this configuration when one
-		core supports secure and the other does not.
-
-config ARMV8M_TRUSTZONE_CPU_BITMASK
-	hex "Security support bitmap for multicore."
-	depends on ARMV8M_TRUSTZONE_HYBRID
-	default 0
-	---help---
-		Set Security bitmap for multicore, bit 0 means core 0.
-
 config ARMV8M_CMSE
 	bool "ARMv8-M Security Extensions"
 	---help---

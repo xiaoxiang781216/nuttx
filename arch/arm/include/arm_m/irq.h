@@ -377,7 +377,7 @@ static inline_function void setbasepri(uint32_t basepri)
       : "memory");
 }
 
-#ifdef CONFIG_ARMV7M_BASEPRI_WAR  /* Cortex-M7 r0p1 Errata 837070 Workaround */
+#ifdef CONFIG_ARM_BASEPRI_WAR  /* Cortex-M7 r0p1 Errata 837070 Workaround */
 /* Set the BASEPRI register (possibly increasing the priority).
  *
  * This may be retaining or raising priority.  Cortex-M7 r0p1 Errata
