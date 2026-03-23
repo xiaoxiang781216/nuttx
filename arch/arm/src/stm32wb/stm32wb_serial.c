@@ -82,7 +82,7 @@
  * When streaming data, the generic serial layer will be called
  * every time the FIFO receives half this number of bytes.
  *
- * The buffer size should be an even multiple of ARMV7M_DCACHE_LINESIZE.
+ * The buffer size should be an even multiple of ARCH_DCACHE_LINESIZE.
  */
 
 #  if !defined(CONFIG_STM32WB_SERIAL_RXDMA_BUFFER_SIZE) || \

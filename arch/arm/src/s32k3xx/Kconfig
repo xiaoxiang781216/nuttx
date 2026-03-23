@@ -174,8 +174,6 @@ config ARCH_FAMILY_S32K3XX_BASE
 	bool
 	select ARCH_CORTEXM7
 	select ARCH_HAVE_FPU
-	select ARMV7M_HAVE_ICACHE
-	select ARMV7M_HAVE_DCACHE
 	select ARMV7M_HAVE_ITCM
 	select ARMV7M_HAVE_DTCM
 
@@ -197,7 +195,7 @@ config S32K3XX_HAVE_ENET
 config S32K3XX_NEEDS_MPU
 	bool
 	default y
-	depends on ARMV7M_DCACHE
+	depends on ARCH_DCACHE
 	select ARM_MPU
 
 config S32K3XX_HAVE_FLEXCAN3

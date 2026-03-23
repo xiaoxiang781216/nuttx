@@ -15,8 +15,6 @@ config ARCH_CHIP_IMX95_M7
 	bool "i.MX95 Cortex-M7 Processor"
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU
-	select ARMV7M_HAVE_ICACHE
-	select ARMV7M_HAVE_DCACHE
 	select ARMV7M_HAVE_ITCM
 	select ARMV7M_HAVE_DTCM
 	select IMX9_HAVE_MU

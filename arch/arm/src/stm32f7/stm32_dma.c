@@ -942,16 +942,16 @@ bool stm32_dmacapable(uintptr_t maddr, uint32_t count, uint32_t ccr)
       return false;
     }
 
-#  if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#  if defined(CONFIG_ARCH_DCACHE) && !defined(CONFIG_ARCH_DCACHE_WRITETHROUGH)
   /* buffer alignment is required for DMA transfers with dcache in buffered
    * mode (not write-through) because a) up_invalidate_dcache could lose
    * buffered writes and b) up_flush_dcache could corrupt adjacent memory if
    * the maddr and the mend+1, the next next address are not on
-   * ARMV7M_DCACHE_LINESIZE boundaries.
+   * ARCH_DCACHE_LINESIZE boundaries.
    */
 
-  if ((maddr & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-      ((mend + 1) & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
+  if ((maddr & (ARCH_DCACHE_LINESIZE - 1)) != 0 ||
+      ((mend + 1) & (ARCH_DCACHE_LINESIZE - 1)) != 0)
     {
       dmawarn("stm32_dmacapable:"
               " dcache unaligned maddr:0x%08" PRIxPTR " mend:0x%08"

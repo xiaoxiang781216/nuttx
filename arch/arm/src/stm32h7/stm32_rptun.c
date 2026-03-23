@@ -43,10 +43,10 @@
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_CHIP_STM32H7_CORTEXM7
-#  if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_OPENAMP_CACHE)
+#  if defined(CONFIG_ARCH_DCACHE) && !defined(CONFIG_OPENAMP_CACHE)
 #    error CONFIG_OPENAMP_CACHE must be set
 #  endif
-#  if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_ARM_MPU)
+#  if defined(CONFIG_ARCH_DCACHE) && !defined(CONFIG_ARM_MPU)
 #    erro CONFIG_ARM_MPU must be enabled
 #  endif
 #endif

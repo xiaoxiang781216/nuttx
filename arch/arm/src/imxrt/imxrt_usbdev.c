@@ -204,9 +204,9 @@ const struct trace_msg_t g_usb_trace_strings_intdecode[] =
 };
 #endif
 
-#if defined(CONFIG_ARMV7M_DCACHE)
-#  define cache_aligned_alloc(s) kmm_memalign(ARMV7M_DCACHE_LINESIZE,(s))
-#  define CACHE_ALIGNED_DATA     aligned_data(ARMV7M_DCACHE_LINESIZE)
+#if defined(CONFIG_ARCH_DCACHE)
+#  define cache_aligned_alloc(s) kmm_memalign(ARCH_DCACHE_LINESIZE,(s))
+#  define CACHE_ALIGNED_DATA     aligned_data(ARCH_DCACHE_LINESIZE)
 #else
 #  define cache_aligned_alloc kmm_malloc
 #  define CACHE_ALIGNED_DATA

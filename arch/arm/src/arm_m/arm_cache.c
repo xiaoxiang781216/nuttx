@@ -537,7 +537,7 @@ void up_enable_dcache(void)
 
   UP_DSB();
 
-#ifdef CONFIG_ARM_DCACHE_WRITETHROUGH
+#ifdef CONFIG_ARCH_DCACHE_WRITETHROUGH
   ccr = getreg32(NVIC_CACR);
   ccr |= NVIC_CACR_FORCEWT;
   putreg32(ccr, NVIC_CACR);
@@ -810,7 +810,7 @@ void up_invalidate_dcache_all(void)
 void up_clean_dcache(uintptr_t start, uintptr_t end)
 {
   uintptr_t start_ = start;
-#ifndef CONFIG_ARM_DCACHE_WRITETHROUGH
+#ifndef CONFIG_ARCH_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
   uint32_t ssize;
@@ -854,7 +854,7 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
       start += ssize;
     }
   while (start < end);
-#endif /* !CONFIG_ARM_DCACHE_WRITETHROUGH */
+#endif /* !CONFIG_ARCH_DCACHE_WRITETHROUGH */
 
   UNUSED(start_);
 
@@ -890,7 +890,7 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
 #ifdef CONFIG_ARCH_DCACHE
 void up_clean_dcache_all(void)
 {
-#ifndef CONFIG_ARM_DCACHE_WRITETHROUGH
+#ifndef CONFIG_ARCH_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
   uint32_t wshift;
@@ -934,7 +934,7 @@ void up_clean_dcache_all(void)
       while (tmpways--);
     }
   while (sets--);
-#endif /* !CONFIG_ARM_DCACHE_WRITETHROUGH */
+#endif /* !CONFIG_ARCH_DCACHE_WRITETHROUGH */
 
   UP_MB();
 
@@ -970,7 +970,7 @@ void up_clean_dcache_all(void)
 void up_flush_dcache(uintptr_t start, uintptr_t end)
 {
   uintptr_t start_ = start;
-#ifndef CONFIG_ARM_DCACHE_WRITETHROUGH
+#ifndef CONFIG_ARCH_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
   uint32_t ssize;
@@ -1018,7 +1018,7 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
   UP_MB();
 #else
   up_invalidate_dcache(start, end);
-#endif /* !CONFIG_ARM_DCACHE_WRITETHROUGH */
+#endif /* !CONFIG_ARCH_DCACHE_WRITETHROUGH */
 
   UNUSED(start_);
 
@@ -1051,7 +1051,7 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
 #ifdef CONFIG_ARCH_DCACHE
 void up_flush_dcache_all(void)
 {
-#ifndef CONFIG_ARM_DCACHE_WRITETHROUGH
+#ifndef CONFIG_ARCH_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
   uint32_t wshift;
@@ -1099,7 +1099,7 @@ void up_flush_dcache_all(void)
   UP_MB();
 #else
   up_invalidate_dcache_all();
-#endif /* !CONFIG_ARM_DCACHE_WRITETHROUGH */
+#endif /* !CONFIG_ARCH_DCACHE_WRITETHROUGH */
 
   l2cc_flush_all();
 }

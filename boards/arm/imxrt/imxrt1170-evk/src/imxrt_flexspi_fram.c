@@ -513,7 +513,7 @@ static ssize_t imxrt_flexspi_fram_bwrite(struct mtd_dev_s *dev,
   size_t len = nblocks * FRAM_PAGE_SIZE;
   off_t offset = startblock * FRAM_PAGE_SIZE;
   uint8_t *src = (uint8_t *) buffer;
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   uint8_t *dst = priv->ahb_base + startblock * FRAM_PAGE_SIZE;
 #endif
   int i;
@@ -531,7 +531,7 @@ static ssize_t imxrt_flexspi_fram_bwrite(struct mtd_dev_s *dev,
       len -= i;
     }
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   up_invalidate_dcache((uintptr_t)dst,
                        (uintptr_t)dst + nblocks * FRAM_PAGE_SIZE);
 #endif
@@ -546,7 +546,7 @@ static int imxrt_flexspi_fram_erase(struct mtd_dev_s *dev,
   struct imxrt_flexspi_fram_dev_s *priv =
                   (struct imxrt_flexspi_fram_dev_s *)dev;
   size_t blocksleft = nblocks;
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   uint8_t *dst = priv->ahb_base + startblock * FRAM_SECTOR_SIZE;
 #endif
 
@@ -563,7 +563,7 @@ static int imxrt_flexspi_fram_erase(struct mtd_dev_s *dev,
       startblock++;
     }
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   up_invalidate_dcache((uintptr_t)dst,
                        (uintptr_t)dst + nblocks * FRAM_SECTOR_SIZE);
 #endif

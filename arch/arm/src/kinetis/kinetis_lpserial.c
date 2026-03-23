@@ -212,24 +212,24 @@
  * the FIFO receives half this number of bytes.
  *
  * This buffer size should be an even multiple of the Cortex-M7 D-Cache line
- * size, ARMV7M_DCACHE_LINESIZE, so that it can be individually invalidated.
+ * size, ARCH_DCACHE_LINESIZE, so that it can be individually invalidated.
  *
- * Should there be a Cortex-M7 without a D-Cache, ARMV7M_DCACHE_LINESIZE
+ * Should there be a Cortex-M7 without a D-Cache, ARCH_DCACHE_LINESIZE
  * would be zero!
  */
 
-#  if !defined(ARMV7M_DCACHE_LINESIZE) || ARMV7M_DCACHE_LINESIZE == 0
-#    undef ARMV7M_DCACHE_LINESIZE
-#    define ARMV7M_DCACHE_LINESIZE 32
+#  if !defined(ARCH_DCACHE_LINESIZE) || ARCH_DCACHE_LINESIZE == 0
+#    undef ARCH_DCACHE_LINESIZE
+#    define ARCH_DCACHE_LINESIZE 32
 #  endif
 
 #  if !defined(CONFIG_KINETIS_LPUART_RXDMA_BUFFER_SIZE) || \
-      (CONFIG_KINETIS_LPUART_RXDMA_BUFFER_SIZE < ARMV7M_DCACHE_LINESIZE)
+      (CONFIG_KINETIS_LPUART_RXDMA_BUFFER_SIZE < ARCH_DCACHE_LINESIZE)
 #    undef CONFIG_KINETIS_LPUART_RXDMA_BUFFER_SIZE
-#    define CONFIG_KINETIS_LPUART_RXDMA_BUFFER_SIZE ARMV7M_DCACHE_LINESIZE
+#    define CONFIG_KINETIS_LPUART_RXDMA_BUFFER_SIZE ARCH_DCACHE_LINESIZE
 #  endif
 
-#  define RXDMA_BUFFER_MASK   ((uint32_t)(ARMV7M_DCACHE_LINESIZE - 1))
+#  define RXDMA_BUFFER_MASK   ((uint32_t)(ARCH_DCACHE_LINESIZE - 1))
 #  define RXDMA_BUFFER_SIZE   ((CONFIG_KINETIS_LPUART_RXDMA_BUFFER_SIZE \
                                 + RXDMA_BUFFER_MASK) & ~RXDMA_BUFFER_MASK)
 
@@ -379,7 +379,7 @@ static char g_lpuart0rxbuffer[CONFIG_LPUART0_RXBUFSIZE];
 static char g_lpuart0txbuffer[CONFIG_LPUART0_TXBUFSIZE];
 #  ifdef CONFIG_KINETIS_LPUART0_RXDMA
 static char g_lpuart0rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #  endif
 #endif
 #ifdef CONFIG_KINETIS_LPUART1
@@ -387,7 +387,7 @@ static char g_lpuart1rxbuffer[CONFIG_LPUART1_RXBUFSIZE];
 static char g_lpuart1txbuffer[CONFIG_LPUART1_TXBUFSIZE];
 #  ifdef CONFIG_KINETIS_LPUART1_RXDMA
 static char g_lpuart1rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #  endif
 #endif
 #ifdef CONFIG_KINETIS_LPUART2
@@ -395,7 +395,7 @@ static char g_lpuart2rxbuffer[CONFIG_LPUART2_RXBUFSIZE];
 static char g_lpuart2txbuffer[CONFIG_LPUART2_TXBUFSIZE];
 #  ifdef CONFIG_KINETIS_LPUART2_RXDMA
 static char g_lpuart2rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #  endif
 #endif
 #ifdef CONFIG_KINETIS_LPUART3
@@ -403,7 +403,7 @@ static char g_lpuart3rxbuffer[CONFIG_LPUART3_RXBUFSIZE];
 static char g_lpuart3txbuffer[CONFIG_LPUART3_TXBUFSIZE];
 #  ifdef CONFIG_KINETIS_LPUART3_RXDMA
 static char g_lpuart3rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #  endif
 #endif
 #ifdef CONFIG_KINETIS_LPUART4
@@ -411,7 +411,7 @@ static char g_lpuart4rxbuffer[CONFIG_LPUART4_RXBUFSIZE];
 static char g_lpuart4txbuffer[CONFIG_LPUART4_TXBUFSIZE];
 #  ifdef CONFIG_KINETIS_LPUART4_RXDMA
 static char g_lpuart4rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #  endif
 #endif
 

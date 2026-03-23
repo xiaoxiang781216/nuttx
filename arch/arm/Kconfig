@@ -644,8 +644,6 @@ config ARCH_CHIP_MX8MP
 	select ARCH_HAVE_RAMFUNCS
 	select ARCH_HAVE_I2CRESET
 	select ARM_HAVE_MPU_UNIFIED
-	select ARMV7M_HAVE_ICACHE
-	select ARMV7M_HAVE_DCACHE
 	select ARMV7M_HAVE_ITCM
 	select ARMV7M_HAVE_DTCM
 	select ARMV7M_HAVE_STACKCHECK
@@ -1586,10 +1584,6 @@ config ARM_HAVE_PTM
 	---help---
 		Selected by the configuration tool if the architecture supports the
 		per-processor Private Timers (PTMs)
-
-config ARM_DCACHE_WRITETHROUGH
-	bool "Enable DCACHE Write-Through for __start or arm_m"
-	default n
 
 config ARM_GIC_EOIMODE
 	bool "Enable GIC EOImode"

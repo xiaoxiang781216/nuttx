@@ -76,53 +76,53 @@
  * the FIFO receives half this number of bytes.
  *
  * This buffer size should be an even multiple of the Cortex-M7 D-Cache line
- * size, ARMV7M_DCACHE_LINESIZE, so that it can be individually invalidated.
+ * size, ARCH_DCACHE_LINESIZE, so that it can be individually invalidated.
  *
- * Should there be a Cortex-M7 without a D-Cache, ARMV7M_DCACHE_LINESIZE
+ * Should there be a Cortex-M7 without a D-Cache, ARCH_DCACHE_LINESIZE
  * would be zero!
  */
 
-#  if !defined(ARMV7M_DCACHE_LINESIZE) || ARMV7M_DCACHE_LINESIZE == 0
-#    undef ARMV7M_DCACHE_LINESIZE
-#    define ARMV7M_DCACHE_LINESIZE 32
+#  if !defined(ARCH_DCACHE_LINESIZE) || ARCH_DCACHE_LINESIZE == 0
+#    undef ARCH_DCACHE_LINESIZE
+#    define ARCH_DCACHE_LINESIZE 32
 #  endif
 
 #  if !defined(CONFIG_IMXRT_SERIAL_RXDMA_BUFFER_SIZE) || \
-      (CONFIG_IMXRT_SERIAL_RXDMA_BUFFER_SIZE < ARMV7M_DCACHE_LINESIZE)
+      (CONFIG_IMXRT_SERIAL_RXDMA_BUFFER_SIZE < ARCH_DCACHE_LINESIZE)
 #    undef CONFIG_IMXRT_SERIAL_RXDMA_BUFFER_SIZE
-#    define CONFIG_IMXRT_SERIAL_RXDMA_BUFFER_SIZE ARMV7M_DCACHE_LINESIZE
+#    define CONFIG_IMXRT_SERIAL_RXDMA_BUFFER_SIZE ARCH_DCACHE_LINESIZE
 #  endif
 
-#  define RXDMA_BUFFER_MASK   (ARMV7M_DCACHE_LINESIZE - 1)
+#  define RXDMA_BUFFER_MASK   (ARCH_DCACHE_LINESIZE - 1)
 #  define RXDMA_BUFFER_SIZE   ((CONFIG_IMXRT_SERIAL_RXDMA_BUFFER_SIZE \
                                 + RXDMA_BUFFER_MASK) & ~RXDMA_BUFFER_MASK)
 
 /* The DMA buffer size when using TX DMA.
  *
  * This TX buffer size should be an even multiple of the Cortex-M7 D-Cache
- * line size, ARMV7M_DCACHE_LINESIZE, so that it can be individually
+ * line size, ARCH_DCACHE_LINESIZE, so that it can be individually
  * invalidated.
  *
- * Should there be a Cortex-M7 without a D-Cache, ARMV7M_DCACHE_LINESIZE
+ * Should there be a Cortex-M7 without a D-Cache, ARCH_DCACHE_LINESIZE
  * would be zero!
  */
 
-#if !defined(ARMV7M_DCACHE_LINESIZE) || ARMV7M_DCACHE_LINESIZE == 0
-#  undef ARMV7M_DCACHE_LINESIZE
-#  define ARMV7M_DCACHE_LINESIZE 32
+#if !defined(ARCH_DCACHE_LINESIZE) || ARCH_DCACHE_LINESIZE == 0
+#  undef ARCH_DCACHE_LINESIZE
+#  define ARCH_DCACHE_LINESIZE 32
 #endif
 
-#define TXDMA_BUFFER_MASK   (ARMV7M_DCACHE_LINESIZE - 1)
+#define TXDMA_BUFFER_MASK   (ARCH_DCACHE_LINESIZE - 1)
 #define TXDMA_BUFFER_SIZE   ((CONFIG_IMXRT_SERIAL_RXDMA_BUFFER_SIZE \
                               + RXDMA_BUFFER_MASK) & ~RXDMA_BUFFER_MASK)
 
-/* If built with CONFIG_ARMV7M_DCACHE Buffers need to be aligned and
- * multiples of ARMV7M_DCACHE_LINESIZE
+/* If built with CONFIG_ARCH_DCACHE Buffers need to be aligned and
+ * multiples of ARCH_DCACHE_LINESIZE
  */
 
-#if defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_DCACHE)
 #  define TXDMA_BUF_SIZE(b) (((b) + TXDMA_BUFFER_MASK) & ~TXDMA_BUFFER_MASK)
-#  define TXDMA_BUF_ALIGN   aligned_data(ARMV7M_DCACHE_LINESIZE);
+#  define TXDMA_BUF_ALIGN   aligned_data(ARCH_DCACHE_LINESIZE);
 #else
 #  define TXDMA_BUF_SIZE(b)  (b)
 #  define TXDMA_BUF_ALIGN
@@ -771,7 +771,7 @@ struct imxrt_uart_s
   DMACH_HANDLE       rxdma;         /* currently-open receive DMA stream */
   bool               rxenable;      /* DMA-based reception en/disable */
   uint32_t           rxdmanext;     /* Next byte in the DMA buffer to be read */
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   uint32_t          rxdmaavail;     /* Number of bytes available without need to
                                      * to invalidate the data cache */
 #endif
@@ -983,62 +983,62 @@ const struct uart_ops_s *g_o1 = &g_lpuart_txdma_ops;
 
 #ifdef CONFIG_LPUART1_RXDMA
 static char g_lpuart1rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 # ifdef CONFIG_LPUART2_RXDMA
 static char g_lpuart2rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART3_RXDMA
 static char g_lpuart3rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART4_RXDMA
 static char g_lpuart4rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART5_RXDMA
 static char g_lpuart5rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART6_RXDMA
 static char g_lpuart6rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART7_RXDMA
 static char g_lpuart7rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART8_RXDMA
 static char g_lpuart8rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART9_RXDMA
 static char g_lpuart9rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART10_RXDMA
 static char g_lpuart10rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART11_RXDMA
 static char g_lpuart11rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 #ifdef CONFIG_LPUART12_RXDMA
 static char g_lpuart12rxfifo[RXDMA_BUFFER_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 
 /* Receive/Transmit buffers */
@@ -2122,7 +2122,7 @@ static int imxrt_dma_setup(struct uart_dev_s *dev)
        */
 
       priv->rxdmanext = 0;
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
       priv->rxdmaavail = 0;
 #endif
 
@@ -2962,7 +2962,7 @@ static int imxrt_dma_receive(struct uart_dev_s *dev, unsigned int *status)
 
   if (nextrx != priv->rxdmanext)
     {
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
       /* If the data cache is enabled, then we will also need to manage
        * cache coherency.  Are any bytes available in the currently coherent
        * region of the data cache?
@@ -3069,7 +3069,7 @@ static void imxrt_dma_reenable(struct imxrt_uart_s *priv)
    */
 
   priv->rxdmanext = 0;
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   priv->rxdmaavail = 0;
 #endif
 

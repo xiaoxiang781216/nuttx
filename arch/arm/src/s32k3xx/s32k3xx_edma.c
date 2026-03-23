@@ -91,8 +91,8 @@
  * invalidation.
  */
 
-#ifdef CONFIG_ARMV7M_DCACHE
-#  define EDMA_ALIGN  ARMV7M_DCACHE_LINESIZE
+#ifdef CONFIG_ARCH_DCACHE
+#  define EDMA_ALIGN  ARCH_DCACHE_LINESIZE
 #else
 /* 32 byte alignment for TCDs is required for scatter gather */
 

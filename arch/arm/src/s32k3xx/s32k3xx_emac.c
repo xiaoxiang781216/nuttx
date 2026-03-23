@@ -149,7 +149,7 @@
  * The TX and RX descriptors are 16 bytes in size
  */
 
-#define DMA_BUFFER_MASK    (ARMV7M_DCACHE_LINESIZE - 1)
+#define DMA_BUFFER_MASK    (ARCH_DCACHE_LINESIZE - 1)
 #define DMA_ALIGN_UP(n)    (((n) + DMA_BUFFER_MASK) & ~DMA_BUFFER_MASK)
 #define DMA_ALIGN_DOWN(n)  ((n) & ~DMA_BUFFER_MASK)
 
@@ -365,16 +365,16 @@ static struct s32k3xx_driver_s g_enet[CONFIG_S32K3XX_ENET_NETHIFS];
 /* Descriptor allocations */
 
 static union s32k3xx_desc_u g_rxtable[RXTABLE_SIZE]
-aligned_data(ARMV7M_DCACHE_LINESIZE);
+aligned_data(ARCH_DCACHE_LINESIZE);
 static union s32k3xx_desc_u g_txtable[TXTABLE_SIZE]
-aligned_data(ARMV7M_DCACHE_LINESIZE);
+aligned_data(ARCH_DCACHE_LINESIZE);
 
 /* Buffer allocations */
 
 static uint8_t g_rxbuffer[RXBUFFER_ALLOC]
-aligned_data(ARMV7M_DCACHE_LINESIZE);
+aligned_data(ARCH_DCACHE_LINESIZE);
 static uint8_t g_txbuffer[TXBUFFER_ALLOC]
-aligned_data(ARMV7M_DCACHE_LINESIZE);
+aligned_data(ARCH_DCACHE_LINESIZE);
 
 /****************************************************************************
  * Private Function Prototypes

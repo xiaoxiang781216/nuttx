@@ -70,7 +70,7 @@ void sam_mpu_initialize(void)
 
   mpu_showtype();
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   /* Memory barrier */
 
   UP_DMB();

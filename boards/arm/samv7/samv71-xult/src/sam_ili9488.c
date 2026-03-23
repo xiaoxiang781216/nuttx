@@ -248,10 +248,10 @@
  * invalidation will occur in multiples of full change lines.
  */
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 /* Align to the cache line size which we assume is >= 8 */
 
-#  define LCD_ALIGN            ARMV7M_DCACHE_LINESIZE
+#  define LCD_ALIGN            ARCH_DCACHE_LINESIZE
 #  define LCD_ALIGN_MASK       (LCD_ALIGN-1)
 #  define LCD_ALIGN_UP(n)      (((n) + LCD_ALIGN_MASK) & ~LCD_ALIGN_MASK)
 

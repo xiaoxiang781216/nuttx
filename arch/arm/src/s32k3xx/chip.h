@@ -48,8 +48,8 @@
 
 /* Cache line sizes (in bytes)for the S32K3XX */
 
-#define ARMV7M_DCACHE_LINESIZE 32  /* 4 bytes */
-#define ARMV7M_ICACHE_LINESIZE 64  /* 8 bytes */
+#define ARCH_DCACHE_LINESIZE 32  /* 4 bytes */
+#define ARCH_ICACHE_LINESIZE 64  /* 8 bytes */
 
 /****************************************************************************
  * Pre-processor Definitions

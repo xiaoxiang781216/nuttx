@@ -120,14 +120,14 @@
 #  define SPI_TXDMA16NULL_CONFIG    (SPI_DMA_PRIO|DMA_SCR_MSIZE_8BITS |DMA_SCR_PSIZE_16BITS             |DMA_SCR_DIR_M2P)
 #  define SPI_TXDMA8NULL_CONFIG     (SPI_DMA_PRIO|DMA_SCR_MSIZE_8BITS |DMA_SCR_PSIZE_8BITS              |DMA_SCR_DIR_M2P)
 
-/* If built with CONFIG_ARMV7M_DCACHE Buffers need to be aligned and
- * multiples of ARMV7M_DCACHE_LINESIZE
+/* If built with CONFIG_ARCH_DCACHE Buffers need to be aligned and
+ * multiples of ARCH_DCACHE_LINESIZE
  */
 
-#  if defined(CONFIG_ARMV7M_DCACHE)
-#    define SPIDMA_BUFFER_MASK   (ARMV7M_DCACHE_LINESIZE - 1)
+#  if defined(CONFIG_ARCH_DCACHE)
+#    define SPIDMA_BUFFER_MASK   (ARCH_DCACHE_LINESIZE - 1)
 #    define SPIDMA_SIZE(b) (((b) + SPIDMA_BUFFER_MASK) & ~SPIDMA_BUFFER_MASK)
-#    define SPIDMA_BUF_ALIGN   aligned_data(ARMV7M_DCACHE_LINESIZE)
+#    define SPIDMA_BUF_ALIGN   aligned_data(ARCH_DCACHE_LINESIZE)
 #  else
 #    define SPIDMA_SIZE(b)  (b)
 #    define SPIDMA_BUF_ALIGN

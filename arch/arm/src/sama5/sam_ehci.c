@@ -88,7 +88,7 @@
 
 /* Buffers must be aligned to the cache line size */
 
-#define DCACHE_LINEMASK (ARMV7A_DCACHE_LINESIZE -1)
+#define DCACHE_LINEMASK (ARCH_DCACHE_LINESIZE -1)
 
 /* Configurable size of a request/descriptor buffers */
 
@@ -3876,7 +3876,7 @@ static int sam_alloc(struct usbhost_driver_s *drvr,
    */
 
   *buffer = (uint8_t *)
-    kmm_memalign(ARMV7A_DCACHE_LINESIZE, SAMA5_EHCI_BUFSIZE);
+    kmm_memalign(ARCH_DCACHE_LINESIZE, SAMA5_EHCI_BUFSIZE);
   if (*buffer)
     {
       *maxlen = SAMA5_EHCI_BUFSIZE;
@@ -3963,7 +3963,7 @@ static int sam_ioalloc(struct usbhost_driver_s *drvr,
    */
 
   buflen  = (buflen + DCACHE_LINEMASK) & ~DCACHE_LINEMASK;
-  *buffer = kumm_memalign(ARMV7A_DCACHE_LINESIZE, buflen);
+  *buffer = kumm_memalign(ARCH_DCACHE_LINESIZE, buflen);
   return *buffer ? OK : -ENOMEM;
 }
 

@@ -181,10 +181,10 @@ struct imxrt_dev_s
   volatile uint8_t xfrflags;          /* Used to synchronize SDIO and DMA
                                        * completion */
                                       /* DMA buffer for unaligned transfers */
-#if defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_DCACHE)
   uint32_t blocksize;                 /* Current block size */
   uint8_t  rxbuffer[SDMMC_MAX_BLOCK_SIZE]
-                   __attribute__((aligned(ARMV7M_DCACHE_LINESIZE)));
+                   __attribute__((aligned(ARCH_DCACHE_LINESIZE)));
   bool     unaligned_rx;              /* buffer is not cache-line aligned */
 #endif
 #endif
@@ -276,7 +276,7 @@ static void imxrt_dataconfig(struct imxrt_dev_s *priv, bool bwrite,
 #ifndef CONFIG_IMXRT_USDHC_DMA
 static void imxrt_transmit(struct imxrt_dev_s *priv);
 static void imxrt_receive(struct imxrt_dev_s *priv);
-#if defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_DCACHE)
 static void imxrt_recvdma(struct imxrt_dev_s *priv);
 #endif
 #endif
@@ -765,7 +765,7 @@ static void imxrt_dataconfig(struct imxrt_dev_s *priv, bool bwrite,
   regval |= timeout << USDHC_SYSCTL_DTOCV_SHIFT;
   putreg32(regval, priv->addr + IMXRT_USDHC_SYSCTL_OFFSET);
 
-#if defined(CONFIG_IMXRT_USDHC_DMA) && defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_IMXRT_USDHC_DMA) && defined(CONFIG_ARCH_DCACHE)
       /* If cache is enabled, and this is an unaligned receive,
        * receive one block at a time to the internal buffer
        */
@@ -1007,7 +1007,7 @@ static void imxrt_receive(struct imxrt_dev_s *priv)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_IMXRT_USDHC_DMA) && defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_IMXRT_USDHC_DMA) && defined(CONFIG_ARCH_DCACHE)
 static void imxrt_recvdma(struct imxrt_dev_s *priv)
 {
   unsigned int watermark;
@@ -1264,7 +1264,7 @@ static int imxrt_interrupt(int irq, void *context, void *arg)
       if ((pending & USDHC_INT_TC) != 0)
         {
           /* Terminate the transfer */
-#if defined(CONFIG_IMXRT_USDHC_DMA) && defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_IMXRT_USDHC_DMA) && defined(CONFIG_ARCH_DCACHE)
           imxrt_recvdma(priv);
 #else
           imxrt_endtransfer(priv, SDIOWAIT_TRANSFERDONE);
@@ -2210,7 +2210,7 @@ static void imxrt_blocksetup(struct sdio_dev_s *dev,
 
   /* Configure block size for next transfer */
 
-#if defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_DCACHE)
   priv->blocksize = blocklen;
 #endif
 
@@ -2953,17 +2953,17 @@ static int imxrt_dmapreflight(struct sdio_dev_s *dev,
       return -EFAULT;
     }
 
-#if defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_DCACHE)
   /* buffer alignment is required for DMA transfers with dcache in buffered
    * mode (not write-through) because a) arch_invalidate_dcache could lose
    * buffered writes and b) arch_flush_dcache could corrupt adjacent memory
    * if the maddr and the mend+1, the next next address are not on
-   * ARMV7M_DCACHE_LINESIZE boundaries.
+   * ARCH_DCACHE_LINESIZE boundaries.
    */
 
   if (buffer != priv->rxbuffer &&
-      (((uintptr_t)buffer & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-      ((uintptr_t)(buffer + buflen) & (ARMV7M_DCACHE_LINESIZE - 1)) != 0))
+      (((uintptr_t)buffer & (ARCH_DCACHE_LINESIZE - 1)) != 0 ||
+      ((uintptr_t)(buffer + buflen) & (ARCH_DCACHE_LINESIZE - 1)) != 0))
     {
       mcerr("dcache unaligned buffer:%p end:%p\n",
             buffer, buffer + buflen - 1);
@@ -3019,9 +3019,9 @@ static int imxrt_dmarecvsetup(struct sdio_dev_s *dev,
   imxrt_sampleinit();
   imxrt_sample(priv, SAMPLENDX_BEFORE_SETUP);
 
-#if defined(CONFIG_ARMV7M_DCACHE)
-  if (((uintptr_t)buffer & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-       (buflen & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
+#if defined(CONFIG_ARCH_DCACHE)
+  if (((uintptr_t)buffer & (ARCH_DCACHE_LINESIZE - 1)) != 0 ||
+       (buflen & (ARCH_DCACHE_LINESIZE - 1)) != 0)
     {
       /* The read buffer is not cache-line aligned, but will fit in
        * the rxbuffer. So Read to an internalbuffer instead.
@@ -3055,7 +3055,7 @@ static int imxrt_dmarecvsetup(struct sdio_dev_s *dev,
   /* Configure the RX DMA */
 
   imxrt_configxfrints(priv, USDHC_DMADONE_INTS);
-#if defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_DCACHE)
   if (priv->unaligned_rx)
     {
       putreg32((uint32_t) priv->rxbuffer,
@@ -3109,12 +3109,12 @@ static int imxrt_dmasendsetup(struct sdio_dev_s *dev,
 
   /* Save the source buffer information for use by the interrupt handler */
 
-#if defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_DCACHE)
   priv->unaligned_rx = false;
 
   /* Flush cache to physical memory when not in DTCM memory */
 
-#  if !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#  if !defined(CONFIG_ARCH_DCACHE_WRITETHROUGH)
     {
       up_clean_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
     }

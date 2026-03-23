@@ -57,32 +57,6 @@ config ARMV7M_SYSTICK
 	---help---
 		Enable SysTick timer driver.
 
-config ARMV7M_HAVE_ICACHE
-	bool
-	default n
-
-config ARMV7M_HAVE_DCACHE
-	bool
-	default n
-
-config ARMV7M_ICACHE
-	bool "Use I-Cache"
-	default n
-	depends on ARMV7M_HAVE_ICACHE
-	select ARCH_ICACHE
-
-config ARMV7M_DCACHE
-	bool "Use D-Cache"
-	default n
-	depends on ARMV7M_HAVE_DCACHE
-	select ARCH_DCACHE
-
-config ARMV7M_DCACHE_WRITETHROUGH
-	bool "D-Cache Write-Through"
-	default n
-	depends on ARMV7M_DCACHE
-	select ARM_DCACHE_WRITETHROUGH
-
 config ARMV7M_BASEPRI_WAR
 	bool "Cortex-M7 r0p1 Errata 837070 Workaround"
 	default n
@@ -163,32 +137,6 @@ config ARMV8M_SYSTICK
 	select ARM_SYSTICK
 	---help---
 		Enable SysTick timer driver.
-
-config ARMV8M_HAVE_ICACHE
-	bool
-	default n
-
-config ARMV8M_HAVE_DCACHE
-	bool
-	default n
-
-config ARMV8M_ICACHE
-	bool "Use I-Cache"
-	default n
-	depends on ARMV8M_HAVE_ICACHE
-	select ARCH_ICACHE
-
-config ARMV8M_DCACHE
-	bool "Use D-Cache"
-	default n
-	depends on ARMV8M_HAVE_DCACHE
-	select ARCH_DCACHE
-
-config ARMV8M_DCACHE_WRITETHROUGH
-	bool "D-Cache Write-Through"
-	default n
-	depends on ARMV8M_DCACHE
-	select ARM_DCACHE_WRITETHROUGH
 
 config ARMV8M_HAVE_ITCM
 	bool

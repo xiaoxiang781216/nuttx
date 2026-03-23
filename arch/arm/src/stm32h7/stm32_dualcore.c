@@ -39,8 +39,8 @@
 /* Check CM4 core configuration */
 
 #ifdef CONFIG_ARCH_CHIP_STM32H7_CORTEXM4
-#  if defined(CONFIG_ARMV7M_DCACHE) || defined(CONFIG_ARMV7M_DTCM) || \
-      defined(CONFIG_ARMV7M_ICACHE)
+#  if defined(CONFIG_ARCH_DCACHE) || defined(CONFIG_ARMV7M_DTCM) || \
+      defined(CONFIG_ARCH_ICACHE)
 #    error Invalid configuration for CM4 core
 #  endif
 #endif

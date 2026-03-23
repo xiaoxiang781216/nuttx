@@ -783,7 +783,7 @@ int stm32_bbsraminitialize(char *devpath, int *sizes)
       return -EINVAL;
     }
 
-#if defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_DCACHE)
   /* ST placed the H7's BBSRAM in the default region for SRAM so we need to
    * make it not cacheable
    */

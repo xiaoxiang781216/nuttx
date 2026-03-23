@@ -169,7 +169,7 @@ void __start(void)
 
   mps_tcmenable();
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   /* Memory barrier */
 
   UP_DMB();

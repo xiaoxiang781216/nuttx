@@ -51,7 +51,7 @@
 
 /* Cache line sizes (in bytes) for the STM32WL5 */
 
-#define ARMV7M_DCACHE_LINESIZE 0  /* no cache */
-#define ARMV7M_ICACHE_LINESIZE 0  /* no cache */
+#define ARCH_DCACHE_LINESIZE 0  /* no cache */
+#define ARCH_ICACHE_LINESIZE 0  /* no cache */
 
 #endif /* __ARCH_ARM_SRC_STM32WL5_CHIP_H */

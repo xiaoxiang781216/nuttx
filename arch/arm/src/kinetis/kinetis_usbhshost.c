@@ -87,11 +87,11 @@
 
 /* Buffers must be aligned to the cache line size */
 
-#ifndef ARMV7M_DCACHE_LINESIZE
-#  define ARMV7M_DCACHE_LINESIZE 32
+#ifndef ARCH_DCACHE_LINESIZE
+#  define ARCH_DCACHE_LINESIZE 32
 #endif
 
-#define DCACHE_LINEMASK (ARMV7M_DCACHE_LINESIZE -1)
+#define DCACHE_LINEMASK (ARCH_DCACHE_LINESIZE -1)
 
 /* Configurable size of a request/descriptor buffers */
 
@@ -4135,7 +4135,7 @@ static int kinetis_alloc(struct usbhost_driver_s *drvr,
    * multiple of the cache line size in length.
    */
 
-  *buffer = kmm_memalign(ARMV7M_DCACHE_LINESIZE, KINETIS_EHCI_BUFSIZE);
+  *buffer = kmm_memalign(ARCH_DCACHE_LINESIZE, KINETIS_EHCI_BUFSIZE);
   if (*buffer)
     {
       *maxlen = KINETIS_EHCI_BUFSIZE;
@@ -4223,7 +4223,7 @@ static int kinetis_ioalloc(struct usbhost_driver_s *drvr,
    */
 
   buflen  = (buflen + DCACHE_LINEMASK) & ~DCACHE_LINEMASK;
-  *buffer = kumm_memalign(ARMV7M_DCACHE_LINESIZE, buflen);
+  *buffer = kumm_memalign(ARCH_DCACHE_LINESIZE, buflen);
   return *buffer ? OK : -ENOMEM;
 }
 

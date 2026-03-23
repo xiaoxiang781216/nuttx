@@ -773,7 +773,7 @@ static int imxrt_transmit(struct imxrt_driver_s *priv)
       DEBUGASSERT(txdesc->data == buf);
     }
 
-#ifdef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifdef CONFIG_ARCH_DCACHE_WRITETHROUGH
   /* Make sure that descriptors are flushed */
 
   UP_DSB();
@@ -1030,7 +1030,7 @@ static void imxrt_receive(struct imxrt_driver_s *priv)
             imxrt_swap32((uint32_t)priv->txdesc[priv->txhead].data);
           rxdesc->status1 |= RXDESC_E;
 
-#ifdef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifdef CONFIG_ARCH_DCACHE_WRITETHROUGH
           UP_DSB();
 #else
           up_clean_dcache((uintptr_t)rxdesc,
@@ -1468,7 +1468,7 @@ static int imxrt_ifup_action(struct net_driver_s *dev, bool resetphy)
         ;
   imxrt_enet_putreg32(priv, regval, IMXRT_ENET_ECR_OFFSET);
 
-#ifdef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifdef CONFIG_ARCH_DCACHE_WRITETHROUGH
   /* Make sure that descriptors are flushed */
 
   UP_DSB();

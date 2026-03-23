@@ -130,7 +130,7 @@
 #  ifndef CONFIG_SAMV7_SERIAL_RXDMA_BUFFER
 #    define CONFIG_SAMV7_SERIAL_RXDMA_BUFFER 128
 #  endif
-#define RXDMA_CACHE_SIZE    (ARMV7M_DCACHE_LINESIZE/sizeof(uint32_t))
+#define RXDMA_CACHE_SIZE    (ARCH_DCACHE_LINESIZE/sizeof(uint32_t))
 #define RXDMA_MUTIPLE       (sizeof(uint32_t) > RXDMA_CACHE_SIZE ? \
                              sizeof(uint32_t) : RXDMA_CACHE_SIZE)
 #define RXDMA_MUTIPLE_MASK  (RXDMA_MUTIPLE - 1)
@@ -640,7 +640,7 @@ static char g_usart0rxbuffer[CONFIG_USART0_RXBUFSIZE];
 static char g_usart0txbuffer[CONFIG_USART0_TXBUFSIZE];
 #  ifdef CONFIG_USART0_RXDMA
 static uint32_t g_usart0rxbuf[2][RXDMA_BUFFER_SIZE]
-aligned_data(ARMV7M_DCACHE_LINESIZE);
+aligned_data(ARCH_DCACHE_LINESIZE);
 static struct chnext_view1_s g_usart0rxdesc[2];
 #  endif
 #endif
@@ -649,7 +649,7 @@ static char g_usart1rxbuffer[CONFIG_USART1_RXBUFSIZE];
 static char g_usart1txbuffer[CONFIG_USART1_TXBUFSIZE];
 #  ifdef CONFIG_USART1_RXDMA
 static uint32_t g_usart1rxbuf[2][RXDMA_BUFFER_SIZE]
-aligned_data(ARMV7M_DCACHE_LINESIZE);
+aligned_data(ARCH_DCACHE_LINESIZE);
 static struct chnext_view1_s g_usart1rxdesc[2];
 #  endif
 #endif
@@ -658,7 +658,7 @@ static char g_usart2rxbuffer[CONFIG_USART2_RXBUFSIZE];
 static char g_usart2txbuffer[CONFIG_USART2_TXBUFSIZE];
 #  ifdef CONFIG_USART2_RXDMA
 static uint32_t g_usart2rxbuf[2][RXDMA_BUFFER_SIZE]
-aligned_data(ARMV7M_DCACHE_LINESIZE);
+aligned_data(ARCH_DCACHE_LINESIZE);
 static struct chnext_view1_s g_usart2rxdesc[2];
 #  endif
 #endif

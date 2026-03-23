@@ -383,13 +383,13 @@ struct stm32_dev_s
   struct work_s      cbfifo;          /* Monitor for Lame FIFO */
 #endif
   uint8_t            rxfifo[FIFO_SIZE_IN_BYTES] /* To offload with IDMA and support un-alinged buffers */
-                     aligned_data(ARMV7M_DCACHE_LINESIZE);
+                     aligned_data(ARCH_DCACHE_LINESIZE);
   bool               unaligned_rx; /* read buffer is not cache-line or 32 bit aligned */
 
   /* Input dma buffer for unaligned transfers */
 #if defined(CONFIG_STM32H7_SDMMC_IDMA)
   uint8_t sdmmc_rxbuffer[SDMMC_MAX_BLOCK_SIZE]
-          aligned_data(ARMV7M_DCACHE_LINESIZE);
+          aligned_data(ARCH_DCACHE_LINESIZE);
 #endif
 };
 
@@ -3090,17 +3090,17 @@ static int stm32_dmapreflight(struct sdio_dev_s *dev,
     }
 #endif
 
-#if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#if defined(CONFIG_ARCH_DCACHE) && !defined(CONFIG_ARCH_DCACHE_WRITETHROUGH)
   /* buffer alignment is required for DMA transfers with dcache in buffered
    * mode (not write-through) because a) arch_invalidate_dcache could lose
    * buffered writes and b) arch_flush_dcache could corrupt adjacent memory
    * if the maddr and the mend+1, the next next address are not on
-   * ARMV7M_DCACHE_LINESIZE boundaries.
+   * ARCH_DCACHE_LINESIZE boundaries.
    */
 
   if (buffer != priv->rxfifo &&
-      (((uintptr_t)buffer & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-      ((uintptr_t)(buffer + buflen) & (ARMV7M_DCACHE_LINESIZE - 1)) != 0))
+      (((uintptr_t)buffer & (ARCH_DCACHE_LINESIZE - 1)) != 0 ||
+      ((uintptr_t)(buffer + buflen) & (ARCH_DCACHE_LINESIZE - 1)) != 0))
     {
       mcerr("dcache unaligned "
             "buffer:%p end:%p\n",
@@ -3143,9 +3143,9 @@ static int stm32_dmarecvsetup(struct sdio_dev_s *dev,
   DEBUGASSERT(stm32_dmapreflight(dev, buffer, buflen) == 0);
 #endif
 
-#if defined(CONFIG_ARMV7M_DCACHE)
-  if (((uintptr_t)buffer & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-       (buflen & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
+#if defined(CONFIG_ARCH_DCACHE)
+  if (((uintptr_t)buffer & (ARCH_DCACHE_LINESIZE - 1)) != 0 ||
+       (buflen & (ARCH_DCACHE_LINESIZE - 1)) != 0)
     {
       /* The read buffer is not cache-line aligned. Read to an internal
        * buffer instead.
@@ -3261,8 +3261,8 @@ static int stm32_dmasendsetup(struct sdio_dev_s *dev,
 
   /* Flush cache to physical memory when not in DTCM memory */
 
-#if defined(CONFIG_ARMV7M_DCACHE) && \
-      !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#if defined(CONFIG_ARCH_DCACHE) && \
+      !defined(CONFIG_ARCH_DCACHE_WRITETHROUGH)
   if ((uintptr_t)buffer < DTCM_START ||
       (uintptr_t)buffer + buflen > DTCM_END)
     {

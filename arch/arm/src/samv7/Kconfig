@@ -128,8 +128,6 @@ config ARCH_CHIP_SAME70
 	default n
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU # REVISIT
-	select ARMV7M_HAVE_ICACHE
-	select ARMV7M_HAVE_DCACHE
 	select ARMV7M_HAVE_ITCM
 	select ARMV7M_HAVE_DTCM
 
@@ -179,8 +177,6 @@ config ARCH_CHIP_SAMV71
 	default n
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU # REVISIT
-	select ARMV7M_HAVE_ICACHE
-	select ARMV7M_HAVE_DCACHE
 	select ARMV7M_HAVE_ITCM
 	select ARMV7M_HAVE_DTCM
 	select SAMV7_HAVE_MEDIALB
@@ -294,7 +290,7 @@ config SAMV7_EEFC
 config SAMV7_EMAC
 	bool
 	default n
-	select ARMV7M_DCACHE_WRITETHROUGH if ARMV7M_DCACHE
+	select ARCH_DCACHE_WRITETHROUGH if ARCH_DCACHE
 	select ARCH_HAVE_NETDEV_STATISTICS
 	---help---
 		NOTE that write-through caching is automatically selected.  This is

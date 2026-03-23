@@ -83,7 +83,7 @@
 
 /* Buffers must be aligned to the cache line size */
 
-#define DCACHE_LINEMASK (ARMV7M_DCACHE_LINESIZE -1)
+#define DCACHE_LINEMASK (ARCH_DCACHE_LINESIZE -1)
 
 /* Configurable size of a request/descriptor buffers */
 
@@ -4066,7 +4066,7 @@ static int imxrt_alloc(struct usbhost_driver_s *drvr,
    * multiple of the cache line size in length.
    */
 
-  *buffer = kmm_memalign(ARMV7M_DCACHE_LINESIZE, IMXRT_EHCI_BUFSIZE);
+  *buffer = kmm_memalign(ARCH_DCACHE_LINESIZE, IMXRT_EHCI_BUFSIZE);
   if (*buffer)
     {
       *maxlen = IMXRT_EHCI_BUFSIZE;
@@ -4153,7 +4153,7 @@ static int imxrt_ioalloc(struct usbhost_driver_s *drvr,
    */
 
   buflen  = (buflen + DCACHE_LINEMASK) & ~DCACHE_LINEMASK;
-  *buffer = kumm_memalign(ARMV7M_DCACHE_LINESIZE, buflen);
+  *buffer = kumm_memalign(ARCH_DCACHE_LINESIZE, buflen);
   return *buffer ? OK : -ENOMEM;
 }
 

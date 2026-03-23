@@ -120,7 +120,7 @@
  * At present, we simply insist that write through cache be enabled.
  */
 
-#if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#if defined(CONFIG_ARCH_DCACHE) && !defined(CONFIG_ARCH_DCACHE_WRITETHROUGH)
 #  error Write back D-Cache not yet supported
 #endif
 
@@ -134,7 +134,7 @@
  * otherwise, the size of the descriptors much smaller, only 8 bytes.
  */
 
-#define ENET_ALIGN        ARMV7M_DCACHE_LINESIZE
+#define ENET_ALIGN        ARCH_DCACHE_LINESIZE
 #define ENET_ALIGN_MASK   (ENET_ALIGN - 1)
 #define ENET_ALIGN_UP(n)  (((n) + ENET_ALIGN_MASK) & ~ENET_ALIGN_MASK)
 

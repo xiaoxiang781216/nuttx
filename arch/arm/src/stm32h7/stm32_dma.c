@@ -1545,8 +1545,8 @@ static bool stm32_sdma_capable(stm32_dmacfg_t *cfg)
       return false;
     }
 
-#  if defined(CONFIG_ARMV7M_DCACHE) && \
-     !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#  if defined(CONFIG_ARCH_DCACHE) && \
+     !defined(CONFIG_ARCH_DCACHE_WRITETHROUGH)
   /* buffer alignment is required for RX DMA transfers with dcache in
    * buffered mode (not write-through) because arch_invalidate_dcache could
    * lose buffered writes
@@ -1555,8 +1555,8 @@ static bool stm32_sdma_capable(stm32_dmacfg_t *cfg)
   if ((ccr & DMA_SCR_DIR_MASK) == DMA_SCR_DIR_P2M ||
       (ccr & DMA_SCR_DIR_MASK) == DMA_SCR_DIR_M2M)
     {
-      if ((cfg->maddr & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-          ((mend + 1) & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
+      if ((cfg->maddr & (ARCH_DCACHE_LINESIZE - 1)) != 0 ||
+          ((mend + 1) & (ARCH_DCACHE_LINESIZE - 1)) != 0)
         {
           dmainfo("stm32_dmacapable: dcache unaligned "
                   "maddr:0x%08" PRIx32 " mend:0x%08" PRIx32 "\n",
@@ -2104,17 +2104,17 @@ static bool stm32_bdma_capable(stm32_dmacfg_t *cfg)
       return false;
     }
 
-#  if defined(CONFIG_ARMV7M_DCACHE) &&                  \
-      !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#  if defined(CONFIG_ARCH_DCACHE) &&                  \
+      !defined(CONFIG_ARCH_DCACHE_WRITETHROUGH)
   /* buffer alignment is required for DMA transfers with dcache in buffered
    * mode (not write-through) because a) arch_invalidate_dcache could lose
    * buffered writes and b) arch_flush_dcache could corrupt adjacent memory
    * if the maddr and the mend+1, the next next address are not on
-   * ARMV7M_DCACHE_LINESIZE boundaries.
+   * ARCH_DCACHE_LINESIZE boundaries.
    */
 
-  if ((cfg->maddr & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-      ((mend + 1) & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
+  if ((cfg->maddr & (ARCH_DCACHE_LINESIZE - 1)) != 0 ||
+      ((mend + 1) & (ARCH_DCACHE_LINESIZE - 1)) != 0)
     {
       dmainfo("stm32_dmacapable: dcache unaligned "
               "maddr:0x%08" PRIx32 " mend:0x%08" PRIx32 "\n",

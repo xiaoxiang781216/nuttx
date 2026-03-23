@@ -123,7 +123,7 @@ int sam_write_user_signature(void *buffer, size_t buflen)
     {
       *dest++ = g_page_buffer[i];
 
-#ifdef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifdef CONFIG_ARCH_DCACHE_WRITETHROUGH
       UP_DMB();
 #endif
     }

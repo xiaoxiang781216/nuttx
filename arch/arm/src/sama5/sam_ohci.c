@@ -93,8 +93,8 @@
  * the cache line size.
  */
 
-#if ARMV7A_DCACHE_LINESIZE > 16
-#  define SAMA5_DMA_ALIGN ARMV7A_DCACHE_LINESIZE
+#if ARCH_DCACHE_LINESIZE > 16
+#  define SAMA5_DMA_ALIGN ARCH_DCACHE_LINESIZE
 #else
 #  define SAMA5_DMA_ALIGN 16
 #endif

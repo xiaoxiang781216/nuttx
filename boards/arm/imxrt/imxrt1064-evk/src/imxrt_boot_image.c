@@ -161,10 +161,10 @@ int board_boot_image(const char *path, uint32_t hdr_size)
 
   cleanup_arm_nvic();
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   up_disable_dcache();
 #endif
-#ifdef CONFIG_ARMV7M_ICACHE
+#ifdef CONFIG_ARCH_ICACHE
   up_disable_icache();
 #endif
 

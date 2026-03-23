@@ -3012,16 +3012,16 @@ static int stm32_dmarecvsetup(struct sdio_dev_s *dev,
 #ifdef CONFIG_ARCH_HAVE_SDIO_PREFLIGHT
   DEBUGASSERT(stm32_dmapreflight(dev, buffer, buflen) == 0);
 #else
-#  if defined(CONFIG_ARMV7M_DCACHE) && \
-      !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#  if defined(CONFIG_ARCH_DCACHE) && \
+      !defined(CONFIG_ARCH_DCACHE_WRITETHROUGH)
   /* buffer alignment is required for DMA transfers with dcache in buffered
    * mode (not write-through) because the up_invalidate_dcache could lose
    * buffered buffered writes if the buffer alignment and sizes are not on
-   * ARMV7M_DCACHE_LINESIZE boundaries.
+   * ARCH_DCACHE_LINESIZE boundaries.
    */
 
-  if (((uintptr_t)buffer & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-      (buflen & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
+  if (((uintptr_t)buffer & (ARCH_DCACHE_LINESIZE - 1)) != 0 ||
+      (buflen & (ARCH_DCACHE_LINESIZE - 1)) != 0)
     {
       return -EFAULT;
     }
@@ -3115,16 +3115,16 @@ static int stm32_dmasendsetup(struct sdio_dev_s *dev,
 #ifdef CONFIG_ARCH_HAVE_SDIO_PREFLIGHT
   DEBUGASSERT(stm32_dmapreflight(dev, buffer, buflen) == 0);
 #else
-#  if defined(CONFIG_ARMV7M_DCACHE) && \
-      !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#  if defined(CONFIG_ARCH_DCACHE) && \
+      !defined(CONFIG_ARCH_DCACHE_WRITETHROUGH)
   /* buffer alignment is required for DMA transfers with dcache in buffered
    * mode (not write-through) because the up_flush_dcache would corrupt
    * adjacent memory if the buffer alignment and sizes are not on
-   * ARMV7M_DCACHE_LINESIZE boundaries.
+   * ARCH_DCACHE_LINESIZE boundaries.
    */
 
-  if (((uintptr_t)buffer & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-      (buflen & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
+  if (((uintptr_t)buffer & (ARCH_DCACHE_LINESIZE - 1)) != 0 ||
+      (buflen & (ARCH_DCACHE_LINESIZE - 1)) != 0)
     {
       return -EFAULT;
     }

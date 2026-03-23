@@ -51,7 +51,7 @@
 
 /* Cache line sizes (in bytes) for the STM32WB */
 
-#define ARMV7M_DCACHE_LINESIZE 32  /* 32 bytes (4 x 64 bits) */
-#define ARMV7M_ICACHE_LINESIZE 32  /* 32 bytes (4 x 64 bits) */
+#define ARCH_DCACHE_LINESIZE 32  /* 32 bytes (4 x 64 bits) */
+#define ARCH_ICACHE_LINESIZE 32  /* 32 bytes (4 x 64 bits) */
 
 #endif /* __ARCH_ARM_SRC_STM32WB_CHIP_H */

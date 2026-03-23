@@ -46,7 +46,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifndef CONFIG_ARMV7M_DCACHE
+#ifndef CONFIG_ARCH_DCACHE
   /*  With Dcache off:
    *  Cacheable (MPU_RASR_C) and Bufferable (MPU_RASR_B) needs to be off
    */
@@ -55,7 +55,7 @@
 #  define RASR_B_VALUE  0
 #  define RASR_C_VALUE  0
 #else
-#  ifndef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#  ifndef CONFIG_ARCH_DCACHE_WRITETHROUGH
   /*  With Dcache on:
    *  Cacheable (MPU_RASR_C) and Bufferable (MPU_RASR_B) needs to be on
    */
@@ -101,7 +101,7 @@ void imx9_mpu_initialize(void)
 
   mpu_reset();
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   /* Memory barrier */
 
   ARM_DMB();

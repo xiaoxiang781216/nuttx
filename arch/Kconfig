@@ -384,7 +384,7 @@ config ARCH_HAVE_IRQPRIO
 	default n
 
 config ARCH_ICACHE
-	bool
+	bool "Use I-Cache"
 	default n
 
 config ARCH_ICACHE_LOCK
@@ -393,8 +393,13 @@ config ARCH_ICACHE_LOCK
 	default n
 
 config ARCH_DCACHE
-	bool
+	bool "Use D-Cache"
 	default n
+
+config ARCH_DCACHE_WRITETHROUGH
+	bool "D-Cache Write-Through"
+	default n
+	depends on ARCH_DCACHE
 
 config ARCH_DCACHE_LOCK
 	bool

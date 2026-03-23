@@ -376,8 +376,6 @@ choice
 config ARCH_CHIP_STM32H7_CORTEXM7
 	bool "STM32H7 Cortex-M7 core"
 	select ARCH_CORTEXM7
-	select ARMV7M_HAVE_ICACHE
-	select ARMV7M_HAVE_DCACHE
 	select ARMV7M_HAVE_ITCM
 	select ARMV7M_HAVE_DTCM
 
@@ -2218,7 +2216,7 @@ config STM32H7_DMACAPABLE
 
 config STM32H7_DMACAPABLE_ASSUME_CACHE_ALIGNED
 	bool "Do not disqualify DMA capability based on cache alignment"
-	depends on STM32H7_DMACAPABLE && ARMV7M_DCACHE && !ARMV7M_DCACHE_WRITETHROUGH
+	depends on STM32H7_DMACAPABLE && ARCH_DCACHE && !ARCH_DCACHE_WRITETHROUGH
 	default n
 	---help---
 		This option configures the stm32_dmacapable to not disqualify

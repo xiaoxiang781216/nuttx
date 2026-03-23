@@ -111,7 +111,7 @@
  * every time the FIFO receives half this number of bytes.
  *
  * If there ever is a STM32WL5 with D-cache, the buffer size
- * should be an even multiple of ARMV7M_DCACHE_LINESIZE, so that it
+ * should be an even multiple of ARCH_DCACHE_LINESIZE, so that it
  * can be individually invalidated.
  */
 

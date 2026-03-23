@@ -500,7 +500,7 @@ static ssize_t imxrt_flexspi_nor_bwrite(struct mtd_dev_s *dev,
       len -= i;
     }
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   up_invalidate_dcache((uintptr_t)dst,
                        (uintptr_t)dst + nblocks * NOR_PAGE_SIZE);
 #endif
@@ -530,7 +530,7 @@ static int imxrt_flexspi_nor_erase(struct mtd_dev_s *dev,
       startblock++;
     }
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
   up_invalidate_dcache((uintptr_t)dst,
                        (uintptr_t)dst + nblocks * NOR_SECTOR_SIZE);
 #endif

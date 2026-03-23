@@ -338,9 +338,9 @@
  * buffers to protect data after the end of from invalidation.
  */
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 /* Align to the cache line size which we assume is >= 8 */
-#  define EMAC_ALIGN        ARMV7M_DCACHE_LINESIZE
+#  define EMAC_ALIGN        ARCH_DCACHE_LINESIZE
 #else
 /* Use the minimum alignment requirement */
 #  define EMAC_ALIGN        8

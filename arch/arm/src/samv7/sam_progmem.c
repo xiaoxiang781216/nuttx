@@ -546,7 +546,7 @@ ssize_t up_progmem_write(size_t address, const void *buffer, size_t buflen)
         {
           *dest++ = *src++;
 
-#ifdef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
+#ifdef CONFIG_ARCH_DCACHE_WRITETHROUGH
           UP_DMB();
 #endif
         }

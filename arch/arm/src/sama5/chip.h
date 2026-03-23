@@ -45,7 +45,7 @@
 
 /* Cache line sizes (in bytes) */
 
-#define ARMV7A_DCACHE_LINESIZE 32  /* 32 bytes (8 words) */
-#define ARMV7A_ICACHE_LINESIZE 32  /* 32 bytes (8 words) */
+#define ARCH_DCACHE_LINESIZE 32  /* 32 bytes (8 words) */
+#define ARCH_ICACHE_LINESIZE 32  /* 32 bytes (8 words) */
 
 #endif /* __ARCH_ARM_SRC_SAMA5_CHIP_H */

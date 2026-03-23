@@ -171,16 +171,16 @@
  * invalidation will occur in multiples of full cache lines.
  */
 
-#ifdef CONFIG_ARMV7M_DCACHE
+#ifdef CONFIG_ARCH_DCACHE
 /* Align to the cache line size which we assume is >= 8 */
 
-#  define USBHS_ALIGN         ARMV7M_DCACHE_LINESIZE
+#  define USBHS_ALIGN         ARCH_DCACHE_LINESIZE
 #  define USBHS_ALIGN_MASK    (USBHS_ALIGN-1)
 #  define USBHS_ALIGN_DOWN(n) ((n) & ~USBHS_ALIGN_MASK)
 #  define USBHS_ALIGN_UP(n)   (((n) + USBHS_ALIGN_MASK) & ~USBHS_ALIGN_MASK)
 
-#  ifndef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
-#    warning !!! This driver will not work without CONFIG_ARMV7M_DCACHE_WRITETHROUGH=y!!!
+#  ifndef CONFIG_ARCH_DCACHE_WRITETHROUGH
+#    warning !!! This driver will not work without CONFIG_ARCH_DCACHE_WRITETHROUGH=y!!!
 #  endif
 
 #else

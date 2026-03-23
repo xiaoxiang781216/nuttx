@@ -46,8 +46,8 @@
 
 /* Cache line sizes (in bytes)for the SAMV71 */
 
-#define ARMV7M_DCACHE_LINESIZE 32  /* 32 bytes (8 words) */
-#define ARMV7M_ICACHE_LINESIZE 32  /* 32 bytes (8 words) */
+#define ARCH_DCACHE_LINESIZE 32  /* 32 bytes (8 words) */
+#define ARCH_ICACHE_LINESIZE 32  /* 32 bytes (8 words) */
 
 /****************************************************************************
  * Pre-processor Definitions

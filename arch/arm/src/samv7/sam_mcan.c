@@ -99,12 +99,12 @@
  */
 
 #ifdef CONFIG_ARCH_DCACHE
-#  define MCAN_ALIGN        ARMV7M_DCACHE_LINESIZE
+#  define MCAN_ALIGN        ARCH_DCACHE_LINESIZE
 #  define MCAN_ALIGN_MASK   (MCAN_ALIGN - 1)
 #  define MCAN_ALIGN_UP(n)  (((n) + MCAN_ALIGN_MASK) & ~MCAN_ALIGN_MASK)
 
-#  ifndef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
-#    warning !!! This driver will not work without CONFIG_ARMV7M_DCACHE_WRITETHROUGH=y!!!
+#  ifndef CONFIG_ARCH_DCACHE_WRITETHROUGH
+#    warning !!! This driver will not work without CONFIG_ARCH_DCACHE_WRITETHROUGH=y!!!
 #  endif
 #endif
 
