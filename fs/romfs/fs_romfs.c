@@ -761,14 +761,23 @@ static int romfs_dup(FAR const struct file *oldp, FAR struct file *newp)
       newrf->rf_type        = oldrf->rf_type;
       memcpy(newrf->rf_path, oldrf->rf_path, len + 1);
 
-      /* Configure buffering to support access to this file. */
+      /* O_DIRECT 3-way: skip buffer allocation for cache templates */
 
-      ret = romfs_fileconfigure(rm, newrf);
-      if (ret < 0)
+      if (newp->f_oflags & O_DIRECT)
         {
-          fs_heap_free(newrf);
-          ferr("ERROR: Failed configure buffering: %d\n", ret);
-          goto errout_with_lock;
+          newrf->rf_buffer       = NULL;
+          newrf->rf_cachesector  = (uint32_t)-1;
+          newrf->rf_ncachesector = 0;
+        }
+      else
+        {
+          ret = romfs_fileconfigure(rm, newrf);
+          if (ret < 0)
+            {
+              fs_heap_free(newrf);
+              ferr("ERROR: Failed configure buffering: %d\n", ret);
+              goto errout_with_lock;
+            }
         }
 
       newp->f_priv = newrf;
