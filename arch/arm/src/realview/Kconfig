@@ -1,0 +1,30 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_CHIP_REALVIEW
+comment "RealView Configuration Options"
+
+choice
+	prompt "RealView CPU core"
+	default REALVIEW_ARM1136J
+
+config REALVIEW_ARM1136J
+	bool "ARM1136J(F)-S"
+	select ARCH_ARM1136J
+
+config REALVIEW_ARM11MPCORE
+	bool "ARM11MPCore"
+	select ARCH_ARM1176JZ
+
+endchoice # RealView CPU core
+
+config REALVIEW_TIMER_CLOCK
+	int "SP804 Timer clock frequency (Hz)"
+	default 1000000
+	---help---
+		Clock frequency of the SP804 timer in Hz.
+		QEMU defaults to 1 MHz.
+
+endif # ARCH_CHIP_REALVIEW

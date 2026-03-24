@@ -633,6 +633,14 @@ config ARCH_CHIP_VERSATILE
 	---help---
 		ARM Versatile Platform Baseboard (ARM926EJ-S)
 
+config ARCH_CHIP_REALVIEW
+	bool "ARM RealView"
+	select ARCH_HAVE_LOWVECTORS
+	select ARMV7A_HAVE_GICv2
+	---help---
+		ARM RealView Emulation Baseboard.
+		Supports QEMU emulation via qemu-system-arm -M realview-eb.
+
 config ARCH_CHIP_XMC4
 	bool "Infineon XMC4xxx"
 	select ARCH_CORTEXM4
@@ -1184,6 +1192,7 @@ config ARCH_CHIP
 	default "str71x"	if ARCH_CHIP_STR71X
 	default "tms570"	if ARCH_CHIP_TMS570
 	default "versatile"	if ARCH_CHIP_VERSATILE
+	default "realview"	if ARCH_CHIP_REALVIEW
 	default "xmc4"		if ARCH_CHIP_XMC4
 	default "mx8mp"		if ARCH_CHIP_MX8MP
 	default "cxd56xx"	if ARCH_CHIP_CXD56XX
@@ -1968,6 +1977,9 @@ source "arch/arm/src/tms570/Kconfig"
 endif
 if ARCH_CHIP_VERSATILE
 source "arch/arm/src/versatile/Kconfig"
+endif
+if ARCH_CHIP_REALVIEW
+source "arch/arm/src/realview/Kconfig"
 endif
 if ARCH_CHIP_XMC4
 source "arch/arm/src/xmc4/Kconfig"

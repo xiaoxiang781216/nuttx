@@ -3115,6 +3115,13 @@ config ARCH_BOARD_VERSATILE_PB
 		ARM Versatile Platform Baseboard (VersatilePB) with ARM926EJ-S
 		processor.  Supports QEMU emulation via qemu-system-arm -M versatilepb.
 
+config ARCH_BOARD_REALVIEW_EB
+	bool "ARM RealView Emulation Baseboard"
+	depends on ARCH_CHIP_REALVIEW
+	---help---
+		ARM RealView Emulation Baseboard with ARM926EJ-S or ARM1136
+		processor.  Supports QEMU emulation via qemu-system-arm -M realview-eb.
+
 config ARCH_BOARD_Z16F2800100ZCOG
 	bool "Zilog Z16F2800100ZCOG Development Kit"
 	depends on ARCH_CHIP_Z16F2811
@@ -3640,6 +3647,7 @@ config ARCH_BOARD
 	default "xmc4800-relax"             if ARCH_BOARD_XMC4800RELAX
 	default "verdin-mx8mp"              if ARCH_BOARD_VERDIN_MX8MP
 	default "versatile-pb"              if ARCH_BOARD_VERSATILE_PB
+	default "realview-eb"               if ARCH_BOARD_REALVIEW_EB
 	default "z16f2800100zcog"           if ARCH_BOARD_Z16F2800100ZCOG
 	default "z20x"                      if ARCH_BOARD_Z20X
 	default "z80sim"                    if ARCH_BOARD_Z80SIM
@@ -3773,6 +3781,9 @@ source "boards/arm/qemu/qemu-armv7a/Kconfig"
 endif
 if ARCH_BOARD_VERSATILE_PB
 source "boards/arm/versatile/versatile-pb/Kconfig"
+endif
+if ARCH_BOARD_REALVIEW_EB
+source "boards/arm/realview/realview-eb/Kconfig"
 endif
 if ARCH_BOARD_QEMU_ARMV8A
 source "boards/arm64/qemu/qemu-armv8a/Kconfig"
