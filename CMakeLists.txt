@@ -663,18 +663,19 @@ endif()
 # Get linker script to use
 get_property(ldscript GLOBAL PROPERTY LD_SCRIPT)
 
-# Pre-compile linker script
+# Pre-compile linker script(s)
 if(NOT CONFIG_ARCH_SIM AND NOT CONFIG_ARCH_TOOLCHAIN_TASKING)
-  get_filename_component(LD_SCRIPT_NAME ${ldscript} NAME)
-  set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
-
-  nuttx_generate_preprocess_target(SOURCE_FILE ${ldscript} TARGET_FILE
-                                   ${LD_SCRIPT_TMP})
-
-  add_custom_target(ldscript_tmp DEPENDS ${LD_SCRIPT_TMP})
+  set(ldscript_tmp_list "")
+  foreach(script ${ldscript})
+    get_filename_component(LD_SCRIPT_NAME ${script} NAME)
+    set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
+    nuttx_generate_preprocess_target(SOURCE_FILE ${script} TARGET_FILE
+                                     ${LD_SCRIPT_TMP})
+    list(APPEND ldscript_tmp_list ${LD_SCRIPT_TMP})
+  endforeach()
+  add_custom_target(ldscript_tmp DEPENDS ${ldscript_tmp_list})
   add_dependencies(nuttx ldscript_tmp)
-
-  set(ldscript ${LD_SCRIPT_TMP})
+  set(ldscript ${ldscript_tmp_list})
 endif()
 
 # Perform link
@@ -714,13 +715,20 @@ set(CMAKE_EXECUTABLE_SUFFIX "")
 if(NOT CONFIG_ARCH_SIM)
   # TODO: nostart/nodefault not applicable to nuttx toolchain
   if(CONFIG_ARCH_TOOLCHAIN_TASKING)
-    target_link_libraries(nuttx PRIVATE --lsl-file=${ldscript} ${nuttx_libs}
+    set(ldscript_lsl "")
+    foreach(script ${ldscript})
+      list(APPEND ldscript_lsl --lsl-file=${script})
+    endforeach()
+    target_link_libraries(nuttx PRIVATE ${ldscript_lsl} ${nuttx_libs}
                                         ${nuttx_extra_libs})
 
   else()
     get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
-    target_link_options(nuttx PRIVATE ${NUTTX_EXTRA_FLAGS}
-                        ${LINK_OPTION_FLAG}${ldscript})
+    set(ldscript_options "")
+    foreach(script ${ldscript})
+      list(APPEND ldscript_options ${LINK_OPTION_FLAG}${script})
+    endforeach()
+    target_link_options(nuttx PRIVATE ${NUTTX_EXTRA_FLAGS} ${ldscript_options})
     target_link_libraries(
       nuttx
       PRIVATE
@@ -897,15 +905,19 @@ if(CONFIG_BUILD_PROTECTED)
 
   get_property(user_ldscript GLOBAL PROPERTY LD_SCRIPT_USER)
 
-  # Pre-compile linker script
+  # Pre-compile linker script(s)
   if(NOT CONFIG_ARCH_TOOLCHAIN_TASKING)
-    get_filename_component(LD_SCRIPT_USER_NAME ${user_ldscript} NAME)
-    set(LD_SCRIPT_USER_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_USER_NAME}.tmp")
-    nuttx_generate_preprocess_target(SOURCE_FILE ${user_ldscript} TARGET_FILE
-                                     ${LD_SCRIPT_USER_TMP})
-    add_custom_target(user_ldscript_tmp DEPENDS ${LD_SCRIPT_USER_TMP})
+    set(user_ldscript_tmp_list "")
+    foreach(script ${user_ldscript})
+      get_filename_component(LD_SCRIPT_USER_NAME ${script} NAME)
+      set(LD_SCRIPT_USER_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_USER_NAME}.tmp")
+      nuttx_generate_preprocess_target(SOURCE_FILE ${script} TARGET_FILE
+                                       ${LD_SCRIPT_USER_TMP})
+      list(APPEND user_ldscript_tmp_list ${LD_SCRIPT_USER_TMP})
+    endforeach()
+    add_custom_target(user_ldscript_tmp DEPENDS ${user_ldscript_tmp_list})
     add_dependencies(nuttx_user user_ldscript_tmp)
-    set(user_ldscript ${LD_SCRIPT_USER_TMP})
+    set(user_ldscript ${user_ldscript_tmp_list})
   endif()
 
   # reset link options that don't fit userspace
@@ -941,14 +953,22 @@ if(CONFIG_BUILD_PROTECTED)
   endif()
 
   if(CONFIG_ARCH_TOOLCHAIN_TASKING)
+    set(user_ldscript_lsl "")
+    foreach(script ${user_ldscript})
+      list(APPEND user_ldscript_lsl --lsl-file=${script})
+    endforeach()
     target_link_libraries(
       nuttx_user
-      PRIVATE --lsl-file=${user_ldscript} ${nuttx_apps_libs} ${nuttx_user_libs}
+      PRIVATE ${user_ldscript_lsl} ${nuttx_apps_libs} ${nuttx_user_libs}
               ${nuttx_system_libs} ${nuttx_user_extra_libs})
   else()
+    set(user_ldscript_options "")
+    foreach(script ${user_ldscript})
+      list(APPEND user_ldscript_options ${LINK_OPTION_FLAG}${script})
+    endforeach()
     target_link_libraries(
       nuttx_user
-      PRIVATE ${LINK_OPTION_FLAG}${user_ldscript}
+      PRIVATE ${user_ldscript_options}
               $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
               ${nuttx_apps_libs}
               ${nuttx_user_libs}
