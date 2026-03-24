@@ -699,6 +699,8 @@ void rspin_lock(FAR rspinlock_t *lock)
 
       spinlock_mark_locking(&lock->info);
 
+      sched_note_spinlock(lock, NOTE_SPINLOCK_LOCK);
+
       /* Try seize the ownership of the lock using CAS. */
 
       new_val = RSPINLOCK_VALUE(owner, 1u);
@@ -724,6 +726,8 @@ void rspin_lock(FAR rspinlock_t *lock)
       /* Mark locked only when the lock is acquired for the first time. */
 
       spinlock_mark_locked(&lock->info);
+
+      sched_note_spinlock(lock, NOTE_SPINLOCK_LOCKED);
     }
 }
 
@@ -1073,6 +1077,7 @@ bool rspin_unlock(FAR rspinlock_t *lock)
 
   if (RSPINLOCK_COUNT(val) == 1u)
     {
+      sched_note_spinlock(lock, NOTE_SPINLOCK_UNLOCK);
       spinlock_mark_unlocked(&lock->info);
       atomic_set_release(&lock->val, 0u);
       UP_DSB();
