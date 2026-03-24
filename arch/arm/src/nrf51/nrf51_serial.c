@@ -58,6 +58,7 @@ struct uart_nrf51_s
   uint32_t uartbase;  /* Base address of UART registers */
   uint32_t baud;      /* Configured baud */
   uint8_t  irq;       /* UART IRQ number */
+  bool     rxavail;   /* RX data available flag */
 };
 
 /****************************************************************************
@@ -129,6 +130,7 @@ static struct uart_nrf51_s g_uart0priv =
   .uartbase = CONFIG_NRF51_UART0_BASE,
   .baud     = CONFIG_NRF51_UART0_BAUD,
   .irq      = CONFIG_NRF51_UART0_IRQ,
+  .rxavail  = false,
 };
 
 static uart_dev_t g_uart0port =
@@ -156,6 +158,7 @@ static struct uart_nrf51_s g_uart1priv =
   .uartbase = CONFIG_NRF51_UART1_BASE,
   .baud     = CONFIG_NRF51_UART1_BAUD,
   .irq      = CONFIG_NRF51_UART1_IRQ,
+  .rxavail  = false,
 };
 
 static uart_dev_t g_uart1port =
@@ -268,6 +271,7 @@ static int uart_nrf51_setup(FAR struct uart_dev_s *dev)
 
   uart_nrf51_putreg(priv, NRF51_UART_RXDRDY_OFFSET, 0);
   uart_nrf51_putreg(priv, NRF51_UART_ERROR_OFFSET, 0);
+  priv->rxavail = false;
 
   /* Enable UART */
 
@@ -397,12 +401,8 @@ static int uart_nrf51_interrupt(int irq, FAR void *context, FAR void *arg)
   rxdrdy = uart_nrf51_getreg(priv, NRF51_UART_RXDRDY_OFFSET);
   if (rxdrdy != 0)
     {
-      /* Process received characters
-       * Note: DO NOT clear RXDRDY here! It should be cleared after
-       * each RXD read in uart_nrf51_receive(). QEMU will automatically
-       * re-set RXDRDY if more data is available in the FIFO.
-       */
-
+      uart_nrf51_putreg(priv, NRF51_UART_RXDRDY_OFFSET, 0);
+      priv->rxavail = true;
       uart_recvchars(dev);
     }
 
@@ -442,14 +442,7 @@ static int uart_nrf51_receive(FAR struct uart_dev_s *dev,
   /* Read the received character */
 
   rxd = uart_nrf51_getreg(priv, NRF51_UART_RXD_OFFSET);
-
-  /* Clear RXDRDY event after reading RXD
-   * IMPORTANT: In QEMU's nRF51 UART implementation, reading RXD does NOT
-   * automatically clear RXDRDY. We must clear it manually. If the FIFO
-   * still has data, QEMU will immediately re-set RXDRDY to 1.
-   */
-
-  uart_nrf51_putreg(priv, NRF51_UART_RXDRDY_OFFSET, 0);
+  priv->rxavail = false;
 
   /* Return status */
 
@@ -497,9 +490,7 @@ static bool uart_nrf51_rxavailable(FAR struct uart_dev_s *dev)
 {
   FAR struct uart_nrf51_s *priv = (FAR struct uart_nrf51_s *)dev->priv;
 
-  /* Return true if the RXDRDY event is set */
-
-  return uart_nrf51_getreg(priv, NRF51_UART_RXDRDY_OFFSET) != 0;
+  return priv->rxavail;
 }
 
 /****************************************************************************
