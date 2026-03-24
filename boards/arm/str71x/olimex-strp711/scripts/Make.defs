@@ -26,29 +26,6 @@ include $(TOPDIR)/arch/arm/src/arm_a_r/Toolchain.defs
 
 ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)ld.script
 
-ARCHCCVERSION = ${shell $(CC) -v 2>&1 | sed -n '/^gcc version/p' | sed -e 's/^gcc version \([0-9\.]\)/\1/g' -e 's/[-\ ].*//g' -e '1q'}
-ARCHCCMAJOR = ${shell echo $(ARCHCCVERSION) | cut -d'.' -f1}
-
-ifeq ($(ARCHCCMAJOR),2)
-  OLDGCC = y
-else ifeq ($(ARCHCCMAJOR),3)
-  OLDGCC = y
-else
-  OLDGCC = n
-endif
-
-ifeq ($(OLDGCC),n)
-ifneq ($(CONFIG_WINDOWS_CYGWIN),y)
-  OBJCOPYARGS = -R .note -R .note.gnu.build-id -R .comment
-endif
-endif
-
-ifeq ($(OLDGCC),n)
-  ARCHCPUFLAGS = -mcpu=arm7tdmi -mfloat-abi=soft
-else
-  ARCHCPUFLAGS = -mapcs-32 -mcpu=arm7tdmi -msoft-float
-endif
-
 ARCHPICFLAGS = -fpic -msingle-pic-base -mpic-register=r10
 
 CFLAGS := $(ARCHCFLAGS) $(ARCHOPTIMIZATION) \

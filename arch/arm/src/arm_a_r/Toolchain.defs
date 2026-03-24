@@ -200,6 +200,36 @@ else
   ARCHCPUFLAGS += -mfloat-abi=soft
 endif
 
+############################################################################
+# Legacy ARM (ARM7TDMI, ARM9, ARM11, etc.)
+############################################################################
+
+else
+
+ifeq ($(CONFIG_ARCH_ARM7TDMI),y)
+  ARCHCPUFLAGS += -mcpu=arm7tdmi
+  LLVM_CPUTYPE := arm7tdmi
+else ifeq ($(CONFIG_ARCH_ARM920T),y)
+  ARCHCPUFLAGS += -mcpu=arm920t
+  LLVM_CPUTYPE := arm920t
+else ifeq ($(CONFIG_ARCH_ARM926EJS),y)
+  ARCHCPUFLAGS += -mtune=arm926ej-s -march=armv5te
+  LLVM_CPUTYPE := arm926ej-s
+else ifeq ($(CONFIG_ARCH_ARM1136J),y)
+  ARCHCPUFLAGS += -mcpu=arm1136j-s
+  LLVM_CPUTYPE := arm1136j-s
+else ifeq ($(CONFIG_ARCH_ARM1156T2),y)
+  ARCHCPUFLAGS += -mcpu=arm1156t2-s
+  LLVM_CPUTYPE := arm1156t2-s
+else ifeq ($(CONFIG_ARCH_ARM1176JZ),y)
+  ARCHCPUFLAGS += -mcpu=arm1176jz-s
+  LLVM_CPUTYPE := arm1176jz-s
+endif
+
+LLVM_ARCHTYPE := arm
+LLVM_ABITYPE := eabi
+ARCHCPUFLAGS += -mfloat-abi=soft
+
 endif # CONFIG_ARCH_ARMV7A / CONFIG_ARCH_ARMV7R / CONFIG_ARCH_ARMV8R
 
 include $(TOPDIR)/arch/arm/src/common/Toolchain.defs

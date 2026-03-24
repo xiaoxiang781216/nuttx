@@ -19,3 +19,30 @@
 # the License.
 #
 # ##############################################################################
+
+set(PLATFORM_FLAGS)
+
+if(CONFIG_ARCH_ARM7TDMI)
+  list(APPEND PLATFORM_FLAGS -mcpu=arm7tdmi)
+  set(LLVM_CPUTYPE arm7tdmi)
+elseif(CONFIG_ARCH_ARM920T)
+  list(APPEND PLATFORM_FLAGS -mcpu=arm920t)
+  set(LLVM_CPUTYPE arm920t)
+elseif(CONFIG_ARCH_ARM926EJS)
+  list(APPEND PLATFORM_FLAGS -mtune=arm926ej-s -march=armv5te)
+  set(LLVM_CPUTYPE arm926ej-s)
+elseif(CONFIG_ARCH_ARM1136J)
+  list(APPEND PLATFORM_FLAGS -mcpu=arm1136j-s)
+  set(LLVM_CPUTYPE arm1136j-s)
+elseif(CONFIG_ARCH_ARM1156T2)
+  list(APPEND PLATFORM_FLAGS -mcpu=arm1156t2-s)
+  set(LLVM_CPUTYPE arm1156t2-s)
+elseif(CONFIG_ARCH_ARM1176JZ)
+  list(APPEND PLATFORM_FLAGS -mcpu=arm1176jz-s)
+  set(LLVM_CPUTYPE arm1176jz-s)
+endif()
+
+set(LLVM_ARCHTYPE arm)
+set(LLVM_ABITYPE eabi)
+
+list(APPEND PLATFORM_FLAGS -mfloat-abi=soft)
