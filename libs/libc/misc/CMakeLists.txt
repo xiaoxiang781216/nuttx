@@ -127,7 +127,7 @@ if(CONFIG_FDSAN)
   list(APPEND SRCS lib_fdsan.c)
 endif()
 
-list(APPEND SRCS lib_fdcheck.c)
+list(APPEND SRCS lib_fdcheck.c lib_tag.c)
 
 if(CONFIG_DRIVERS_NOTE)
   list(APPEND SRCS lib_note.c)
