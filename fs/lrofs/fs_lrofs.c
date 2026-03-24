@@ -904,14 +904,23 @@ static int lrofs_dup(FAR const struct file *oldp, FAR struct file *newp)
       new_lf->lf_dirty       = false;
       memcpy(new_lf->lf_path, old_lf->lf_path, len + 1);
 
-      /* Configure buffering to support access to this file */
+      /* O_DIRECT 3-way: skip buffer allocation for cache templates */
 
-      ret = lrofs_fileconfigure(lm, new_lf);
-      if (ret < 0)
+      if (newp->f_oflags & O_DIRECT)
         {
-          fs_heap_free(new_lf);
-          ferr("ERROR: Failed configure buffering: %d\n", ret);
-          goto errout_with_lock;
+          new_lf->lf_buffer       = NULL;
+          new_lf->lf_cachesector  = (uint32_t)-1;
+          new_lf->lf_ncachesector = 0;
+        }
+      else
+        {
+          ret = lrofs_fileconfigure(lm, new_lf);
+          if (ret < 0)
+            {
+              fs_heap_free(new_lf);
+              ferr("ERROR: Failed configure buffering: %d\n", ret);
+              goto errout_with_lock;
+            }
         }
 
       newp->f_priv = new_lf;
