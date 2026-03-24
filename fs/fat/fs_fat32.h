@@ -913,6 +913,7 @@ struct fat_file_s
   off_t    ff_cachesector;         /* Current sector in the file buffer */
   off_t    ff_pos;                 /* Current position in the file */
   uint8_t *ff_buffer;              /* File buffer (for partial sector accesses) */
+  char     ff_path[1];             /* Relative path (variable length) */
 };
 
 /* This structure holds the sequence of directory entries used by one

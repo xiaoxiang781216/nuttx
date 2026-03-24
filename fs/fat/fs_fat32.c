@@ -325,7 +325,7 @@ static int fat_open(FAR struct file *filep, FAR const char *relpath,
    * file.
    */
 
-  ff = fs_heap_zalloc(sizeof(struct fat_file_s));
+  ff = fs_heap_zalloc(sizeof(struct fat_file_s) + strlen(relpath));
   if (!ff)
     {
       ret = -ENOMEM;
@@ -346,6 +346,10 @@ static int fat_open(FAR struct file *filep, FAR const char *relpath,
    */
 
   ff->ff_oflags           = oflags;
+
+  /* Save the relative path for FIOC_FILEPATH support */
+
+  strcpy(ff->ff_path, relpath);
 
   /* Save information that can be used later to recover the directory entry */
 
@@ -1030,7 +1034,7 @@ static ssize_t fat_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Check if the file size would exceed the range of off_t */
 
-  if (buflen > OFF_MAX || ff->ff_size > OFF_MAX - (off_t)buflen)
+  if ((off_t)buflen < 0 || ff->ff_size > OFF_MAX - (off_t)buflen)
     {
       ret = -EFBIG;
       goto errout_with_lock;
@@ -1372,8 +1376,33 @@ static int fat_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* ioctl calls are just passed through to the contained block driver */
 
+  switch (cmd)
+    {
+      case FIOC_FILEPATH:
+        {
+          FAR char *path = (FAR char *)(uintptr_t)arg;
+          ret = inode_getpath(inode, path, PATH_MAX);
+          if (ret >= 0)
+            {
+              size_t len = strlen(path);
+              if (len > 0 && path[len - 1] != '/')
+                {
+                  path[len++] = '/';
+                  path[len]   = '\0';
+                }
+
+              strlcpy(&path[len], ff->ff_path, PATH_MAX - len);
+            }
+        }
+        break;
+
+      default:
+        ret = -ENOTTY;
+        break;
+    }
+
   nxmutex_unlock(&fs->fs_lock);
-  return -ENOTTY;
+  return ret;
 }
 
 /****************************************************************************
@@ -1511,6 +1540,7 @@ static int fat_dup(FAR const struct file *oldp, FAR struct file *newp)
   FAR struct fat_mountpt_s *fs;
   FAR struct fat_file_s *oldff;
   FAR struct fat_file_s *newff;
+  size_t pathlen;
   int ret;
 
   finfo("Dup %p->%p\n", oldp, newp);
@@ -1552,75 +1582,121 @@ static int fat_dup(FAR const struct file *oldp, FAR struct file *newp)
       goto errout_with_lock;
     }
 
-  /* Create a new instance of the file private date to describe the
-   * dup'ed file.
-   */
-
-  newff = fs_heap_malloc(sizeof(struct fat_file_s));
-  if (!newff)
+  if (oldp->f_oflags & O_DIRECTORY)
     {
-      ret = -ENOMEM;
-      goto errout_with_lock;
+      FAR struct fat_dirent_s *oldfdir = oldp->f_priv;
+      FAR struct fat_dirent_s *newfdir;
+
+      newfdir = fs_heap_malloc(sizeof(struct fat_dirent_s));
+      if (!newfdir)
+        {
+          ret = -ENOMEM;
+          goto errout_with_lock;
+        }
+
+      memcpy(newfdir, oldfdir, sizeof(struct fat_dirent_s));
+      newfdir->dir.fd_currcluster = newfdir->dir.fd_startcluster;
+      if (newfdir->dir.fd_startcluster != 0)
+        {
+          newfdir->dir.fd_currsector = fat_cluster2sector(fs,
+                                       newfdir->dir.fd_startcluster);
+          newfdir->dir.fd_index      = 2;
+        }
+      else
+        {
+          /* Root: fs_rootbase is already a sector number */
+
+          newfdir->dir.fd_currsector = fs->fs_rootbase;
+          newfdir->dir.fd_index      = 0;
+        }
+
+      newp->f_priv = newfdir;
     }
-
-  /* Create a file buffer to support partial sector accesses */
-
-  newff->ff_buffer = (FAR uint8_t *)fat_io_alloc(fs->fs_hwsectorsize);
-  if (!newff->ff_buffer)
+  else
     {
-      ret = -ENOMEM;
-      goto errout_with_struct;
+      /* Create a new instance of the file private data to describe the
+       * dup'ed file.
+       */
+
+      pathlen = strlen(oldff->ff_path);
+      newff = fs_heap_malloc(sizeof(struct fat_file_s) + pathlen);
+      if (!newff)
+        {
+          ret = -ENOMEM;
+          goto errout_with_lock;
+        }
+
+      /* O_DIRECT two-way handling:
+       *
+       * 1) newp has O_DIRECT: creating a cache template (snapshot).
+       *    Do NOT allocate I/O buffer — the template is never read
+       *    directly.
+       *
+       * 2) Otherwise: creating a work copy from cache template or
+       *    normal dup.  Allocate I/O buffer for the new descriptor.
+       */
+
+      if (newp->f_oflags & O_DIRECT)
+        {
+          /* Case 1: cache template — no I/O buffer needed */
+
+          newff->ff_buffer = NULL;
+        }
+      else
+        {
+          /* Case 2: work copy or normal dup — allocate I/O buffer */
+
+          newff->ff_buffer =
+            (FAR uint8_t *)fat_io_alloc(fs->fs_hwsectorsize);
+          if (!newff->ff_buffer)
+            {
+              ret = -ENOMEM;
+              goto errout_with_struct;
+            }
+        }
+
+      /* Copy file metadata from the old file structure */
+
+      newff->ff_bflags           = 0;
+      newff->ff_oflags           = newp->f_oflags;
+      newff->ff_dirindex         = oldff->ff_dirindex;
+      newff->ff_dirsector        = oldff->ff_dirsector;
+      newff->ff_size             = oldff->ff_size;
+      newff->ff_startcluster     = oldff->ff_startcluster;
+
+      /* Reset position-dependent state so the new descriptor starts at
+       * offset 0, matching the behavior expected by pathcache work copies.
+       */
+
+      newff->ff_currentcluster   = oldff->ff_startcluster;
+      newff->ff_sectorsincluster = fs->fs_fatsecperclus;
+      newff->ff_currentsector    =
+        fat_cluster2sector(fs, oldff->ff_startcluster);
+      newff->ff_cachesector      = 0;
+      newff->ff_pos              = 0;
+
+      /* Copy the relative path */
+
+      strcpy(newff->ff_path, oldff->ff_path);
+
+      /* Attach the private data to the struct file instance */
+
+      newp->f_priv = newff;
+
+      /* Then insert the new instance into the mountpoint structure.
+       * It needs to be there (1) to handle error conditions that effect
+       * all files, and (2) to inform the umount logic that we are busy
+       * (but a simple reference count could have done that).
+       */
+
+      newff->ff_next = fs->fs_head;
+      fs->fs_head = newff;
     }
-
-  /* Copy the rest of the open open file state from the old file structure.
-   * There are some assumptions and potential issues here:
-   *
-   * 1) We assume that the higher level logic has copied the elements of
-   *    the file structure, in particular, the file position.
-   * 2) There is a problem with ff_size if there are multiple opened
-   *    file structures, each believing they know the size of the file.
-   *    If one instance modifies the file length, then the new size of
-   *    the opened file will be unknown to the other.  That is a lurking
-   *    bug!
-   *
-   *    One good solution to this might be to add a reference count to the
-   *    file structure.  Then, instead of dup'ing the whole structure
-   *    as is done here, just increment the reference count on the
-   *    structure.  The would have to be integrated with open logic as
-   *    well, however, so that the same file structure is re-used if the
-   *    file is re-opened.
-   */
-
-  newff->ff_bflags           = 0;                          /* File buffer flags */
-  newff->ff_oflags           = oldff->ff_oflags;           /* File open flags */
-  newff->ff_sectorsincluster = oldff->ff_sectorsincluster; /* Sectors remaining in cluster */
-  newff->ff_dirindex         = oldff->ff_dirindex;         /* Index to directory entry */
-  newff->ff_currentcluster   = oldff->ff_currentcluster;   /* Current cluster */
-  newff->ff_dirsector        = oldff->ff_dirsector;        /* Sector containing directory entry */
-  newff->ff_size             = oldff->ff_size;             /* Size of the file */
-  newff->ff_startcluster     = oldff->ff_startcluster;     /* Start cluster of file on media */
-  newff->ff_currentsector    = oldff->ff_currentsector;    /* Current sector */
-  newff->ff_cachesector      = 0;                          /* Sector in file buffer */
-
-  /* Attach the private date to the struct file instance */
-
-  newp->f_priv = newff;
-
-  /* Then insert the new instance into the mountpoint structure.
-   * It needs to be there (1) to handle error conditions that effect
-   * all files, and (2) to inform the umount logic that we are busy
-   * (but a simple reference count could have done that).
-   */
-
-  newff->ff_next = fs->fs_head;
-  fs->fs_head = newff;
 
   nxmutex_unlock(&fs->fs_lock);
   return OK;
 
-  /* Error exits -- goto's are nasty things, but they sure can make error
-   * handling a lot simpler.
-   */
+  /* Error exits */
 
 errout_with_struct:
   fs_heap_free(newff);
