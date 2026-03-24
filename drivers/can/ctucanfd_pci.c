@@ -1595,7 +1595,9 @@ static FAR netpkt_t *ctucanfd_sock_recv(FAR struct netdev_lowerhalf_s *dev)
   uint32_t                     buff[sizeof(struct ctucanfd_frame_s) / 4];
   int                          i      = 0;
   uint32_t                     regval = 0;
+#ifdef CONFIG_NET_CAN_CANFD
   uint8_t                      bytes;
+#endif
 
   pkt = ctucanfd_sock_txconfirm(dev);
   if (pkt)
