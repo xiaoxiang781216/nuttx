@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
@@ -1340,7 +1341,7 @@ int lan91c111_initialize(uintptr_t base, int irq)
   macrev = getreg16(priv, REV_REG);
   phyid  = getphy(priv, MII_PHYID1) << 16;
   phyid |= getphy(priv, MII_PHYID2);
-  ninfo("base: %08x irq: %d rev: %04x phy: %08x\n",
+  ninfo("base: %08" PRIxPTR " irq: %d rev: %04x phy: %08" PRIx32 "\n",
         base, irq, macrev, phyid);
 
   if ((macrev >> 4 & 0x0f) != CHIP_91111FD)
