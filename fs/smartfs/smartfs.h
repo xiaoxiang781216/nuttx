@@ -296,7 +296,6 @@ struct smartfs_ofile_s
   FAR uint8_t                *buffer;       /* Sector buffer to reduce writes */
   uint8_t                     bflags;       /* Buffer flags */
 #endif
-  int16_t                     crefs;        /* Reference count */
   mode_t                      oflags;       /* Open mode */
   struct smartfs_entry_s      entry;        /* Describes the SMARTFS inode entry */
   size_t                      filepos;      /* Current file position */

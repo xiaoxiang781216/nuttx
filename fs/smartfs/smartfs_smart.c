@@ -340,7 +340,6 @@ static int smartfs_open(FAR struct file *filep, FAR const char *relpath,
   /* Now perform the "open" on the file in direntry */
 
   sf->oflags       = oflags;
-  sf->crefs        = 1;
   sf->filepos      = 0;
   sf->curroffset   = sizeof(struct smartfs_chain_header_s);
   sf->currsector   = sf->entry.firstsector;
@@ -456,20 +455,6 @@ static int smartfs_close(FAR struct file *filep)
       return ret;
     }
 
-  /* Check if we are the last one with a reference to the file and
-   * only close if we are.
-   */
-
-  if (sf->crefs > 1)
-    {
-      /* The file is opened more than once.  Just decrement the
-       * reference count and return.
-       */
-
-      sf->crefs--;
-      goto okout;
-    }
-
   /* Remove ourselves from the linked list */
 
   nextfile = fs->fs_head;
@@ -520,7 +505,6 @@ static int smartfs_close(FAR struct file *filep)
 
   fs_heap_free(sf);
 
-okout:
   nxmutex_unlock(&g_lock);
   return OK;
 }
@@ -1034,6 +1018,7 @@ static int smartfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               if (path[len - 1] != '/')
                 {
                   path[len++] = '/';
+                  path[len]   = '\0';
                 }
 
               strlcat(path, priv->path, PATH_MAX - len);
@@ -1098,7 +1083,11 @@ static int smartfs_sync(FAR struct file *filep)
 
 static int smartfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
+  FAR struct smartfs_mountpt_s *fs;
   FAR struct smartfs_ofile_s *sf;
+  FAR struct smartfs_ofile_s *newsf;
+  size_t pathlen;
+  int ret;
 
   finfo("Dup %p->%p\n", oldp, newp);
 
@@ -1108,16 +1097,123 @@ static int smartfs_dup(FAR const struct file *oldp, FAR struct file *newp)
               newp->f_priv == NULL &&
               newp->f_inode != NULL);
 
-  /* Recover our private data from the struct file instance */
+  if (oldp->f_oflags & O_DIRECTORY)
+    {
+      FAR struct smartfs_dir_s *olddir = oldp->f_priv;
+      FAR struct smartfs_dir_s *newdir;
 
-  sf    = oldp->f_priv;
+      newdir = fs_heap_malloc(sizeof(struct smartfs_dir_s));
+      if (newdir == NULL)
+        {
+          return -ENOMEM;
+        }
 
-  DEBUGASSERT(sf != NULL);
+      memcpy(newdir, olddir, sizeof(struct smartfs_dir_s));
 
-  /* Just increment the reference count on the ofile */
+      /* Reset directory traversal to the beginning */
 
-  sf->crefs++;
-  newp->f_priv = sf;
+      newdir->fs_currsector = newdir->fs_firstsector;
+      newdir->fs_curroffset = sizeof(struct smartfs_chain_header_s);
+      newp->f_priv = newdir;
+    }
+  else
+    {
+      /* Recover our private data from the struct file instance */
+
+      sf = oldp->f_priv;
+      fs = oldp->f_inode->i_private;
+
+      DEBUGASSERT(sf != NULL && fs != NULL);
+
+      /* Allocate a new open file structure with variable-length path */
+
+      pathlen = strlen(sf->path);
+      newsf = fs_heap_malloc(sizeof(struct smartfs_ofile_s) + pathlen);
+      if (newsf == NULL)
+        {
+          return -ENOMEM;
+        }
+
+      /* Take the lock to protect the open file list */
+
+      ret = nxmutex_lock(&g_lock);
+      if (ret < 0)
+        {
+          fs_heap_free(newsf);
+          return ret;
+        }
+
+      /* Deep copy all fields */
+
+      memcpy(newsf, sf, sizeof(struct smartfs_ofile_s) + pathlen);
+
+      /* Use the caller's open flags, not the old file's */
+
+      newsf->oflags = newp->f_oflags;
+
+      /* Reset position to start of file */
+
+      newsf->filepos      = 0;
+      newsf->currsector   = newsf->entry.firstsector;
+      newsf->curroffset   = sizeof(struct smartfs_chain_header_s);
+      newsf->byteswritten = 0;
+
+      /* Duplicate the entry name string (heap-allocated) */
+
+      if (sf->entry.name != NULL)
+        {
+          newsf->entry.name = fs_heap_strdup(sf->entry.name);
+          if (newsf->entry.name == NULL)
+            {
+              nxmutex_unlock(&g_lock);
+              fs_heap_free(newsf);
+              return -ENOMEM;
+            }
+        }
+
+      /* O_DIRECT two-way handling:
+       *
+       * 1) newp has O_DIRECT: creating a cache template (snapshot).
+       *    No sector buffer needed — the template is never read
+       *    directly.
+       *
+       * 2) Otherwise: creating a work copy from cache template or
+       *    normal dup.  Allocate sector buffer for the new descriptor.
+       */
+
+#ifdef CONFIG_SMARTFS_USE_SECTOR_BUFFER
+      newsf->bflags = 0;
+
+      if (newp->f_oflags & O_DIRECT)
+        {
+          /* Case 1: cache template — no sector buffer needed */
+
+          newsf->buffer = NULL;
+        }
+      else if (sf->buffer != NULL)
+        {
+          /* Case 2: work copy or normal dup — allocate sector buffer */
+
+          newsf->buffer = fs_heap_malloc(fs->fs_llformat.availbytes);
+          if (newsf->buffer == NULL)
+            {
+              nxmutex_unlock(&g_lock);
+              fs_heap_free(newsf->entry.name);
+              fs_heap_free(newsf);
+              return -ENOMEM;
+            }
+        }
+#endif
+
+      /* Insert the new entry into the open file list */
+
+      newsf->fnext = fs->fs_head;
+      fs->fs_head  = newsf;
+
+      nxmutex_unlock(&g_lock);
+
+      newp->f_priv = newsf;
+    }
 
   return OK;
 }
