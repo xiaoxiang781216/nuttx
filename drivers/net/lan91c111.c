@@ -211,19 +211,6 @@ static void getregs32(FAR struct lan91c111_driver_s *priv,
     }
 }
 
-static void putregs32(FAR struct lan91c111_driver_s *priv,
-                      uint16_t offset, const void *value_, size_t length)
-{
-  FAR const uint32_t *value = value_;
-  size_t i;
-
-  offset = updatebank(priv, offset);
-  for (i = 0; i < length; i += sizeof(*value))
-    {
-      *(FAR volatile uint32_t *)(priv->base + offset) = *value++;
-    }
-}
-
 static void copyfrom16(FAR struct lan91c111_driver_s *priv,
                        uint16_t offset, FAR void *value_, size_t length)
 {
@@ -249,6 +236,20 @@ static void copyto16(FAR struct lan91c111_driver_s *priv,
     {
       *(FAR volatile uint16_t *)(priv->base + offset) = *value++;
       offset += sizeof(*value);
+    }
+}
+
+static void putdata16(FAR struct lan91c111_driver_s *priv,
+                      uint16_t offset, FAR const void *value_,
+                      size_t length)
+{
+  FAR const uint16_t *value = value_;
+  size_t i;
+
+  offset = updatebank(priv, offset);
+  for (i = 0; i < length; i += sizeof(*value))
+    {
+      *(FAR volatile uint16_t *)(priv->base + offset) = *value++;
     }
 }
 
@@ -384,6 +385,7 @@ static int lan91c111_transmit(FAR struct net_driver_s *dev)
   FAR struct lan91c111_driver_s *priv = dev->d_private;
   uint32_t pages;
   uint8_t packet;
+  uint16_t control;
 
   /* Verify that the hardware is ready to send another packet. If we get
    * here, then we are committed to sending a packet; Higher level logic
@@ -399,7 +401,7 @@ static int lan91c111_transmit(FAR struct net_driver_s *dev)
    * If odd size then last byte is included in ctl word.
    */
 
-  pages = ((dev->d_len & ~1) + 6) >> 8;
+  pages = ((dev->d_len & ~1) + 5) >> 8;
 
   while (1)
     {
@@ -454,14 +456,20 @@ static int lan91c111_transmit(FAR struct net_driver_s *dev)
   putreg16(priv, DATA_REG, 0);
   putreg16(priv, DATA_REG, dev->d_len + 6);
 
-  /* Append ctl byte */
+  /* Copy the packet payload and append the trailing control word.
+   * For odd-sized frames, the last data byte is packed into the low
+   * byte of the control word and TC_ODD is stored in the high byte.
+   */
 
-  dev->d_buf[dev->d_len]     = TC_ODD;
-  dev->d_buf[dev->d_len + 1] = 0x00;
+  putdata16(priv, DATA_REG, dev->d_buf, dev->d_len & ~1);
 
-  /* Copy and enqueue the buffer */
+  control = 0;
+  if ((dev->d_len & 1) != 0)
+    {
+      control = ((uint16_t)TC_ODD << 8) | dev->d_buf[dev->d_len - 1];
+    }
 
-  putregs32(priv, DATA_REG, dev->d_buf, dev->d_len + 2);
+  putreg16(priv, DATA_REG, control);
   lan91c111_command_mmu(priv, MC_ENQUEUE);
 
   /* Assume the transmission no error, otherwise
@@ -497,17 +505,13 @@ static int lan91c111_transmit(FAR struct net_driver_s *dev)
 
 static int lan91c111_txpoll(FAR struct net_driver_s *dev)
 {
-  FAR struct lan91c111_driver_s *priv = dev->d_private;
-
-  /* Send the packet */
-
-  lan91c111_transmit(dev);
-
-  /* Check if there is room in the device to hold another packet.  If
-   * not, return a non-zero value to terminate the poll.
+  /* Send the packet and terminate this polling pass.  The LAN91C111
+   * allocates internal packet memory on demand in lan91c111_transmit(), so
+   * pre-checking MIR does not provide a reliable availability test.
    */
 
-  return !(getreg16(priv, MIR_REG) & MIR_FREE_MASK);
+  lan91c111_transmit(dev);
+  return 1;
 }
 
 /****************************************************************************
@@ -720,7 +724,7 @@ static void lan91c111_txdone(FAR struct net_driver_s *dev)
 
   /* Check for errors and update statistics */
 
-  if (status & ES_ERRORS)
+  if ((status & ES_ERRORS) != 0)
     {
       /* Re-enable transmit */
 
@@ -732,10 +736,6 @@ static void lan91c111_txdone(FAR struct net_driver_s *dev)
       dev->d_statistics.tx_done--;
 #endif
       NETDEV_TXERRORS(dev);
-    }
-  else
-    {
-      DEBUGPANIC();
     }
 }
 
@@ -871,10 +871,7 @@ static void lan91c111_interrupt_work(FAR void *arg)
 
       /* In any event, poll the network for new TX data */
 
-      if (getreg16(priv, MIR_REG) & MIR_FREE_MASK)
-        {
-          devif_poll(dev, lan91c111_txpoll);
-        }
+      devif_poll(dev, lan91c111_txpoll);
     }
 
   netdev_unlock(dev);
@@ -1052,7 +1049,6 @@ static int lan91c111_ifdown(FAR struct net_driver_s *dev)
 static void lan91c111_txavail_work(FAR void *arg)
 {
   FAR struct net_driver_s *dev = arg;
-  FAR struct lan91c111_driver_s *priv = dev->d_private;
 
   /* Lock the network and serialize driver operations if necessary.
    * NOTE: Serialization is only required in the case where the driver work
@@ -1066,16 +1062,11 @@ static void lan91c111_txavail_work(FAR void *arg)
 
   if (IFF_IS_UP(dev->d_flags))
     {
-      /* Check if there is room in the hardware to hold another outgoing
-       * packet.
+      /* Poll the network for new XMIT data.  The actual packet memory
+       * allocation is handled inside lan91c111_transmit().
        */
 
-      if (getreg16(priv, MIR_REG) & MIR_FREE_MASK)
-        {
-          /* If so, then poll the network for new XMIT data */
-
-          devif_poll(dev, lan91c111_txpoll);
-        }
+      devif_poll(dev, lan91c111_txpoll);
     }
 
   netdev_unlock(dev);
