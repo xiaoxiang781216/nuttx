@@ -509,6 +509,18 @@ int oneshot_start_absolute(FAR struct oneshot_lowerhalf_s *lower,
 
       irqstate_t flags = irq_save();
       clkcnt_t   delay = expected - lower->ops->current(lower);
+
+      /* Guard against unsigned underflow: if the deadline has already
+       * passed, the unsigned subtraction wraps to a huge value.
+       * Reinterpret as signed to detect this and clamp to 1 so the
+       * timer fires at the earliest opportunity.
+       */
+
+      if ((int64_t)delay < 0)
+        {
+          delay = 1;
+        }
+
       lower->ops->start(lower, delay);
       irq_restore(flags);
     }
@@ -649,6 +661,18 @@ int oneshot_tick_absolute(FAR struct oneshot_lowerhalf_s *lower,
 
       irqstate_t flags = irq_save();
       clkcnt_t   delay = expected - lower->ops->current(lower);
+
+      /* Guard against unsigned underflow: if the deadline has already
+       * passed, the unsigned subtraction wraps to a huge value.
+       * Reinterpret as signed to detect this and clamp to 1 so the
+       * timer fires at the earliest opportunity.
+       */
+
+      if ((int64_t)delay < 0)
+        {
+          delay = 1;
+        }
+
       lower->ops->start(lower, delay);
       irq_restore(flags);
     }
