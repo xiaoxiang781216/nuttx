@@ -763,17 +763,38 @@ static int littlefs_dup(FAR const struct file *oldp, FAR struct file *newp)
 
       memcpy(newpriv, oldpriv, sizeof(struct littlefs_file_s));
 
-      /* Deep copy cache.buffer */
+      /* O_DIRECT two-way handling:
+       *
+       * 1. newp has O_DIRECT  => creating a cache template (snapshot).
+       *    Skip cache.buffer allocation to save memory.
+       *    lfs_file_rawclose handles NULL cache.buffer gracefully.
+       *
+       * 2. Otherwise          => creating a working copy from cache
+       *    or normal dup.  Allocate cache.buffer for I/O operations.
+       */
 
-      newpriv->file.cache.buffer = lfs_malloc(fs->lfs.cfg->cache_size);
-      if (!newpriv->file.cache.buffer)
+      if (newp->f_oflags & O_DIRECT)
         {
-          nxmutex_unlock(&fs->lock);
-          fs_heap_free(newpriv);
-          return -ENOMEM;
-        }
+          /* Cache template: no I/O buffer needed */
 
-      newpriv->file.cache.block = (lfs_block_t)-1;
+          newpriv->file.cache.buffer = NULL;
+          newpriv->file.cache.block = (lfs_block_t)-1;
+        }
+      else
+        {
+          /* Working copy (from cache or normal): allocate I/O buffer */
+
+          newpriv->file.cache.buffer =
+            lfs_malloc(fs->lfs.cfg->cache_size);
+          if (!newpriv->file.cache.buffer)
+            {
+              nxmutex_unlock(&fs->lock);
+              fs_heap_free(newpriv);
+              return -ENOMEM;
+            }
+
+          newpriv->file.cache.block = (lfs_block_t)-1;
+        }
 
       /* Update LFS internal flags for the new fd's open mode,
        * preserving LFS_F_INLINE (file storage layout).
@@ -788,7 +809,7 @@ static int littlefs_dup(FAR const struct file *oldp, FAR struct file *newp)
       newpriv->file.off = 0;
 
       /* Insert the new file into littlefs's mlist (file list).
-       * The next pointer needs to be updated to maintain the linked list.
+       * Required by lfs_file_close() which asserts mlist membership.
        */
 
       newpriv->file.next = (FAR struct lfs_file *)fs->lfs.mlist;
