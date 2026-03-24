@@ -775,6 +775,10 @@ static void lan91c111_phy_notify(FAR struct net_driver_s *dev)
 
           netdev_carrier_on(dev);
         }
+      else if (getreg16(priv, EPH_STATUS_REG) & ES_LINK_OK)
+        {
+          netdev_carrier_on(dev);
+        }
       else
         {
           netdev_carrier_off(dev);
@@ -1348,9 +1352,9 @@ int lan91c111_initialize(uintptr_t base, int irq)
   ninfo("base: %08x irq: %d rev: %04x phy: %08x\n",
         base, irq, macrev, phyid);
 
-  if ((macrev >> 4 & 0x0f) != CHIP_91111FD || phyid != PHY_LAN83C183)
+  if ((macrev >> 4 & 0x0f) != CHIP_91111FD)
     {
-      nerr("ERROR: Unsupported LAN91C111's MAC/PHY\n");
+      nerr("ERROR: Unsupported LAN91C111's MAC revision %04x\n", macrev);
       ret = -ENODEV;
       goto err;
     }
