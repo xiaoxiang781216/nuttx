@@ -125,7 +125,7 @@
                                                        dynalloc, throttle, \
                                                        alignsize, ...) \
   static DEFINE_PER_CPU_BSS_BMP(char, CONCATENATE(name, _buffer) \
-  [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE] \
+  [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE]) \
   aligned_data(alignsize) MEMPOOL_LOCATE_DATA(__VA_ARGS__); \
   static DEFINE_PER_CPU_BMP(struct mempool_s, name) = \
     { \
