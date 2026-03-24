@@ -291,6 +291,7 @@ static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
   FAR struct tcb_s *tcb = running_task();
   FAR struct note_printf_s *note;
   uint8_t data[NOTE_BUFFER_SIZE];
+  size_t cpunamelen;
   size_t length;
   size_t fmtlen;
   size_t next;
@@ -298,14 +299,28 @@ static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
   noterpmsg_driver_initialize();
 
   note = (FAR struct note_printf_s *)data;
+
+  /* npt_data layout: [cpuname\0][fmt\0][args...]
+   * When npt_fmt == 0, receiver can extract cpuname to identify source core
+   */
+
+  cpunamelen = strlen(CONFIG_RPMSG_LOCAL_CPUNAME) + 1;
+  memcpy(note->npt_data, CONFIG_RPMSG_LOCAL_CPUNAME, cpunamelen);
+
   fmtlen = strlen(fmt) + 1;
-  memcpy(note->npt_data, fmt, fmtlen);
+  memcpy(note->npt_data + cpunamelen, fmt, fmtlen);
 
-  length = sizeof(data) - SIZEOF_NOTE_PRINTF(0) - fmtlen;
-  next = lib_bsprintf(note->npt_data + fmtlen, length, fmt, va);
-  DEBUGASSERT(next < sizeof(data) - sizeof(*note));
+  length = sizeof(data) - SIZEOF_NOTE_PRINTF(0) - cpunamelen - fmtlen;
+  next = lib_bsprintf(note->npt_data + cpunamelen + fmtlen, length, fmt, va);
 
-  length = SIZEOF_NOTE_PRINTF(next + fmtlen);
+  /* Silently truncate if data exceeds buffer - avoid assert in syslog path */
+
+  if (next > length)
+    {
+      next = length;
+    }
+
+  length = SIZEOF_NOTE_PRINTF(next + cpunamelen + fmtlen);
   note_common(tcb, &note->npt_cmn, length, NOTE_DUMP_PRINTF);
   note->npt_ip = ip;
   note->npt_tag = tag;
