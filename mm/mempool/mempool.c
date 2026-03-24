@@ -68,6 +68,8 @@ struct mempool_info_task_ctx
  * Private Data
  ****************************************************************************/
 
+static spinlock_t g_mempool_init_lock = SP_UNLOCKED;
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -387,13 +389,11 @@ static inline_function void mempool_try_init(FAR struct mempool_s *pool)
 
 int mempool_init(FAR struct mempool_s *pool)
 {
-  static DEFINE_PER_CPU_BMP(mutex_t, g_mempool_init_lock) =
-                                     NXMUTEX_INITIALIZER;
-  #define g_mempool_init_lock this_cpu_var_bmp(g_mempool_init_lock)
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
+  irqstate_t flags;
   int ret = OK;
 
-  nxmutex_lock(&g_mempool_init_lock);
+  flags = spin_lock_irqsave_notrace(&g_mempool_init_lock);
 #ifdef CONFIG_PERCPU_SECTION
   if (strcmp(pool->name, "bmp_") == 0)
     {
@@ -472,7 +472,7 @@ int mempool_init(FAR struct mempool_s *pool)
         }
     }
 
-  nxmutex_unlock(&g_mempool_init_lock);
+  spin_unlock_irqrestore_notrace(&g_mempool_init_lock, flags);
 
   return ret;
 }
