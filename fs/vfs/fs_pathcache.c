@@ -167,7 +167,7 @@ static int pathcache_create(FAR struct file *filep, FAR char *abspath)
 
   /* Initialize cached_file's VFS fields */
 
-  cached_file->f_oflags = O_RDONLY;
+  cached_file->f_oflags = O_RDONLY | O_DIRECT;
   cached_file->f_inode  = inode;
 
   /* Duplicate the file structure for caching */
