@@ -38,7 +38,7 @@ CMN_CSRCS += arm_prefetchabort.c arm_cpuidlestack.c arm_initialstate.c
 CMN_CSRCS += arm_undefinedinsn.c arm_allocpage.c arm_perf.c
 CMN_CSRCS += arm_cache.c arm_cpuinfo.c cp15_cacheops.c
 
-ifeq ($(CONFIG_ARM_VIC),y)
+ifeq ($(CONFIG_ARM_HAVE_VIC),y)
   CMN_CSRCS += arm_vic.c
 endif
 

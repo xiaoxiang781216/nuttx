@@ -42,7 +42,7 @@ if(CONFIG_ARM_HAVE_PTM)
   list(APPEND CSRCS arm_timer.c)
 endif()
 
-if(CONFIG_ARM_VIC)
+if(CONFIG_ARM_HAVE_VIC)
   list(APPEND CSRCS arm_vic.c)
 endif()
 

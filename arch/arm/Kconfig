@@ -782,6 +782,7 @@ config ARCH_ARM926EJS
 	default n
 	select ARCH_DCACHE
 	select ARCH_ICACHE
+	select ARCH_HAVE_CPUINFO
 	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
