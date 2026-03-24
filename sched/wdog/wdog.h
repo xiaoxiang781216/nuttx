@@ -184,7 +184,9 @@ static inline_function void wd_timer_start(clock_t tick, bool in_expiration)
 #ifdef CONFIG_SCHED_TICKLESS_ALARM
   up_alarm_tick_start(next_tick);
 #else
-  up_timer_tick_start(next_tick - clock_systime_ticks());
+  clock_t now   = clock_systime_ticks();
+  clock_t delay = clock_compare(now, next_tick) ? next_tick - now : 0u;
+  up_timer_tick_start(delay);
 #endif
 }
 
