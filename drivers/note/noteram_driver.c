@@ -117,7 +117,7 @@ struct noteram_driver_s
   struct notifier_block nb;
   struct noteram_ratelimit_s ratelimit;
   dq_queue_t poll_list;     /* Registered poll users list */
-  spinlock_t lock;
+  rspinlock_t lock;
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
   struct wdog_s wdog;
 #endif
@@ -277,7 +277,7 @@ void noteram_timeout_reset(FAR struct noteram_driver_s *drv)
 static void noteram_timeout_handler(wdparm_t arg)
 {
   FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)arg;
-  irqstate_t flags = spin_lock_irqsave_notrace(&drv->lock);
+  irqstate_t flags = rspin_lock_irqsave_notrace(&drv->lock);
   FAR struct noteram_dump_context_s *ctx;
 
   sched_lock();
@@ -298,7 +298,7 @@ static void noteram_timeout_handler(wdparm_t arg)
     }
 
   noteram_timeout_reset(drv);
-  spin_unlock_irqrestore_notrace(&drv->lock, flags);
+  rspin_unlock_irqrestore_notrace(&drv->lock, flags);
   sched_unlock();
 }
 #else
@@ -765,7 +765,7 @@ int noteram_close(FAR struct file *filep)
 {
   FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
   FAR struct noteram_dump_context_s *ctx = filep->f_priv;
-  irqstate_t flags = spin_lock_irqsave_notrace(&drv->lock);
+  irqstate_t flags = rspin_lock_irqsave_notrace(&drv->lock);
 
   /* If poll is registered, remove from the list */
 
@@ -775,7 +775,7 @@ int noteram_close(FAR struct file *filep)
       ctx->pfd = NULL;
     }
 
-  spin_unlock_irqrestore_notrace(&drv->lock, flags);
+  rspin_unlock_irqrestore_notrace(&drv->lock, flags);
   filep->f_priv = NULL;
   kmm_free(ctx);
   return OK;
@@ -865,14 +865,14 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
        */
 
       case NOTE_CLEAR:
-        flags = spin_lock_irqsave_notrace(&drv->lock);
+        flags = rspin_lock_irqsave_notrace(&drv->lock);
         drv->header->tail = drv->header->head;
         if (drv->overwrite == NOTE_MODE_OVERWRITE_OVERFLOW)
           {
             drv->overwrite = NOTE_MODE_OVERWRITE_DISABLE;
           }
 
-        spin_unlock_irqrestore_notrace(&drv->lock, flags);
+        rspin_unlock_irqrestore_notrace(&drv->lock, flags);
         ret = OK;
         break;
 
@@ -888,9 +888,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            flags = spin_lock_irqsave_notrace(&drv->lock);
+            flags = rspin_lock_irqsave_notrace(&drv->lock);
             *(FAR unsigned int *)arg = drv->overwrite;
-            spin_unlock_irqrestore_notrace(&drv->lock, flags);
+            rspin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
@@ -907,9 +907,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            flags = spin_lock_irqsave_notrace(&drv->lock);
+            flags = rspin_lock_irqsave_notrace(&drv->lock);
             drv->overwrite = *(FAR unsigned int *)arg;
-            spin_unlock_irqrestore_notrace(&drv->lock, flags);
+            rspin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
@@ -962,10 +962,10 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             FAR struct note_ratelimit_s *limit =
               (FAR struct note_ratelimit_s *)arg;
 
-            flags = spin_lock_irqsave_notrace(&drv->lock);
+            flags = rspin_lock_irqsave_notrace(&drv->lock);
             limit->interval = drv->ratelimit.interval;
             limit->burst = drv->ratelimit.burst;
-            spin_unlock_irqrestore_notrace(&drv->lock, flags);
+            rspin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
@@ -980,10 +980,10 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             FAR struct note_ratelimit_s *limit =
               (FAR struct note_ratelimit_s *)arg;
 
-            flags = spin_lock_irqsave_notrace(&drv->lock);
+            flags = rspin_lock_irqsave_notrace(&drv->lock);
             drv->ratelimit.interval = limit->interval;
             drv->ratelimit.burst = limit->burst;
-            spin_unlock_irqrestore_notrace(&drv->lock, flags);
+            rspin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
@@ -1000,9 +1000,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            flags = spin_lock_irqsave_notrace(&drv->lock);
+            flags = rspin_lock_irqsave_notrace(&drv->lock);
             *(FAR unsigned int *)arg = noteram_unread_length(drv, ctx->read);
-            spin_unlock_irqrestore_notrace(&drv->lock, flags);
+            rspin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
@@ -1041,7 +1041,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
   drv = inode->i_private;
   ctx = filep->f_priv;
 
-  flags = spin_lock_irqsave_notrace(&drv->lock);
+  flags = rspin_lock_irqsave_notrace(&drv->lock);
   sched_lock();
 
   /* Ignore waits that do not include POLLIN */
@@ -1081,7 +1081,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
 errout:
   noteram_timeout_reset(drv);
-  spin_unlock_irqrestore_notrace(&drv->lock, flags);
+  rspin_unlock_irqrestore_notrace(&drv->lock, flags);
   sched_unlock();
   return ret;
 }
@@ -1118,7 +1118,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
 
   noteram_driver_initialize();
 
-  flags = spin_lock_irqsave_notrace(&drv->lock);
+  flags = rspin_lock_irqsave_notrace(&drv->lock);
   sched_lock();
 
   /* Initialize the noteram header if it has not been initialized yet. */
@@ -1166,19 +1166,20 @@ static void noteram_add(FAR struct note_driver_s *driver,
   memcpy(drv->header->buffer, buf + space, notelen - space);
   drv->header->head = noteram_next(drv, head, notelen);
 
-  if (!noswitches && !dq_empty(&drv->poll_list))
+  /* Only notify poll waiters on the outermost (non-recursive) call.
+   * poll_notify -> nxsem_post -> sched_note_wakeup -> noteram_add
+   * would re-enter with rspinlock held; the recursive call writes
+   * the buffer but skips notification to break the chain.
+   */
+
+  if (!noswitches && !rspin_lock_is_recursive(&drv->lock) &&
+      !dq_empty(&drv->poll_list))
     {
       FAR struct noteram_dump_context_s *ctx;
 
       dq_for_every_entry(&drv->poll_list, ctx,
                           struct noteram_dump_context_s, poll_node)
         {
-          /* Relaxed read of ctx->read and ctx->threshold without
-            * ctx->lock: we already hold drv lock which serializes with
-            * poll_list add/remove, so ctx stays valid.  A stale value
-            * only causes a harmless extra or missed notification.
-            */
-
           if (ctx->pfd &&
               noteram_unread_length(drv, ctx->read) >= ctx->threshold)
             {
@@ -1190,7 +1191,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
     }
 
 out:
-  spin_unlock_irqrestore_notrace(&drv->lock, flags);
+  rspin_unlock_irqrestore_notrace(&drv->lock, flags);
   sched_unlock();
 }
 
