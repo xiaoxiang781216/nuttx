@@ -705,15 +705,26 @@ static int fatfs_dup(FAR const struct file *oldp, FAR struct file *newp)
       FAR struct fatfs_file_s *oldfp;
       FAR struct fatfs_file_s *newfp;
       size_t alloc_size;
+      size_t copy_size;
       int oflags;
 
       oldfp = oldp->f_priv;
 
-      /* Calculate allocation size based on sector size */
-
-      alloc_size = sizeof(*newfp) - FF_MAX_SS + SS(&fs->fat);
-
-      /* Allocate a new file structure */
+      if (newp->f_oflags & O_DIRECT)
+        {
+          alloc_size = sizeof(*newfp) - FF_MAX_SS;
+          copy_size  = alloc_size;
+        }
+      else if (oldp->f_oflags & O_DIRECT)
+        {
+          alloc_size = sizeof(*newfp) - FF_MAX_SS + SS(&fs->fat);
+          copy_size  = sizeof(*newfp) - FF_MAX_SS;
+        }
+      else
+        {
+          alloc_size = sizeof(*newfp) - FF_MAX_SS + SS(&fs->fat);
+          copy_size  = alloc_size;
+        }
 
       newfp = fs_heap_malloc(alloc_size);
       if (newfp == NULL)
@@ -728,16 +739,17 @@ static int fatfs_dup(FAR const struct file *oldp, FAR struct file *newp)
           return ret;
         }
 
-      /* Copy the old file structure to the new one */
+      memcpy(newfp, oldfp, copy_size);
 
-      memcpy(newfp, oldfp, alloc_size);
-
-      /* But update the flags */
+      newfp->f.fptr = 0;
+      newfp->f.sect = 0;
 
       oflags = fatfs_convert_oflags(newp->f_oflags);
       newfp->f.flag = oflags;
 
-      /* Set the private data in the new file descriptor */
+#if FF_USE_FASTSEEK
+      newfp->f.cltbl = NULL;
+#endif
 
       newp->f_priv = newfp;
       nxmutex_unlock(&fs->lock);
