@@ -5,6 +5,16 @@
 
 if ARCH_CHIP_NRF51
 
+config NRF51_LARGE
+	bool "Enlarged memory for QEMU (16MB Flash, 1MB SRAM)"
+	default n
+	---help---
+		Enable enlarged memory layout for modified QEMU. When enabled,
+		the Flash size is set to 16MB and the SRAM size is set to 1MB,
+		instead of the default 256KB Flash and 16KB SRAM. This option
+		is only useful when running on a custom QEMU build that supports
+		larger memory for nRF51.
+
 config NRF51_UART
 	bool
 	default n

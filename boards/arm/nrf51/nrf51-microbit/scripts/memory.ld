@@ -26,8 +26,13 @@
 
 MEMORY
 {
+#ifdef CONFIG_NRF51_LARGE
+  FLASH (rx)  : ORIGIN = 0x00000000, LENGTH = 16M
+  RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 1M
+#else
   FLASH (rx)  : ORIGIN = 0x00000000, LENGTH = 256K
   RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 16K
+#endif
 }
 
 _ram_size = LENGTH(RAM);
