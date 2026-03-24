@@ -97,7 +97,6 @@ DEFINE_PER_CPU_BMP(rmutex_t, g_udp_connections_lock) = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_udp_connections, sizeof(struct udp_conn_s),
                CONFIG_NET_UDP_PREALLOC_CONNS, CONFIG_NET_UDP_MAX_CONNS,
                CONFIG_NET_UDP_ALLOC_CONNS);
-#define g_udp_connections this_cpu_var_bmp(g_udp_connections)
 
 /* A list of all allocated UDP connections */
 
