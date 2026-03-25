@@ -167,10 +167,12 @@ static const struct oneshot_operations_s g_arm_oneshot_ops =
   .max_delay      = arm_oneshot_max_delay,
 };
 
-static struct oneshot_lowerhalf_s g_arm_oneshot_lowerhalf =
+static DEFINE_PER_CPU_BMP(struct oneshot_lowerhalf_s,
+                          g_arm_oneshot_lowerhalf) =
 {
   .ops = &g_arm_oneshot_ops
 };
+#define g_arm_oneshot_lowerhalf this_cpu_var_bmp(g_arm_oneshot_lowerhalf)
 
 /****************************************************************************
  * Public Functions
