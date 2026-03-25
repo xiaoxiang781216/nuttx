@@ -25,8 +25,11 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/compiler.h>
 
 #include <stdarg.h>
+
+#ifdef CONFIG_SYSLOG
 #include <syslog.h>
 
 #include <nuttx/tls_task.h>
@@ -141,3 +144,36 @@ void syslog_ratelimit(int priority,
       va_end(ap);
     }
 }
+
+#else
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: vsyslog / syslog
+ *
+ * Description:
+ *   When CONFIG_SYSLOG is not enabled, syslog/vsyslog may be defined as
+ *   macros or static inline in the header. These functions provide real
+ *   symbols for pre-built libraries that reference syslog() directly.
+ *
+ ****************************************************************************/
+
+#undef vsyslog
+void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
+{
+  (void)priority;
+  (void)fmt;
+  (void)ap;
+}
+
+#undef syslog
+void syslog(int priority, FAR const IPTR char *fmt, ...)
+{
+  (void)priority;
+  (void)fmt;
+}
+
+#endif
