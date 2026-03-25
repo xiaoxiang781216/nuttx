@@ -182,7 +182,7 @@ static void notefdx_add(FAR struct note_driver_s *drv,
   if (!note->enable)
     {
       note->enable = true;
-      sched_note_taskname(notefdx_taskname_handler, channel);
+      note_taskname(notefdx_taskname_handler, channel);
     }
 
   T32_Fdx_SendPoll(channel, (FAR void *)buf, notelen);

@@ -26,12 +26,14 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include <time.h>
 #include <syslog.h>
+#include <sys/param.h>
 
 #include <nuttx/init.h>
 #include <nuttx/irq.h>
@@ -58,43 +60,43 @@
 #  error "Maximum channel number exceeds. "
 #endif
 
-#define note_add(drv, note, notelen, noswitches)                             \
+#define note_do_add(drv, note, notelen, noswitches)                             \
   ((drv)->ops->add(drv, note, notelen, noswitches))
-#define note_start(drv, tcb)                                                 \
+#define note_do_start(drv, tcb)                                                 \
   ((drv)->ops->start && ((drv)->ops->start(drv, tcb), true))
-#define note_stop(drv, tcb)                                                  \
+#define note_do_stop(drv, tcb)                                                  \
   ((drv)->ops->stop && ((drv)->ops->stop(drv, tcb), true))
-#define note_suspend(drv, tcb)                                               \
+#define note_do_suspend(drv, tcb)                                               \
   ((drv)->ops->suspend && ((drv)->ops->suspend(drv, tcb), true))
-#define note_resume(drv, tcb)                                                \
+#define note_do_resume(drv, tcb)                                                \
   ((drv)->ops->resume && ((drv)->ops->resume(drv, tcb), true))
-#define note_cpu_start(drv, tcb, cpu)                                        \
+#define note_do_cpu_start(drv, tcb, cpu)                                        \
   ((drv)->ops->cpu_start && ((drv)->ops->cpu_start(drv, tcb, cpu), true))
-#define note_cpu_started(drv, tcb)                                           \
+#define note_do_cpu_started(drv, tcb)                                           \
   ((drv)->ops->cpu_started && ((drv)->ops->cpu_started(drv, tcb), true))
-#define note_preemption(drv, tcb, locked)                                    \
+#define note_do_preemption(drv, tcb, locked)                                    \
   ((drv)->ops->preemption && ((drv)->ops->preemption(drv, tcb, locked), true))
-#define note_csection(drv, tcb, enter)                                       \
+#define note_do_csection(drv, tcb, enter)                                       \
   ((drv)->ops->csection && ((drv)->ops->csection(drv, tcb, enter), true))
-#define note_spinlock(drv, tcb, spinlock, type)                              \
+#define note_do_spinlock(drv, tcb, spinlock, type)                              \
   ((drv)->ops->spinlock &&                                                   \
   ((drv)->ops->spinlock(drv, tcb, spinlock, type), true))
-#define note_syscall_enter(drv, nr, argc, ap)                                \
+#define note_do_syscall_enter(drv, nr, argc, ap)                                \
   ((drv)->ops->syscall_enter &&                                              \
   ((drv)->ops->syscall_enter(drv, nr, argc, ap), true))
-#define note_syscall_leave(drv, nr, result)                                  \
+#define note_do_syscall_leave(drv, nr, result)                                  \
   ((drv)->ops->syscall_leave &&                                              \
   ((drv)->ops->syscall_leave(drv, nr, result), true))
-#define note_irqhandler(drv, irq, handler, enter)                            \
+#define note_do_irqhandler(drv, irq, handler, enter)                            \
   ((drv)->ops->irqhandler &&                                                 \
   ((drv)->ops->irqhandler(drv, irq, handler, enter), true))
-#define note_heap(drv, event, data, mem, size, used)                         \
+#define note_do_heap(drv, event, data, mem, size, used)                         \
   ((drv)->ops->heap && ((drv)->ops->heap(drv, event, data, mem, size, used), true))
-#define note_wdog(drv, event, handler, arg)                                  \
+#define note_do_wdog(drv, event, handler, arg)                                  \
   ((drv)->ops->wdog && ((drv)->ops->wdog(drv, event, handler, arg), true))
-#define note_event(drv, tag, level, ip, event, buf, len)                          \
+#define note_do_event(drv, tag, level, ip, event, buf, len)                          \
   ((drv)->ops->event && ((drv)->ops->event(drv, tag, level, ip, event, buf, len), true))
-#define note_vprintf(drv, tag, level, ip, type, fmt, va)                                \
+#define note_do_vprintf(drv, tag, level, ip, type, fmt, va)                                \
   ((drv)->ops->vprintf && ((drv)->ops->vprintf(drv, tag, level, ip, type, fmt, va), true))
 
 /****************************************************************************
@@ -201,8 +203,156 @@ static DEFINE_PER_CPU_BSS_BMP(clock_t, g_note_perf_offset);
 #endif
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+struct note_filter_s g_note_filter;
+#endif
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+/****************************************************************************
+ * Name: note_update_filter
+ *
+ * Description:
+ *   Recompute g_note_filter by AND-ing all registered per-driver
+ *   filters.
+ *   A note type/syscall/irq/tag is globally disabled only when EVERY
+ *   driver has it disabled.
+ *
+ ****************************************************************************/
+
+static void note_update_filter(void)
+{
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+  FAR struct note_filter_syscall_s *syscall =
+                              &g_note_filter.syscall_mask;
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
+  FAR struct note_filter_irq_s *irq = &g_note_filter.irq_mask;
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+  FAR struct note_filter_tag_s *tag = &g_note_filter.tag_mask;
+  FAR uint8_t *level = &g_note_filter.level.level;
+#endif
+  FAR uint64_t *type_mask = &g_note_filter.mode.type_mask;
+  size_t i;
+  size_t j;
+
+  UNUSED(j);
+
+  /* Step 1: Compute type_mask by AND-ing all drivers.
+   * NOTE_ALL is folded into type_mask: if all drivers have
+   * NOTE_ALL set, the global type_mask will have it set too,
+   * and all type bits will be set to "disabled".
+   */
+
+  *type_mask = UINT64_MAX;
+
+  for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
+    {
+      if (g_note_drivers[i] == NULL)
+        {
+          continue;
+        }
+
+      *type_mask &= g_note_drivers[i]->filter.mode.type_mask;
+    }
+
+  /* If NOTE_ALL is set in the computed type_mask, force all
+   * type bits to disabled.
+   */
+
+  if (*type_mask & (1ULL << NOTE_ALL))
+    {
+      *type_mask = UINT64_MAX;
+    }
+
+  /* Step 2: Compute sub-masks.  If the corresponding type
+   * bits are disabled in the global type_mask, set the
+   * sub-mask to all-filtered (0xff) directly — no need to
+   * iterate drivers.
+   */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+  NOTE_FILTER_SYSCALLMASK_FILL(syscall);
+
+  if ((*type_mask & NOTE_FILTER_MODE_FLAG_SYSCALL) !=
+      NOTE_FILTER_MODE_FLAG_SYSCALL)
+    {
+      for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
+        {
+          if (g_note_drivers[i] == NULL)
+            {
+              continue;
+            }
+
+          for (j = 0; j < nitems(syscall->syscall_mask); j++)
+            {
+              syscall->syscall_mask[j] &=
+                g_note_drivers[i]->filter.syscall_mask.syscall_mask[j];
+            }
+        }
+    }
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
+  NOTE_FILTER_IRQMASK_FILL(irq);
+
+  if ((*type_mask & NOTE_FILTER_MODE_FLAG_IRQ) !=
+      NOTE_FILTER_MODE_FLAG_IRQ)
+    {
+      for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
+        {
+          if (g_note_drivers[i] == NULL)
+            {
+              continue;
+            }
+
+          for (j = 0; j < nitems(irq->irq_mask); j++)
+            {
+              irq->irq_mask[j] &=
+                g_note_drivers[i]->filter.irq_mask.irq_mask[j];
+            }
+        }
+    }
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+  NOTE_FILTER_TAGMASK_FILL(tag);
+  *level = 0;
+
+  if ((*type_mask & NOTE_FILTER_MODE_FLAG_DUMP) !=
+      NOTE_FILTER_MODE_FLAG_DUMP)
+    {
+      for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
+        {
+          if (g_note_drivers[i] == NULL)
+            {
+              continue;
+            }
+
+          for (j = 0; j < nitems(tag->tag_mask); j++)
+            {
+              tag->tag_mask[j] &=
+                g_note_drivers[i]->filter.tag_mask.tag_mask[j];
+            }
+
+          if (g_note_drivers[i]->filter.level.level > *level)
+            {
+              *level = g_note_drivers[i]->filter.level.level;
+            }
+        }
+    }
+#endif
+}
+#else
+#  define note_update_filter()
+#endif /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
 
 #ifdef CONFIG_BMP
 static void note_drivers_initialize(void)
@@ -409,6 +559,7 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
 #ifndef CONFIG_UP
           driver->filter.mode.cpuset = mode->cpuset;
 #endif
+          note_update_filter();
         }
         break;
 #endif
@@ -427,6 +578,7 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
           FAR struct note_filter_syscall_s *filter =
                         (FAR struct note_filter_syscall_s *)arg;
           driver->filter.syscall_mask = *filter;
+          note_update_filter();
         }
         break;
 #endif
@@ -445,6 +597,7 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
           FAR struct note_filter_irq_s *filter =
                         (FAR struct note_filter_irq_s *)arg;
           driver->filter.irq_mask = *filter;
+          note_update_filter();
         }
         break;
 #endif
@@ -463,6 +616,7 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
           FAR struct note_filter_tag_s *filter =
                         (FAR struct note_filter_tag_s *)arg;
           driver->filter.tag_mask = *filter;
+          note_update_filter();
         }
         break;
 #endif
@@ -481,6 +635,7 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
           FAR struct note_filter_level_s *level =
                         (FAR struct note_filter_level_s *)arg;
           driver->filter.level.level = level->level;
+          note_update_filter();
         }
         break;
 #endif
@@ -527,7 +682,7 @@ static int note_driver_poll(FAR struct file *filep, FAR struct pollfd *fds,
 #endif /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
 
 /****************************************************************************
- * Name: note_isenabled
+ * Name: note_driver_isenabled
  *
  * Description:
  *   Check whether the instrumentation is enabled.
@@ -540,7 +695,7 @@ static int note_driver_poll(FAR struct file *filep, FAR struct pollfd *fds,
  *
  ****************************************************************************/
 
-static inline int note_isenabled(FAR struct note_driver_s *driver)
+static inline int note_driver_isenabled(FAR struct note_driver_s *driver)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   if (NOTE_FILTER_TYPEMASK_ISSET(NOTE_ALL, &driver->filter.mode))
@@ -564,7 +719,7 @@ static inline int note_isenabled(FAR struct note_driver_s *driver)
 }
 
 /****************************************************************************
- * Name: note_isenabled_type
+ * Name: note_driver_isenabled_type
  *
  * Description:
  *   Check whether the instrumentation is enabled.
@@ -578,11 +733,11 @@ static inline int note_isenabled(FAR struct note_driver_s *driver)
  *
  ****************************************************************************/
 
-static inline int note_isenabled_type(FAR struct note_driver_s *driver,
-                                      int type)
+static inline int
+note_driver_isenabled_type(FAR struct note_driver_s *driver, int type)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  if (!note_isenabled(driver))
+  if (!note_driver_isenabled(driver))
     {
       return false;
     }
@@ -597,7 +752,7 @@ static inline int note_isenabled_type(FAR struct note_driver_s *driver,
 }
 
 /****************************************************************************
- * Name: note_isenabled_syscall
+ * Name: note_driver_isenabled_syscall
  *
  * Description:
  *   Check whether the syscall instrumentation is enabled.
@@ -612,11 +767,12 @@ static inline int note_isenabled_type(FAR struct note_driver_s *driver,
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-static inline int note_isenabled_syscall(FAR struct note_driver_s *driver,
-                                         int type, int nr)
+static inline int
+note_driver_isenabled_syscall(FAR struct note_driver_s *driver, int type,
+                              int nr)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  if (!note_isenabled_type(driver, type))
+  if (!note_driver_isenabled_type(driver, type))
     {
       return false;
     }
@@ -669,13 +825,13 @@ static inline int note_isenabled_syscall(FAR struct note_driver_s *driver,
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-static inline int note_isenabled_irq(FAR struct note_driver_s *driver,
-                                     int irq, bool enter)
+static inline int note_driver_isenabled_irq(FAR struct note_driver_s *driver,
+                                            int irq, bool enter)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   int type = NOTE_IRQ_ENTER + enter;
 
-  if (!note_isenabled_type(driver, type))
+  if (!note_driver_isenabled_type(driver, type))
     {
       return false;
     }
@@ -704,7 +860,7 @@ static inline int note_isenabled_irq(FAR struct note_driver_s *driver,
 #endif
 
 /****************************************************************************
- * Name: note_isenabled_dump
+ * Name: note_driver_isenabled_dump
  *
  * Description:
  *   Check whether the dump instrumentation is enabled.
@@ -719,8 +875,9 @@ static inline int note_isenabled_irq(FAR struct note_driver_s *driver,
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
-                                      uint8_t tag, uint8_t level, int type)
+static inline int
+note_driver_isenabled_dump(FAR struct note_driver_s *driver, uint8_t tag,
+                           uint8_t level, int type)
 {
 #  ifdef CONFIG_SYSLOG_TO_SCHED_NOTE
   if (tag == NXTAG_LOG)
@@ -733,7 +890,7 @@ static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
 #endif
 
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  if (!note_isenabled_type(driver, type))
+  if (!note_driver_isenabled_type(driver, type))
     {
       return false;
     }
@@ -829,7 +986,7 @@ void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
 #ifdef CONFIG_SCHED_INSTRUMENTATION
 
 /****************************************************************************
- * Name: sched_note_add
+ * Name: note_add
  *
  * Description:
  *   Forward rpmsg note data to individual channels.This process does
@@ -847,7 +1004,7 @@ void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
  *
  ****************************************************************************/
 
-void sched_note_add(FAR const void *data, size_t len)
+void note_add(FAR const void *data, size_t len)
 {
   DEBUGASSERT(data);
 
@@ -862,7 +1019,7 @@ void sched_note_add(FAR const void *data, size_t len)
                   len >= notelen);
       for (driver = g_note_drivers; *driver; driver++)
         {
-          if (!note_isenabled_type(*driver, note->nc_type))
+          if (!note_driver_isenabled_type(*driver, note->nc_type))
             {
               continue;
             }
@@ -873,8 +1030,8 @@ void sched_note_add(FAR const void *data, size_t len)
             {
               FAR struct note_event_s *nev =
                   (FAR struct note_event_s *)note;
-              if (!note_isenabled_dump(*driver, nev->nev_tag, nev->nev_level,
-                                       note->nc_type))
+              if (!note_driver_isenabled_dump(*driver, nev->nev_tag,
+                                              nev->nev_level, note->nc_type))
                 {
                   continue;
                 }
@@ -883,8 +1040,8 @@ void sched_note_add(FAR const void *data, size_t len)
             {
               FAR struct note_printf_s *npt =
                   (FAR struct note_printf_s *)note;
-              if (!note_isenabled_dump(*driver, npt->npt_tag, npt->npt_level,
-                                       note->nc_type))
+              if (!note_driver_isenabled_dump(*driver, npt->npt_tag,
+                                              npt->npt_level, note->nc_type))
                 {
                   continue;
                 }
@@ -898,7 +1055,7 @@ void sched_note_add(FAR const void *data, size_t len)
 
           /* Add the note to circular buffer */
 
-          note_add(*driver, note, notelen, false);
+          note_do_add(*driver, note, notelen, false);
         }
 
       /* The note data no longer has alignment padding. */
@@ -929,7 +1086,7 @@ void sched_note_add(FAR const void *data, size_t len)
  *
  ****************************************************************************/
 
-void sched_note_start(FAR struct tcb_s *tcb)
+void note_start(FAR struct tcb_s *tcb)
 {
   struct note_startalloc_s note;
   unsigned int length;
@@ -945,12 +1102,12 @@ void sched_note_start(FAR struct tcb_s *tcb)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, NOTE_START))
+      if (!note_driver_isenabled_type(*driver, NOTE_START))
         {
           continue;
         }
 
-      if (note_start(*driver, tcb))
+      if (note_do_start(*driver, tcb))
         {
           continue;
         }
@@ -989,11 +1146,11 @@ void sched_note_start(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, length, false);
+      note_do_add(*driver, &note, length, false);
     }
 }
 
-void sched_note_stop(FAR struct tcb_s *tcb)
+void note_stop(FAR struct tcb_s *tcb)
 {
   struct note_stop_s note;
   FAR struct note_driver_s **driver;
@@ -1002,12 +1159,12 @@ void sched_note_stop(FAR struct tcb_s *tcb)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, NOTE_STOP))
+      if (!note_driver_isenabled_type(*driver, NOTE_STOP))
         {
           continue;
         }
 
-      if (note_stop(*driver, tcb))
+      if (note_do_stop(*driver, tcb))
         {
           continue;
         }
@@ -1028,7 +1185,7 @@ void sched_note_stop(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nsp_cmn.nc_length, false);
+      note_do_add(*driver, &note, note.nsp_cmn.nc_length, false);
     }
 }
 
@@ -1048,9 +1205,9 @@ static void note_taskname_handler(pid_t pid, FAR const char *name,
   ctx->handler(&note, length, ctx->arg);
 }
 
-void sched_note_taskname(void (FAR *handler)(FAR const void *,
-                                             size_t, FAR void *),
-                         FAR void *arg)
+void note_taskname(void (FAR *handler)(FAR const void *,
+                                      size_t, FAR void *),
+                   FAR void *arg)
 {
   struct note_taskname_foreach_s ctx;
 
@@ -1059,7 +1216,7 @@ void sched_note_taskname(void (FAR *handler)(FAR const void *,
   nxtask_namepool_foreach(note_taskname_handler, &ctx);
 }
 
-void sched_note_suspend(FAR struct tcb_s *tcb)
+void note_suspend(FAR struct tcb_s *tcb)
 {
   struct note_suspend_s note;
   FAR struct note_driver_s **driver;
@@ -1071,12 +1228,12 @@ void sched_note_suspend(FAR struct tcb_s *tcb)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, NOTE_SUSPEND))
+      if (!note_driver_isenabled_type(*driver, NOTE_SUSPEND))
         {
           continue;
         }
 
-      if (note_suspend(*driver, tcb))
+      if (note_do_suspend(*driver, tcb))
         {
           continue;
         }
@@ -1110,11 +1267,11 @@ void sched_note_suspend(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nsu_cmn.nc_length, true);
+      note_do_add(*driver, &note, note.nsu_cmn.nc_length, true);
     }
 }
 
-void sched_note_resume(FAR struct tcb_s *tcb)
+void note_resume(FAR struct tcb_s *tcb)
 {
   struct note_resume_s note;
   FAR struct note_driver_s **driver;
@@ -1123,12 +1280,12 @@ void sched_note_resume(FAR struct tcb_s *tcb)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, NOTE_RESUME))
+      if (!note_driver_isenabled_type(*driver, NOTE_RESUME))
         {
           continue;
         }
 
-      if (note_resume(*driver, tcb))
+      if (note_do_resume(*driver, tcb))
         {
           continue;
         }
@@ -1149,12 +1306,12 @@ void sched_note_resume(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nre_cmn.nc_length, true);
+      note_do_add(*driver, &note, note.nre_cmn.nc_length, true);
     }
 }
 
 #ifdef CONFIG_SMP
-void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu)
+void note_cpu_start(FAR struct tcb_s *tcb, int cpu)
 {
   struct note_cpu_start_s note;
   FAR struct note_driver_s **driver;
@@ -1163,12 +1320,12 @@ void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, NOTE_CPU_START))
+      if (!note_driver_isenabled_type(*driver, NOTE_CPU_START))
         {
           continue;
         }
 
-      if (note_cpu_start(*driver, tcb, cpu))
+      if (note_do_cpu_start(*driver, tcb, cpu))
         {
           continue;
         }
@@ -1190,11 +1347,11 @@ void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.ncs_cmn.nc_length, false);
+      note_do_add(*driver, &note, note.ncs_cmn.nc_length, false);
     }
 }
 
-void sched_note_cpu_started(FAR struct tcb_s *tcb)
+void note_cpu_started(FAR struct tcb_s *tcb)
 {
   struct note_cpu_started_s note;
   FAR struct note_driver_s **driver;
@@ -1203,12 +1360,12 @@ void sched_note_cpu_started(FAR struct tcb_s *tcb)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, NOTE_CPU_STARTED))
+      if (!note_driver_isenabled_type(*driver, NOTE_CPU_STARTED))
         {
           continue;
         }
 
-      if (note_cpu_started(*driver, tcb))
+      if (note_do_cpu_started(*driver, tcb))
         {
           continue;
         }
@@ -1229,14 +1386,14 @@ void sched_note_cpu_started(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.ncs_cmn.nc_length, false);
+      note_do_add(*driver, &note, note.ncs_cmn.nc_length, false);
     }
 }
 #endif /* CONFIG_SMP */
 #endif /* CONFIG_SCHED_INSTRUMENTATION_SWITCH */
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
-void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
+void note_preemption(FAR struct tcb_s *tcb, bool locked)
 {
   struct note_preempt_s note;
   FAR struct note_driver_s **driver;
@@ -1247,12 +1404,12 @@ void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
   flags = spin_lock_irqsave_notrace(&g_note_lock);
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, NOTE_PREEMPT_LOCK))
+      if (!note_driver_isenabled_type(*driver, NOTE_PREEMPT_LOCK))
         {
           continue;
         }
 
-      if (note_preemption(*driver, tcb, locked))
+      if (note_do_preemption(*driver, tcb, locked))
         {
           continue;
         }
@@ -1274,7 +1431,7 @@ void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.npr_cmn.nc_length, true);
+      note_do_add(*driver, &note, note.npr_cmn.nc_length, true);
     }
 
   spin_unlock_irqrestore_notrace(&g_note_lock, flags);
@@ -1282,7 +1439,7 @@ void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-void sched_note_csection(FAR struct tcb_s *tcb, bool enter)
+void note_csection(FAR struct tcb_s *tcb, bool enter)
 {
   struct note_csection_s note;
   FAR struct note_driver_s **driver;
@@ -1291,12 +1448,12 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, NOTE_CSECTION_ENTER + enter))
+      if (!note_driver_isenabled_type(*driver, NOTE_CSECTION_ENTER + enter))
         {
           continue;
         }
 
-      if (note_csection(*driver, tcb, enter))
+      if (note_do_csection(*driver, tcb, enter))
         {
           continue;
         }
@@ -1317,7 +1474,7 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.ncs_cmn.nc_length, true);
+      note_do_add(*driver, &note, note.ncs_cmn.nc_length, true);
     }
 }
 #endif
@@ -1338,8 +1495,7 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-void sched_note_spinlock(FAR volatile spinlock_t *spinlock,
-                         int type)
+void note_spinlock(FAR volatile spinlock_t *spinlock, int type)
 {
   FAR struct tcb_s *tcb = running_task();
   struct note_spinlock_s note;
@@ -1349,12 +1505,12 @@ void sched_note_spinlock(FAR volatile spinlock_t *spinlock,
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, type))
+      if (!note_driver_isenabled_type(*driver, type))
         {
           continue;
         }
 
-      if (note_spinlock(*driver, tcb, spinlock, type))
+      if (note_do_spinlock(*driver, tcb, spinlock, type))
         {
           continue;
         }
@@ -1377,13 +1533,13 @@ void sched_note_spinlock(FAR volatile spinlock_t *spinlock,
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nsp_cmn.nc_length, true);
+      note_do_add(*driver, &note, note.nsp_cmn.nc_length, true);
     }
 }
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-void sched_note_syscall_enter(int nr, int argc, ...)
+void note_syscall_enter(int nr, int argc, ...)
 {
   struct note_syscall_enter_s note;
   FAR struct note_driver_s **driver;
@@ -1398,13 +1554,13 @@ void sched_note_syscall_enter(int nr, int argc, ...)
     {
       va_list copy;
 
-      if (!note_isenabled_syscall(*driver, NOTE_SYSCALL_ENTER, nr))
+      if (!note_driver_isenabled_syscall(*driver, NOTE_SYSCALL_ENTER, nr))
         {
           continue;
         }
 
       va_copy(copy, ap);
-      if (note_syscall_enter(*driver, nr, argc, &copy))
+      if (note_do_syscall_enter(*driver, nr, argc, &copy))
         {
           va_end(copy);
           continue;
@@ -1447,13 +1603,13 @@ void sched_note_syscall_enter(int nr, int argc, ...)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, length, false);
+      note_do_add(*driver, &note, length, false);
     }
 
     va_end(ap);
 }
 
-void sched_note_syscall_leave(int nr, uintptr_t result)
+void note_syscall_leave(int nr, uintptr_t result)
 {
   struct note_syscall_leave_s note;
   FAR struct note_driver_s **driver;
@@ -1463,12 +1619,12 @@ void sched_note_syscall_leave(int nr, uintptr_t result)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_syscall(*driver, NOTE_SYSCALL_LEAVE, nr))
+      if (!note_driver_isenabled_syscall(*driver, NOTE_SYSCALL_LEAVE, nr))
         {
           continue;
         }
 
-      if (note_syscall_leave(*driver, nr, result))
+      if (note_do_syscall_leave(*driver, nr, result))
         {
           continue;
         }
@@ -1493,13 +1649,13 @@ void sched_note_syscall_leave(int nr, uintptr_t result)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nsc_cmn.nc_length, false);
+      note_do_add(*driver, &note, note.nsc_cmn.nc_length, false);
     }
 }
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
+void note_irqhandler(int irq, FAR void *handler, bool enter)
 {
   struct note_irqhandler_s note;
   FAR struct note_driver_s **driver;
@@ -1509,12 +1665,12 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_irq(*driver, irq, enter))
+      if (!note_driver_isenabled_irq(*driver, irq, enter))
         {
           continue;
         }
 
-      if (note_irqhandler(*driver, irq, handler, enter))
+      if (note_do_irqhandler(*driver, irq, handler, enter))
         {
           continue;
         }
@@ -1538,13 +1694,13 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
        * trigger context switches (e.g. via poll_notify -> nxsem_post).
        */
 
-      note_add(*driver, &note, note.nih_cmn.nc_length, true);
+      note_do_add(*driver, &note, note.nih_cmn.nc_length, true);
     }
 }
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
-void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
+void note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
 {
   FAR struct note_driver_s **driver;
   struct note_wdog_s note;
@@ -1556,12 +1712,12 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
   flags = enter_critical_section_notrace();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, event))
+      if (!note_driver_isenabled_type(*driver, event))
         {
           continue;
         }
 
-      if (note_wdog(*driver, event, handler, arg))
+      if (note_do_wdog(*driver, event, handler, arg))
         {
           continue;
         }
@@ -1581,7 +1737,7 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nwd_cmn.nc_length, false);
+      note_do_add(*driver, &note, note.nwd_cmn.nc_length, false);
     }
 
   leave_critical_section_notrace(flags);
@@ -1589,8 +1745,8 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
-void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
-                     size_t size, size_t used)
+void note_heap(uint8_t event, FAR void *heap, FAR void *mem,
+               size_t size, size_t used)
 {
   FAR struct note_driver_s **driver;
   struct note_heap_s note;
@@ -1600,12 +1756,12 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_type(*driver, event))
+      if (!note_driver_isenabled_type(*driver, event))
         {
           continue;
         }
 
-      if (note_heap(*driver, event, heap, mem, size, used))
+      if (note_do_heap(*driver, event, heap, mem, size, used))
         {
           continue;
         }
@@ -1627,7 +1783,7 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nhp_cmn.nc_length, false);
+      note_do_add(*driver, &note, note.nhp_cmn.nc_length, false);
     }
 }
 #endif
@@ -1642,7 +1798,7 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
   char data[NOTE_BUFFER_SIZE];
   unsigned int length = 0;
 
-  if (note_event(driver, tag, level, ip, event, buf, len))
+  if (note_do_event(driver, tag, level, ip, event, buf, len))
     {
       return length;
     }
@@ -1672,7 +1828,7 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
 
   /* Add the note to circular buffer */
 
-  note_add(driver, note, length, false);
+  note_do_add(driver, note, length, false);
   return length - SIZEOF_NOTE_EVENT(0);
 }
 
@@ -1712,7 +1868,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   note = (FAR struct note_printf_s *)data;
   length = sizeof(data) - SIZEOF_NOTE_PRINTF(0);
 
-  if (note_vprintf(driver, tag, level, ip, type, fmt, *va))
+  if (note_do_vprintf(driver, tag, level, ip, type, fmt, *va))
     {
       return;
     }
@@ -1808,7 +1964,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
 
   /* Add the note to circular buffer */
 
-  note_add(driver, note, length, false);
+  note_do_add(driver, note, length, false);
 }
 
 void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
@@ -1821,16 +1977,15 @@ void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   va_end(va);
 }
 
-void sched_note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                         uint8_t event, FAR const void *buf,
-                         size_t len)
+void note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip, uint8_t event,
+                   FAR const void *buf, size_t len)
 {
   FAR struct note_driver_s **driver;
 
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_dump(*driver, tag, level, event))
+      if (!note_driver_isenabled_dump(*driver, tag, level, event))
         {
           continue;
         }
@@ -1839,9 +1994,8 @@ void sched_note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip,
     }
 }
 
-void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                           FAR const char *fmt, uint64_t type,
-                           FAR va_list *va)
+void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
+                     FAR const char *fmt, uint64_t type, FAR va_list *va)
 {
   FAR struct note_driver_s **driver;
 
@@ -1849,7 +2003,7 @@ void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
   for (driver = g_note_drivers; *driver; driver++)
     {
       va_list copy;
-      if (!note_isenabled_dump(*driver, tag, level, NOTE_DUMP_PRINTF))
+      if (!note_driver_isenabled_dump(*driver, tag, level, NOTE_DUMP_PRINTF))
         {
           continue;
         }
@@ -1859,6 +2013,59 @@ void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
       va_end(copy);
     }
 }
+
+void note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
+                    FAR const char *fmt, uint64_t type, ...)
+{
+  va_list va;
+  va_start(va, type);
+  note_vprintf_ip(tag, level, ip, fmt, type, &va);
+  va_end(va);
+}
+
+#ifdef CONFIG_LIB_SYSCALL
+
+/****************************************************************************
+ * Name: sched_note_event_ip/vprintf_ip/printf_ip
+ *
+ * Description:
+ *   Syscall-compatible wrappers with built-in filter check.
+ *   When CONFIG_LIB_SYSCALL is enabled, these must be real functions
+ *   (not macros) so the syscall proxy generator can create stubs.
+ *
+ ****************************************************************************/
+
+void sched_note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip,
+                         uint8_t event, FAR const void *buf, size_t len)
+{
+  if (!note_filter_dump(tag))
+    {
+      note_event_ip(tag, level, ip, event, buf, len);
+    }
+}
+
+void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
+                           FAR const char *fmt, uint64_t type, va_list *va)
+{
+  if (!note_filter_dump(tag))
+    {
+      note_vprintf_ip(tag, level, ip, fmt, type, va);
+    }
+}
+
+void sched_note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
+                          FAR const char *fmt, uint64_t type, ...)
+{
+  if (!note_filter_dump(tag))
+    {
+      va_list va;
+      va_start(va, type);
+      note_vprintf_ip(tag, level, ip, fmt, type, &va);
+      va_end(va);
+    }
+}
+#endif /* CONFIG_LIB_SYSCALL */
+
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
 
 /****************************************************************************
@@ -1871,6 +2078,8 @@ int note_driver_initialize(void)
   int ret = 0;
 
   note_drivers_initialize();
+  note_update_filter();
+
   for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
     {
       if (g_note_drivers[i] != NULL)
@@ -1906,6 +2115,7 @@ int note_driver_register(FAR struct note_driver_s *driver)
       if (g_note_drivers[i] == NULL)
         {
           g_note_drivers[i] = driver;
+          note_update_filter();
           break;
         }
     }
@@ -1941,6 +2151,7 @@ void note_driver_unregister(FAR struct note_driver_s *driver)
         {
           note_driver_fs_unregister(driver);
           g_note_drivers[i] = NULL;
+          note_update_filter();
           break;
         }
     }

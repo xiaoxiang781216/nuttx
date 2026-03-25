@@ -59,7 +59,7 @@ static int noterpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
    * data packet.
    */
 
-  sched_note_add(data, len);
+  note_add(data, len);
 
   return 0;
 }

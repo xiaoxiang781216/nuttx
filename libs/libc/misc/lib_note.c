@@ -43,16 +43,6 @@ static DEFINE_RATELIMIT_STATE(g_ratelimit,
  * Public Functions
  ****************************************************************************/
 
-void sched_note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                          FAR const char *fmt,
-                          uint64_t type, ...)
-{
-  va_list va;
-  va_start(va, type);
-  sched_note_vprintf_ip(tag, level, ip, fmt, type, &va);
-  va_end(va);
-}
-
 void sched_note_event_ip_ratelimit(uint8_t tag, uint8_t level,
                                    uintptr_t ip, uint8_t event,
                                    FAR const void *buf,
