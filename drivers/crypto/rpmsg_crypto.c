@@ -132,7 +132,7 @@ static FAR void *
 rpmsg_crypto_get_tx_payload_buffer(FAR struct rpmsg_crypto_s *priv,
                                    FAR uint32_t *len)
 {
-  int sval;
+  int sval = 0;
 
   nxsem_get_value(&priv->wait, &sval);
   if (sval <= 0)
