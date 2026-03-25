@@ -79,7 +79,8 @@ struct audio_openpriv_s
   int                         state;
   FAR struct pollfd           *fd;
   FAR struct audio_openpriv_s *flink;
-  struct file                 *usermq; /* User mode app's message queue */
+  struct file                 *usermq;  /* User mode app's message queue */
+  struct file                 kernelmq; /* Kernel managed message queue */
 };
 
 /* This structure describes the state of the upper half driver */
@@ -157,6 +158,74 @@ static const struct file_operations g_audioops =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: audio_registermq
+ *
+ * Description:
+ *   Handle the AUDIOIOC_REGISTERMQ ioctl command.
+ *   Supports two modes: Kernel_MQ (arg == AUDIO_MQ_KERNEL) and User_MQ.
+ *   The two modes are mutually exclusive.
+ *
+ ****************************************************************************/
+
+static int audio_registermq(FAR struct audio_openpriv_s *priv,
+                            unsigned long arg)
+{
+  if (priv->usermq != NULL)
+    {
+      return -EBUSY;
+    }
+
+  if (arg == AUDIO_MQ_KERNEL)
+    {
+      /* Kernel_MQ mode */
+
+      struct mq_attr attr;
+      char mqname[32];
+      int ret;
+
+      attr.mq_maxmsg  = 32;
+      attr.mq_msgsize = sizeof(struct audio_msg_s);
+      attr.mq_flags   = 0;
+      attr.mq_curmsgs = 0;
+
+      snprintf(mqname, sizeof(mqname), "/aud_%p", priv);
+      ret = file_mq_open(&priv->kernelmq, mqname,
+                         O_RDWR | O_CREAT, 0644, &attr);
+      if (ret >= 0)
+        {
+          file_mq_unlink(mqname);
+          priv->usermq = &priv->kernelmq;
+        }
+
+      return ret;
+    }
+
+  return file_get((mqd_t)arg, &priv->usermq);
+}
+
+/****************************************************************************
+ * Name: audio_unregistermq
+ *
+ * Description:
+ *   Release the message queue associated with the open instance.
+ *
+ ****************************************************************************/
+
+static void audio_unregistermq(FAR struct audio_openpriv_s *priv)
+{
+  if (priv->usermq == &priv->kernelmq)
+    {
+      file_mq_close(priv->usermq);
+    }
+  else if (priv->usermq != NULL)
+    {
+      file_put(priv->usermq);
+    }
+
+  priv->usermq = NULL;
+}
 
 /****************************************************************************
  * Name: audio_open
@@ -260,8 +329,6 @@ static int audio_close(FAR struct file *filep)
       upper->head = priv->flink;
     }
 
-  kmm_free(priv);
-
   /*  If the reference head decrement to NULL,
    *  then uninitialize the driver.
    */
@@ -282,6 +349,10 @@ static int audio_close(FAR struct file *filep)
 
   spin_unlock_irqrestore(&upper->spinlock, flags);
 
+  /* Clean up message queue */
+
+  audio_unregistermq(priv);
+  kmm_free(priv);
   ret = OK;
   nxmutex_unlock(&upper->lock);
 
@@ -920,6 +991,34 @@ static int audio_dump(FAR struct audio_upperhalf_s *upper, FAR char *path)
 }
 
 /****************************************************************************
+ * Name: audio_receivemsg
+ *
+ * Description:
+ *   Handle the AUDIOIOC_RECEIVEMSG ioctl command.
+ *   Receive a message from the registered message queue (either Kernel_MQ
+ *   or User_MQ) with timeout support.
+ *
+ ****************************************************************************/
+
+static int audio_receivemsg(FAR struct audio_openpriv_s *priv,
+                            unsigned long arg)
+{
+  FAR struct audio_msg_timeout_s *param =
+    (FAR struct audio_msg_timeout_s *)((uintptr_t)arg);
+  unsigned int prio;
+
+  if (param == NULL)
+    {
+      return -EINVAL;
+    }
+
+  return file_mq_tickreceive(priv->usermq,
+                            (FAR char *)&param->msg,
+                            sizeof(param->msg),
+                            &prio, param->ticks);
+}
+
+/****************************************************************************
  * Name: audio_ioctl
  *
  * Description:
@@ -1120,7 +1219,7 @@ static int audio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           audinfo("AUDIOIOC_REGISTERMQ\n");
 
-          ret = file_get((mqd_t)arg, &priv->usermq);
+          ret = audio_registermq(priv, arg);
         }
         break;
 
@@ -1133,13 +1232,20 @@ static int audio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           audinfo("AUDIOIOC_UNREGISTERMQ\n");
 
-          if (priv->usermq != NULL)
-            {
-              file_put(priv->usermq);
-              priv->usermq = NULL;
-            }
-
+          audio_unregistermq(priv);
           ret = OK;
+        }
+        break;
+
+      /* RECEIVEMSG must not hold upper->lock (mq is thread-safe,
+       * and blocking would prevent other ioctls).
+       */
+
+      case AUDIOIOC_RECEIVEMSG:
+        {
+          nxmutex_unlock(&upper->lock);
+          ret = audio_receivemsg(priv, arg);
+          nxmutex_lock(&upper->lock);
         }
         break;
 
@@ -1434,6 +1540,7 @@ static inline void audio_sendmsg(FAR struct audio_upperhalf_s *upper,
                                  FAR struct audio_msg_s *msg)
 {
   FAR struct audio_openpriv_s *priv;
+  pollevent_t eventset;
   irqstate_t flags;
 
   flags = spin_lock_irqsave_nopreempt(&upper->spinlock);
@@ -1443,6 +1550,17 @@ static inline void audio_sendmsg(FAR struct audio_upperhalf_s *upper,
         {
           file_mq_send(priv->usermq, (FAR const char *)msg, sizeof(*msg),
                        CONFIG_AUDIO_BUFFER_DEQUEUE_PRIO);
+        }
+
+      if (priv->fd)
+        {
+          eventset = POLLIN | POLLOUT;
+          if ((long)(priv->head - upper->status->tail) <= 0)
+            {
+              eventset |= POLLERR;
+            }
+
+          poll_notify(&priv->fd, 1, eventset);
         }
     }
 
@@ -1490,9 +1608,7 @@ static inline void audio_dequeuebuffer(FAR struct audio_upperhalf_s *upper,
                     FAR struct ap_buffer_s *apb, uint16_t status)
 #endif
 {
-  FAR struct audio_openpriv_s *priv;
   struct audio_msg_s    msg;
-  pollevent_t eventset;
   irqstate_t flags;
 
   audinfo("Entry\n");
@@ -1513,20 +1629,6 @@ static inline void audio_dequeuebuffer(FAR struct audio_upperhalf_s *upper,
   flags = spin_lock_irqsave_nopreempt(&upper->spinlock);
   upper->status->tail++;
   audio_try_enqueue(upper);
-  for (priv = upper->head; priv != NULL; priv = priv->flink)
-    {
-      if (priv->fd)
-        {
-          eventset = POLLIN | POLLOUT;
-          if ((long)(priv->head - upper->status->tail) <= 0)
-            {
-              eventset |= POLLERR;
-            }
-
-          poll_notify(&priv->fd, 1, eventset);
-        }
-    }
-
   spin_unlock_irqrestore_nopreempt(&upper->spinlock, flags);
 
   /* Send a dequeue message to the user if a message queue is registered */
