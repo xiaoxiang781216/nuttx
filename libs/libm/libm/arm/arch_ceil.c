@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/arm-m/arch_trunc.c
+ * libs/libm/libm/arm/arch_ceil.c
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2011, 2012 ARM Ltd.
@@ -36,15 +36,17 @@
 
 #include <math.h>
 
+#include "arm_libm.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__)
-double trunc(double x)
+#if ARM_LIBM_HAVE_VRINT && ARM_LIBM_HAVE_DP_VFP
+double ceil(double x)
 {
   double result;
-  asm volatile ("vrintz.f64\t%P0, %P1" : "=w" (result) : "w" (x));
+  asm volatile("vrintp.f64\t%P0, %P1" : "=w"(result) : "w"(x));
   return result;
 }
 #endif

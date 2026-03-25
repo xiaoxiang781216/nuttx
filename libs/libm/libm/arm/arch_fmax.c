@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/arm-m/arch_sqrt.c
+ * libs/libm/libm/arm/arch_fmax.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,18 +24,20 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
 #include <math.h>
+
+#include "arm_libm.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if (__ARM_ARCH >= 7) && (__ARM_FP & 0x8) && !defined(__SOFTFP__)
-double sqrt(double x)
+#if ARM_LIBM_HAVE_VMINNM && ARM_LIBM_HAVE_DP_VFP
+double fmax(double x, double y)
 {
   double result;
-  asm volatile("vsqrt.f64\t%P0, %P1" : "=w"(result) : "w"(x));
+  asm volatile ("vmaxnm.f64\t%P0, %P1, %P2"
+                : "=w" (result) : "w" (x), "w" (y));
   return result;
 }
 #endif

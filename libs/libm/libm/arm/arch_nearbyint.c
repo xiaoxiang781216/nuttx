@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/arm-m/arch_floorf.c
+ * libs/libm/libm/arm/arch_nearbyint.c
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2011, 2012 ARM Ltd.
@@ -36,15 +36,17 @@
 
 #include <math.h>
 
+#include "arm_libm.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-float floorf(float x)
+#if ARM_LIBM_HAVE_VRINT && ARM_LIBM_HAVE_DP_VFP
+double nearbyint(double x)
 {
-  float result;
-  asm volatile("vrintm.f32\t%0, %1" : "=t"(result) : "t"(x));
+  double result;
+  asm volatile ("vrintr.f64\t%P0, %P1" : "=w" (result) : "w" (x));
   return result;
 }
 #endif

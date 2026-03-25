@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/arm-m/arch_fabs.c
+ * libs/libm/libm/arm/arch_fabsf.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,18 +24,19 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
 #include <math.h>
+
+#include "arm_libm.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if (__ARM_ARCH >= 7) && (__ARM_FP & 0x8) && !defined(__SOFTFP__)
-double fabs(double x)
+#if ARM_LIBM_HAVE_SP_VFP
+float fabsf(float x)
 {
-  double result;
-  asm volatile("vabs.f64\t%P0, %P1" : "=w"(result) : "w"(x));
+  float result;
+  asm volatile ("vabs.f32\t%0, %1" : "=t" (result) : "t" (x));
   return result;
 }
 #endif

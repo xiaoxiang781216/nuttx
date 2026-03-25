@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/arm-m/arch_fabsf.c
+ * libs/libm/libm/arm/arch_sqrt.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,18 +24,19 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
 #include <math.h>
+
+#include "arm_libm.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if (__ARM_ARCH >= 7) && (__ARM_FP >= 4)
-float fabsf(float x)
+#if ARM_LIBM_HAVE_DP_VFP
+double sqrt(double x)
 {
-  float result;
-  asm volatile ("vabs.f32\t%0, %1" : "=t" (result) : "t" (x));
+  double result;
+  asm volatile("vsqrt.f64\t%P0, %P1" : "=w"(result) : "w"(x));
   return result;
 }
 #endif

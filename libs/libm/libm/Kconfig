@@ -86,6 +86,22 @@ config LIBM_ARCH_SQRT
 	bool
 	default n
 
+config LIBM_ARCH_FMINF
+	bool
+	default n
+
+config LIBM_ARCH_FMIN
+	bool
+	default n
+
+config LIBM_ARCH_FMAXF
+	bool
+	default n
+
+config LIBM_ARCH_FMAX
+	bool
+	default n
+
 # One or more the of above may be selected by architecture specific logic
 
 if ARCH_ARM

@@ -20,4 +20,88 @@
 #
 # ##############################################################################
 
-nuttx_add_subdirectory()
+if(CONFIG_ARM_LIBM)
+  set(SRCS)
+
+  if(CONFIG_LIBM_ARCH_FABSF)
+    list(APPEND SRCS arch_fabsf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_SQRTF)
+    list(APPEND SRCS arch_sqrtf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_FABS)
+    list(APPEND SRCS arch_fabs.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_SQRT)
+    list(APPEND SRCS arch_sqrt.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_CEIL)
+    list(APPEND SRCS arch_ceil.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_CEILF)
+    list(APPEND SRCS arch_ceilf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_FLOOR)
+    list(APPEND SRCS arch_floor.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_FLOORF)
+    list(APPEND SRCS arch_floorf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_NEARBYINT)
+    list(APPEND SRCS arch_nearbyint.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_NEARBYINTF)
+    list(APPEND SRCS arch_nearbyintf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_RINTF)
+    list(APPEND SRCS arch_rintf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_ROUNDF)
+    list(APPEND SRCS arch_roundf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_TRUNCF)
+    list(APPEND SRCS arch_truncf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_RINT)
+    list(APPEND SRCS arch_rint.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_ROUND)
+    list(APPEND SRCS arch_round.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_TRUNC)
+    list(APPEND SRCS arch_trunc.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_FMINF)
+    list(APPEND SRCS arch_fminf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_FMIN)
+    list(APPEND SRCS arch_fmin.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_FMAXF)
+    list(APPEND SRCS arch_fmaxf.c)
+  endif()
+
+  if(CONFIG_LIBM_ARCH_FMAX)
+    list(APPEND SRCS arch_fmax.c)
+  endif()
+
+  target_sources(c PRIVATE ${SRCS})
+endif()

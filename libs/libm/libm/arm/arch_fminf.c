@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/arm-m/arch_sqrtf.c
+ * libs/libm/libm/arm/arch_fminf.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,18 +24,20 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
 #include <math.h>
+
+#include "arm_libm.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if (__ARM_ARCH >= 7) && (__ARM_FP >= 4)
-float sqrtf(float x)
+#if ARM_LIBM_HAVE_VMINNM && ARM_LIBM_HAVE_SP_VFP
+float fminf(float x, float y)
 {
   float result;
-  asm volatile ("vsqrt.f32\t%0, %1" : "=t" (result) : "t" (x));
+  asm volatile ("vminnm.f32\t%0, %1, %2"
+                : "=t" (result) : "t" (x), "t" (y));
   return result;
 }
 #endif

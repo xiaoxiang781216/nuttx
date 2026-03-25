@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/arm-m/arch_ceil.c
+ * libs/libm/libm/arm/arch_round.c
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2011, 2012 ARM Ltd.
@@ -36,15 +36,17 @@
 
 #include <math.h>
 
+#include "arm_libm.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__)
-double ceil(double x)
+#if ARM_LIBM_HAVE_VRINT && ARM_LIBM_HAVE_DP_VFP
+double round(double x)
 {
   double result;
-  asm volatile("vrintp.f64\t%P0, %P1" : "=w"(result) : "w"(x));
+  asm volatile ("vrinta.f64\t%P0, %P1" : "=w" (result) : "w" (x));
   return result;
 }
 #endif

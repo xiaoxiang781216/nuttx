@@ -35,10 +35,6 @@ if(CONFIG_LIBM)
       lib_coshf.c
       lib_expf.c
       lib_fmodf.c
-      lib_fmax.c
-      lib_fmin.c
-      lib_fminf.c
-      lib_fmaxf.c
       lib_frexpf.c
       lib_ldexpf.c
       lib_logf.c
@@ -137,11 +133,7 @@ if(CONFIG_LIBM)
       lib_nan.c
       lib_nanf.c
       lib_nanl.c
-      lib_fmax.c
-      lib_fmaxf.c
       lib_fmaxl.c
-      lib_fmin.c
-      lib_fminf.c
       lib_fminl.c
       __cos.c
       __sin.c
@@ -197,6 +189,22 @@ if(CONFIG_LIBM)
 
   if(NOT CONFIG_LIBM_ARCH_SQRTF)
     list(APPEND SRCS lib_sqrtf.c)
+  endif()
+
+  if(NOT CONFIG_LIBM_ARCH_FMINF)
+    list(APPEND SRCS lib_fminf.c)
+  endif()
+
+  if(NOT CONFIG_LIBM_ARCH_FMIN)
+    list(APPEND SRCS lib_fmin.c)
+  endif()
+
+  if(NOT CONFIG_LIBM_ARCH_FMAXF)
+    list(APPEND SRCS lib_fmaxf.c)
+  endif()
+
+  if(NOT CONFIG_LIBM_ARCH_FMAX)
+    list(APPEND SRCS lib_fmax.c)
   endif()
 
   target_sources(c PRIVATE ${SRCS})

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libm/libm/arm/arm-m/arch_nearbyintf.c
+ * libs/libm/libm/arm/arch_nearbyintf.c
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2011, 2012 ARM Ltd.
@@ -36,11 +36,13 @@
 
 #include <math.h>
 
+#include "arm_libm.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
+#if ARM_LIBM_HAVE_VRINT && ARM_LIBM_HAVE_SP_VFP
 float nearbyintf(float x)
 {
   float result;

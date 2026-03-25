@@ -53,8 +53,8 @@ CSRCS += lib_expm1.c lib_expm1f.c lib_expm1l.c
 CSRCS += lib_lround.c lib_lroundf.c lib_lroundl.c
 CSRCS += lib_llround.c lib_llroundf.c lib_llroundl.c
 CSRCS += lib_nan.c lib_nanf.c lib_nanl.c
-CSRCS += lib_fmax.c lib_fmaxf.c lib_fmaxl.c
-CSRCS += lib_fmin.c lib_fminf.c lib_fminl.c
+CSRCS += lib_fmaxl.c
+CSRCS += lib_fminl.c
 
 CSRCS += __cos.c __sin.c lib_gamma.c lib_lgamma.c
 
@@ -107,6 +107,22 @@ endif
 
 ifneq ($(CONFIG_LIBM_ARCH_SQRTF),y)
 CSRCS += lib_sqrtf.c
+endif
+
+ifneq ($(CONFIG_LIBM_ARCH_FMINF),y)
+CSRCS += lib_fminf.c
+endif
+
+ifneq ($(CONFIG_LIBM_ARCH_FMIN),y)
+CSRCS += lib_fmin.c
+endif
+
+ifneq ($(CONFIG_LIBM_ARCH_FMAXF),y)
+CSRCS += lib_fmaxf.c
+endif
+
+ifneq ($(CONFIG_LIBM_ARCH_FMAX),y)
+CSRCS += lib_fmax.c
 endif
 
 ifeq ($(CONFIG_ARCH_ARM),y)

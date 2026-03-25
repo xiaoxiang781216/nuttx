@@ -20,8 +20,88 @@
 #
 ############################################################################
 
-ifeq ($(CONFIG_ARM_M_LIBM),y)
-include $(TOPDIR)/libs/libm/libm/arm/arm-m/Make.defs
+ifeq ($(CONFIG_ARM_LIBM),y)
+
+ifeq ($(CONFIG_LIBM_ARCH_FABSF),y)
+CSRCS += arch_fabsf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_SQRTF),y)
+CSRCS += arch_sqrtf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_FABS),y)
+CSRCS += arch_fabs.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_SQRT),y)
+CSRCS += arch_sqrt.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_CEIL),y)
+CSRCS += arch_ceil.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_CEILF),y)
+CSRCS += arch_ceilf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_FLOOR),y)
+CSRCS += arch_floor.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_FLOORF),y)
+CSRCS += arch_floorf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_NEARBYINT),y)
+CSRCS += arch_nearbyint.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_NEARBYINTF),y)
+CSRCS += arch_nearbyintf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_RINTF),y)
+CSRCS += arch_rintf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_ROUNDF),y)
+CSRCS += arch_roundf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_TRUNCF),y)
+CSRCS += arch_truncf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_RINT),y)
+CSRCS += arch_rint.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_ROUND),y)
+CSRCS += arch_round.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_TRUNC),y)
+CSRCS += arch_trunc.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_FMINF),y)
+CSRCS += arch_fminf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_FMIN),y)
+CSRCS += arch_fmin.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_FMAXF),y)
+CSRCS += arch_fmaxf.c
+endif
+
+ifeq ($(CONFIG_LIBM_ARCH_FMAX),y)
+CSRCS += arch_fmax.c
+endif
+
 endif
 
 DEPPATH += --dep-path libm/arm

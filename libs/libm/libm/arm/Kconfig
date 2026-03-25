@@ -3,4 +3,34 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-source "libs/libm/libm/arm/arm-m/Kconfig"
+if ARCH_ARMV7M || ARCH_ARMV7A || ARCH_ARMV7R || ARCH_ARMV8M || ARCH_ARMV8R
+
+config ARM_LIBM
+	bool "Architecture specific FPU optimizations"
+	default n
+	select LIBM_ARCH_FABSF
+	select LIBM_ARCH_SQRTF
+	select LIBM_ARCH_FABS if ARCH_DPFPU
+	select LIBM_ARCH_SQRT if ARCH_DPFPU
+	select LIBM_ARCH_CEILF if ARCH_ARMV8M || ARCH_ARMV8R
+	select LIBM_ARCH_FLOORF if ARCH_ARMV8M || ARCH_ARMV8R
+	select LIBM_ARCH_NEARBYINTF if ARCH_ARMV8M || ARCH_ARMV8R
+	select LIBM_ARCH_RINTF if ARCH_ARMV8M || ARCH_ARMV8R
+	select LIBM_ARCH_ROUNDF if ARCH_ARMV8M || ARCH_ARMV8R
+	select LIBM_ARCH_TRUNCF if ARCH_ARMV8M || ARCH_ARMV8R
+	select LIBM_ARCH_CEIL if (ARCH_ARMV8M || ARCH_ARMV8R) && ARCH_DPFPU
+	select LIBM_ARCH_FLOOR if (ARCH_ARMV8M || ARCH_ARMV8R) && ARCH_DPFPU
+	select LIBM_ARCH_NEARBYINT if (ARCH_ARMV8M || ARCH_ARMV8R) && ARCH_DPFPU
+	select LIBM_ARCH_RINT if (ARCH_ARMV8M || ARCH_ARMV8R) && ARCH_DPFPU
+	select LIBM_ARCH_ROUND if (ARCH_ARMV8M || ARCH_ARMV8R) && ARCH_DPFPU
+	select LIBM_ARCH_TRUNC if (ARCH_ARMV8M || ARCH_ARMV8R) && ARCH_DPFPU
+	select LIBM_ARCH_FMINF if ARCH_ARMV8M || ARCH_ARMV8R
+	select LIBM_ARCH_FMAXF if ARCH_ARMV8M || ARCH_ARMV8R
+	select LIBM_ARCH_FMIN if (ARCH_ARMV8M || ARCH_ARMV8R) && ARCH_DPFPU
+	select LIBM_ARCH_FMAX if (ARCH_ARMV8M || ARCH_ARMV8R) && ARCH_DPFPU
+	depends on ARCH_FPU
+	depends on LIBM
+	---help---
+		Enable ARM specific floating point optimizations.
+
+endif
