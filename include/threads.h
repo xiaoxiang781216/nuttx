@@ -97,6 +97,14 @@ typedef CODE int (*thrd_start_t)(FAR void *arg);
 typedef CODE void (*tss_dtor_t)(FAR void *);
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_SAFE_STACK
+extern thread_local void *__safestack_unsafe_stack_ptr;
+#endif
+
+/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 

@@ -26,11 +26,18 @@
 
 #include <assert.h>
 
+#ifdef CONFIG_ARCH_SAFE_STACK
+#  include <threads.h>
+#endif
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
 weak_data FAR const void *const __stack_chk_guard = &__stack_chk_guard;
+
+#ifdef CONFIG_ARCH_SAFE_STACK
+thread_local void *__safestack_unsafe_stack_ptr;
+#endif
 
 /****************************************************************************
  * Public Functions
