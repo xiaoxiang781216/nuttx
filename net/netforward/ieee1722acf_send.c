@@ -50,6 +50,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define MAX_1722ACF_STREAMS 128
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -573,6 +575,11 @@ void add_1722acf_stream(FAR struct net_driver_s *dev,
 {
   int i;
   DEBUGASSERT(dev != NULL && streams != NULL);
+
+  if (num == 0 || num > MAX_1722ACF_STREAMS)
+    {
+      return;
+    }
 
   netdev_lock(dev);
 
