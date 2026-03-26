@@ -509,15 +509,6 @@ static int audio_try_enqueue(FAR struct audio_upperhalf_s *upper)
           return OK;
         }
 
-      if (upper->info.type == AUDIO_TYPE_OUTPUT &&
-          upper->dump && !up_interrupt_context())
-        {
-          file_write(
-              &upper->file,
-              upper->apbs[upper->status->head % upper->periods]->samp,
-              upper->apbs[upper->status->head % upper->periods]->nbytes);
-        }
-
       ret = lower->ops->enqueuebuffer(
           lower, upper->apbs[upper->status->head % upper->periods]);
       if (ret < 0)
@@ -1613,17 +1604,15 @@ static inline void audio_dequeuebuffer(FAR struct audio_upperhalf_s *upper,
 
   audinfo("Entry\n");
 
+  if (upper->dump && !up_interrupt_context())
+    {
+      file_write(&upper->file, apb->samp, apb->nbytes);
+    }
+
   if (upper->info.type == AUDIO_TYPE_OUTPUT)
     {
       apb->nbytes = 0;
       memset(apb->samp, 0, apb->nmaxbytes);
-    }
-  else
-    {
-      if (upper->dump && !up_interrupt_context())
-        {
-          file_write(&upper->file, apb->samp, apb->nbytes);
-        }
     }
 
   flags = spin_lock_irqsave_nopreempt(&upper->spinlock);
