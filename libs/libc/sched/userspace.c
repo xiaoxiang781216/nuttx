@@ -28,6 +28,7 @@
 
 #include <nuttx/userspace.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/mm/mm.h>
 #include <nuttx/wqueue.h>
 
 #if defined(CONFIG_BUILD_PROTECTED) && !defined(__KERNEL__)
@@ -66,6 +67,12 @@ int nxuser_init(int argc, char *argv[])
 void nxuser_bringup(FAR const struct userspace_init_s *arg)
 {
   int pid;
+
+  /* Userspace heap init before any user tasks/threads. */
+
+  DEBUGASSERT(arg);
+  DEBUGASSERT(arg->us_heapaddr && arg->us_heapsize > 0);
+  umm_initialize(arg->us_heapaddr, arg->us_heapsize);
 
 #ifdef CONFIG_LIBC_USRWORK
   /* Start the user-space work queue */

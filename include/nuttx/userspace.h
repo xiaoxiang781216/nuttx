@@ -131,6 +131,8 @@ struct userspace_data_s
 
 struct userspace_init_s
 {
+  FAR void *us_heapaddr;
+  size_t us_heapsize;
 };
 
 /* Every user-space blob starts with a header that provides information about

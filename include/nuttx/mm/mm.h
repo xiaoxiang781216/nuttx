@@ -102,7 +102,7 @@ typedef CODE void (*mm_delaycb_t)(FAR void *mem);
  */
 
 #undef MM_KERNEL_USRHEAP_INIT
-#if !defined(CONFIG_BUILD_KERNEL) && defined(__KERNEL__)
+#if defined(CONFIG_BUILD_FLAT) && defined(__KERNEL__)
 #  define MM_KERNEL_USRHEAP_INIT 1
 #endif
 

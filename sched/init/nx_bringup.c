@@ -495,6 +495,7 @@ void nx_bringup(void)
 
 #ifdef CONFIG_BUILD_PROTECTED
   memset(&init, 0, sizeof(init));
+  up_allocate_heap(&init.us_heapaddr, &init.us_heapsize);
   USERSPACE->us_bringup(&init);
 #endif
 
