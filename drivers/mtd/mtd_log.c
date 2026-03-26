@@ -160,8 +160,10 @@ static ssize_t mtdlog_read(FAR struct file *filep,
                            FAR char *buffer, size_t len);
 static ssize_t mtdlog_write(FAR struct file *filep,
                             FAR const char *buffer, size_t len);
+#ifdef CONFIG_MTDLOG_IOCTL
 static int mtdlog_ioctl(FAR struct file *filep,
                         int cmd, unsigned long arg);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -169,12 +171,13 @@ static int mtdlog_ioctl(FAR struct file *filep,
 
 static const struct file_operations g_mtdlog_fops =
 {
-  mtdlog_open,  /* Open */
-  mtdlog_close, /* Close */
-  mtdlog_read,  /* Read */
-  mtdlog_write, /* Write */
-  NULL,         /* Seek */
-  mtdlog_ioctl, /* Ioctl */
+  .open  = mtdlog_open,
+  .close = mtdlog_close,
+  .read  = mtdlog_read,
+  .write = mtdlog_write,
+#ifdef CONFIG_MTDLOG_IOCTL
+  .ioctl = mtdlog_ioctl,
+#endif
 };
 
 /****************************************************************************
@@ -996,6 +999,8 @@ static int mtdlog_write_log_entry(FAR struct mtdlog_s *mtdlog,
   return len_write;
 }
 
+#ifdef CONFIG_MTDLOG_IOCTL
+
 /****************************************************************************
  * Name: mtdlog_query_cur_loginfo
  ****************************************************************************/
@@ -1384,12 +1389,12 @@ static int mtdlog_query_blk_group_count(FAR struct mtdlog_s *mtdlog,
 }
 
 /****************************************************************************
- * Name: mtdlog_seek_cur_blk_group
+ * Name: mtdlog_seek_blk_group
  ****************************************************************************/
 
-static int mtdlog_seek_cur_blk_group(FAR struct mtdlog_s *mtdlog,
-                                     FAR struct mtdlog_user_s *upriv,
-                                     uint32_t count)
+static int mtdlog_seek_blk_group(FAR struct mtdlog_s *mtdlog,
+                                 FAR struct mtdlog_user_s *upriv,
+                                 uint32_t count, bool from_head)
 {
   int ret;
   uint16_t found;
@@ -1402,12 +1407,19 @@ static int mtdlog_seek_cur_blk_group(FAR struct mtdlog_s *mtdlog,
 
   if (count == 0)
     {
+      if (from_head)
+        {
+          upriv->rpos = mtdlog->headpos;
+        }
+
       return 0;
     }
 
-  head_blkidx = upriv->rpos.blkidx;
+  head_blkidx = from_head ?
+    mtdlog->headpos.blkidx : upriv->rpos.blkidx;
+  blkgrp = from_head ?
+    mtdlog->headpos.blkgrp : upriv->rpos.blkgrp;
   tail_blkidx = mtdlog->tailpos.blkidx;
-  blkgrp = upriv->rpos.blkgrp;
 
   if (tail_blkidx < head_blkidx)
     {
@@ -1460,83 +1472,7 @@ static int mtdlog_seek_cur_blk_group(FAR struct mtdlog_s *mtdlog,
     }
 }
 
-/****************************************************************************
- * Name: mtdlog_seek_set_blk_group
- ****************************************************************************/
-
-static int mtdlog_seek_set_blk_group(FAR struct mtdlog_s *mtdlog,
-                                     FAR struct mtdlog_user_s *upriv,
-                                     uint32_t count)
-{
-  int ret;
-  uint16_t found;
-  uint16_t blkidx;
-  uint16_t blkgrp;
-  uint16_t head_blkidx;
-  uint16_t tail_blkidx;
-  uint16_t total_count;
-  struct mtdlog_block_s block_info;
-
-  if (count == 0)
-    {
-      upriv->rpos = mtdlog->headpos;
-      return 0;
-    }
-
-  head_blkidx = mtdlog->headpos.blkidx;
-  tail_blkidx = mtdlog->tailpos.blkidx;
-  blkgrp = mtdlog->headpos.blkgrp;
-
-  if (tail_blkidx < head_blkidx)
-    {
-      tail_blkidx += mtdlog->nblocks;
-    }
-
-  found = 0;
-  total_count = 0;
-  while (head_blkidx <= tail_blkidx)
-    {
-      blkidx = head_blkidx % mtdlog->nblocks;
-      ret = mtdlog_read_block(mtdlog, blkidx, &block_info);
-      if (ret < 0)
-        {
-          return ret;
-        }
-
-      if (block_info.blkgrp != blkgrp)
-        {
-          total_count++;
-          blkgrp = block_info.blkgrp;
-        }
-
-      if (total_count == count)
-        {
-          found = 1;
-          break;
-        }
-
-      head_blkidx++;
-    }
-
-  if (found)
-    {
-      struct mtdlog_pos_s log_rpos;
-
-      log_rpos.blkseq = block_info.blkseq;
-      log_rpos.blkidx = blkidx;
-      log_rpos.blkgrp = block_info.blkgrp;
-      log_rpos.entrycnt = 0;
-      log_rpos.entryoff = MTDLOG_FIRST_ENTRY_OFF(mtdlog);
-      log_rpos.dataoff = MTDLOG_FIRST_DATA_OFF(mtdlog);
-
-      upriv->rpos = log_rpos;
-      return 0;
-    }
-  else
-    {
-      return -ENOENT;
-    }
-}
+#endif /* CONFIG_MTDLOG_IOCTL */
 
 /****************************************************************************
  * Name: mtdlog_open
@@ -1620,6 +1556,8 @@ static ssize_t mtdlog_write(FAR struct file *filep,
 
   return ret;
 }
+
+#ifdef CONFIG_MTDLOG_IOCTL
 
 /****************************************************************************
  * Name: mtdlog_ioctl
@@ -1772,7 +1710,7 @@ static int mtdlog_ioctl(FAR struct file *filep,
           * the specified number of blk groups.
           */
 
-          ret = mtdlog_seek_cur_blk_group(mtdlog, upriv, grp_count);
+          ret = mtdlog_seek_blk_group(mtdlog, upriv, grp_count, false);
 
           break;
         }
@@ -1785,7 +1723,7 @@ static int mtdlog_ioctl(FAR struct file *filep,
           * and move it to the specified blk group.
           */
 
-          ret = mtdlog_seek_set_blk_group(mtdlog, upriv, grp_count);
+          ret = mtdlog_seek_blk_group(mtdlog, upriv, grp_count, true);
 
           break;
         }
@@ -1797,6 +1735,8 @@ static int mtdlog_ioctl(FAR struct file *filep,
   spin_unlock_irqrestore(&mtdlog->lock, flags);
   return ret;
 }
+
+#endif /* CONFIG_MTDLOG_IOCTL */
 
 /****************************************************************************
  * Public Functions

@@ -293,6 +293,16 @@ config MTDLOG_BLOCKSIZE_MULTIPLE
 	---help---
 		The size of a multiple of blocksize compared to erasize
 
+config MTDLOG_IOCTL
+	bool "MTD LOG ioctl support"
+	default y
+	depends on MTDLOG
+	---help---
+		Enable ioctl interface for MTD LOG driver. This includes
+		log entry query, seek, block group query, and status
+		commands. Disable to reduce code size if only read/write
+		access is needed.
+
 comment "MTD Device Drivers"
 
 menuconfig MTD_NAND
