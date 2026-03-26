@@ -52,6 +52,7 @@ if(CONFIG_ARCH_TOOLCHAIN_CLANG)
 
   if(CONFIG_ARCH_RV32)
     add_compile_options(--target=riscv32-none-elf)
+    add_compile_options(-Xclang -fforce-enable-int128)
     add_link_options(--target=riscv32-none-elf)
   else()
     add_compile_options(--target=riscv64-none-elf)
