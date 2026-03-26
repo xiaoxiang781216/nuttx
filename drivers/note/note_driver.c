@@ -1508,9 +1508,12 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
           note.nih_handler = (uintptr_t)handler;
         }
 
-      /* Add the note to circular buffer */
+      /* Add the note to circular buffer.
+       * Use noswitches=true because IRQ handler instrumentation must not
+       * trigger context switches (e.g. via poll_notify -> nxsem_post).
+       */
 
-      note_add(*driver, &note, note.nih_cmn.nc_length, false);
+      note_add(*driver, &note, note.nih_cmn.nc_length, true);
     }
 }
 #endif
