@@ -127,6 +127,12 @@ struct userspace_data_s
 #endif
 };
 
+/* Argument type for us_bringup() */
+
+struct userspace_init_s
+{
+};
+
 /* Every user-space blob starts with a header that provides information about
  * the blob.  The form of that header is provided by struct userspace_s. An
  * instance of this is expected to reside at CONFIG_NUTTX_USERSPACE.
@@ -189,11 +195,9 @@ struct userspace_s
                                FAR struct ppccall_param_s *param);
 #endif
 
-  /* User-space work queue support */
+  /* User-space initialization before all tasks */
 
-#ifdef CONFIG_LIBC_USRWORK
-  CODE int (*work_usrstart)(void);
-#endif
+  CODE void (*us_bringup)(FAR const struct userspace_init_s *arg);
 
   /* Builtin support */
 
@@ -228,6 +232,8 @@ extern "C"
  ****************************************************************************/
 
 int nxuser_init(int argc, char *argv[]);
+
+void nxuser_bringup(FAR const struct userspace_init_s *a);
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -39,7 +39,6 @@
 #include <nuttx/macro.h>
 #include <nuttx/symtab.h>
 #include <nuttx/trace.h>
-#include <nuttx/wqueue.h>
 #include <nuttx/kthread.h>
 #include <nuttx/userspace.h>
 #include <nuttx/binfmt/binfmt.h>
@@ -198,9 +197,6 @@ static inline void nx_workqueues(void)
 #if defined(CONFIG_SCHED_HPWORK) || defined(CONFIG_SCHED_LPWORK)
   int ret;
 #endif
-#ifdef CONFIG_LIBC_USRWORK
-  pid_t pid;
-#endif
 
 #ifdef CONFIG_SCHED_HPWORK
   /* Start the high-priority worker thread to support device driver lower
@@ -221,15 +217,6 @@ static inline void nx_workqueues(void)
   DEBUGASSERT(ret >= 0);
 
 #endif /* CONFIG_SCHED_LPWORK */
-
-#ifdef CONFIG_LIBC_USRWORK
-  /* Start the user-space work queue */
-
-  DEBUGASSERT(USERSPACE->work_usrstart != NULL);
-  pid = USERSPACE->work_usrstart();
-  DEBUGASSERT(pid > 0);
-  UNUSED(pid);
-#endif
 }
 
 #else /* CONFIG_SCHED_WORKQUEUE */
@@ -500,7 +487,16 @@ static inline void nx_create_initthread(void)
 
 void nx_bringup(void)
 {
+#ifdef CONFIG_BUILD_PROTECTED
+  struct userspace_init_s init;
+#endif
+
   sched_trace_begin();
+
+#ifdef CONFIG_BUILD_PROTECTED
+  memset(&init, 0, sizeof(init));
+  USERSPACE->us_bringup(&init);
+#endif
 
 #ifndef CONFIG_DISABLE_ENVIRON
   /* Setup up the initial environment for the idle task.  At present, this

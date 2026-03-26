@@ -28,6 +28,7 @@
 
 #include <nuttx/userspace.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/wqueue.h>
 
 #if defined(CONFIG_BUILD_PROTECTED) && !defined(__KERNEL__)
 
@@ -50,4 +51,28 @@ int nxuser_init(int argc, char *argv[])
   return CONFIG_INIT_ENTRYPOINT(argc, argv);
 }
 
+/****************************************************************************
+ * Name: nxuser_bringup
+ *
+ * Description:
+ *   User-space initialization before all tasks/applications.
+ *
+ *   This is provided by userspace but run in priviledged state after OS
+ *   ready but before any userspace tasks/threads creation, thus requires
+ *   in-kernel syscall function.
+ *
+ ****************************************************************************/
+
+void nxuser_bringup(FAR const struct userspace_init_s *arg)
+{
+  int pid;
+
+#ifdef CONFIG_LIBC_USRWORK
+  /* Start the user-space work queue */
+
+  pid = work_usrstart();
+  DEBUGASSERT(pid > 0);
+#endif
+  UNUSED(pid);
+}
 #endif

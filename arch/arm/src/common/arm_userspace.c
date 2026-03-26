@@ -126,11 +126,7 @@ const struct userspace_s userspace locate_data(".userspace") =
   .ppccall_handler  = up_ppccall_handler,
 #endif
 
-  /* User-space work queue support (declared in include/nuttx/wqueue.h) */
-
-#ifdef CONFIG_LIBC_USRWORK
-  .work_usrstart    = work_usrstart,
-#endif
+  .us_bringup       = nxuser_bringup,
 
   /* Builtin support */
 

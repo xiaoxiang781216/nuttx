@@ -109,11 +109,7 @@ const struct userspace_s userspace locate_data(".userspace") =
   .signal_handler   = up_signal_handler,
 #endif
 
-  /* Userspace work queue support (declared in include/nuttx/wqueue.h) */
-
-#ifdef CONFIG_LIBC_USRWORK
-  .work_usrstart    = work_usrstart,
-#endif
+  .us_bringup       = nxuser_bringup,
 
   /* Builtin support */
 
