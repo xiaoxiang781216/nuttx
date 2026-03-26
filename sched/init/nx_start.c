@@ -127,7 +127,10 @@ DEFINE_PER_CPU_BMP(dq_queue_t, g_readytorun) =
  */
 
 #ifdef CONFIG_SMP
-DEFINE_PER_CPU_BSS_SMP(struct tcb_s *, g_assignedtasks);
+DEFINE_PER_CPU_SMP(struct tcb_s *, g_assignedtasks) =
+{
+  &per_cpu_var_smp(g_idletcb, 0)
+};
 
 DEFINE_PER_CPU_BSS_SMP(enum task_deliver_e, g_delivertasks);
 #endif
