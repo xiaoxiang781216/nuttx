@@ -33,6 +33,7 @@
 #include <nuttx/net/cangw.h>
 #include <nuttx/net/ieee1722.h>
 #include <nuttx/net/netdev.h>
+#include <netinet/if_ether.h>
 
 #include "netforward/ieee1722acf.h"
 #include "netforward/netforward.h"
@@ -309,12 +310,44 @@ int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype)
     break;
   }
 
-  if (dev->d_iob->io_pktlen != offset + payload_len)
+  /* AVTP CRR Ethernet II payload length validation:
+   *
+   * Case 1: payload > (ETH_ZLEN - ETH_HLEN) (46 bytes)
+   *   No padding exists, length field must match payload exactly.
+   *
+   * Case 2: payload <= (ETH_ZLEN - ETH_HLEN) (46 bytes)
+   *   Padding may exist. If length field > payload, the frame is
+   *   invalid and must be discarded. Otherwise strip padding and
+   *   continue parsing.
+   */
+
+  if (dev->d_iob->io_pktlen > ETH_ZLEN - ETH_HLEN)
     {
-      nerr("ERROR: Invalid acf packet, pktlen %u, payload len %zu\n",
-            dev->d_iob->io_pktlen, payload_len);
-      ret = -EINVAL;
-      goto out;
+      /* No padding, length must match payload exactly */
+
+      if (dev->d_iob->io_pktlen != offset + payload_len)
+        {
+          nerr("ERROR: Length mismatch, pktlen %u, expected %zu\n",
+               dev->d_iob->io_pktlen, offset + payload_len);
+          ret = -EINVAL;
+          goto out;
+        }
+    }
+  else
+    {
+      /* Possible padding zone, length field must not exceed payload */
+
+      if (dev->d_iob->io_pktlen < offset + payload_len)
+        {
+          nerr("ERROR: Length field %zu > payload %u, discard\n",
+               (size_t)(offset + payload_len), dev->d_iob->io_pktlen);
+          ret = -EINVAL;
+          goto out;
+        }
+
+      /* Strip padding: adjust pktlen to the actual AVTP data length */
+
+      dev->d_iob->io_pktlen = offset + payload_len;
     }
 
   while (dev->d_iob->io_pktlen - offset >
