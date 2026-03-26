@@ -107,6 +107,14 @@ extern "C"
  *   CONFIG_RAMLOG_SYSLOG would be set to capture debug output only
  *   in the log.
  *
+ * Input Parameters:
+ *   devpath - The full path to the registered driver
+ *   buffer  - A pointer to the RAM buffer, whose total size must be at
+ *             least sizeof(struct ring_s).  The buffer is used
+ *             as a ring_s descriptor followed by the data area.
+ *   buflen  - The size of the data area (circular buffer), must be < 2^23.
+ *             The ring_s header is NOT included in this value.
+ *
  ****************************************************************************/
 
 int ramlog_register(FAR const char *devpath,
