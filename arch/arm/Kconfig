@@ -115,7 +115,7 @@ config ARCH_CHIP_CSK6
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_TIMEKEEPING
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_ADJTIME
 	select ARCH_CORTEXM33
@@ -139,7 +139,7 @@ config ARCH_CHIP_EOSS3
 	bool "QuickLogic EOS S3"
 	select ARCH_CORTEXM4
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_FPU
 	---help---
 		QuickLogic EOS S3 (ARM Cortex-M4)
@@ -153,7 +153,7 @@ config ARCH_CHIP_GD32F4
 	select ARCH_HAVE_PROGMEM
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		GD32MCU GD32 architectures (ARM Cortex-M4).
@@ -190,7 +190,7 @@ config ARCH_CHIP_IMX9_CORTEX_M
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_I2CRESET
 	select ARCH_HAVE_SPI_CS_CONTROL
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		iMX.9 architectures (Cortex-M7)
@@ -203,7 +203,7 @@ config ARCH_CHIP_IMXRT
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_I2CRESET
 	select ARCH_HAVE_SPI_CS_CONTROL
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		NXP i.MX RT (ARM Cortex-M7) architectures
@@ -212,7 +212,7 @@ config ARCH_CHIP_KINETIS
 	bool "NXP/Freescale Kinetis"
 	select ARCH_CORTEXM4
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_RAMFUNCS
 	select ARCH_HAVE_I2CRESET
@@ -241,14 +241,14 @@ config ARCH_CHIP_LC823450
 config ARCH_CHIP_LM
 	bool "TI/Luminary Stellaris"
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	---help---
 		TI/Luminary Stellaris LMS3 and LM4F architectures (ARM Cortex-M3/4)
 
 config ARCH_CHIP_LPC17XX_40XX
 	bool "NXP LPC17xx/LPC40xx"
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		NXP LPC17xx & LPC40xx architectures (ARM Cortex-M3/4)
@@ -278,7 +278,7 @@ config ARCH_CHIP_LPC43XX
 	bool "NXP LPC43XX"
 	select ARCH_CORTEXM4
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_FPU
 	---help---
 		NPX LPC43XX architectures (ARM Cortex-M4).
@@ -287,7 +287,7 @@ config ARCH_CHIP_LPC54XX
 	bool "NXP LPC54XX"
 	select ARCH_CORTEXM4
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_FPU
 	---help---
 		NPX LPC54XX architectures (ARM Cortex-M4).
@@ -311,7 +311,7 @@ config ARCH_CHIP_NRF52
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_STACKCHECK
 	#select ARCH_HAVE_MPU
-	#select ARM_HAVE_MPU_UNIFIED
+	#select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_PWM_MULTICHAN
@@ -365,7 +365,7 @@ config ARCH_CHIP_RP2040
 config ARCH_CHIP_S32K1XX
 	bool "NXP S32K1XX"
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_RAMFUNCS
 	select ARCH_HAVE_I2CRESET
 	---help---
@@ -375,7 +375,7 @@ config ARCH_CHIP_S32K3XX
 	bool "NXP S32K3XX"
 	select ARCH_HAVE_MPU
 	select ARCH_HAVE_RAMFUNCS
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_I2CRESET
 	---help---
 		NPX S32K3XX architectures (ARM Cortex-M7).
@@ -420,7 +420,7 @@ config ARCH_CHIP_SAME5X
 config ARCH_CHIP_SAM34
 	bool "Atmel SAM3/SAM4"
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_RAMFUNCS
 	select ARCH_HAVE_STACKCHECK
 	---help---
@@ -435,7 +435,7 @@ config ARCH_CHIP_SAMV7
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_I2CRESET
 	select ARCH_HAVE_SPI_CS_CONTROL
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_ADJTIME
 	---help---
@@ -444,7 +444,7 @@ config ARCH_CHIP_SAMV7
 config ARCH_CHIP_SIMPLELINK
 	bool "TI SimpleLink"
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	depends on EXPERIMENTAL
 	---help---
 		TI SimpleLink CCxxx architectures (ARM Cortex-M3 or M4)
@@ -458,7 +458,7 @@ config ARCH_CHIP_STM32
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_TIMEKEEPING
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_ADJTIME
 	---help---
@@ -490,7 +490,7 @@ config ARCH_CHIP_STM32F7
 	select ARCH_HAVE_HEAPCHECK
 	select ARCH_HAVE_PROGMEM
 	select ARCH_HAVE_SPI_BITORDER
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_TIMEKEEPING
@@ -504,7 +504,7 @@ config ARCH_CHIP_STM32H7
 	select ARCH_HAVE_PROGMEM
 #	select ARCH_HAVE_HEAPCHECK
 	select ARCH_HAVE_SPI_BITORDER
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_TIMEKEEPING
@@ -521,7 +521,7 @@ config ARCH_CHIP_STM32L4
 	select ARCH_HAVE_PROGMEM
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		STMicro STM32 architectures (ARM Cortex-M4).
@@ -536,7 +536,7 @@ config ARCH_CHIP_STM32H5
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_TRUSTZONE
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		STMicro STM32 H5 architectures (ARM Cortex-M33).
@@ -551,7 +551,7 @@ config ARCH_CHIP_STM32L5
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_TRUSTZONE
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		STMicro STM32 L5 architectures (ARM Cortex-M33).
@@ -566,7 +566,7 @@ config ARCH_CHIP_STM32U5
 	select ARCH_HAVE_PROGMEM
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_TRUSTZONE
 	---help---
@@ -582,7 +582,7 @@ config ARCH_CHIP_STM32WB
 	select ARCH_HAVE_PROGMEM
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		STMicro STM32WB architectures (ARM Cortex-M4).
@@ -596,7 +596,7 @@ config ARCH_CHIP_STM32WL5
 	select ARCH_HAVE_PROGMEM
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		STMicro STM32WL5 architectures (dual CPU ARM Cortex-M4 Cortex-M0).
@@ -621,7 +621,7 @@ config ARCH_CHIP_TMS570
 config ARCH_CHIP_TIVA
 	bool "TI Tiva"
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	---help---
 		TI Tiva TM4C architectures (ARM Cortex-M4)
 
@@ -631,7 +631,7 @@ config ARCH_CHIP_XMC4
 	select ARCH_HAVE_MPU
 	select ARCH_HAVE_RAMFUNCS
 	select ARCH_HAVE_I2CRESET
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_TICKLESS
 	---help---
@@ -643,7 +643,7 @@ config ARCH_CHIP_MX8MP
 	select ARCH_HAVE_MPU
 	select ARCH_HAVE_RAMFUNCS
 	select ARCH_HAVE_I2CRESET
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_ITCM
 	select ARCH_HAVE_DTCM
 	select ARCH_HAVE_STACKCHECK
@@ -654,7 +654,7 @@ config ARCH_CHIP_CXD56XX
 	bool "Sony CXD56xx"
 	select ARCH_CORTEXM4
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_HEAPCHECK
 	select ARCH_HAVE_MULTICPU
@@ -718,7 +718,7 @@ config ARCH_CHIP_AT32
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_TIMEKEEPING
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_STACKCHECK
 	---help---
 		Artery AT32 architectures (ARM Cortex-M4)
@@ -1287,13 +1287,6 @@ config ARM_PACBTI
 	depends on ARM_HAVE_PACBTI
 	---help---
 		Enables PACBTI(Pointer Authentication and Branch Target Identification) Extension
-
-config ARM_HAVE_MPU_UNIFIED
-	bool
-	default n
-	---help---
-		Automatically selected to indicate that the CPU supports a
-		unified MPU for both instruction and data addresses.
 
 config ARM_HAVE_MPCORE
 	bool

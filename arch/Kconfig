@@ -524,6 +524,13 @@ config ARCH_HAVE_MPU
 	bool
 	default n
 
+config ARCH_HAVE_MPU_UNIFIED
+	bool
+	default n
+	---help---
+		Automatically selected to indicate that the CPU supports a
+		unified MPU for both instruction and data addresses.
+
 config ARCH_NAND_HWECC
 	bool
 	default n

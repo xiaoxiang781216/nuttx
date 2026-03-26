@@ -15,7 +15,7 @@ config ARCH_CHIP_MPS2_AN386
 	bool "MPS2 AN386 Processor Cortexm4"
 	select ARCH_CORTEXM4
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_STACKCHECK
 
@@ -24,7 +24,7 @@ config ARCH_CHIP_MPS2_AN500
 	select ARCH_CORTEXM7
 	select ARCH_HAVE_ADDRENV
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_STACKCHECK
 
@@ -32,7 +32,7 @@ config ARCH_CHIP_MPS2_AN521
 	bool "MPS2 AN521 Processor Cortexm33"
 	select ARCH_CORTEXM33
 	select ARCH_HAVE_MPU
-	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_MPU_UNIFIED
 
 config ARCH_CHIP_MPS3_AN524
 	bool "MPS3 AN524 Processor Cortexm33"

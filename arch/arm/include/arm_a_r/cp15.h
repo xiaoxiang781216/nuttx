@@ -120,7 +120,7 @@
 #define CP15_DRBAR(r)      _CP15(0, r, c6, c1, 0)   /* Data Region Base Address Register */
 #define CP15_DRSR(r)       _CP15(0, r, c6, c1, 2)   /* Data Region Size and Enable Register */
 #define CP15_DRACR(r)      _CP15(0, r, c6, c1, 4)   /* Data Region Access Control Register */
-#ifndef CONFIG_ARM_HAVE_MPU_UNIFIED
+#ifndef CONFIG_ARCH_HAVE_MPU_UNIFIED
 #  define CP15_IRBAR(r)    _CP15(0, r, c6, c1, 1)   /* Instruction Region Base Address Register */
 #  define CP15_IRSR(r)     _CP15(0, r, c6, c1, 3)   /* Instruction Region Size and Enable Register */
 #  define CP15_IRACR(r)    _CP15(0, r, c6, c1, 5)   /* Instruction Region Access Control Register */
