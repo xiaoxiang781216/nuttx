@@ -218,7 +218,6 @@ void tricore_bustrap_register_hook(tricore_bustrap_hook_t hook);
 uintptr_t *tricore_alloc_csa(struct tcb_s *tcb, uintptr_t pc, uintptr_t sp,
                              uintptr_t psw, bool irqsave);
 void tricore_reclaim_csa(uintptr_t pcxi);
-void tricore_get_csainfo(csa_info_t *info);
 void tricore_region_csainit(void *regionbase, ssize_t nbytes);
 
 /* Low level serial output **************************************************/

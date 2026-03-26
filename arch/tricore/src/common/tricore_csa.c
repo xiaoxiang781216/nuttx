@@ -109,68 +109,6 @@ void tricore_reclaim_csa(uintptr_t pcxi)
 }
 
 /****************************************************************************
- * Name: tricore_get_csainfo
- ****************************************************************************/
-
-void tricore_get_csainfo(csa_info_t *info)
-{
-  FAR struct tcb_s *rtcb = nxsched_self();
-  uintptr_t fcx, ucx;
-  irqstate_t flags;
-  int hash_ndx;
-  int ndx;
-
-  info->used = 0;
-  hash_ndx = PIDHASH(rtcb->pid);
-
-  flags = spin_lock_irqsave(&g_pidhashlock);
-
-  for (ndx = 0; ndx < g_npidhash; ndx++)
-    {
-      if (g_pidhash[ndx])
-        {
-          if (ndx != hash_ndx)
-            {
-              ucx = tricore_addr2csa(g_pidhash[ndx]->xcp.regs) & FCX_FREE;
-            }
-          else
-            {
-              ucx = __mfcr(CPU_PCXI) & FCX_FREE;
-              UP_DSB();
-            }
-
-          while (ucx != 0)
-            {
-              info->used++;
-              ucx = tricore_csa2addr(ucx)[REG_UPCXI] & FCX_FREE;
-            }
-
-#ifndef CONFIG_DISABLE_SIGNALS
-          ucx = tricore_addr2csa(g_pidhash[ndx]->xcp.saved_regs) & FCX_FREE;
-
-          while (ucx != 0)
-            {
-              info->used++;
-              ucx = tricore_csa2addr(ucx)[REG_UPCXI] & FCX_FREE;
-            }
-#endif
-        }
-    }
-
-  spin_unlock_irqrestore(&g_pidhashlock, flags);
-
-  fcx = __mfcr(CPU_FCX) & FCX_FREE;
-  UP_DSB();
-
-  info->free = 0;
-  while (fcx != 0)
-    {
-      info->free++;
-      fcx = tricore_csa2addr(fcx)[REG_UPCXI] & FCX_FREE;
-    }
-}
-
-/****************************************************************************
  * Name: tricore_region_csainit
  ****************************************************************************/
 
