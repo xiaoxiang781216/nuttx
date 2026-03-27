@@ -136,6 +136,13 @@ config DRIVERS_NOTERAM_CRASH_DUMP
 	---help---
 		If this option is enabled, dump all contents when a crash occurs.
 
+config DRIVERS_NOTERAM_TEXT_DUMP
+	bool "Enable text format read mode"
+	default y
+	---help---
+		Enable human-readable text dump via read(). When disabled, only
+		binary mode (NOTE_MODE_READ_BINARY) is available, saving code size.
+
 config DRIVERS_NOTERAM_POLLTIMEOUT_MS
 	int "The timeout ms if poll requested and no data avaliable"
 	default 0

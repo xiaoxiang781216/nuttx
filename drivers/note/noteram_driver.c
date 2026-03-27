@@ -172,9 +172,9 @@ noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx);
 static int noteram_dump_one(FAR const struct note_max_s *p,
                             FAR struct lib_outstream_s *s,
                             FAR struct noteram_dump_context_s *ctx);
+#endif
 static uint32_t noteram_unread_length(FAR struct noteram_driver_s *drv,
                                       uint32_t read);
-#endif
 
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
 static void noteram_timeout_handler(wdparm_t arg);
@@ -816,7 +816,10 @@ static int noteram_open(FAR struct file *filep)
   spin_lock_init(&ctx->lock);
 
   filep->f_priv = ctx;
+#if defined(CONFIG_DRIVERS_NOTERAM_TEXT_DUMP) || \
+    defined(CONFIG_DRIVERS_NOTERAM_CRASH_DUMP)
   noteram_dump_init_context(ctx);
+#endif
   return OK;
 }
 
@@ -863,13 +866,14 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 {
   FAR struct noteram_dump_context_s *ctx = filep->f_priv;
   FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
-  FAR struct lib_memoutstream_s stream;
   irqstate_t flags;
   ssize_t ret = 0;
 
   flags = spin_lock_irqsave_notrace(&ctx->lock);
 
+#ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
   if (ctx->mode == NOTE_MODE_READ_BINARY)
+#endif
     {
       size_t nread = 0;
       while (nread < buflen)
@@ -887,8 +891,11 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
       spin_unlock_irqrestore_notrace(&ctx->lock, flags);
       return nread > 0 ? nread : ret;
     }
+#ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
   else
     {
+      FAR struct lib_memoutstream_s stream;
+
       lib_memoutstream(&stream, buffer, buflen);
 
       do
@@ -915,6 +922,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
       spin_unlock_irqrestore_notrace(&ctx->lock, flags);
       return stream.common.nput;
     }
+#endif
 }
 
 /****************************************************************************
@@ -1322,6 +1330,9 @@ out:
   noteram_timeout_reset(drv);
   return 0;
 }
+
+#if defined(CONFIG_DRIVERS_NOTERAM_TEXT_DUMP) || \
+    defined(CONFIG_DRIVERS_NOTERAM_CRASH_DUMP)
 
 /****************************************************************************
  * Name: noteram_dump_init_context
@@ -1909,6 +1920,8 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
 
   return ret;
 }
+
+#endif /* CONFIG_DRIVERS_NOTERAM_TEXT_DUMP || CONFIG_DRIVERS_NOTERAM_CRASH_DUMP */
 
 #ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
 
