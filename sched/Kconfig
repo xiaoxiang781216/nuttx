@@ -1337,6 +1337,18 @@ config SCHED_INSTRUMENTATION_SWITCH
 		done in these interfaces.  For example, normal devices may not be
 		used; syslog output cannot be performed.
 
+config SCHED_INSTRUMENTATION_SWITCH_BACKTRACE
+	int "Maximum backtrace depth on context switch out"
+	default 0
+	depends on ARCH_HAVE_BACKTRACE
+	depends on SCHED_INSTRUMENTATION_SWITCH
+	depends on DRIVERS_NOTE
+	---help---
+		Specifies the maximum number of backtrace entries to capture
+		when a task is switched out. This helps diagnose why a task
+		is waiting or blocked by recording the call stack at the
+		point of context switch. Set to zero to disable.
+
 config SCHED_INSTRUMENTATION_PREEMPTION
 	bool "Preemption monitor hooks"
 	default n

@@ -128,6 +128,7 @@ note_drivers_t[CONFIG_DRIVERS_NOTE_MAX + 1];
  * Private Function Prototypes
  ****************************************************************************/
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 static int note_driver_open(FAR struct file *filep);
 static int note_driver_close(FAR struct file *filep);
 static ssize_t note_driver_read(FAR struct file *filep,
@@ -138,11 +139,13 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
                              unsigned long arg);
 static int note_driver_poll(FAR struct file *filep, FAR struct pollfd *fds,
                             bool setup);
+#endif
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 static const struct file_operations g_note_fops =
 {
   .open  = note_driver_open,  /* open */
@@ -152,6 +155,7 @@ static const struct file_operations g_note_fops =
   .ioctl = note_driver_ioctl, /* ioctl */
   .poll  = note_driver_poll,  /* poll */
 };
+#endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
     defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER)
@@ -278,6 +282,8 @@ static void note_driver_fs_unregister(FAR struct note_driver_s *driver)
   unregister_driver(devpath);
 #endif
 }
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 
 /****************************************************************************
  * Name: note_driver_open
@@ -517,6 +523,8 @@ static int note_driver_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   return -ENOSYS;
 }
+
+#endif /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
 
 /****************************************************************************
  * Name: note_isenabled
@@ -1053,6 +1061,9 @@ void sched_note_suspend(FAR struct tcb_s *tcb)
 {
   struct note_suspend_s note;
   FAR struct note_driver_s **driver;
+#if CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE > 0
+  int n;
+#endif
   bool formatted = false;
 
   note_drivers_initialize();
@@ -1078,9 +1089,21 @@ void sched_note_suspend(FAR struct tcb_s *tcb)
       if (!formatted)
         {
           formatted = true;
-          note_common(tcb, &note.nsu_cmn, sizeof(struct note_suspend_s),
-                      NOTE_SUSPEND);
+          note_common(tcb, &note.nsu_cmn,
+                      sizeof(struct note_suspend_s), NOTE_SUSPEND);
           note.nsu_state = tcb->task_state;
+#if CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE > 0
+          n = sched_backtrace(tcb->pid,
+                (FAR void **)note.nsu_backtrace,
+                CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE,
+                2);
+          if (n < CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE)
+            {
+              memset(&note.nsu_backtrace[n], 0,
+                (CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE
+                 - n) * sizeof(uintptr_t));
+            }
+#endif
         }
 
       /* Add the note to circular buffer */

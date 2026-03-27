@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -863,6 +864,30 @@ int main(int argc, char **argv)
               printf(" State=%u", (unsigned int)buffer[bufndx]);
               bufndx++;
               remainder--;
+#if CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE > 0
+              {
+                int i;
+
+                for (i = 0;
+                     i < CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE &&
+                     remainder >= sizeof(uintptr_t); i++)
+                  {
+                    uintptr_t addr;
+                    memcpy(&addr, &buffer[bufndx], sizeof(uintptr_t));
+                    bufndx += sizeof(uintptr_t);
+                    remainder -= sizeof(uintptr_t);
+                    if (addr != 0)
+                      {
+                        if (i == 0)
+                          {
+                            printf(" Backtrace:");
+                          }
+
+                        printf(" 0x%" PRIxPTR, addr);
+                      }
+                  }
+              }
+#endif
               break;
 
             /* Followed by an 8-bit target CPU number */

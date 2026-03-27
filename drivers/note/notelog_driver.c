@@ -177,12 +177,33 @@ static void notelog_stop(FAR struct note_driver_s *drv,
 static void notelog_suspend(FAR struct note_driver_s *drv,
                             FAR struct tcb_s *tcb)
 {
+#if CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE > 0
+  FAR void *backtrace[CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE];
+  int n;
+  int i;
+#endif
+
 #ifdef CONFIG_SMP
   syslog(LOG_INFO, "CPU%d: Suspend %s, TCB@%p, state=%d\n",
          tcb->cpu, get_task_name(tcb), tcb, tcb->task_state);
 #else
   syslog(LOG_INFO, "Suspend %s, TCB@%p, state=%d\n",
          get_task_name(tcb), tcb, tcb->task_state);
+#endif
+
+#if CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE > 0
+  n = sched_backtrace(tcb->pid, backtrace,
+                      CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE, 2);
+  if (n > 0)
+    {
+      syslog(LOG_INFO, "  backtrace:");
+      for (i = 0; i < n; i++)
+        {
+          syslog(LOG_INFO, " %p", backtrace[i]);
+        }
+
+      syslog(LOG_INFO, "\n");
+    }
 #endif
 }
 

@@ -1410,12 +1410,32 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
     case NOTE_SUSPEND:
       {
         FAR struct note_suspend_s *nsu = (FAR struct note_suspend_s *)p;
+        int i;
+
+        UNUSED(i);
 
         /* This note informs the task to be suspended.
          * Preserve the information for the succeeding NOTE_RESUME.
          */
 
         cctx->current_state = nsu->nsu_state;
+
+#if CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE > 0
+        ret += lib_sprintf(s, "   <-");
+        for (i = 0; i < CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE;
+             i++)
+          {
+            if (nsu->nsu_backtrace[i] == 0)
+              {
+                break;
+              }
+
+            ret += lib_sprintf(s, " 0x%" PRIxPTR,
+                               nsu->nsu_backtrace[i]);
+          }
+
+        ret += lib_sprintf(s, "\n");
+#endif
       }
       break;
 

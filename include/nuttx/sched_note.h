@@ -209,6 +209,9 @@ struct note_suspend_s
 {
   struct note_common_s nsu_cmn; /* Common note parameters */
   uint8_t nsu_state;            /* Task state */
+#if CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE > 0
+  uintptr_t nsu_backtrace[CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE];
+#endif
 };
 
 /* This is the specific form of the NOTE_RESUME note */
