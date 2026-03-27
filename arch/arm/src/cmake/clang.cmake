@@ -253,6 +253,10 @@ if(CONFIG_LIBM_TOOLCHAIN)
   add_compile_options(--config=newlib.cfg)
 endif()
 
+if(CONFIG_MODULES)
+  add_compile_options(-mlong-calls)
+endif()
+
 # override nuttx_find_toolchain_lib
 
 set(NUTTX_FIND_TOOLCHAIN_LIB_DEFINED true)

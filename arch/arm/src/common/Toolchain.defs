@@ -601,13 +601,18 @@ endif
 
 # Loadable module definitions
 
-CMODULEFLAGS = $(CFLAGS) -fvisibility=hidden -mlong-calls # --target1-abs
+ifeq ($(CONFIG_MODULES),y)
+  CFLAGS += -mlong-calls
+  CXXFLAGS += -mlong-calls
+endif
+
+CMODULEFLAGS = $(CFLAGS) -fvisibility=hidden # --target1-abs
 LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/elf/gnu-elf.ld)
 
 # ELF module definitions
 
-CELFFLAGS = $(CFLAGS) -fvisibility=hidden -mlong-calls # --target1-abs
-CXXELFFLAGS = $(CXXFLAGS)-fvisibility=hidden -mlong-calls
+CELFFLAGS = $(CFLAGS) -fvisibility=hidden # --target1-abs
+CXXELFFLAGS = $(CXXFLAGS)-fvisibility=hidden
 
 ifeq ($(CONFIG_UNWINDER_ARM),y)
   CELFFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables
