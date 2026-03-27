@@ -267,6 +267,9 @@ if(NOT COMMAND nuttx_add_elf_app)
     # loadable build requires applying ELF flags to all applications
 
     if(CONFIG_MODULES)
+      if(NOT TARGET nuttx_apps_mksymtab)
+        add_custom_target(nuttx_apps_mksymtab)
+      endif()
       add_dependencies(nuttx_apps_mksymtab ${ELF_TARGET})
       target_compile_options(
         ${ELF_TARGET}
