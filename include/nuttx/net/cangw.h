@@ -134,6 +134,10 @@ int remove_cangw_rule(FAR struct net_driver_s *dev,
                       FAR const struct cangw_rule_s *rule,
                       FAR sq_queue_t *removed);
 
+int modify_cangw_rule(FAR struct net_driver_s *dev,
+                      FAR const struct cangw_rule_s *rule,
+                      uint16_t flags);
+
 #undef EXTERN
 #ifdef __cplusplus
 }

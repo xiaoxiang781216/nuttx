@@ -158,6 +158,7 @@ enum
 #define CGW_FLAGS_CAN_SRC_TSTAMP 0x02
 #define CGW_FLAGS_CAN_IIF_TX_OK  0x04
 #define CGW_FLAGS_CAN_FD         0x08
+#define CGW_FLAGS_CAN_DISABLED   0x10  /* rule is disabled */
 
 /* length of checksum operation parameters.
  * idx = index in CAN frame data[]

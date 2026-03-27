@@ -38,6 +38,7 @@
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/netstats.h>
+#include <netpacket/cangw.h>
 
 #include "devif/devif.h"
 #include "netforward/ieee1722acf.h"
@@ -336,6 +337,52 @@ int remove_cangw_rule(FAR struct net_driver_s *dev,
 }
 
 /****************************************************************************
+ * Name: modify_cangw_rule
+ *
+ * Description:
+ *   Modify flags of CAN gateway rules on a device. If rule is provided,
+ *   only matching rules are affected; otherwise all rules are affected.
+ *   Only the CGW_FLAGS_CAN_DISABLED bit from flags is applied.
+ *
+ * Input Parameters:
+ *   dev   - Source device whose rule list to search
+ *   rule  - Rule to match (NULL = affect all rules)
+ *   flags - Flags to apply (only CGW_FLAGS_CAN_DISABLED bit is used)
+ *
+ * Returned Value:
+ *   Number of rules affected, or -ENOENT if no matching rule found.
+ *
+ ****************************************************************************/
+
+int modify_cangw_rule(FAR struct net_driver_s *dev,
+                      FAR const struct cangw_rule_s *rule,
+                      uint16_t flags)
+{
+  FAR sq_entry_t *entry;
+  int count = 0;
+
+  DEBUGASSERT(dev);
+
+  netdev_lock(dev);
+
+  sq_for_every(&dev->d_cangw_rules, entry)
+    {
+      FAR struct cangw_rule_s *rtrule =
+                              (FAR struct cangw_rule_s *)entry;
+
+      if (rule == NULL || cangw_rule_match(rtrule, rule))
+        {
+          rtrule->flags = (rtrule->flags & ~CGW_FLAGS_CAN_DISABLED) |
+                          (flags & CGW_FLAGS_CAN_DISABLED);
+          count++;
+        }
+    }
+
+  netdev_unlock(dev);
+  return count > 0 ? count : -ENOENT;
+}
+
+/****************************************************************************
  * Name: can_forward
  *
  * Description:
@@ -388,6 +435,14 @@ int can_forward(FAR struct net_driver_s *dev)
   sq_for_every(&dev->d_cangw_rules, entry)
     {
       fwdrule = (FAR struct cangw_rule_s *)entry;
+
+      /* Skip disabled rules */
+
+      if (fwdrule->flags & CGW_FLAGS_CAN_DISABLED)
+        {
+          continue;
+        }
+
       switch (fwdrule->gwtype)
         {
           case CGW_TYPE_CAN_CAN:

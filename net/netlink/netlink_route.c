@@ -1584,6 +1584,73 @@ errout:
   return ret;
 }
 
+static int netlink_modify_can_route(FAR const struct nlmsghdr *nlmsg)
+{
+  FAR struct nlattr *tb[CGW_MAX + 1];
+  FAR struct rtcanmsg *rt_msg = nlmsg_data(nlmsg);
+  FAR struct net_driver_s *src_dev;
+  uint32_t src_if;
+  int ret;
+
+  if (nlmsg->nlmsg_len < nlmsg_msg_size(sizeof(struct rtcanmsg)))
+    {
+      return -EINVAL;
+    }
+
+  ret = nlmsg_parse(nlmsg, sizeof(struct rtcanmsg), tb, CGW_MAX,
+                    g_cgw_policy, NULL);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  if (!tb[CGW_SRC_IF])
+    {
+      return -EINVAL;
+    }
+
+  src_if = *(FAR uint32_t *)nla_data(tb[CGW_SRC_IF]);
+  src_dev = netdev_findbyindex(src_if);
+  if (!src_dev)
+    {
+      return -ENODEV;
+    }
+
+  if (tb[CGW_FILTER] || tb[CGW_DST_IF])
+    {
+      struct cangw_rule_s match;
+      memset(&match, 0, sizeof(match));
+      match.gwtype = rt_msg->gwtype;
+
+      if (tb[CGW_FILTER])
+        {
+          nla_memcpy(&match.gw.ccgw.filter, tb[CGW_FILTER],
+                     sizeof(struct can_filter));
+        }
+
+      if (tb[CGW_DST_IF])
+        {
+          uint32_t dst_if = *(FAR uint32_t *)nla_data(tb[CGW_DST_IF]);
+          if (dst_if != 0)
+            {
+              match.dest_dev = netdev_findbyindex(dst_if);
+              if (match.dest_dev == NULL)
+                {
+                  return -ENODEV;
+                }
+            }
+        }
+
+      ret = modify_cangw_rule(src_dev, &match, rt_msg->flags);
+    }
+  else
+    {
+      ret = modify_cangw_rule(src_dev, NULL, rt_msg->flags);
+    }
+
+  return ret > 0 ? OK : ret;
+}
+
 static int netlink_new_can_route(FAR const struct nlmsghdr *nlmsg)
 {
   FAR struct nlattr *tb[CGW_MAX + 1];
@@ -1595,6 +1662,13 @@ static int netlink_new_can_route(FAR const struct nlmsghdr *nlmsg)
   if (nlmsg->nlmsg_len < nlmsg_msg_size(sizeof(struct rtcanmsg)))
     {
       return -EINVAL;
+    }
+
+  /* NLM_F_REPLACE means modify existing rules (enable/disable) */
+
+  if (nlmsg->nlmsg_flags & NLM_F_REPLACE)
+    {
+      return netlink_modify_can_route(nlmsg);
     }
 
   /* parse nlmsg and acquire tb. */
