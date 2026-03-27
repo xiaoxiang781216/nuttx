@@ -38,6 +38,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/circbuf.h>
 #include <nuttx/crc32.h>
+#include <nuttx/queue.h>
 #include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
@@ -120,6 +121,7 @@ struct rpmsg_socket_conn_s
   FAR struct rpmsg_socket_conn_s *server;
   FAR struct rpmsg_socket_conn_s *next;
   FAR struct rpmsg_socket_conn_s *pend;
+  struct dq_entry_s              snode;
 
   /* server listen-scoket listening: backlog > 0;
    * others: backlog = 0;
@@ -237,6 +239,12 @@ const struct sock_intf_s g_rpmsg_sockif =
 
 static DEFINE_PER_CPU_BSS_BMP(uint32_t, g_rpmsg_id);
 #define g_rpmsg_id this_cpu_var_bmp(g_rpmsg_id)
+
+static DEFINE_PER_CPU_BSS_BMP(spinlock_t, g_rpmsg_socket_lock);
+#define g_rpmsg_socket_lock this_cpu_var_bmp(g_rpmsg_socket_lock)
+
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_rpmsg_socket_server);
+#define g_rpmsg_socket_server this_cpu_var_bmp(g_rpmsg_socket_server)
 
 /****************************************************************************
  * Private Functions
@@ -637,34 +645,74 @@ static bool rpmsg_socket_ns_match(FAR struct rpmsg_device *rdev,
                                   FAR void *priv, FAR const char *name,
                                   uint32_t dest)
 {
-  FAR struct rpmsg_socket_conn_s *server = priv;
+  return strncmp(name, RPMSG_SOCKET_NAME_PREFIX,
+                 RPMSG_SOCKET_NAME_PREFIX_LEN) == 0;
+}
+
+static FAR struct rpmsg_socket_conn_s *
+rpmsg_socket_find_server(FAR struct rpmsg_device *rdev,
+                         FAR const char *name)
+{
+  FAR struct rpmsg_socket_conn_s *server;
   char namebuf[RPMSG_NAME_SIZE];
+  irqstate_t flags;
 
-  rpmsg_socket_format_name(server, namebuf);
-  if (strncmp(name, namebuf, strlen(namebuf)))
+  flags = spin_lock_irqsave(&g_rpmsg_socket_lock);
+  dq_for_every_entry(&g_rpmsg_socket_server, server,
+                     struct rpmsg_socket_conn_s, snode)
     {
-      return false;
+      rpmsg_socket_format_name(server, namebuf);
+      if (strncmp(name, namebuf, strlen(namebuf)))
+        {
+          continue;
+        }
+
+      if (server->rpaddr.rp_cpu[0] &&
+          strcmp(server->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev)))
+        {
+          continue;
+        }
+
+      spin_unlock_irqrestore(&g_rpmsg_socket_lock, flags);
+      return server;
     }
 
-  if (server->rpaddr.rp_cpu[0] &&
-      strcmp(server->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev)))
-    {
-      /* Bind specific CPU, then only listen that CPU */
+  spin_unlock_irqrestore(&g_rpmsg_socket_lock, flags);
+  return NULL;
+}
 
-      return false;
-    }
+static void rpmsg_socket_ns_destroy(FAR struct rpmsg_device *rdev,
+                                    FAR const char *name,
+                                    uint32_t dest)
+{
+  struct rpmsg_ns_msg ns_msg;
 
-  return true;
+  strlcpy(ns_msg.name, name, RPMSG_NAME_SIZE);
+  ns_msg.addr  = dest;
+  ns_msg.flags = RPMSG_NS_DESTROY;
+
+  rpmsg_send_offchannel_raw(&rdev->ns_ept,
+                            rdev->ns_ept.addr,
+                            RPMSG_NS_EPT_ADDR,
+                            &ns_msg, sizeof(ns_msg),
+                            true);
 }
 
 static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
                                  FAR void *priv, FAR const char *name,
                                  uint32_t dest)
 {
-  FAR struct rpmsg_socket_conn_s *server = priv;
+  FAR struct rpmsg_socket_conn_s *server;
   FAR struct rpmsg_socket_conn_s *new;
   irqstate_t flags;
   int ret;
+
+  server = rpmsg_socket_find_server(rdev, name);
+  if (!server)
+    {
+      rpmsg_socket_ns_destroy(rdev, name, dest);
+      return;
+    }
 
   new = rpmsg_socket_alloc();
   if (!new)
@@ -857,6 +905,7 @@ static int rpmsg_socket_getpeername(FAR struct socket *psock,
 static int rpmsg_socket_listen(FAR struct socket *psock, int backlog)
 {
   FAR struct rpmsg_socket_conn_s *server = psock->s_conn;
+  irqstate_t flags;
 
   if (psock->s_type != SOCK_STREAM)
     {
@@ -869,11 +918,12 @@ static int rpmsg_socket_listen(FAR struct socket *psock, int backlog)
     }
 
   server->backlog = backlog;
-  return rpmsg_register_callback(server,
-                                 NULL,
-                                 NULL,
-                                 rpmsg_socket_ns_match,
-                                 rpmsg_socket_ns_bind);
+
+  flags = spin_lock_irqsave(&g_rpmsg_socket_lock);
+  dq_addlast(&server->snode, &g_rpmsg_socket_server);
+  spin_unlock_irqrestore(&g_rpmsg_socket_lock, flags);
+
+  return 0;
 }
 
 static int rpmsg_socket_connect_internal(FAR struct socket *psock)
@@ -1501,11 +1551,9 @@ static int rpmsg_socket_close(FAR struct socket *psock)
       FAR struct rpmsg_socket_conn_s *next;
       irqstate_t flags;
 
-      rpmsg_unregister_callback(conn,
-                                NULL,
-                                NULL,
-                                rpmsg_socket_ns_match,
-                                rpmsg_socket_ns_bind);
+      flags = spin_lock_irqsave(&g_rpmsg_socket_lock);
+      dq_rem(&conn->snode, &g_rpmsg_socket_server);
+      spin_unlock_irqrestore(&g_rpmsg_socket_lock, flags);
 
       flags = spin_lock_irqsave(&conn->recvlock);
       child = conn->next;
@@ -1808,3 +1856,14 @@ static int rpmsg_socket_setsockopt(FAR struct socket *psock, int level,
 }
 
 #endif
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+void rpmsg_socket_initialize(void)
+{
+  rpmsg_register_callback(NULL, NULL, NULL,
+                          rpmsg_socket_ns_match,
+                          rpmsg_socket_ns_bind);
+}

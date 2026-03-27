@@ -46,6 +46,8 @@ extern "C"
 
 EXTERN const struct sock_intf_s g_rpmsg_sockif;
 
+void rpmsg_socket_initialize(void);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
