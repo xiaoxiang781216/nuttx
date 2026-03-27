@@ -73,6 +73,7 @@ arm_fpuconfig:
 	mrc		CP15_CPACR(r0)
 	orr		r0, r0, #0xf00000
 	mcr		CP15_CPACR(r0)
+	isb
 
 	/* Enable access to CP10 and CP11 in CP15.NSACR */
 
@@ -80,6 +81,7 @@ arm_fpuconfig:
 	mrc		CP15_NSACR(r0)
 	orr		r0, r0, #0xc00
 	mcr		CP15_NSACR(r0)
+	isb
 #endif
 
 	/* REVISIT: Do we need to do this? */
