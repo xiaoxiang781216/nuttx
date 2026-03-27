@@ -160,7 +160,7 @@ config LIBCXX_VERSION
 
 config LIBCXX_TEST
 	bool "LLVM Libcxx Library Test"
-	depends on LIBCXX && CXX_EXCEPTION
+	depends on LIBCXX
 	default n
 
 endif
