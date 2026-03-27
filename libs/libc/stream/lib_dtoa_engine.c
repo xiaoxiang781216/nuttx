@@ -100,7 +100,7 @@ int __dtoa_engine(double x, FAR struct dtoa_s *dtoa, int max_digits,
   uint8_t flags = 0;
   int i;
 
-  if (x < 0)
+  if (signbit(x))
     {
       flags |= DTOA_MINUS;
       x = -x;
