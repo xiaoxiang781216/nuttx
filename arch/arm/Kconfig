@@ -1513,6 +1513,8 @@ config UNWINDER_ARM
 
 endchoice # Choose ARM unwinder
 
+endif # SCHED_BACKTRACE
+
 config ARM_STACKCHECK
 	bool
 	default n
@@ -1539,8 +1541,6 @@ config ARM_STACKCHECK_BREAKPOINT
 		overflow trap. This is useful to stop the execution of the program
 		and diagnose the issue before the hardfault handler is called (and
 		context information is lost).
-
-endif
 
 config ARM_HAVE_VIC
 	bool
