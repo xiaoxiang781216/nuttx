@@ -54,10 +54,10 @@ union sigset_u
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_handle_irq
+ * Name: host_handle_irq
  ****************************************************************************/
 
-static void up_handle_irq(int irq, siginfo_t *info, void *context)
+static void host_handle_irq(int irq, siginfo_t *info, void *context)
 {
   sim_doirq(irq, context);
 }
@@ -67,14 +67,14 @@ static void up_handle_irq(int irq, siginfo_t *info, void *context)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_irq_flags
+ * Name: host_irq_flags
  *
  * Description:
  *   Get the current irq flags
  *
  ****************************************************************************/
 
-uint64_t up_irq_flags(void)
+uint64_t host_irq_flags(void)
 {
   union sigset_u omask;
 
@@ -84,14 +84,14 @@ uint64_t up_irq_flags(void)
 }
 
 /****************************************************************************
- * Name: up_irq_save
+ * Name: host_irq_save
  *
  * Description:
  *   Disable interrupts and returned the mask before disabling them.
  *
  ****************************************************************************/
 
-uint64_t up_irq_save(void)
+uint64_t host_irq_save(void)
 {
   union sigset_u nmask;
   union sigset_u omask;
@@ -103,7 +103,7 @@ uint64_t up_irq_save(void)
 }
 
 /****************************************************************************
- * Name: up_irq_restore
+ * Name: host_irq_restore
  *
  * Input Parameters:
  *   flags - the mask used to restore interrupts
@@ -113,7 +113,7 @@ uint64_t up_irq_save(void)
  *
  ****************************************************************************/
 
-void up_irq_restore(uint64_t flags)
+void host_irq_restore(uint64_t flags)
 {
   union sigset_u nmask;
 
@@ -123,27 +123,14 @@ void up_irq_restore(uint64_t flags)
 }
 
 /****************************************************************************
- * Name: up_irq_enable
- *
- * Description:
- *   Enable interrupts.
- *
- ****************************************************************************/
-
-void up_irq_enable(void)
-{
-  up_irq_restore(0);
-}
-
-/****************************************************************************
- * Name: up_enable_irq
+ * Name: host_enable_irq
  *
  * Description:
  *   Enable the IRQ specified by 'irq'
  *
  ****************************************************************************/
 
-void up_enable_irq(int irq)
+void host_enable_irq(int irq)
 {
   struct sigaction act;
   sigset_t set;
@@ -155,7 +142,7 @@ void up_enable_irq(int irq)
   /* Register signal handler */
 
   memset(&act, 0, sizeof(act));
-  act.sa_sigaction = up_handle_irq;
+  act.sa_sigaction = host_handle_irq;
   act.sa_flags     = SA_SIGINFO;
   sigfillset(&act.sa_mask);
 
@@ -174,14 +161,14 @@ void up_enable_irq(int irq)
 }
 
 /****************************************************************************
- * Name: up_disable_irq
+ * Name: host_disable_irq
  *
  * Description:
  *   Disable the IRQ specified by 'irq'
  *
  ****************************************************************************/
 
-void up_disable_irq(int irq)
+void host_disable_irq(int irq)
 {
   /* Remove the signal from the set */
 

@@ -113,10 +113,8 @@ int up_cpu_index(void) noinstrument_function;
  * leave_critical section(), are probably what you really want.
  */
 
-irqstate_t up_irq_flags(void);
 irqstate_t up_irq_save(void);
 void up_irq_restore(irqstate_t flags);
-void up_irq_enable(void);
 
 /****************************************************************************
  * Inline functions

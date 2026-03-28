@@ -36,33 +36,33 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_irq_flags
+ * Name: host_irq_flags
  *
  * Description:
  *   Get the current irq flags
  *
  ****************************************************************************/
 
-uint64_t up_irq_flags(void)
+uint64_t host_irq_flags(void)
 {
   return 0;
 }
 
 /****************************************************************************
- * Name: up_irq_save
+ * Name: host_irq_save
  *
  * Description:
  *   Disable interrupts and returned the mask before disabling them.
  *
  ****************************************************************************/
 
-uint64_t up_irq_save(void)
+uint64_t host_irq_save(void)
 {
   return 0;
 }
 
 /****************************************************************************
- * Name: up_irq_restore
+ * Name: host_irq_restore
  *
  * Input Parameters:
  *   flags - the mask used to restore interrupts
@@ -72,31 +72,31 @@ uint64_t up_irq_save(void)
  *
  ****************************************************************************/
 
-void up_irq_restore(uint64_t flags)
+void host_irq_restore(uint64_t flags)
 {
 }
 
 /****************************************************************************
- * Name: up_enable_irq
+ * Name: host_enable_irq
  *
  * Description:
  *   Enable the IRQ specified by 'irq'
  *
  ****************************************************************************/
 
-void up_enable_irq(int irq)
+void host_enable_irq(int irq)
 {
 }
 
 /****************************************************************************
- * Name: up_disable_irq
+ * Name: host_disable_irq
  *
  * Description:
  *   Disable the IRQ specified by 'irq'
  *
  ****************************************************************************/
 
-void up_disable_irq(int irq)
+void host_disable_irq(int irq)
 {
 }
 

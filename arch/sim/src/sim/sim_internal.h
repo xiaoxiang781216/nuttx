@@ -99,7 +99,7 @@
 #define sim_saveusercontext(saveregs, ret)                      \
     do                                                          \
       {                                                         \
-        irqstate_t flags = up_irq_flags();                      \
+        irqstate_t flags = host_irq_flags();                    \
         xcpt_reg_t *env = saveregs;                             \
         uint32_t *val = (uint32_t *)&env[JB_FLAG];              \
                                                                 \
@@ -155,17 +155,17 @@
 #  define sim_asan_finish_switch()
 #endif
 
-void up_irq_restore(uint64_t flags);
+void host_irq_restore(uint64_t flags);
 
 static inline void host_uninterruptible_cleanup(uint64_t *flags)
 {
-  up_irq_restore(*flags);
+  host_irq_restore(*flags);
 }
 
 #define host_uninterruptible(func, ...)                         \
     ({                                                          \
         uint64_t flags_ __attribute__((cleanup(                 \
-            host_uninterruptible_cleanup))) = up_irq_save();    \
+            host_uninterruptible_cleanup))) = host_irq_save();  \
         (void)flags_;                                           \
         func(__VA_ARGS__);                                      \
     })
@@ -223,8 +223,10 @@ extern struct kwork_wqueue_s *g_work_queue;
  * Public Function Prototypes
  ****************************************************************************/
 
-uint64_t up_irq_save(void);
-void up_irq_restore(uint64_t flags);
+uint64_t host_irq_flags(void);
+uint64_t host_irq_save(void);
+void host_enable_irq(int irq);
+void host_disable_irq(int irq);
 
 /* Context switching */
 
