@@ -466,7 +466,12 @@ static ssize_t userfs_read(FAR struct file *filep, char *buffer,
 
   /* Copy the received data to the user buffer */
 
-  memcpy(buffer, resp->rddata, resp->nread);
+  if (resp->nread > 0)
+    {
+      memcpy(buffer, resp->rddata, resp->nread);
+      filep->f_pos += resp->nread;
+    }
+
   return resp->nread;
 }
 
@@ -551,6 +556,11 @@ static ssize_t userfs_write(FAR struct file *filep, FAR const char *buffer,
       return -EIO;
     }
 
+  if (resp->nwritten > 0)
+    {
+      filep->f_pos += resp->nwritten;
+    }
+
   return resp->nwritten;
 }
 
@@ -623,6 +633,11 @@ static off_t userfs_seek(FAR struct file *filep, off_t offset, int whence)
     {
       ferr("ERROR: Incorrect response: %u\n", resp->resp);
       return -EIO;
+    }
+
+  if (resp->ret >= 0)
+    {
+      filep->f_pos = resp->ret;
     }
 
   return resp->ret;
