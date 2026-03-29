@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -97,8 +98,6 @@ struct userfs_state_s
 static int     userfs_open(FAR struct file *filep, const char *relpath,
                  int oflags, mode_t mode);
 static int     userfs_close(FAR struct file *filep);
-static ssize_t userfs_read(FAR struct file *filep, char *buffer,
-                 size_t buflen);
 static ssize_t userfs_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 static ssize_t userfs_write(FAR struct file *filep, FAR const char *buffer,
@@ -233,8 +232,7 @@ static int userfs_open(FAR struct file *filep, FAR const char *relpath,
 
   finfo("Open '%s'\n", relpath);
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -267,12 +265,12 @@ static int userfs_open(FAR struct file *filep, FAR const char *relpath,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_OPEN_REQUEST_S(pathlen + 1), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -283,13 +281,13 @@ static int userfs_open(FAR struct file *filep, FAR const char *relpath,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_open_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -319,8 +317,7 @@ static int userfs_close(FAR struct file *filep)
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -339,14 +336,14 @@ static int userfs_close(FAR struct file *filep)
   req->openinfo = filep->f_priv;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_close_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -357,13 +354,13 @@ static int userfs_close(FAR struct file *filep)
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_close_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -397,10 +394,9 @@ static ssize_t userfs_read(FAR struct file *filep, char *buffer,
   int respsize;
   int ret;
 
-  finfo("Read %zu bytes from offset %jd\n", buflen, (intmax_t)filep->f_pos);
+  finfo("Read %zu bytes from offset %" PRIdOFF "\n", buflen, filep->f_pos);
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -420,14 +416,14 @@ static ssize_t userfs_read(FAR struct file *filep, char *buffer,
   req->readlen  = buflen;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_read_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -438,13 +434,13 @@ static ssize_t userfs_read(FAR struct file *filep, char *buffer,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
   if (nrecvd < SIZEOF_USERFS_READ_RESPONSE_S(0))
     {
-      ferr("ERROR: Response too small: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response too small: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -457,14 +453,14 @@ static ssize_t userfs_read(FAR struct file *filep, char *buffer,
 
   if (resp->nread > buflen)
     {
-      ferr("ERROR: Response size too large: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size too large: %zd\n", nrecvd);
       return -EIO;
     }
 
   respsize = SIZEOF_USERFS_READ_RESPONSE_S(resp->nread);
   if (respsize != nrecvd)
     {
-      ferr("ERROR: Incorrect response size: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Incorrect response size: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -488,10 +484,9 @@ static ssize_t userfs_write(FAR struct file *filep, FAR const char *buffer,
   ssize_t nrecvd;
   int ret;
 
-  finfo("Write %zu bytes to offset %jd\n", buflen, (intmax_t)filep->f_pos);
+  finfo("Write %zu bytes to offset %" PRIdOFF "\n", buflen, filep->f_pos);
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -523,12 +518,12 @@ static ssize_t userfs_write(FAR struct file *filep, FAR const char *buffer,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_WRITE_REQUEST_S(buflen), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -539,13 +534,13 @@ static ssize_t userfs_write(FAR struct file *filep, FAR const char *buffer,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_write_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -572,10 +567,9 @@ static off_t userfs_seek(FAR struct file *filep, off_t offset, int whence)
   ssize_t nrecvd;
   int ret;
 
-  finfo("Offset %lu bytes to whence=%d\n", (unsigned long)offset, whence);
+  finfo("Offset %" PRIdOFF " bytes to whence=%d\n", offset, whence);
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -596,14 +590,14 @@ static off_t userfs_seek(FAR struct file *filep, off_t offset, int whence)
   req->whence   = whence;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_seek_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -614,13 +608,13 @@ static off_t userfs_seek(FAR struct file *filep, off_t offset, int whence)
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_seek_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -649,8 +643,7 @@ static int userfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   finfo("cmd: %d arg: %08lx\n", cmd, arg);
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -671,14 +664,14 @@ static int userfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   req->arg      = arg;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_ioctl_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -689,13 +682,13 @@ static int userfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_ioctl_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -722,8 +715,7 @@ static int userfs_sync(FAR struct file *filep)
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -742,14 +734,14 @@ static int userfs_sync(FAR struct file *filep)
   req->openinfo = filep->f_priv;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_sync_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -760,13 +752,13 @@ static int userfs_sync(FAR struct file *filep)
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_sync_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -819,14 +811,14 @@ static int userfs_dup(FAR const struct file *oldp, FAR struct file *newp)
   req->openinfo = oldp->f_priv;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_dup_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -837,13 +829,13 @@ static int userfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_dup_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -876,8 +868,7 @@ static int userfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -896,14 +887,14 @@ static int userfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
   req->openinfo = filep->f_priv;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_fstat_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -914,13 +905,13 @@ static int userfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_fstat_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -934,7 +925,7 @@ static int userfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
   /* Return the status of the directory entry */
 
   DEBUGASSERT(buf != NULL);
-  memcpy(buf, &resp->buf, sizeof(struct stat));
+  memcpy(buf, &resp->buf, sizeof(*buf));
   return resp->ret;
 }
 
@@ -957,8 +948,7 @@ static int userfs_fchstat(FAR const struct file *filep,
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -979,14 +969,14 @@ static int userfs_fchstat(FAR const struct file *filep,
   req->flags    = flags;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_fchstat_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
       ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -998,10 +988,10 @@ static int userfs_fchstat(FAR const struct file *filep,
   if (nrecvd < 0)
     {
       ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
-      return (int)nrecvd;
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_fchstat_response_s))
+  if (nrecvd != sizeof(*resp))
     {
       ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
@@ -1034,8 +1024,7 @@ static int userfs_truncate(FAR struct file *filep, off_t length)
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(
-              filep->f_inode != NULL &&
+  DEBUGASSERT(filep->f_inode != NULL &&
               filep->f_inode->i_private != NULL);
   priv = filep->f_inode->i_private;
 
@@ -1055,14 +1044,14 @@ static int userfs_truncate(FAR struct file *filep, off_t length)
   req->length   = length;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_truncate_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1073,13 +1062,13 @@ static int userfs_truncate(FAR struct file *filep, off_t length)
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_truncate_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1117,8 +1106,7 @@ static int userfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   finfo("relpath: \"%s\"\n", relpath ? relpath : "NULL");
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path length */
@@ -1148,12 +1136,12 @@ static int userfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_OPENDIR_REQUEST_S(pathlen + 1), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1164,13 +1152,13 @@ static int userfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_opendir_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1184,7 +1172,7 @@ static int userfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
   /* Save the opaque dir reference in struct fs_dirent_s */
 
   DEBUGASSERT(dir != NULL);
-  udir = fs_heap_zalloc(sizeof(struct userfs_dir_s));
+  udir = fs_heap_zalloc(sizeof(*udir));
   if (udir == NULL)
     {
       return -ENOMEM;
@@ -1214,8 +1202,7 @@ static int userfs_closedir(FAR struct inode *mountpt,
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
   udir = (FAR struct userfs_dir_s *)dir;
 
@@ -1234,14 +1221,14 @@ static int userfs_closedir(FAR struct inode *mountpt,
   req->dir = udir->dir;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_closedir_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1252,13 +1239,13 @@ static int userfs_closedir(FAR struct inode *mountpt,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_closedir_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1292,8 +1279,7 @@ static int userfs_readdir(FAR struct inode *mountpt,
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
   udir = (FAR struct userfs_dir_s *)dir;
 
@@ -1312,14 +1298,14 @@ static int userfs_readdir(FAR struct inode *mountpt,
   req->dir = udir->dir;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_readdir_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1330,13 +1316,13 @@ static int userfs_readdir(FAR struct inode *mountpt,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_readdir_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1350,7 +1336,7 @@ static int userfs_readdir(FAR struct inode *mountpt,
   /* Return the dirent */
 
   DEBUGASSERT(dir != NULL);
-  memcpy(entry, &resp->entry, sizeof(struct dirent));
+  memcpy(entry, &resp->entry, sizeof(*entry));
   return resp->ret;
 }
 
@@ -1372,8 +1358,7 @@ static int userfs_rewinddir(FAR struct inode *mountpt,
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
   udir = (FAR struct userfs_dir_s *)dir;
 
@@ -1392,14 +1377,14 @@ static int userfs_rewinddir(FAR struct inode *mountpt,
   req->dir = udir->dir;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_rewinddir_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1410,13 +1395,13 @@ static int userfs_rewinddir(FAR struct inode *mountpt,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_rewinddir_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1451,7 +1436,7 @@ static int userfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   int ret;
 
   DEBUGASSERT(data != NULL && handle != NULL);
-  config = (FAR const struct userfs_config_s *)data;
+  config = data;
 
   /* Allocate an instance of the UserFS state structure */
 
@@ -1499,7 +1484,7 @@ static int userfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   client.sin_addr.s_addr = HTONL(INADDR_LOOPBACK);
 
   ret = psock_bind(&priv->psock, (FAR struct sockaddr *)&client,
-                   sizeof(struct sockaddr_in));
+                   sizeof(client));
   if (ret < 0)
     {
       ferr("ERROR: bind() failed: %d\n", ret);
@@ -1508,7 +1493,7 @@ static int userfs_bind(FAR struct inode *blkdriver, FAR const void *data,
 
   /* Mounted! */
 
-  *handle = (FAR void *)priv;
+  *handle = priv;
   return OK;
 
 errout_with_psock:
@@ -1554,14 +1539,14 @@ static int userfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
   req->req = USERFS_REQ_DESTROY;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_destroy_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1572,13 +1557,13 @@ static int userfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_destroy_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1621,8 +1606,7 @@ static int userfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Get exclusive access */
@@ -1639,14 +1623,14 @@ static int userfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   req->req = USERFS_REQ_STATFS;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_statfs_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1657,13 +1641,13 @@ static int userfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_statfs_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1677,7 +1661,7 @@ static int userfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   /* Return the status of the file system */
 
   DEBUGASSERT(buf != NULL);
-  memcpy(buf, &resp->buf, sizeof(struct statfs));
+  memcpy(buf, &resp->buf, sizeof(*buf));
   return resp->ret;
 }
 
@@ -1700,8 +1684,7 @@ static int userfs_unlink(FAR struct inode *mountpt,
   int pathlen;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path length */
@@ -1731,12 +1714,12 @@ static int userfs_unlink(FAR struct inode *mountpt,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_UNLINK_REQUEST_S(pathlen + 1), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1747,13 +1730,13 @@ static int userfs_unlink(FAR struct inode *mountpt,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_unlink_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1786,8 +1769,7 @@ static int userfs_mkdir(FAR struct inode *mountpt,
   int pathlen;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path length */
@@ -1818,12 +1800,12 @@ static int userfs_mkdir(FAR struct inode *mountpt,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_MKDIR_REQUEST_S(pathlen + 1), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1834,13 +1816,13 @@ static int userfs_mkdir(FAR struct inode *mountpt,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_mkdir_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1873,8 +1855,7 @@ static int userfs_rmdir(FAR struct inode *mountpt,
   int pathlen;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path length */
@@ -1904,12 +1885,12 @@ static int userfs_rmdir(FAR struct inode *mountpt,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_RMDIR_REQUEST_S(pathlen + 1), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -1920,13 +1901,13 @@ static int userfs_rmdir(FAR struct inode *mountpt,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_rmdir_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -1961,8 +1942,7 @@ static int userfs_rename(FAR struct inode *mountpt,
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path lengths */
@@ -1996,12 +1976,12 @@ static int userfs_rename(FAR struct inode *mountpt,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                       SIZEOF_USERFS_RENAME_REQUEST_S(oldpathlen, newpathlen),
                       0, (FAR struct sockaddr *)&priv->server,
-                      sizeof(struct sockaddr_in));
+                      sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -2012,13 +1992,13 @@ static int userfs_rename(FAR struct inode *mountpt,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_rename_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -2051,8 +2031,7 @@ static int userfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   int pathlen;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path length */
@@ -2082,12 +2061,12 @@ static int userfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_STAT_REQUEST_S(pathlen + 1), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
-      ferr("ERROR: psock_sendto failed: %d\n", (int)nsent);
+      ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -2098,13 +2077,13 @@ static int userfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
   if (nrecvd < 0)
     {
-      ferr("ERROR: psock_recvfrom failed: %d\n", (int)nrecvd);
-      return (int)nrecvd;
+      ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_stat_response_s))
+  if (nrecvd != sizeof(*resp))
     {
-      ferr("ERROR: Response size incorrect: %u\n", (unsigned int)nrecvd);
+      ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
     }
 
@@ -2118,7 +2097,7 @@ static int userfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   /* Return the directory entry status */
 
   DEBUGASSERT(buf != NULL);
-  memcpy(buf, &resp->buf, sizeof(struct stat));
+  memcpy(buf, &resp->buf, sizeof(*buf));
   return resp->ret;
 }
 
@@ -2141,8 +2120,7 @@ static int userfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
   int pathlen;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path length */
@@ -2174,12 +2152,12 @@ static int userfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_CHSTAT_REQUEST_S(pathlen + 1), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
       ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -2191,10 +2169,10 @@ static int userfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
   if (nrecvd < 0)
     {
       ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
-      return (int)nrecvd;
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_chstat_response_s))
+  if (nrecvd != sizeof(*resp))
     {
       ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
@@ -2227,8 +2205,7 @@ static int userfs_syncfs(FAR struct inode *mountpt)
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Get exclusive access */
@@ -2245,14 +2222,14 @@ static int userfs_syncfs(FAR struct inode *mountpt)
   req->req = USERFS_REQ_SYNCFS;
 
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
-                       sizeof(struct userfs_syncfs_request_s), 0,
+                       sizeof(*req), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
       ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -2264,10 +2241,10 @@ static int userfs_syncfs(FAR struct inode *mountpt)
   if (nrecvd < 0)
     {
       ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
-      return (int)nrecvd;
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_syncfs_response_s))
+  if (nrecvd != sizeof(*resp))
     {
       ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
@@ -2306,8 +2283,7 @@ static int userfs_link(FAR struct inode *mountpt,
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path lengths */
@@ -2341,12 +2317,12 @@ static int userfs_link(FAR struct inode *mountpt,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_LINK_REQUEST_S(path1len, path2len),
                        0, (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
       ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -2358,10 +2334,10 @@ static int userfs_link(FAR struct inode *mountpt,
   if (nrecvd < 0)
     {
       ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
-      return (int)nrecvd;
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_link_response_s))
+  if (nrecvd != sizeof(*resp))
     {
       ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
@@ -2398,8 +2374,7 @@ static int userfs_symlink(FAR struct inode *mountpt,
   ssize_t nrecvd;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path lengths */
@@ -2433,12 +2408,12 @@ static int userfs_symlink(FAR struct inode *mountpt,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_SYMLINK_REQUEST_S(path1len, path2len),
                        0, (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
       ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -2450,10 +2425,10 @@ static int userfs_symlink(FAR struct inode *mountpt,
   if (nrecvd < 0)
     {
       ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
-      return (int)nrecvd;
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_symlink_response_s))
+  if (nrecvd != sizeof(*resp))
     {
       ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
@@ -2489,8 +2464,7 @@ static ssize_t userfs_readlink(FAR struct inode *mountpt,
   int pathlen;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path length */
@@ -2521,7 +2495,7 @@ static ssize_t userfs_readlink(FAR struct inode *mountpt,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_READLINK_REQUEST_S(pathlen + 1), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
       ferr("ERROR: psock_sendto failed: %zd\n", nsent);
@@ -2591,8 +2565,7 @@ static int userfs_lstat(FAR struct inode *mountpt,
   int pathlen;
   int ret;
 
-  DEBUGASSERT(mountpt != NULL &&
-              mountpt->i_private != NULL);
+  DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   priv = mountpt->i_private;
 
   /* Check the path length */
@@ -2622,12 +2595,12 @@ static int userfs_lstat(FAR struct inode *mountpt,
   nsent = psock_sendto(&priv->psock, priv->iobuffer,
                        SIZEOF_USERFS_LSTAT_REQUEST_S(pathlen + 1), 0,
                        (FAR struct sockaddr *)&priv->server,
-                       sizeof(struct sockaddr_in));
+                       sizeof(priv->server));
   if (nsent < 0)
     {
       ferr("ERROR: psock_sendto failed: %zd\n", nsent);
       nxmutex_unlock(&priv->lock);
-      return (int)nsent;
+      return nsent;
     }
 
   /* Then get the response from the server */
@@ -2639,10 +2612,10 @@ static int userfs_lstat(FAR struct inode *mountpt,
   if (nrecvd < 0)
     {
       ferr("ERROR: psock_recvfrom failed: %zd\n", nrecvd);
-      return (int)nrecvd;
+      return nrecvd;
     }
 
-  if (nrecvd != sizeof(struct userfs_lstat_response_s))
+  if (nrecvd != sizeof(*resp))
     {
       ferr("ERROR: Response size incorrect: %zd\n", nrecvd);
       return -EIO;
@@ -2658,7 +2631,7 @@ static int userfs_lstat(FAR struct inode *mountpt,
   /* Return the directory entry status */
 
   DEBUGASSERT(buf != NULL);
-  memcpy(buf, &resp->buf, sizeof(struct stat));
+  memcpy(buf, &resp->buf, sizeof(*buf));
   return resp->ret;
 }
 
