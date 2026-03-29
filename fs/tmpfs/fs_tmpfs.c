@@ -39,6 +39,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/fs/uio.h>
 
 #include "inode/inode.h"
 #include "fs_tmpfs.h"
@@ -146,15 +147,15 @@ static int  tmpfs_foreach(FAR struct tmpfs_directory_s *tdo,
 static int  tmpfs_open(FAR struct file *filep, FAR const char *relpath,
               int oflags, mode_t mode);
 static int  tmpfs_close(FAR struct file *filep);
-static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
-              size_t buflen);
-static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
-              size_t buflen);
+static ssize_t tmpfs_readv(FAR struct file *filep, FAR struct uio *uio);
+static ssize_t tmpfs_writev(FAR struct file *filep, FAR struct uio *uio);
 static off_t tmpfs_seek(FAR struct file *filep, off_t offset, int whence);
 static int  tmpfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 static int  tmpfs_sync(FAR struct file *filep);
 static int  tmpfs_dup(FAR const struct file *oldp, FAR struct file *newp);
 static int  tmpfs_fstat(FAR const struct file *filep, FAR struct stat *buf);
+static int  tmpfs_fchstat(FAR const struct file *filep,
+              FAR const struct stat *buf, int flags);
 static int  tmpfs_truncate(FAR struct file *filep, off_t length);
 #ifdef CONFIG_FS_FILEMAP
 static int  tmpfs_mmap(FAR struct file *filep,
@@ -175,6 +176,7 @@ static int  tmpfs_bind(FAR struct inode *blkdriver, FAR const void *data,
 static int  tmpfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
               unsigned int flags);
 static int  tmpfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf);
+static int  tmpfs_syncfs(FAR struct inode *mountpt);
 static int  tmpfs_unlink(FAR struct inode *mountpt, FAR const char *relpath);
 static int  tmpfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
               mode_t mode);
@@ -185,6 +187,8 @@ static void tmpfs_stat_common(FAR struct tmpfs_object_s *to,
               FAR struct stat *buf);
 static int  tmpfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
               FAR struct stat *buf);
+static int  tmpfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
+              FAR const struct stat *buf, int flags);
 #ifdef CONFIG_FS_LINKS
 static int  tmpfs_link(FAR struct inode *mountpt,
               FAR const char *oldrelpath, FAR const char *newrelpath);
@@ -204,14 +208,14 @@ const struct mountpt_operations g_tmpfs_operations =
 {
   tmpfs_open,       /* open */
   tmpfs_close,      /* close */
-  tmpfs_read,       /* read */
-  tmpfs_write,      /* write */
+  NULL,             /* read */
+  NULL,             /* write */
   tmpfs_seek,       /* seek */
   tmpfs_ioctl,      /* ioctl */
   tmpfs_truncate,   /* truncate */
   NULL,             /* poll */
-  NULL,             /* readv */
-  NULL,             /* writev */
+  tmpfs_readv,      /* readv */
+  tmpfs_writev,     /* writev */
 #ifdef CONFIG_FS_FILEMAP
   tmpfs_mmap,       /* mmap */
 #endif
@@ -219,7 +223,7 @@ const struct mountpt_operations g_tmpfs_operations =
   tmpfs_sync,       /* sync */
   tmpfs_dup,        /* dup */
   tmpfs_fstat,      /* fstat */
-  NULL,             /* fchstat */
+  tmpfs_fchstat,    /* fchstat */
 
   tmpfs_opendir,    /* opendir */
   tmpfs_closedir,   /* closedir */
@@ -235,8 +239,8 @@ const struct mountpt_operations g_tmpfs_operations =
   tmpfs_rmdir,      /* rmdir */
   tmpfs_rename,     /* rename */
   tmpfs_stat,       /* stat */
-  NULL,             /* chstat */
-  NULL,             /* syncfs */
+  tmpfs_chstat,     /* chstat */
+  tmpfs_syncfs,     /* syncfs */
 #ifdef CONFIG_FS_LINKS
   tmpfs_link,       /* link */
   tmpfs_symlink,    /* symlink */
@@ -684,6 +688,7 @@ tmpfs_alloc_file(FAR struct tmpfs_directory_s *parent)
   tfo->tfo_alloc  = 0;
   tfo->tfo_type   = TMPFS_REGULAR;
   tfo->tfo_refs   = 1;
+  tfo->tfo_mode   = S_IRWXO | S_IRWXG | S_IRWXU;
   tfo->tfo_parent = parent;
   tfo->tfo_nlink  = 1;
   tfo->tfo_size   = 0;
@@ -794,6 +799,11 @@ static int tmpfs_create_file(FAR struct tmpfs_s *fs,
       goto errout_with_file;
     }
 
+  /* Update parent directory timestamps */
+
+  tmpfs_update_mtime((FAR struct tmpfs_object_s *)parent);
+  tmpfs_update_ctime((FAR struct tmpfs_object_s *)parent);
+
   /* Release the reference and lock on the parent directory */
 
   parent->tdo_refs--;
@@ -838,6 +848,7 @@ tmpfs_alloc_directory(FAR struct tmpfs_directory_s *parent)
   tdo->tdo_alloc    = 0;
   tdo->tdo_type     = TMPFS_DIRECTORY;
   tdo->tdo_refs     = 0;
+  tdo->tdo_mode     = S_IRWXO | S_IRWXG | S_IRWXU;
   tdo->tdo_parent   = parent;
   tdo->tdo_nentries = 0;
   tdo->tdo_entry    = NULL;
@@ -944,6 +955,11 @@ static int tmpfs_create_directory(FAR struct tmpfs_s *fs,
     {
       goto errout_with_directory;
     }
+
+  /* Update parent directory timestamps */
+
+  tmpfs_update_mtime((FAR struct tmpfs_object_s *)parent);
+  tmpfs_update_ctime((FAR struct tmpfs_object_s *)parent);
 
   /* Free the copy of the relpath, release our reference to the parent
    * directory, and return success
@@ -1660,6 +1676,11 @@ static int tmpfs_open(FAR struct file *filep, FAR const char *relpath,
                 {
                   goto errout_with_filelock;
                 }
+
+              /* Update modification and status change timestamps */
+
+              tmpfs_update_mtime((FAR struct tmpfs_object_s *)tfo);
+              tmpfs_update_ctime((FAR struct tmpfs_object_s *)tfo);
             }
         }
     }
@@ -1689,6 +1710,8 @@ static int tmpfs_open(FAR struct file *filep, FAR const char *relpath,
         {
           goto errout_with_fslock;
         }
+
+      tfo->tfo_mode = mode & ~S_IFMT;
     }
 
   /* Some other error occurred */
@@ -1754,11 +1777,10 @@ static int tmpfs_close(FAR struct file *filep)
 }
 
 /****************************************************************************
- * Name: tmpfs_read
+ * Name: tmpfs_readv
  ****************************************************************************/
 
-static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
-                          size_t buflen)
+static ssize_t tmpfs_readv(FAR struct file *filep, FAR struct uio *uio)
 {
   FAR struct tmpfs_file_s *tfo;
   ssize_t nread;
@@ -1766,8 +1788,6 @@ static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
   off_t endpos;
   int ret;
 
-  finfo("filep: %p buffer: %p buflen: %lu\n",
-        filep, buffer, (unsigned long)buflen);
   DEBUGASSERT(filep->f_priv != NULL);
 
   /* Recover our private data from the struct file instance */
@@ -1792,8 +1812,8 @@ static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
   /* Handle attempts to read beyond the end of the file. */
 
   startpos = filep->f_pos;
-  nread    = buflen;
-  endpos   = startpos + buflen;
+  nread    = uio->uio_resid;
+  endpos   = startpos + nread;
 
   if (endpos > tfo->tfo_size)
     {
@@ -1801,11 +1821,11 @@ static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
       nread  = endpos - startpos;
     }
 
-  /* Copy data from the memory object to the user buffer */
+  /* Copy data from the memory object to the user buffers */
 
   if (tfo->tfo_data != NULL)
     {
-      memcpy(buffer, &tfo->tfo_data[startpos], nread);
+      uio_copyfrom(uio, 0, &tfo->tfo_data[startpos], nread);
       filep->f_pos += nread;
 
       /* Update atime on successful read unless O_NOATIME is set */
@@ -1827,11 +1847,10 @@ static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
 }
 
 /****************************************************************************
- * Name: tmpfs_write
+ * Name: tmpfs_writev
  ****************************************************************************/
 
-static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
-                           size_t buflen)
+static ssize_t tmpfs_writev(FAR struct file *filep, FAR struct uio *uio)
 {
   FAR struct tmpfs_file_s *tfo;
   ssize_t nwritten;
@@ -1839,8 +1858,6 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
   off_t endpos;
   int ret;
 
-  finfo("filep: %p buffer: %p buflen: %lu\n",
-        filep, buffer, (unsigned long)buflen);
   DEBUGASSERT(filep->f_priv != NULL);
 
   /* Recover our private data from the struct file instance */
@@ -1866,8 +1883,8 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
       startpos = filep->f_pos;
     }
 
-  nwritten = buflen;
-  endpos   = startpos + buflen;
+  nwritten = uio->uio_resid;
+  endpos   = startpos + nwritten;
 
   if (endpos > tfo->tfo_size)
     {
@@ -1880,11 +1897,11 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
         }
     }
 
-  /* Copy data from the memory object to the user buffer */
+  /* Copy data from the user buffers to the memory object */
 
   if (tfo->tfo_data != NULL)
     {
-      memcpy(&tfo->tfo_data[startpos], buffer, nwritten);
+      uio_copyto(uio, 0, &tfo->tfo_data[startpos], nwritten);
     }
   else
     {
@@ -1892,6 +1909,11 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
     }
 
   filep->f_pos = endpos;
+
+  /* Update modification and status change timestamps */
+
+  tmpfs_update_mtime((FAR struct tmpfs_object_s *)tfo);
+  tmpfs_update_ctime((FAR struct tmpfs_object_s *)tfo);
 
   /* Release the lock on the file */
 
@@ -2178,7 +2200,7 @@ static int tmpfs_dup(FAR const struct file *oldp, FAR struct file *newp)
       ret = OK;
     }
 
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -2219,6 +2241,68 @@ static int tmpfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
   tmpfs_unlock_file(tfo);
   return OK;
+}
+
+/****************************************************************************
+ * Name: tmpfs_chstat_common
+ ****************************************************************************/
+
+static int tmpfs_chstat_common(FAR struct tmpfs_object_s *to,
+                               FAR const struct stat *buf, int flags)
+{
+  if (flags & CH_STAT_MODE)
+    {
+      to->to_mode = buf->st_mode;
+    }
+
+  if (flags & CH_STAT_ATIME)
+    {
+      to->to_atime.tv_sec = buf->st_atime;
+      to->to_atime.tv_nsec = 0;
+    }
+
+  if (flags & CH_STAT_MTIME)
+    {
+      to->to_mtime.tv_sec = buf->st_mtime;
+      to->to_mtime.tv_nsec = 0;
+    }
+
+  if (flags & (CH_STAT_MODE | CH_STAT_ATIME | CH_STAT_MTIME))
+    {
+      tmpfs_update_ctime(to);
+    }
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: tmpfs_fchstat
+ *
+ * Description:
+ *   Change attributes of an open file.
+ *
+ ****************************************************************************/
+
+static int tmpfs_fchstat(FAR const struct file *filep,
+                         FAR const struct stat *buf, int flags)
+{
+  FAR struct tmpfs_file_s *tfo;
+  int ret;
+
+  DEBUGASSERT(filep->f_priv != NULL && buf != NULL);
+
+  tfo = filep->f_priv;
+
+  ret = tmpfs_lock_file(tfo);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = tmpfs_chstat_common((FAR struct tmpfs_object_s *)tfo, buf, flags);
+
+  tmpfs_unlock_file(tfo);
+  return ret;
 }
 
 /****************************************************************************
@@ -2269,6 +2353,11 @@ static int tmpfs_truncate(FAR struct file *filep, off_t length)
         {
           memset(&tfo->tfo_data[oldsize], 0, length - oldsize);
         }
+
+      /* Update modification and status change timestamps */
+
+      tmpfs_update_mtime((FAR struct tmpfs_object_s *)tfo);
+      tmpfs_update_ctime((FAR struct tmpfs_object_s *)tfo);
 
       ret = OK;
     }
@@ -2638,6 +2727,15 @@ static int tmpfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
 }
 
 /****************************************************************************
+ * Name: tmpfs_syncfs
+ ****************************************************************************/
+
+static int tmpfs_syncfs(FAR struct inode *mountpt)
+{
+  return OK;
+}
+
+/****************************************************************************
  * Name: tmpfs_unlink
  ****************************************************************************/
 
@@ -2705,6 +2803,11 @@ static int tmpfs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
   tfo->tfo_nlink--;
   tmpfs_release_lockedfile(tfo);
 
+  /* Update parent directory timestamps */
+
+  tmpfs_update_mtime((FAR struct tmpfs_object_s *)tdo);
+  tmpfs_update_ctime((FAR struct tmpfs_object_s *)tdo);
+
   /* Release the reference and lock on the parent directory */
 
   tdo->tdo_refs--;
@@ -2731,6 +2834,7 @@ errout_with_lock:
 static int tmpfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
                        mode_t mode)
 {
+  FAR struct tmpfs_directory_s *tdo;
   FAR struct tmpfs_s *fs;
   int ret;
 
@@ -2752,7 +2856,12 @@ static int tmpfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
 
   /* Create the directory. */
 
-  ret = tmpfs_create_directory(fs, relpath, NULL);
+  ret = tmpfs_create_directory(fs, relpath, &tdo);
+  if (ret >= 0)
+    {
+      tdo->tdo_mode = mode & ~S_IFMT;
+    }
+
   tmpfs_unlock(fs);
   return ret;
 }
@@ -2805,7 +2914,7 @@ static int tmpfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
 
   if (tdo->tdo_nentries > 0 || tdo->tdo_refs > 1)
     {
-      ret = -EBUSY;
+      ret = tdo->tdo_nentries > 0 ? -ENOTEMPTY : -EBUSY;
       goto errout_with_objects;
     }
 
@@ -2845,6 +2954,11 @@ static int tmpfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
   nxrmutex_destroy(&tdo->tdo_lock);
   fs_large_free(tdo->tdo_entry);
   fs_heap_free(tdo);
+
+  /* Update parent directory timestamps */
+
+  tmpfs_update_mtime((FAR struct tmpfs_object_s *)parent);
+  tmpfs_update_ctime((FAR struct tmpfs_object_s *)parent);
 
   /* Release the reference and lock on the parent directory */
 
@@ -3005,6 +3119,16 @@ static int tmpfs_rename(FAR struct inode *mountpt,
   /* Add an entry to the new parent directory. */
 
   ret = tmpfs_add_dirent(newparent, to, newname);
+  if (ret >= 0)
+    {
+      /* Update timestamps on the renamed object and both directories */
+
+      tmpfs_update_ctime(to);
+      tmpfs_update_mtime((FAR struct tmpfs_object_s *)oldparent);
+      tmpfs_update_ctime((FAR struct tmpfs_object_s *)oldparent);
+      tmpfs_update_mtime((FAR struct tmpfs_object_s *)newparent);
+      tmpfs_update_ctime((FAR struct tmpfs_object_s *)newparent);
+    }
 
 errout_with_oldparent:
   oldparent->tdo_refs--;
@@ -3041,7 +3165,7 @@ static void tmpfs_stat_common(FAR struct tmpfs_object_s *to,
 
       /* -rwxrwxrwx */
 
-      buf->st_mode = S_IRWXO | S_IRWXG | S_IRWXU | S_IFREG;
+      buf->st_mode = tfo->tfo_mode | S_IFREG;
 
       /* Set hard link count */
 
@@ -3059,7 +3183,7 @@ static void tmpfs_stat_common(FAR struct tmpfs_object_s *to,
 
       /* lrwxrwxrwx */
 
-      buf->st_mode = S_IRWXO | S_IRWXG | S_IRWXU | S_IFLNK;
+      buf->st_mode = tfo->tfo_mode | S_IFLNK;
 
       /* Set hard link count */
 
@@ -3077,7 +3201,7 @@ static void tmpfs_stat_common(FAR struct tmpfs_object_s *to,
 
       /* drwxrwxrwx */
 
-      buf->st_mode = S_IRWXO | S_IRWXG | S_IRWXU | S_IFDIR;
+      buf->st_mode = tdo->tdo_mode | S_IFDIR;
 
       /* Get the size of the object */
 
@@ -3148,6 +3272,49 @@ static int tmpfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
   tmpfs_release_lockedobject(to);
   ret = OK;
+
+errout_with_fslock:
+  tmpfs_unlock(fs);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: tmpfs_chstat
+ *
+ * Description:
+ *   Change attributes of a file by path.
+ *
+ ****************************************************************************/
+
+static int tmpfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
+                        FAR const struct stat *buf, int flags)
+{
+  FAR struct tmpfs_s *fs;
+  FAR struct tmpfs_object_s *to;
+  int ret;
+
+  DEBUGASSERT(mountpt != NULL && relpath != NULL && buf != NULL);
+
+  fs = mountpt->i_private;
+  DEBUGASSERT(fs != NULL && fs->tfs_root.tde_object != NULL);
+
+  ret = tmpfs_lock(fs);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = tmpfs_find_object(fs, relpath, strlen(relpath), &to, NULL,
+                          TMPFS_NOFOLLOW_NONE);
+  if (ret < 0)
+    {
+      goto errout_with_fslock;
+    }
+
+  DEBUGASSERT(to != NULL);
+  ret = tmpfs_chstat_common(to, buf, flags);
+
+  tmpfs_release_lockedobject(to);
 
 errout_with_fslock:
   tmpfs_unlock(fs);

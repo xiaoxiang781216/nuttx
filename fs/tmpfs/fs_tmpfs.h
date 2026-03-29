@@ -79,6 +79,7 @@ struct tmpfs_object_s
   size_t   to_alloc;     /* Allocated size of the memory object */
   uint8_t  to_type;      /* See enum tmpfs_objtype_e */
   uint8_t  to_refs;      /* Reference count */
+  mode_t   to_mode;      /* Access mode */
   FAR struct tmpfs_directory_s *to_parent;
 
   /* Add timestamp fields */
@@ -99,6 +100,7 @@ struct tmpfs_directory_s
   size_t   tdo_alloc;    /* Allocated size of the directory object */
   uint8_t  tdo_type;     /* See enum tmpfs_objtype_e */
   uint8_t  tdo_refs;     /* Reference count */
+  mode_t   tdo_mode;     /* Access mode */
   FAR struct tmpfs_directory_s *tdo_parent;
 
   struct timespec tdo_atime;  /* Time of last access */
@@ -130,6 +132,7 @@ struct tmpfs_file_s
   size_t   tfo_alloc;    /* Allocated size of the file object */
   uint8_t  tfo_type;     /* See enum tmpfs_objtype_e */
   uint8_t  tfo_refs;     /* Reference count */
+  mode_t   tfo_mode;     /* Access mode */
   FAR struct tmpfs_directory_s *tfo_parent;
 
   struct timespec tfo_atime;  /* Time of last access */
