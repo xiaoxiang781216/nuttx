@@ -766,7 +766,7 @@ userfs_rmdir_dispatch(FAR struct userfs_info_s *info, size_t reqlen)
 
   /* Verify the request size */
 
-  if (reqlen < SIZEOF_USERFS_MKDIR_REQUEST_S(0))
+  if (reqlen < SIZEOF_USERFS_RMDIR_REQUEST_S(0))
     {
       return -EINVAL;
     }
@@ -778,7 +778,7 @@ userfs_rmdir_dispatch(FAR struct userfs_info_s *info, size_t reqlen)
       return -EINVAL;
     }
 
-  expected = SIZEOF_USERFS_MKDIR_REQUEST_S(pathlen);
+  expected = SIZEOF_USERFS_RMDIR_REQUEST_S(pathlen);
   if (expected >= reqlen)
     {
       return -EINVAL;
