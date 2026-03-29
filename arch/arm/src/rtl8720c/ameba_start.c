@@ -38,7 +38,7 @@ const hal_irq_api_t sys_irq_api =
  * Public Functions
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV8M_STACKCHECK
+#ifdef CONFIG_ARM_STACKCHECK
 
 /* We need to get r10 set before we can allow instrumentation calls */
 
@@ -46,7 +46,7 @@ void __start(void) noinstrument_function;
 #endif
 void __start(void)
 {
-#ifdef CONFIG_ARMV8M_STACKCHECK
+#ifdef CONFIG_ARM_STACKCHECK
 
   /* Set the stack limit before we attempt to call any functions */
 
@@ -78,7 +78,7 @@ void app_start(void)
 {
   __asm volatile("MSR msplim, %0" : : "r"(0));
 
-#ifdef CONFIG_ARMV8M_STACKCHECK
+#ifdef CONFIG_ARM_STACKCHECK
   arm_stack_check_init();
 #endif
 

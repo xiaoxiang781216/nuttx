@@ -154,10 +154,6 @@ else ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
 
 endif
 
-ifeq ($(CONFIG_ARMV7M_STACKCHECK),y)
-  ARCHOPTIMIZATION += -finstrument-functions -ffixed-r10
-endif
-
 ############################################################################
 # ARMv8-M Toolchain
 ############################################################################
@@ -327,10 +323,6 @@ ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
 
 endif
 
-ifeq ($(CONFIG_ARMV8M_STACKCHECK),y)
-  ARCHOPTIMIZATION += -finstrument-functions -ffixed-r10
-endif
-
 # ARMv8-M Security Extensions
 
 ifeq ($(CONFIG_ARMV8M_CMSE),y)
@@ -338,6 +330,14 @@ ifeq ($(CONFIG_ARMV8M_CMSE),y)
 endif
 
 endif # CONFIG_ARCH_ARMV6M / CONFIG_ARCH_ARMV7M / CONFIG_ARCH_ARMV8M
+
+############################################################################
+# Common: Stack check
+############################################################################
+
+ifeq ($(CONFIG_ARM_STACKCHECK),y)
+  ARCHOPTIMIZATION += -finstrument-functions -ffixed-r10
+endif
 
 ############################################################################
 # Common: LLVM ABI type

@@ -285,13 +285,11 @@ endif()
 # Common: Stack check and instrumentation
 # ============================================================================
 
-if(CONFIG_ARMV7M_STACKCHECK OR CONFIG_ARMV8M_STACKCHECK)
+if(CONFIG_ARM_STACKCHECK)
   list(APPEND PLATFORM_FLAGS -finstrument-functions -ffixed-r10)
 endif()
 
-if(CONFIG_ARCH_INSTRUMENT_ALL
-   AND NOT CONFIG_ARMV7M_STACKCHECK
-   AND NOT CONFIG_ARMV8M_STACKCHECK)
+if(CONFIG_ARCH_INSTRUMENT_ALL AND NOT CONFIG_ARM_STACKCHECK)
   list(APPEND PLATFORM_FLAGS -finstrument-functions)
 endif()
 

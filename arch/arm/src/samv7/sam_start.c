@@ -82,7 +82,7 @@ const uintptr_t g_idle_topstack = HEAP_BASE;
  * Private Functions
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_STACKCHECK
+#ifdef CONFIG_ARM_STACKCHECK
 /* we need to get r10 set before we can allow instrumentation calls */
 
 void __start(void) noinstrument_function;
@@ -152,7 +152,7 @@ void __start(void)
   const uint32_t *src;
   uint32_t *dest;
 
-#ifdef CONFIG_ARMV7M_STACKCHECK
+#ifdef CONFIG_ARM_STACKCHECK
   /* Set the stack limit before we attempt to call any functions */
 
   __asm__ volatile("sub r10, sp, %0" : :
@@ -197,7 +197,7 @@ void __start(void)
     }
 #endif
 
-#ifdef CONFIG_ARMV7M_STACKCHECK
+#ifdef CONFIG_ARM_STACKCHECK
   arm_stack_check_init();
 #endif
 
