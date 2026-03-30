@@ -78,5 +78,15 @@
 
 int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 {
-  return up_create_stack(tcb, stack_size, TCB_FLAG_TTYPE_KERNEL);
+  int ret;
+
+  ret = up_create_stack(tcb, stack_size, TCB_FLAG_TTYPE_KERNEL);
+  if (ret == OK)
+    {
+      /* Initialize xcp.regs to point to the embedded jmp_buf */
+
+      up_initial_state(tcb);
+    }
+
+  return ret;
 }
