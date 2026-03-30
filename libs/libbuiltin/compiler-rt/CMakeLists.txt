@@ -75,6 +75,10 @@ if(CONFIG_BUILTIN_COMPILER_RT)
                         ${CMAKE_CURRENT_LIST_DIR}/compiler-rt/lib/builtins)
 
   target_compile_options(rt.buitlins PRIVATE -Wno-undef -Wno-macro-redefined)
+  if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+    target_compile_options(rt.buitlins
+                           PRIVATE -Wno-implicit-function-declaration)
+  endif()
 
   set(SRCSTMP)
   set(RT_BUILTINS_SRCS)
