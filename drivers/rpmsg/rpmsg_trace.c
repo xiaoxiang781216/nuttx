@@ -90,21 +90,21 @@ void rpmsg_vtrace(FAR const char *name, bool bt, FAR const void *buf,
           backtrace_format(buf, sizeof(buf), buffer,
                           CONFIG_RPMSG_TRACE_BACKTRACE);
           flags = spin_lock_irqsave(&g_rpmsg_trace_lock);
-          note_driver_printf(g_rpmsg_trace_drv, NOTE_TAG_RPMSG,
+          note_driver_printf(g_rpmsg_trace_drv, NXTAG_RPMSG,
                             "%pV, %s", &vaf, buf);
         }
       else
 #endif
         {
           flags = spin_lock_irqsave(&g_rpmsg_trace_lock);
-          note_driver_vprintf(g_rpmsg_trace_drv, NOTE_TAG_RPMSG,
+          note_driver_vprintf(g_rpmsg_trace_drv, NXTAG_RPMSG,
                               format, &ap);
         }
 
       while (len > 0)
         {
           size_t written = note_driver_binary(g_rpmsg_trace_drv,
-                                              NOTE_TAG_RPMSG, buf, len);
+                                              NXTAG_RPMSG, buf, len);
           buf += written;
           len -= written;
         }

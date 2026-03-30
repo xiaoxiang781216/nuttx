@@ -69,7 +69,7 @@ int register_driver(FAR const char *path,
   FAR struct inode *node;
   int ret;
 
-  drivers_trace_mark(path);
+  fs_trace_mark(path);
 
   /* Insert a dummy node -- we need to hold the inode semaphore because we
    * will have a momentarily bad structure.

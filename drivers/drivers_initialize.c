@@ -129,7 +129,7 @@ void drivers_early_initialize(void)
 
 void drivers_initialize(void)
 {
-  drivers_trace_begin();
+  sched_trace_begin();
 
   /* Register devices */
 
@@ -383,5 +383,5 @@ void drivers_initialize(void)
   dmabuf_system_heap_create();
 #endif
 
-  drivers_trace_end();
+  sched_trace_end();
 }

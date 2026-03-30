@@ -37,6 +37,9 @@
 
 static FAR const char *const g_nxtag_names[] =
 {
+  "always",
+  "log",
+  "app",
   "analog",
   "audio",
   "battery",

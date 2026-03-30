@@ -236,9 +236,9 @@ void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
      syslog_like(2, 0);
 #elif defined(CONFIG_SYSLOG_TO_SCHED_NOTE)
 #  define syslog(priority, fmt, ...) \
-          sched_note_printf(NOTE_TAG_LOG, priority, fmt, ##__VA_ARGS__)
+          sched_note_printf(NXTAG_LOG, priority, fmt, ##__VA_ARGS__)
 #  define vsyslog(priority, fmt, ap) \
-          sched_note_vprintf(NOTE_TAG_LOG, priority, fmt, ap)
+          sched_note_vprintf(NXTAG_LOG, priority, fmt, ap)
 #else
 static inline_function void syslog_like(2, 3)
 syslog(int priority, FAR const char *fmt, ...)

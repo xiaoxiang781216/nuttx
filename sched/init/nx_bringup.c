@@ -315,9 +315,9 @@ static inline void nx_start_application(void)
    * configured.
    */
 
-  boards_trace_begin();
+  sched_trace_begin();
   board_late_initialize();
-  boards_trace_end();
+  sched_trace_end();
 #endif
 
 #ifndef CONFIG_BOARD_CRASHDUMP_NONE

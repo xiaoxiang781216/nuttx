@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/tag.h>
 
 #include <sys/types.h>
 #include <stdint.h>
@@ -52,6 +53,15 @@
 #define NOTE_PRINTF_UINT64 1
 #define NOTE_PRINTF_DOUBLE 2
 #define NOTE_PRINTF_STRING 3
+
+/* Backward compatibility: map old NOTE_TAG_* to new NXTAG_* */
+
+#define NOTE_TAG_ALWAYS   NXTAG_ALWAYS
+#define NOTE_TAG_LOG      NXTAG_LOG
+#define NOTE_TAG_APP      NXTAG_APP
+#define NOTE_TAG_GRAPHICS NXTAG_GRAPHICS
+#define NOTE_TAG_LAST     NXTAG_KERNEL_MAX
+#define NOTE_TAG_MAX      NXTAG_MAX
 
 /* Get/set printf tag. each parameter occupies 2 bits. The highest
  * four bits are used to represent the number of parameters, So up to
@@ -120,7 +130,7 @@
           { \
             struct note_threadtime_s threadtime; \
             threadtime.elapsed = (_elapsed); \
-            sched_note_event(NOTE_TAG_SCHED, LOG_INFO, NOTE_DUMP_THREADTIME, \
+            sched_note_event(NXTAG_SCHED, LOG_INFO, NOTE_DUMP_THREADTIME, \
                              &threadtime, sizeof(threadtime)); \
           } \
         while (0)
@@ -172,33 +182,6 @@ enum note_type_e
   /* Always last */
 
   NOTE_TYPE_LAST
-};
-
-enum note_tag_e
-{
-  NOTE_TAG_ALWAYS = 0,
-  NOTE_TAG_LOG,
-  NOTE_TAG_APP,
-  NOTE_TAG_ARCH,
-  NOTE_TAG_AUDIO,
-  NOTE_TAG_BOARDS,
-  NOTE_TAG_CRYPTO,
-  NOTE_TAG_DRIVERS,
-  NOTE_TAG_FS,
-  NOTE_TAG_GRAPHICS,
-  NOTE_TAG_INPUT,
-  NOTE_TAG_LIBS,
-  NOTE_TAG_MM,
-  NOTE_TAG_NET,
-  NOTE_TAG_SCHED,
-  NOTE_TAG_VIDEO,
-  NOTE_TAG_WIRLESS,
-  NOTE_TAG_RPMSG,
-
-  /* Always last */
-
-  NOTE_TAG_LAST,
-  NOTE_TAG_MAX = NOTE_TAG_LAST + 16
 };
 
 /* This structure provides the common header of each note */

@@ -2701,24 +2701,40 @@ config TRACE_APP
 	bool "Enable tracepoints in app"
 	default n
 
-config TRACE_ARCH
-	bool "Enable tracepoints in arch"
+config TRACE_ANALOG
+	bool "Enable tracepoints in analog"
 	default n
 
 config TRACE_AUDIO
 	bool "Enable tracepoints in audio"
 	default n
 
-config TRACE_BOARDS
-	bool "Enable tracepoints in boards"
+config TRACE_BATTERY
+	bool "Enable tracepoints in battery"
+	default n
+
+config TRACE_BINFMT
+	bool "Enable tracepoints in binfmt"
+	default n
+
+config TRACE_CAN
+	bool "Enable tracepoints in can"
+	default n
+
+config TRACE_CAPTURE
+	bool "Enable tracepoints in capture"
+	default n
+
+config TRACE_CONTACTLESS
+	bool "Enable tracepoints in contactless"
 	default n
 
 config TRACE_CRYPTO
 	bool "Enable tracepoints in crypto"
 	default n
 
-config TRACE_DRIVERS
-	bool "Enable tracepoints in drivers"
+config TRACE_DMA
+	bool "Enable tracepoints in dma"
 	default n
 
 config TRACE_FS
@@ -2751,32 +2767,168 @@ config TRACE_YAFFS_FS
 endmenu # Trace Fs Support
 endif
 
+config TRACE_GPIO
+	bool "Enable tracepoints in gpio"
+	default n
+
 config TRACE_GRAPHICS
 	bool "Enable tracepoints in graphics"
+	default n
+
+config TRACE_HWTRACING
+	bool "Enable tracepoints in hwtracing"
+	default n
+
+config TRACE_I2C
+	bool "Enable tracepoints in i2c"
+	default n
+
+config TRACE_I2S
+	bool "Enable tracepoints in i2s"
+	default n
+
+config TRACE_I3C
+	bool "Enable tracepoints in i3c"
 	default n
 
 config TRACE_INPUT
 	bool "Enable tracepoints in input"
 	default n
 
-config TRACE_LIBS
-	bool "Enable tracepoints in libs"
+config TRACE_IPC
+	bool "Enable tracepoints in ipc"
+	default n
+
+config TRACE_IRQ
+	bool "Enable tracepoints in irq"
+	default n
+
+config TRACE_LCD
+	bool "Enable tracepoints in lcd"
+	default n
+
+config TRACE_LEDS
+	bool "Enable tracepoints in leds"
+	default n
+
+config TRACE_LIB
+	bool "Enable tracepoints in lib"
+	default n
+
+config TRACE_MEMCARD
+	bool "Enable tracepoints in memcard"
 	default n
 
 config TRACE_MM
 	bool "Enable tracepoints in mm"
 	default n
 
+config TRACE_MOTOR
+	bool "Enable tracepoints in motor"
+	default n
+
 config TRACE_NET
 	bool "Enable tracepoints in net"
+	default n
+
+config TRACE_PAGING
+	bool "Enable tracepoints in paging"
+	default n
+
+config TRACE_PCI
+	bool "Enable tracepoints in pci"
+	default n
+
+config TRACE_POWER
+	bool "Enable tracepoints in power"
+	default n
+
+config TRACE_PTP
+	bool "Enable tracepoints in ptp"
+	default n
+
+config TRACE_PWM
+	bool "Enable tracepoints in pwm"
+	default n
+
+config TRACE_RC
+	bool "Enable tracepoints in rc"
+	default n
+
+config TRACE_REGMAP
+	bool "Enable tracepoints in regmap"
+	default n
+
+config TRACE_RESET
+	bool "Enable tracepoints in reset"
+	default n
+
+config TRACE_RMT
+	bool "Enable tracepoints in rmt"
+	default n
+
+config TRACE_RPMSG
+	bool "Enable tracepoints in rpmsg"
+	default n
+
+config TRACE_RPTUN
+	bool "Enable tracepoints in rptun"
+	default n
+
+config TRACE_RTC
+	bool "Enable tracepoints in rtc"
+	default n
+
+config TRACE_SAFETY
+	bool "Enable tracepoints in safety"
 	default n
 
 config TRACE_SCHED
 	bool "Enable tracepoints in sched"
 	default n
 
+config TRACE_SENSORS
+	bool "Enable tracepoints in sensors"
+	default n
+
+config TRACE_SPI
+	bool "Enable tracepoints in spi"
+	default n
+
+config TRACE_STEPPER
+	bool "Enable tracepoints in stepper"
+	default n
+
+config TRACE_SYSCALL
+	bool "Enable tracepoints in syscall"
+	default n
+
+config TRACE_THERMAL
+	bool "Enable tracepoints in thermal"
+	default n
+
+config TRACE_TIMER
+	bool "Enable tracepoints in timer"
+	default n
+
+config TRACE_USB
+	bool "Enable tracepoints in usb"
+	default n
+
+config TRACE_VHOST
+	bool "Enable tracepoints in vhost"
+	default n
+
 config TRACE_VIDEO
 	bool "Enable tracepoints in video"
+	default n
+
+config TRACE_VIRTIO
+	bool "Enable tracepoints in virtio"
+	default n
+
+config TRACE_WATCHDOG
+	bool "Enable tracepoints in watchdog"
 	default n
 
 config TRACE_WIRELESS

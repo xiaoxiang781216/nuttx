@@ -720,9 +720,9 @@ static void hardware_initialize(void)
    * that cannot wait until board_late_initialize.
    */
 
-  boards_trace_begin();
+  sched_trace_begin();
   board_early_initialize();
-  boards_trace_end();
+  sched_trace_end();
 #endif
 
   /* Hardware resources are now available */

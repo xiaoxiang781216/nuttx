@@ -40,6 +40,9 @@
 
 enum nxtag_e
 {
+  NXTAG_ALWAYS,
+  NXTAG_LOG,
+  NXTAG_APP,
   NXTAG_ANALOG,
   NXTAG_AUDIO,
   NXTAG_BATTERY,

@@ -153,15 +153,15 @@
 /* Helper macros for dump instrumentation filter */
 
 #define NOTE_FILTER_TAGMASK_SET(tag, s) \
-        ((s)->tag_mask[(tag) / 8] |= (1 << ((tag) % 8)))
+        NXTAG_MASK_SET((s)->tag_mask, (tag))
 #define NOTE_FILTER_TAGMASK_CLR(tag, s) \
-        ((s)->tag_mask[(tag) / 8] &= ~(1 << ((tag) % 8)))
+        NXTAG_MASK_CLR((s)->tag_mask, (tag))
 #define NOTE_FILTER_TAGMASK_ISSET(tag, s) \
-        ((s)->tag_mask[(tag) / 8] & (1 << ((tag) % 8)))
+        NXTAG_MASK_ISSET((s)->tag_mask, (tag))
 #define NOTE_FILTER_TAGMASK_ZERO(s) \
-        memset((s), 0, sizeof(struct note_filter_tag_s));
+        NXTAG_MASK_ZERO((s)->tag_mask)
 #define NOTE_FILTER_TAGMASK_FILL(s) \
-        memset((s), 0xff, sizeof(struct note_filter_tag_s))
+        NXTAG_MASK_FILL((s)->tag_mask)
 #define NOTE_FILTER_LEVEL_SET(level, s) \
         ((s)->level = (level))
 
@@ -353,7 +353,7 @@ struct note_filter_irq_s
 
 struct note_filter_tag_s
 {
-  uint8_t tag_mask[(NOTE_TAG_MAX + 7) / 8];
+  uint8_t tag_mask[NXTAG_MASK_SIZE];
 };
 
 struct note_filter_level_s
