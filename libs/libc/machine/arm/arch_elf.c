@@ -219,6 +219,19 @@ int up_relocate(const Elf32_Rel *rel, const Elf32_Sym *sym,
       }
       break;
 
+    case R_ARM_REL32:
+      {
+        binfo("Performing REL32 link "
+              "at addr=%08" PRIxPTR
+              " [%08" PRIx32 "] to "
+              "sym=%p st_value=%08" PRIx32 "\n",
+              addr, *(uint32_t *)addr,
+              sym, sym->st_value);
+
+        *(uint32_t *)addr += sym->st_value - addr;
+      }
+      break;
+
 #ifdef CONFIG_ARM_TARGET2_PREL
     case R_ARM_TARGET2:
       {
