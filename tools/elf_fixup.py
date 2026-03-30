@@ -22,13 +22,13 @@
 import argparse
 import logging
 import os
+import re
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 import lief
-from elftools.elf.elffile import ELFFile
 
 nuttxroot = Path(__file__).parent.parent
 
@@ -470,14 +470,16 @@ class TaskingToolchain(Toolchain):
 
 
 def get_elf_fixup_s_size(elf_path: Path) -> int:
-    elf = ELFFile(open(elf_path, "rb"))
-    debug_info = elf.get_dwarf_info()
-    for cu in debug_info.iter_CUs():
-        for die in cu.iter_DIEs():
-            if die.tag == "DW_TAG_structure_type":
-                name = die.attributes.get("DW_AT_name")
-                if name and name.value.decode("utf-8") == "elf_fixup_s":
-                    return die.attributes["DW_AT_byte_size"].value
+    result = subprocess.run(
+        ["llvm-dwarfdump", "--name=elf_fixup_s", str(elf_path)],
+        capture_output=True,
+        text=True,
+    )
+    for line in result.stdout.splitlines():
+        if "DW_AT_byte_size" in line:
+            m = re.search(r"\((\d+)\)", line)
+            if m:
+                return int(m.group(1))
     return 0
 
 
