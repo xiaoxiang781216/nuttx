@@ -45,8 +45,10 @@
  * Private Data
  ****************************************************************************/
 
-static uint32_t g_devno;
-static mutex_t g_devno_lock = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BSS_BMP(uint32_t, g_devno);
+static DEFINE_PER_CPU_BMP(mutex_t, g_devno_lock) = NXMUTEX_INITIALIZER;
+#define g_devno this_cpu_var_bmp(g_devno)
+#define g_devno_lock this_cpu_var_bmp(g_devno_lock)
 
 /****************************************************************************
  * Private Functions
