@@ -41,7 +41,6 @@ list(
   SRCS
   sig_dispatch.c
   sig_kill.c
-  sig_lowest.c
   sig_nanosleep.c
   sig_notification.c
   sig_pause.c

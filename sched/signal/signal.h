@@ -34,6 +34,7 @@
 #include <sched.h>
 
 #include <nuttx/sched.h>
+#include <nuttx/signal.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 #include <nuttx/spinlock.h>
@@ -188,7 +189,33 @@ int                nxsig_dispatch(pid_t pid, FAR siginfo_t *info,
 /* sig_cleanup.c */
 
 #ifndef CONFIG_DISABLE_SIGNALS
-void               nxsig_cleanup(FAR struct tcb_s *stcb);
+
+void               nxsig_release_pendingsigaction(FAR sigq_t *sigq);
+
+static inline_function void nxsig_cleanup(FAR struct tcb_s *stcb)
+{
+  FAR sigq_t *sigq;
+
+  /* Deallocate all entries in the list of pending signal actions */
+
+  while ((sigq = (FAR sigq_t *)sq_remfirst(&stcb->sigpendactionq)) != NULL)
+    {
+      nxsig_release_pendingsigaction(sigq);
+    }
+
+  /* Deallocate all entries in the list of posted signal actions */
+
+  while ((sigq = (FAR sigq_t *)sq_remfirst(&stcb->sigpostedq)) != NULL)
+    {
+      nxsig_release_pendingsigaction(sigq);
+    }
+
+  /* Misc. signal-related clean-up */
+
+  sigfillset(&stcb->sigprocmask);
+  sigemptyset(&stcb->sigwaitmask);
+}
+
 void               nxsig_release(FAR struct task_group_s *group);
 #else
 #  define          nxsig_cleanup(stcb)
@@ -207,8 +234,22 @@ FAR sigq_t        *nxsig_alloc_pendingsigaction(void);
 void               nxsig_deliver(FAR struct tcb_s *stcb);
 FAR sigactq_t     *nxsig_find_action(FAR struct task_group_s *group,
                                      int signo);
-int                nxsig_lowest(FAR sigset_t *set);
-void               nxsig_release_pendingsigaction(FAR sigq_t *sigq);
+static inline_function int nxsig_lowest(FAR sigset_t *set)
+{
+  int signo;
+  int ret = ERROR;
+
+  for (signo = MIN_SIGNO; signo <= MAX_SIGNO; signo++)
+    {
+      if (nxsig_ismember(set, signo))
+        {
+          ret = signo;
+          break;
+        }
+    }
+
+  return ret;
+}
 void               nxsig_release_pendingsignal(FAR sigpendq_t *sigpend);
 FAR sigpendq_t    *nxsig_remove_pendingsignal(FAR struct tcb_s *stcb,
                                               int signo);

@@ -663,8 +663,15 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
  *
  ****************************************************************************/
 
-int nxsig_nanosleep(FAR const struct timespec *rqtp,
-                    FAR struct timespec *rmtp);
+static inline_function int
+nxsig_nanosleep(FAR const struct timespec *rqtp, FAR struct timespec *rmtp)
+{
+  int ret;
+
+  ret = nxsig_clockwait(CLOCK_REALTIME, 0, rqtp, rmtp);
+
+  return ret == -EAGAIN ? 0 : ret;
+}
 
 /****************************************************************************
  * Name: nxsig_sleep
