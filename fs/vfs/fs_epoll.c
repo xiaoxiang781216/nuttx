@@ -260,7 +260,7 @@ static int epoll_do_close(FAR struct file *filep)
  * Name: epoll_notify
  ****************************************************************************/
 
-static void epoll_notify(FAR epoll_head_t *eph, pollevent_t eventset)
+static inline void epoll_notify(FAR epoll_head_t *eph, pollevent_t eventset)
 {
   irqstate_t flags;
 

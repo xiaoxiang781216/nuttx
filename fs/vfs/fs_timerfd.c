@@ -161,7 +161,7 @@ static FAR struct timerfd_priv_s *timerfd_allocdev(void)
   return dev;
 }
 
-static void
+static inline void
 timerfd_unregister_clock_notifier(FAR struct timerfd_priv_s *dev)
 {
   if (dev->nb.notifier_call)
@@ -171,7 +171,7 @@ timerfd_unregister_clock_notifier(FAR struct timerfd_priv_s *dev)
     }
 }
 
-static void timerfd_destroy(FAR struct timerfd_priv_s *dev)
+static inline void timerfd_destroy(FAR struct timerfd_priv_s *dev)
 {
   timerfd_unregister_clock_notifier(dev);
   wd_cancel(&dev->wdog);

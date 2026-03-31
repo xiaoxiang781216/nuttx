@@ -168,8 +168,8 @@ static int open_mountpoint(FAR struct inode *inode, FAR const char *relpath,
  *
  ****************************************************************************/
 
-static void close_mountpoint(FAR struct inode *inode,
-                             FAR struct fs_dirent_s *dir)
+static inline void close_mountpoint(FAR struct inode *inode,
+                                    FAR struct fs_dirent_s *dir)
 {
   if (inode->u.i_mops != NULL && inode->u.i_mops->closedir != NULL)
     {
@@ -227,7 +227,7 @@ static int open_pseudodir(FAR struct inode *inode,
  *
  ****************************************************************************/
 
-static void close_pseudodir(FAR struct fs_dirent_s *dir)
+static inline void close_pseudodir(FAR struct fs_dirent_s *dir)
 {
   FAR struct fs_pseudodir_s *pdir = (FAR struct fs_pseudodir_s *)dir;
 

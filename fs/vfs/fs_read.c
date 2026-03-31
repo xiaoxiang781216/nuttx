@@ -210,16 +210,6 @@ ssize_t file_readv(FAR struct file *filep,
  *
  ****************************************************************************/
 
-ssize_t file_read(FAR struct file *filep, FAR void *buf, size_t nbytes)
-{
-  struct iovec iov;
-
-  iov.iov_base = buf;
-  iov.iov_len = nbytes;
-
-  return file_readv(filep, &iov, 1);
-}
-
 /****************************************************************************
  * Name: nx_readv
  *
@@ -261,36 +251,6 @@ ssize_t nx_readv(int fd, FAR const struct iovec *iov, int iovcnt)
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: nx_read
- *
- * Description:
- *   nx_read() is an internal OS interface.  It is functionally similar to
- *   the standard read() interface except:
- *
- *    - It does not modify the errno variable, and
- *    - It is not a cancellation point.
- *
- * Input Parameters:
- *   fd     - File descriptor to read from
- *   buf    - User-provided to save the data
- *   nbytes - The maximum size of the user-provided buffer
- *
- * Returned Value:
- *   The positive non-zero number of bytes read on success, 0 on if an
- *   end-of-file condition, or a negated errno value on any failure.
- *
- ****************************************************************************/
-
-ssize_t nx_read(int fd, FAR void *buf, size_t nbytes)
-{
-  struct iovec iov;
-
-  iov.iov_base = buf;
-  iov.iov_len = nbytes;
-  return nx_readv(fd, &iov, 1);
 }
 
 /****************************************************************************

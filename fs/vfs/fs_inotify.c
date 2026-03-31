@@ -159,7 +159,7 @@ static DEFINE_PER_CPU_BMP(struct inotify_global_s, g_inotify) =
  *
  ****************************************************************************/
 
-static void inotify_add_count(uint32_t mask)
+static inline void inotify_add_count(uint32_t mask)
 {
   g_inotify.read_count += (mask & IN_ACCESS) ? 1 : 0;
   g_inotify.write_count += (mask & IN_MODIFY) ? 1 : 0;
@@ -173,7 +173,7 @@ static void inotify_add_count(uint32_t mask)
  *
  ****************************************************************************/
 
-static void inotify_sub_count(uint32_t mask)
+static inline void inotify_sub_count(uint32_t mask)
 {
   g_inotify.read_count -= (mask & IN_ACCESS) ? 1 : 0;
   g_inotify.write_count -= (mask & IN_MODIFY) ? 1 : 0;
@@ -187,7 +187,7 @@ static void inotify_sub_count(uint32_t mask)
  *
  ****************************************************************************/
 
-static int notify_check_mask(uint32_t mask)
+static inline int notify_check_mask(uint32_t mask)
 {
   return (((mask & IN_ACCESS) && g_inotify.read_count == 0) ||
           ((mask & IN_MODIFY) && g_inotify.write_count == 0)) ?
@@ -333,8 +333,8 @@ inotify_remove_watch_no_event(FAR struct inotify_watch_s *watch)
  *
  ****************************************************************************/
 
-static void inotify_remove_watch(FAR struct inotify_device_s *dev,
-                                 FAR struct inotify_watch_s *watch)
+static inline void inotify_remove_watch(FAR struct inotify_device_s *dev,
+                                        FAR struct inotify_watch_s *watch)
 {
   inotify_queue_event(dev, watch->wd, IN_IGNORED, 0, NULL);
   inotify_remove_watch_no_event(watch);
@@ -348,8 +348,8 @@ static void inotify_remove_watch(FAR struct inotify_device_s *dev,
  *
  ****************************************************************************/
 
-static void inotify_remove_event(FAR struct inotify_device_s *dev,
-                                 FAR struct inotify_event_s *event)
+static inline void inotify_remove_event(FAR struct inotify_device_s *dev,
+                                        FAR struct inotify_event_s *event)
 {
   list_delete(&event->node);
   dev->event_size -= sizeof(struct inotify_event) + event->event.len;

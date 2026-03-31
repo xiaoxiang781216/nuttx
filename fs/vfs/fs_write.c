@@ -214,17 +214,6 @@ ssize_t file_writev(FAR struct file *filep,
  *
  ****************************************************************************/
 
-ssize_t file_write(FAR struct file *filep, FAR const void *buf,
-                   size_t nbytes)
-{
-  struct iovec iov;
-
-  iov.iov_base = (FAR void *)buf;
-  iov.iov_len = nbytes;
-
-  return file_writev(filep, &iov, 1);
-}
-
 /****************************************************************************
  * Name: nx_writev
  *
@@ -271,40 +260,6 @@ ssize_t nx_writev(int fd, FAR const struct iovec *iov, int iovcnt)
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: nx_write
- *
- * Description:
- *  nx_write() writes up to nytes bytes to the file referenced by the file
- *  descriptor fd from the buffer starting at buf.  nx_write() is an
- *  internal OS function.  It is functionally equivalent to write() except
- *  that:
- *
- *  - It does not modify the errno variable, and
- *  - It is not a cancellation point.
- *
- * Input Parameters:
- *   fd     - file descriptor to write to
- *   buf    - Data to write
- *   nbytes - Length of data to write
- *
- * Returned Value:
- *  On success, the number of bytes written are returned (zero indicates
- *  nothing was written).  On any failure, a negated errno value is returned
- *  (see comments withwrite() for a description of the appropriate errno
- *   values).
- *
- ****************************************************************************/
-
-ssize_t nx_write(int fd, FAR const void *buf, size_t nbytes)
-{
-  struct iovec iov;
-
-  iov.iov_base = (void *)buf;
-  iov.iov_len = nbytes;
-  return nx_writev(fd, &iov, 1);
 }
 
 /****************************************************************************

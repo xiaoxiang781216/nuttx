@@ -144,7 +144,7 @@ static FAR struct eventfd_priv_s *eventfd_allocdev(void)
   return dev;
 }
 
-static void eventfd_destroy(FAR struct eventfd_priv_s *dev)
+static inline void eventfd_destroy(FAR struct eventfd_priv_s *dev)
 {
   nxmutex_unlock(&dev->lock);
   nxmutex_destroy(&dev->lock);

@@ -225,7 +225,7 @@ static int file_lock_normalize(FAR struct file *filep,
  * Name: file_lock_delete
  ****************************************************************************/
 
-static void file_lock_delete(FAR struct file_lock_s *file_lock)
+static inline void file_lock_delete(FAR struct file_lock_s *file_lock)
 {
   list_delete(&file_lock->fl_node);
   fs_heap_free(file_lock);
