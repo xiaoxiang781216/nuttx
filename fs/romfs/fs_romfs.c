@@ -396,17 +396,11 @@ static ssize_t romfs_read(FAR struct file *filep, FAR char *buffer,
 
   /* Make sure that the mount is still healthy */
 
-  ret = nxrmutex_lock(&rm->rm_lock);
-  if (ret < 0)
-    {
-      return (ssize_t)ret;
-    }
-
   ret = romfs_checkmount(rm);
   if (ret < 0)
     {
       ferr("ERROR: romfs_checkmount failed: %d\n", ret);
-      goto errout_with_lock;
+      return (ssize_t)ret;
     }
 
   /* Get the number of bytes left in the file */
@@ -454,7 +448,7 @@ static ssize_t romfs_read(FAR struct file *filep, FAR char *buffer,
           if (ret < 0)
             {
               ferr("ERROR: romfs_hwread failed: %d\n", ret);
-              goto errout_with_lock;
+              break;
             }
 
           bytesread = nsectors * rm->rm_hwsectorsize;
@@ -471,7 +465,7 @@ static ssize_t romfs_read(FAR struct file *filep, FAR char *buffer,
           if (ret < 0)
             {
               ferr("ERROR: romfs_filecacheread failed: %d\n", ret);
-              goto errout_with_lock;
+              break;
             }
 
           /* Copy the partial sector into the user buffer */
@@ -499,8 +493,6 @@ static ssize_t romfs_read(FAR struct file *filep, FAR char *buffer,
       buflen       -= bytesread;
     }
 
-errout_with_lock:
-  nxrmutex_unlock(&rm->rm_lock);
   return readsize ? readsize : ret;
 }
 
@@ -555,17 +547,11 @@ static off_t romfs_seek(FAR struct file *filep, off_t offset, int whence)
 
   /* Make sure that the mount is still healthy */
 
-  ret = nxrmutex_lock(&rm->rm_lock);
-  if (ret < 0)
-    {
-      return (off_t)ret;
-    }
-
   ret = romfs_checkmount(rm);
   if (ret < 0)
     {
        ferr("ERROR: romfs_checkmount failed: %d\n", ret);
-       goto errout_with_lock;
+       return (off_t)ret;
     }
 
   /* Limit positions to the end of the file. */
@@ -582,8 +568,6 @@ static off_t romfs_seek(FAR struct file *filep, off_t offset, int whence)
   filep->f_pos = position;
   finfo("New file position: %jd\n", (intmax_t)filep->f_pos);
 
-errout_with_lock:
-  nxrmutex_unlock(&rm->rm_lock);
   return ret < 0 ? ret : position;
 }
 
