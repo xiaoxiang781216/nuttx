@@ -1074,7 +1074,18 @@ void nxsched_put_tcb(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-bool nxsched_verify_pid(pid_t pid);
+static inline_function bool nxsched_verify_pid(pid_t pid)
+{
+  FAR struct tcb_s *ret;
+
+  ret = nxsched_get_tcb(pid);
+  if (ret)
+    {
+      nxsched_put_tcb(ret);
+    }
+
+  return ret != NULL;
+}
 
 /****************************************************************************
  * Name:  nxsched_release_tcb
@@ -1109,7 +1120,19 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, int ttype);
  *
  ****************************************************************************/
 
-FAR struct fdlist *nxsched_get_fdlist_from_tcb(FAR struct tcb_s *tcb);
+static inline_function
+FAR struct fdlist *nxsched_get_fdlist_from_tcb(FAR struct tcb_s *tcb)
+{
+  FAR struct task_group_s *group = tcb->group;
+  FAR struct fdlist *ret = NULL;
+
+  if (group)
+    {
+      ret = &group->tg_fdlist;
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: nxsched_get_fdlist
@@ -1127,7 +1150,10 @@ FAR struct fdlist *nxsched_get_fdlist_from_tcb(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-FAR struct fdlist *nxsched_get_fdlist(void);
+static inline_function FAR struct fdlist *nxsched_get_fdlist(void)
+{
+  return nxsched_get_fdlist_from_tcb(this_task());
+}
 
 /****************************************************************************
  * Name: nxtask_init
@@ -1862,8 +1888,16 @@ int nxsched_cpu_call_handler(int irq, FAR void *context,
  *
  ****************************************************************************/
 
+static inline_function
 void nxsched_cpu_call_init(FAR struct cpu_call_data_s *data,
-                           nxsched_cpu_call_t func, FAR void *arg);
+                           nxsched_cpu_call_t func, FAR void *arg)
+{
+  DEBUGASSERT(data != NULL && func != NULL);
+
+  memset(data, 0, sizeof(struct cpu_call_data_s));
+  data->func = func;
+  data->arg = arg;
+}
 
 /****************************************************************************
  * Name: nxsched_cpu_call_delay_init
@@ -1891,25 +1925,6 @@ void nxsched_cpu_call_delay_init(FAR struct cpu_call_delay_data_s *data,
 }
 
 /****************************************************************************
- * Name: nxsched_cpu_call_single
- *
- * Description:
- *   Call function on single processor, wait function callback
- *
- * Input Parameters:
- *   cpuid - Target cpu id
- *   func  - Function
- *   arg   - Function args
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-int nxsched_cpu_call_single(int cpuid, nxsched_cpu_call_t func,
-                            FAR void *arg);
-
-/****************************************************************************
  * Name: nxsched_cpu_call
  *
  * Description:
@@ -1927,43 +1942,6 @@ int nxsched_cpu_call_single(int cpuid, nxsched_cpu_call_t func,
 
 int nxsched_cpu_call(cpu_set_t cpuset, nxsched_cpu_call_t func,
                      FAR void *arg);
-
-/****************************************************************************
- * Name: nxsched_cpu_call_single_async
- *
- * Description:
- *   Call function on single processor async
- *
- * Input Parameters:
- *   cpuset - Target cpuset
- *   data   - Call data
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-int nxsched_cpu_call_single_async(int cpuid,
-                                  FAR struct cpu_call_data_s *data);
-
-/****************************************************************************
- * Name: nxsched_cpu_call_single_delay
- *
- * Description:
- *   Call function on single processor async after ticks delay
- *
- * Input Parameters:
- *   cpuset - Target cpuset
- *   delay  - Delay ticks
- *   data   - Call data
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-int nxsched_cpu_call_single_delay(int cpuid, sclock_t delay,
-                                  FAR struct cpu_call_delay_data_s *data);
 
 /****************************************************************************
  * Name: nxsched_cpu_call_async
@@ -2001,6 +1979,86 @@ int nxsched_cpu_call_async(cpu_set_t cpuset,
 
 int nxsched_cpu_call_delay(cpu_set_t cpuset, sclock_t delay,
                            FAR struct cpu_call_delay_data_s *data);
+
+/****************************************************************************
+ * Name: nxsched_cpu_call_single
+ *
+ * Description:
+ *   Call function on single processor, wait function callback
+ *
+ * Input Parameters:
+ *   cpuid - Target cpu id
+ *   func  - Function
+ *   arg   - Function args
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+static inline_function
+int nxsched_cpu_call_single(int cpuid, nxsched_cpu_call_t func,
+                            FAR void *arg)
+{
+  cpu_set_t cpuset;
+
+  CPU_ZERO(&cpuset);
+  CPU_SET(cpuid, &cpuset);
+  return nxsched_cpu_call(cpuset, func, arg);
+}
+
+/****************************************************************************
+ * Name: nxsched_cpu_call_single_async
+ *
+ * Description:
+ *   Call function on single processor async
+ *
+ * Input Parameters:
+ *   cpuset - Target cpuset
+ *   data   - Call data
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+static inline_function
+int nxsched_cpu_call_single_async(int cpuid,
+                                  FAR struct cpu_call_data_s *data)
+{
+  cpu_set_t cpuset;
+
+  CPU_ZERO(&cpuset);
+  CPU_SET(cpuid, &cpuset);
+  return nxsched_cpu_call_async(cpuset, data);
+}
+
+/****************************************************************************
+ * Name: nxsched_cpu_call_single_delay
+ *
+ * Description:
+ *   Call function on single processor async after ticks delay
+ *
+ * Input Parameters:
+ *   cpuset - Target cpuset
+ *   delay  - Delay ticks
+ *   data   - Call data
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+static inline_function
+int nxsched_cpu_call_single_delay(int cpuid, sclock_t delay,
+                                  FAR struct cpu_call_delay_data_s *data)
+{
+  cpu_set_t cpuset;
+
+  CPU_ZERO(&cpuset);
+  CPU_SET(cpuid, &cpuset);
+  return nxsched_cpu_call_delay(cpuset, delay, data);
+}
 
 #endif
 

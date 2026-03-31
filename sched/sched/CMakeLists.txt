@@ -20,14 +20,12 @@
 #
 # ##############################################################################
 set(SRCS
-    sched_getfiles.c
     sched_profil.c
     sched_addreadytorun.c
     sched_removereadytorun.c
     sched_addblocked.c
     sched_removeblocked.c
     sched_gettcb.c
-    sched_verifytcb.c
     sched_releasetcb.c
     sched_setparam.c
     sched_setpriority.c
@@ -44,7 +42,6 @@ set(SRCS
     sched_self.c
     sched_getcpu.c
     sched_get_stackinfo.c
-    sched_get_tls.c
     sched_sysinfo.c
     sched_get_stateinfo.c
     sched_switchcontext.c)

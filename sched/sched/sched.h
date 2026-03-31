@@ -37,6 +37,7 @@
 #include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -390,9 +391,17 @@ void nxsched_critmon_preemption(FAR struct tcb_s *tcb, bool state,
 
 /* Obtain TLS from kernel */
 
-struct tls_info_s; /* Forward declare */
-FAR struct tls_info_s *nxsched_get_tls(FAR struct tcb_s *tcb);
-FAR char **nxsched_get_stackargs(FAR struct tcb_s *tcb);
+static inline_function
+FAR struct tls_info_s *nxsched_get_tls(FAR struct tcb_s *tcb)
+{
+  return (FAR struct tls_info_s *)tcb->stack_alloc_ptr;
+}
+
+static inline_function
+FAR char **nxsched_get_stackargs(FAR struct tcb_s *tcb)
+{
+  return nxsched_get_tls(tcb)->tl_argv;
+}
 
 /****************************************************************************
  * Inline functions
