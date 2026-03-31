@@ -763,8 +763,20 @@ int nxsem_trywait(FAR sem_t *sem);
  *
  ****************************************************************************/
 
+static inline_function
 int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
-                    FAR const struct timespec *abstime);
+                    FAR const struct timespec *abstime)
+{
+  int ret;
+
+  ret = nxsem_trywait(sem);
+  if (ret != OK)
+    {
+      ret = nxsem_clockwait_slow(sem, clockid, abstime);
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: nxsem_clockwait_uninterruptible

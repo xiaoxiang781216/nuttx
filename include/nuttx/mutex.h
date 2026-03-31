@@ -105,7 +105,22 @@ static inline_function void nxmutex_remove_backtrace(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
-int nxmutex_init(FAR mutex_t *mutex);
+static inline_function
+int nxmutex_init(FAR mutex_t *mutex)
+{
+  int ret = nxsem_init(&mutex->sem, 0, NXSEM_NO_MHOLDER);
+
+  if (ret >= 0)
+    {
+#ifdef CONFIG_PRIORITY_INHERITANCE
+      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX | SEM_PRIO_INHERIT);
+#else
+      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX);
+#endif
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: nxmutex_get_holder

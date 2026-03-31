@@ -25,7 +25,7 @@
 CSRCS += lib_ffs.c lib_ffsl.c lib_ffsll.c lib_fls.c lib_flsl.c
 CSRCS += lib_flsll.c lib_isbasedigit.c lib_memmem.c
 CSRCS += lib_popcount.c lib_popcountl.c lib_popcountll.c
-CSRCS += lib_skipspace.c lib_strcasecmp.c
+CSRCS += lib_strcasecmp.c
 CSRCS += lib_strcspn.c lib_strdup.c
 CSRCS += lib_strerror.c lib_strncasecmp.c lib_strncat.c
 CSRCS += lib_strndup.c lib_strcasestr.c lib_strpbrk.c

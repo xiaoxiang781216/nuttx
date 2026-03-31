@@ -40,7 +40,7 @@ CSRCS += lib_seteuid.c lib_setegid.c lib_geteuid.c lib_getegid.c
 endif
 
 ifneq ($(CONFIG_DISABLE_ENVIRON),y)
-CSRCS += lib_chdir.c lib_fchdir.c lib_restoredir.c
+CSRCS += lib_chdir.c lib_fchdir.c
 endif
 
 ifeq ($(CONFIG_LIBC_EXECFUNCS),y)

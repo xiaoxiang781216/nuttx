@@ -35,6 +35,7 @@
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <limits.h>
+#  include <ctype.h>
 #  include <semaphore.h>
 
 #  include <nuttx/lib/lib.h>
@@ -261,8 +262,17 @@ int lib_flushall_unlocked(FAR struct streamlist *list);
 
 /* Defined in lib_libfflush.c */
 
-ssize_t lib_fflush(FAR FILE *stream);
 ssize_t lib_fflush_unlocked(FAR FILE *stream);
+
+static inline_function ssize_t lib_fflush(FAR FILE *stream)
+{
+  ssize_t ret;
+
+  flockfile(stream);
+  ret = lib_fflush_unlocked(stream);
+  funlockfile(stream);
+  return ret;
+}
 
 /* Defined in lib_rdflush_unlocked.c */
 
@@ -278,7 +288,12 @@ int lib_getbase(FAR const char *nptr, FAR const char **endptr);
 
 /* Defined in lib_skipspace.c */
 
-void lib_skipspace(FAR const char **pptr);
+static inline_function void lib_skipspace(FAR const char **pptr)
+{
+  FAR const char *ptr = *pptr;
+  while (isspace(*ptr)) ptr++;
+  *pptr = ptr;
+}
 
 /* Defined in lib_isbasedigit.c */
 
@@ -297,7 +312,19 @@ ssize_t lib_parse_hostfile(FAR FILE *stream, FAR struct hostent *host,
 #endif
 
 #ifndef CONFIG_DISABLE_ENVIRON
-int lib_restoredir(void);
+static inline_function int lib_restoredir(void)
+{
+  FAR char *oldpwd;
+  int ret = OK;
+
+  oldpwd = getenv("OLDPWD");
+  if (oldpwd)
+    {
+      ret = setenv("PWD", oldpwd, TRUE);
+    }
+
+  return ret;
+}
 #endif
 
 #undef EXTERN

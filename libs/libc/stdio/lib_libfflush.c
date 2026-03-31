@@ -164,15 +164,3 @@ ssize_t lib_fflush_unlocked(FAR FILE *stream)
   return 0;
 #endif
 }
-
-ssize_t lib_fflush(FAR FILE *stream)
-{
-  ssize_t ret;
-
-  /* Make sure that we have exclusive access to the stream */
-
-  flockfile(stream);
-  ret = lib_fflush_unlocked(stream);
-  funlockfile(stream);
-  return ret;
-}

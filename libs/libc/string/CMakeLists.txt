@@ -35,7 +35,6 @@ set(SRCS
     lib_popcount.c
     lib_popcountl.c
     lib_popcountll.c
-    lib_skipspace.c
     lib_strcasecmp.c
     lib_strcspn.c
     lib_strdup.c
