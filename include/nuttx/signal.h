@@ -156,7 +156,17 @@ struct timespec;  /* Forward reference */
  *
  ****************************************************************************/
 
-int nxsig_ismember(FAR const sigset_t *set, int signo);
+static inline_function int nxsig_ismember(FAR const sigset_t *set, int signo)
+{
+  if (!GOOD_SIGNO(signo))
+    {
+      return -EINVAL;
+    }
+  else
+    {
+      return ((set->_elem[_SIGSET_NDX(signo)] & _SIGNO2SET(signo)) != 0);
+    }
+}
 
 /****************************************************************************
  * Name: nxsig_addset
@@ -180,7 +190,18 @@ int nxsig_ismember(FAR const sigset_t *set, int signo);
  *
  ****************************************************************************/
 
-int nxsig_addset(FAR sigset_t *set, int signo);
+static inline_function int nxsig_addset(FAR sigset_t *set, int signo)
+{
+  if (!GOOD_SIGNO(signo))
+    {
+      return -EINVAL;
+    }
+  else
+    {
+      set->_elem[_SIGSET_NDX(signo)] |= _SIGNO2SET(signo);
+      return OK;
+    }
+}
 
 /****************************************************************************
  * Name: nxsig_delset
@@ -204,7 +225,18 @@ int nxsig_addset(FAR sigset_t *set, int signo);
  *
  ****************************************************************************/
 
-int nxsig_delset(FAR sigset_t *set, int signo);
+static inline_function int nxsig_delset(FAR sigset_t *set, int signo)
+{
+  if (!GOOD_SIGNO(signo))
+    {
+      return -EINVAL;
+    }
+  else
+    {
+      set->_elem[_SIGSET_NDX(signo)] &= ~_SIGNO2SET(signo);
+      return OK;
+    }
+}
 
 /****************************************************************************
  * Name: nxsig_nandset
@@ -227,8 +259,19 @@ int nxsig_delset(FAR sigset_t *set, int signo);
  *
  ****************************************************************************/
 
+static inline_function
 int nxsig_nandset(FAR sigset_t *dest, FAR const sigset_t *left,
-                  FAR const sigset_t *right);
+                  FAR const sigset_t *right)
+{
+  int ndx;
+
+  for (ndx = 0; ndx < _SIGSET_NELEM; ndx++)
+    {
+      dest->_elem[ndx] = left->_elem[ndx] & ~right->_elem[ndx];
+    }
+
+  return OK;
+}
 
 /****************************************************************************
  * Name: nxsig_xorset
@@ -251,8 +294,19 @@ int nxsig_nandset(FAR sigset_t *dest, FAR const sigset_t *left,
  *
  ****************************************************************************/
 
+static inline_function
 int nxsig_xorset(FAR sigset_t *dest, FAR const sigset_t *left,
-                 FAR const sigset_t *right);
+                 FAR const sigset_t *right)
+{
+  int ndx;
+
+  for (ndx = 0; ndx < _SIGSET_NELEM; ndx++)
+    {
+      dest->_elem[ndx] = left->_elem[ndx] ^ right->_elem[ndx];
+    }
+
+  return OK;
+}
 
 /****************************************************************************
  * Name: nxsig_pendingset

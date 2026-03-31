@@ -31,8 +31,8 @@ endif
 
 CSRCS += sig_addset.c sig_altstack.c sig_andset.c sig_delset.c
 CSRCS += sig_emptyset.c sig_fillset.c sig_hold.c sig_isemptyset.c
-CSRCS += sig_ismember.c sig_killpg.c sig_nandset.c sig_orset.c
-CSRCS += sig_pause.c sig_psignal.c sig_raise.c sig_relse.c sig_xorset.c
+CSRCS += sig_ismember.c sig_killpg.c sig_orset.c
+CSRCS += sig_pause.c sig_psignal.c sig_raise.c sig_relse.c
 CSRCS += sig_wait.c
 
 DEPPATH += --dep-path signal

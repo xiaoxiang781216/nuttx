@@ -32,13 +32,11 @@ set(SRCS
     sig_ismember.c
     sig_killpg.c
     sig_longjmp.c
-    sig_nandset.c
     sig_orset.c
     sig_pause.c
     sig_psignal.c
     sig_raise.c
     sig_relse.c
-    sig_xorset.c
     sig_wait.c)
 
 if(NOT CONFIG_DISABLE_SIGNALS)
