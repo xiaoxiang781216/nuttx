@@ -137,7 +137,7 @@ static int acpi_open(struct file *filep, const char *relpath,
                      int oflags, mode_t mode)
 {
   struct acpi_file_s *acpifile;
-  size_t len;
+  ssize_t len;
 
   finfo("Open '%s'\n", relpath);
 
@@ -163,6 +163,13 @@ static int acpi_open(struct file *filep, const char *relpath,
     }
 
   len = acpi_table_get(relpath, &acpifile->data);
+  if (len < 0)
+    {
+      ferr("ERROR: Failed to get ACPI table '%s': %zd\n", relpath, len);
+      kmm_free(acpifile);
+      return len;
+    }
+
   acpifile->length = len;
   filep->f_pos     = 0;
 
