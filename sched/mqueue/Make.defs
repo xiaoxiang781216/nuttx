@@ -21,7 +21,7 @@
 ############################################################################
 
 ifneq ($(CONFIG_DISABLE_MQUEUE)$(CONFIG_DISABLE_MQUEUE_SYSV),yy)
-  CSRCS += mq_initialize.c mq_waitirq.c mq_recover.c
+  CSRCS += mq_initialize.c mq_waitirq.c
 endif
 
 ifneq ($(CONFIG_DISABLE_MQUEUE),y)

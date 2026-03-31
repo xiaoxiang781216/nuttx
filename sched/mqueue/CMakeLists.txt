@@ -23,7 +23,7 @@
 set(SRCS)
 
 if(NOT CONFIG_DISABLE_MQUEUE OR NOT CONFIG_DISABLE_MQUEUE_SYSV)
-  list(APPEND SRCS mq_initialize.c mq_waitirq.c mq_recover.c)
+  list(APPEND SRCS mq_initialize.c mq_waitirq.c)
 endif()
 
 if(NOT CONFIG_DISABLE_MQUEUE)
