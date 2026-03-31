@@ -81,25 +81,9 @@ void arm_el_init(void)
 
 void arm_boot(void)
 {
-  /* MAP IO and DRAM, enable MPU. */
-
-#ifdef CONFIG_ARCH_FPU
-  arm_fpuconfig();
-#endif
-
   /* Perform board-specific device initialization. This would include
    * configuration of board specific resources such as GPIOs, LEDs, etc.
    */
 
   fvp_board_initialize();
-
-#ifdef USE_EARLYSERIALINIT
-  /* Perform early serial initialization if we are going to use the serial
-   * driver.
-   */
-
-  arm_earlyserialinit();
-#endif
-
-  nx_start();
 }

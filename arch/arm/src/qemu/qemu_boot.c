@@ -76,44 +76,10 @@
 
 void arm_boot(void)
 {
-  arm_fpuconfig();
-
-  /* Percpu section init */
-
-#ifdef CONFIG_PERCPU_SECTION
-  int cpu = 0;
-#  ifdef CONFIG_SMP
-  for (; cpu < CONFIG_NCPUS; cpu++)
-#  endif
-    {
-      memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
-             (void *)_ldata_percpu,
-             (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
-      memset((void *)((uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu),
-             0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
-    }
-#endif
-
-#ifdef CONFIG_ARM_MPU
-  mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
-#endif
-
-#ifdef CONFIG_ARCH_PERF_EVENTS
-  /* Perf init */
-
-  up_perf_init(0);
-#endif
-
 #ifdef CONFIG_ARCH_ARMV7A
   /* Set the page table for section */
 
   qemu_setupmappings();
-#endif
-
-#ifdef CONFIG_SMP
-  /* Enable SMP cache coherency for CPU0 */
-
-  arm_enable_smp(0);
 #endif
 
 #ifdef CONFIG_ARM_PSCI
@@ -124,21 +90,9 @@ void arm_boot(void)
   fdt_register((const char *)0x40000000);
 #endif
 
-#ifdef USE_EARLYSERIALINIT
-  /* Perform early serial initialization if we are going to use the serial
-   * driver.
-   */
-
-  arm_earlyserialinit();
-#endif
-
 #ifdef CONFIG_BUILD_PROTECTED
   qemu_userspace();
 #endif
-
-  arm_finish_busy_wait();
-
-  nx_start();
 }
 
 #if defined(CONFIG_ARM_PSCI) && defined(CONFIG_SMP)

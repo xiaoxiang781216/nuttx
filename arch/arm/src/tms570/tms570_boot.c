@@ -372,10 +372,6 @@ void arm_boot(void)
 
   tms570_esm_initialize();
 
-  /* Initialize the FPU */
-
-  arm_fpuconfig();
-
 #ifdef CONFIG_BOOT_SDRAM_DATA
   /* Initialize the .bss and .data sections as well as RAM functions
    * now after RAM has been initialized.
@@ -406,8 +402,4 @@ void arm_boot(void)
   /* Perform common, low-level chip initialization (might do nothing) */
 
   tms570_lowsetup();
-
-  /* Then start NuttX */
-
-  nx_start();
 }

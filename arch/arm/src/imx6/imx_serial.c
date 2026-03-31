@@ -1053,7 +1053,7 @@ static bool imx_txempty(struct uart_dev_s *dev)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: imx_earlyserialinit
+ * Name: arm_earlyserialinit
  *
  * Description:
  *   Performs the low level UART initialization early in
@@ -1062,7 +1062,7 @@ static bool imx_txempty(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
-void imx_earlyserialinit(void)
+void arm_earlyserialinit(void)
 {
   /* NOTE: This function assumes that low level hardware configuration
    * -- including all clocking and pin configuration -- was performed by the
@@ -1084,7 +1084,7 @@ void imx_earlyserialinit(void)
  *
  * Description:
  *   Register serial console and serial ports.  This assumes
- *   that imx_earlyserialinit was called previously.
+ *   that arm_earlyserialinit was called previously.
  *
  ****************************************************************************/
 

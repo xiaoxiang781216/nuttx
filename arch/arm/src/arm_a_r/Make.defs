@@ -33,7 +33,7 @@ HEAD_ASRC += arm_vectortab.S
 
 CMN_ASRCS += arm_vectors.S arm_saveusercontext.S arm_head.S
 
-CMN_CSRCS += arm_doirq.c arm_dataabort.c arm_syscall.c
+CMN_CSRCS += arm_boot.c arm_doirq.c arm_dataabort.c arm_syscall.c
 CMN_CSRCS += arm_prefetchabort.c arm_cpuidlestack.c arm_initialstate.c
 CMN_CSRCS += arm_undefinedinsn.c arm_allocpage.c arm_perf.c
 CMN_CSRCS += arm_cache.c arm_cpuinfo.c cp15_cacheops.c

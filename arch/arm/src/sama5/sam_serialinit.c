@@ -37,7 +37,7 @@
 #ifdef USE_EARLYSERIALINIT
 
 /****************************************************************************
- * Name: sam_earlyserialinit
+ * Name: arm_earlyserialinit
  *
  * Description:
  *   Performs the low level serial initialization early so that the serial
@@ -46,7 +46,7 @@
  *
  ****************************************************************************/
 
-void sam_earlyserialinit(void)
+void arm_earlyserialinit(void)
 {
   /* NOTE:  All PIO configuration for the USARTs was performed in
    * sam_lowsetup

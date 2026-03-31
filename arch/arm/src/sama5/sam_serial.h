@@ -62,20 +62,6 @@ extern "C"
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sam_earlyserialinit
- *
- * Description:
- *   Performs the low level USART initialization early in debug so that the
- *   serial console will be available during bootup.  This must be called
- *   before arm_serialinit.
- *
- ****************************************************************************/
-
-#ifdef USE_EARLYSERIALINIT
-void sam_earlyserialinit(void);
-#endif
-
-/****************************************************************************
  * Name: uart_earlyserialinit
  *
  * Description:

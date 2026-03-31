@@ -44,7 +44,6 @@
 #include "imx_clockconfig.h"
 #include "imx_memorymap.h"
 #include "imx_lowputc.h"
-#include "imx_serial.h"
 #include "imx_boot.h"
 
 /****************************************************************************
@@ -361,13 +360,6 @@ static inline void imx_wdtdisable(void)
 
 void arm_boot(void)
 {
-#if defined(CONFIG_ARCH_RAMFUNCS)
-  const uint32_t *src;
-#endif
-#if defined(CONFIG_ARCH_RAMFUNCS) || defined(CONFIG_SMP) && defined(SMP_INTERCPU_NONCACHED)
-  uint32_t *dest;
-#endif
-
   /* __start provided the basic MMU mappings for OCRAM.  Now provide mappings
    * for all IO regions (Including the vector region).
    */
@@ -383,43 +375,12 @@ void arm_boot(void)
   imx_cpu_disable();
   PROGRESS('B');
 
-#ifdef CONFIG_SMP
-  /* Enable SMP cache coherency for CPU0 */
-
-  arm_enable_smp(0);
-  PROGRESS('C');
-#endif
-
   /* Provide a special mapping for the OCRAM interrupt vector positioned in
    * high memory.
    */
 
   imx_vectormapping();
   PROGRESS('D');
-
-#ifdef CONFIG_ARCH_RAMFUNCS
-  /* Copy any necessary code sections from FLASH to RAM.  The correct
-   * destination in OCRAM is given by _sramfuncs and _eramfuncs.  The
-   * temporary location is in flash after the data initialization code
-   * at _framfuncs
-   */
-
-  for (src = (const uint32_t *)_framfuncs,
-       dest = (uint32_t *)_sramfuncs; dest < (uint32_t *)_eramfuncs;
-      )
-    {
-      *dest++ = *src++;
-    }
-
-  PROGRESS('E');
-
-  /* Flush the copied RAM functions into physical RAM so that will
-   * be available when fetched into the I-Cache.
-   */
-
-  up_clean_dcache((uintptr_t)_sramfuncs, (uintptr_t)_eramfuncs)
-  PROGRESS('F');
-#endif
 
   /* Setup up vector block.  _vector_start and _vector_end are exported from
    * arm_vector.S
@@ -437,11 +398,6 @@ void arm_boot(void)
 
   imx_clockconfig();
   PROGRESS('I');
-
-  /* Initialize the FPU */
-
-  arm_fpuconfig();
-  PROGRESS('J');
 
   /* Perform board-specific memory initialization,  This must include
    * initialization of board-specific memory resources (e.g., SDRAM)
@@ -484,15 +440,6 @@ void arm_boot(void)
 
   imx_lowsetup();
   PROGRESS('O');
-
-#ifdef USE_EARLYSERIALINIT
-  /* Perform early serial initialization if we are going to use the serial
-   * driver.
-   */
-
-  imx_earlyserialinit();
-  PROGRESS('P');
-#endif
 
   /* Now we can enable all other CPUs.  The enabled CPUs will start execution
    * at __cpuN_start and, after very low-level CPU initialization has been

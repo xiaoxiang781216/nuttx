@@ -201,10 +201,4 @@ void arm_boot(void)
 #ifdef CONFIG_ARCH_LEDS
   board_autoled_initialize();
 #endif
-
-  /* Perform early serial initialization */
-
-#ifdef USE_EARLYSERIALINIT
-  arm_earlyserialinit();
-#endif
 }

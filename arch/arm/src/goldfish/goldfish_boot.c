@@ -58,23 +58,9 @@
 
 void arm_boot(void)
 {
-#ifdef CONFIG_ARCH_PERF_EVENTS
-  /* Perf init */
-
-  up_perf_init(0);
-#endif
-
   /* Set the page table for section */
 
   goldfish_setupmappings();
-
-#ifdef CONFIG_SMP
-  /* Enable SMP cache coherency for CPU0 */
-
-  arm_enable_smp(0);
-#endif
-
-  arm_fpuconfig();
 
 #ifdef CONFIG_ARM_PSCI
   arm_psci_init("smc");
@@ -82,14 +68,6 @@ void arm_boot(void)
 
 #ifdef CONFIG_DEVICE_TREE
   fdt_register((const char *)0x40000000);
-#endif
-
-#ifdef USE_EARLYSERIALINIT
-  /* Perform early serial initialization if we are going to use the serial
-   * driver.
-   */
-
-  arm_earlyserialinit();
 #endif
 }
 

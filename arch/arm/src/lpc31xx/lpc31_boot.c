@@ -369,14 +369,6 @@ void arm_boot(void)
 
   lpc31_lowsetup();
 
-  /* Perform early serial initialization if we are going to use the
-   * serial driver
-   */
-
-#ifdef USE_EARLYSERIALINIT
-  arm_earlyserialinit();
-#endif
-
   /* Perform board-specific initialization */
 
   lpc31_boardinitialize();

@@ -368,10 +368,6 @@ static inline void sam_wdtdisable(void)
 
 void arm_boot(void)
 {
-#ifdef CONFIG_ARCH_RAMFUNCS
-  const uint32_t *src;
-  uint32_t *dest;
-#endif
 #ifdef ATSAMA5D2
   uint32_t regval;
 #endif
@@ -411,27 +407,6 @@ void arm_boot(void)
   putreg32(regval, SAM_SFR_L2CCHRAMC);
 #endif
 
-#ifdef CONFIG_ARCH_RAMFUNCS
-  /* Copy any necessary code sections from FLASH to RAM.  The correct
-   * destination in SRAM is given by _sramfuncs and _eramfuncs.  The
-   * temporary location is in flash after the data initialization code
-   * at _framfuncs
-   */
-
-  for (src = (const uint32_t *)_framfuncs,
-       dest = (uint32_t *)_sramfuncs; dest < (uint32_t *)_eramfuncs;
-      )
-    {
-      *dest++ = *src++;
-    }
-
-  /* Flush the copied RAM functions into physical RAM so that will
-   * be available when fetched into the I-Cache.
-   */
-
-  up_clean_dcache((uintptr_t)_sramfuncs, (uintptr_t)_eramfuncs)
-#endif
-
   /* Setup up vector block.  _vector_start and _vector_end are exported from
    * arm_vector.S
    */
@@ -445,10 +420,6 @@ void arm_boot(void)
   /* Initialize clocking to settings provided by board-specific logic */
 
   sam_clockconfig();
-
-  /* Initialize the FPU */
-
-  arm_fpuconfig();
 
   /* Perform board-specific initialization,  This must include:
    *
@@ -482,12 +453,4 @@ void arm_boot(void)
   /* Perform common, low-level chip initialization (might do nothing) */
 
   sam_lowsetup();
-
-#ifdef USE_EARLYSERIALINIT
-  /* Perform early serial initialization if we are going to use the serial
-   * driver.
-   */
-
-  sam_earlyserialinit();
-#endif
 }

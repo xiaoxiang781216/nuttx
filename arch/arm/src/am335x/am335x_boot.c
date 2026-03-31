@@ -395,10 +395,6 @@ void arm_boot(void)
 
   am335x_clockconfig();
 
-  /* Initialize the FPU */
-
-  arm_fpuconfig();
-
   /* Disable CPU Watchdog */
 
   am335x_wdog_disable_all();
@@ -435,14 +431,6 @@ void arm_boot(void)
   /* Perform common, low-level chip initialization (might do nothing) */
 
   am335x_lowsetup();
-
-#ifdef USE_EARLYSERIALINIT
-  /* Perform early serial initialization if we are going to use the serial
-   * driver.
-   */
-
-  arm_earlyserialinit();
-#endif
 
   /* Perform board-specific initialization,  This must include:
    *

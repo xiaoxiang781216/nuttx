@@ -299,10 +299,6 @@ void arm_boot(void)
 
   a1x_copyvectorblock();
 
-  /* Initialize the FPU */
-
-  arm_fpuconfig();
-
 #ifdef CONFIG_BOOT_SDRAM_DATA
   /* This setting is inappropriate for the A1x because the code is *always*
    * executing from SDRAM.  If CONFIG_BOOT_SDRAM_DATA happens to be set,
@@ -316,14 +312,6 @@ void arm_boot(void)
   /* Perform common, low-level chip initialization (might do nothing) */
 
   a1x_lowsetup();
-
-#ifdef USE_EARLYSERIALINIT
-  /* Perform early serial initialization if we are going to use the serial
-   * driver.
-   */
-
-  arm_earlyserialinit();
-#endif
 
   /* Perform board-specific initialization,  This must include:
    *

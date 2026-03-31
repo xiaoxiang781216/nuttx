@@ -76,6 +76,7 @@ endif()
 list(
   APPEND
   CSRCS
+  arm_boot.c
   arm_doirq.c
   arm_dataabort.c
   arm_syscall.c
