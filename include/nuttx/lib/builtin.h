@@ -106,24 +106,6 @@ EXTERN const int g_builtin_count;
 int builtin_isavail(FAR const char *appname);
 
 /****************************************************************************
- * Name: builtin_getname
- *
- * Description:
- *   Returns pointer to a name of built-in application pointed by the
- *   index.
- *
- * Input Parameters:
- *   index, from 0 and on ...
- *
- * Returned Value:
- *   Returns valid pointer pointing to the app name if index is valid.
- *   Otherwise NULL is returned.
- *
- ****************************************************************************/
-
-FAR const char *builtin_getname(int index);
-
-/****************************************************************************
  * Name: builtin_for_index
  *
  * Description:
@@ -143,6 +125,37 @@ FAR const char *builtin_getname(int index);
  ****************************************************************************/
 
 FAR const struct builtin_s *builtin_for_index(int index);
+
+/****************************************************************************
+ * Name: builtin_getname
+ *
+ * Description:
+ *   Returns pointer to a name of built-in application pointed by the
+ *   index.
+ *
+ * Input Parameters:
+ *   index, from 0 and on ...
+ *
+ * Returned Value:
+ *   Returns valid pointer pointing to the app name if index is valid.
+ *   Otherwise NULL is returned.
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR const char *builtin_getname(int index)
+{
+  FAR const struct builtin_s *builtin;
+
+  builtin = builtin_for_index(index);
+
+  if (builtin != NULL)
+    {
+      return builtin->name;
+    }
+
+  return NULL;
+}
 
 #ifdef CONFIG_SCHED_USER_IDENTITY
 

@@ -21,7 +21,7 @@
 # ##############################################################################
 
 if(CONFIG_BUILTIN)
-  set(SRCS lib_builtin_getname.c lib_builtin_isavail.c lib_builtin_forindex.c)
+  set(SRCS lib_builtin_isavail.c lib_builtin_forindex.c)
 
   if(CONFIG_SCHED_USER_IDENTITY)
     list(APPEND SRCS lib_builtin_getuid.c lib_builtin_getgid.c
