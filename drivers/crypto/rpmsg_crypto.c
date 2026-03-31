@@ -461,6 +461,7 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
                            FAR struct cryptop *crp)
 {
   FAR struct rpmsg_crypto_process_s *msg;
+  FAR struct rpmsg_crypto_process_s *rsp;
   uint32_t space = rpmsg_get_tx_buffer_size(&rdev->ept);
   bool need_iv = !(crp->crp_desc->crd_flags & CRD_F_UPDATE);
   int remaining = crp->crp_ilen;
@@ -501,7 +502,6 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
 
       data_size = MIN(data_size, remaining);
       memcpy(buf, crp->crp_buf + offset, data_size);
-      session->data = crp->crp_dst + offset;
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                    RPMSG_CRYPTO_PROCESS,
                                    header_size + data_size, true);
@@ -509,6 +509,14 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
         {
           rpmsgerr("Rpmsg Crypto process failed, ret=%d\n", ret);
           return ret;
+        }
+
+      if (session->data != NULL)
+        {
+          rsp = session->data;
+          memcpy(crp->crp_dst + offset, rsp->buf, data_size);
+          rpmsg_release_rx_buffer(&rdev->ept, rsp);
+          session->data = NULL;
         }
 
       remaining -= data_size;
@@ -525,6 +533,7 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
                               FAR struct cryptop *crp)
 {
   FAR struct rpmsg_crypto_process_s *msg;
+  FAR struct rpmsg_crypto_process_s *rsp;
   int service = virtio_crypto_get_service(crp->crp_desc->crd_alg);
   uint32_t space = rpmsg_get_tx_buffer_size(&rdev->ept);
   uint32_t flags = crp->crp_desc->crd_flags;
@@ -533,7 +542,6 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
   uint32_t offset = 0;
   int ret;
 
-  session->data = crp->crp_mac;
   do
     {
       msg = rpmsg_crypto_get_process_msg(rdev, info);
@@ -563,11 +571,18 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
                                    sizeof(*msg) + data_size,
                                    remaining == 0 &&
                                    !(flags & CRD_F_UPDATE));
-
       if (ret < 0)
         {
           rpmsgerr("Rpmsg Crypto process failed, ret=%d\n", ret);
           return ret;
+        }
+
+      if (session->data != NULL)
+        {
+          rsp = session->data;
+          memcpy(crp->crp_mac, rsp->buf, crp->crp_olen);
+          rpmsg_release_rx_buffer(&rdev->ept, rsp);
+          session->data = NULL;
         }
     }
   while (remaining > 0);
@@ -592,8 +607,6 @@ rpmsg_crypto_process_aead_update_aad(
   uint32_t len;
   FAR char *buf;
   int ret;
-
-  session->data = NULL;
 
   do
     {
@@ -657,6 +670,7 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
                                  FAR struct cryptop *crp)
 {
   FAR struct rpmsg_crypto_process_s *msg;
+  FAR struct rpmsg_crypto_process_s *rsp;
   uint32_t space = rpmsg_get_tx_buffer_size(&rdev->ept);
   uint32_t flags = crp->crp_desc->crd_flags;
   uint32_t remaining = crp->crp_ilen;
@@ -696,10 +710,6 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
 
       msg->data.op_flf.aead.src_data_len = datalen;
 
-      /* Update session data pointer for this packet's output */
-
-      session->data = crp->crp_dst + offset - datalen;
-
       /* Send packet and wait for response to receive output data */
 
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
@@ -709,6 +719,14 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
         {
           rpmsgerr("Rpmsg Crypto AEAD update failed, ret=%d\n", ret);
           return ret;
+        }
+
+      if (session->data != NULL)
+        {
+          rsp = session->data;
+          memcpy(crp->crp_dst + offset - datalen, rsp->buf, datalen);
+          rpmsg_release_rx_buffer(&rdev->ept, rsp);
+          session->data = NULL;
         }
     }
 
@@ -722,6 +740,7 @@ rpmsg_crypto_process_aead_final(FAR struct rpmsg_crypto_s *rdev,
                                 FAR struct cryptop *crp)
 {
   FAR struct rpmsg_crypto_process_s *msg;
+  FAR struct rpmsg_crypto_process_s *rsp;
   uint32_t flags = crp->crp_desc->crd_flags;
   int ret;
 
@@ -741,7 +760,6 @@ rpmsg_crypto_process_aead_final(FAR struct rpmsg_crypto_s *rdev,
 
   /* Both encrypt and decrypt receive tag from server */
 
-  session->data = crp->crp_mac;
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                RPMSG_CRYPTO_PROCESS,
                                sizeof(*msg), true);
@@ -749,6 +767,14 @@ rpmsg_crypto_process_aead_final(FAR struct rpmsg_crypto_s *rdev,
     {
       rpmsgerr("Rpmsg Crypto AEAD final failed, ret=%d\n", ret);
       return ret;
+    }
+
+  if (session->data != NULL)
+    {
+      rsp = session->data;
+      memcpy(crp->crp_mac, rsp->buf, crp->crp_olen);
+      rpmsg_release_rx_buffer(&rdev->ept, rsp);
+      session->data = NULL;
     }
 
   return session->result;
@@ -1330,14 +1356,16 @@ static int rpmsg_crypto_process_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsg_crypto_header_s *header = data;
   FAR struct rpmsg_crypto_session_s *session =
     (FAR struct rpmsg_crypto_session_s *)(uintptr_t)header->cookie;
-  FAR struct rpmsg_crypto_process_s *msg = data;
-  FAR unsigned char *dst = session->data;
 
-  len -= sizeof(*msg);
   session->result = header->result;
-  if (session->result == 0 && len > 0 && dst != NULL)
+  if (session->result == 0)
     {
-      memcpy(dst, msg->buf, len);
+      rpmsg_hold_rx_buffer(ept, data);
+      session->data = data;
+    }
+  else
+    {
+      session->data = NULL;
     }
 
   return rpmsg_post(ept, &session->sem);
