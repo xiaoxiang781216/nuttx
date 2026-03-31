@@ -91,7 +91,16 @@ int  clock_basetime(FAR struct timespec *tp);
 void clock_initialize(void);
 #if !defined(CONFIG_SCHED_TICKLESS) && \
     !defined(CONFIG_ALARM_ARCH) && !defined(CONFIG_TIMER_ARCH)
-void clock_timer(void);
+static inline_function void clock_timer(void)
+{
+  irqstate_t flags;
+
+  /* Increment the per-tick system counter */
+
+  flags = write_seqlock_irqsave(&g_system_tick_lock);
+  g_system_ticks++;
+  write_sequnlock_irqrestore(&g_system_tick_lock, flags);
+}
 #else
 #  define clock_timer()
 #endif

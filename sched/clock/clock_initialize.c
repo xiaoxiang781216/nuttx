@@ -447,27 +447,3 @@ void clock_resynchronize(FAR struct timespec *rtc_diff)
     }
 }
 #endif
-
-/****************************************************************************
- * Name: clock_timer
- *
- * Description:
- *   This function must be called once every time the real time clock
- *   interrupt occurs.  The interval of this clock interrupt must be
- *   USEC_PER_TICK
- *
- ****************************************************************************/
-
-#if !defined(CONFIG_SCHED_TICKLESS) && \
-    !defined(CONFIG_ALARM_ARCH) && !defined(CONFIG_TIMER_ARCH)
-void clock_timer(void)
-{
-  irqstate_t flags;
-
-  /* Increment the per-tick system counter */
-
-  flags = write_seqlock_irqsave(&g_system_tick_lock);
-  g_system_ticks++;
-  write_sequnlock_irqrestore(&g_system_tick_lock, flags);
-}
-#endif

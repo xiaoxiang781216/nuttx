@@ -82,7 +82,7 @@ static void adjtime_wdog_callback(wdparm_t arg)
 
 /* Query remaining adjustment in microseconds */
 
-static long long adjtime_remaining_usec(void)
+static inline_function long long adjtime_remaining_usec(void)
 {
   return (long long)g_adjtime_ppb
     * TICK2MSEC(wd_gettime(&g_adjtime_wdog))
