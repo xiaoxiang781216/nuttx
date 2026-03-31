@@ -32,9 +32,12 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <sched.h>
+#include <errno.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mm.h>
 #include <nuttx/sched.h>
+#include <nuttx/spinlock.h>
 
 /****************************************************************************
  * Public Type Definitions
@@ -59,10 +62,55 @@ void task_initialize(void);
 /* Task group data structure management */
 
 #ifdef CONFIG_MM_TASK_HEAP
-int group_heap_initialize(FAR struct mm_heap_s **heap,
-                          size_t alignment, size_t heapsize);
-int group_heap_size(FAR struct mm_heap_s *heap);
-void group_heap_uninitialize(FAR struct mm_heap_s *heap);
+
+#if defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)
+#  define GROUP_HEAP USERSPACE_HEAP
+#else
+#  define GROUP_HEAP g_mmheap
+#endif
+
+static inline_function int
+group_heap_initialize(FAR struct mm_heap_s **heap,
+                      size_t alignment, size_t heapsize)
+{
+  if (heapsize == 0)
+    {
+      heapsize = CONFIG_MM_TASK_HEAP_DEFAULT_SIZE;
+    }
+
+  if (alignment == 0)
+    {
+      alignment = CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN;
+    }
+
+  *heap = mm_memalign(GROUP_HEAP, alignment, heapsize);
+  if (*heap != NULL)
+    {
+      mm_initialize("Task heap", *heap, heapsize);
+    }
+  else
+    {
+      return -ENOMEM;
+    }
+
+  return OK;
+}
+
+static inline_function int group_heap_size(FAR struct mm_heap_s *heap)
+{
+  return mm_malloc_size(GROUP_HEAP, heap);
+}
+
+static inline_function
+void group_heap_uninitialize(FAR struct mm_heap_s *heap)
+{
+  mm_uninitialize(heap);
+  if (mm_heapmember(GROUP_HEAP, heap))
+    {
+      mm_free(GROUP_HEAP, heap);
+    }
+}
+
 #else
 #  define group_heap_initialize(heap, alignment, heapsize) (0)
 #  define group_heap_size(heap) (0)
@@ -73,8 +121,34 @@ int group_allocate(FAR struct tcb_s *tcb, int ttype, size_t heapsize);
 
 void group_initialize(FAR struct tcb_s *tcb);
 #ifndef CONFIG_DISABLE_PTHREAD
-void group_bind(FAR struct tcb_s *tcb);
-void group_join(FAR struct tcb_s *tcb);
+static inline_function void group_bind(FAR struct tcb_s *tcb)
+{
+  FAR struct tcb_s *ptcb = this_task();
+
+  DEBUGASSERT(ptcb && tcb && ptcb->group && !tcb->group);
+
+  /* Copy the group reference from the parent to the child */
+
+  tcb->group = ptcb->group;
+}
+
+static inline_function void group_join(FAR struct tcb_s *tcb)
+{
+  FAR struct task_group_s *group;
+  irqstate_t flags;
+
+  DEBUGASSERT(tcb && tcb->group);
+
+  /* Get the group from the TCB */
+
+  group = tcb->group;
+
+  /* Add the member to the group */
+
+  flags = spin_lock_irqsave(&group->tg_lock);
+  sq_addfirst(&tcb->member, &group->tg_members);
+  spin_unlock_irqrestore(&group->tg_lock, flags);
+}
 #endif
 void group_leave(FAR struct tcb_s *tcb);
 void group_drop(FAR struct task_group_s *group);

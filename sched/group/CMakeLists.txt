@@ -22,7 +22,6 @@
 
 set(SRCS
     group_create.c
-    group_join.c
     group_leave.c
     group_setupidlefiles.c
     group_setuptaskfiles.c
@@ -65,7 +64,4 @@ if(CONFIG_MM_KERNEL_HEAP OR CONFIG_MM_TASK_HEAP)
     group_memalign.c)
 endif()
 
-if(CONFIG_MM_TASK_HEAP)
-  list(APPEND SRCS group_heap.c)
-endif()
 target_sources(sched PRIVATE ${SRCS})

@@ -93,8 +93,8 @@ static DEFINE_PER_CPU_BMP(spinlock_t, g_child_pool_lock) = SP_UNLOCKED;
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_CHILDSTATUS
-static void group_dump_children(FAR struct task_group_s *group,
-                                FAR const char *msg)
+static inline_function void
+group_dump_children(FAR struct task_group_s *group, FAR const char *msg)
 {
   FAR struct child_status_s *child;
   int i;
