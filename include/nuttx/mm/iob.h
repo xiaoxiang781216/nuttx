@@ -34,6 +34,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <assert.h>
 #include <sys/param.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/mempool.h>
@@ -729,7 +730,21 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob);
  ****************************************************************************/
 
 #ifdef CONFIG_IOB_NOTIFIER
-int iob_notifier_setup(int qid, worker_t worker, FAR void *arg);
+static inline_function
+int iob_notifier_setup(int qid, worker_t worker, FAR void *arg)
+{
+  struct work_notifier_s info;
+
+  DEBUGASSERT(worker != NULL);
+
+  info.evtype    = WORK_IOB_AVAIL;
+  info.qid       = qid;
+  info.qualifier = NULL;
+  info.arg       = arg;
+  info.worker    = worker;
+
+  return work_notifier_setup(&info);
+}
 #endif
 
 /****************************************************************************
@@ -751,7 +766,10 @@ int iob_notifier_setup(int qid, worker_t worker, FAR void *arg);
  ****************************************************************************/
 
 #ifdef CONFIG_IOB_NOTIFIER
-void iob_notifier_teardown(int key);
+static inline_function void iob_notifier_teardown(int key)
+{
+  work_notifier_teardown(key);
+}
 #endif
 
 /****************************************************************************
@@ -763,7 +781,16 @@ void iob_notifier_teardown(int key);
  *
  ****************************************************************************/
 
-void iob_free_chain(FAR struct iob_s *iob);
+static inline_function
+void iob_free_chain(FAR struct iob_s *iob)
+{
+  FAR struct iob_s *next;
+
+  for (; iob; iob = next)
+    {
+      next = iob_free(iob);
+    }
+}
 
 /****************************************************************************
  * Name: iob_add_queue
@@ -798,7 +825,32 @@ void iob_concat_queue(FAR struct iob_queue_s *dest,
  *
  ****************************************************************************/
 
-FAR struct iob_s *iob_remove_queue(FAR struct iob_queue_s *iobq);
+static inline_function
+FAR struct iob_s *iob_remove_queue(FAR struct iob_queue_s *iobq)
+{
+  FAR struct iob_s *iob;
+  FAR struct iob_s *last;
+
+  iob = iobq->qh_head;
+  if (iob != NULL)
+    {
+      last = iob;
+      while (!IOB_FLAG_TEST(last, IOB_CHAIN_END))
+        {
+          last = IOB_LINK_GET(last);
+        }
+
+      iobq->qh_head = IOB_LINK_GET(last);
+      if (iobq->qh_head == NULL)
+        {
+          iobq->qh_tail = NULL;
+        }
+
+      last->io_flink = NULL;
+    }
+
+  return iob;
+}
 
 /****************************************************************************
  * Name: iob_peek_queue
@@ -815,7 +867,11 @@ FAR struct iob_s *iob_remove_queue(FAR struct iob_queue_s *iobq);
  *
  ****************************************************************************/
 
-FAR struct iob_s *iob_peek_queue(FAR struct iob_queue_s *iobq);
+static inline_function
+FAR struct iob_s *iob_peek_queue(FAR struct iob_queue_s *iobq)
+{
+  return iobq->qh_head;
+}
 
 /****************************************************************************
  * Name: iob_free_queue
@@ -825,7 +881,31 @@ FAR struct iob_s *iob_peek_queue(FAR struct iob_queue_s *iobq);
  *
  ****************************************************************************/
 
-void iob_free_queue(FAR struct iob_queue_s *qhead);
+static inline_function
+void iob_free_queue(FAR struct iob_queue_s *qhead)
+{
+  FAR struct iob_s *iob;
+  FAR struct iob_s *next_chain;
+  FAR struct iob_s *last;
+
+  iob = qhead->qh_head;
+  qhead->qh_head = NULL;
+  qhead->qh_tail = NULL;
+
+  while (iob != NULL)
+    {
+      last = iob;
+      while (!IOB_FLAG_TEST(last, IOB_CHAIN_END))
+        {
+          last = IOB_LINK_GET(last);
+        }
+
+      next_chain = IOB_LINK_GET(last);
+      last->io_flink = NULL;
+      iob_free_chain(iob);
+      iob = next_chain;
+    }
+}
 
 /****************************************************************************
  * Name: iob_free_queue_qentry
@@ -846,8 +926,49 @@ void iob_free_queue_qentry(FAR struct iob_s *iob,
  *
  ****************************************************************************/
 
-unsigned int iob_get_queue_size(FAR struct iob_queue_s *queue);
-unsigned int iob_get_queue_entry_count(FAR struct iob_queue_s *queue);
+static inline_function
+unsigned int iob_get_queue_size(FAR struct iob_queue_s *queue)
+{
+  FAR struct iob_s *iob;
+  unsigned int total = 0;
+
+  iob = queue->qh_head;
+  while (iob != NULL)
+    {
+      total += iob->io_pktlen;
+
+      while (!IOB_FLAG_TEST(iob, IOB_CHAIN_END))
+        {
+          iob = IOB_LINK_GET(iob);
+        }
+
+      iob = IOB_LINK_GET(iob);
+    }
+
+  return total;
+}
+
+static inline_function
+unsigned int iob_get_queue_entry_count(FAR struct iob_queue_s *queue)
+{
+  FAR struct iob_s *iob;
+  unsigned int count = 0;
+
+  iob = queue->qh_head;
+  while (iob != NULL)
+    {
+      count++;
+
+      while (!IOB_FLAG_TEST(iob, IOB_CHAIN_END))
+        {
+          iob = IOB_LINK_GET(iob);
+        }
+
+      iob = IOB_LINK_GET(iob);
+    }
+
+  return count;
+}
 
 /****************************************************************************
  * Name: iob_copyin
@@ -895,7 +1016,16 @@ int iob_copyout(FAR uint8_t *dest, FAR const struct iob_s *iob,
  *
  ****************************************************************************/
 
-unsigned int iob_tailroom(FAR struct iob_s *iob);
+static inline_function
+unsigned int iob_tailroom(FAR struct iob_s *iob)
+{
+  while (IOB_LINK_GET(iob) != NULL)
+    {
+      iob = IOB_LINK_GET(iob);
+    }
+
+  return IOB_BUFSIZE(iob) - (iob->io_offset + iob->io_len);
+}
 
 /****************************************************************************
  * Name: iob_clone
@@ -941,7 +1071,19 @@ int iob_clone_partial(FAR struct iob_s *iob1, unsigned int len,
  *
  ****************************************************************************/
 
-void iob_concat(FAR struct iob_s *iob1, FAR struct iob_s *iob2);
+static inline_function
+void iob_concat(FAR struct iob_s *iob1, FAR struct iob_s *iob2)
+{
+  iob1->io_pktlen += iob2->io_pktlen;
+  iob2->io_pktlen  = 0;
+
+  while (IOB_LINK_GET(iob1) != NULL)
+    {
+      iob1 = IOB_LINK_GET(iob1);
+    }
+
+  iob1->io_flink = iob2;
+}
 
 /****************************************************************************
  * Name: iob_trimhead
@@ -970,8 +1112,21 @@ FAR struct iob_s *iob_trimhead(FAR struct iob_s *iob, unsigned int trimlen);
  *
  ****************************************************************************/
 
+static inline_function
 FAR struct iob_s *iob_trimhead_queue(FAR struct iob_queue_s *qhead,
-                                     unsigned int trimlen);
+                                     unsigned int trimlen)
+{
+  FAR struct iob_s *iob;
+
+  iob = qhead->qh_head;
+  if (iob)
+    {
+      iob = iob_trimhead(iob, trimlen);
+      qhead->qh_head = iob;
+    }
+
+  return iob;
+}
 
 /****************************************************************************
  * Name: iob_trimtail
@@ -1042,7 +1197,16 @@ int iob_update_pktlen(FAR struct iob_s *iob, unsigned int pktlen,
  *
  ****************************************************************************/
 
-int iob_count(FAR struct iob_s *iob);
+static inline_function
+int iob_count(FAR struct iob_s *iob)
+{
+  int count;
+
+  for (count = 0; iob != NULL;
+       iob = IOB_LINK_GET(iob), count++);
+
+  return count;
+}
 
 /****************************************************************************
  * Name: iob_foreach

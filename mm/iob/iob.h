@@ -103,7 +103,10 @@ extern FAR struct mempool_s *g_iob_head_pool;
  ****************************************************************************/
 
 #ifdef CONFIG_IOB_NOTIFIER
-void iob_notifier_signal(void);
+static inline_function void iob_notifier_signal(void)
+{
+  work_notifier_signal(WORK_IOB_AVAIL, NULL);
+}
 #endif
 
 /****************************************************************************

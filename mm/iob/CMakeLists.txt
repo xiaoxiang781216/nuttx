@@ -26,32 +26,19 @@ if(CONFIG_MM_IOB)
       iob_add_queue.c
       iob_alloc.c
       iob_clone.c
-      iob_concat.c
       iob_copyin.c
       iob_copyout.c
       iob_contig.c
       iob_foreach.c
       iob_free.c
-      iob_free_chain.c
-      iob_free_queue.c
       iob_initialize.c
       iob_pack.c
-      iob_peek_queue.c
-      iob_remove_queue.c
       iob_trimhead.c
-      iob_trimhead_queue.c
       iob_trimtail.c
       iob_navail.c
       iob_free_queue_qentry.c
-      iob_tailroom.c
-      iob_get_queue_info.c
       iob_reserve.c
-      iob_update_pktlen.c
-      iob_count.c)
-
-  if(CONFIG_IOB_NOTIFIER)
-    list(APPEND SRCS iob_notifier.c)
-  endif()
+      iob_update_pktlen.c)
 
   if(CONFIG_DEBUG_FEATURES)
     list(APPEND SRCS iob_dump.c)
