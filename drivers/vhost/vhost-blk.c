@@ -106,6 +106,9 @@ static ssize_t vhost_blk_rdwr_handler(FAR struct vhost_blk_priv_s *priv,
       return -ENOBUFS;
     }
 
+  file_seek(&priv->bdev,
+            req->sector << VIRTIO_BLK_SECTOR_BITS, SEEK_SET);
+
   if (write)
     {
       ret = file_write(&priv->bdev, vb.buf, len);
@@ -271,7 +274,7 @@ static int vhost_blk_probe(FAR struct vhost_device *hdev)
 
   vqname[0]   = "virtio_blk";
   callback[0] = vhost_blk_callback;
-  ret = vhost_create_virtqueues(hdev, 0, 1, vqname, callback);
+  ret = vhost_create_virtqueues(hdev, 0, 1, vqname, callback, NULL);
   if (ret < 0)
     {
       vhosterr("vhost_device_create_virtqueue failed, ret=%d\n", ret);
