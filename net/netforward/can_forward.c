@@ -161,18 +161,14 @@ errout:
 static inline_function int can_forward_filter(FAR struct can_filter *filter,
                                               canid_t id)
 {
-  if (id & CAN_INV_FILTER)
+  if (filter->can_id & CAN_INV_FILTER)
     {
       return ((id & filter->can_mask) !=
                 ((filter->can_id & ~CAN_INV_FILTER) & filter->can_mask));
     }
-  else
-    {
-      return ((id & filter->can_mask) ==
-                (filter->can_id & filter->can_mask));
-    }
 
-  return 0;
+  return ((id & filter->can_mask) ==
+            (filter->can_id & filter->can_mask));
 }
 
 /****************************************************************************
