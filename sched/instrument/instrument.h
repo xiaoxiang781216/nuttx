@@ -24,23 +24,24 @@
 #define __SCHED_INSTRUMENT_INSTRUMENT_H
 
 /****************************************************************************
- * Public Functions prototypes
+ * Included Files
  ****************************************************************************/
+
+#include <nuttx/instrument.h>
 
 /****************************************************************************
- * Name: instrument_initialize
- *
- * Description:
- *   This function is called to initialize all the instrument functions
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Does not return.
- *
+ * Inline functions
  ****************************************************************************/
 
-void instrument_initialize(void);
+#if CONFIG_SCHED_STACK_RECORD > 0
+extern struct instrument_s g_stack_monitor;
+#endif
+
+static inline_function void instrument_initialize(void)
+{
+#if CONFIG_SCHED_STACK_RECORD > 0
+  instrument_register(&g_stack_monitor);
+#endif
+}
 
 #endif

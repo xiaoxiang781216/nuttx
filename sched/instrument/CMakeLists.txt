@@ -20,10 +20,12 @@
 #
 # ##############################################################################
 
-set(SRCS instrument.c)
+set(SRCS)
 
 if(NOT "${CONFIG_SCHED_STACK_RECORD}" STREQUAL "0")
   list(APPEND SRCS stack_monitor.c)
 endif()
 
-target_sources(sched PRIVATE ${SRCS})
+if(SRCS)
+  target_sources(sched PRIVATE ${SRCS})
+endif()
