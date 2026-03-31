@@ -3008,7 +3008,8 @@ static int fat_stat_file(FAR struct fat_mountpt_s *fs,
  *
  ****************************************************************************/
 
-static int fat_stat_root(FAR struct fat_mountpt_s *fs, FAR struct stat *buf)
+static inline int fat_stat_root(FAR struct fat_mountpt_s *fs,
+                                FAR struct stat *buf)
 {
   /* Clear the "struct stat"  */
 

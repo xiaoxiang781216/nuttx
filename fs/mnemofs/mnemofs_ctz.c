@@ -156,7 +156,7 @@ static void   ctz_copyidxptrs(FAR const struct mfs_sb_s * const sb,
  *
  ****************************************************************************/
 
-static mfs_t ctz_idx_nptrs(const mfs_t idx)
+static inline mfs_t ctz_idx_nptrs(const mfs_t idx)
 {
   mfs_t ret;
 
@@ -224,8 +224,8 @@ static void ctz_off2loc(FAR const struct mfs_sb_s * const sb, mfs_t off,
  *
  ****************************************************************************/
 
-static mfs_t ctz_blkdatasz(FAR const struct mfs_sb_s * const sb,
-                           const mfs_t idx)
+static inline mfs_t ctz_blkdatasz(FAR const struct mfs_sb_s * const sb,
+                                  const mfs_t idx)
 {
   mfs_t ret;
 

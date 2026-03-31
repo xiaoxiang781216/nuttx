@@ -76,7 +76,8 @@ struct romfs_entryname_s
  *
  ****************************************************************************/
 
-static uint32_t romfs_devread32(FAR struct romfs_mountpt_s *rm, int ndx)
+static inline
+uint32_t romfs_devread32(FAR struct romfs_mountpt_s *rm, int ndx)
 {
   /* This should not read past the end of the sector since the directory
    * entries are aligned at 16-byte boundaries.

@@ -91,7 +91,8 @@ struct nxffs_pack_s
  *
  ****************************************************************************/
 
-static off_t nxffs_getblock(FAR struct nxffs_volume_s *volume, off_t offset)
+static inline
+off_t nxffs_getblock(FAR struct nxffs_volume_s *volume, off_t offset)
 {
   return offset / volume->geo.blocksize;
 }
@@ -112,8 +113,8 @@ static off_t nxffs_getblock(FAR struct nxffs_volume_s *volume, off_t offset)
  *
  ****************************************************************************/
 
-static off_t nxffs_getoffset(FAR struct nxffs_volume_s *volume,
-                             off_t offset, off_t block)
+static inline off_t nxffs_getoffset(FAR struct nxffs_volume_s *volume,
+                                    off_t offset, off_t block)
 {
   return offset - block * volume->geo.blocksize;
 }
@@ -133,8 +134,8 @@ static off_t nxffs_getoffset(FAR struct nxffs_volume_s *volume,
  *
  ****************************************************************************/
 
-static off_t nxffs_packtell(FAR struct nxffs_volume_s *volume,
-                            FAR struct nxffs_pack_s *pack)
+static inline off_t nxffs_packtell(FAR struct nxffs_volume_s *volume,
+                                   FAR struct nxffs_pack_s *pack)
 {
   return pack->ioblock * volume->geo.blocksize + pack->iooffset;
 }

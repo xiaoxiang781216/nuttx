@@ -215,9 +215,28 @@ extern "C"
  *
  ****************************************************************************/
 
-size_t procfs_memcpy(FAR const char *src, size_t srclen,
-                     FAR char *dest, size_t destlen,
-                     FAR off_t *offset);
+static inline size_t procfs_memcpy(FAR const char *src, size_t srclen,
+                                   FAR char *dest, size_t destlen,
+                                   FAR off_t *offset)
+{
+  size_t copysize;
+  size_t lnoffset;
+
+  lnoffset = *offset;
+  if (srclen < lnoffset)
+    {
+      *offset -= srclen;
+      return 0;
+    }
+
+  srclen -= lnoffset;
+  src    += lnoffset;
+  *offset = 0;
+
+  copysize = srclen < destlen ? srclen : destlen;
+  memcpy(dest, src, copysize);
+  return copysize;
+}
 
 /****************************************************************************
  * Name: procfs_snprintf

@@ -225,7 +225,7 @@ static void lru_nodesearch(FAR const struct mfs_sb_s * const sb,
  *
  ****************************************************************************/
 
-static bool lru_islrufull(FAR struct mfs_sb_s * const sb)
+static inline bool lru_islrufull(FAR struct mfs_sb_s * const sb)
 {
   return !MFS_FLUSH(sb) && list_length(&MFS_LRU(sb)) == CONFIG_MNEMOFS_NLRU;
 }
@@ -249,8 +249,8 @@ static bool lru_islrufull(FAR struct mfs_sb_s * const sb)
  *
  ****************************************************************************/
 
-static bool lru_isnodefull(FAR struct mfs_sb_s * const sb,
-                           FAR struct mfs_node_s *node)
+static inline bool lru_isnodefull(FAR struct mfs_sb_s * const sb,
+                                  FAR struct mfs_node_s *node)
 {
   return !MFS_FLUSH(sb) && node->n_list == CONFIG_MNEMOFS_NLRUDELTA;
 }
@@ -266,7 +266,7 @@ static bool lru_isnodefull(FAR struct mfs_sb_s * const sb,
  *
  ****************************************************************************/
 
-static void lru_free_delta(FAR struct mfs_delta_s *delta)
+static inline void lru_free_delta(FAR struct mfs_delta_s *delta)
 {
   fs_heap_free(delta->upd);
   fs_heap_free(delta);
@@ -622,7 +622,7 @@ errout:
   return ret;
 }
 
-static void lru_node_free(FAR struct mfs_node_s *node)
+static inline void lru_node_free(FAR struct mfs_node_s *node)
 {
   mfs_free_patharr(node->path);
   fs_heap_free(node);

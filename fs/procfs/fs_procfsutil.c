@@ -91,37 +91,6 @@
  *
  ****************************************************************************/
 
-size_t procfs_memcpy(FAR const char *src, size_t srclen,
-                     FAR char *dest, size_t destlen,
-                     FAR off_t *offset)
-{
-  size_t copysize;
-  size_t lnoffset;
-
-  /* Will this line take us past the offset? */
-
-  lnoffset = *offset;
-  if (srclen < lnoffset)
-    {
-      /* No... decrement the offset and return without doing anything */
-
-      *offset -= srclen;
-      return 0;
-    }
-
-  /* Handle the remaining offset */
-
-  srclen -= lnoffset;
-  src    += lnoffset;
-  *offset = 0;
-
-  /* Copy the line into the user destination buffer */
-
-  copysize = MIN(srclen, destlen);
-  memcpy(dest, src, copysize);
-  return copysize;
-}
-
 /****************************************************************************
  * Name: procfs_snprintf
  *

@@ -253,7 +253,7 @@ static int fat_ucstoutf8(FAR uint8_t *dest, uint8_t offset, lfnchar ucs)
  ****************************************************************************/
 
 #ifdef CONFIG_FAT_LFN
-static uint8_t fat_lfnchecksum(FAR const uint8_t *sfname)
+static inline uint8_t fat_lfnchecksum(FAR const uint8_t *sfname)
 {
   uint8_t sum = 0;
   int i;
@@ -2201,7 +2201,7 @@ static int fat_putsfname(FAR struct fat_mountpt_s *fs,
  ****************************************************************************/
 
 #ifdef CONFIG_FAT_LFN
-static void fat_initlfname(FAR uint8_t *chunk, int nchunk)
+static inline void fat_initlfname(FAR uint8_t *chunk, int nchunk)
 {
   int i;
 

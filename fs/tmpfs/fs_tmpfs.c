@@ -257,7 +257,7 @@ const struct mountpt_operations g_tmpfs_operations =
  * Name: tmpfs_get_current_time
  ****************************************************************************/
 
-static void tmpfs_get_current_time(FAR struct timespec *ts)
+static inline void tmpfs_get_current_time(FAR struct timespec *ts)
 {
   clock_gettime(CLOCK_REALTIME, ts);
 }
@@ -266,7 +266,7 @@ static void tmpfs_get_current_time(FAR struct timespec *ts)
  * Name: tmpfs_update_atime
  ****************************************************************************/
 
-static void tmpfs_update_atime(FAR struct tmpfs_object_s *obj)
+static inline void tmpfs_update_atime(FAR struct tmpfs_object_s *obj)
 {
   tmpfs_get_current_time(&obj->to_atime);
 }
@@ -275,7 +275,7 @@ static void tmpfs_update_atime(FAR struct tmpfs_object_s *obj)
  * Name: tmpfs_update_mtime
  ****************************************************************************/
 
-static void tmpfs_update_mtime(FAR struct tmpfs_object_s *obj)
+static inline void tmpfs_update_mtime(FAR struct tmpfs_object_s *obj)
 {
   tmpfs_get_current_time(&obj->to_mtime);
 }
@@ -284,7 +284,7 @@ static void tmpfs_update_mtime(FAR struct tmpfs_object_s *obj)
  * Name: tmpfs_update_ctime
  ****************************************************************************/
 
-static void tmpfs_update_ctime(FAR struct tmpfs_object_s *obj)
+static inline void tmpfs_update_ctime(FAR struct tmpfs_object_s *obj)
 {
   tmpfs_get_current_time(&obj->to_ctime);
 }

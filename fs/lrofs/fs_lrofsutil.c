@@ -103,8 +103,9 @@ static int lrofs_nodeinfo_compare(FAR const void *a, FAR const void *b)
  * Name: lrofs_devmemcpy
  ****************************************************************************/
 
-static void lrofs_devmemcpy(FAR struct lrofs_mountpt_s *lm,
-                            int ndx, FAR const void *buf, size_t len)
+static inline void lrofs_devmemcpy(FAR struct lrofs_mountpt_s *lm,
+                                   int ndx, FAR const void *buf,
+                                   size_t len)
 {
   memcpy(lm->lm_devbuffer + ndx, buf, len);
 }
@@ -113,8 +114,8 @@ static void lrofs_devmemcpy(FAR struct lrofs_mountpt_s *lm,
  * Name: lrofs_devstrcpy
  ****************************************************************************/
 
-static void lrofs_devstrcpy(FAR struct lrofs_mountpt_s *lm,
-                            int ndx, FAR const char *buf)
+static inline void lrofs_devstrcpy(FAR struct lrofs_mountpt_s *lm,
+                                   int ndx, FAR const char *buf)
 {
   strcpy((FAR char *)lm->lm_devbuffer + ndx, buf);
 }
@@ -127,7 +128,8 @@ static void lrofs_devstrcpy(FAR struct lrofs_mountpt_s *lm,
  *
  ****************************************************************************/
 
-static uint32_t lrofs_devload32(FAR struct lrofs_mountpt_s *lm, int ndx)
+static inline
+uint32_t lrofs_devload32(FAR struct lrofs_mountpt_s *lm, int ndx)
 {
   return ((((uint32_t)lm->lm_devbuffer[ndx]     & 0xff) << 24) |
           (((uint32_t)lm->lm_devbuffer[ndx + 1] & 0xff) << 16) |
@@ -146,7 +148,8 @@ static uint32_t lrofs_devload32(FAR struct lrofs_mountpt_s *lm, int ndx)
  *
  ****************************************************************************/
 
-static uint32_t lrofs_devread32(FAR struct lrofs_mountpt_s *lm, int ndx)
+static inline
+uint32_t lrofs_devread32(FAR struct lrofs_mountpt_s *lm, int ndx)
 {
   /* This should not read past the end of the sector since the directory
    * entries are aligned at 16-byte boundaries.
@@ -166,8 +169,8 @@ static uint32_t lrofs_devread32(FAR struct lrofs_mountpt_s *lm, int ndx)
  *
  ****************************************************************************/
 
-static void lrofs_devwrite32(FAR struct lrofs_mountpt_s *lm,
-                             int ndx, uint32_t value)
+static inline void lrofs_devwrite32(FAR struct lrofs_mountpt_s *lm,
+                                    int ndx, uint32_t value)
 {
   /* Write the 32-bit value to the specified index in the buffer */
 
