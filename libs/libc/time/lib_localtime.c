@@ -295,8 +295,8 @@ static const char g_etc_utc[] = "Etc/UTC";
 static FAR const char *g_utc = g_etc_utc + sizeof("Etc/") - 1;
 
 static char g_lcl_tzname[MY_TZNAME_MAX + 1];
-static int g_lcl_isset;
-static int g_gmt_isset;
+static volatile int g_lcl_isset;
+static volatile int g_gmt_isset;
 static FAR struct state_s g_lcl_st;
 static FAR struct state_s g_gmt_st;
 static rmutex_t g_lcl_lock = NXRMUTEX_INITIALIZER;
@@ -391,8 +391,13 @@ static int  tzparse(FAR const char *name, FAR struct state_s *sp,
  * Private Functions
  ****************************************************************************/
 
-static inline void tz_lock(FAR rmutex_t *lock)
+static inline void tz_lock(FAR rmutex_t *lock, int isset)
 {
+  if (isset)
+    {
+      return;
+    }
+
 #if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
   if (up_interrupt_context() || (sched_idletask() && OSINIT_IDLELOOP()))
     {
@@ -403,8 +408,13 @@ static inline void tz_lock(FAR rmutex_t *lock)
   nxrmutex_lock(lock);
 }
 
-static inline void tz_unlock(FAR rmutex_t *lock)
+static inline void tz_unlock(FAR rmutex_t *lock, int isset)
 {
+  if (isset)
+    {
+      return;
+    }
+
 #if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
   if (up_interrupt_context() || (sched_idletask() && OSINIT_IDLELOOP()))
     {
@@ -1931,7 +1941,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
       return NULL;
     }
 
-  tz_lock(&g_lcl_lock);
+  tz_lock(&g_lcl_lock, g_lcl_isset);
   if ((sp->goback && t < sp->ats[0]) ||
       (sp->goahead && t > sp->ats[sp->timecnt - 1]))
     {
@@ -1968,7 +1978,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
 
       if (newt < sp->ats[0] || newt > sp->ats[sp->timecnt - 1])
         {
-          tz_unlock(&g_lcl_lock);
+          tz_unlock(&g_lcl_lock, g_lcl_isset);
           return NULL; /* "cannot happen" */
         }
 
@@ -1989,14 +1999,14 @@ static FAR struct tm *localsub(FAR const time_t *timep,
 
           if (newy < INT_MIN || newy > INT_MAX)
             {
-              tz_unlock(&g_lcl_lock);
+              tz_unlock(&g_lcl_lock, g_lcl_isset);
               return NULL;
             }
 
           result->tm_year = newy;
         }
 
-      tz_unlock(&g_lcl_lock);
+      tz_unlock(&g_lcl_lock, g_lcl_isset);
       return result;
     }
 
@@ -2042,7 +2052,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
       result->tm_zone = tzname[result->tm_isdst];
     }
 
-  tz_unlock(&g_lcl_lock);
+  tz_unlock(&g_lcl_lock, g_lcl_isset);
   return result;
 }
 
@@ -2053,7 +2063,7 @@ static FAR struct tm *gmtsub(FAR const time_t *timep,
 {
   if (!g_gmt_isset)
     {
-      tz_lock(&g_gmt_lock);
+      tz_lock(&g_gmt_lock, 0);
 
       if (!g_gmt_isset)
         {
@@ -2061,7 +2071,7 @@ static FAR struct tm *gmtsub(FAR const time_t *timep,
           gmtload(&g_gmt_st);
         }
 
-      tz_unlock(&g_gmt_lock);
+      tz_unlock(&g_gmt_lock, 0);
     }
 
   tmp->tm_zone = ((FAR char *)(offset ? g_wildabbr :
@@ -2805,7 +2815,8 @@ void tzset(void)
       return;
     }
 
-  tz_lock(&g_lcl_lock);
+  g_lcl_isset = 0;
+  tz_lock(&g_lcl_lock, 0);
 
   if (zoneinit(name) != 0)
     {
@@ -2816,7 +2827,7 @@ void tzset(void)
 
   settzname();
   g_lcl_isset = 1;
-  tz_unlock(&g_lcl_lock);
+  tz_unlock(&g_lcl_lock, 0);
 }
 
 FAR struct tm *localtime(FAR const time_t *timep)
