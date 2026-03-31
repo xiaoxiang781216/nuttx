@@ -58,13 +58,6 @@ static DEFINE_PER_CPU_BMP(rw_semaphore_t, g_inode_lock) = RWSEM_INITIALIZER;
  *
  ****************************************************************************/
 
-void inode_initialize(void)
-{
-  /* Reserve the root node */
-
-  inode_root_reserve();
-}
-
 /****************************************************************************
  * Name: inode_lock
  *

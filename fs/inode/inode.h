@@ -165,6 +165,8 @@ extern const struct file_operations g_dir_fileops;
  * Public Function Prototypes
  ****************************************************************************/
 
+void inode_root_reserve(void);
+
 /****************************************************************************
  * Name: inode_initialize
  *
@@ -174,7 +176,10 @@ extern const struct file_operations g_dir_fileops;
  *
  ****************************************************************************/
 
-void inode_initialize(void);
+static inline void inode_initialize(void)
+{
+  inode_root_reserve();
+}
 
 /****************************************************************************
  * Name: inode_lock
@@ -342,16 +347,6 @@ void inode_free(FAR struct inode *inode);
 const char *inode_nextname(FAR const char *name);
 
 /****************************************************************************
- * Name: inode_root_reserve
- *
- * Description:
- *   Reserve the root node for the pseudo file system.
- *
- ****************************************************************************/
-
-void inode_root_reserve(void);
-
-/****************************************************************************
  * Name: inode_reserve
  *
  * Description:
@@ -431,7 +426,13 @@ int inode_remove(FAR const char *path);
  *
  ****************************************************************************/
 
-void inode_addref(FAR struct inode *inode);
+static inline void inode_addref(FAR struct inode *inode)
+{
+  if (inode)
+    {
+      atomic_add(&inode->i_crefs, 1);
+    }
+}
 
 /****************************************************************************
  * Name: inode_release
@@ -441,7 +442,19 @@ void inode_addref(FAR struct inode *inode);
  *
  ****************************************************************************/
 
-void inode_release(FAR struct inode *inode);
+static inline void inode_release(FAR struct inode *inode)
+{
+  if (inode)
+    {
+      /* Decrement the references of the inode */
+
+      if (atomic_sub(&inode->i_crefs, 1) <= 1)
+        {
+          DEBUGASSERT(inode->i_peer == NULL);
+          inode_free(inode);
+        }
+    }
+}
 
 /****************************************************************************
  * Name: foreach_inode

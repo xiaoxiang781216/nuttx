@@ -51,7 +51,7 @@ static DEFINE_PER_CPU_BSS_BMP(ino_t, g_ino);
  * Name: inode_namelen
  ****************************************************************************/
 
-static int inode_namelen(FAR const char *name)
+static inline int inode_namelen(FAR const char *name)
 {
   FAR const char *tmp = name;
   while (*tmp && *tmp != '/')
@@ -66,7 +66,7 @@ static int inode_namelen(FAR const char *name)
  * Name: inode_namecpy
  ****************************************************************************/
 
-static void inode_namecpy(FAR char *dest, FAR const char *src)
+static inline void inode_namecpy(FAR char *dest, FAR const char *src)
 {
   while (*src && *src != '/')
     {
