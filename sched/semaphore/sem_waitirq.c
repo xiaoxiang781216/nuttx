@@ -118,7 +118,7 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
   bool mutex;
 
 #ifdef CONFIG_ARCH_ADDRENV
-  FAR struct addrenv_s *oldenv;
+  FAR struct addrenv_s *oldenv = NULL;
 
   if (wtcb->group->tg_addrenv_own)
     {

@@ -406,7 +406,7 @@ static void nxsem_restore_priority(FAR struct tcb_s *htcb)
       FAR struct semholder_s *pholder;
 
 #ifdef CONFIG_ARCH_ADDRENV
-      FAR struct addrenv_s *oldenv;
+      FAR struct addrenv_s *oldenv = NULL;
 
       if (htcb->group->tg_addrenv_own)
         {

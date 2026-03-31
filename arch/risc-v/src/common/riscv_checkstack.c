@@ -183,7 +183,7 @@ size_t up_check_tcbstack(struct tcb_s *tcb, size_t check_size)
   size_t size;
 
 #ifdef CONFIG_ARCH_ADDRENV
-  struct addrenv_s *oldenv;
+  struct addrenv_s *oldenv = NULL;
 
   if (tcb != g_running_task && tcb->group->tg_addrenv_own != NULL)
     {

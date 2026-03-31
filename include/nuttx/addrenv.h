@@ -40,6 +40,8 @@
 
 #include <nuttx/atomic.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/kmalloc.h>
+#include <nuttx/arch.h>
 
 #include <arch/arch.h>
 
@@ -335,7 +337,21 @@ struct addrenv_reserve_s
  *
  ****************************************************************************/
 
-FAR struct addrenv_s *addrenv_allocate(void);
+static inline_function
+FAR struct addrenv_s *addrenv_allocate(void)
+{
+  FAR struct addrenv_s *addrenv;
+
+  addrenv = kmm_zalloc(sizeof(struct addrenv_s));
+  if (addrenv)
+    {
+      /* Take reference so this won't get freed */
+
+      atomic_set(&addrenv->refs, 1);
+    }
+
+  return addrenv;
+}
 
 /****************************************************************************
  * Name: addrenv_switch
@@ -374,7 +390,21 @@ int addrenv_switch(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-int addrenv_attach(FAR struct tcb_s *tcb, FAR struct addrenv_s *addrenv);
+static inline_function
+int addrenv_attach(FAR struct tcb_s *tcb, FAR struct addrenv_s *addrenv)
+{
+  FAR struct task_group_s *group = tcb->group;
+
+  if (group == NULL)
+    {
+      group = (FAR struct task_group_s *)(tcb + 1);
+    }
+
+  group->tg_addrenv_own = addrenv;
+  tcb->addrenv_curr = group->tg_addrenv_own;
+
+  return OK;
+}
 
 /****************************************************************************
  * Name: addrenv_join
@@ -411,7 +441,71 @@ int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-int addrenv_leave(FAR struct tcb_s *tcb);
+static inline_function int addrenv_leave(FAR struct tcb_s *tcb)
+{
+  int ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
+  int ret;
+
+  ret = up_addrenv_detach(tcb);
+
+  addrenv_drop(tcb->group->tg_addrenv_own, false);
+  if (ttype == TCB_FLAG_TTYPE_TASK)
+    {
+      tcb->group->tg_addrenv_own = NULL;
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: addrenv_take
+ *
+ * Description:
+ *   Take a reference to an address environment.
+ *
+ * Input Parameters:
+ *   addrenv - The address environment.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+static inline_function void addrenv_take(FAR struct addrenv_s *addrenv)
+{
+  if (addrenv)
+    {
+      atomic_add(&addrenv->refs, 1);
+    }
+}
+
+/****************************************************************************
+ * Name: addrenv_give
+ *
+ * Description:
+ *   Give back a reference to an address environment, obtaining the resulting
+ *   reference counter as returned value.
+ *
+ * Input Parameters:
+ *   addrenv - The address environment.
+ *
+ * Returned Value:
+ *   Remaining reference count.
+ *
+ ****************************************************************************/
+
+static inline_function int addrenv_give(FAR struct addrenv_s *addrenv)
+{
+  int refs = 0;
+
+  if (addrenv)
+    {
+      refs = (int)atomic_sub(&addrenv->refs, 1);
+      refs--;
+    }
+
+  return refs;
+}
 
 /****************************************************************************
  * Name: addrenv_select
@@ -431,8 +525,16 @@ int addrenv_leave(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
+static inline_function
 int addrenv_select(FAR struct addrenv_s *addrenv,
-                   FAR struct addrenv_s **oldenv);
+                   FAR struct addrenv_s **oldenv)
+{
+  FAR struct tcb_s *tcb = this_task();
+  addrenv_take(addrenv);
+  *oldenv = tcb->addrenv_curr;
+  tcb->addrenv_curr = addrenv;
+  return addrenv_switch(tcb);
+}
 
 /****************************************************************************
  * Name: addrenv_restore
@@ -450,40 +552,14 @@ int addrenv_select(FAR struct addrenv_s *addrenv,
  *
  ****************************************************************************/
 
-int addrenv_restore(FAR struct addrenv_s *addrenv);
-
-/****************************************************************************
- * Name: addrenv_take
- *
- * Description:
- *   Take a reference to an address environment.
- *
- * Input Parameters:
- *   addrenv - The address environment.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void addrenv_take(FAR struct addrenv_s *addrenv);
-
-/****************************************************************************
- * Name: addrenv_give
- *
- * Description:
- *   Give back a reference to an address environment, obtaining the resulting
- *   reference counter as returned value.
- *
- * Input Parameters:
- *   addrenv - The address environment.
- *
- * Returned Value:
- *   Remaining reference count.
- *
- ****************************************************************************/
-
-int addrenv_give(FAR struct addrenv_s *addrenv);
+static inline_function
+int addrenv_restore(FAR struct addrenv_s *addrenv)
+{
+  FAR struct tcb_s *tcb = this_task();
+  addrenv_give(tcb->addrenv_curr);
+  tcb->addrenv_curr = addrenv;
+  return addrenv_switch(tcb);
+}
 
 /****************************************************************************
  * Name: addrenv_drop

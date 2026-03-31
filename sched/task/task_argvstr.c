@@ -60,7 +60,7 @@ size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
 {
   size_t n = 0u;
 #ifdef CONFIG_ARCH_ADDRENV
-  FAR struct addrenv_s *oldenv;
+  FAR struct addrenv_s *oldenv = NULL;
 #endif
 
   /* Sanity checks and idle tasks */
