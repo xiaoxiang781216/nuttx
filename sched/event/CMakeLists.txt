@@ -23,15 +23,7 @@
 # Add event-related files to the build
 set(CSRCS)
 if(CONFIG_SCHED_EVENTS)
-  list(
-    APPEND
-    CSRCS
-    event_init.c
-    event_post.c
-    event_reset.c
-    event_destroy.c
-    event_wait.c
-    event_clear.c)
+  list(APPEND CSRCS event_post.c event_wait.c)
 endif()
 
 target_sources(sched PRIVATE ${CSRCS})

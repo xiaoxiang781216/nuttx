@@ -31,6 +31,7 @@
 
 #include <nuttx/list.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/spinlock_type.h>
 
 /****************************************************************************
@@ -121,44 +122,13 @@ extern "C"
  *
  ****************************************************************************/
 
-void nxevent_init(FAR nxevent_t *event, nxevent_mask_t events);
-
-/****************************************************************************
- * Name: nxevent_destroy
- *
- * Description:
- *   This function is used to destroy the event.
- *
- * Input Parameters:
- *   event  - Address of the event object
- *
- * Returned Value:
- *   This is an internal OS interface and should not be used by applications.
- *   It follows the NuttX internal error return policy:  Zero (OK) is
- *   returned on success.  A negated errno value is returned on failure.
- *
- ****************************************************************************/
-
-int nxevent_destroy(FAR nxevent_t *event);
-
-/****************************************************************************
- * Name: nxevent_reset
- *
- * Description:
- *   Reset events mask to a specific value.
- *
- * Input Parameters:
- *   event  - Address of the event object
- *   events - Set of events to post to event
- *
- * Returned Value:
- *   This is an internal OS interface, not available to applications, and
- *   hence follows the NuttX internal error return policy:  Zero (OK) is
- *   returned on success.  A negated errno value is returned on failure.
- *
- ****************************************************************************/
-
-int nxevent_reset(FAR nxevent_t *event, nxevent_mask_t events);
+static inline_function
+void nxevent_init(FAR nxevent_t *event, nxevent_mask_t events)
+{
+  event->events = events;
+  spin_lock_init(&event->lock);
+  list_initialize(&event->list);
+}
 
 /****************************************************************************
  * Name: nxevent_post
@@ -194,29 +164,48 @@ int nxevent_post(FAR nxevent_t *event, nxevent_mask_t events,
                  nxevent_flags_t eflags);
 
 /****************************************************************************
- * Name: nxevent_wait
+ * Name: nxevent_destroy
  *
  * Description:
- *   Wait for all of the specified events.
- *
- *   This routine waits on event object event until all of the specified
- *   events have been delivered to the event object. A thread may wait on
- *   up to 32 distinctly numbered events that are expressed as bits in a
- *   single 32-bit word.
+ *   This function is used to destroy the event.
  *
  * Input Parameters:
  *   event  - Address of the event object
- *   events - Set of events to wait, 0 will indicate wait from any events
  *
  * Returned Value:
  *   This is an internal OS interface and should not be used by applications.
- *   Return of matching events upon success, Otherwise, 0 is returned if OS
- *   internal error.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
  *
  ****************************************************************************/
 
-nxevent_mask_t nxevent_wait(FAR nxevent_t *event, nxevent_mask_t events,
-                            nxevent_flags_t eflags);
+static inline_function int nxevent_destroy(FAR nxevent_t *event)
+{
+  return nxevent_post(event, 0u, NXEVENT_POST_ALL | NXEVENT_POST_SET);
+}
+
+/****************************************************************************
+ * Name: nxevent_reset
+ *
+ * Description:
+ *   Reset events mask to a specific value.
+ *
+ * Input Parameters:
+ *   event  - Address of the event object
+ *   events - Set of events to post to event
+ *
+ * Returned Value:
+ *   This is an internal OS interface, not available to applications, and
+ *   hence follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *
+ ****************************************************************************/
+
+static inline_function
+int nxevent_reset(FAR nxevent_t *event, nxevent_mask_t events)
+{
+  return nxevent_post(event, events, NXEVENT_POST_ALL | NXEVENT_POST_SET);
+}
 
 /****************************************************************************
  * Name: nxevent_tickwait_wait
@@ -279,8 +268,38 @@ nxevent_mask_t nxevent_tickwait_wait(FAR nxevent_t *event,
  *
  ****************************************************************************/
 
+static inline_function
 nxevent_mask_t nxevent_tickwait(FAR nxevent_t *event, nxevent_mask_t events,
-                                nxevent_flags_t eflags, uint32_t delay);
+                                nxevent_flags_t eflags, uint32_t delay)
+{
+  nxevent_wait_t wait;
+
+  return nxevent_tickwait_wait(event, &wait, events, eflags, delay);
+}
+
+/****************************************************************************
+ * Name: nxevent_wait
+ *
+ * Description:
+ *   Wait for all of the specified events.
+ *
+ * Input Parameters:
+ *   event  - Address of the event object
+ *   events - Set of events to wait, 0 will indicate wait from any events
+ *   eflags - Events flags
+ *
+ * Returned Value:
+ *   Return of matching events upon success, Otherwise, 0 is returned if OS
+ *   internal error.
+ *
+ ****************************************************************************/
+
+static inline_function
+nxevent_mask_t nxevent_wait(FAR nxevent_t *event, nxevent_mask_t events,
+                            nxevent_flags_t eflags)
+{
+  return nxevent_tickwait(event, events, eflags, UINT32_MAX);
+}
 
 /****************************************************************************
  * Name: nxevent_trywait
@@ -306,8 +325,12 @@ nxevent_mask_t nxevent_tickwait(FAR nxevent_t *event, nxevent_mask_t events,
  *
  ****************************************************************************/
 
+static inline_function
 nxevent_mask_t nxevent_trywait(FAR nxevent_t *event, nxevent_mask_t events,
-                               nxevent_flags_t eflags);
+                               nxevent_flags_t eflags)
+{
+  return nxevent_tickwait(event, events, eflags, 0u);
+}
 
 /****************************************************************************
  * Name: nxevent_clear
@@ -330,7 +353,23 @@ nxevent_mask_t nxevent_trywait(FAR nxevent_t *event, nxevent_mask_t events,
  *
  ****************************************************************************/
 
-nxevent_mask_t nxevent_clear(FAR nxevent_t *event, nxevent_mask_t mask);
+static inline_function
+nxevent_mask_t nxevent_clear(FAR nxevent_t *event, nxevent_mask_t mask)
+{
+  nxevent_mask_t events;
+  irqstate_t flags;
+
+  DEBUGASSERT(event != NULL);
+
+  flags = spin_lock_irqsave(&event->lock);
+
+  events = event->events;
+  event->events &= ~mask;
+
+  spin_unlock_irqrestore(&event->lock, flags);
+
+  return events;
+}
 
 /****************************************************************************
  * Name: nxevent_open
