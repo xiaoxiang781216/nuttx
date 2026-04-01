@@ -652,6 +652,21 @@ endif()
 process_all_target_dependencies()
 process_all_directory_romfs()
 
+# Write ELF manifest for incremental build cleanup. This lists all ELF filenames
+# that should exist in bin/. The cleanup script removes anything not in this
+# list.
+if(CONFIG_MODULES OR CONFIG_BUILD_KERNEL)
+  get_property(
+    _elf_names
+    TARGET nuttx
+    PROPERTY NUTTX_ELF_NAMES)
+  list(JOIN _elf_names "\n" _manifest)
+  file(WRITE ${CMAKE_BINARY_DIR}/.elf_manifest "${_manifest}\n")
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -DBINARY_DIR=${CMAKE_BINARY_DIR} -P
+            ${CMAKE_CURRENT_SOURCE_DIR}/cmake/nuttx_elf_bin_cleanup.cmake)
+endif()
+
 # Link step ##################################################################
 
 # Get linker option

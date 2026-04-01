@@ -417,11 +417,20 @@ function(nuttx_add_elf_app)
     )
   endif()
 
+  # Ensure cleanup of stale ELFs runs before this target populates bin/
+  if(TARGET nuttx_elf_bin_cleanup)
+    add_dependencies(${ELF_TARGET} nuttx_elf_bin_cleanup)
+  endif()
+
   install(TARGETS ${ELF_TARGET})
   set_property(
     TARGET nuttx
     APPEND
     PROPERTY NUTTX_LOADABLE_APPS ${ELF_TARGET})
+  set_property(
+    TARGET nuttx
+    APPEND
+    PROPERTY NUTTX_ELF_NAMES ${NAME})
 
   # Return target name to parent scope
   set(RESULT_TARGET
