@@ -107,7 +107,6 @@ DEFINE_PER_CPU_BMP(struct hp_wqueue_s, g_hpwork) =
     },
     CONFIG_SCHED_HPNTHREADS,
     false,
-    false,
     SEM_INITIALIZER(0),
   },
 };
@@ -139,7 +138,6 @@ DEFINE_PER_CPU_BMP(struct lp_wqueue_s, g_lpwork) =
       },
     },
     CONFIG_SCHED_LPNTHREADS,
-    false,
     false,
     SEM_INITIALIZER(0),
   }
@@ -178,7 +176,7 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
    * so ourselves, and (2) there will be no changes to the work queue
    */
 
-  flags = spin_lock_irqsave_nopreempt(&wqueue->lock);
+  flags = wqueue_lock(wqueue, true);
 
   /* If the worker thread is the first woken thread, the thread
    * should check the pending queue and dispatch the expired work.
@@ -206,7 +204,7 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
           if (!clock_compare(work->qtime, ticks))
             {
               wd_start_abstick(&wqueue->timer, work->qtime,
-                              work_timer_expired, (wdparm_t)wqueue);
+                               work_timer_expired, (wdparm_t)wqueue);
               break;
             }
 
@@ -225,15 +223,6 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
               nxsem_post(&wqueue->sem);
             }
         }
-    }
-
-  /* Reset sorted flag when pending queue is drained, so that
-   * subsequent delay=0 works can use O(1) tail insertion again.
-   */
-
-  if (list_is_empty(&wqueue->pending))
-    {
-      wqueue->sorted = false;
     }
 
   while (!list_is_empty(&wqueue->expired))
@@ -260,14 +249,14 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
 
       kworker->work = work;
 
-      spin_unlock_irqrestore_nopreempt(&wqueue->lock, flags);
+      wqueue_unlock(wqueue, flags, true);
 
       /* Do the work.  Re-enable interrupts while the work is being
        * performed... we don't have any idea how long this will take!
        */
 
       CALL_WORKER(worker, arg);
-      flags = spin_lock_irqsave_nopreempt(&wqueue->lock);
+      flags = wqueue_lock(wqueue, true);
 
       /* Mark the thread un-busy */
 
@@ -282,7 +271,7 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
         }
     }
 
-  spin_unlock_irqrestore_nopreempt(&wqueue->lock, flags);
+  wqueue_unlock(wqueue, flags, true);
 }
 
 /****************************************************************************

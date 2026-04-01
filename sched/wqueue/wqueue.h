@@ -79,7 +79,6 @@ struct kwork_wqueue_s
   sem_t            sem;       /* The counting semaphore of the wqueue */
   struct wdog_s    timer;     /* Timer to pending. */
   uint8_t          nthreads;  /* Number of worker threads */
-  bool             sorted;    /* Pending queue has delay works (sorted) */
   bool             exit;      /* A flag to request the thread to exit */
   sem_t            exsem;     /* Sync waiting for thread exit */
 };
@@ -165,6 +164,7 @@ static inline_function FAR struct kwork_wqueue_s *work_qid2wq(int qid)
  * Input Parameters:
  *   wqueue - The work queue.
  *   work   - The work to be inserted.
+ *   is_expired - The work is expired.
  *
  * Returned Value:
  *   Return whether the work is inserted at the head of the pending queue.
@@ -173,12 +173,16 @@ static inline_function FAR struct kwork_wqueue_s *work_qid2wq(int qid)
 
 static inline_function
 bool work_insert_pending(FAR struct kwork_wqueue_s *wqueue,
-                         FAR struct work_s         *work)
+                         FAR struct work_s         *work, bool is_expired)
 {
+  bool ret = true;
+
   DEBUGASSERT(wqueue != NULL && work != NULL);
 
-  if (wqueue->sorted)
+  if (!is_expired)
     {
+      FAR struct work_s *head = list_first_entry(&wqueue->pending,
+                                                 struct work_s, node);
       FAR struct work_s *curr;
 
       list_for_every_entry(&wqueue->pending, curr, struct work_s, node)
@@ -197,13 +201,14 @@ bool work_insert_pending(FAR struct kwork_wqueue_s *wqueue,
        */
 
       list_add_before(&curr->node, &work->node);
+      ret = curr == head;
     }
   else
     {
-      list_add_tail(&wqueue->pending, &work->node);
+      list_add_tail(&wqueue->expired, &work->node);
     }
 
-  return list_is_head(&wqueue->pending, &work->node);
+  return ret;
 }
 
 /****************************************************************************
@@ -282,6 +287,67 @@ void work_timer_reset(FAR struct kwork_wqueue_s *wqueue)
   else
     {
       wd_cancel(&wqueue->timer);
+    }
+}
+
+/****************************************************************************
+ * Name: wqueue_lock
+ *
+ * Description:
+ *   Lock the workqueue spinlock and save interrupt state.
+ *   When nopreempt is true, use the nopreempt variant (for non-SMP or
+ *   contexts that must not trigger preemption on non-SMP).
+ *
+ * Input Parameters:
+ *   wqueue    - The work queue.
+ *   nopreempt - Use spin_lock_irqsave_nopreempt when true on non-SMP.
+ *
+ * Returned Value:
+ *   The saved interrupt state.
+ *
+ ****************************************************************************/
+
+static inline_function
+irqstate_t wqueue_lock(FAR struct kwork_wqueue_s *wqueue, bool nopreempt)
+{
+  if (nopreempt)
+    {
+      return spin_lock_irqsave_nopreempt(&wqueue->lock);
+    }
+  else
+    {
+      return spin_lock_irqsave(&wqueue->lock);
+    }
+}
+
+/****************************************************************************
+ * Name: wqueue_unlock
+ *
+ * Description:
+ *   Unlock the workqueue spinlock and restore interrupt state.
+ *   The nopreempt flag must match the one used in wqueue_lock.
+ *
+ * Input Parameters:
+ *   wqueue    - The work queue.
+ *   flags     - The saved interrupt state from wqueue_lock.
+ *   nopreempt - Use spin_unlock_irqrestore_nopreempt when true on non-SMP.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+static inline_function
+void wqueue_unlock(FAR struct kwork_wqueue_s *wqueue,
+                   irqstate_t flags, bool nopreempt)
+{
+  if (nopreempt)
+    {
+      spin_unlock_irqrestore_nopreempt(&wqueue->lock, flags);
+    }
+  else
+    {
+      spin_unlock_irqrestore(&wqueue->lock, flags);
     }
 }
 

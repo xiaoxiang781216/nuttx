@@ -38,6 +38,7 @@
 #include <nuttx/semaphore.h>
 
 #include "wqueue/wqueue.h"
+#include "wdog/wdog.h"
 
 #ifdef CONFIG_SCHED_WORKQUEUE
 
@@ -45,10 +46,10 @@
  * Private Functions
  ****************************************************************************/
 
-static void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
-                             FAR struct work_s *work, worker_t worker,
-                             FAR void *arg, clock_t expected,
-                             clock_t delay)
+static inline_function
+void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
+                      FAR struct work_s *work, worker_t worker,
+                      FAR void *arg, clock_t expected, clock_t delay)
 {
   bool retimer;
 
@@ -62,20 +63,23 @@ static void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
   work->arg    = arg;      /* Callback argument */
   work->qtime  = expected; /* Expected time */
 
-  /* Track whether the pending queue contains delay works requiring
-   * sorted insertion. The sorted flag is cleared when the worker
-   * thread drains the pending queue.
-   */
-
-  if (delay != 0)
-    {
-      wqueue->sorted = true;
-    }
-
   /* Insert to the pending list of the wqueue. */
 
-  retimer |= work_insert_pending(wqueue, work);
+  retimer |= work_insert_pending(wqueue, work, !delay);
 
+  /* Non-SMP fast-path. Notice that we can not wake up the worker
+   * thread in SMP configuaration due to the deadlock introduced by
+   * the circular-wait.
+   */
+
+#ifndef CONFIG_SMP
+  if (!delay)
+    {
+      nxsem_post(&wqueue->sem);
+      wd_cancel(&wqueue->timer);
+    }
+  else
+#endif
   if (retimer)
     {
       /* Start the timer if the work is the earliest expired work. */
@@ -122,10 +126,10 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
   if (wqueue && work && worker && delay <= WDOG_MAX_DELAY)
     {
       ret   = OK;
-      flags = spin_lock_irqsave(&wqueue->lock);
+      flags = wqueue_lock(wqueue, false);
       work_queue_start(wqueue, work, worker, arg,
                        work->qtime + delay, delay);
-      spin_unlock_irqrestore(&wqueue->lock, flags);
+      wqueue_unlock(wqueue, flags, false);
     }
 
   return ret;
@@ -177,12 +181,19 @@ int work_queue_wq(FAR struct kwork_wqueue_s *wqueue,
 
   if (wqueue && work && worker && delay <= WDOG_MAX_DELAY)
     {
+#ifdef CONFIG_SMP
+      bool nopreempt = false;
+#else
+      /* In Non-SMP fast-path we may change the scheduler state */
+
+      bool nopreempt = !delay;
+#endif
+
       ret      = OK;
-      expected = delay ? clock_delay2abstick(delay) :
-                 clock_systime_ticks();
-      flags    = spin_lock_irqsave(&wqueue->lock);
+      expected = delay ? clock_delay2abstick(delay) : clock_systime_ticks();
+      flags    = wqueue_lock(wqueue, nopreempt);
       work_queue_start(wqueue, work, worker, arg, expected, delay);
-      spin_unlock_irqrestore(&wqueue->lock, flags);
+      wqueue_unlock(wqueue, flags, nopreempt);
     }
 
   return ret;
