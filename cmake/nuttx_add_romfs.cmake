@@ -160,7 +160,8 @@ function(nuttx_add_romfs)
         COMMAND
           ${CMAKE_COMMAND} -E copy_directory
           ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX}
-          ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX})
+          ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX}
+        DEPENDS ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX})
       list(APPEND DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX})
     else()
       list(APPEND DEPENDS ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX})
@@ -343,7 +344,7 @@ function(process_all_directory_romfs)
           ${CMAKE_COMMAND} -E copy_directory
           ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX}
           ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX}
-        DEPENDS ${dyn_deps})
+        DEPENDS ${dyn_deps} ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX})
       list(APPEND DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX})
     else()
       list(FIND DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX} index)
@@ -358,7 +359,7 @@ function(process_all_directory_romfs)
         COMMAND
           ${CMAKE_COMMAND} -E copy ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX}
           ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX} ${APPEND_OPTION}
-        DEPENDS ${dyn_deps})
+        DEPENDS ${dyn_deps} ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX})
       list(APPEND DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX})
     endif()
   endforeach()
