@@ -395,7 +395,7 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
           FAR struct note_filter_mode_s *mode =
                          (FAR struct note_filter_mode_s *)arg;
           mode->type_mask = driver->filter.mode.type_mask;
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
           mode->cpuset = driver->filter.mode.cpuset;
 #endif
         }
@@ -406,7 +406,7 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
           FAR struct note_filter_mode_s *mode =
                         (FAR struct note_filter_mode_s *)arg;
           driver->filter.mode.type_mask = mode->type_mask;
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
           driver->filter.mode.cpuset = mode->cpuset;
 #endif
         }
@@ -548,7 +548,7 @@ static inline int note_isenabled(FAR struct note_driver_s *driver)
       return false;
     }
 
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
   /* Ignore notes that are not in the set of monitored CPUs */
 
   if (CPU_ISSET(this_cpu(), &driver->filter.mode.cpuset) == 0)

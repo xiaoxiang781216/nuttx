@@ -72,7 +72,7 @@ DEFINE_PER_CPU_BMP(struct notestream_driver_s, g_notestream_lowerout) =
     {
       {
         CONFIG_DRIVERS_NOTELOWEROUT_FILTER_DEFAULT_MODE,
-#    ifdef CONFIG_SMP
+#    ifndef CONFIG_UP
         CONFIG_DRIVERS_NOTELOWEROUT_CPUSET
 #    endif
       },
@@ -148,7 +148,7 @@ int notefile_register(FAR const char *filename)
   notefile->driver.driver.filter.mode.type_mask =
                       CONFIG_DRIVERS_NOTEFILE_FILTER_DEFAULT_MODE;
 
-#  ifdef CONFIG_SMP
+#  ifndef CONFIG_UP
   notefile->driver.driver.filter.mode.cpuset =
                       CONFIG_DRIVERS_NOTEFILE_CPUSET;
 #  endif

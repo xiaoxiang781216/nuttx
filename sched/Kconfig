@@ -1318,7 +1318,7 @@ config SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 config SCHED_INSTRUMENTATION_CPUSET
 	hex "CPU bit set"
 	default 0xffff
-	depends on SMP && SCHED_INSTRUMENTATION_FILTER
+	depends on !UP && SCHED_INSTRUMENTATION_FILTER
 	---help---
 		Monitor only CPUs in the bitset.  Bit 0=CPU0, Bit1=CPU1, etc.
 

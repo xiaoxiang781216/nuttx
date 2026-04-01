@@ -341,7 +341,7 @@ struct note_ratelimit_s
 struct note_filter_mode_s
 {
   uint64_t type_mask;         /* The type mask of the note */
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
   cpu_set_t cpuset;           /* The set of monitored CPUs */
 #endif
 };

@@ -195,7 +195,7 @@ DEFINE_PER_CPU_BMP(struct notesnap_s, g_notesnap) =
     {
       {
         CONFIG_DRIVERS_NOTESNAP_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
+#  ifndef CONFIG_UP
         CONFIG_DRIVERS_NOTESNAP_CPUSET
 #  endif
       },

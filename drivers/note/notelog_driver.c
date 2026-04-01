@@ -115,7 +115,7 @@ DEFINE_PER_CPU_BMP(struct note_driver_s, g_notelog_driver) =
     {
       {
         CONFIG_DRIVERS_NOTELOG_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
+#  ifndef CONFIG_UP
         CONFIG_DRIVERS_NOTELOG_CPUSET
 #  endif
       },

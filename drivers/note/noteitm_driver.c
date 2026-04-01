@@ -60,7 +60,7 @@ struct noteitm_s g_noteitm =
     {
       {
         CONFIG_DRIVERS_NOTERTT_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
+#  ifndef CONFIG_UP
         CONFIG_DRIVERS_NOTERTT_CPUSET
 #  endif
       },

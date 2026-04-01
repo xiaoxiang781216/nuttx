@@ -87,8 +87,8 @@ struct notenet_driver_s g_notenet =
     {
       {
         CONFIG_DRIVERS_NOTENET_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
-        DRIVERS_NOTENET_CPUSET
+#  ifndef CONFIG_UP
+        CONFIG_DRIVERS_NOTENET_CPUSET
 #  endif
       },
 
