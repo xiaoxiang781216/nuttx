@@ -157,6 +157,7 @@ static int addrenv_select_region(unsigned int *region,
 }
 #endif
 
+#ifdef CONFIG_BUILD_FLAT
 static void addrenv_enter_kernel(bool enter)
 {
   /* The stack may overlap with the kernel region,
@@ -178,6 +179,7 @@ static void addrenv_enter_kernel(bool enter)
   mpu_control(true, false, false);
 #endif
 }
+#endif
 
 /****************************************************************************
  * Public Functions
