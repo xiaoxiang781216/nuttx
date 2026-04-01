@@ -27,7 +27,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <stdint.h>
+#include <limits.h>
 #include <string.h>
 
 /****************************************************************************
@@ -102,15 +102,19 @@ enum nxtag_e
 };
 
 /* Bitmask helpers for tag enable/disable masks.
- * A mask is an array of uint8_t with NXTAG_MASK_SIZE bytes.
+ * A mask is an array of unsigned long with NXTAG_MASK_NWORDS elements.
  */
 
-#define NXTAG_MASK_SIZE             ((NXTAG_MAX + 7) / 8)
-#define NXTAG_MASK_SET(mask, tag)   ((mask)[(tag) / 8] |= (1u << ((tag) % 8)))
-#define NXTAG_MASK_CLR(mask, tag)   ((mask)[(tag) / 8] &= ~(1u << ((tag) % 8)))
-#define NXTAG_MASK_ISSET(mask, tag) ((mask)[(tag) / 8] & (1u << ((tag) % 8)))
-#define NXTAG_MASK_ZERO(mask)       memset((mask), 0, NXTAG_MASK_SIZE)
-#define NXTAG_MASK_FILL(mask)       memset((mask), 0xff, NXTAG_MASK_SIZE)
+#define NXTAG_BPL                   (sizeof(unsigned long) * CHAR_BIT)
+#define NXTAG_MASK_NWORDS           ((NXTAG_MAX + NXTAG_BPL - 1) / NXTAG_BPL)
+#define NXTAG_MASK_SET(mask, tag)   ((mask)[(tag) / NXTAG_BPL] |= \
+                                     (1ul << ((tag) % NXTAG_BPL)))
+#define NXTAG_MASK_CLR(mask, tag)   ((mask)[(tag) / NXTAG_BPL] &= \
+                                     ~(1ul << ((tag) % NXTAG_BPL)))
+#define NXTAG_MASK_ISSET(mask, tag) ((mask)[(tag) / NXTAG_BPL] & \
+                                     (1ul << ((tag) % NXTAG_BPL)))
+#define NXTAG_MASK_ZERO(mask)       memset((mask), 0, sizeof(mask))
+#define NXTAG_MASK_FILL(mask)       memset((mask), 0xff, sizeof(mask))
 
 /****************************************************************************
  * Public Function Prototypes

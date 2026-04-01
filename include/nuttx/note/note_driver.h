@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <limits.h>
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/sched_note.h>
@@ -97,12 +98,17 @@
 
 /* Helper macros for type instrumentation filter */
 
+#define NOTE_BPL (sizeof(unsigned long) * CHAR_BIT)
+
 #define NOTE_FILTER_TYPEMASK_SET(type, s) \
-          (((uint8_t *)&(s)->type_mask)[(type) / 8] |= (1 << ((type) % 8)))
+          (((unsigned long *)&(s)->type_mask)[(type) / NOTE_BPL] |= \
+           (1ul << ((type) % NOTE_BPL)))
 #define NOTE_FILTER_TYPEMASK_CLR(type, s) \
-          (((uint8_t *)&(s)->type_mask)[(type) / 8] &= ~(1 << ((type) % 8)))
+          (((unsigned long *)&(s)->type_mask)[(type) / NOTE_BPL] &= \
+           ~(1ul << ((type) % NOTE_BPL)))
 #define NOTE_FILTER_TYPEMASK_ISSET(type, s) \
-          (((uint8_t *)&(s)->type_mask)[(type) / 8] & (1 << ((type) % 8)))
+          (((unsigned long *)&(s)->type_mask)[(type) / NOTE_BPL] & \
+           (1ul << ((type) % NOTE_BPL)))
 #define NOTE_FILTER_TYPEMASK_ZERO(s) \
           memset((s), 0, sizeof(struct note_filter_mode_s))
 #define NOTE_FILTER_TYPEMASK_FILL(s) \
@@ -112,11 +118,11 @@
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
 #  define NOTE_FILTER_SYSCALLMASK_SET(nr, s) \
-          ((s)->syscall_mask[(nr) / 8] |= (1 << ((nr) % 8)))
+          ((s)->syscall_mask[(nr) / NOTE_BPL] |= (1ul << ((nr) % NOTE_BPL)))
 #  define NOTE_FILTER_SYSCALLMASK_CLR(nr, s) \
-          ((s)->syscall_mask[(nr) / 8] &= ~(1 << ((nr) % 8)))
+          ((s)->syscall_mask[(nr) / NOTE_BPL] &= ~(1ul << ((nr) % NOTE_BPL)))
 #  define NOTE_FILTER_SYSCALLMASK_ISSET(nr, s) \
-          ((s)->syscall_mask[(nr) / 8] & (1 << ((nr) % 8)))
+          ((s)->syscall_mask[(nr) / NOTE_BPL] & (1ul << ((nr) % NOTE_BPL)))
 #  define NOTE_FILTER_SYSCALLMASK_ZERO(s) \
           memset((s), 0, sizeof(struct note_filter_syscall_s))
 #  define NOTE_FILTER_SYSCALLMASK_FILL(s) \
@@ -133,11 +139,11 @@
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
 #  define NOTE_FILTER_IRQMASK_SET(nr, s) \
-          ((s)->irq_mask[(nr) / 8] |= (1 << ((nr) % 8)))
+          ((s)->irq_mask[(nr) / NOTE_BPL] |= (1ul << ((nr) % NOTE_BPL)))
 #  define NOTE_FILTER_IRQMASK_CLR(nr, s) \
-          ((s)->irq_mask[(nr) / 8] &= ~(1 << ((nr) % 8)))
+          ((s)->irq_mask[(nr) / NOTE_BPL] &= ~(1ul << ((nr) % NOTE_BPL)))
 #  define NOTE_FILTER_IRQMASK_ISSET(nr, s) \
-          ((s)->irq_mask[(nr) / 8] & (1 << ((nr) % 8)))
+          ((s)->irq_mask[(nr) / NOTE_BPL] & (1ul << ((nr) % NOTE_BPL)))
 #  define NOTE_FILTER_IRQMASK_ZERO(s) \
           memset((s), 0, sizeof(struct note_filter_irq_s))
 #  define NOTE_FILTER_IRQMASK_FILL(s) \
@@ -336,7 +342,7 @@ struct note_filter_mode_s
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
 struct note_filter_syscall_s
 {
-  uint8_t syscall_mask[(SYS_nsyscalls + 7) / 8];
+  unsigned long syscall_mask[(SYS_nsyscalls + NOTE_BPL - 1) / NOTE_BPL];
 };
 #endif
 
@@ -347,13 +353,13 @@ struct note_filter_syscall_s
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
 struct note_filter_irq_s
 {
-  uint8_t irq_mask[(NR_IRQS + 7) / 8];
+  unsigned long irq_mask[(NR_IRQS + NOTE_BPL - 1) / NOTE_BPL];
 };
 #endif
 
 struct note_filter_tag_s
 {
-  uint8_t tag_mask[NXTAG_MASK_SIZE];
+  unsigned long tag_mask[NXTAG_MASK_NWORDS];
 };
 
 struct note_filter_level_s
