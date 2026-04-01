@@ -59,7 +59,7 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
        * interrupt handlers.
        */
 
-      flags = spin_lock_irqsave(&wqueue->lock);
+      flags = wqueue_lock(wqueue, false);
 
       if (!work_available(work))
         {
@@ -101,7 +101,7 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
             }
         }
 
-      spin_unlock_irqrestore(&wqueue->lock, flags);
+      wqueue_unlock(wqueue, flags, false);
 
       if (sync_wait)
         {

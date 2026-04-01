@@ -312,11 +312,14 @@ irqstate_t wqueue_lock(FAR struct kwork_wqueue_s *wqueue, bool nopreempt)
 {
   if (nopreempt)
     {
-      return spin_lock_irqsave_nopreempt(&wqueue->lock);
+      irqstate_t flags;
+      flags = spin_lock_irqsave_notrace(&wqueue->lock);
+      sched_lock();
+      return flags;
     }
   else
     {
-      return spin_lock_irqsave(&wqueue->lock);
+      return spin_lock_irqsave_notrace(&wqueue->lock);
     }
 }
 
@@ -343,11 +346,12 @@ void wqueue_unlock(FAR struct kwork_wqueue_s *wqueue,
 {
   if (nopreempt)
     {
-      spin_unlock_irqrestore_nopreempt(&wqueue->lock, flags);
+      spin_unlock_irqrestore_notrace(&wqueue->lock, flags);
+      sched_unlock();
     }
   else
     {
-      spin_unlock_irqrestore(&wqueue->lock, flags);
+      spin_unlock_irqrestore_notrace(&wqueue->lock, flags);
     }
 }
 
