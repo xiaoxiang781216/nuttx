@@ -74,7 +74,7 @@ static void pkt_sendbuffer_notify(FAR struct pkt_conn_s *conn)
   int val = 0;
 
   nxsem_get_value(&conn->sconn.s_sndsem, &val);
-  if (val < 0)
+  if (val < 1)
     {
       nxsem_post(&conn->sconn.s_sndsem);
     }
