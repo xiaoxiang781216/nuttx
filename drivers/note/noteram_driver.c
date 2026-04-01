@@ -1027,6 +1027,18 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         ret = OK;
         break;
 
+      case PIPEIOC_GETSIZE:
+        if (arg == 0)
+          {
+            ret = -EINVAL;
+          }
+        else
+          {
+            *(FAR unsigned int *)arg = drv->bufsize;
+            ret = OK;
+          }
+        break;
+
       default:
         break;
     }
