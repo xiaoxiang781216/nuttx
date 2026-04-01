@@ -30,6 +30,7 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 #include <nuttx/streams.h>
+#include <nuttx/tag.h>
 
 #ifdef CONFIG_ARCH_DEBUG_H
 #  include <arch/debug.h>
@@ -152,940 +153,966 @@
    __arch_syslog(LOG_INFO, EXTRA_FMT format EXTRA_ARG, ##__VA_ARGS__)
 #endif
 
+/* Tagged variants — carry tag in priority upper bits */
+
+#if !defined(CONFIG_DEBUG_ERROR)
+#  define _terr(tag, format, ...) _none(format, ##__VA_ARGS__)
+#elif defined(CONFIG_CPP_HAVE_VARARGS)
+#  define _terr(tag, format, ...) \
+   __arch_syslog(LOG_TAGPRI(tag, LOG_ERR), \
+                 EXTRA_FMT format EXTRA_ARG, ##__VA_ARGS__)
+#endif
+
+#if !defined(CONFIG_DEBUG_WARN)
+#  define _twarn(tag, format, ...) _none(format, ##__VA_ARGS__)
+#elif defined(CONFIG_CPP_HAVE_VARARGS)
+#  define _twarn(tag, format, ...) \
+   __arch_syslog(LOG_TAGPRI(tag, LOG_WARNING), \
+                 EXTRA_FMT format EXTRA_ARG, ##__VA_ARGS__)
+#endif
+
+#if !defined(CONFIG_DEBUG_INFO)
+#  define _tinfo(tag, format, ...) _none(format, ##__VA_ARGS__)
+#elif defined(CONFIG_CPP_HAVE_VARARGS)
+#  define _tinfo(tag, format, ...) \
+   __arch_syslog(LOG_TAGPRI(tag, LOG_INFO), \
+                 EXTRA_FMT format EXTRA_ARG, ##__VA_ARGS__)
+#endif
+
 /* Subsystem specific debug */
 
 #ifdef CONFIG_DEBUG_MM_ERROR
-#  define merr         _err
+#  define merr(format, ...) _terr(NXTAG_MM, format, ##__VA_ARGS__)
 #else
 #  define merr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_MM_WARN
-#  define mwarn       _warn
+#  define mwarn(format, ...) _twarn(NXTAG_MM, format, ##__VA_ARGS__)
 #else
 #  define mwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_MM_INFO
-#  define minfo       _info
+#  define minfo(format, ...) _tinfo(NXTAG_MM, format, ##__VA_ARGS__)
 #else
 #  define minfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_SCHED_ERROR
-#  define serr         _err
+#  define serr(format, ...) _terr(NXTAG_SCHED, format, ##__VA_ARGS__)
 #else
 #  define serr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_SCHED_WARN
-#  define swarn       _warn
+#  define swarn(format, ...) _twarn(NXTAG_SCHED, format, ##__VA_ARGS__)
 #else
 #  define swarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_SCHED_INFO
-#  define sinfo       _info
+#  define sinfo(format, ...) _tinfo(NXTAG_SCHED, format, ##__VA_ARGS__)
 #else
 #  define sinfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_SYSCALL_ERROR
-#  define svcerr       _err
+#  define svcerr(format, ...) _terr(NXTAG_SYSCALL, format, ##__VA_ARGS__)
 #else
 #  define svcerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_SYSCALL_WARN
-#  define svcwarn     _warn
+#  define svcwarn(format, ...) _twarn(NXTAG_SYSCALL, format, ##__VA_ARGS__)
 #else
 #  define svcwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-#  define svcinfo     _info
+#  define svcinfo(format, ...) _tinfo(NXTAG_SYSCALL, format, ##__VA_ARGS__)
 #else
 #  define svcinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_PAGING_ERROR
-#  define pgerr        _err
+#  define pgerr(format, ...) _terr(NXTAG_PAGING, format, ##__VA_ARGS__)
 #else
 #  define pgerr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_PAGING_WARN
-#  define pgwarn      _warn
+#  define pgwarn(format, ...) _twarn(NXTAG_PAGING, format, ##__VA_ARGS__)
 #else
 #  define pgwarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_PAGING_INFO
-#  define pginfo      _info
+#  define pginfo(format, ...) _tinfo(NXTAG_PAGING, format, ##__VA_ARGS__)
 #else
 #  define pginfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_NET_ERROR
-#  define nerr         _err
+#  define nerr(format, ...) _terr(NXTAG_NET, format, ##__VA_ARGS__)
 #else
 #  define nerr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_NET_WARN
-#  define nwarn       _warn
+#  define nwarn(format, ...) _twarn(NXTAG_NET, format, ##__VA_ARGS__)
 #else
 #  define nwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_NET_INFO
-#  define ninfo       _info
+#  define ninfo(format, ...) _tinfo(NXTAG_NET, format, ##__VA_ARGS__)
 #else
 #  define ninfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_POWER_ERROR
-#  define pwrerr       _err
+#  define pwrerr(format, ...) _terr(NXTAG_POWER, format, ##__VA_ARGS__)
 #else
 #  define pwrerr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_POWER_WARN
-#  define pwrwarn      _warn
+#  define pwrwarn(format, ...) _twarn(NXTAG_POWER, format, ##__VA_ARGS__)
 #else
 #  define pwrwarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_POWER_INFO
-#  define pwrinfo      _info
+#  define pwrinfo(format, ...) _tinfo(NXTAG_POWER, format, ##__VA_ARGS__)
 #else
 #  define pwrinfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_BATTERY_ERROR
-#  define baterr       _err
+#  define baterr(format, ...) _terr(NXTAG_BATTERY, format, ##__VA_ARGS__)
 #else
 #  define baterr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_BATTERY_WARN
-#  define batwarn      _warn
+#  define batwarn(format, ...) _twarn(NXTAG_BATTERY, format, ##__VA_ARGS__)
 #else
 #  define batwarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_BATTERY_INFO
-#  define batinfo      _info
+#  define batinfo(format, ...) _tinfo(NXTAG_BATTERY, format, ##__VA_ARGS__)
 #else
 #  define batinfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_WIRELESS_ERROR
-#  define wlerr       _err
+#  define wlerr(format, ...) _terr(NXTAG_WIRELESS, format, ##__VA_ARGS__)
 #else
 #  define wlerr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_WIRELESS_WARN
-#  define wlwarn      _warn
+#  define wlwarn(format, ...) _twarn(NXTAG_WIRELESS, format, ##__VA_ARGS__)
 #else
 #  define wlwarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_WIRELESS_INFO
-#  define wlinfo      _info
+#  define wlinfo(format, ...) _tinfo(NXTAG_WIRELESS, format, ##__VA_ARGS__)
 #else
 #  define wlinfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_FS_ERROR
-#  define ferr         _err
+#  define ferr(format, ...) _terr(NXTAG_FS, format, ##__VA_ARGS__)
 #else
 #  define ferr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_FS_WARN
-#  define fwarn       _warn
+#  define fwarn(format, ...) _twarn(NXTAG_FS, format, ##__VA_ARGS__)
 #else
 #  define fwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_FS_INFO
-#  define finfo       _info
+#  define finfo(format, ...) _tinfo(NXTAG_FS, format, ##__VA_ARGS__)
 #else
 #  define finfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_CONTACTLESS_ERROR
-#  define ctlserr     _err
+#  define ctlserr(format, ...) _terr(NXTAG_CONTACTLESS, format, ##__VA_ARGS__)
 #else
 #  define ctlserr     _none
 #endif
 
 #ifdef CONFIG_DEBUG_CONTACTLESS_WARN
-#  define ctlswarn    _warn
+#  define ctlswarn(format, ...) _twarn(NXTAG_CONTACTLESS, format, ##__VA_ARGS__)
 #else
 #  define ctlswarn    _none
 #endif
 
 #ifdef CONFIG_DEBUG_CONTACTLESS_INFO
-#  define ctlsinfo    _info
+#  define ctlsinfo(format, ...) _tinfo(NXTAG_CONTACTLESS, format, ##__VA_ARGS__)
 #else
 #  define ctlsinfo    _none
 #endif
 
 #ifdef CONFIG_DEBUG_CRYPTO_ERROR
-#  define crypterr     _err
+#  define crypterr(format, ...) _terr(NXTAG_CRYPTO, format, ##__VA_ARGS__)
 #else
 #  define crypterr    _none
 #endif
 
 #ifdef CONFIG_DEBUG_CRYPTO_WARN
-#  define cryptwarn   _warn
+#  define cryptwarn(format, ...) _twarn(NXTAG_CRYPTO, format, ##__VA_ARGS__)
 #else
 #  define cryptwarn   _none
 #endif
 
 #ifdef CONFIG_DEBUG_CRYPTO_INFO
-#  define cryptinfo   _info
+#  define cryptinfo(format, ...) _tinfo(NXTAG_CRYPTO, format, ##__VA_ARGS__)
 #else
 #  define cryptinfo   _none
 #endif
 
 #ifdef CONFIG_DEBUG_INPUT_ERROR
-#  define ierr         _err
+#  define ierr(format, ...) _terr(NXTAG_INPUT, format, ##__VA_ARGS__)
 #else
 #  define ierr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_INPUT_WARN
-#  define iwarn       _warn
+#  define iwarn(format, ...) _twarn(NXTAG_INPUT, format, ##__VA_ARGS__)
 #else
 #  define iwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_INPUT_INFO
-#  define iinfo       _info
+#  define iinfo(format, ...) _tinfo(NXTAG_INPUT, format, ##__VA_ARGS__)
 #else
 #  define iinfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_ANALOG_ERROR
-#  define aerr         _err
+#  define aerr(format, ...) _terr(NXTAG_ANALOG, format, ##__VA_ARGS__)
 #else
 #  define aerr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_ANALOG_WARN
-#  define awarn       _warn
+#  define awarn(format, ...) _twarn(NXTAG_ANALOG, format, ##__VA_ARGS__)
 #else
 #  define awarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_ANALOG_INFO
-#  define ainfo       _info
+#  define ainfo(format, ...) _tinfo(NXTAG_ANALOG, format, ##__VA_ARGS__)
 #else
 #  define ainfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_CAN_ERROR
-#  define canerr       _err
+#  define canerr(format, ...) _terr(NXTAG_CAN, format, ##__VA_ARGS__)
 #else
 #  define canerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_CAN_WARN
-#  define canwarn     _warn
+#  define canwarn(format, ...) _twarn(NXTAG_CAN, format, ##__VA_ARGS__)
 #else
 #  define canwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_CAN_INFO
-#  define caninfo     _info
+#  define caninfo(format, ...) _tinfo(NXTAG_CAN, format, ##__VA_ARGS__)
 #else
 #  define caninfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_GRAPHICS_ERROR
-#  define gerr         _err
+#  define gerr(format, ...) _terr(NXTAG_GRAPHICS, format, ##__VA_ARGS__)
 #else
 #  define gerr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_GRAPHICS_WARN
-#  define gwarn       _warn
+#  define gwarn(format, ...) _twarn(NXTAG_GRAPHICS, format, ##__VA_ARGS__)
 #else
 #  define gwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_GRAPHICS_INFO
-#  define ginfo       _info
+#  define ginfo(format, ...) _tinfo(NXTAG_GRAPHICS, format, ##__VA_ARGS__)
 #else
 #  define ginfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_BINFMT_ERROR
-#  define berr         _err
+#  define berr(format, ...) _terr(NXTAG_BINFMT, format, ##__VA_ARGS__)
 #else
 #  define berr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_BINFMT_WARN
-#  define bwarn       _warn
+#  define bwarn(format, ...) _twarn(NXTAG_BINFMT, format, ##__VA_ARGS__)
 #else
 #  define bwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_BINFMT_INFO
-#  define binfo       _info
+#  define binfo(format, ...) _tinfo(NXTAG_BINFMT, format, ##__VA_ARGS__)
 #else
 #  define binfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_LIB_ERROR
-#  define lerr         _err
+#  define lerr(format, ...) _terr(NXTAG_LIB, format, ##__VA_ARGS__)
 #else
 #  define lerr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_LIB_WARN
-#  define lwarn       _warn
+#  define lwarn(format, ...) _twarn(NXTAG_LIB, format, ##__VA_ARGS__)
 #else
 #  define lwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_LIB_INFO
-#  define linfo       _info
+#  define linfo(format, ...) _tinfo(NXTAG_LIB, format, ##__VA_ARGS__)
 #else
 #  define linfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_AUDIO_ERROR
-#  define auderr       _err
+#  define auderr(format, ...) _terr(NXTAG_AUDIO, format, ##__VA_ARGS__)
 #else
 #  define auderr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_AUDIO_WARN
-#  define audwarn     _warn
+#  define audwarn(format, ...) _twarn(NXTAG_AUDIO, format, ##__VA_ARGS__)
 #else
 #  define audwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_AUDIO_INFO
-#  define audinfo     _info
+#  define audinfo(format, ...) _tinfo(NXTAG_AUDIO, format, ##__VA_ARGS__)
 #else
 #  define audinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_DMA_ERROR
-#  define dmaerr       _err
+#  define dmaerr(format, ...) _terr(NXTAG_DMA, format, ##__VA_ARGS__)
 #else
 #  define dmaerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_DMA_WARN
-#  define dmawarn     _warn
+#  define dmawarn(format, ...) _twarn(NXTAG_DMA, format, ##__VA_ARGS__)
 #else
 #  define dmawarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_DMA_INFO
-#  define dmainfo     _info
+#  define dmainfo(format, ...) _tinfo(NXTAG_DMA, format, ##__VA_ARGS__)
 #else
 #  define dmainfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_IRQ_ERROR
-#  define irqerr       _err
+#  define irqerr(format, ...) _terr(NXTAG_IRQ, format, ##__VA_ARGS__)
 #else
 #  define irqerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_IRQ_WARN
-#  define irqwarn     _warn
+#  define irqwarn(format, ...) _twarn(NXTAG_IRQ, format, ##__VA_ARGS__)
 #else
 #  define irqwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_IRQ_INFO
-#  define irqinfo     _info
+#  define irqinfo(format, ...) _tinfo(NXTAG_IRQ, format, ##__VA_ARGS__)
 #else
 #  define irqinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_LCD_ERROR
-#  define lcderr       _err
+#  define lcderr(format, ...) _terr(NXTAG_LCD, format, ##__VA_ARGS__)
 #else
 #  define lcderr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_LCD_WARN
-#  define lcdwarn     _warn
+#  define lcdwarn(format, ...) _twarn(NXTAG_LCD, format, ##__VA_ARGS__)
 #else
 #  define lcdwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_LCD_INFO
-#  define lcdinfo     _info
+#  define lcdinfo(format, ...) _tinfo(NXTAG_LCD, format, ##__VA_ARGS__)
 #else
 #  define lcdinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_LEDS_ERROR
-#  define lederr       _err
+#  define lederr(format, ...) _terr(NXTAG_LEDS, format, ##__VA_ARGS__)
 #else
 #  define lederr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_LEDS_WARN
-#  define ledwarn     _warn
+#  define ledwarn(format, ...) _twarn(NXTAG_LEDS, format, ##__VA_ARGS__)
 #else
 #  define ledwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_LEDS_INFO
-#  define ledinfo     _info
+#  define ledinfo(format, ...) _tinfo(NXTAG_LEDS, format, ##__VA_ARGS__)
 #else
 #  define ledinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_GPIO_ERROR
-#  define gpioerr      _err
+#  define gpioerr(format, ...) _terr(NXTAG_GPIO, format, ##__VA_ARGS__)
 #else
 #  define gpioerr     _none
 #endif
 
 #ifdef CONFIG_DEBUG_GPIO_WARN
-#  define gpiowarn    _warn
+#  define gpiowarn(format, ...) _twarn(NXTAG_GPIO, format, ##__VA_ARGS__)
 #else
 #  define gpiowarn    _none
 #endif
 
 #ifdef CONFIG_DEBUG_GPIO_INFO
-#  define gpioinfo    _info
+#  define gpioinfo(format, ...) _tinfo(NXTAG_GPIO, format, ##__VA_ARGS__)
 #else
 #  define gpioinfo    _none
 #endif
 
 #ifdef CONFIG_DEBUG_I2C_ERROR
-#  define i2cerr       _err
+#  define i2cerr(format, ...) _terr(NXTAG_I2C, format, ##__VA_ARGS__)
 #else
 #  define i2cerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_I2C_WARN
-#  define i2cwarn     _warn
+#  define i2cwarn(format, ...) _twarn(NXTAG_I2C, format, ##__VA_ARGS__)
 #else
 #  define i2cwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_I2C_INFO
-#  define i2cinfo     _info
+#  define i2cinfo(format, ...) _tinfo(NXTAG_I2C, format, ##__VA_ARGS__)
 #else
 #  define i2cinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_I2S_ERROR
-#  define i2serr       _err
+#  define i2serr(format, ...) _terr(NXTAG_I2S, format, ##__VA_ARGS__)
 #else
 #  define i2serr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_I2S_WARN
-#  define i2swarn     _warn
+#  define i2swarn(format, ...) _twarn(NXTAG_I2S, format, ##__VA_ARGS__)
 #else
 #  define i2swarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_I2S_INFO
-#  define i2sinfo     _info
+#  define i2sinfo(format, ...) _tinfo(NXTAG_I2S, format, ##__VA_ARGS__)
 #else
 #  define i2sinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_I3C_ERROR
-#  define i3cerr       _err
+#  define i3cerr(format, ...) _terr(NXTAG_I3C, format, ##__VA_ARGS__)
 #else
 #  define i3cerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_I3C_WARN
-#  define i3cwarn     _warn
+#  define i3cwarn(format, ...) _twarn(NXTAG_I3C, format, ##__VA_ARGS__)
 #else
 #  define i3cwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_I3C_INFO
-#  define i3cinfo     _info
+#  define i3cinfo(format, ...) _tinfo(NXTAG_I3C, format, ##__VA_ARGS__)
 #else
 #  define i3cinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_PWM_ERROR
-#  define pwmerr       _err
+#  define pwmerr(format, ...) _terr(NXTAG_PWM, format, ##__VA_ARGS__)
 #else
 #  define pwmerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_PWM_WARN
-#  define pwmwarn     _warn
+#  define pwmwarn(format, ...) _twarn(NXTAG_PWM, format, ##__VA_ARGS__)
 #else
 #  define pwmwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_PWM_INFO
-#  define pwminfo     _info
+#  define pwminfo(format, ...) _tinfo(NXTAG_PWM, format, ##__VA_ARGS__)
 #else
 #  define pwminfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_CAPTURE_ERROR
-#  define cperr       _err
+#  define cperr(format, ...) _terr(NXTAG_CAPTURE, format, ##__VA_ARGS__)
 #else
 #  define cperr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_CAPTURE_WARN
-#  define cpwarn     _warn
+#  define cpwarn(format, ...) _twarn(NXTAG_CAPTURE, format, ##__VA_ARGS__)
 #else
 #  define cpwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_CAPTURE_INFO
-#  define cpinfo     _info
+#  define cpinfo(format, ...) _tinfo(NXTAG_CAPTURE, format, ##__VA_ARGS__)
 #else
 #  define cpinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_RC_ERROR
-#  define rcerr        _err
+#  define rcerr(format, ...) _terr(NXTAG_RC, format, ##__VA_ARGS__)
 #else
 #  define rcerr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_RC_WARN
-#  define rcwarn      _warn
+#  define rcwarn(format, ...) _twarn(NXTAG_RC, format, ##__VA_ARGS__)
 #else
 #  define rcwarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_RC_INFO
-#  define rcinfo      _info
+#  define rcinfo(format, ...) _tinfo(NXTAG_RC, format, ##__VA_ARGS__)
 #else
 #  define rcinfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_REGMAP_ERROR
-#  define regmaperr       _err
+#  define regmaperr(format, ...) _terr(NXTAG_REGMAP, format, ##__VA_ARGS__)
 #else
 #  define regmaperr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_REGMAP_WARN
-#  define regmapwarn     _warn
+#  define regmapwarn(format, ...) _twarn(NXTAG_REGMAP, format, ##__VA_ARGS__)
 #else
 #  define regmapwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_REGMAP_INFO
-#  define regmapinfo     _info
+#  define regmapinfo(format, ...) _tinfo(NXTAG_REGMAP, format, ##__VA_ARGS__)
 #else
 #  define regmapinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_RMT_ERROR
-#  define rmterr        _err
+#  define rmterr(format, ...) _terr(NXTAG_RMT, format, ##__VA_ARGS__)
 #else
 #  define rmterr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_RMT_WARN
-#  define rmtwarn      _warn
+#  define rmtwarn(format, ...) _twarn(NXTAG_RMT, format, ##__VA_ARGS__)
 #else
 #  define rmtwarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_RMT_INFO
-#  define rmtinfo      _info
+#  define rmtinfo(format, ...) _tinfo(NXTAG_RMT, format, ##__VA_ARGS__)
 #else
 #  define rmtinfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_RTC_ERROR
-#  define rtcerr       _err
+#  define rtcerr(format, ...) _terr(NXTAG_RTC, format, ##__VA_ARGS__)
 #else
 #  define rtcerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_RTC_WARN
-#  define rtcwarn     _warn
+#  define rtcwarn(format, ...) _twarn(NXTAG_RTC, format, ##__VA_ARGS__)
 #else
 #  define rtcwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_RTC_INFO
-#  define rtcinfo     _info
+#  define rtcinfo(format, ...) _tinfo(NXTAG_RTC, format, ##__VA_ARGS__)
 #else
 #  define rtcinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_MEMCARD_ERROR
-#  define mcerr        _err
+#  define mcerr(format, ...) _terr(NXTAG_MEMCARD, format, ##__VA_ARGS__)
 #else
 #  define mcerr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_MEMCARD_WARN
-#  define mcwarn      _warn
+#  define mcwarn(format, ...) _twarn(NXTAG_MEMCARD, format, ##__VA_ARGS__)
 #else
 #  define mcwarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_MEMCARD_INFO
-#  define mcinfo      _info
+#  define mcinfo(format, ...) _tinfo(NXTAG_MEMCARD, format, ##__VA_ARGS__)
 #else
 #  define mcinfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_SENSORS_ERROR
-#  define snerr        _err
+#  define snerr(format, ...) _terr(NXTAG_SENSORS, format, ##__VA_ARGS__)
 #else
 #  define snerr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_SENSORS_WARN
-#  define snwarn      _warn
+#  define snwarn(format, ...) _twarn(NXTAG_SENSORS, format, ##__VA_ARGS__)
 #else
 #  define snwarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_SENSORS_INFO
-#  define sninfo      _info
+#  define sninfo(format, ...) _tinfo(NXTAG_SENSORS, format, ##__VA_ARGS__)
 #else
 #  define sninfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_SAFETY_ERROR
-#  define saerr        _err
+#  define saerr(format, ...) _terr(NXTAG_SAFETY, format, ##__VA_ARGS__)
 #else
 #  define saerr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_SAFETY_WARN
-#  define sawarn      _warn
+#  define sawarn(format, ...) _twarn(NXTAG_SAFETY, format, ##__VA_ARGS__)
 #else
 #  define sawarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_SAFETY_INFO
-#  define sainfo      _info
+#  define sainfo(format, ...) _tinfo(NXTAG_SAFETY, format, ##__VA_ARGS__)
 #else
 #  define sainfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_SPI_ERROR
-#  define spierr       _err
+#  define spierr(format, ...) _terr(NXTAG_SPI, format, ##__VA_ARGS__)
 #else
 #  define spierr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_SPI_WARN
-#  define spiwarn     _warn
+#  define spiwarn(format, ...) _twarn(NXTAG_SPI, format, ##__VA_ARGS__)
 #else
 #  define spiwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_SPI_INFO
-#  define spiinfo     _info
+#  define spiinfo(format, ...) _tinfo(NXTAG_SPI, format, ##__VA_ARGS__)
 #else
 #  define spiinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_THERMAL_ERROR
-#  define therr         _err
+#  define therr(format, ...) _terr(NXTAG_THERMAL, format, ##__VA_ARGS__)
 #else
 #  define therr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_THERMAL_WARN
-#  define thwarn       _warn
+#  define thwarn(format, ...) _twarn(NXTAG_THERMAL, format, ##__VA_ARGS__)
 #else
 #  define thwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_THERMAL_INFO
-#  define thinfo       _info
+#  define thinfo(format, ...) _tinfo(NXTAG_THERMAL, format, ##__VA_ARGS__)
 #else
 #  define thinfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_TIMER_ERROR
-#  define tmrerr       _err
+#  define tmrerr(format, ...) _terr(NXTAG_TIMER, format, ##__VA_ARGS__)
 #else
 #  define tmrerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_TIMER_WARN
-#  define tmrwarn     _warn
+#  define tmrwarn(format, ...) _twarn(NXTAG_TIMER, format, ##__VA_ARGS__)
 #else
 #  define tmrwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_TIMER_INFO
-#  define tmrinfo     _info
+#  define tmrinfo(format, ...) _tinfo(NXTAG_TIMER, format, ##__VA_ARGS__)
 #else
 #  define tmrinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_USB_ERROR
-#  define uerr         _err
+#  define uerr(format, ...) _terr(NXTAG_USB, format, ##__VA_ARGS__)
 #else
 #  define uerr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_USB_WARN
-#  define uwarn       _warn
+#  define uwarn(format, ...) _twarn(NXTAG_USB, format, ##__VA_ARGS__)
 #else
 #  define uwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_USB_INFO
-#  define uinfo       _info
+#  define uinfo(format, ...) _tinfo(NXTAG_USB, format, ##__VA_ARGS__)
 #else
 #  define uinfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_WATCHDOG_ERROR
-#  define wderr        _err
+#  define wderr(format, ...) _terr(NXTAG_WATCHDOG, format, ##__VA_ARGS__)
 #else
 #  define wderr       _none
 #endif
 
 #ifdef CONFIG_DEBUG_WATCHDOG_WARN
-#  define wdwarn      _warn
+#  define wdwarn(format, ...) _twarn(NXTAG_WATCHDOG, format, ##__VA_ARGS__)
 #else
 #  define wdwarn      _none
 #endif
 
 #ifdef CONFIG_DEBUG_WATCHDOG_INFO
-#  define wdinfo      _info
+#  define wdinfo(format, ...) _tinfo(NXTAG_WATCHDOG, format, ##__VA_ARGS__)
 #else
 #  define wdinfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_MOTOR_ERROR
-#  define mtrerr      _err
+#  define mtrerr(format, ...) _terr(NXTAG_MOTOR, format, ##__VA_ARGS__)
 #else
 #  define mtrerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_MOTOR_WARN
-#  define mtrwarn     _warn
+#  define mtrwarn(format, ...) _twarn(NXTAG_MOTOR, format, ##__VA_ARGS__)
 #else
 #  define mtrwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_MOTOR_INFO
-#  define mtrinfo     _info
+#  define mtrinfo(format, ...) _tinfo(NXTAG_MOTOR, format, ##__VA_ARGS__)
 #else
 #  define mtrinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_STEPPER_ERROR
-#  define stperr      _err
+#  define stperr(format, ...) _terr(NXTAG_STEPPER, format, ##__VA_ARGS__)
 #else
 #  define stperr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_STEPPER_WARN
-#  define stpwarn     _warn
+#  define stpwarn(format, ...) _twarn(NXTAG_STEPPER, format, ##__VA_ARGS__)
 #else
 #  define stpwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_STEPPER_INFO
-#  define stpinfo     _info
+#  define stpinfo(format, ...) _tinfo(NXTAG_STEPPER, format, ##__VA_ARGS__)
 #else
 #  define stpinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_VIDEO_ERROR
-#  define verr        _err
+#  define verr(format, ...) _terr(NXTAG_VIDEO, format, ##__VA_ARGS__)
 #else
 #  define verr        _none
 #endif
 
 #ifdef CONFIG_DEBUG_VIDEO_WARN
-#  define vwarn       _warn
+#  define vwarn(format, ...) _twarn(NXTAG_VIDEO, format, ##__VA_ARGS__)
 #else
 #  define vwarn       _none
 #endif
 
 #ifdef CONFIG_DEBUG_VIDEO_INFO
-#  define vinfo       _info
+#  define vinfo(format, ...) _tinfo(NXTAG_VIDEO, format, ##__VA_ARGS__)
 #else
 #  define vinfo       _none
 #endif
 
 #ifdef CONFIG_DEBUG_VIRTIO_ERROR
-#  define vrterr      _err
+#  define vrterr(format, ...) _terr(NXTAG_VIRTIO, format, ##__VA_ARGS__)
 #else
 #  define vrterr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_VIRTIO_WARN
-#  define vrtwarn     _warn
+#  define vrtwarn(format, ...) _twarn(NXTAG_VIRTIO, format, ##__VA_ARGS__)
 #else
 #  define vrtwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_VIRTIO_INFO
-#  define vrtinfo     _info
+#  define vrtinfo(format, ...) _tinfo(NXTAG_VIRTIO, format, ##__VA_ARGS__)
 #else
 #  define vrtinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_VHOST_ERROR
-#  define vhosterr     _err
+#  define vhosterr(format, ...) _terr(NXTAG_VHOST, format, ##__VA_ARGS__)
 #else
 #  define vhosterr     _none
 #endif
 
 #ifdef CONFIG_DEBUG_VHOST_WARN
-#  define vhostwarn    _warn
+#  define vhostwarn(format, ...) _twarn(NXTAG_VHOST, format, ##__VA_ARGS__)
 #else
 #  define vhostwarn    _none
 #endif
 
 #ifdef CONFIG_DEBUG_VHOST_INFO
-#  define vhostinfo    _info
+#  define vhostinfo(format, ...) _tinfo(NXTAG_VHOST, format, ##__VA_ARGS__)
 #else
 #  define vhostinfo    _none
 #endif
 
 #ifdef CONFIG_DEBUG_RESET_ERROR
-#  define rsterr       _err
+#  define rsterr(format, ...) _terr(NXTAG_RESET, format, ##__VA_ARGS__)
 #else
 #  define rsterr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_RESET_WARN
-#  define rstwarn     _warn
+#  define rstwarn(format, ...) _twarn(NXTAG_RESET, format, ##__VA_ARGS__)
 #else
 #  define rstwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_RESET_INFO
-#  define rstinfo     _info
+#  define rstinfo(format, ...) _tinfo(NXTAG_RESET, format, ##__VA_ARGS__)
 #else
 #  define rstinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_IPC_ERROR
-#  define ipcerr       _err
+#  define ipcerr(format, ...) _terr(NXTAG_IPC, format, ##__VA_ARGS__)
 #else
 #  define ipcerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_IPC_WARN
-#  define ipcwarn     _warn
+#  define ipcwarn(format, ...) _twarn(NXTAG_IPC, format, ##__VA_ARGS__)
 #else
 #  define ipcwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_IPC_INFO
-#  define ipcinfo     _info
+#  define ipcinfo(format, ...) _tinfo(NXTAG_IPC, format, ##__VA_ARGS__)
 #else
 #  define ipcinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_PCI_ERROR
-#  define pcierr       _err
+#  define pcierr(format, ...) _terr(NXTAG_PCI, format, ##__VA_ARGS__)
 #else
 #  define pcierr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_PCI_WARN
-#  define pciwarn     _warn
+#  define pciwarn(format, ...) _twarn(NXTAG_PCI, format, ##__VA_ARGS__)
 #else
 #  define pciwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_PCI_INFO
-#  define pciinfo     _info
+#  define pciinfo(format, ...) _tinfo(NXTAG_PCI, format, ##__VA_ARGS__)
 #else
 #  define pciinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_RPMSG_ERROR
-#  define rpmsgerr       _err
+#  define rpmsgerr(format, ...) _terr(NXTAG_RPMSG, format, ##__VA_ARGS__)
 #else
 #  define rpmsgerr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_RPMSG_WARN
-#  define rpmsgwarn     _warn
+#  define rpmsgwarn(format, ...) _twarn(NXTAG_RPMSG, format, ##__VA_ARGS__)
 #else
 #  define rpmsgwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_RPMSG_INFO
-#  define rpmsginfo     _info
+#  define rpmsginfo(format, ...) _tinfo(NXTAG_RPMSG, format, ##__VA_ARGS__)
 #else
 #  define rpmsginfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_RPTUN_ERROR
-#  define rptunerr     _err
+#  define rptunerr(format, ...) _terr(NXTAG_RPTUN, format, ##__VA_ARGS__)
 #else
 #  define rptunerr     _none
 #endif
 
 #ifdef CONFIG_DEBUG_RPTUN_WARN
-#  define rptunwarn    _warn
+#  define rptunwarn(format, ...) _twarn(NXTAG_RPTUN, format, ##__VA_ARGS__)
 #else
 #  define rptunwarn    _none
 #endif
 
 #ifdef CONFIG_DEBUG_RPTUN_INFO
-#  define rptuninfo    _info
+#  define rptuninfo(format, ...) _tinfo(NXTAG_RPTUN, format, ##__VA_ARGS__)
 #else
 #  define rptuninfo    _none
 #endif
 
 #ifdef CONFIG_DEBUG_HWTRACING_ERROR
-#  define hterr       _err
+#  define hterr(format, ...) _terr(NXTAG_HWTRACING, format, ##__VA_ARGS__)
 #else
 #  define hterr      _none
 #endif
 
 #ifdef CONFIG_DEBUG_HWTRACING_WARN
-#  define htwarn     _warn
+#  define htwarn(format, ...) _twarn(NXTAG_HWTRACING, format, ##__VA_ARGS__)
 #else
 #  define htwarn     _none
 #endif
 
 #ifdef CONFIG_DEBUG_HWTRACING_INFO
-#  define htinfo     _info
+#  define htinfo(format, ...) _tinfo(NXTAG_HWTRACING, format, ##__VA_ARGS__)
 #else
 #  define htinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_PTP_ERROR
-#  define ptperr     _err
+#  define ptperr(format, ...) _terr(NXTAG_PTP, format, ##__VA_ARGS__)
 #else
 #  define ptperr     _none
 #endif
 
 #ifdef CONFIG_DEBUG_PTP_WARN
-#  define ptpwarn    _warn
+#  define ptpwarn(format, ...) _twarn(NXTAG_PTP, format, ##__VA_ARGS__)
 #else
 #  define ptpwarn    _none
 #endif
 
 #ifdef CONFIG_DEBUG_PTP_INFO
-#  define ptpinfo    _info
+#  define ptpinfo(format, ...) _tinfo(NXTAG_PTP, format, ##__VA_ARGS__)
 #else
 #  define ptpinfo    _none
 #endif

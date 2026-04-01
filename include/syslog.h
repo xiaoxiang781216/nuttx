@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
+#include <nuttx/tag.h>
 
 #ifdef CONFIG_SYSLOG_TO_SCHED_NOTE
 #include <nuttx/sched_note.h>
@@ -123,10 +124,25 @@
 #define LOG_INFO      6  /* Informational message */
 #define LOG_DEBUG     7  /* Debug-level message */
 
+/* Tag encoding in priority.
+ * The tag is packed into the upper bits of the priority argument
+ * so that existing syslog()/vsyslog() signatures can carry tag info
+ * without adding new API functions.
+ *
+ *   bits [7:0]  — standard syslog priority (LOG_ERR, LOG_INFO, …)
+ *   bits [15:8] — tag (NXTAG_* from <nuttx/tag.h>)
+ */
+
+#define LOG_TAG_SHIFT 8
+#define LOG_PRI_MASK  0x00ff
+#define LOG_TAGPRI(t, p) (((int)(t) << LOG_TAG_SHIFT) | (p))
+#define LOG_GETTAG(p)    (((p) >> LOG_TAG_SHIFT) & 0xff)
+#define LOG_GETPRI(p)    ((p) & LOG_PRI_MASK)
+
 /* Used with setlogmask() */
 
-#define LOG_MASK(p)   (1 << (p))
-#define LOG_UPTO(p)   ((1 << ((p)+1)) - 1)
+#define LOG_MASK(p)   (1 << (LOG_GETPRI(p)))
+#define LOG_UPTO(p)   ((1 << ((LOG_GETPRI(p))+1)) - 1)
 #define LOG_ALL       0xff
 
 /****************************************************************************
@@ -236,9 +252,11 @@ void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
      syslog_like(2, 0);
 #elif defined(CONFIG_SYSLOG_TO_SCHED_NOTE)
 #  define syslog(priority, fmt, ...) \
-          sched_note_printf(NXTAG_LOG, priority, fmt, ##__VA_ARGS__)
+          sched_note_printf(LOG_GETTAG(priority), \
+                            LOG_GETPRI(priority), fmt, ##__VA_ARGS__)
 #  define vsyslog(priority, fmt, ap) \
-          sched_note_vprintf(NXTAG_LOG, priority, fmt, ap)
+          sched_note_vprintf(LOG_GETTAG(priority), \
+                             LOG_GETPRI(priority), fmt, ap)
 #else
 static inline_function void syslog_like(2, 3)
 syslog(int priority, FAR const char *fmt, ...)

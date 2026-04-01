@@ -238,13 +238,13 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 #if defined(CONFIG_SYSLOG_COLOR_OUTPUT)
   /* Set the terminal style according to message priority. */
 
-                             , g_priority_color[priority]
+                             , g_priority_color[LOG_GETPRI(priority)]
 #endif
 
 #if defined(CONFIG_SYSLOG_PRIORITY)
   /* Prepend the message priority. */
 
-                             , g_priority_str[priority]
+                             , g_priority_str[LOG_GETPRI(priority)]
 #endif
 
 #if defined(CONFIG_SYSLOG_PREFIX)
