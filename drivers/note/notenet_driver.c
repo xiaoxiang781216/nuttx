@@ -192,7 +192,8 @@ static int note_netdev_add(FAR struct note_driver_s *driver,
 
   /* Ignore data if device is not ready */
 
-  if (!drv->pkt)
+  if (!drv->pkt || drv->np.lower == NULL ||
+      IFF_IS_RUNNING(drv->np.lower->netdev.d_flags) == 0)
     {
       spin_unlock_irqrestore_notrace(&drv->lock, flags);
       return -ENODEV;
