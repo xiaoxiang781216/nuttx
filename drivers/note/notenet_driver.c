@@ -26,6 +26,7 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/percpu.h>
 #include <nuttx/net/netpoll.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/spinlock.h>
@@ -76,7 +77,7 @@ static const struct note_driver_ops_s g_notenetdev_ops =
  * Public Data
  ****************************************************************************/
 
-struct notenet_driver_s g_notenet =
+DEFINE_PER_CPU_BMP(struct notenet_driver_s, g_notenet) =
 {
   {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
@@ -100,6 +101,7 @@ struct notenet_driver_s g_notenet =
   },
   .lock = SP_UNLOCKED
 };
+#define g_notenet this_cpu_var_bmp(g_notenet)
 
 /****************************************************************************
  * Private Functions

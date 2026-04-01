@@ -95,7 +95,7 @@ DECLARE_PER_CPU_BMP(struct notesnap_s, g_notesnap);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTENET
-extern struct notenet_driver_s g_notenet;
+DECLARE_PER_CPU_BMP(struct notenet_driver_s, g_notenet);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTESTREAM
