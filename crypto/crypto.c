@@ -588,22 +588,26 @@ int crypto_invoke(FAR struct cryptop *crp)
   hid = (crp->crp_sid >> 32) & 0xffffffff;
   if (hid >= crypto_drivers_num)
     {
+      nxmutex_unlock(&g_crypto_lock);
       goto migrate;
     }
 
   if (crypto_drivers[hid].cc_flags & CRYPTOCAP_F_CLEANUP)
     {
+      nxmutex_unlock(&g_crypto_lock);
       crypto_freesession(crp->crp_sid);
       goto migrate;
     }
 
   if (crypto_drivers[hid].cc_process == NULL)
     {
+      nxmutex_unlock(&g_crypto_lock);
       goto migrate;
     }
 
   crypto_drivers[hid].cc_operations++;
   crypto_drivers[hid].cc_bytes += crp->crp_ilen;
+  nxmutex_unlock(&g_crypto_lock);
 
   error = crypto_drivers[hid].cc_process(crp);
   if (error)
@@ -621,7 +625,6 @@ int crypto_invoke(FAR struct cryptop *crp)
         }
     }
 
-  nxmutex_unlock(&g_crypto_lock);
   return 0;
 
 migrate:
@@ -639,7 +642,6 @@ migrate:
     }
 
   crp->crp_etype = -EAGAIN;
-  nxmutex_unlock(&g_crypto_lock);
   return 0;
 }
 
