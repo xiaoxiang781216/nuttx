@@ -158,7 +158,7 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 
   if (!MM_NODE_IS_ALLOC(node))
     {
-      mm_trace_event(LOG_EMERG, DIAG_MM_FREE_FAIL,
+      mm_trace_diag(LOG_EMERG, DIAG_MM_FREE_FAIL,
                      "address:%p, reason:double-free", mem);
       kasan_bypass(bypass);
       DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));

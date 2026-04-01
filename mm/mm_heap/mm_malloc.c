@@ -383,7 +383,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
             minfo.arena, minfo.uordblks, minfo.fordblks,
             minfo.mxordblk, minfo.aordblks, minfo.ordblks);
 
-      mm_trace_event(LOG_EMERG, DIAG_MM_ALLOC_FAIL,
+      mm_trace_diag(LOG_EMERG, DIAG_MM_ALLOC_FAIL,
                      "size:%zu, total:%d, used:%d, free:%d, "
                      "largest:%d, nused:%d, nfree:%d",
                      alignsize, minfo.arena, minfo.uordblks, minfo.fordblks,
@@ -414,7 +414,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       mm_memdump(heap, &dump);
 #  endif
 #else
-    mm_trace_event(LOG_EMERG, DIAG_MM_ALLOC_FAIL, "size:%zu", alignsize);
+    mm_trace_diag(LOG_EMERG, DIAG_MM_ALLOC_FAIL, "size:%zu", alignsize);
 #endif
 #ifdef CONFIG_MM_PANIC_ON_FAILURE
       PANIC();

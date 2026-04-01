@@ -104,15 +104,15 @@
 #endif
 
 #define sched_note_begin(tag) \
-        sched_note_event(tag, LOG_INFO, NOTE_DUMP_BEGIN, NULL, 0)
+        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_BEGIN, NULL, 0)
 #define sched_note_end(tag) \
-        sched_note_event(tag, LOG_INFO, NOTE_DUMP_END, NULL, 0)
+        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_END, NULL, 0)
 #define sched_note_beginex(tag, str) \
-        sched_note_event(tag, LOG_INFO, NOTE_DUMP_BEGIN, str, strlen(str))
+        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_BEGIN, str, strlen(str))
 #define sched_note_endex(tag, str) \
-        sched_note_event(tag, LOG_INFO, NOTE_DUMP_END, str, strlen(str))
+        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_END, str, strlen(str))
 #define sched_note_mark(tag, str) \
-        sched_note_event(tag, LOG_INFO, NOTE_DUMP_MARK, str, strlen(str))
+        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_MARK, str, strlen(str))
 
 #define sched_note_counter(tag, name_, value_) \
         do \
@@ -120,7 +120,7 @@
             struct note_counter_s counter; \
             counter.value = value_; \
             strlcpy(counter.name, name_, NAME_MAX); \
-            sched_note_event(tag, LOG_INFO, NOTE_DUMP_COUNTER, \
+            sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_COUNTER, \
                              &counter, sizeof(counter)); \
           } \
         while (0)
@@ -130,7 +130,7 @@
           { \
             struct note_threadtime_s threadtime; \
             threadtime.elapsed = (_elapsed); \
-            sched_note_event(NXTAG_SCHED, LOG_INFO, NOTE_DUMP_THREADTIME, \
+            sched_note_event(NXTAG_SCHED, LOG_DEBUG, NOTE_DUMP_THREADTIME, \
                              &threadtime, sizeof(threadtime)); \
           } \
         while (0)

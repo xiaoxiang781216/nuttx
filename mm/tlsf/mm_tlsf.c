@@ -415,7 +415,7 @@ static void forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 
   if (tlsf_block_is_free(mem))
     {
-      mm_trace_event(LOG_EMERG, DIAG_MM_FREE_FAIL,
+      mm_trace_diag(LOG_EMERG, DIAG_MM_FREE_FAIL,
                      "address:%p, reason:double-free", mem);
       DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
       DEBUGPANIC();
