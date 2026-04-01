@@ -39,6 +39,7 @@
 #include <inttypes.h>
 #include <poll.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
@@ -118,6 +119,7 @@ struct noteram_driver_s
   struct noteram_ratelimit_s ratelimit;
   dq_queue_t poll_list;     /* Registered poll users list */
   rspinlock_t lock;
+  atomic_t poll_ref;        /* Poll notify in-flight reference */
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
   struct wdog_s wdog;
 #endif
@@ -280,7 +282,7 @@ static void noteram_timeout_handler(wdparm_t arg)
   irqstate_t flags = rspin_lock_irqsave_notrace(&drv->lock);
   FAR struct noteram_dump_context_s *ctx;
 
-  sched_lock();
+  atomic_add(&drv->poll_ref, 1);
   dq_for_every_entry(&drv->poll_list, ctx,
                      struct noteram_dump_context_s, poll_node)
     {
@@ -293,13 +295,16 @@ static void noteram_timeout_handler(wdparm_t arg)
       if (ctx->pfd &&
           noteram_unread_length(drv, ctx->read) >= ctx->threshold)
         {
+          rspin_unlock_irqrestore_notrace(&drv->lock, flags);
           poll_notify(&ctx->pfd, 1, POLLIN);
+          flags = rspin_lock_irqsave_notrace(&drv->lock);
         }
     }
 
-  noteram_timeout_reset(drv);
+  atomic_sub(&drv->poll_ref, 1);
+
   rspin_unlock_irqrestore_notrace(&drv->lock, flags);
-  sched_unlock();
+  noteram_timeout_reset(drv);
 }
 #else
 #  define noteram_timeout_reset(drv)
@@ -765,17 +770,25 @@ int noteram_close(FAR struct file *filep)
 {
   FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
   FAR struct noteram_dump_context_s *ctx = filep->f_priv;
-  irqstate_t flags = rspin_lock_irqsave_notrace(&drv->lock);
-
-  /* If poll is registered, remove from the list */
 
   if (ctx->pfd != NULL)
     {
-      dq_rem(&ctx->poll_node, &drv->poll_list);
+      irqstate_t flags;
+
+      flags = rspin_lock_irqsave_notrace(&drv->lock);
+
+      while (atomic_read(&drv->poll_ref) > 0)
+        {
+          rspin_unlock_irqrestore_notrace(&drv->lock, flags);
+          sched_yield();
+          flags = rspin_lock_irqsave_notrace(&drv->lock);
+        }
+
       ctx->pfd = NULL;
+      dq_rem(&ctx->poll_node, &drv->poll_list);
+      rspin_unlock_irqrestore_notrace(&drv->lock, flags);
     }
 
-  rspin_unlock_irqrestore_notrace(&drv->lock, flags);
   filep->f_priv = NULL;
   kmm_free(ctx);
   return OK;
@@ -1041,48 +1054,52 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
   drv = inode->i_private;
   ctx = filep->f_priv;
 
-  flags = rspin_lock_irqsave_notrace(&drv->lock);
-  sched_lock();
-
   /* Ignore waits that do not include POLLIN */
 
   if ((fds->events & POLLIN) == 0)
     {
-      ret = -EDEADLK;
-      goto errout;
+      return -EDEADLK;
     }
 
-  /* Are we setting up the poll?  Or tearing it down? */
+  flags = rspin_lock_irqsave_notrace(&drv->lock);
+
+  while (atomic_read(&drv->poll_ref) > 0)
+    {
+      rspin_unlock_irqrestore_notrace(&drv->lock, flags);
+      sched_yield();
+      flags = rspin_lock_irqsave_notrace(&drv->lock);
+    }
 
   if (setup)
     {
-      /* Check if this file handle already has poll registered */
-
       if (ctx->pfd != NULL)
         {
-          ret = -EBUSY;
-          goto errout;
+          rspin_unlock_irqrestore_notrace(&drv->lock, flags);
+          return -EBUSY;
         }
-
-      /* Register poll: store pfd and add to list */
 
       ctx->pfd = fds;
       dq_addlast(&ctx->poll_node, &drv->poll_list);
+
       if (noteram_unread_length(drv, ctx->read) >= ctx->threshold)
         {
-          poll_notify(&ctx->pfd, 1, POLLIN);
+          rspin_unlock_irqrestore_notrace(&drv->lock, flags);
+          poll_notify(&fds, 1, POLLIN);
         }
     }
-  else if (ctx->pfd != NULL) /* Tear it down */
+  else
     {
-      dq_rem(&ctx->poll_node, &drv->poll_list);
-      ctx->pfd = NULL;
+      if (ctx->pfd != NULL)
+        {
+          ctx->pfd = NULL;
+          dq_rem(&ctx->poll_node, &drv->poll_list);
+        }
+
+      rspin_unlock_irqrestore_notrace(&drv->lock, flags);
     }
 
-errout:
   noteram_timeout_reset(drv);
-  rspin_unlock_irqrestore_notrace(&drv->lock, flags);
-  sched_unlock();
+
   return ret;
 }
 
@@ -1119,7 +1136,6 @@ static void noteram_add(FAR struct note_driver_s *driver,
   noteram_driver_initialize();
 
   flags = rspin_lock_irqsave_notrace(&drv->lock);
-  sched_lock();
 
   /* Initialize the noteram header if it has not been initialized yet. */
 
@@ -1166,16 +1182,12 @@ static void noteram_add(FAR struct note_driver_s *driver,
   memcpy(drv->header->buffer, buf + space, notelen - space);
   drv->header->head = noteram_next(drv, head, notelen);
 
-  /* Only notify poll waiters on the outermost (non-recursive) call.
-   * poll_notify -> nxsem_post -> sched_note_wakeup -> noteram_add
-   * would re-enter with rspinlock held; the recursive call writes
-   * the buffer but skips notification to break the chain.
-   */
-
   if (!noswitches && !rspin_lock_is_recursive(&drv->lock) &&
       !dq_empty(&drv->poll_list))
     {
       FAR struct noteram_dump_context_s *ctx;
+
+      atomic_add(&drv->poll_ref, 1);
 
       dq_for_every_entry(&drv->poll_list, ctx,
                           struct noteram_dump_context_s, poll_node)
@@ -1183,16 +1195,18 @@ static void noteram_add(FAR struct note_driver_s *driver,
           if (ctx->pfd &&
               noteram_unread_length(drv, ctx->read) >= ctx->threshold)
             {
+              rspin_unlock_irqrestore_notrace(&drv->lock, flags);
               poll_notify(&ctx->pfd, 1, POLLIN);
+              flags = rspin_lock_irqsave_notrace(&drv->lock);
             }
         }
 
-      noteram_timeout_reset(drv);
+      atomic_sub(&drv->poll_ref, 1);
     }
 
 out:
   rspin_unlock_irqrestore_notrace(&drv->lock, flags);
-  sched_unlock();
+  noteram_timeout_reset(drv);
 }
 
 /****************************************************************************
