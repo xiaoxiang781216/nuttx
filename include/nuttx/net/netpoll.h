@@ -264,6 +264,71 @@ int netpoll_can_queue_send(FAR struct netpoll_s *np,
 int netpoll_can_send(FAR struct netpoll_s *np, FAR const void *buf,
                      size_t len);
 
+/****************************************************************************
+ * Name: netpoll_isotp_init
+ *
+ * Description:
+ *   Initialize netpoll with CAN ISO-TP.
+ *
+ * Input Parameters:
+ *   np    - pointer to netpoll data
+ *   lower - pointer to netdev lower
+ *   txid  - CAN ID used for transmission (srcport).
+ *   rxid  - CAN ID used for reception (destport).
+ *
+ * Returned Value:
+ *   Returns OK on success
+ *
+ * Description:
+ *   Initialize netpoll for ISO-TP over CAN.
+ *
+ ****************************************************************************/
+
+int netpoll_isotp_init(FAR struct netpoll_s *np,
+                       FAR struct netdev_lowerhalf_s *lower,
+                       uint16_t txid, uint16_t rxid);
+
+/****************************************************************************
+ * Name: netpoll_isotp_send
+ *
+ * Description:
+ *   Send a buffer via ISO-TP over CAN netpoll.
+ *
+ * Input Parameters:
+ *   np  - pointer to netpoll data
+ *   buf - data to send
+ *   len - length of data to send
+ *
+ * Returned Value:
+ *   OK on success; Negated errno on failure.
+ *
+ ****************************************************************************/
+
+int netpoll_isotp_send(FAR struct netpoll_s *np, FAR const void *buf,
+                       size_t len);
+
+/****************************************************************************
+ * Name: netpoll_isotp_recv
+ *
+ * Description:
+ *   Receive a message via ISO-TP over CAN netpoll.
+ *
+ *   This function doesn't use the NET stack so it can be used in
+ *   an interrupt context.
+ *
+ * Input Parameters:
+ *   np  - pointer to netpoll data
+ *   buf - receive buffer
+ *   len - length of receive buffer
+ *
+ * Returned Value:
+ *   Returns the number of characters received.
+ *
+ ****************************************************************************/
+
+ssize_t netpoll_isotp_recv(FAR struct netpoll_s *np, FAR void *buf,
+                           size_t len);
+
 #undef EXTERN
 #ifdef __cplusplus
 }

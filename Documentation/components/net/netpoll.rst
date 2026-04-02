@@ -52,3 +52,22 @@ NOTE: for CAN FD, the data segment length can only take specific
 predefinied values. Therefore, when the last data segment to be sent has
 an invalid length, padding is required. Netpoll adds the necessary padding
 and fills it with zeros.
+
+======
+ISO-TP
+======
+
+The ISO-TP transport adds bidirectional, message-oriented communication on
+top of the CAN netpoll layer. Payloads up to 4095 bytes are supported.
+Both send and receive block until the exchange completes or a timeout
+occurs. On receive, a partial message is discarded and reception restarts
+if no consecutive frame arrives within the N_Cr timeout.
+
+The frame format and CAN ID width are selected at compile time:
+
+- ``CONFIG_NET_CAN_CANFD`` - when enabled, all transmitted frames use
+  CAN FD format with a 64-byte data field and the ``CANFD_FDF`` flag set.
+  When disabled, classic CAN frames with an 8-byte data field are used.
+- ``CONFIG_NET_CAN_EXTID`` - when enabled, all transmitted frames use the
+  29-bit extended CAN ID (``CAN_EFF_FLAG``). When disabled, the 11-bit
+  base CAN ID is used.

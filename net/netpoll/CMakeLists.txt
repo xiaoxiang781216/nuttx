@@ -23,13 +23,13 @@
 if(CONFIG_NET_NETPOLL)
   set(SRCS netpoll_pkt.c)
 
-if(CONFIG_NET_UDP)
-  list(APPEND SRCS netpoll_udp.c)
-endif()
+  if(CONFIG_NET_UDP)
+    list(APPEND SRCS netpoll_udp.c)
+  endif()
 
-if(CONFIG_NET_CAN)
-  list(APPEND SRCS netpoll_can.c)
-endif()
+  if(CONFIG_NET_CAN)
+    list(APPEND SRCS netpoll_can.c netpoll_isotp.c)
+  endif()
 
   target_sources(net PRIVATE ${SRCS})
 endif()

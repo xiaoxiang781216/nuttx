@@ -28,7 +28,7 @@ NET_CSRCS += netpoll_udp.c
 endif
 
 ifeq ($(CONFIG_NET_CAN),y)
-NET_CSRCS += netpoll_can.c
+NET_CSRCS += netpoll_can.c netpoll_isotp.c
 endif
 
 # Include netpoll build support
