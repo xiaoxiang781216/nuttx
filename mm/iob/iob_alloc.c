@@ -90,6 +90,15 @@ static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
 #ifdef CONFIG_DEBUG_IOB
       iob->io_owner[0] = '\0';
 #endif
+#ifdef CONFIG_NET_TIMESTAMP
+
+      /* Clear the receive timestamp so that recycled IOBs do not
+       * carry stale values from a previous allocation.
+       */
+
+      iob->io_time.tv_sec  = 0;
+      iob->io_time.tv_nsec = 0;
+#endif
 
       /* Verify IOB and IOB data address alignment */
 

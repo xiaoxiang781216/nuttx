@@ -718,12 +718,32 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
                                                     IEEE1722ACF_TYPE_CAN);
 
 #ifdef CONFIG_NET_TIMESTAMP
-                struct timespec tv;
-                if (ieee1722acf_stream_gettime(stream, &tv) == OK)
+
+                /* If the source CAN IOB already carries a valid receive
+                 * timestamp (e.g. from hardware RX timestamping via
+                 * routing), reuse it directly.  Otherwise fall back to
+                 * reading the stream's PTP / system clock.
+                 */
+
+#ifdef CONFIG_NET_IEEE1722ACF_CAN_RX_TIMESTAMP
+                if (can_iob->io_time.tv_sec != 0 ||
+                    can_iob->io_time.tv_nsec != 0)
                   {
                     dest_hdr.can_hdr.msg_time_valid = 1;
-                    dest_hdr.msg_timestamp = HTONQ(1000000000ull *
-                                                   tv.tv_sec + tv.tv_nsec);
+                    dest_hdr.msg_timestamp =
+                        HTONQ(1000000000ull * can_iob->io_time.tv_sec +
+                              can_iob->io_time.tv_nsec);
+                  }
+                else
+#endif
+                  {
+                    struct timespec tv;
+                    if (ieee1722acf_stream_gettime(stream, &tv) == OK)
+                      {
+                        dest_hdr.can_hdr.msg_time_valid = 1;
+                        dest_hdr.msg_timestamp =
+                            HTONQ(1000000000ull * tv.tv_sec + tv.tv_nsec);
+                      }
                   }
 #endif
 

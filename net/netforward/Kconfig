@@ -40,6 +40,19 @@ config NET_CANFORWARD_IEEE1722ACF
 	default n
 	depends on NET_CANFORWARD
 
+config NET_IEEE1722ACF_CAN_RX_TIMESTAMP
+	bool "Reuse CAN IOB receive timestamp for ACF CAN message"
+	default n
+	depends on NET_CANFORWARD_IEEE1722ACF && NET_TIMESTAMP
+	---help---
+		When enabled, the IEEE 1722 ACF CAN message timestamp will
+		prefer the receive timestamp already carried in the source
+		CAN IOB (io_time) if it is valid (non-zero).  This provides
+		a more accurate timestamp when the CAN frame was received
+		through a gateway route with hardware RX timestamping.
+		If the IOB timestamp is not valid, it falls back to reading
+		the stream PTP / system clock.
+
 config NET_IEEE1722_PKTSIZE
 	int "IEEE 1722 packet buffer size"
 	default NET_ETH_PKTSIZE
