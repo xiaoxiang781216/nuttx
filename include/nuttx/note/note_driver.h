@@ -162,8 +162,8 @@
         NXTAG_MASK_ZERO((s)->tag_mask)
 #define NOTE_FILTER_TAGMASK_FILL(s) \
         NXTAG_MASK_FILL((s)->tag_mask)
-#define NOTE_FILTER_LEVEL_SET(level, s) \
-        ((s)->level = (level))
+#define NOTE_FILTER_LEVEL_SET(l, s) \
+        ((s)->level = (l))
 
 /* IOCTL Commands ***********************************************************/
 
