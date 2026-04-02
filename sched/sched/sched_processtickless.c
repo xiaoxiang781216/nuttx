@@ -379,8 +379,12 @@ static void nxsched_timer_start(clock_t ticks, clock_t interval)
 
 void nxsched_process_timer(void)
 {
-#ifdef CONFIG_HRTIMER
-  uint64_t nsec = clock_systime_nsec();
+  uint64_t        nsec;
+  struct timespec ts;
+
+  up_timer_gettime(&ts);
+  nsec = clock_time2nsec(&ts);
+
   hrtimer_process(nsec);
 
 #  if CONFIG_RR_INTERVAL > 0
@@ -390,29 +394,6 @@ void nxsched_process_timer(void)
   nxsched_process_event(div_const(nsec, (uint32_t)NSEC_PER_TICK), true);
   leave_critical_section(flags);
 #  endif
-
-#else
-  irqstate_t flags;
-  clock_t ticks;
-
-  flags = enter_critical_section();
-
-  /* Do not move the up_timer_gettick out of the critical section,
-   * it will violate the invariant that the g_timer_tick should be monotonic.
-   */
-
-  up_timer_gettick(&ticks);
-
-#if CONFIG_RR_INTERVAL > 0
-  /* Workaround for SCHED_RR, see the note. */
-
-  nxsched_process_event(ticks, true);
-#endif
-
-  wd_timer(ticks);
-
-  leave_critical_section(flags);
-#endif
 }
 
 /****************************************************************************

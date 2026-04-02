@@ -36,14 +36,11 @@
 #include <nuttx/clock.h>
 #include <nuttx/queue.h>
 #include <nuttx/wdog.h>
+#include <nuttx/hrtimer.h>
 #include <nuttx/list.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched.h>
 #include <nuttx/arch.h>
-
-#ifdef CONFIG_HRTIMER
-#  include <nuttx/hrtimer.h> 
-#endif
 
 /****************************************************************************
  * Public Data
@@ -65,18 +62,14 @@ extern "C"
 DECLARE_PER_CPU_BMP(struct list_node, g_wdactivelist);
 #define g_wdactivelist this_cpu_var_bmp(g_wdactivelist)
 
-#ifdef CONFIG_HRTIMER
 DECLARE_PER_CPU_BMP(struct hrtimer_s, g_wdtimer);
 #define g_wdtimer this_cpu_var_bmp(g_wdtimer)
-#endif
 
-#if defined(CONFIG_SCHED_TICKLESS) || defined(CONFIG_HRTIMER)
 DECLARE_PER_CPU_BMP(bool, g_wdtimernested);
 #define g_wdtimernested this_cpu_var_bmp(g_wdtimernested)
 
 DECLARE_PER_CPU_BMP(clock_t, g_wdexpired);
 #define g_wdexpired this_cpu_var_bmp(g_wdexpired)
-#endif
 
 /****************************************************************************
  * Public Function Prototypes
@@ -108,37 +101,25 @@ DECLARE_PER_CPU_BMP(clock_t, g_wdexpired);
  *
  ****************************************************************************/
 
-#ifndef CONFIG_HRTIMER
-void wd_timer(clock_t ticks);
-#else
 uint64_t wd_timer(const hrtimer_t *timer, uint64_t expired);
-#endif
 
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
 
-#if defined(CONFIG_SCHED_TICKLESS) || defined(CONFIG_HRTIMER)
-#  define wd_in_callback()          (g_wdtimernested)
-#  define wd_set_nested(f)          (g_wdtimernested = (f))
-#  define wd_update_expire(expired) (g_wdexpired = (expired))
-#else
-#  define wd_in_callback() (false)
-#  define wd_set_nested(f)
-#  define wd_update_expire(expired)
-#endif
+#define wd_in_callback()          (g_wdtimernested)
+#define wd_set_nested(f)          (g_wdtimernested = (f))
+#define wd_update_expire(expired) (g_wdexpired = (expired))
 
-#ifdef CONFIG_HRTIMER
 static inline_function void wd_timer_start(clock_t tick, bool in_expiration)
 {
   if (!in_expiration)
     {
-      clock_t interval = clock_compare(g_wdexpired, tick) ?
-                         tick - g_wdexpired : 0u;
-      uint64_t nsec    = interval <= HRTIMER_MAX_DELAY / NSEC_PER_TICK ?
-                         TICK2NSEC((uint64_t)g_wdexpired + interval) :
-                         TICK2NSEC((uint64_t)g_wdexpired) +
-                         HRTIMER_MAX_DELAY;
+      uint64_t delay = clock_compare(g_wdexpired, tick) ?
+                       tick - g_wdexpired : 0u;
+      uint64_t nsec  = delay <= HRTIMER_MAX_DELAY / NSEC_PER_TICK ?
+                       TICK2NSEC(g_wdexpired + delay) :
+                       TICK2NSEC((uint64_t)g_wdexpired) + HRTIMER_MAX_DELAY;
       hrtimer_start(&g_wdtimer, wd_timer, nsec, HRTIMER_MODE_ABS);
     }
 }
@@ -147,62 +128,6 @@ static inline_function void wd_timer_cancel(void)
 {
   hrtimer_cancel(&g_wdtimer);
 }
-#elif defined(CONFIG_SCHED_TICKLESS)
-static inline_function clock_t wd_adjust_next_tick(clock_t tick)
-{
-  clock_t next_tick = tick;
-#ifdef CONFIG_SCHED_TICKLESS_LIMIT_MAX_SLEEP
-  clock_t interval  = clock_compare(g_wdexpired, tick) ?
-                      tick - g_wdexpired : 0u;
-  interval          = interval <= g_oneshot_maxticks ?
-                      interval : g_oneshot_maxticks;
-  next_tick         = g_wdexpired + interval;
-#endif
-
-#if CONFIG_TIMER_ADJUST_USEC > 0
-  /* Normally, timer event cannot triggered on exact time due to the
-   * existence of interrupt latency.
-   * Assuming that the interrupt latency is distributed within
-   * [Best-Case Execution Time, Worst-Case Execution Time],
-   * we can set the timer adjustment value to the BCET to reduce the latency.
-   * After the adjustment, the timer interrupt latency will be
-   * [0, WCET - BCET].
-   * Please use this carefully, if the timer adjustment value is not the
-   * best-case interrupt latency, it will immediately fired another timer
-   * interrupt, which may result in a much larger timer interrupt latency.
-   */
-
-  next_tick -= CONFIG_TIMER_ADJUST_USEC / USEC_PER_TICK;
-#endif
-
-  return next_tick;
-}
-
-static inline_function void wd_timer_start(clock_t tick, bool in_expiration)
-{
-  clock_t next_tick = wd_adjust_next_tick(tick);
-#ifdef CONFIG_SCHED_TICKLESS_ALARM
-  up_alarm_tick_start(next_tick);
-#else
-  clock_t now   = clock_systime_ticks();
-  clock_t delay = clock_compare(now, next_tick) ? next_tick - now : 0u;
-  up_timer_tick_start(delay);
-#endif
-}
-
-static inline_function void wd_timer_cancel(void)
-{
-  struct timespec ts;
-#ifdef CONFIG_SCHED_TICKLESS_ALARM
-  up_alarm_cancel(&ts);
-#else
-  up_timer_cancel(&ts);
-#endif
-}
-#else
-#  define wd_timer_start(next_tick, in_expiration)
-#  define wd_timer_cancel()
-#endif
 
 static inline_function clock_t wd_next_expire(void)
 {

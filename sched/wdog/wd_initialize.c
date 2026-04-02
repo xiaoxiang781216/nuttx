@@ -43,13 +43,10 @@
 DEFINE_PER_CPU_BSS_BMP(struct list_node, g_wdactivelist);
 #define g_wdactivelist this_cpu_var_bmp(g_wdactivelist)
 
-#ifdef CONFIG_HRTIMER
 #undef g_wdtimer
 DEFINE_PER_CPU_BSS_BMP(struct hrtimer_s, g_wdtimer);
 #  define g_wdtimer this_cpu_var_bmp(g_wdtimer)
-#endif
 
-#if defined(CONFIG_SCHED_TICKLESS) || defined(CONFIG_HRTIMER)
 #undef g_wdtimernested
 DEFINE_PER_CPU_BSS_BMP(bool, g_wdtimernested);
 #  define g_wdtimernested this_cpu_var_bmp(g_wdtimernested)
@@ -57,7 +54,6 @@ DEFINE_PER_CPU_BSS_BMP(bool, g_wdtimernested);
 #undef g_wdexpired
 DEFINE_PER_CPU_BSS_BMP(clock_t, g_wdexpired);
 #  define g_wdexpired this_cpu_var_bmp(g_wdexpired)
-#endif
 
 /****************************************************************************
  * Public Functions

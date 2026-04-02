@@ -36,8 +36,6 @@
 
 #include "sched/sched.h"
 
-#ifdef CONFIG_HRTIMER
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -183,8 +181,8 @@ static inline_function void hrtimer_reprogram(uint64_t next_expired)
           next_expired - expired : 0u;
 
 #  ifdef CONFIG_SCHED_TICKLESS_LIMIT_MAX_SLEEP
-  delay = delay < TICK2NSEC(g_oneshot_maxticks) ?
-          delay : TICK2NSEC(g_oneshot_maxticks);
+  delay = delay < TICK2NSEC((uint64_t)g_oneshot_maxticks) ?
+          delay : TICK2NSEC((uint64_t)g_oneshot_maxticks);
 #  endif
 
   clock_nsec2time(&ts, expired + delay);
@@ -324,7 +322,7 @@ static inline_function bool hrtimer_insert(FAR hrtimer_t *hrtimer)
     {
       /* Until curr->expired has not timed out relative to expired */
 
-      if (!clock_compare(curr->expired, expired))
+      if (!HRTIMER_TIME_BEFORE_EQ(curr->expired, expired))
         {
           break;
         }
@@ -584,5 +582,4 @@ static inline_function void hrtimer_wait(FAR hrtimer_t *timer)
 #  define hrtimer_wait(timer) /* Nothing to wait in non-SMP. */
 #endif
 
-#endif /* CONFIG_HRTIMER */
 #endif /* __SCHED_HRTIMER_HRTIMER_H */

@@ -2265,18 +2265,9 @@ config COREDUMP
 		memory space of the program. The CPU state contains register values
 		when the core dump has been generated.
 
-config HRTIMER
-	bool "High resolution timer support"
-	depends on SYSTEM_TIME64
-	default n
-	---help---
-		Enable to support high resolution timer
-
-if HRTIMER
-
 choice
     prompt "HRTimer management data structure type"
-    default HRTIMER_TREE
+    default HRTIMER_LIST
 
 config HRTIMER_LIST
     bool "List-based timer management"
@@ -2294,5 +2285,3 @@ config HRTIMER_TREE
         timers, at the cost of slightly higher memory usage.
 
 endchoice
-
-endif # HRTIMER
