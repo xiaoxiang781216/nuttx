@@ -84,6 +84,11 @@ if(CONFIG_LIBCXXABI)
   add_compile_definitions(_LIBCPP_BUILDING_LIBRARY)
   add_compile_definitions(LIBCXXABI_BAREMETAL)
 
+  # Use thread local storage if available, otherwise need tls support
+  if(CONFIG_SCHED_THREAD_LOCAL)
+    add_compile_definitions(HAS_THREAD_LOCAL)
+  endif()
+
   # C++ STL files
   list(APPEND SRCS stdlib_exception.cpp stdlib_new_delete.cpp
        stdlib_stdexcept.cpp)

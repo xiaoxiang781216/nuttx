@@ -118,6 +118,10 @@ config CXX_STANDARD
 
 config CXX_EXCEPTION
 	bool "Enable Exception Support"
+	depends on SCHED_THREAD_LOCAL || !LIBCXXABI || TLS_TASK_NELEM > 0
+	---help---
+		Enable C++ exception need handling exception storage, Default THREAD_LOCAL
+		method is preferred. Should add Task Local Storage (TLS) otherwise.
 
 config CXX_RTTI
 	bool "Enable RTTI Support"

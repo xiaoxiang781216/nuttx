@@ -83,13 +83,18 @@ endif
 # libcxxabi/src/cxa_personality.cpp:594:22: error: '_URC_FATAL_PHASE1_ERROR' was not declared in this scope
 #   594 |     results.reason = _URC_FATAL_PHASE1_ERROR;
 ifeq ($(CONFIG_ARCH_ARM),y)
-	ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),)
-		CXXFLAGS += -D_URC_FATAL_PHASE2_ERROR=_URC_FAILURE -D_URC_FATAL_PHASE1_ERROR=_URC_FAILURE
-	endif
+  ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),)
+    CXXFLAGS += -D_URC_FATAL_PHASE2_ERROR=_URC_FAILURE -D_URC_FATAL_PHASE1_ERROR=_URC_FAILURE
+  endif
 endif
 
 CXXFLAGS += -DLIBCXXABI_NON_DEMANGLING_TERMINATE
 CXXFLAGS += -DLIBCXXABI_BAREMETAL
+
+# Use thread local storage if available, otherwise need tls support
+ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
+CXXFLAGS += -DHAS_THREAD_LOCAL
+endif
 
 # Fix GCC false positive -Warray-bounds in __builtin_memmove
 # triggered by libcxx constexpr_c_functions.h with -O3
