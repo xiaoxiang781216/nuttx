@@ -115,6 +115,8 @@ struct noteram_driver_s
    */
 
   uint32_t max_index;
+  atomic_t count_ref;       /* Reference count, init 1 at creation */
+  bool dynamic;             /* true if dynamically allocated */
   struct notifier_block nb;
   struct noteram_ratelimit_s ratelimit;
   dq_queue_t poll_list;     /* Registered poll users list */
@@ -248,6 +250,23 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: noteram_free
+ ****************************************************************************/
+
+static void noteram_free(FAR struct noteram_driver_s *drv)
+{
+  if (drv->dynamic)
+    {
+      kmm_free(drv->header);
+    }
+
+  if (drv != &g_noteram_driver)
+    {
+      kmm_free(drv);
+    }
+}
 
 #ifdef CONFIG_BMP
 static void noteram_driver_initialize(void)
@@ -751,9 +770,17 @@ static int noteram_open(FAR struct file *filep)
 
   noteram_driver_initialize();
 
+  atomic_add(&drv->count_ref, 1);
+
   ctx = kmm_zalloc(sizeof(*ctx));
   if (ctx == NULL)
     {
+      if (atomic_sub(&drv->count_ref, 1) == 1)
+        {
+          noteram_free(drv);
+          return -ENOMEM;
+        }
+
       return -ENOMEM;
     }
 
@@ -791,6 +818,12 @@ int noteram_close(FAR struct file *filep)
 
   filep->f_priv = NULL;
   kmm_free(ctx);
+
+  if (atomic_sub(&drv->count_ref, 1) == 1)
+    {
+      noteram_free(drv);
+    }
+
   return OK;
 }
 
@@ -1936,6 +1969,13 @@ noteram_initialize(FAR const char *devname, size_t bufsize,
     {
       kmm_free(buffer);
     }
+  else
+    {
+      FAR struct noteram_driver_s *noteram_drv;
+
+      noteram_drv = container_of(drv, struct noteram_driver_s, driver);
+      noteram_drv->dynamic = true;
+    }
 
   return drv;
 }
@@ -1984,6 +2024,8 @@ noteram_initialize_with_buffer(FAR const char *devname,
     {
       return NULL;
     }
+
+  atomic_set(&drv->count_ref, 1);
 
   if (devname)
     {
@@ -2074,5 +2116,8 @@ void noteram_deinitialize(struct note_driver_s *drv)
 
   unregister_driver((char *)(noteram_drv + 1));
 
-  kmm_free(noteram_drv);
+  if (atomic_sub(&noteram_drv->count_ref, 1) == 1)
+    {
+      noteram_free(noteram_drv);
+    }
 }
