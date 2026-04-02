@@ -41,7 +41,7 @@
  * Pre-processor definitions
  ****************************************************************************/
 
-#define RPMSG_CRYPTO_SESSIONS_NUM 2
+#define RPMSG_CRYPTO_SESSIONS_NUM 4
 
 /****************************************************************************
  * Private Types
@@ -64,6 +64,7 @@ struct rpmsg_crypto_s
                                        * opreation until the connection
                                        * between two cpu established.
                                        */
+  mutex_t               lock;         /* Protect session alloc/free */
   uint8_t               devid;        /* The device id registered */
   uint8_t               keydevid;     /* The key management id registered */
   uint32_t              sesnum;       /* The number of sessions */
@@ -202,7 +203,6 @@ static int rpmsg_crypto_alloc_session(FAR struct rpmsg_crypto_s *rdev)
                         sizeof(struct rpmsg_crypto_session_s));
   if (session == NULL)
     {
-      rdev->sesnum = 0;
       return -ENOMEM;
     }
 
@@ -215,6 +215,8 @@ static int rpmsg_crypto_get_session(FAR struct rpmsg_crypto_s *rdev)
 {
   uint32_t i;
 
+  nxmutex_lock(&rdev->lock);
+
   for (i = 0; i < rdev->sesnum; i++)
     {
       if (!rdev->sessions[i].used)
@@ -225,12 +227,14 @@ static int rpmsg_crypto_get_session(FAR struct rpmsg_crypto_s *rdev)
 
   if (i == rdev->sesnum && rpmsg_crypto_alloc_session(rdev) < 0)
     {
+      nxmutex_unlock(&rdev->lock);
       return -ENOMEM;
     }
 
   rdev->sessions[i].used = true;
   rdev->sessions[i].data = NULL;
   nxsem_init(&rdev->sessions[i].sem, 0, 0);
+  nxmutex_unlock(&rdev->lock);
   return i;
 }
 
@@ -242,8 +246,10 @@ static int rpmsg_crypto_put_session(FAR struct rpmsg_crypto_s *rdev,
       return -EINVAL;
     }
 
+  nxmutex_lock(&rdev->lock);
   nxsem_destroy(&rdev->sessions[sid].sem);
   rdev->sessions[sid].used = false;
+  nxmutex_unlock(&rdev->lock);
   return OK;
 }
 
@@ -1643,8 +1649,20 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
       return -ENOMEM;
     }
 
+  /* Pre-allocate session slots to avoid realloc during concurrent use */
+
+  rdev->sessions = kmm_zalloc(RPMSG_CRYPTO_SESSIONS_NUM *
+                              sizeof(struct rpmsg_crypto_session_s));
+  if (rdev->sessions == NULL)
+    {
+      kmm_free(rdev);
+      return -ENOMEM;
+    }
+
+  rdev->sesnum = RPMSG_CRYPTO_SESSIONS_NUM;
   rdev->remotecpu = remotecpu;
   nxsem_init(&rdev->wait, 0, 0);
+  nxmutex_init(&rdev->lock);
 
   /* Register the rpmsg callback */
 
@@ -1738,7 +1756,9 @@ fail_register:
                             NULL,
                             NULL);
 fail_alloc:
+  nxmutex_destroy(&rdev->lock);
   nxsem_destroy(&rdev->wait);
+  kmm_free(rdev->sessions);
   kmm_free(rdev);
   return ret;
 }
