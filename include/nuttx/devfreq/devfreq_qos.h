@@ -19,7 +19,7 @@
  ****************************************************************************/
 
 #ifndef __INCLUDE_NUTTX_DEVFREQ_DEVFREQ_QOS_H
-#define __INCLUDE_NUTTX_DEVFREQ_DEVFREQ_OQS_H
+#define __INCLUDE_NUTTX_DEVFREQ_DEVFREQ_QOS_H
 
 /****************************************************************************
  * Included Files
