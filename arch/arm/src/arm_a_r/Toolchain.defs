@@ -120,14 +120,23 @@ else ifeq ($(CONFIG_ARCH_CORTEXR7),y)
   LLVM_CPUTYPE := cortex-r7
 endif
 
+ifneq ($(CONFIG_ARM_DPFPU32),y)
+  ARCHFPUD16 = -d16
+endif
+
 ifeq ($(CONFIG_ARCH_FPU),y)
   LLVM_ABITYPE := eabihf
-  ARCHCPUFLAGS += -mfpu=vfpv3-d16
   ifeq ($(CONFIG_ARM_FPU_ABI_SOFT),y)
     ARCHCPUFLAGS += -mfloat-abi=softfp
   else
     ARCHCPUFLAGS += -mfloat-abi=hard
   endif
+
+  ifeq ($(CONFIG_ARM_NEON),y)
+    ARCHNEON = neon-
+  endif
+  ARCHCPUFLAGS += -mfpu=$(ARCHNEON)vfpv3$(ARCHFPUD16)
+
 else
   LLVM_ABITYPE := eabi
   ARCHCPUFLAGS += -mfloat-abi=soft
