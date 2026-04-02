@@ -550,12 +550,10 @@ def generate_link_script(
                 heap_size = symbol.value
 
             if symbol.shndx == 0 and symbol.name != "":
-                nuttx_symbol = next(
-                    (s for s in nuttx_symbols if s.name == symbol.name), None
-                )
-                if not nuttx_symbol:
+                nuttx_value = nuttx_symbols.get(symbol.name)
+                if nuttx_value is None:
                     continue
-                extern_symbols[nuttx_symbol.name] = nuttx_symbol.value
+                extern_symbols[symbol.name] = nuttx_value
 
     args.toolchain.run_cpp(
         args,
@@ -570,7 +568,8 @@ def generate_link_script(
 
 
 def generate_elf_hex(args, apps, flash_start, flash_size, ram_start, ram_size):
-    nuttx_symbols = elf_parse(args.elf).symbols
+    nuttx_elf = elf_parse(args.elf)
+    nuttx_symbols = {s.name: s.value for s in nuttx_elf.symbols if s.name}
     flash_base, flash_remaining = flash_start, flash_size
     ram_base, ram_remaining = ram_start, ram_size
 
