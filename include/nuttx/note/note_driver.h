@@ -231,6 +231,17 @@
 #define NOTE_GETLEVEL                    _NOTEIOC(0x11)
 #define NOTE_SETLEVEL                    _NOTEIOC(0x12)
 
+/* NOTE_CREATE
+ *              - Dynamically create a new note backend device
+ *                Argument: Backend-specific configuration pointer
+ * NOTE_DESTROY
+ *              - Dynamically destroy a note backend device
+ *                Argument: A read-only pointer to the device name string
+ */
+
+#define NOTE_CREATE                      _NOTEIOC(0x13)
+#define NOTE_DESTROY                     _NOTEIOC(0x14)
+
 /* Overwrite mode definitions */
 
 #define NOTE_MODE_OVERWRITE_DISABLE      0

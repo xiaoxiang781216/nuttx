@@ -43,6 +43,13 @@
 
 struct noteram_driver_s;
 
+struct noteram_config_s
+{
+  FAR const char *devname;
+  size_t          bufsize;
+  bool            overwrite;
+};
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

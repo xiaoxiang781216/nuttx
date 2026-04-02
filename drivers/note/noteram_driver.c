@@ -268,6 +268,30 @@ static void noteram_free(FAR struct noteram_driver_s *drv)
     }
 }
 
+/****************************************************************************
+ * Name: noteram_deinitialize_by_name
+ ****************************************************************************/
+
+static int noteram_deinitialize_by_name(FAR const char *name)
+{
+  FAR struct noteram_driver_s *drv;
+  char devpath[PATH_MAX];
+  struct file filep;
+  int ret;
+
+  snprintf(devpath, sizeof(devpath), "/dev/note/%s", name);
+  ret = file_open(&filep, devpath, O_RDONLY);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  drv = (FAR struct noteram_driver_s *)filep.f_inode->i_private;
+  file_close(&filep);
+  noteram_deinitialize(&drv->driver);
+  return OK;
+}
+
 #ifdef CONFIG_BMP
 static void noteram_driver_initialize(void)
 {
@@ -1070,6 +1094,43 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             *(FAR unsigned int *)arg = drv->bufsize;
             ret = OK;
           }
+        break;
+
+      case NOTE_CREATE:
+        {
+          FAR struct noteram_config_s *config =
+            (FAR struct noteram_config_s *)arg;
+
+          if (config == NULL || config->devname == NULL ||
+              config->bufsize == 0)
+            {
+              ret = -EINVAL;
+            }
+          else
+            {
+              FAR struct note_driver_s *new_drv;
+              new_drv = noteram_initialize(config->devname,
+                                           config->bufsize,
+                                           config->overwrite,
+                                           false, true);
+              ret = new_drv != NULL ? OK : -ENOMEM;
+            }
+        }
+        break;
+
+      case NOTE_DESTROY:
+        {
+          FAR const char *devname = (FAR const char *)arg;
+
+          if (devname == NULL)
+            {
+              ret = -EINVAL;
+            }
+          else
+            {
+              ret = noteram_deinitialize_by_name(devname);
+            }
+        }
         break;
 
       default:
