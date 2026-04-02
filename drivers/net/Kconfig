@@ -839,6 +839,7 @@ config GDBSTUB_NETDEV_INTF
 	default "eth0"
 	---help---
 		Network interface used for netdev GDBSTUB.
+		Comma-separated list for multiple interfaces, e.g. "eth0.65,eth0.47".
 
 config GDBSTUB_NETDEV_PORT
 	int "GDBSTUB netdev port"

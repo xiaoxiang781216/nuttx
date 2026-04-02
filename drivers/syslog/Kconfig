@@ -549,6 +549,7 @@ config SYSLOG_NETDEV_INTF
 	default "eth0"
 	---help---
 		Network interface used for SYSLOG.
+		Comma-separated list for multiple interfaces, e.g. "eth0.65,eth0.47".
 
 config SYSLOG_NETDEV_IPADDR
 	hex "Netdev SYSLOG destination IP address"

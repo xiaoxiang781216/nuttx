@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <debug.h>
+#include <string.h>
 
 #ifdef CONFIG_DRIVERS_NOTENET
 #  include <nuttx/note/notenet_driver.h>
@@ -41,6 +42,50 @@
 #endif
 
 #include "netdev_drivers.h"
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: netdev_match_intf
+ *
+ * Description:
+ *   Check if ifname matches any entry in a comma-separated interface list.
+ *
+ * Input Parameters:
+ *   ifname - The interface name to match (e.g. "eth0.65")
+ *   intfs  - Comma-separated interface list (e.g. "eth0.65,eth0.47")
+ *
+ * Returned Value:
+ *   true if ifname matches any entry in the list
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_DRIVERS_NOTENET) || defined(CONFIG_SYSLOG_NETDEV) || \
+    defined(CONFIG_GDBSTUB_NETDEV)
+static bool netdev_match_intf(FAR const char *ifname,
+                              FAR const char *intfs)
+{
+  FAR const char *p;
+  size_t namelen = strlen(ifname);
+  size_t len;
+
+  while (*intfs)
+    {
+      p = strchrnul(intfs, ',');
+      len = p - intfs;
+      if (namelen == len && memcmp(ifname, intfs, len) == 0)
+        {
+          return true;
+        }
+
+      intfs = *p ? p + 1 : p;
+    }
+
+  return false;
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -65,7 +110,7 @@ int netdev_drivers_init(FAR struct netdev_lowerhalf_s *dev)
   int ret = OK;
 
 #ifdef CONFIG_DRIVERS_NOTENET
-  if (strcmp(dev->netdev.d_ifname, CONFIG_DRIVERS_NOTENET_INTF) == 0)
+  if (netdev_match_intf(dev->netdev.d_ifname, CONFIG_DRIVERS_NOTENET_INTF))
     {
       ninfo("bind NOTE with netdev = %p\n", dev);
       ret = notenet_init(dev);
@@ -78,7 +123,7 @@ int netdev_drivers_init(FAR struct netdev_lowerhalf_s *dev)
 #endif
 
 #ifdef CONFIG_SYSLOG_NETDEV
-  if (strcmp(dev->netdev.d_ifname, CONFIG_SYSLOG_NETDEV_INTF) == 0)
+  if (netdev_match_intf(dev->netdev.d_ifname, CONFIG_SYSLOG_NETDEV_INTF))
     {
       ninfo("bind SYSLOG with netdev = %p\n", dev);
       ret = syslog_netdev_init(dev);
@@ -91,7 +136,7 @@ int netdev_drivers_init(FAR struct netdev_lowerhalf_s *dev)
 #endif
 
 #ifdef CONFIG_GDBSTUB_NETDEV
-  if (strcmp(dev->netdev.d_ifname, CONFIG_GDBSTUB_NETDEV_INTF) == 0)
+  if (netdev_match_intf(dev->netdev.d_ifname, CONFIG_GDBSTUB_NETDEV_INTF))
     {
       ninfo("bind GDBSTUB with netdev = %p\n", dev);
       ret = netdev_gdbstub_init(dev);
