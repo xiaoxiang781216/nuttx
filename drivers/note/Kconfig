@@ -138,6 +138,22 @@ config DRIVERS_NOTERAM_POLLTIMEOUT_MS
 		Default 0 to disable this feature, positive value (ms) to make noteram trigger a
 		wdog to enable idle timeout notify poll waiter.
 
+config DRIVERS_NOTERAM_FILTER_DEFAULT_MODE
+	hex "Note RAM filter mode"
+	depends on SCHED_INSTRUMENTATION_FILTER
+	default SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
+	---help---
+		Filter mode bitmask for the static noteram instance.
+		Each bit corresponds to a note_type_e value; a set bit
+		rejects that type.
+
+config DRIVERS_NOTERAM_CPUSET
+	hex "Note RAM CPU set"
+	depends on SMP && SCHED_INSTRUMENTATION_FILTER
+	default SCHED_INSTRUMENTATION_CPUSET
+	---help---
+		CPU set for noteram
+
 endif # DRIVERS_NOTERAM
 
 config DRIVERS_NOTE_STRIP_FORMAT

@@ -215,9 +215,9 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
     "ram",
     {
       {
-        CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
+        CONFIG_DRIVERS_NOTERAM_FILTER_DEFAULT_MODE,
 #  ifdef CONFIG_SMP
-        CONFIG_SCHED_INSTRUMENTATION_CPUSET
+        CONFIG_DRIVERS_NOTERAM_CPUSET
 #  endif
       },
 
