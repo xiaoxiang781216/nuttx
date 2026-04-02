@@ -390,17 +390,7 @@ static void append_timestamp(FAR struct pkt_recvfrom_s *pstate,
 static void append_timestamping(FAR struct pkt_recvfrom_s *pstate,
                                 FAR struct iob_s *iob)
 {
-  struct timespec ts[3];
-
-  memset(&ts, 0, sizeof(ts));
-
-  ts[0].tv_sec = iob->io_time.tv_sec;
-  ts[0].tv_nsec = iob->io_time.tv_nsec;
-  ts[2].tv_sec = iob->io_time.tv_sec;
-  ts[2].tv_nsec = iob->io_time.tv_nsec;
-
-  cmsg_append(pstate->pr_msg, SOL_SOCKET, SO_TIMESTAMPING, &ts,
-              sizeof(ts));
+  cmsg_store_timestamping(pstate->pr_msg, &iob->io_time);
   pstate->pr_msg->msg_flags |= MSG_ERRQUEUE;
 }
 #endif

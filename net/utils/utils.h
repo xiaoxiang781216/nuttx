@@ -620,6 +620,8 @@ FAR void *cmsg_append(FAR struct msghdr *msg, int level, int type,
 #ifdef CONFIG_NET_TIMESTAMP
 void cmsg_store_timestamp(FAR struct msghdr *msg,
                           FAR const struct timespec *tstamp, sockopt_t opt);
+void cmsg_store_timestamping(FAR struct msghdr *msg,
+                             FAR const struct timespec *tstamp);
 #endif /* CONFIG_NET_TIMESTAMP */
 
 #undef EXTERN

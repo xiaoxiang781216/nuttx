@@ -122,13 +122,34 @@ void cmsg_store_timestamp(FAR struct msghdr *msg,
 
   if (_SO_GETOPT(opt, SO_TIMESTAMPING_RX))
     {
-      struct timespec ts[3];
-
-      memset(&ts, 0, sizeof(ts));
-      ts[0] = *tstamp;
-      ts[2] = *tstamp;
-      cmsg_append(msg, SOL_SOCKET, SO_TIMESTAMPING, &ts,
-                  sizeof(ts));
+      cmsg_store_timestamping(msg, tstamp);
     }
+}
+
+/****************************************************************************
+ * Name: cmsg_store_timestamping
+ *
+ * Description:
+ *   Store the SO_TIMESTAMPING data in the cmsg. This is used for both
+ *   RX timestamping and TX timestamping (via errqueue).
+ *
+ * Input Parameters:
+ *   msg    - Pointer to the msghdr containing ancillary data (CMSG).
+ *   tstamp - Timestamp information.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void cmsg_store_timestamping(FAR struct msghdr *msg,
+                             FAR const struct timespec *tstamp)
+{
+  struct timespec ts[3];
+
+  memset(&ts, 0, sizeof(ts));
+  ts[0] = *tstamp;
+  ts[2] = *tstamp;
+  cmsg_append(msg, SOL_SOCKET, SO_TIMESTAMPING, &ts, sizeof(ts));
 }
 #endif /* CONFIG_NET_TIMESTAMP */
