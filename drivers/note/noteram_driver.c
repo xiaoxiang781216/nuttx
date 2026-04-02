@@ -1098,6 +1098,10 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
           rspin_unlock_irqrestore_notrace(&drv->lock, flags);
           poll_notify(&fds, 1, POLLIN);
         }
+      else
+        {
+          rspin_unlock_irqrestore_notrace(&drv->lock, flags);
+        }
     }
   else
     {
