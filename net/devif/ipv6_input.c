@@ -199,18 +199,33 @@ static int ipv6_in(FAR struct net_driver_s *dev)
   bool isfrag = false;
 #endif
 
-  /* Storing reception timestamp provided by realtime
-   * if timestamp no provided by hardware.
+  /* This is where the input processing starts.
+   *
+   * Get the size of the packet minus the size of link layer header,
+   * and make sure that all packet processing logic knows that there
+   * is an IPv6 packet in the device buffer.
    */
 
+  dev->d_len -= NET_LL_HDRLEN(dev);
+  IFF_SET_IPv6(dev->d_flags);
+
 #ifdef CONFIG_NET_TIMESTAMP
+  if (dev->d_iob->io_conn != NULL)
+    {
+      /* This is a TX timestamp clone looped back by the driver.
+       * Skip all validation and deliver it to the originating
+       * socket's error queue directly.
+       */
+
+      udp_ipv6_input(dev, IPv6_HDRLEN);
+      goto drop;
+    }
+
   if ((dev->d_features & NETDEV_RX_STAMP) == 0)
     {
       clock_gettime(CLOCK_REALTIME, &dev->d_iob->io_time);
     }
-#endif /* CONFIG_NET_TIMESTAMP */
-
-  /* This is where the input processing starts. */
+#endif
 
 #ifdef CONFIG_NET_STATISTICS
   g_netstats.ipv6.recv++;
@@ -233,21 +248,11 @@ static int ipv6_in(FAR struct net_driver_s *dev)
       goto drop;
     }
 
-  /* Get the size of the packet minus the size of link layer header */
-
-  dev->d_len -= NET_LL_HDRLEN(dev);
-
   if (IPv6_HDRLEN > dev->d_len)
     {
       nwarn("WARNING: Packet shorter than IPv6 header\n");
       goto drop;
     }
-
-  /* Make sure that all packet processing logic knows that there is an IPv6
-   * packet in the device buffer.
-   */
-
-  IFF_SET_IPv6(dev->d_flags);
 
   /* Check the size of the packet. If the size reported to us in d_len is
    * smaller the size reported in the IP header, we assume that the packet

@@ -100,6 +100,15 @@ static uint32_t udp_poll_eventhandler(FAR struct net_driver_s *dev,
           eventset |= POLLOUT;
         }
 
+#ifdef CONFIG_NET_TIMESTAMP
+      /* Check for timestamping data */
+
+      if (!IOB_QEMPTY(&info->conn->sconn.s_errahead))
+        {
+          eventset |= POLLPRI | POLLERR;
+        }
+#endif
+
       /* Awaken the caller of poll() is requested event occurred. */
 
       poll_notify(&info->fds, 1, eventset);
@@ -205,6 +214,13 @@ int udp_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
       cb->flags |= UDP_NEWDATA;
     }
 
+#ifdef CONFIG_NET_TIMESTAMP
+  if ((fds->events & POLLPRI) != 0)
+    {
+      cb->flags |= UDP_NEWDATA;
+    }
+#endif
+
   /* Save the reference in the poll info structure as fds private as well
    * for use during poll teardown as well.
    */
@@ -219,6 +235,13 @@ int udp_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
 
       eventset |= POLLRDNORM;
     }
+
+#ifdef CONFIG_NET_TIMESTAMP
+  if (!IOB_QEMPTY(&conn->sconn.s_errahead))
+    {
+      eventset |= POLLPRI | POLLERR;
+    }
+#endif
 
   if (psock_udp_cansend(conn) >= 0)
     {
