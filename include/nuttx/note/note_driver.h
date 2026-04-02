@@ -221,6 +221,28 @@
 #  define note_filter_dump(tag) (0)
 #endif /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
 
+/* Per-driver dump convenience macros */
+
+#define note_driver_event(driver, tag, event, buf, len) \
+        note_driver_event_ip(driver, tag, 0, up_getpc(), \
+                             event, buf, len)
+#define note_driver_vprintf(driver, tag, fmt, va) \
+        note_driver_vprintf_ip(driver, tag, 0, up_getpc(), \
+                               0, fmt, va)
+#define note_driver_printf(driver, tag, fmt, ...) \
+        note_driver_printf_ip(driver, tag, 0, up_getpc(), \
+                              0, fmt, ##__VA_ARGS__)
+#define note_driver_begin(driver, tag) \
+        note_driver_event(driver, tag, NOTE_DUMP_BEGIN, NULL, 0)
+#define note_driver_end(driver, tag) \
+        note_driver_event(driver, tag, NOTE_DUMP_END, NULL, 0)
+#define note_driver_mark(driver, tag, buf) \
+        note_driver_event(driver, tag, NOTE_DUMP_MARK, \
+                          buf, strlen(buf))
+#define note_driver_binary(driver, tag, buf, len) \
+        note_driver_event(driver, tag, NOTE_DUMP_BINARY, \
+                          buf, len)
+
 /* IOCTL Commands ***********************************************************/
 
 /* NOTE_CLEAR
@@ -841,10 +863,29 @@ void note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 #endif
 
 /****************************************************************************
- * Name: note_event_ip/vprintf_ip/printf_ip
+ * Name: note_driver_event_ip/vprintf_ip/printf_ip (per-driver)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+size_t note_driver_event_ip(FAR struct note_driver_s *driver,
+                            uint8_t tag, uint8_t level,
+                            uintptr_t ip, uint8_t event,
+                            FAR const void *buf, size_t len);
+void note_driver_vprintf_ip(FAR struct note_driver_s *driver,
+                            uint8_t tag, uint8_t level,
+                            uintptr_t ip, uint64_t type,
+                            FAR const char *fmt,
+                            va_list *va) printf_like(6, 0);
+void note_driver_printf_ip(FAR struct note_driver_s *driver,
+                           uint8_t tag, uint8_t level,
+                           uintptr_t ip, uint64_t type,
+                           FAR const char *fmt, ...)
+                           printf_like(6, 7);
+
+/****************************************************************************
+ * Name: note_event_ip/vprintf_ip/printf_ip
+ ****************************************************************************/
+
 void note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip, uint8_t event,
                    FAR const void *buf, size_t len);
 void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
