@@ -314,6 +314,22 @@ config CAN_KVASER_IRQ_PASSES
 		data loss when there is a lot of trafic on the CAN bus.
 		The downside is that it increases the interrupt service time.
 
+config CAN_KVASER_TX_QUOTA
+	int "Kvaser socket TX netpkt quota"
+	default 1
+	range 1 4096
+	---help---
+		Number of TX netpkt quota units reserved for the Kvaser socket
+		lower-half.
+
+config CAN_KVASER_RX_QUOTA
+	int "Kvaser socket RX netpkt quota"
+	default 1
+	range 1 4096
+	---help---
+		Number of RX netpkt quota units reserved for the Kvaser socket
+		lower-half.
+
 choice
 	prompt "Kvaser PCI CAN device type"
 	default CAN_KVASER_CHARDEV if CAN
@@ -342,6 +358,22 @@ config CAN_CTUCANFD
 		NOTE: for now works only with QEMU
 
 if CAN_CTUCANFD
+
+config CAN_CTUCANFD_TX_QUOTA
+	int "CTU socket TX netpkt quota"
+	default 1
+	range 1 4096
+	---help---
+		Number of TX netpkt quota units reserved for the CTUCANFD socket
+		lower-half.
+
+config CAN_CTUCANFD_RX_QUOTA
+	int "CTU socket RX netpkt quota"
+	default 1
+	range 1 4096
+	---help---
+		Number of RX netpkt quota units reserved for the CTUCANFD socket
+		lower-half.
 
 choice
 	prompt "CTU CAN FD PCI CAN device type"

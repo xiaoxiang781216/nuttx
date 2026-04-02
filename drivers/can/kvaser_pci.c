@@ -28,6 +28,7 @@
 #include <debug.h>
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
@@ -38,6 +39,7 @@
 #endif
 
 #ifdef CONFIG_CAN_KVASER_SOCKET
+#  include <nuttx/mm/iob.h>
 #  include <nuttx/net/netdev_lowerhalf.h>
 #  include <nuttx/net/can.h>
 #endif
@@ -82,8 +84,8 @@
 /* SocketCAN specific */
 
 #ifdef CONFIG_CAN_KVASER_SOCKET
-#  define KVASER_TX_QUOTA              1
-#  define KVASER_RX_QUOTA              1
+#  define KVASER_TX_QUOTA              CONFIG_CAN_KVASER_TX_QUOTA
+#  define KVASER_RX_QUOTA              CONFIG_CAN_KVASER_RX_QUOTA
 #endif /* CONFIG_CAN_KVASER_SOCKET */
 
 #ifndef CONFIG_NET_CAN_ERRORS
@@ -192,6 +194,10 @@ static int  kvaser_sock_ifup(FAR struct netdev_lowerhalf_s *dev);
 static int  kvaser_sock_ifdown(FAR struct netdev_lowerhalf_s *dev);
 static int  kvaser_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
                                  FAR netpkt_t *pkt);
+#ifdef CONFIG_NET_NETPOLL
+static void kvaser_sock_txpoll(FAR struct netdev_lowerhalf_s *dev);
+#endif
+
 static FAR netpkt_t *kvaser_sock_recv(FAR struct netdev_lowerhalf_s *dev);
 
 #  ifdef CONFIG_NETDEV_IOCTL
@@ -245,6 +251,9 @@ static const struct netdev_ops_s g_kvaser_net_ops =
   .receive  = kvaser_sock_recv,
 #ifdef CONFIG_NETDEV_IOCTL
   .ioctl    = kvaser_sock_ioctl,
+#endif
+#ifdef CONFIG_NET_NETPOLL
+  .txpoll   = kvaser_sock_txpoll
 #endif
 };
 #endif
@@ -1147,9 +1156,9 @@ static int kvaser_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
 
   /* Set up the data fields */
 
-  if (frame->can_dlc > 8)
+  if (frame->can_dlc > CAN_MAX_DLEN)
     {
-      frame->can_dlc = 8;
+      frame->can_dlc = CAN_MAX_DLEN;
     }
 
   for (i = 0; i < frame->can_dlc; i++)
@@ -1282,6 +1291,38 @@ static FAR netpkt_t *kvaser_sock_recv(FAR struct netdev_lowerhalf_s *dev)
 
   return pkt;
 }
+
+#ifdef CONFIG_NET_NETPOLL
+/*****************************************************************************
+ * Name: kvaser_sock_txpoll
+ *
+ * Description:
+ *   Wait for TX done
+ *
+ * Input Parameters:
+ *   dev - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   None
+ *
+ *****************************************************************************/
+
+static void kvaser_sock_txpoll(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct kvaser_sja_s *priv = (FAR struct kvaser_sja_s *)dev;
+
+  /* Wait for TX done with interrupt disabled */
+
+  kvaser_txint(priv, false);
+  kvaser_rxint(priv, false);
+
+  while (!(kvaser_getreg_sja(priv, SJA1000_INT_RAW_REG) &
+           SJA1000_TX_INT_ST));
+
+  kvaser_txint(priv, true);
+  kvaser_rxint(priv, true);
+}
+#endif
 
 #  ifdef CONFIG_NETDEV_IOCTL
 /*****************************************************************************

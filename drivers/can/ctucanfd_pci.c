@@ -73,8 +73,8 @@
 /* SocketCAN specific */
 
 #ifdef CONFIG_CAN_CTUCANFD_SOCKET
-#  define CTUCANFD_TX_QUOTA   1
-#  define CTUCANFD_RX_QUOTA   1
+#  define CTUCANFD_TX_QUOTA   CONFIG_CAN_CTUCANFD_TX_QUOTA
+#  define CTUCANFD_RX_QUOTA   CONFIG_CAN_CTUCANFD_RX_QUOTA
 #endif /* CONFIG_CAN_CTUCANFD_SOCKET */
 
 #ifndef CONFIG_NET_CAN_ERRORS
@@ -125,7 +125,6 @@ struct ctucanfd_driver_s
 
   FAR struct pci_device_s   *pcidev;
   int                        irq;
-  uintptr_t                  base;
 };
 
 /*****************************************************************************
@@ -193,6 +192,7 @@ static int  ctucanfd_sock_ifup(FAR struct netdev_lowerhalf_s *dev);
 static int  ctucanfd_sock_ifdown(FAR struct netdev_lowerhalf_s *dev);
 static int  ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
                                    FAR netpkt_t *pkt);
+static void ctucanfd_sock_txpoll(FAR struct netdev_lowerhalf_s *dev);
 static FAR netpkt_t *ctucanfd_sock_recv(FAR struct netdev_lowerhalf_s *dev);
 
 #  ifdef CONFIG_NETDEV_IOCTL
@@ -247,6 +247,9 @@ static const struct netdev_ops_s g_ctucanfd_net_ops =
   .receive  = ctucanfd_sock_recv,
 #ifdef CONFIG_NETDEV_IOCTL
   .ioctl    = ctucanfd_sock_ioctl,
+#endif
+#ifdef CONFIG_NET_NETPOLL
+  .txpoll   = ctucanfd_sock_txpoll
 #endif
 };
 #endif
@@ -1404,131 +1407,114 @@ static int ctucanfd_sock_ioctl(FAR struct netdev_lowerhalf_s *dev, int cmd,
 #  endif  /* CONFIG_NETDEV_IOCTL */
 
 /*****************************************************************************
- * Name: ctucanfd_sock_transmit
+ * Name: ctucanfd_sock_get_empty_txbuf
  *****************************************************************************/
 
-static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
-                                  FAR netpkt_t *pkt)
+static void ctucanfd_sock_get_empty_txbuf(FAR struct netdev_lowerhalf_s *dev,
+                                          FAR struct ctucanfd_can_s *priv,
+                                          FAR int *txidx,
+                                          FAR uint32_t *offset)
 {
-  FAR struct ctucanfd_can_s  *priv = (FAR struct ctucanfd_can_s *)dev;
-  union ctucanfd_frame_fmt_u  fmt;
-  union ctucanfd_frame_id_u   id;
-  uint32_t                    regval;
-  uint32_t                    offset;
-  int                         txidx;
-  int                         i;
+  uint32_t regval;
+  int      i;
 
-  /* Get TX empty buffer */
-
-  regval = ctucanfd_getreg(priv, CTUCANFD_TXSTAT);
-
-  offset = 0;
-  for (i = 0; i < priv->txbufcnt; i++)
+  for (; ; )
     {
-      if (CTUCANFD_TXSTAT_GET(regval, i) == CTUCANFD_TXSTAT_ETY)
+      /* Get TX empty buffer */
+
+      regval = ctucanfd_getreg(priv, CTUCANFD_TXSTAT);
+      *offset = 0;
+
+      for (i = 0; i < priv->txbufcnt; i++)
         {
-          offset = CTUCANFD_TXT1 + CTUCANFD_TXT_SIZE * i;
-          txidx = i;
-          break;
+          if (CTUCANFD_TXSTAT_GET(regval, i) == CTUCANFD_TXSTAT_ETY)
+            {
+              *offset = CTUCANFD_TXT1 + CTUCANFD_TXT_SIZE * i;
+              *txidx  = i;
+              return;
+            }
         }
-    }
 
-  if (offset == 0)
-    {
-      canerr("ERROR: TX buffer not available\n");
-      return -EBUSY;
+      ctucanfd_sock_txpoll(dev);
     }
+}
+
+/*****************************************************************************
+ * Name: ctucanfd_sock_queue_one
+ *****************************************************************************/
+
+static void ctucanfd_sock_queue_one(FAR struct netdev_lowerhalf_s *dev,
+                                    FAR struct ctucanfd_can_s *priv,
+                                    canid_t can_id, bool rtr,
+                                    bool fdf, bool brs, bool esi,
+                                    FAR const uint8_t *data, uint8_t len,
+                                    FAR netpkt_t *pkt)
+{
+  union ctucanfd_frame_fmt_u fmt;
+  union ctucanfd_frame_id_u  id;
+  uint32_t                   regval;
+  uint32_t                   offset;
+  uint8_t                    wirelen;
+  int                        txidx;
+  int                        i;
+
+  ctucanfd_sock_get_empty_txbuf(dev, priv, &txidx, &offset);
 
   /* Reset data */
 
   fmt.u32 = 0;
   id.u32  = 0;
 
-  /* CAN 2.0 or CAN FD */
+  /* Set up the DLC */
 
-  if (netpkt_getdatalen(dev, pkt) == sizeof(struct can_frame))
-    {
-      FAR struct can_frame *frame = frame =
-        (FAR struct can_frame *)netpkt_getdata(dev, pkt);
+  fmt.s.dlc = fdf ? can_bytes2dlc(len) : len;
 
-      /* Set up the DLC */
+  /* Set RTR bit */
 
-      fmt.s.dlc = frame->can_dlc;
+  fmt.s.rtr = rtr ? 1 : 0;
 
-      /* Set RTR bit */
-
-      fmt.s.rtr = (frame->can_id & CAN_RTR_FLAG) ? 1 : 0;
-
-#ifdef CONFIG_NET_CAN_EXTID
-      if (frame->can_id & CAN_EFF_FLAG)
-        {
-          fmt.s.ide   = 1;
-          id.s.id_ext = (frame->can_id & 0x1ffffff);
-        }
-      else
-#endif
-        {
-          fmt.s.ide = 0;
-          id.s.id   = (frame->can_id & 0x07ff);
-        }
-
-      /* Write frame */
-
-      ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_FMT, fmt.u32);
-      ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_ID, id.u32);
-      ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_TSL, 0);
-      ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_TSU, 0);
-
-      for (i = 0; i < frame->can_dlc; i++)
-        {
-          ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_DATA + i,
-                          frame->data[i]);
-        }
-    }
 #ifdef CONFIG_NET_CAN_CANFD
-  else /* CAN FD frame */
-    {
-      FAR struct canfd_frame *frame =
-        (FAR struct canfd_frame *)netpkt_getdata(dev, pkt);
+  /* Set flags */
 
-      /* CAN FD frame */
-
-      fmt.s.fdf = (frame->flags & CANFD_FDF) ? 1 : 0;
-
-      /* Set up the DLC */
-
-      fmt.s.dlc = can_bytes2dlc(frame->len);
-
-      /* Set flags */
-
-      fmt.s.rtr     = (frame->can_id & CAN_RTR_FLAG) ? 1 : 0;
-      fmt.s.brs     = (frame->flags & CANFD_BRS) ? 1 : 0;
-      fmt.s.esi_rsv = (frame->flags & CANFD_ESI) ? 1 : 0;
+  fmt.s.fdf     = fdf ? 1 : 0;
+  fmt.s.brs     = brs ? 1 : 0;
+  fmt.s.esi_rsv = esi ? 1 : 0;
+#endif
 
 #ifdef CONFIG_NET_CAN_EXTID
-      if (frame->can_id & CAN_EFF_FLAG)
-        {
-          fmt.s.ide   = 1;
-          id.s.id_ext = (frame->can_id & 0x1ffffff);
-        }
-      else
+  if (can_id & CAN_EFF_FLAG)
+    {
+      fmt.s.ide   = 1;
+      id.s.id_ext = (can_id & 0x1ffffff);
+    }
+  else
 #endif
+    {
+      fmt.s.ide = 0;
+      id.s.id   = (can_id & 0x07ff);
+    }
+
+  /* Write frame */
+
+  ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_FMT, fmt.u32);
+  ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_ID, id.u32);
+  ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_TSL, 0);
+  ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_TSU, 0);
+
+  for (i = 0; i < len; i++)
+    {
+      ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_DATA + i, data[i]);
+    }
+
+#ifdef CONFIG_NET_CAN_CANFD
+  /* CAN FD frame */
+
+  if (fdf)
+    {
+      wirelen = can_dlc2bytes(can_bytes2dlc(len));
+      for (; i < wirelen; i++)
         {
-          fmt.s.ide = 0;
-          id.s.id   = (frame->can_id & 0x07ff);
-        }
-
-      /* Write frame */
-
-      ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_FMT, fmt.u32);
-      ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_ID, id.u32);
-      ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_TSL, 0);
-      ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_TSU, 0);
-
-      for (i = 0; i < frame->len; i++)
-        {
-          ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_DATA + i,
-                          frame->data[i]);
+          ctucanfd_putreg(priv, offset + CTUCANFD_TXBUF_DATA + i, 0);
         }
     }
 #endif
@@ -1541,8 +1527,105 @@ static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
 
   regval = CTUCANFD_TXCMD_TXCR + (1 << (CTUCANFD_TXCMD_TXB_SHIFT + txidx));
   ctucanfd_putreg(priv, CTUCANFD_TXINFOCMD, regval);
+}
 
-  return OK;
+/*****************************************************************************
+ * Name: ctucanfd_sock_transmit
+ *****************************************************************************/
+
+static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
+                                  FAR netpkt_t *pkt)
+{
+  FAR struct ctucanfd_can_s *priv = (FAR struct ctucanfd_can_s *)dev;
+
+  /* CAN 2.0 or CAN FD */
+
+  if (pkt->io_len == sizeof(struct can_frame))
+    {
+      FAR struct can_frame *frame =
+        (FAR struct can_frame *)netpkt_getdata(dev, pkt);
+
+      ctucanfd_sock_queue_one(dev, priv, frame->can_id,
+                              (frame->can_id & CAN_RTR_FLAG) != 0,
+                              false, false, false,
+                              frame->data, frame->can_dlc, pkt);
+      return OK;
+    }
+
+#ifdef CONFIG_NET_CAN_CANFD
+  if (pkt->io_len == sizeof(struct canfd_frame))
+    {
+      FAR struct canfd_frame *frame =
+        (FAR struct canfd_frame *)netpkt_getdata(dev, pkt);
+
+      ctucanfd_sock_queue_one(dev, priv, frame->can_id,
+                              (frame->can_id & CAN_RTR_FLAG) != 0,
+                              (frame->flags & CANFD_FDF) != 0,
+                              (frame->flags & CANFD_BRS) != 0,
+                              (frame->flags & CANFD_ESI) != 0,
+                              frame->data, frame->len, pkt);
+
+      return OK;
+    }
+#endif
+
+  canerr("ERROR: unsupported netpkt len %u\n", pkt->io_len);
+  netpkt_free(dev, pkt, NETPKT_TX);
+  return -EINVAL;
+}
+
+/*****************************************************************************
+ * Name: ctucanfd_sock_txpoll
+ *
+ * Description:
+ *   Poll for TX completion in netpoll paths and reclaim TX packets even when
+ *   RX worker is not running.
+ *
+ *****************************************************************************/
+
+static void ctucanfd_sock_txpoll(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct ctucanfd_can_s *priv = (FAR struct ctucanfd_can_s *)dev;
+  uint32_t regval;
+  uint32_t setval;
+  int      txidx;
+
+  regval = ctucanfd_getreg(priv, CTUCANFD_TXSTAT);
+
+  for (txidx = 0; txidx < priv->txbufcnt; txidx++)
+    {
+      uint32_t txst = CTUCANFD_TXSTAT_GET(regval, txidx);
+
+      if (txst >= CTUCANFD_TXSTAT_TOK && txst != CTUCANFD_TXSTAT_ETY)
+        {
+          setval = (CTUCANFD_TXCMD_TXCE +
+                    (1 << (CTUCANFD_TXCMD_TXB_SHIFT + txidx)));
+          ctucanfd_putreg(priv, CTUCANFD_TXINFOCMD, setval);
+
+          /* In netpoll paths there may be no RX worker to run txconfirm. */
+
+          if (priv->tx_pktbuf[txidx] != NULL)
+            {
+              netpkt_free(dev, priv->tx_pktbuf[txidx], NETPKT_TX);
+              priv->tx_pktbuf[txidx] = NULL;
+            }
+
+          netdev_lower_txdone(dev);
+        }
+      else if (txst == CTUCANFD_TXSTAT_ETY && priv->tx_pktbuf[txidx] != NULL)
+        {
+          /* Buffer was already emptied by IRQ path; reclaim stale owner. */
+
+          netpkt_free(dev, priv->tx_pktbuf[txidx], NETPKT_TX);
+          priv->tx_pktbuf[txidx] = NULL;
+          netdev_lower_txdone(dev);
+        }
+    }
+
+  if ((ctucanfd_getreg(priv, CTUCANFD_INTSTAT) & CTUCANFD_INT_TXI) != 0)
+    {
+      ctucanfd_putreg(priv, CTUCANFD_INTSTAT, CTUCANFD_INT_TXI);
+    }
 }
 
 /*****************************************************************************
@@ -1938,17 +2021,14 @@ static int ctucanfd_interrupt(int irq, FAR void *context, FAR void *arg)
       return OK;
     }
 
-  else
-    {
-      /* Disable all RX/TX interrupts for this card until all pending
-       * interrupts are handled.
-       */
+  /* Disable all RX/TX interrupts for this card until all pending
+   * interrupts are handled.
+   */
 
-      for (i = 0; i < priv->count; i++)
-        {
-          ctucanfd_rxint(&priv->devs[i], false);
-          ctucanfd_txint(&priv->devs[i], false);
-        }
+  for (i = 0; i < priv->count; i++)
+    {
+      ctucanfd_rxint(&priv->devs[i], false);
+      ctucanfd_txint(&priv->devs[i], false);
     }
 
 #ifdef CONFIG_CAN_CTUCANFD_CHARDEV
