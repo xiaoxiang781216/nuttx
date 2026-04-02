@@ -315,6 +315,12 @@ function(nuttx_add_elf_app)
     set(ELF_TARGET "ELF_${NAME}")
     add_library(${ELF_TARGET} ${SRCS})
     add_dependencies(${ELF_TARGET} apps_post)
+    foreach(dep ${DEPENDS})
+      set_property(
+        TARGET ${ELF_TARGET}
+        APPEND
+        PROPERTY ELF_DEP_LINK_LIBRARIES $<TARGET_FILE:${dep}>)
+    endforeach()
     if(TARGET STARTUP_OBJS)
       add_dependencies(${ELF_TARGET} STARTUP_OBJS)
     endif()
@@ -362,6 +368,7 @@ function(nuttx_add_elf_app)
         ${LINK_FLAGS}
         $<$<AND:$<TARGET_EXISTS:STARTUP_OBJS>,$<NOT:$<BOOL:${DYNLIB_ELF_MODE}>>>:$<TARGET_OBJECTS:STARTUP_OBJS>>
         $<$<BOOL:${KERNEL_ELF_MODE}>:$<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_LIBRARIES>>>
+        $<GENEX_EVAL:$<TARGET_PROPERTY:${ELF_TARGET},ELF_DEP_LINK_LIBRARIES>>
         $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_EXTRA_LIBRARIES>>
         $<TARGET_FILE:${ELF_TARGET}>
         -o
