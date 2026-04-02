@@ -54,9 +54,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if defined(CONFIG_DRIVERS_NOTERAM) +  defined(CONFIG_DRIVERS_NOTELOG) + \
+#if defined(CONFIG_DRIVERS_NOTERAM) + defined(CONFIG_DRIVERS_NOTELOG) + \
     defined(CONFIG_DRIVERS_NOTESNAP) + defined(CONFIG_DRIVERS_NOTERTT) + \
-    defined(CONFIG_SEGGER_SYSVIEW) > CONFIG_DRIVERS_NOTE_MAX
+    defined(CONFIG_SEGGER_SYSVIEW) + defined(CONFIG_DRIVERS_NOTELOWEROUT) + \
+    defined(CONFIG_DRIVERS_NOTERPMSG) + defined(CONFIG_DRIVERS_NOTET32FDX) + \
+    defined(CONFIG_DRIVERS_NOTENET) > CONFIG_DRIVERS_NOTE_MAX
 #  error "Maximum channel number exceeds. "
 #endif
 
@@ -829,7 +831,7 @@ static inline int note_driver_isenabled_irq(FAR struct note_driver_s *driver,
                                             int irq, bool enter)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  int type = NOTE_IRQ_ENTER + enter;
+  int type = NOTE_IRQ_ENTER + !enter;
 
   if (!note_driver_isenabled_type(driver, type))
     {
@@ -1404,7 +1406,7 @@ void note_preemption(FAR struct tcb_s *tcb, bool locked)
   flags = spin_lock_irqsave_notrace(&g_note_lock);
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_driver_isenabled_type(*driver, NOTE_PREEMPT_LOCK))
+      if (!note_driver_isenabled_type(*driver, NOTE_PREEMPT_LOCK + !locked))
         {
           continue;
         }
@@ -1425,7 +1427,7 @@ void note_preemption(FAR struct tcb_s *tcb, bool locked)
         {
           formatted = true;
           note_common(tcb, &note.npr_cmn, sizeof(struct note_preempt_s),
-                      locked ? NOTE_PREEMPT_LOCK : NOTE_PREEMPT_UNLOCK);
+                      NOTE_PREEMPT_LOCK + !locked);
           note.npr_count = tcb->lockcount;
         }
 
@@ -1448,7 +1450,7 @@ void note_csection(FAR struct tcb_s *tcb, bool enter)
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_driver_isenabled_type(*driver, NOTE_CSECTION_ENTER + enter))
+      if (!note_driver_isenabled_type(*driver, NOTE_CSECTION_ENTER + !enter))
         {
           continue;
         }
