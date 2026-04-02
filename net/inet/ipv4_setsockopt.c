@@ -171,18 +171,45 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
                 }
               else if (option == IP_ADD_MEMBERSHIP)
                 {
-                  if (conn->mreq.imr_multiaddr.s_addr != 0)
+                  int i;
+                  int slot = -ENOBUFS;
+
+                  conn_lock(&conn->sconn);
+
+                  /* Find a free slot in the mreq array */
+
+                  for (i = 0; i < CONFIG_NET_MCAST_MAX_GROUPS; i++)
                     {
-                      ret = -EADDRINUSE;
+                      if (conn->mreq[i].imr_multiaddr.s_addr ==
+                          mrec->imr_multiaddr.s_addr)
+                        {
+                          /* Already a member of this group */
+
+                          slot = -EADDRINUSE;
+                          break;
+                        }
+
+                      if (slot < 0 &&
+                          conn->mreq[i].imr_multiaddr.s_addr == 0)
+                        {
+                          slot = i;
+                        }
+                    }
+
+                  if (slot < 0)
+                    {
+                      conn_unlock(&conn->sconn);
+                      ret = slot;
                     }
                   else
                     {
                       ret = igmp_joingroup(dev, &mrec->imr_multiaddr);
-                      conn_lock(&conn->sconn);
                       if (ret == OK)
                         {
-                          conn->mreq.imr_multiaddr = mrec->imr_multiaddr;
-                          conn->mreq.imr_ifindex   = dev->d_ifindex;
+                          conn->mreq[slot].imr_multiaddr =
+                              mrec->imr_multiaddr;
+                          conn->mreq[slot].imr_ifindex =
+                              dev->d_ifindex;
                         }
 
                       conn_unlock(&conn->sconn);
@@ -190,12 +217,22 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
                 }
               else
                 {
+                  int i;
+
                   ret = igmp_leavegroup(dev, &mrec->imr_multiaddr);
                   conn_lock(&conn->sconn);
                   if (ret == OK)
                     {
-                      conn->mreq.imr_multiaddr.s_addr = 0;
-                      conn->mreq.imr_ifindex          = 0;
+                      for (i = 0; i < CONFIG_NET_MCAST_MAX_GROUPS; i++)
+                        {
+                          if (conn->mreq[i].imr_multiaddr.s_addr ==
+                              mrec->imr_multiaddr.s_addr)
+                            {
+                              conn->mreq[i].imr_multiaddr.s_addr = 0;
+                              conn->mreq[i].imr_ifindex = 0;
+                              break;
+                            }
+                        }
                     }
 
                   conn_unlock(&conn->sconn);
@@ -275,8 +312,8 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
               if (net_ipv4addr_cmp(mreq.imr_multiaddr.s_addr, INADDR_ANY))
                 {
                   conn_lock(&conn->sconn);
-                  conn->mreq.imr_address.s_addr = 0;
-                  conn->mreq.imr_ifindex = 0;
+                  conn->mcast_ifindex = 0;
+
                   conn_unlock(&conn->sconn);
                   ret = OK;
                   break;
@@ -310,8 +347,7 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
             }
 #endif
 
-          conn->mreq.imr_address.s_addr = mreq.imr_multiaddr.s_addr;
-          conn->mreq.imr_ifindex = mreq.imr_ifindex;
+          conn->mcast_ifindex = mreq.imr_ifindex;
           conn_unlock(&conn->sconn);
           ret = OK;
           break;

@@ -72,6 +72,7 @@
 #include "netdev/netdev.h"
 #include "socket/socket.h"
 #include "igmp/igmp.h"
+#include "mld/mld.h"
 #include "udp/udp.h"
 #include "utils/utils.h"
 
@@ -1032,16 +1033,35 @@ int udp_connect(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
 
 void udp_leavegroup(FAR struct udp_conn_s *conn)
 {
-  if (conn->mreq.imr_multiaddr.s_addr != 0)
-    {
-      FAR struct net_driver_s *dev;
+  int i;
 
-      if ((dev = netdev_findbyindex(conn->mreq.imr_ifindex)) != NULL)
+  for (i = 0; i < CONFIG_NET_MCAST_MAX_GROUPS; i++)
+    {
+      if (conn->mreq[i].imr_multiaddr.s_addr != 0)
         {
-          igmp_leavegroup(dev, &conn->mreq.imr_multiaddr);
+          FAR struct net_driver_s *dev;
+
+          if ((dev = netdev_findbyindex(conn->mreq[i].imr_ifindex)) != NULL)
+            {
+              igmp_leavegroup(dev, &conn->mreq[i].imr_multiaddr);
+            }
+
+          conn->mreq[i].imr_multiaddr.s_addr = 0;
+          conn->mreq[i].imr_ifindex = 0;
         }
     }
+
+#ifdef CONFIG_NET_MLD
+  for (i = 0; i < CONFIG_NET_MCAST_MAX_GROUPS; i++)
+    {
+      if (!net_ipv6addr_cmp(conn->mreq6[i].ipv6mr_multiaddr.in6_u.u6_addr16,
+                           g_ipv6_unspecaddr))
+        {
+          mld_leavegroup(&conn->mreq6[i]);
+          memset(&conn->mreq6[i], 0, sizeof(struct ipv6_mreq));
+        }
+    }
+#endif
 }
 #endif
-
 #endif /* CONFIG_NET && CONFIG_NET_UDP */

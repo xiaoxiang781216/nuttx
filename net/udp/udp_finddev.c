@@ -159,10 +159,25 @@ udp_find_raddr_device(FAR struct udp_conn_s *conn,
 #if defined(CONFIG_NET_IGMP) && defined(CONFIG_NET_BINDTODEVICE)
           if (IN_MULTICAST(NTOHL(raddr)))
             {
-              if ((conn->sconn.s_boundto == 0) &&
-                  (conn->mreq.imr_ifindex != 0))
+              if (conn->sconn.s_boundto == 0)
                 {
-                  return netdev_findbyindex(conn->mreq.imr_ifindex);
+                  int i;
+                  for (i = 0; i < CONFIG_NET_MCAST_MAX_GROUPS; i++)
+                    {
+                      if (conn->mreq[i].imr_multiaddr.s_addr ==
+                          raddr && conn->mreq[i].imr_ifindex != 0)
+                        {
+                          return netdev_findbyindex(
+                              conn->mreq[i].imr_ifindex);
+                        }
+                    }
+
+                  /* Fallback to IP_MULTICAST_IF setting */
+
+                  if (conn->mcast_ifindex != 0)
+                    {
+                      return netdev_findbyindex(conn->mcast_ifindex);
+                    }
                 }
             }
           else
@@ -217,14 +232,33 @@ udp_find_raddr_device(FAR struct udp_conn_s *conn,
 #if defined(CONFIG_NET_MLD) && defined(CONFIG_NET_BINDTODEVICE)
           if (IN6_IS_ADDR_MULTICAST(&raddr))
             {
-              if (conn->mreq.imr_ifindex != 0)
+              if (conn->sconn.s_boundto == 0)
                 {
-                  return netdev_findbyindex(conn->mreq.imr_ifindex);
+                  int i;
+
+                  /* Match multicast group address in mreq6 array */
+
+                  for (i = 0; i < CONFIG_NET_MCAST_MAX_GROUPS; i++)
+                    {
+                      if (net_ipv6addr_cmp(
+                          conn->mreq6[i].ipv6mr_multiaddr.in6_u.u6_addr16,
+                          raddr.in6_u.u6_addr16) &&
+                          conn->mreq6[i].ipv6mr_interface != 0)
+                        {
+                          return netdev_findbyindex(
+                              conn->mreq6[i].ipv6mr_interface);
+                        }
+                    }
+
+                  /* Fallback to IP_MULTICAST_IF setting */
+
+                  if (conn->mcast_ifindex != 0)
+                    {
+                      return netdev_findbyindex(conn->mcast_ifindex);
+                    }
                 }
-              else if (conn->sconn.s_boundto != 0)
-                {
-                  return netdev_findbyindex(conn->sconn.s_boundto);
-                }
+
+              /* Fall through to normal routing if no match */
             }
           else
 #endif

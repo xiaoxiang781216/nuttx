@@ -91,11 +91,87 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
       /* Handle MLD-related socket options */
 
       case IPV6_JOIN_GROUP:       /* Join a multicast group */
-        ret = mld_joingroup(value);
+        {
+          FAR const struct ipv6_mreq *mrec;
+          FAR struct udp_conn_s *conn = psock->s_conn;
+          int i;
+          int slot = -ENOBUFS;
+
+          mrec = (FAR const struct ipv6_mreq *)value;
+
+          conn_lock(&conn->sconn);
+
+          for (i = 0; i < CONFIG_NET_MCAST_MAX_GROUPS; i++)
+            {
+              if (conn->mreq6[i].ipv6mr_interface ==
+                      mrec->ipv6mr_interface &&
+                  net_ipv6addr_cmp(
+                       conn->mreq6[i].ipv6mr_multiaddr.in6_u.u6_addr16,
+                                   mrec->ipv6mr_multiaddr.in6_u.u6_addr16))
+                {
+                  /* Already a member, silently ignore */
+
+                  slot = -EADDRINUSE;
+                  break;
+                }
+
+              if (slot < 0 &&
+                  net_ipv6addr_cmp(
+                       conn->mreq6[i].ipv6mr_multiaddr.in6_u.u6_addr16,
+                                   g_ipv6_unspecaddr))
+                {
+                  slot = i;
+                }
+            }
+
+          if (slot < 0)
+            {
+              conn_unlock(&conn->sconn);
+              ret = slot;
+            }
+          else
+            {
+              ret = mld_joingroup(mrec);
+              if (ret == OK)
+                {
+                  memcpy(&conn->mreq6[slot], mrec,
+                         sizeof(struct ipv6_mreq));
+                }
+
+              conn_unlock(&conn->sconn);
+            }
+        }
         break;
 
       case IPV6_LEAVE_GROUP:      /* Quit a multicast group */
-        ret = mld_leavegroup(value);
+        {
+          FAR const struct ipv6_mreq *mrec;
+          FAR struct udp_conn_s *conn = psock->s_conn;
+          int i;
+
+          mrec = (FAR const struct ipv6_mreq *)value;
+
+          ret = mld_leavegroup(mrec);
+          conn_lock(&conn->sconn);
+          if (ret == OK)
+            {
+              for (i = 0; i < CONFIG_NET_MCAST_MAX_GROUPS; i++)
+                {
+                  if (conn->mreq6[i].ipv6mr_interface ==
+                          mrec->ipv6mr_interface &&
+                      net_ipv6addr_cmp(
+                       conn->mreq6[i].ipv6mr_multiaddr.in6_u.u6_addr16,
+                                     mrec->ipv6mr_multiaddr.in6_u.u6_addr16))
+                    {
+                      memset(&conn->mreq6[i], 0,
+                             sizeof(struct ipv6_mreq));
+                      break;
+                    }
+                }
+            }
+
+          conn_unlock(&conn->sconn);
+        }
         break;
 
       case IPV6_MULTICAST_HOPS:   /* Multicast hop limit */
@@ -142,7 +218,7 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
           }
 
         conn_lock(&conn->sconn);
-        conn->mreq.imr_ifindex = ifindex;
+        conn->mcast_ifindex = ifindex;
         conn_unlock(&conn->sconn);
 
         ret = OK;

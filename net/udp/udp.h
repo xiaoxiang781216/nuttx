@@ -147,8 +147,14 @@ struct udp_conn_s
   FAR struct devif_callback_s *sndcb;
 #endif
 
+#ifdef CONFIG_NET_IGMP
+  struct ip_mreqn mreq[CONFIG_NET_MCAST_MAX_GROUPS];
+#endif
+#ifdef CONFIG_NET_MLD
+  struct ipv6_mreq mreq6[CONFIG_NET_MCAST_MAX_GROUPS];
+#endif
 #if defined(CONFIG_NET_IGMP) || defined(CONFIG_NET_MLD)
-  struct ip_mreqn mreq;
+  unsigned int    mcast_ifindex;    /* Multicast output interface index (IP_MULTICAST_IF) */
 #endif
 
   /* The following is a list of poll structures of threads waiting for

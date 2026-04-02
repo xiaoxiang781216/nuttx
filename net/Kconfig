@@ -405,6 +405,15 @@ source "net/icmp/Kconfig"
 source "net/icmpv6/Kconfig"
 source "net/mld/Kconfig"
 source "net/igmp/Kconfig"
+
+config NET_MCAST_MAX_GROUPS
+	int "Maximum multicast groups per socket"
+	default 1
+	depends on NET_IGMP || NET_MLD
+	---help---
+		Maximum number of multicast groups that a single UDP socket
+		can join simultaneously. Increase this if applications need
+		to join more multicast groups per socket.
 source "net/arp/Kconfig"
 source "net/procfs/Kconfig"
 source "net/usrsock/Kconfig"
