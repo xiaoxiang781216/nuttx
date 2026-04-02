@@ -26,173 +26,15 @@
 
 #include <nuttx/config.h>
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <nuttx/irq.h>
+#define ARCH_ATOMIC_SPECIFIER
+
+#include <nuttx/atomic.h>
+
 #include <nuttx/macro.h>
-#if defined(CONFIG_LIBC_ATOMIC_HWSPINLOCK)
-  #include <nuttx/hwspinlock/hwspinlock.h>
-#endif
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define STORE(fn, n, type)                                            \
-                                                                      \
-  void weak_function CONCATENATE(fn, n)(FAR volatile void *ptr,       \
-                                        type value, int memorder)     \
-  {                                                                   \
-    irqstate_t irqstate = atomic_lock();                              \
-                                                                      \
-    *(FAR type *)ptr = value;                                         \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-  }
-
-#define LOAD(fn, n, type)                                             \
-                                                                      \
-  type weak_function CONCATENATE(fn, n)(FAR const volatile void *ptr, \
-                                        int memorder)                 \
-  {                                                                   \
-    irqstate_t irqstate = atomic_lock();                              \
-                                                                      \
-    type ret = *(FAR type *)ptr;                                      \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-    return ret;                                                       \
-  }
-
-#define EXCHANGE(fn, n, type)                                         \
-                                                                      \
-  type weak_function CONCATENATE(fn, n)(FAR volatile void *ptr,       \
-                                        type value, int memorder)     \
-  {                                                                   \
-    irqstate_t irqstate = atomic_lock();                              \
-    FAR type *tmp = (FAR type *)ptr;                                  \
-                                                                      \
-    type ret = *tmp;                                                  \
-    *tmp = value;                                                     \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-    return ret;                                                       \
-  }
-
-#define CMP_EXCHANGE(fn, n, type)                                     \
-                                                                      \
-  bool weak_function CONCATENATE(fn, n)(FAR volatile void *mem,       \
-                                        FAR volatile void *expect,    \
-                                        type desired, bool weak,      \
-                                        int success, int failure)     \
-  {                                                                   \
-    bool ret = false;                                                 \
-    irqstate_t irqstate = atomic_lock();                              \
-    FAR type *tmpmem = (FAR type *)mem;                               \
-    FAR type *tmpexp = (FAR type *)expect;                            \
-                                                                      \
-    if (*tmpmem == *tmpexp)                                           \
-      {                                                               \
-        ret = true;                                                   \
-        *tmpmem = desired;                                            \
-      }                                                               \
-    else                                                              \
-      {                                                               \
-        *tmpexp = *tmpmem;                                            \
-      }                                                               \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-    return ret;                                                       \
-  }
-
-#define FLAG_TEST_AND_SET(fn, n, type)                                \
-                                                                      \
-  type weak_function CONCATENATE(fn, n)(FAR volatile void *ptr,       \
-                                        int memorder)                 \
-  {                                                                   \
-    irqstate_t irqstate = atomic_lock();                              \
-    FAR type *tmp = (FAR type *)ptr;                                  \
-    type ret = *tmp;                                                  \
-                                                                      \
-    *(FAR type *)ptr = 1;                                             \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-    return ret;                                                       \
-  }
-
-#define FETCH_ADD(fn, n, type)                                        \
-                                                                      \
-  type weak_function CONCATENATE(fn, n)(FAR volatile void *ptr,       \
-                                        type value, int memorder)     \
-  {                                                                   \
-    irqstate_t irqstate = atomic_lock();                              \
-    FAR type *tmp = (FAR type *)ptr;                                  \
-    type ret = *tmp;                                                  \
-                                                                      \
-    *tmp = *tmp + value;                                              \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-    return ret;                                                       \
-  }
-
-#define FETCH_SUB(fn, n, type)                                        \
-                                                                      \
-  type weak_function CONCATENATE(fn, n)(FAR volatile void *ptr,       \
-                                        type value, int memorder)     \
-  {                                                                   \
-    irqstate_t irqstate = atomic_lock();                              \
-    FAR type *tmp = (FAR type *)ptr;                                  \
-    type ret = *tmp;                                                  \
-                                                                      \
-    *tmp = *tmp - value;                                              \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-    return ret;                                                       \
-  }
-
-#define FETCH_AND(fn, n, type)                                        \
-                                                                      \
-  type weak_function CONCATENATE(fn, n)(FAR volatile void *ptr,       \
-                                        type value, int memorder)     \
-  {                                                                   \
-    irqstate_t irqstate = atomic_lock();                              \
-    FAR type *tmp = (FAR type *)ptr;                                  \
-    type ret = *tmp;                                                  \
-                                                                      \
-    *tmp = *tmp & value;                                              \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-    return ret;                                                       \
-  }
-
-#define FETCH_OR(fn, n, type)                                         \
-                                                                      \
-  type weak_function CONCATENATE(fn, n)(FAR volatile void *ptr,       \
-                                        type value, int memorder)     \
-  {                                                                   \
-    irqstate_t irqstate = atomic_lock();                              \
-    FAR type *tmp = (FAR type *)ptr;                                  \
-    type ret = *tmp;                                                  \
-                                                                      \
-    *tmp = *tmp | value;                                              \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-    return ret;                                                       \
-  }
-
-#define FETCH_XOR(fn, n, type)                                        \
-                                                                      \
-  type weak_function CONCATENATE(fn, n)(FAR volatile void *ptr,       \
-                                        type value, int memorder)     \
-  {                                                                   \
-    irqstate_t irqstate = atomic_lock();                              \
-    FAR type *tmp = (FAR type *)ptr;                                  \
-    type ret = *tmp;                                                  \
-                                                                      \
-    *tmp = *tmp ^ value;                                              \
-                                                                      \
-    atomic_unlock(irqstate);                                          \
-    return ret;                                                       \
-  }
 
 #define SYNC_ADD_FETCH(fn, n, type)                                   \
                                                                       \
@@ -201,11 +43,13 @@
   {                                                                   \
     irqstate_t irqstate = atomic_lock();                              \
     FAR type *tmp = (FAR type *)ptr;                                  \
+    type ret;                                                         \
                                                                       \
     *tmp = *tmp + value;                                              \
+    ret = *tmp;                                                       \
                                                                       \
     atomic_unlock(irqstate);                                          \
-    return *tmp;                                                      \
+    return ret;                                                       \
   }
 
 #define SYNC_SUB_FETCH(fn, n, type)                                   \
@@ -215,11 +59,13 @@
   {                                                                   \
     irqstate_t irqstate = atomic_lock();                              \
     FAR type *tmp = (FAR type *)ptr;                                  \
+    type ret;                                                         \
                                                                       \
     *tmp = *tmp - value;                                              \
+    ret = *tmp;                                                       \
                                                                       \
     atomic_unlock(irqstate);                                          \
-    return *tmp;                                                      \
+    return ret;                                                       \
   }
 
 #define SYNC_OR_FETCH(fn, n, type)                                    \
@@ -229,11 +75,13 @@
   {                                                                   \
     irqstate_t irqstate = atomic_lock();                              \
     FAR type *tmp = (FAR type *)ptr;                                  \
+    type ret;                                                         \
                                                                       \
     *tmp = *tmp | value;                                              \
+    ret = *tmp;                                                       \
                                                                       \
     atomic_unlock(irqstate);                                          \
-    return *tmp;                                                      \
+    return ret;                                                       \
   }
 
 #define SYNC_AND_FETCH(fn, n, type)                                   \
@@ -243,11 +91,13 @@
   {                                                                   \
     irqstate_t irqstate = atomic_lock();                              \
     FAR type *tmp = (FAR type *)ptr;                                  \
+    type ret;                                                         \
                                                                       \
     *tmp = *tmp & value;                                              \
+    ret = *tmp;                                                       \
                                                                       \
     atomic_unlock(irqstate);                                          \
-    return *tmp;                                                      \
+    return ret;                                                       \
   }
 
 #define SYNC_XOR_FETCH(fn, n, type)                                   \
@@ -257,11 +107,13 @@
   {                                                                   \
     irqstate_t irqstate = atomic_lock();                              \
     FAR type *tmp = (FAR type *)ptr;                                  \
+    type ret;                                                         \
                                                                       \
     *tmp = *tmp ^ value;                                              \
+    ret = *tmp;                                                       \
                                                                       \
     atomic_unlock(irqstate);                                          \
-    return *tmp;                                                      \
+    return ret;                                                       \
   }
 
 #define SYNC_NAND_FETCH(fn, n, type)                                  \
@@ -271,11 +123,13 @@
   {                                                                   \
     irqstate_t irqstate = atomic_lock();                              \
     FAR type *tmp = (FAR type *)ptr;                                  \
+    type ret;                                                         \
                                                                       \
     *tmp = ~(*tmp & value);                                           \
+    ret = *tmp;                                                       \
                                                                       \
     atomic_unlock(irqstate);                                          \
-    return *tmp;                                                      \
+    return ret;                                                       \
   }
 
 #define SYNC_BOOL_CMP_SWAP(fn, n, type)                               \
@@ -318,295 +172,17 @@
   }
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-#if defined(CONFIG_LIBC_ATOMIC_HWSPINLOCK)
-extern struct hwspinlock_dev_s g_atomic_hwspinlock;
-static inline irqstate_t atomic_lock(void)
-{
-  return hwspin_lock_irqsave(&g_atomic_hwspinlock);
-}
-
-static inline void atomic_unlock(irqstate_t flags)
-{
-  hwspin_unlock_restore(&g_atomic_hwspinlock, flags);
-}
-#else
-static inline irqstate_t atomic_lock(void)
-{
-  return irq_save();
-}
-
-static inline void atomic_unlock(irqstate_t flags)
-{
-  irq_restore(flags);
-}
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: __atomic_store_1
+ * Name: __atomic_*_{1,2,4,8}
  ****************************************************************************/
 
-STORE(__atomic_store_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_store_2
- ****************************************************************************/
-
-STORE(__atomic_store_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_store_4
- ****************************************************************************/
-
-STORE(__atomic_store_, 4, uint32_t)
-STORE(atomic_store_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_store_8
- ****************************************************************************/
-
-STORE(__atomic_store_, 8, uint64_t)
-STORE(atomic_store_, 8, int64_t)
-
-/****************************************************************************
- * Name: __atomic_load_1
- ****************************************************************************/
-
-LOAD(__atomic_load_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_load__2
- ****************************************************************************/
-
-LOAD(__atomic_load_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_load__4
- ****************************************************************************/
-
-LOAD(__atomic_load_, 4, uint32_t)
-LOAD(atomic_load_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_load__8
- ****************************************************************************/
-
-LOAD(__atomic_load_, 8, uint64_t)
-LOAD(atomic_load_, 8, int64_t)
-
-/****************************************************************************
- * Name: __atomic_exchange_1
- ****************************************************************************/
-
-EXCHANGE(__atomic_exchange_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_exchange__2
- ****************************************************************************/
-
-EXCHANGE(__atomic_exchange_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_exchange__4
- ****************************************************************************/
-
-EXCHANGE(__atomic_exchange_, 4, uint32_t)
-EXCHANGE(atomic_exchange_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_exchange__8
- ****************************************************************************/
-
-EXCHANGE(__atomic_exchange_, 8, uint64_t)
-EXCHANGE(atomic_exchange_, 8, int64_t)
-
-/****************************************************************************
- * Name: __atomic_compare_exchange_1
- ****************************************************************************/
-
-CMP_EXCHANGE(__atomic_compare_exchange_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_compare_exchange_2
- ****************************************************************************/
-
-CMP_EXCHANGE(__atomic_compare_exchange_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_compare_exchange_4
- ****************************************************************************/
-
-CMP_EXCHANGE(__atomic_compare_exchange_, 4, uint32_t)
-CMP_EXCHANGE(atomic_compare_exchange_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_compare_exchange_8
- ****************************************************************************/
-
-CMP_EXCHANGE(__atomic_compare_exchange_, 8, uint64_t)
-CMP_EXCHANGE(atomic_compare_exchange_, 8, int64_t)
-
-/****************************************************************************
- * Name: __atomic_flag_test_and_set_1
- ****************************************************************************/
-
-FLAG_TEST_AND_SET(__atomic_flags_test_and_set_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_flag_test_and_set_2
- ****************************************************************************/
-
-FLAG_TEST_AND_SET(__atomic_flags_test_and_set_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_flag_test_and_set_4
- ****************************************************************************/
-
-FLAG_TEST_AND_SET(__atomic_flags_test_and_set_, 4, uint32_t)
-FLAG_TEST_AND_SET(atomic_flags_test_and_set_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_flag_test_and_set_8
- ****************************************************************************/
-
-FLAG_TEST_AND_SET(__atomic_flags_test_and_set_, 8, uint64_t)
-FLAG_TEST_AND_SET(atomic_flags_test_and_set_, 8, int64_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_add_1
- ****************************************************************************/
-
-FETCH_ADD(__atomic_fetch_add_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_add_2
- ****************************************************************************/
-
-FETCH_ADD(__atomic_fetch_add_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_add_4
- ****************************************************************************/
-
-FETCH_ADD(__atomic_fetch_add_, 4, uint32_t)
-FETCH_ADD(atomic_fetch_add_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_add_8
- ****************************************************************************/
-
-FETCH_ADD(__atomic_fetch_add_, 8, uint64_t)
-FETCH_ADD(atomic_fetch_add_, 8, int64_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_sub_1
- ****************************************************************************/
-
-FETCH_SUB(__atomic_fetch_sub_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_sub_2
- ****************************************************************************/
-
-FETCH_SUB(__atomic_fetch_sub_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_sub_4
- ****************************************************************************/
-
-FETCH_SUB(__atomic_fetch_sub_, 4, uint32_t)
-FETCH_SUB(atomic_fetch_sub_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_sub_8
- ****************************************************************************/
-
-FETCH_SUB(__atomic_fetch_sub_, 8, uint64_t)
-FETCH_SUB(atomic_fetch_sub_, 8, int64_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_and_1
- ****************************************************************************/
-
-FETCH_AND(__atomic_fetch_and_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_and_2
- ****************************************************************************/
-
-FETCH_AND(__atomic_fetch_and_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_and_4
- ****************************************************************************/
-
-FETCH_AND(__atomic_fetch_and_, 4, uint32_t)
-FETCH_AND(atomic_fetch_and_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_and_8
- ****************************************************************************/
-
-FETCH_AND(__atomic_fetch_and_, 8, uint64_t)
-FETCH_AND(atomic_fetch_and_, 8, int64_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_or_1
- ****************************************************************************/
-
-FETCH_OR(__atomic_fetch_or_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_or_2
- ****************************************************************************/
-
-FETCH_OR(__atomic_fetch_or_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_or_4
- ****************************************************************************/
-
-FETCH_OR(__atomic_fetch_or_, 4, uint32_t)
-FETCH_OR(atomic_fetch_or_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_or_4
- ****************************************************************************/
-
-FETCH_OR(__atomic_fetch_or_, 8, uint64_t)
-FETCH_OR(atomic_fetch_or_, 8, int64_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_xor_1
- ****************************************************************************/
-
-FETCH_XOR(__atomic_fetch_xor_, 1, uint8_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_xor_2
- ****************************************************************************/
-
-FETCH_XOR(__atomic_fetch_xor_, 2, uint16_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_xor_4
- ****************************************************************************/
-
-FETCH_XOR(__atomic_fetch_xor_, 4, uint32_t)
-FETCH_XOR(atomic_fetch_xor_, 4, int32_t)
-
-/****************************************************************************
- * Name: __atomic_fetch_xor_8
- ****************************************************************************/
-
-FETCH_XOR(__atomic_fetch_xor_, 8, uint64_t)
-FETCH_XOR(atomic_fetch_xor_, 8, int64_t)
+ARCH_ATOMIC_DEFINE(__atomic, uint8_t, 1)
+ARCH_ATOMIC_DEFINE(__atomic, uint16_t, 2)
+ARCH_ATOMIC_DEFINE(__atomic, uint32_t, 4)
+ARCH_ATOMIC_DEFINE(__atomic, uint64_t, 8)
 
 /* Clang define the __sync builtins, add #ifndef to avoid
  * redefined/redeclared problem.
