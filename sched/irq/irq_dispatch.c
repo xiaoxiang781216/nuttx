@@ -70,30 +70,37 @@
 #    define DEC_NESTLEVEL(ndx)
 #  endif
 
+#  define IRQ_MONITOR_ENABLED(ndx) \
+    ((ndx) >= 0 && (ndx) < NUSER_IRQS && g_irqvector[ndx].monitor)
+
 #  define CALL_VECTOR(ndx, vector, irq, context, arg) \
      do \
        { \
-         clock_t start; \
-         clock_t elapsed; \
-         INC_NESTLEVEL(); \
-         start = perf_gettime(); \
-         vector(irq, context, arg); \
-         elapsed = perf_gettime() - start; \
-         if (ndx < NUSER_IRQS) \
+         if (IRQ_MONITOR_ENABLED(ndx)) \
            { \
+             clock_t start; \
+             clock_t elapsed; \
+             INC_NESTLEVEL(); \
+             start = perf_gettime(); \
+             vector(irq, context, arg); \
+             elapsed = perf_gettime() - start; \
              atomic_add(&g_irqvector[ndx].count, 1); \
              if (elapsed > g_irqvector[ndx].time) \
                { \
                  g_irqvector[ndx].time = elapsed; \
                } \
+             if (CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0 && \
+                 elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ) \
+               { \
+                 CRITMONITOR_PANIC("IRQ %d(%p), execute time too long %ju\n", \
+                                   irq, vector, (uintmax_t)elapsed); \
+               } \
+             DEC_NESTLEVEL(ndx); \
            } \
-         if (CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0 && \
-             elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ) \
+         else \
            { \
-             CRITMONITOR_PANIC("IRQ %d(%p), execute time too long %ju\n", \
-                               irq, vector, (uintmax_t)elapsed); \
+             vector(irq, context, arg); \
            } \
-         DEC_NESTLEVEL(ndx); \
        } \
      while (0)
 #else
@@ -200,3 +207,31 @@ __jumpfunc__ void irq_dispatch(int irq, FAR void *context)
                                   CONFIG_STACKCHECK_MARGIN) == 0);
 #endif
 }
+
+/****************************************************************************
+ * Name: irq_monitor_enable / irq_monitor_disable
+ *
+ * Description:
+ *   Dynamically enable/disable IRQ timing statistics for a specific IRQ.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_IRQMONITOR
+void irq_monitor_enable(int irq)
+{
+  int ndx = IRQ_TO_NDX(irq);
+  if (ndx >= 0 && ndx < NUSER_IRQS)
+    {
+      g_irqvector[ndx].monitor = true;
+    }
+}
+
+void irq_monitor_disable(int irq)
+{
+  int ndx = IRQ_TO_NDX(irq);
+  if (ndx >= 0 && ndx < NUSER_IRQS)
+    {
+      g_irqvector[ndx].monitor = false;
+    }
+}
+#endif

@@ -52,6 +52,7 @@ struct irq_info_s
   xcpt_t handler;    /* Address of the interrupt handler */
   FAR void *arg;     /* The argument provided to the interrupt handler. */
 #ifdef CONFIG_SCHED_IRQMONITOR
+  bool monitor;      /* Whether to collect timing statistics */
   clock_t start;     /* Time interrupt attached */
   clock_t time;      /* Maximum execution time on this IRQ */
   atomic_t count;    /* Number of interrupts on this IRQ */
@@ -147,6 +148,11 @@ int irq_unexpected_isr(int irq, FAR void *context, FAR void *arg);
 
 #ifdef CONFIG_SCHED_IRQMONITOR
 int irq_foreach(irq_foreach_t callback, FAR void *arg);
+#endif
+
+#ifdef CONFIG_SCHED_IRQMONITOR
+void irq_monitor_enable(int irq);
+void irq_monitor_disable(int irq);
 #endif
 
 #ifdef CONFIG_IRQCHAIN
