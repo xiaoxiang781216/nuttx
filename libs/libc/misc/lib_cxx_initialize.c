@@ -43,6 +43,18 @@
 extern void macho_call_saved_init_funcs(void);
 #endif
 
+/* For DWARF-based exception handling (non-ARM EHABI architectures),
+ * the GCC unwinder needs .eh_frame registered via __register_frame().
+ * ARM32 uses EHABI (.ARM.exidx) which is found via __gnu_Unwind_Find_exidx()
+ * and does not need this.
+ */
+
+#if defined(CONFIG_CXX_EXCEPTION) && !defined(__ARM_EABI__) \
+    && !defined(CONFIG_ARCH_SIM)
+extern void __register_frame(FAR void *begin);
+extern char __eh_frame_start[];
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -65,6 +77,11 @@ extern void macho_call_saved_init_funcs(void);
 
 void lib_cxx_initialize(void)
 {
+#if defined(CONFIG_CXX_EXCEPTION) && !defined(__ARM_EABI__) \
+    && !defined(CONFIG_ARCH_SIM)
+  __register_frame(__eh_frame_start);
+#endif
+
 #ifdef CONFIG_HAVE_CXXINITIALIZE
 #  if defined(CONFIG_ARCH_SIM) && defined(CONFIG_HOST_MACOS)
   macho_call_saved_init_funcs();
