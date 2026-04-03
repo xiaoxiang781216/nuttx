@@ -844,7 +844,7 @@ static void dump_core_info(FAR struct tcb_s *rtcb, FAR const char *filename,
     }
 }
 
-#ifdef CONFIG_ARCH_LOWPUTC
+#if defined(CONFIG_ARCH_LOWPUTC) && !defined(CONFIG_NDEBUG)
 /****************************************************************************
  * Name: dump_mini_info
  ****************************************************************************/
@@ -969,7 +969,7 @@ void _assert(FAR const char *filename, int linenum,
     {
       /* Already in fatal state, reset board directly. */
 
-#ifdef CONFIG_ARCH_LOWPUTC
+#if defined(CONFIG_ARCH_LOWPUTC) && !defined(CONFIG_NDEBUG)
       dump_mini_info(regs);
 #endif
       reset_board(); /* Should not return. */
