@@ -238,31 +238,27 @@ static int rpmsgdev_read_nonblock_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct file *filep = (FAR struct file *)(uintptr_t)msg->filep;
   size_t read = 0;
   uint32_t space;
-  ssize_t ret;
+  ssize_t ret = 0;
 
-  /* Loop to read data in fragments until complete or error */
-
-  while (read < msg->count)
+  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  if (rsp == NULL)
     {
-      rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
-      if (rsp == NULL)
-        {
-          return -ENOMEM;
-        }
+      return -ENOMEM;
+    }
 
-      *rsp = *msg;
+  *rsp = *msg;
 
-      space -= sizeof(*msg) - 1;
-      if (space > msg->count - read)
-        {
-          space = msg->count - read;
-        }
+  space -= sizeof(*msg) - 1;
+  if (space > msg->count)
+    {
+      space = msg->count;
+    }
 
-      ret = file_read(filep, rsp->buf, space);
+  /* Loop file_read to fill the single tx buffer */
 
-      rsp->header.result = ret;
-      rpmsg_send_nocopy(ept, rsp, (ret < 0 ? 0 : ret) + sizeof(*rsp) - 1);
-
+  while (read < space)
+    {
+      ret = file_read(filep, rsp->buf + read, space - read);
       if (ret <= 0)
         {
           break;
@@ -271,7 +267,9 @@ static int rpmsgdev_read_nonblock_handler(FAR struct rpmsg_endpoint *ept,
       read += ret;
     }
 
-  return 0;
+  rsp->header.result = read > 0 ? read : ret;
+  return rpmsg_send_nocopy(ept, rsp,
+                           (read > 0 ? read : 0) + sizeof(*rsp) - 1);
 }
 
 /****************************************************************************
