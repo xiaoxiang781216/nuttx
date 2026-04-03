@@ -32,6 +32,7 @@ libcxxabi/libcxxabi: libcxxabi-$(LIBCXXABI_VERSION).src.tar.xz
 	$(Q) mv libcxxabi-$(LIBCXXABI_VERSION).src $@
 	$(Q) patch -p0 < libcxxabi/0001-libcxxabi-Fix-build-warnings-generated-by-CMake-comp.patch -d libcxxabi
 	$(Q) patch -p0 < libcxxabi/0002-libcxxabi-fix-compilation-errors.patch -d libcxxabi
+	$(Q) patch -p0 < libcxxabi/0003-libcxxabi-use-task_tls-for-exception-storage-on-NuttX.patch -d libcxxabi
 endif
 
 $(TOPDIR)/include/libcxxabi: libcxxabi/libcxxabi

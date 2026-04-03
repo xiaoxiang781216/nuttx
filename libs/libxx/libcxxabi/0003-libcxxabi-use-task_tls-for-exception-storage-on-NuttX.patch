@@ -1,0 +1,146 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: user <user@nuttx.org>
+Date: Wed, 2 Apr 2025 00:00:00 +0800
+Subject: libcxxabi: use cascaded task_tls + pthread_tls for exception storage
+
+The previous task_tls-only approach is incorrect: task_tls stores
+per-task-group (ta_telem[]), so multiple pthreads in the same
+group would share a single slot and clobber each other.
+
+The original pthread_once + pthread_key approach also fails because
+the once flag is a global static (lifetime = system) while
+pthread_key_create registers ta_tlsdtor[key] per-task-group.
+After a group exits, the flag stays "done" but the destructor
+registration is gone — subsequent groups hit EINVAL on
+pthread_setspecific.
+
+Cascaded solution aligns lifetimes:
+
+  task_tls (per-group) stores pthread_key + 1  (0 = not created)
+  pthread TLS (per-thread) stores __cxa_eh_globals*
+
+pthread_once is correct for task_tls_alloc() because it allocates
+a system-level, permanent index (lifetime matches the flag).
+
+Each task group lazily creates its own pthread_key via
+pthread_key_create(), so the destructor registration is per-group.
+group_dtor_() calls pthread_key_delete() on group exit.
+eh_dtor_() frees __cxa_eh_globals on thread exit.
+
+diff --git a/src/cxa_exception_storage.cpp b/src/cxa_exception_storage.cpp
+index 3a3233a..bf36876 100644
+--- a/src/cxa_exception_storage.cpp
++++ b/src/cxa_exception_storage.cpp
+@@ -53,6 +53,105 @@ extern "C" {
+ //  We cannot call std::terminate() because that will in turn
+ //  call __cxa_get_globals() and cause infinite recursion.
+
++#if defined(__NuttX__) && CONFIG_TLS_TASK_NELEM > 0
++
++// Cascaded task_tls + pthread_tls for NuttX flat build.
++//
++// The original pthread_once + pthread_key approach fails because:
++//   - pthread_once's done flag is a global static (lifetime = system)
++//   - pthread_key_create registers ta_tlsdtor[key] per-task-group
++//   - After Task A exits, its group's ta_tlsdtor[] is freed, but the
++//     once flag stays "done", so subsequent groups never re-register
++//
++// Our cascaded approach aligns lifetimes:
++//   task_tls (per-group) → stores pthread_key (+1 sentinel)
++//   pthread TLS (per-thread) → stores actual __cxa_eh_globals*
++//
++// pthread_once is correct for task_tls_alloc() because it allocates
++// a system-level, permanent index (lifetime matches the flag).
++
++#include <nuttx/tls_task.h>
++#include <pthread.h>
++
++namespace __cxxabiv1 {
++namespace {
++    int task_idx_ = -1;
++    std::__libcpp_exec_once_flag alloc_flag_ = _LIBCPP_EXEC_ONCE_INITIALIZER;
++
++    void _LIBCPP_TLS_DESTRUCTOR_CC eh_dtor_(void *p) {
++        __free_with_fallback(p);
++    }
++
++    /* Per-group destructor: delete the pthread key on group exit.
++     * Value is stored as (key + 1); recover the real key. */
++
++    void group_dtor_(FAR void *p) {
++        uintptr_t val = reinterpret_cast<uintptr_t>(p);
++        if (val != 0) {
++            pthread_key_t key = static_cast<pthread_key_t>(val - 1);
++            pthread_key_delete(key);
++        }
++    }
++
++    /* Allocate the global task_tls index (system-level, called once). */
++
++    void alloc_task_idx_() {
++        task_idx_ = task_tls_alloc(group_dtor_);
++        if (task_idx_ < 0)
++            abort_message("cannot allocate task TLS for __cxa_get_globals()");
++    }
++
++    /* Get (or lazily create) the per-group pthread key.
++     *
++     * task_tls slot stores key + 1 so that 0 means "not yet created"
++     * (pthread_key_t 0 is a valid key).  Each task group gets its own
++     * pthread_key, so the destructor registration is per-group. */
++
++    pthread_key_t get_key_() {
++        if (0 != std::__libcpp_execute_once(&alloc_flag_, alloc_task_idx_))
++            abort_message("execute once failure in __cxa_get_globals()");
++
++        uintptr_t val = task_tls_get_value(task_idx_);
++        if (val != 0) {
++            return static_cast<pthread_key_t>(val - 1);
++        }
++
++        pthread_key_t key;
++        if (0 != pthread_key_create(&key, eh_dtor_))
++            abort_message("cannot create pthread key for __cxa_get_globals()");
++
++        if (0 != task_tls_set_value(task_idx_,
++                                    static_cast<uintptr_t>(key + 1)))
++            abort_message("task_tls_set_value failure in __cxa_get_globals()");
++
++        return key;
++    }
++} // namespace
++
++extern "C" {
++    __cxa_eh_globals *__cxa_get_globals() {
++        __cxa_eh_globals *retVal = __cxa_get_globals_fast();
++
++        if (NULL == retVal) {
++            retVal = static_cast<__cxa_eh_globals*>(
++                __calloc_with_fallback(1, sizeof(__cxa_eh_globals)));
++            if (NULL == retVal)
++                abort_message("cannot allocate __cxa_eh_globals");
++            if (0 != pthread_setspecific(get_key_(), retVal))
++                abort_message("pthread_setspecific failure in __cxa_get_globals()");
++        }
++        return retVal;
++    }
++
++    __cxa_eh_globals *__cxa_get_globals_fast() {
++        return static_cast<__cxa_eh_globals*>(
++            pthread_getspecific(get_key_()));
++    }
++} // extern "C"
++} // namespace __cxxabiv1
++
++#else // !__NuttX__ — original pthread TLS key implementation
++
+ namespace __cxxabiv1 {
+ namespace {
+     std::__libcpp_tls_key key_;
+@@ -100,4 +199,6 @@ extern "C" {
+ } // extern "C"
+ } // namespace __cxxabiv1
+
++#endif // __NuttX__
++
+ #endif

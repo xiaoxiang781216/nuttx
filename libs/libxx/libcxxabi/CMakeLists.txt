@@ -41,7 +41,13 @@ if(CONFIG_LIBCXXABI)
           ""
           TEST_COMMAND
           ""
-      PATCH_COMMAND ""
+      PATCH_COMMAND
+        patch -p0 -d ${CMAKE_CURRENT_LIST_DIR}/libcxxabi <
+        ${CMAKE_CURRENT_LIST_DIR}/0001-libcxxabi-Fix-build-warnings-generated-by-CMake-comp.patch
+        && patch -p0 -d ${CMAKE_CURRENT_LIST_DIR}/libcxxabi <
+        ${CMAKE_CURRENT_LIST_DIR}/0002-libcxxabi-fix-compilation-errors.patch &&
+        patch -p0 -d ${CMAKE_CURRENT_LIST_DIR}/libcxxabi <
+        ${CMAKE_CURRENT_LIST_DIR}/0003-libcxxabi-use-task_tls-for-exception-storage-on-NuttX.patch
       DOWNLOAD_NO_PROGRESS true
       TIMEOUT 30)
 
