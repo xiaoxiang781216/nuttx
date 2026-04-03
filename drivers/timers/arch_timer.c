@@ -380,6 +380,22 @@ int weak_function up_timer_start(FAR const struct timespec *ts)
 
   return ret;
 }
+
+int weak_function up_timer_start(FAR const struct timespec *ts)
+{
+  int ret = -EAGAIN;
+
+  DEBUGASSERT(ts);
+
+  if (g_timer.lower != NULL)
+    {
+      clock_t ticks = clock_time2ticks(ts);
+      update_timeout(ticks);
+      ret = OK;
+    }
+
+  return ret;
+}
 #endif
 
 /****************************************************************************
