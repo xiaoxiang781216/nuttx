@@ -393,8 +393,6 @@ void tricore_trapcall(volatile void *trap)
     {
       uintptr_t istackbase = up_get_intstackbase(up_cpu_index());
 
-      up_set_interrupt_context(true);
-
       /* Update the current task's regs */
 
       g_running_task->xcp.regs = regs - TC_CONTEXT_REGS;
@@ -420,7 +418,6 @@ void tricore_trapcall(volatile void *trap)
   if (tclass == IfxCpu_Trap_Class_nonMaskableInterrupt)
     {
       tricore_nmitrap(tid, regs, NULL);
-      up_set_interrupt_context(false);
       __jumpBackToLink();
     }
 
@@ -460,8 +457,6 @@ void tricore_trapcall(volatile void *trap)
 
           if (!was_interrupt_context)
             {
-              up_set_interrupt_context(false);
-
               /* Restore the original FCX/LCX that were saved before
                * switching to the IRQ stack CSA. Without this, rslcx
                * in IFX_TRAP_RET would use the IRQ stack CSA chain

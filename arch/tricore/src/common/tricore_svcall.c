@@ -189,10 +189,6 @@ void tricore_svcall(volatile void *trap)
                                               - 2 * TC_CONTEXT_SIZE));
   UP_ISB();
 
-  /* Set irq flag */
-
-  up_set_interrupt_context(true);
-
   cmd = puregs[REG_D8];
 
   if (cmd != SYS_restore_context)
@@ -520,10 +516,6 @@ void tricore_svcall(volatile void *trap)
   tricore_restore_pprs(tcb);
 
   UP_ISB();
-
-  /* Set irq flag */
-
-  up_set_interrupt_context(false);
 
   /* (*running_task)->xcp.regs is about to become invalid and
    * will be marked as NULL to avoid misusage. the same applies

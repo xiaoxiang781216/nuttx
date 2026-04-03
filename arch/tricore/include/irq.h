@@ -40,7 +40,6 @@
  */
 
 #include <arch/arch.h>
-#include <nuttx/percpu.h>
 
 /* Include chip-specific IRQ definitions (including IRQ numbers) */
 
@@ -259,15 +258,6 @@ struct xcptcontext
 };
 
 /****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/* g_interrupt_context store irq status */
-
-DECLARE_PER_CPU(volatile bool, g_interrupt_context);
-#define g_interrupt_context this_cpu_var(g_interrupt_context)
-
-/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
@@ -355,39 +345,19 @@ void up_irq_restore(irqstate_t flags)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_set_interrupt_context
- *
- * Description:
- *   Set the interrupt handler context.
- *
- ****************************************************************************/
-
-noinstrument_function
-static inline_function void up_set_interrupt_context(bool flag)
-{
-  g_interrupt_context = flag;
-}
-
-/****************************************************************************
  * Name: up_interrupt_context
  *
  * Description:
  *   Return true is we are currently executing in the interrupt
- *   handler context.
+ *   handler context.  Uses the hardware PSW.IS bit which is
+ *   automatically set to 1 on interrupt entry and restored via RFE.
  *
  ****************************************************************************/
 
 noinstrument_function
 static inline_function bool up_interrupt_context(void)
 {
-#ifdef CONFIG_SMP
-  irqstate_t flags = up_irq_save();
-#endif
-  bool ret = g_interrupt_context;
-#ifdef CONFIG_SMP
-  up_irq_restore(flags);
-#endif
-  return ret;
+  return (__mfcr(CPU_PSW) & PSW_IS) != 0;
 }
 
 /****************************************************************************
