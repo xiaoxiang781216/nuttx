@@ -53,10 +53,6 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
         {
           kasan_bypass(bypass);
 
-#  if CONFIG_MM_NODE_GUARDSIZE != 0
-          DEBUGASSERT(size % MM_ALIGN == 0);
-#  endif
-
           return size;
         }
     }
@@ -80,10 +76,6 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
   size = MM_SIZEOF_NODE(node) - MM_ALLOCNODE_OVERHEAD;
 
   kasan_bypass(bypass);
-
-#if CONFIG_MM_NODE_GUARDSIZE != 0
-  DEBUGASSERT(size % MM_ALIGN == 0);
-#endif
 
   return size;
 }

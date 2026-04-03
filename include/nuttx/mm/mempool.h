@@ -41,8 +41,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define MEMPOOL_HEADER_SIZE        (sizeof(sq_entry_t) + \
-                                    (size_t)CONFIG_MM_NODE_GUARDSIZE)
+#define MEMPOOL_HEADER_SIZE        ALIGN_UP(sizeof(sq_entry_t), MM_ALIGN)
 
 #ifdef CONFIG_MM_RECORD
 #  define MEMPOOL_RECORD_SIZE      (ALIGN_UP( \
@@ -682,7 +681,7 @@ void mempool_procfs_unregister(FAR struct mempool_procfs_entry_s *entry);
  *   alloc           - The alloc memory function for multiples pool.
  *   alloc_size      - Get the address size of the alloc function.
  *   free            - The free memory function for multiples pool.
- *   arg             - The alloc & free memory fuctions used arg.
+ *   arg             - The alloc & free memory functions used arg.
  * Returned Value:
  *   Return an initialized multiple pool pointer on success,
  *   otherwise NULL is returned.
@@ -770,7 +769,7 @@ FAR void *mempool_multiple_realloc(FAR struct mempool_multiple_s *mpool,
  * Name: mempool_multiple_free
  *
  * Description:
- *   Release an memory block to the multiple mempry pool. The blk must have
+ *   Release an memory block to the multiple memory pool. The blk must have
  *   been returned by a previous call to mempool_multiple_alloc.
  *
  * Input Parameters:

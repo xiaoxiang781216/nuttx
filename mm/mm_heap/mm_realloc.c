@@ -164,7 +164,7 @@ __jumpfunc__ FAR void *mm_realloc(FAR struct mm_heap_s *heap,
           mm_shrinkchunk(heap, oldnode, newsize);
           kasan_poison2(heap->mm_kasan,
                         (FAR char *)oldnode + MM_SIZEOF_NODE(oldnode) +
-                        sizeof(mmsize_t) - CONFIG_MM_NODE_GUARDSIZE,
+                        MM_SIZEOF_ALLOCNODE - MM_ALLOCNODE_OVERHEAD,
                         oldsize - MM_SIZEOF_NODE(oldnode));
         }
 
