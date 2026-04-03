@@ -331,10 +331,13 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
           (FAR struct sockaddr_can *)msg->msg_name;
       struct cangw_rule_s fwdrule;
 
+      conn_dev_unlock(&conn->sconn, dev);
+
       if (canaddr == NULL || canaddr->can_family != AF_CAN)
         {
           nerr("ERROR: CAN 1722ACF setting is not right\n");
-          goto errout_with_wrb;
+          iob_free_chain(wb_iob);
+          return -EINVAL;
         }
 
       fwdrule.dest_dev = dev;
@@ -346,14 +349,13 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
       fwdrule.gw.cegw.can_bus_id = canaddr->can_addr.eth1722acf.can_bus_id;
 
       ret = ieee1722acf_send(dev, &fwdrule, wb_iob);
+      iob_free_chain(wb_iob);
       if (ret < 0)
         {
           nerr("ERROR: Failed to send can msg into acf stream: %d\n", ret);
-          goto errout_with_wrb;
+          return ret;
         }
 
-      iob_free_chain(wb_iob);
-      conn_dev_unlock(&conn->sconn, dev);
       return msg->msg_iov->iov_len;
     }
 #endif
