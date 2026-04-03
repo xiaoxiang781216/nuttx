@@ -92,6 +92,17 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
   DEBUGASSERT(dev != NULL && conn != NULL);
 
+  /* Check if the network device has gone down */
+
+  if ((flags & NETDEV_DOWN) != 0)
+    {
+      /* Discard all unsent data in the write queue */
+
+      iob_free_queue(&conn->write_q);
+      pkt_sendbuffer_notify(conn);
+      return flags;
+    }
+
   /* Check if the outgoing packet is available. It may have been claimed
    * by a send event handler serving a different thread -OR- if the
    * output buffer currently contains unprocessed incoming data. In
@@ -360,7 +371,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
       /* Set up the callback in the connection */
 
-      conn->sndcb->flags = PKT_POLL;
+      conn->sndcb->flags = (PKT_POLL | NETDEV_DOWN);
       conn->sndcb->priv  = conn;
       conn->sndcb->event = psock_send_eventhandler;
 
