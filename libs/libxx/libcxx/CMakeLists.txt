@@ -79,7 +79,16 @@ if(CONFIG_LIBCXX)
              ${CMAKE_CURRENT_LIST_DIR}/libcxx/test/support
              ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
 
+  # llvm-21+ requires __assertion_handler
+  if(EXISTS
+     ${CMAKE_CURRENT_LIST_DIR}/libcxx/vendor/llvm/default_assertion_handler.in)
+    configure_file(
+      ${CMAKE_CURRENT_LIST_DIR}/libcxx/vendor/llvm/default_assertion_handler.in
+      ${CMAKE_BINARY_DIR}/include/libcxx_config/__assertion_handler COPYONLY)
+  endif()
+
   add_compile_definitions(_LIBCPP_BUILDING_LIBRARY)
+
   if(CONFIG_LIBSUPCXX_TOOLCHAIN)
     add_compile_definitions(__GLIBCXX__)
   endif()
@@ -95,9 +104,17 @@ if(CONFIG_LIBCXX)
   file(GLOB SRCS ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/*.cpp)
 
   string(REGEX MATCH "[0-9]+$" CPP_STD_VER "${CONFIG_CXX_STANDARD}")
-  if(${CPP_STD_VER} GREATER_EQUAL 20)
-    file(GLOB SRCSTMP ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/experimental/*.cpp)
-    list(APPEND SRCS ${SRCSTMP})
+
+  if(${CPP_STD_VER} LESS 23)
+    list(REMOVE_ITEM SRCS ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/expected.cpp)
+  endif()
+
+  if(${CPP_STD_VER} LESS 20)
+    list(REMOVE_ITEM SRCS ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/barrier.cpp
+         ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/atomic.cpp)
+  endif()
+
+  if(${CPP_STD_VER} GREATER_EQUAL 17)
     file(GLOB SRCSTMP ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/filesystem/*.cpp)
     list(APPEND SRCS ${SRCSTMP})
     file(GLOB SRCSTMP ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/ryu/*.cpp)
@@ -126,7 +143,9 @@ if(CONFIG_LIBCXX)
       ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/iostream.cpp
       ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/locale.cpp
       ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/regex.cpp
-      ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/strstream.cpp)
+      ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/strstream.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/ostream.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/fstream.cpp)
     list(REMOVE_ITEM SRCS ${SRCSTMP})
   endif()
 
@@ -139,12 +158,26 @@ if(CONFIG_LIBCXX)
     list(APPEND FLAGS -Wno-maybe-uninitialized -Wno-alloc-size-larger-than)
   endif()
 
+  # Suppress C++20 keyword(e.g. constinit macro) for -std=c++17
+  if(${CPP_STD_VER} LESS 20)
+    list(APPEND FLAGS -Wno-c++20-compat)
+  endif()
+
   nuttx_add_system_library(libcxx)
   target_sources(libcxx PRIVATE ${SRCS})
+
   target_compile_options(libcxx PRIVATE ${FLAGS})
   target_include_directories(libcxx BEFORE
                              PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
 
+  # Map C++20 keyword constinit to compiler attribute for C++17 builds
+  if(${CPP_STD_VER} LESS 20)
+    target_compile_definitions(
+      libcxx
+      PRIVATE "constinit=__attribute__((__require_constant_initialization__))")
+  endif()
+
+  # TODO: re-port for llvm-21 libcxx/test
   if(CONFIG_LIBCXX_TEST)
     include(${CMAKE_CURRENT_LIST_DIR}/libcxx_test.cmake)
   endif()

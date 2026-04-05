@@ -133,12 +133,19 @@ if(CONFIG_LIBCXXABI)
   target_compile_definitions(libcxxabi
                              PRIVATE LIBCXXABI_NON_DEMANGLING_TERMINATE)
 
-  # Fix GCC false positive -Warray-bounds in __builtin_memmove triggered by
-  # libcxx constexpr_c_functions.h with -O3
-  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
   if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG AND NOT CONFIG_ARCH_TOOLCHAIN_TASKING)
-    target_compile_options(libcxxabi PRIVATE -Wno-array-bounds
-                                             -Wno-stringop-overflow)
+    target_compile_options(
+      libcxxabi PRIVATE -Wno-array-bounds -Wno-stringop-overflow
+                        -Wno-maybe-uninitialized)
+  endif()
+
+  # Map C++20 keyword constinit to compiler attribute(works for gcc&clang)
+  string(REGEX MATCH "[0-9]+$" CPP_STD_VER_ABI "${CONFIG_CXX_STANDARD}")
+  if(CPP_STD_VER_ABI LESS 20)
+    target_compile_definitions(
+      libcxxabi
+      PRIVATE "constinit=__attribute__((__require_constant_initialization__))")
+    target_compile_options(libcxxabi PRIVATE -Wno-c++20-compat)
   endif()
 
   target_sources(libcxxabi PRIVATE ${TARGET_SRCS})
