@@ -44,7 +44,8 @@
 #define CNT_CTL_IMASK_BIT       1
 #define CNT_CTL_ISTATUS_BIT     2
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || \
+    defined(CONFIG_ARCH_TRUSTZONE_DISABLED)
 #  define GIC_IRQ_TIMER         GIC_IRQ_STM
 #else
 #  define GIC_IRQ_TIMER         GIC_IRQ_PTM
