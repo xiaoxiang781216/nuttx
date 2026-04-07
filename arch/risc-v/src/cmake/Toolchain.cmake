@@ -33,7 +33,40 @@ endif()
 # Default toolchain
 
 if(CONFIG_ARCH_TOOLCHAIN_CLANG)
-  set(CROSSDEV riscv64-unknown-elf-)
+  set(CROSSDEV "")
+  set(CMAKE_C_COMPILER_FORCED TRUE)
+  set(CMAKE_CXX_COMPILER_FORCED TRUE)
+
+  set(CMAKE_ASM_COMPILER ${CROSSDEV}clang)
+  set(CMAKE_C_COMPILER ${CROSSDEV}clang)
+  set(CMAKE_CXX_COMPILER ${CROSSDEV}clang++)
+  set(CMAKE_PREPROCESSOR ${CROSSDEV}clang -E -P -x c)
+  set(CMAKE_STRIP ${CROSSDEV}llvm-strip --strip-unneeded)
+  set(CMAKE_OBJCOPY ${CROSSDEV}llvm-objcopy)
+  set(CMAKE_OBJDUMP ${CROSSDEV}llvm-objdump)
+  set(CMAKE_LINKER ${CROSSDEV}ld.lld)
+  set(CMAKE_LD ${CROSSDEV}ld.lld)
+  set(CMAKE_AR ${CROSSDEV}llvm-ar)
+  set(CMAKE_NM ${CROSSDEV}llvm-nm)
+  set(CMAKE_RANLIB ${CROSSDEV}llvm-ranlib)
+
+  if(CONFIG_ARCH_RV32)
+    add_compile_options(--target=riscv32-none-elf)
+    add_link_options(--target=riscv32-none-elf)
+  else()
+    add_compile_options(--target=riscv64-none-elf)
+    add_link_options(--target=riscv64-none-elf)
+  endif()
+
+  # Since the no_builtin attribute is not fully supported on Clang disable the
+  # built-in functions, refer:
+  # https://github.com/apache/incubator-nuttx/pull/5971
+
+  add_compile_options(-fno-builtin)
+
+  # Use lld linker for clang
+  add_link_options(-fuse-ld=lld)
+
 else()
   find_program(RV_COMPILER riscv-none-elf-gcc)
   if(RV_COMPILER)
@@ -45,32 +78,11 @@ else()
       set(CROSSDEV riscv64-unknown-elf-)
     endif()
   endif()
-endif()
 
-string(REGEX REPLACE "-$" "" CROSSDEV_TARGET ${CROSSDEV})
-set(CMAKE_LIBRARY_ARCHITECTURE ${CROSSDEV_TARGET})
-set(CMAKE_C_COMPILER_TARGET ${CROSSDEV_TARGET})
-set(CMAKE_CXX_COMPILER_TARGET ${CROSSDEV_TARGET})
-
-if(CONFIG_ARCH_TOOLCHAIN_CLANG)
-  set(CMAKE_ASM_COMPILER ${CROSSDEV}clang)
-  set(CMAKE_C_COMPILER ${CROSSDEV}clang)
-  set(CMAKE_CXX_COMPILER ${CROSSDEV}clang++)
-  set(CMAKE_STRIP ${CROSSDEV}llvm-strip --strip-unneeded)
-  set(CMAKE_OBJCOPY ${CROSSDEV}llvm-objcopy)
-  set(CMAKE_OBJDUMP ${CROSSDEV}llvm-objdump)
-  set(CMAKE_LINKER ${CROSSDEV}ld)
-  set(CMAKE_LD ${CROSSDEV}ld)
-  set(CMAKE_AR ${CROSSDEV}llvm-ar)
-  set(CMAKE_NM ${CROSSDEV}llvm-nm)
-  set(CMAKE_RANLIB ${CROSSDEV}llvm-ranlib)
-
-  # Since the no_builtin attribute is not fully supported on Clang disable the
-  # built-in functions, refer:
-  # https://github.com/apache/incubator-nuttx/pull/5971
-
-  add_compile_options(-fno-builtin)
-else()
+  string(REGEX REPLACE "-$" "" CROSSDEV_TARGET ${CROSSDEV})
+  set(CMAKE_LIBRARY_ARCHITECTURE ${CROSSDEV_TARGET})
+  set(CMAKE_C_COMPILER_TARGET ${CROSSDEV_TARGET})
+  set(CMAKE_CXX_COMPILER_TARGET ${CROSSDEV_TARGET})
   set(CMAKE_ASM_COMPILER ${CROSSDEV}gcc)
   set(CMAKE_C_COMPILER ${CMAKE_ASM_COMPILER})
   set(CMAKE_CXX_COMPILER ${CROSSDEV}g++)
@@ -158,16 +170,20 @@ if(${CONFIG_STACK_USAGE_WARNING})
 endif()
 
 if(CONFIG_COVERAGE_ALL)
-  if(CONFIG_COVERAGE_SOURCE)
-    add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
-  elseif(CONFIG_COVERAGE_PGO)
-    if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+  if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+    if(CONFIG_COVERAGE_SOURCE)
+      add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+    elseif(CONFIG_COVERAGE_PGO)
       if(EXISTS "${CMAKE_BINARY_DIR}/default.profdata")
         add_compile_options(-fprofile-use)
       else()
         add_compile_options(-fprofile-generate -fprofile-update=atomic)
       endif()
-    elseif(CONFIG_ARCH_TOOLCHAIN_GCC)
+    endif()
+  elseif(CONFIG_ARCH_TOOLCHAIN_GCC)
+    if(CONFIG_COVERAGE_SOURCE)
+      add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
+    elseif(CONFIG_COVERAGE_PGO)
       file(GLOB_RECURSE GCDA_FILES "${CMAKE_BINARY_DIR}/*.gcda")
       if(GCDA_FILES)
         add_compile_options(-fprofile-use)
@@ -209,13 +225,17 @@ if(NOT CONFIG_CXX_RTTI)
 endif()
 
 if(CONFIG_ARCH_RV32)
-  add_link_options(-Wl,-melf32lriscv)
+  if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
+    add_link_options(-Wl,-melf32lriscv)
+  endif()
 elseif(CONFIG_ARCH_RV64)
   add_compile_options(-mcmodel=medany)
-  if(CONFIG_ARCH_RV64ILP32)
-    add_link_options(-Wl,-melf32lriscv)
-  else()
-    add_link_options(-Wl,-melf64lriscv)
+  if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
+    if(CONFIG_ARCH_RV64ILP32)
+      add_link_options(-Wl,-melf32lriscv)
+    else()
+      add_link_options(-Wl,-melf64lriscv)
+    endif()
   endif()
 endif()
 
@@ -273,7 +293,7 @@ if(CONFIG_RISCV_TOOLCHAIN STREQUAL GNU_RVG)
     set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}v)
   endif()
 
-  if(NOT GCCVER)
+  if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
                     OUTPUT_VARIABLE GCC_VERSION_OUTPUT)
     string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" _
@@ -428,4 +448,45 @@ endif()
 
 if(CONFIG_ARCH_HW_SHADOW_STACK)
   add_compile_options(-fcf-protection=return)
+endif()
+
+# override nuttx_find_toolchain_lib
+
+set(NUTTX_FIND_TOOLCHAIN_LIB_DEFINED true)
+
+if(CONFIG_BUILTIN_TOOLCHAIN)
+  function(nuttx_find_toolchain_lib)
+    if(ARGN)
+      execute_process(
+        COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+                --print-file-name=${ARGN}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE extra_lib_path)
+      nuttx_add_extra_library(${extra_lib_path})
+    else()
+      execute_process(
+        COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+                --print-libgcc-file-name
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE libgcc_path)
+      get_filename_component(libgcc_name ${libgcc_path} NAME)
+      execute_process(
+        COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+                --print-file-name=${libgcc_name}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE libgcc)
+      nuttx_add_extra_library(${libgcc})
+    endif()
+  endfunction()
+else()
+  function(nuttx_find_toolchain_lib)
+    if(ARGN)
+      execute_process(
+        COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+                --print-file-name=${ARGN}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE extra_lib_path)
+    endif()
+    nuttx_add_extra_library(${extra_lib_path})
+  endfunction()
 endif()
