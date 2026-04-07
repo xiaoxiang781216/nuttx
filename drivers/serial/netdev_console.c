@@ -28,6 +28,7 @@
 
 #include <errno.h>
 #include <debug.h>
+#include <string.h>
 
 #include <net/if.h>
 #include <sys/types.h>
@@ -57,6 +58,9 @@ struct netdev_consol_s
 {
   struct uart_dev_s dev;
   struct socket     psock;
+  uint16_t          rxdgram_off;
+  uint16_t          rxdgram_len;
+  uint8_t           rxdgram[CONFIG_CONSOLE_NETDEV_RXBUFSIZE];
   bool              rxint;
   struct work_s     work;
 };
@@ -260,6 +264,8 @@ static void netdev_console_shutdown(FAR struct uart_dev_s *dev)
 static int netdev_console_attach(FAR struct uart_dev_s *dev)
 {
   FAR struct netdev_consol_s *priv = (FAR struct netdev_consol_s *)dev;
+  priv->rxdgram_off = 0;
+  priv->rxdgram_len = 0;
 
 #ifdef CONFIG_CONSOLE_NETDEV_UDP
   return netdev_console_udp_init(dev);
@@ -278,6 +284,8 @@ static void netdev_console_detach(FAR struct uart_dev_s *dev)
 {
   FAR struct netdev_consol_s *priv = (FAR struct netdev_consol_s *)dev;
 
+  priv->rxdgram_off = 0;
+  priv->rxdgram_len = 0;
   psock_close(&priv->psock);
 }
 
@@ -347,11 +355,68 @@ static void netdev_console_dmasend(FAR struct uart_dev_s *dev)
 static void netdev_console_dmareceive(FAR struct uart_dev_s *dev)
 {
   FAR struct netdev_consol_s *priv = (FAR struct netdev_consol_s *)dev;
+  uint16_t                    space;
+  uint16_t                    copylen;
+  uint16_t                    first;
+  uint16_t                    second;
   ssize_t                     ret;
 
-  ret = psock_recv(&priv->psock, dev->dmarx.buffer, dev->dmarx.length,
-                   MSG_DONTWAIT);
-  dev->dmarx.nbytes = ret > 0 ? ret : 0;
+  space = dev->dmarx.length + dev->dmarx.nlength;
+  if (space == 0)
+    {
+      dev->dmarx.nbytes = 0;
+      uart_recvchars_done(dev);
+      return;
+    }
+
+  /* Console expects a continuous byte stream. UDP/ISO-TP recv returns one
+   * datagram, and any bytes that do not fit in this DMA window are lost.
+   * Keep one datagram here and drain it over multiple DMA windows.
+   */
+
+  if (priv->rxdgram_off >= priv->rxdgram_len)
+    {
+      ret = psock_recv(&priv->psock, priv->rxdgram, sizeof(priv->rxdgram),
+                       MSG_DONTWAIT);
+      if (ret <= 0)
+        {
+          dev->dmarx.nbytes = 0;
+          uart_recvchars_done(dev);
+          return;
+        }
+
+      priv->rxdgram_off = 0;
+      priv->rxdgram_len = ret;
+    }
+
+  copylen = space;
+  if (copylen > priv->rxdgram_len - priv->rxdgram_off)
+    {
+      copylen = priv->rxdgram_len - priv->rxdgram_off;
+    }
+
+  /* First DMA segment */
+
+  first = copylen > dev->dmarx.length ? dev->dmarx.length : copylen;
+  memcpy(dev->dmarx.buffer, &priv->rxdgram[priv->rxdgram_off], first);
+
+  /* Second DMA segment */
+
+  second = copylen - first;
+  if (second > 0 && dev->dmarx.nbuffer != NULL)
+    {
+      memcpy(dev->dmarx.nbuffer, &priv->rxdgram[priv->rxdgram_off + first],
+             second);
+    }
+
+  priv->rxdgram_off += copylen;
+  if (priv->rxdgram_off >= priv->rxdgram_len)
+    {
+      priv->rxdgram_off = 0;
+      priv->rxdgram_len = 0;
+    }
+
+  dev->dmarx.nbytes = copylen;
   uart_recvchars_done(dev);
 }
 
