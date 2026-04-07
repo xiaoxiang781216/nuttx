@@ -84,6 +84,10 @@ FLAGS += ${INCDIR_PREFIX}$(CURDIR)/compiler-rt/compiler-rt/lib/builtins/${ARCH}
 
 FLAGS += -Wno-undef -Wno-macro-redefined
 
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+FLAGS += -Wno-implicit-function-declaration
+endif
+
 CSRCS += $(wildcard compiler-rt/compiler-rt/lib/builtins/*.c)
 ASRCS += $(wildcard compiler-rt/compiler-rt/lib/builtins/$(ARCH)/*.S)
 CSRCS += $(wildcard compiler-rt/compiler-rt/lib/builtins/$(ARCH)/*.c)
