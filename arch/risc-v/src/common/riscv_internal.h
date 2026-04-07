@@ -30,6 +30,7 @@
 #ifndef __ASSEMBLY__
 #  include <nuttx/compiler.h>
 #  include <nuttx/sched.h>
+#  include <nuttx/tls.h>
 #  include <sys/types.h>
 #  include <stdint.h>
 #  include <syscall.h>
@@ -152,6 +153,15 @@ static inline void putreg64(uint64_t v, const volatile uintreg_t a)
 
 #define riscv_append_pmp_region(a, b, s) \
   riscv_config_pmp_region(riscv_next_free_pmp_region(), a, b, s)
+
+static inline void riscv_tp_boot(int cpu)
+{
+  uintptr_t val = g_idle_topstack -
+                  SMP_STACK_SIZE * (CONFIG_SMP_NCPUS - cpu);
+
+  val += sizeof(struct tls_info_s) + ARCH_TP_OFFSET;
+  __asm__ volatile("mv tp, %0" :: "r" (val) : "tp");
+}
 
 #endif
 

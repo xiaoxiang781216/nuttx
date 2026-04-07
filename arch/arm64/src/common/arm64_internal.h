@@ -415,6 +415,13 @@ static inline_function void arm64_color_intstack(void)
 #  define arm64_color_intstack()
 #endif
 
+static inline_function void arm64_tp_boot(int cpu)
+{
+  uintptr_t val = (uintptr_t)g_cpu_idlestackalloc[cpu] +
+                  sizeof(struct tls_info_s);
+  write_sysreg(val, tpidr_el0);
+}
+
 #undef EXTERN
 #ifdef __cplusplus
 }

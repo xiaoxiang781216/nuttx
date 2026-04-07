@@ -26,6 +26,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/init.h>
+#include <nuttx/tls.h>
 
 #include <arch/barriers.h>
 
@@ -41,7 +42,7 @@
 extern void *_vector_table[];
 
 /****************************************************************************
- * Private Data
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -224,6 +225,7 @@ void arm64_boot_el1_init(void)
 
 void arm64_boot_primary_c_routine(void)
 {
+  arm64_tp_boot(0);
 #ifdef CONFIG_ARCH_HAVE_MPU
   arm64_mpu_init(true);
 #endif

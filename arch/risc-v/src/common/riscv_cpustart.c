@@ -38,8 +38,11 @@
 #include "sched/sched.h"
 #include "init/init.h"
 #include "riscv_internal.h"
-#include "riscv_ipi.h"
 #include "riscv_percpu.h"
+
+#ifdef CONFIG_SMP
+#  include "riscv_ipi.h"
+#endif
 
 #ifdef CONFIG_BUILD_KERNEL
 #  include "riscv_mmu.h"
@@ -51,6 +54,18 @@
  * Public Functions
  ****************************************************************************/
 
+void riscv_config(int cpu)
+{
+  riscv_tp_boot(cpu);
+#ifdef CONFIG_ARCH_FPU
+  riscv_fpuconfig();
+#endif
+#ifdef CONFIG_ARCH_RV_ISA_V
+  riscv_vpuconfig();
+#endif
+}
+
+#ifdef CONFIG_SMP
 /****************************************************************************
  * Name: riscv_cpu_boot
  *
@@ -171,3 +186,4 @@ int up_cpu_start(int cpu)
 
   return 0;
 }
+#endif

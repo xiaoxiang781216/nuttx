@@ -26,6 +26,7 @@
 
 #include <nuttx/cache.h>
 #include <nuttx/init.h>
+#include <nuttx/tls.h>
 
 #include "arm.h"
 #include "arm_internal.h"
@@ -36,6 +37,21 @@
 #ifdef CONFIG_ARM_MPU
 #  include "mpu.h"
 #endif
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static void arm_tp_boot(int cpu)
+{
+  uintptr_t val;
+
+  val = g_idle_topstack -
+        CONFIG_IDLETHREAD_STACKSIZE * (CONFIG_NCPUS - cpu) +
+        sizeof(struct tls_info_s);
+
+  CP15_SET(TPIDRURO, val);
+}
 
 /****************************************************************************
  * Public Functions
@@ -61,6 +77,7 @@ void arm_boot_primary(void)
   int cpu = 0;
 #endif
 
+  arm_tp_boot(0);
   arm_fpuconfig();
 
 #ifdef CONFIG_ARM_MPU
@@ -128,6 +145,7 @@ void arm_boot_primary(void)
 #if defined(CONFIG_SMP) || defined(CONFIG_BMP)
 void arm_boot_secondary(int cpu)
 {
+  arm_tp_boot(cpu);
   arm_fpuconfig();
 
 #ifdef CONFIG_PERCPU_SECTION

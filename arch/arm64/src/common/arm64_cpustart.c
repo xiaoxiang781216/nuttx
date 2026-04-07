@@ -233,6 +233,7 @@ void arm64_boot_secondary_c_routine(void)
   write_sysreg(this_cpu() * USERSPACE->us_offset_percpu, tpidrro_el0);
 #  endif
 #endif
+  arm64_tp_boot(this_cpu());
 
 #ifdef CONFIG_ARCH_HAVE_MPU
   arm64_mpu_init(false);

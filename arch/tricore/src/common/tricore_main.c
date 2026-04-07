@@ -24,6 +24,7 @@
 
 #include <tricore_internal.h>
 #include <nuttx/init.h>
+#include <nuttx/tls.h>
 
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
@@ -38,12 +39,26 @@
  * Private Definitions
  ****************************************************************************/
 
+static void tricore_tp_boot(int cpu)
+{
+#ifdef CONFIG_UP
+  uintptr_t val = g_idle_topstack;
+#else
+  uintptr_t val = g_idle_topstack[cpu];
+#endif
+
+  val -= CONFIG_IDLETHREAD_STACKSIZE - sizeof(struct tls_info_s);
+  write_sysreg(val, a8);
+}
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 static inline_function void core_main(void)
 {
+  tricore_tp_boot(this_cpu());
+
 #ifdef CONFIG_ARCH_HAVE_FPU
   tricore_fpuinit();
 #endif
