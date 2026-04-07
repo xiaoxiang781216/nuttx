@@ -37,7 +37,10 @@
  * Public Data
  ****************************************************************************/
 
-uint8_t g_syslog_mask = CONFIG_SYSLOG_DEFAULT_MASK;
+uint8_t g_syslog_mask[NXTAG_KERNEL_MAX] =
+{
+  CONFIG_SYSLOG_DEFAULT_MASK
+};
 
 /****************************************************************************
  * Private Functions
@@ -67,15 +70,30 @@ static void task_syslogmask(FAR struct tcb_s *tcb, FAR void *arg)
  *   system log mask to the specified value.  It also sets the per-task
  *   log mask for all tasks.
  *
+ *   If tag is encoded in the high byte (LOG_TAG_SHIFT), only the per-tag
+ *   mask is updated without affecting the global mask or per-task masks.
+ *
  ****************************************************************************/
 
 int nx_setlogmask(int mask)
 {
+  uint8_t tag = LOG_GETTAG(mask);
   uint8_t oldmask;
 
-  oldmask = g_syslog_mask;
-  g_syslog_mask = (uint8_t)mask;
+  mask = LOG_GETPRI(mask);
 
-  nxsched_foreach(task_syslogmask, &mask);
+  if (tag >= NXTAG_KERNEL_MAX)
+    {
+      return 0;
+    }
+
+  oldmask = g_syslog_mask[tag];
+  g_syslog_mask[tag] = mask;
+
+  if (tag == NXTAG_GLOBAL)
+    {
+      nxsched_foreach(task_syslogmask, &mask);
+    }
+
   return oldmask;
 }

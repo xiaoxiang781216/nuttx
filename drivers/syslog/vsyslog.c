@@ -98,6 +98,13 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 #  endif
 #endif
 
+  /* Per-tag filtering */
+
+  if (!syslog_is_enabled(priority))
+    {
+      return 0;
+    }
+
   /* Save errno so that nx_vsyslog does not clobber it. The syslog
    * formatting path calls libc functions (e.g. strftime -> tzset -> open)
    * that may modify errno as a side effect.
@@ -305,12 +312,7 @@ void nx_syslog(int priority, FAR const IPTR char *fmt, ...)
 {
   va_list ap;
 
-  if ((g_syslog_mask & LOG_MASK(priority)) != 0)
-    {
-      /* Let nx_vsyslog do all of the work */
-
-      va_start(ap, fmt);
-      nx_vsyslog(priority, fmt, &ap);
-      va_end(ap);
-    }
+  va_start(ap, fmt);
+  nx_vsyslog(priority, fmt, &ap);
+  va_end(ap);
 }

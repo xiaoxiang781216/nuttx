@@ -727,7 +727,7 @@ static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
     {
       /* For NXTAG_LOG, use the syslog level mask */
 
-      return (g_syslog_mask & LOG_MASK(level)) != 0;
+      return (g_syslog_mask[NXTAG_GLOBAL] & LOG_MASK(level)) != 0;
     }
 
 #endif

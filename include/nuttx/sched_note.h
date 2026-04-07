@@ -56,7 +56,7 @@
 
 /* Backward compatibility: map old NOTE_TAG_* to new NXTAG_* */
 
-#define NOTE_TAG_ALWAYS   NXTAG_ALWAYS
+#define NOTE_TAG_ALWAYS   NXTAG_GLOBAL
 #define NOTE_TAG_LOG      NXTAG_LOG
 #define NOTE_TAG_APP      NXTAG_APP
 #define NOTE_TAG_GRAPHICS NXTAG_GRAPHICS

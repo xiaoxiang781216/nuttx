@@ -151,7 +151,7 @@ int task_init_info(FAR struct task_group_s *group)
 #endif
 
 #ifdef CONFIG_SYSLOG
-      info->ta_syslog_mask = g_syslog_mask;
+      info->ta_syslog_mask = g_syslog_mask[NXTAG_GLOBAL];
 #endif
       info->ta_seed48[0] = 0;
       info->ta_seed48[1] = 0;

@@ -30,10 +30,13 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 #include <nuttx/streams.h>
+#include <nuttx/tag.h>
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include <syslog.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -186,7 +189,28 @@ extern "C"
 #define EXTERN extern
 #endif
 
-EXTERN uint8_t g_syslog_mask;
+EXTERN uint8_t g_syslog_mask[NXTAG_KERNEL_MAX];
+
+/****************************************************************************
+ * Name: syslog_is_enabled
+ *
+ * Description:
+ *   Check if a syslog message at given priority should be printed.
+ *
+ ****************************************************************************/
+
+static inline_function bool syslog_is_enabled(int priority)
+{
+  uint8_t tag = LOG_GETTAG(priority);
+  uint8_t level = LOG_GETPRI(priority);
+
+  if (tag >= NXTAG_KERNEL_MAX)
+    {
+      tag = NXTAG_GLOBAL;
+    }
+
+  return (g_syslog_mask[tag] & LOG_MASK(level)) != 0;
+}
 
 /****************************************************************************
  * Public Function Prototypes

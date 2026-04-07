@@ -40,7 +40,7 @@
 
 enum nxtag_e
 {
-  NXTAG_ALWAYS,
+  NXTAG_GLOBAL,
   NXTAG_LOG,
   NXTAG_APP,
   NXTAG_ANALOG,
