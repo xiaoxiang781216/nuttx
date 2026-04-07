@@ -229,6 +229,7 @@ static int rpmsg_crypto_get_session(FAR struct rpmsg_crypto_s *rdev)
     }
 
   rdev->sessions[i].used = true;
+  rdev->sessions[i].data = NULL;
   nxsem_init(&rdev->sessions[i].sem, 0, 0);
   return i;
 }
