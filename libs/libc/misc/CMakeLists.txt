@@ -93,6 +93,7 @@ list(
   lib_crc16ccitt.c
   lib_crc16h1021.c
   lib_crc16h8005.c
+  lib_crc16xor.c
   lib_crc8.c
   lib_crc8ccitt.c
   lib_crc8h1d.c

@@ -161,6 +161,18 @@ uint16_t crc16h8005_part(FAR const uint8_t *src,
 
 uint16_t crc16h8005(FAR const uint8_t *src, size_t len);
 
+/****************************************************************************
+ * Name: crc16xor
+ *
+ * Description:
+ *   Return a 16-bit XOR checksum of the contents of the 'src' buffer,
+ *   length 'len'. Uses automatic alignment handling and loop unrolling
+ *   for maximum performance on small MCUs.
+ *
+ ****************************************************************************/
+
+uint16_t crc16xor(FAR const uint8_t *src, size_t len);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
