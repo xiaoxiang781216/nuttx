@@ -22,19 +22,15 @@
 
 if(CONFIG_FS_LITTLEFS)
   if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/littlefs)
-    set(LITTLEFS_VERSION 2.4.0)
+    set(LITTLEFS_VERSION 2.11.2)
 
     FetchContent_Declare(
       littlefs
-      URL https://github.com/ARMmbed/littlefs/archive/v${LITTLEFS_VERSION}.tar.gz
+      URL https://github.com/littlefs-project/littlefs/archive/v${LITTLEFS_VERSION}.tar.gz
           SOURCE_DIR
           ${CMAKE_CURRENT_LIST_DIR}/littlefs
           BINARY_DIR
-          ${CMAKE_BINARY_DIR}/fs/littlefs/littlefs
-      PATCH_COMMAND
-        patch -p2 -d ${CMAKE_CURRENT_LIST_DIR} <
-        ${CMAKE_CURRENT_LIST_DIR}/lfs_util.patch && patch -p2 -d
-        ${CMAKE_CURRENT_LIST_DIR} < ${CMAKE_CURRENT_LIST_DIR}/lfs_getpath.patch)
+          ${CMAKE_BINARY_DIR}/fs/littlefs/littlefs)
     FetchContent_MakeAvailable(littlefs)
   endif()
 
@@ -46,6 +42,7 @@ if(CONFIG_FS_LITTLEFS)
             -DLFS_ERROR=ferr
             -DLFS_ASSERT=DEBUGASSERT
             -DLFS_CONFIG=../lfs_vfs.h
+            -DLFS_DEFINES=../lfs_defines.h
             -DLFS_NAME_MAX=${CONFIG_FS_LITTLEFS_NAME_MAX}
             -DLFS_FILE_MAX=${CONFIG_FS_LITTLEFS_FILE_MAX}
             -DLFS_ATTR_MAX=${CONFIG_FS_LITTLEFS_ATTR_MAX})
@@ -54,6 +51,13 @@ if(CONFIG_FS_LITTLEFS)
                             ${CMAKE_CURRENT_LIST_DIR}/littlefs/lfs_util.c)
 
   target_include_directories(fs PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+
+  # Note: the littlefs upstream doesn't care about -Wshadow cf.
+  # https://github.com/littlefs-project/littlefs/pull/873
+  set_source_files_properties(
+    ${CMAKE_CURRENT_LIST_DIR}/littlefs/lfs.c
+    ${CMAKE_CURRENT_LIST_DIR}/littlefs/lfs_util.c DIRECTORY ..
+    PROPERTIES COMPILE_FLAGS "-Wno-shadow -Wno-unused-function")
 
   if(CONFIG_TRACE_LITTLEFS_FS)
     set_source_files_properties(lfs_vfs.c DIRECTORY ..

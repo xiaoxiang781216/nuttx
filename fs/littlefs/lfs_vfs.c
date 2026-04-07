@@ -1058,7 +1058,8 @@ static int littlefs_opendir(FAR struct inode *mountpt,
 
   /* Call the LFS's opendir function */
 
-  ret = littlefs_convert_result(lfs_dir_open(&fs->lfs, &ldir->dir, relpath));
+  ret = littlefs_convert_result(lfs_dir_open(&fs->lfs, &ldir->dir,
+          (relpath == NULL || relpath[0] == '\0') ? "/" : relpath));
   if (ret < 0)
     {
       goto errout;
@@ -1829,6 +1830,15 @@ static int littlefs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   /* Get the mountpoint private data from the inode structure */
 
   fs = mountpt->i_private;
+
+  /* Handle root directory specially (v2.11.2 rejects empty paths) */
+
+  if (relpath == NULL || relpath[0] == '\0')
+    {
+      buf->st_mode    = S_IFDIR | S_IRWXU | S_IRWXG | S_IRWXO;
+      buf->st_blksize = fs->cfg.block_size;
+      return OK;
+    }
 
   /* Call the LFS to do the stat operation */
 
