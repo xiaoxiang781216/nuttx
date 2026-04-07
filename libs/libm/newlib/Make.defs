@@ -96,6 +96,10 @@ ifneq ($(CONFIG_ARCH_X86_64)$(CONFIG_ARCH_X86),)
 CFLAGS += ${INCDIR_PREFIX}newlib/newlib/newlib/libc/machine/shared_x86/sys
 endif
 
+ifneq ($(CONFIG_ARCH_RISCV),)
+CFLAGS += ${INCDIR_PREFIX}newlib/newlib/newlib/libc/machine/riscv/sys
+endif
+
 # aggresive optimisation can replace occurrences of sinl() and cosl() with
 # sincosl(), but sincosl() is missing in newlib which causes error. So let's
 # use custom implementation here.
