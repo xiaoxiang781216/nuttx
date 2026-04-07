@@ -39,6 +39,10 @@
 #include <nuttx/serial/serial.h>
 #include <nuttx/wqueue.h>
 
+#ifdef CONFIG_NET_CAN
+#  include <nuttx/can.h>
+#endif
+
 /****************************************************************************
  * Pre-processor definitions
  ****************************************************************************/
@@ -60,6 +64,13 @@ struct netdev_consol_s
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
+#ifdef CONFIG_NET_UDP
+static int  netdev_console_udp_init(FAR struct uart_dev_s *dev);
+#endif
+#ifdef CONFIG_NET_CAN
+static int  netdev_console_can_init(FAR struct uart_dev_s *dev);
+#endif
 
 static int  netdev_console_setup(FAR struct uart_dev_s *dev);
 static void netdev_console_shutdown(FAR struct uart_dev_s *dev);
@@ -131,28 +142,12 @@ static struct netdev_consol_s g_netdev_console =
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_CONSOLE_NETDEV_UDP
 /****************************************************************************
- * Name: netdev_console_setup
+ * Name: netdev_console_udp_init
  ****************************************************************************/
 
-static int netdev_console_setup(FAR struct uart_dev_s *dev)
-{
-  return OK;
-}
-
-/****************************************************************************
- * Name: netdev_console_shutdown
- ****************************************************************************/
-
-static void netdev_console_shutdown(FAR struct uart_dev_s *dev)
-{
-}
-
-/****************************************************************************
- * Name: netdev_console_attach
- ****************************************************************************/
-
-static int netdev_console_attach(FAR struct uart_dev_s *dev)
+static int netdev_console_udp_init(FAR struct uart_dev_s *dev)
 {
   FAR struct netdev_consol_s *priv = (FAR struct netdev_consol_s *)dev;
   struct sockaddr_in          addr;
@@ -183,6 +178,96 @@ static int netdev_console_attach(FAR struct uart_dev_s *dev)
     }
 
   return OK;
+}
+#endif
+
+#ifdef CONFIG_CONSOLE_NETDEV_CAN
+/****************************************************************************
+ * Name: netdev_console_can_init
+ ****************************************************************************/
+
+static int netdev_console_can_init(FAR struct uart_dev_s *dev)
+{
+  FAR struct netdev_consol_s  *priv = (FAR struct netdev_consol_s *)dev;
+#ifdef CONFIG_NET_CAN_CANFD
+  struct can_isotp_ll_options  ll;
+#endif
+  struct sockaddr_can          addr;
+  int                          ret;
+
+  ret = psock_socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP, &priv->psock);
+  if (ret < 0)
+    {
+      nerr("ERROR: Failed to create ISO-TP socket: %d\n", ret);
+      return ret;
+    }
+
+  memset(&addr, 0, sizeof(addr));
+  addr.can_family        = AF_CAN;
+#ifdef CONFIG_NETDEV_IFINDEX
+  addr.can_ifindex       = if_nametoindex(CONFIG_CONSOLE_NETDEV_INTF);
+#else
+  addr.can_ifindex       = 0;
+#endif
+  addr.can_addr.tp.tx_id = CONFIG_CONSOLE_NETDEV_PORT;
+  addr.can_addr.tp.rx_id = CONFIG_CONSOLE_NETDEV_PORT + 1;
+
+  ret = psock_bind(&priv->psock, (FAR struct sockaddr *)&addr,
+                   sizeof(addr));
+  if (ret < 0)
+    {
+      psock_close(&priv->psock);
+      nerr("ERROR: Failed to bind ISO-TP socket: %d\n", ret);
+      return ret;
+    }
+
+#ifdef CONFIG_NET_CAN_CANFD
+  /* Always use CAN FD if enabled */
+
+  ll.mtu      = CANFD_MTU;
+  ll.tx_dl    = CANFD_MAX_DLEN;
+  ll.tx_flags = 0;
+
+  psock_setsockopt(&priv->psock, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &ll,
+                   sizeof(ll));
+#endif
+
+  return OK;
+}
+#endif
+
+/****************************************************************************
+ * Name: netdev_console_setup
+ ****************************************************************************/
+
+static int netdev_console_setup(FAR struct uart_dev_s *dev)
+{
+  return OK;
+}
+
+/****************************************************************************
+ * Name: netdev_console_shutdown
+ ****************************************************************************/
+
+static void netdev_console_shutdown(FAR struct uart_dev_s *dev)
+{
+}
+
+/****************************************************************************
+ * Name: netdev_console_attach
+ ****************************************************************************/
+
+static int netdev_console_attach(FAR struct uart_dev_s *dev)
+{
+  FAR struct netdev_consol_s *priv = (FAR struct netdev_consol_s *)dev;
+
+#ifdef CONFIG_CONSOLE_NETDEV_UDP
+  return netdev_console_udp_init(dev);
+#endif
+
+#ifdef CONFIG_CONSOLE_NETDEV_CAN
+  return netdev_console_can_init(dev);
+#endif
 }
 
 /****************************************************************************
