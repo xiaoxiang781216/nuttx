@@ -46,6 +46,8 @@
 #include <nuttx/lib/math32.h>
 #include <nuttx/mm/mempool.h>
 
+#include "kasan/kasan.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
