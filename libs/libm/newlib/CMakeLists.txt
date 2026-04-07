@@ -146,6 +146,8 @@ if(CONFIG_LIBM_NEWLIB)
 
   if(CONFIG_ARCH_X86_64 OR CONFIG_ARCH_X86)
     list(APPEND INCDIR ${NEWLIB_DIR}/newlib/libc/machine/shared_x86/sys)
+  elseif(CONFIG_ARCH_RISCV)
+    list(APPEND INCDIR ${NEWLIB_DIR}/newlib/libc/machine/riscv/sys)
   endif()
 
   # ############################################################################
