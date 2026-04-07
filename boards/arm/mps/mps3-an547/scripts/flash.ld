@@ -136,7 +136,11 @@ SECTIONS
         *(.bss .bss.*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
+#ifdef CONFIG_TLS_ALIGNED
+        . = ALIGN(1 << CONFIG_TLS_LOG2_MAXSTACK);
+#else
         . = ALIGN(4);
+#endif
         _ebss = ABSOLUTE(.);
     } > sram1
 
