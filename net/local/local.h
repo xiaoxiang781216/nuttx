@@ -262,6 +262,9 @@ FAR struct local_conn_s *local_alloc(void);
  *    connection in LISTEN. In that case, this function will create
  *    a new connection and initialize it.
  *
+ * Assumptions:
+ *   This function is called WITHOUT the network lock.
+ *
  ****************************************************************************/
 
 int local_alloc_accept(FAR struct local_conn_s *server,
@@ -304,16 +307,14 @@ void local_addref(FAR struct local_conn_s *conn);
  *
  * Description:
  *   Subtract the reference count on the underlying connection structure.
+ *   Takes the lock internally.  If the reference count reaches zero,
+ *   the connection is fully released.
  *
  * Input Parameters:
- *   conn - Socket structure of the socket whose reference count will be
- *           incremented.
+ *   conn - Connection whose reference count will be decremented.
  *
  * Returned Value:
  *   None
- *
- * Assumptions:
- *   Called with local lock held
  *
  ****************************************************************************/
 

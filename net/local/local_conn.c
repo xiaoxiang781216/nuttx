@@ -147,10 +147,8 @@ FAR struct local_conn_s *local_peerconn(FAR struct local_conn_s *conn)
  * Description:
  *   Allocate a new, uninitialized Unix domain socket connection structure.
  *   This is normally something done by the implementation of the socket()
- *   API
- *
- * Assumptions:
- *   This function must be called with the network locked.
+ *   API.  Memory allocation and initialization are performed without the
+ *   lock; only the insertion into the global list requires the lock.
  *
  ****************************************************************************/
 
@@ -193,9 +191,11 @@ FAR struct local_conn_s *local_alloc(void)
       conn->lc_cred.gid = getgid();
 #endif
 
-      /* Add the connection structure to the list of listeners */
+      /* Add the connection structure to the list — needs lock */
 
+      local_lock();
       dq_addlast(&conn->lc_conn.s_node, &g_local_connections);
+      local_unlock();
     }
 
   return conn;
@@ -210,7 +210,8 @@ FAR struct local_conn_s *local_alloc(void)
  *    a new connection and initialize it.
  *
  * Assumptions:
- *   This function must be called with the network locked.
+ *   This function is called WITHOUT the network lock.  Slow VFS
+ *   operations (FIFO creation, file open) are safe outside the lock.
  *
  ****************************************************************************/
 
@@ -301,9 +302,6 @@ err:
  *   Free a packet Unix domain connection structure that is no longer in use.
  *   This should be done by the implementation of close().
  *
- * Assumptions:
- *   This function must be called with the network locked.
- *
  ****************************************************************************/
 
 void local_free(FAR struct local_conn_s *conn)
@@ -314,8 +312,9 @@ void local_free(FAR struct local_conn_s *conn)
 
   DEBUGASSERT(conn != NULL);
 
-  /* Remove the server from the list of listeners. */
+  /* Remove the server from the list and clear peer pointers */
 
+  local_lock();
   dq_rem(&conn->lc_conn.s_node, &g_local_connections);
 
   if (conn->lc_peer)
@@ -323,6 +322,8 @@ void local_free(FAR struct local_conn_s *conn)
       conn->lc_peer->lc_peer = NULL;
       conn->lc_peer = NULL;
     }
+
+  local_unlock();
 
   /* Make sure that the read-only FIFO is closed */
 
@@ -404,25 +405,33 @@ void local_addref(FAR struct local_conn_s *conn)
  *
  * Description:
  *   Subtract the reference count on the underlying connection structure.
+ *   Takes the lock internally.  If the reference count reaches zero,
+ *   the connection is fully released.
  *
  * Input Parameters:
- *   psock - Socket structure of the socket whose reference count will be
- *           incremented.
+ *   conn - Connection whose reference count will be decremented.
  *
  * Returned Value:
  *   None
- *
- * Assumptions:
- *   Called with local lock held
  *
  ****************************************************************************/
 
 void local_subref(FAR struct local_conn_s *conn)
 {
+  bool should_release = false;
+
+  local_lock();
   DEBUGASSERT(conn->lc_crefs > 0 && conn->lc_crefs < 255);
 
   conn->lc_crefs--;
   if (conn->lc_crefs == 0)
+    {
+      should_release = true;
+    }
+
+  local_unlock();
+
+  if (should_release)
     {
       local_release(conn);
     }

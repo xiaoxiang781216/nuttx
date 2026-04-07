@@ -59,9 +59,9 @@
  *   failure.  Possible failures include:
  *
  * Assumptions:
- *   The network is locked on entry, unlocked on return.  This logic is
- *   an integral part of the lock_connect() implementation and was
- *   separated out only to improve readability.
+ *   The network is NOT locked on entry and NOT locked on return.
+ *   The caller (psock_local_connect) holds a reference on server and
+ *   is responsible for calling local_subref(server) after this returns.
  *
  ****************************************************************************/
 
@@ -73,20 +73,9 @@ static int inline local_stream_connect(FAR struct local_conn_s *client,
   int ret;
   int sval;
 
-  /* Has server backlog been reached?
-   * NOTE: The backlog will be zero if listen() has never been called by the
-   * server.
+  /* Allocate accept conn, create FIFOs, open server-side file handles.
+   * No lock needed — local_alloc_accept() is safe outside the lock.
    */
-
-  if (server->lc_state != LOCAL_STATE_LISTENING ||
-      server->u.server.lc_pending >= server->u.server.lc_backlog)
-    {
-      nerr("ERROR: Server is not listening: lc_state=%d\n",
-           server->lc_state);
-      nerr("   OR: The backlog limit was reached: %d or %d\n",
-           server->u.server.lc_pending, server->u.server.lc_backlog);
-      return -ECONNREFUSED;
-    }
 
   ret = local_alloc_accept(server, client, &conn);
   if (ret < 0)
@@ -124,6 +113,26 @@ static int inline local_stream_connect(FAR struct local_conn_s *client,
 
   DEBUGASSERT(client->lc_infile.f_inode != NULL);
 
+  /* Acquire lock to finalize the connection: check backlog and add to
+   * the server's waiter list.
+   */
+
+  local_lock();
+
+  /* Check that the server is still listening.  It could have been
+   * closed while we were performing FIFO operations.
+   */
+
+  if (server->lc_state != LOCAL_STATE_LISTENING ||
+      server->u.server.lc_pending >= server->u.server.lc_backlog)
+    {
+      nerr("ERROR: Server %s during connect for %s\n",
+           server->lc_state != LOCAL_STATE_LISTENING ?
+           "closed" : "backlog full", client->lc_path);
+      ret = -ECONNREFUSED;
+      goto errout_with_infd;
+    }
+
   /* Increment the number of pending server connections */
 
   server->u.server.lc_pending++;
@@ -140,7 +149,13 @@ static int inline local_stream_connect(FAR struct local_conn_s *client,
     }
 
   client->lc_state = LOCAL_STATE_CONNECTED;
+  local_unlock();
   return ret;
+
+errout_with_infd:
+  local_unlock();
+  file_close(&client->lc_infile);
+  client->lc_infile.f_inode = NULL;
 
 errout_with_outfd:
   file_close(&client->lc_outfile);
@@ -148,6 +163,7 @@ errout_with_outfd:
 
 errout_with_conn:
   local_release_fifos(conn);
+
   /* Restore client state: if client was unbound, keep it unbound;
    * if client was bound, restore to bound state.
    */
@@ -271,12 +287,18 @@ int psock_local_connect(FAR struct socket *psock,
             {
               client->lc_instance_id = local_generate_instance_id();
 
-              /* We have to do more for the SOCK_STREAM family */
+              /* Hold a reference on server so it cannot be freed
+               * after we drop the lock.  The caller manages the
+               * server refcount: local_subref(conn) is called below
+               * after local_stream_connect() returns.
+               */
+
+              local_addref(conn);
+              local_unlock();
 
               ret = local_stream_connect(client, conn,
                           _SS_ISNONBLOCK(client->lc_conn.s_flags));
-
-              local_unlock();
+              local_subref(conn);
               return ret;
             }
 

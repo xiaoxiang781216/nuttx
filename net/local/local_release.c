@@ -85,6 +85,7 @@ int local_release(FAR struct local_conn_s *conn)
         {
           accept = container_of(waiter, struct local_conn_s,
                                 u.accept.lc_waiter);
+          dq_rem(waiter, &conn->u.server.lc_waiters);
           local_subref(accept);
         }
 

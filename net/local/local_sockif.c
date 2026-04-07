@@ -139,9 +139,7 @@ static int local_sockif_alloc(FAR struct socket *psock)
   /* Allocate the local connection structure */
 
   FAR struct local_conn_s *conn;
-  local_lock();
   conn = local_alloc();
-  local_unlock();
   if (conn == NULL)
     {
       /* Failed to reserve a connection structure */
@@ -928,9 +926,7 @@ static int local_close(FAR struct socket *psock)
            * could be more if the socket was dup'ed).
            */
 
-          local_lock();
           local_subref(psock->s_conn);
-          local_unlock();
           return OK;
         }
 
