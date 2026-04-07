@@ -384,6 +384,7 @@ ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
 
   ifeq ($(CONFIG_ARCH_RV32),y)
     ARCHOPTIMIZATION += --target=riscv32-none-elf
+    ARCHOPTIMIZATION += -Xclang -fforce-enable-int128
   else
     ARCHOPTIMIZATION += --target=riscv64-none-elf
   endif
