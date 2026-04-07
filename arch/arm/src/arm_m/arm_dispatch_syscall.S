@@ -73,6 +73,20 @@
  *     R14 - Need not be preserved
  *     R15 - (PC)
  *
+ *   Stub dispatch strategy:
+ *
+ *     On ARMv7-M/ARMv8-M, we use IP (R12) to load g_stublookup and call
+ *     the stub. Since IP is caller-saved (scratch) per AAPCS, it does not
+ *     need to be restored. R4-R6 are not modified before blx, so AAPCS
+ *     guarantees they are preserved across the stub call — no explicit
+ *     restore is needed.
+ *
+ *     On ARMv6-M (Thumb-1), IP cannot be used for indexed addressing
+ *     (ldr ip, [ip, r0, lsl #2] is not encodable), so R4 is used instead.
+ *     Since R4 is clobbered before blx, it must be explicitly restored
+ *     from the stack frame before SYS_syscall_return. R5-R6 remain
+ *     untouched before blx and are preserved by AAPCS.
+ *
  ****************************************************************************/
 
 	.text
@@ -96,13 +110,17 @@ arm_dispatch_syscall:
 	.cfi_offset pc, -16
 	.save {r4, r5, r6, lr}                     /* Declare in Unwind table */
 	.pad #32
+#ifdef CONFIG_ARCH_ARMV6M
 	ldr r4, =g_stublookup                      /* R4=The base of the stub lookup table */
 	lsl r0, r0, #2                             /* R0=Offset of the stub for this syscall */
 	ldr r4, [r4, r0]                           /* R4=Address of the stub for this syscall */
 	blx r4                                     /* Call the stub (modifies lr) */
 	ldr r4, [sp, #0]                           /* Restore r4 */
-	ldr r5, [sp, #4]                           /* Restore r5 */
-	ldr r6, [sp, #8]                           /* Restore r6 */
+#else
+	ldr ip, =g_stublookup                      /* IP=The base of the stub lookup table */
+	ldr ip, [ip, r0, lsl #2]                   /* IP=Address of the stub for this syscall */
+	blx ip                                     /* Call the stub (modifies lr) */
+#endif
 	ldr lr, [sp, #12]
 	add sp, sp, #32                            /* Destroy the stack frame */
 	mov r2, r0                                 /* R2=Save return value in R2 */
