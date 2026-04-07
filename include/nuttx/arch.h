@@ -158,6 +158,7 @@
 
 typedef CODE void (*phy_enable_t)(bool enable);
 typedef CODE void (*initializer_t)(void);
+typedef CODE void (*up_vector_t)(void);
 typedef CODE void (*debug_callback_t)(int type, FAR void *addr, size_t size,
                                       FAR void *arg);
 

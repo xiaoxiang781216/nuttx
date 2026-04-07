@@ -129,7 +129,6 @@
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-typedef void (*up_vector_t)(void);
 
 /* Bus trap hook function type for safety test modules.
  * Returns OK if the trap was handled, ERROR otherwise.
