@@ -246,10 +246,17 @@ static int uart_putxmitchar(FAR uart_dev_t *dev, int ch, bool oktoblock)
        * circular buffer would overrun
        */
 
-      nexthead = dev->xmit.head + 1;
-      if (nexthead >= dev->xmit.size)
+      if (dev->xmit.buffer == NULL)
         {
-          nexthead = 0;
+          nexthead = dev->xmit.tail;
+        }
+      else
+        {
+          nexthead = dev->xmit.head + 1;
+          if (nexthead >= dev->xmit.size)
+            {
+              nexthead = 0;
+            }
         }
 
       /* Check if the TX buffer is full */
