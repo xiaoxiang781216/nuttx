@@ -191,11 +191,11 @@ static int netprocfs_linklayer(FAR struct netprocfs_file_s *netfile)
 
   /* Get the interface status:  RUNNING, UP, or DOWN */
 
-  if (IFF_IS_RUNNING(dev->d_flags) != 0)
+  if (IFF_IS_UP(dev->d_flags) && IFF_IS_RUNNING(dev->d_flags))
     {
       status = "RUNNING";
     }
-  else if ((dev->d_flags & IFF_UP) != 0)
+  else if (IFF_IS_UP(dev->d_flags))
     {
       status = "UP";
     }
