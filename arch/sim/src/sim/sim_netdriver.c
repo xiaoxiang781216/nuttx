@@ -271,14 +271,15 @@ static void sim_netdev_work(void *arg)
 {
   struct sim_netdev_s *priv = (struct sim_netdev_s *)arg;
   struct netdev_lowerhalf_s *dev = (struct netdev_lowerhalf_s *)&priv->dev;
-  irqstate_t flags = irq_save_nopreempt();
+
+  netdev_lock(&dev->netdev);
 
   if (sim_netdev_avail(DEVIDX(dev)))
     {
       netdev_lower_rxready(dev);
     }
 
-  irq_restore_nopreempt(flags);
+  netdev_unlock(&dev->netdev);
   work_queue_next_wq(g_work_queue, &priv->work, sim_netdev_work, arg,
                      SIM_NETDEV_PERIOD);
 }
