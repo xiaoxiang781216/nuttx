@@ -46,7 +46,6 @@
 #include <nuttx/clock.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mutex_type.h>
-#include <nuttx/spi/spi.h>
 #include <nuttx/queue.h>
 
 #ifdef CONFIG_AUDIO

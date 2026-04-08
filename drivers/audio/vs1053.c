@@ -42,6 +42,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
+#include <nuttx/spi/spi.h>
 #include <nuttx/mqueue.h>
 #include <nuttx/mutex.h>
 #include <nuttx/queue.h>
