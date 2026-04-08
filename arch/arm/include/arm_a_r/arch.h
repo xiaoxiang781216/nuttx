@@ -63,7 +63,7 @@ static inline_function int up_cpu_index(void)
 #endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
 #ifdef CONFIG_PERCPU_SECTION
-#  define up_this_cpu_var_user(v) (*(typeof(v) *)(CP15_GET(TPIDRURO) + (uintptr_t)&(v)))
+#  define up_this_cpu_var_user(v) (*(typeof(v) *)(CP15_GET(TPIDRURW) + (uintptr_t)&(v)))
 
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__) /* Kernel Space */
 #    define up_this_cpu_var(v)    (*(typeof(v) *)(CP15_GET(TPIDRPRW) + (uintptr_t)&(v)))

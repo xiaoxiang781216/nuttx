@@ -218,7 +218,7 @@ endif()
 
 if(CONFIG_SCHED_THREAD_LOCAL)
   if(CONFIG_ARCH_ARM_A_R)
-    add_compile_options(-mtp=tpidrurw)
+    add_compile_options(-mtp=cp15)
   else()
     add_compile_options(-mtp=soft)
   endif()

@@ -169,7 +169,7 @@ endif
 
 ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
   ifeq ($(CONFIG_ARCH_ARM_A_R),y)
-    ARCHOPTIMIZATION += -mtp=tpidrurw
+    ARCHOPTIMIZATION += -mtp=cp15
   else
     ARCHOPTIMIZATION += -mtp=soft
   endif

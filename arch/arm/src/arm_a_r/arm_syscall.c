@@ -609,13 +609,15 @@ uint32_t *arm_syscall(uint32_t *regs)
    * metadata structure. By adding sizeof(struct tls_info_s), we
    * ensure that compiler-generated code accesses the correct memory
    * location, bypassing our internal bookkeeping structure.
+   *
+   * ARM32 default hardware TLS uses TPIDRURO (cp15 / c13,c0,3).
    */
 
 #if __ARM_ARCH >= 7
   {
     uintptr_t tpidr = (uintptr_t)tcb->stack_alloc_ptr +
                       sizeof(struct tls_info_s);
-    CP15_SET(TPIDRURW, tpidr);
+    CP15_SET(TPIDRURO, tpidr);
   }
 #endif
 
