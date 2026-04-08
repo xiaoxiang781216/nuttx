@@ -37,7 +37,7 @@
  */
 
 #ifdef CONFIG_SMP
-uintptr_t g_hrtimer_running[CONFIG_SMP_NCPUS];
+DEFINE_PER_CPU_BSS_SMP(uintptr_t, g_hrtimer_running);
 #endif
 
 /* Global spinlock protecting the high-resolution timer subsystem.
@@ -47,7 +47,9 @@ uintptr_t g_hrtimer_running[CONFIG_SMP_NCPUS];
  * timer queue is modified.
  */
 
-seqcount_t g_hrtimer_lock = SEQLOCK_INITIALIZER;
+#undef g_hrtimer_lock
+DEFINE_PER_CPU_BMP(seqcount_t, g_hrtimer_lock) = SEQLOCK_INITIALIZER;
+#define g_hrtimer_lock this_cpu_var_bmp(g_hrtimer_lock)
 
 /* HRTimer queue for all active high-resolution timers.
  *
@@ -58,28 +60,27 @@ seqcount_t g_hrtimer_lock = SEQLOCK_INITIALIZER;
  * both configurations.
  */
 
-struct hrtimer_s g_hrtimer_guard =
+#undef g_hrtimer_guard
+DEFINE_PER_CPU_BMP(struct hrtimer_s, g_hrtimer_guard) =
 {
-#ifdef CONFIG_HRTIMER_TREE
   { NULL },
-#else
-  { &g_hrtimer_list, &g_hrtimer_list },
-#endif
   NULL,
   HRTIMER_GUARD_DELAY
 };
+#define g_hrtimer_guard this_cpu_var_bmp(g_hrtimer_guard)
 
 #ifdef CONFIG_HRTIMER_TREE
-struct hrtimer_tree_s g_hrtimer_tree =
-{
-  &g_hrtimer_guard
-};
-struct FAR hrtimer_s *g_hrtimer_head = &g_hrtimer_guard;
+#  undef g_hrtimer_tree
+DEFINE_PER_CPU_BSS_BMP(struct hrtimer_tree_s, g_hrtimer_tree);
+#  define g_hrtimer_tree this_cpu_var_bmp(g_hrtimer_tree)
+
+#  undef g_hrtimer_head
+DEFINE_PER_CPU_BSS_BMP(FAR struct hrtimer_s *, g_hrtimer_head);
+#  define g_hrtimer_head this_cpu_var_bmp(g_hrtimer_head)
 #else
-struct list_node g_hrtimer_list =
-{
-  &g_hrtimer_guard.node, &g_hrtimer_guard.node
-};
+#  undef g_hrtimer_list
+DEFINE_PER_CPU_BSS_BMP(struct list_node, g_hrtimer_list);
+#  define g_hrtimer_list this_cpu_var_bmp(g_hrtimer_list)
 #endif
 
 /****************************************************************************

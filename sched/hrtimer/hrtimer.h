@@ -77,19 +77,25 @@ RB_HEAD(hrtimer_tree_s, hrtimer_s);
 
 /* Seqcount protecting access to the hrtimer queue and timer state */
 
-extern seqcount_t g_hrtimer_lock;
+DECLARE_PER_CPU_BMP(seqcount_t, g_hrtimer_lock);
+#define g_hrtimer_lock this_cpu_var_bmp(g_hrtimer_lock)
 
-extern struct hrtimer_s g_hrtimer_guard;
+DECLARE_PER_CPU_BMP(struct hrtimer_s, g_hrtimer_guard);
+#define g_hrtimer_guard this_cpu_var_bmp(g_hrtimer_guard)
 
 #ifdef CONFIG_HRTIMER_TREE
 /* Red-Black tree containing all active high-resolution timers */
 
-extern struct hrtimer_tree_s g_hrtimer_tree;
-extern struct FAR hrtimer_s *g_hrtimer_head;
+DECLARE_PER_CPU_BMP(struct hrtimer_tree_s, g_hrtimer_tree);
+#define g_hrtimer_tree this_cpu_var_bmp(g_hrtimer_tree)
+
+DECLARE_PER_CPU_BMP(FAR struct hrtimer_s *, g_hrtimer_head);
+#define g_hrtimer_head this_cpu_var_bmp(g_hrtimer_head)
 #else
 /* List containing all active high-resolution timers */
 
-extern struct list_node g_hrtimer_list;
+DECLARE_PER_CPU_BMP(struct list_node, g_hrtimer_list);
+#define g_hrtimer_list this_cpu_var_bmp(g_hrtimer_list)
 #endif
 
 /* Array of pointers to currently running high-resolution timers
@@ -97,7 +103,7 @@ extern struct list_node g_hrtimer_list;
  */
 
 #ifdef CONFIG_SMP
-extern uintptr_t g_hrtimer_running[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU_SMP(uintptr_t, g_hrtimer_running);
 #endif
 
 /****************************************************************************
@@ -143,6 +149,31 @@ void hrtimer_process(uint64_t now);
 static inline_function uint64_t hrtimer_last_expired(void)
 {
   return g_hrtimer_guard.expired - HRTIMER_GUARD_DELAY;
+}
+
+/****************************************************************************
+ * Name: hrtimer_initialize
+ *
+ * Description:
+ *   Called from the nx_start to initialize the hrtimer module.
+ *
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+static inline_function void hrtimer_initialize(void)
+{
+#ifdef CONFIG_HRTIMER_TREE
+  RB_INSERT(hrtimer_tree_s, &g_hrtimer_tree, &g_hrtimer_guard);
+  g_hrtimer_head = &g_hrtimer_guard;
+#else
+  list_initialize(&g_hrtimer_list);
+  list_add_tail(&g_hrtimer_list, &g_hrtimer_guard.node);
+#endif
 }
 
 /****************************************************************************
@@ -439,7 +470,7 @@ uint32_t hrtimer_read_32(FAR const uint32_t *ptr)
 
 #ifdef CONFIG_SMP
 #  define hrtimer_mark_running(timer, cpu) \
-  (g_hrtimer_running[cpu] = (uintptr_t)(timer))
+  (per_cpu_var_smp(g_hrtimer_running, cpu) = (uintptr_t)(timer))
 #else
 #  define hrtimer_mark_running(timer, cpu) UNUSED(cpu)
 #endif
@@ -462,7 +493,7 @@ uint32_t hrtimer_read_32(FAR const uint32_t *ptr)
 
 #ifdef CONFIG_SMP
 #  define hrtimer_is_running(timer, cpu) \
-  (hrtimer_read_ptr(&g_hrtimer_running[cpu]) == (uintptr_t)(timer))
+  (hrtimer_read_ptr(&per_cpu_var_smp(g_hrtimer_running, cpu)) == (uintptr_t)(timer))
 #else
 #  define hrtimer_is_running(timer, cpu) (true)
 #endif
@@ -511,13 +542,13 @@ int hrtimer_cancel_running(FAR hrtimer_t *timer)
        * (the last bit must be zero).
        */
 
-      if ((g_hrtimer_running[cpu] ^ cancelled) <= 0x1u)
+      if ((per_cpu_var_smp(g_hrtimer_running, cpu) ^ cancelled) <= 0x1u)
         {
           /* Set the timer to the cancelled state and revoke the write
            * ownership of the timer from the queue.
            */
 
-          g_hrtimer_running[cpu] = cancelled;
+          per_cpu_var_smp(g_hrtimer_running, cpu) = cancelled;
           refs++;
         }
     }

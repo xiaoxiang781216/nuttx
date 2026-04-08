@@ -66,6 +66,7 @@
 #include "instrument/instrument.h"
 #include "tls/tls.h"
 #include "wqueue/wqueue.h"
+#include "hrtimer/hrtimer.h"
 
 /****************************************************************************
  * Public Data
@@ -526,6 +527,10 @@ static void tasklist_initialize(void)
   /* Initialize wdog list ***************************************************/
 
   wdlist_initialize();
+
+  /* Initialize hrtimer *****************************************************/
+
+  hrtimer_initialize();
 
   /* Initialize wqueue list *************************************************/
 
