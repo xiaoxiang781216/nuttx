@@ -106,12 +106,6 @@ char *__llvm_profile_end_bitmap(void)
 }
 
 COMPILER_RT_VISIBILITY
-uint32_t *__llvm_profile_begin_orderfile(void)
-{
-  return 0;
-}
-
-COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_begin_vnodes(void)
 {
   return 0;
@@ -119,6 +113,42 @@ ValueProfNode *__llvm_profile_begin_vnodes(void)
 
 COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_end_vnodes(void)
+{
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY
+const VTableProfData *__llvm_profile_begin_vtables(void)
+{
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY
+const VTableProfData *__llvm_profile_end_vtables(void)
+{
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY
+const char *__llvm_profile_begin_vtabnames(void)
+{
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY
+const char *__llvm_profile_end_vtabnames(void)
+{
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY
+const __llvm_gcov_init_func_struct *__llvm_profile_begin_covinit(void)
+{
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY
+const __llvm_gcov_init_func_struct *__llvm_profile_end_covinit(void)
 {
   return 0;
 }
