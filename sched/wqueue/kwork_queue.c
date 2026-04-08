@@ -77,20 +77,17 @@ void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
    * the circular-wait.
    */
 
-#ifndef CONFIG_SMP
   if (!delay)
     {
       nxsem_post(&wqueue->sem);
-      wd_cancel(&wqueue->timer);
+      hrtimer_cancel(&wqueue->timer);
     }
-  else
-#endif
-  if (retimer)
+  else if (retimer)
     {
       /* Start the timer if the work is the earliest expired work. */
 
-      wd_start_abstick(&wqueue->timer, expected,
-                       work_timer_expired, (wdparm_t)wqueue);
+      hrtimer_start(&wqueue->timer, work_timer_expired,
+                    TICK2NSEC((uint64_t)expected), HRTIMER_MODE_ABS);
     }
 }
 
@@ -128,7 +125,7 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
   irqstate_t flags;
   int ret = -EINVAL;
 
-  if (wqueue && work && worker && delay <= WDOG_MAX_DELAY)
+  if (wqueue && work && worker && delay <= WQUEUE_MAX_DELAY)
     {
       ret   = OK;
       flags = wqueue_lock(wqueue, false);
@@ -184,15 +181,11 @@ int work_queue_wq(FAR struct kwork_wqueue_s *wqueue,
   clock_t expected;
   int          ret = -EINVAL;
 
-  if (wqueue && work && worker && delay <= WDOG_MAX_DELAY)
+  if (wqueue && work && worker && delay <= WQUEUE_MAX_DELAY)
     {
-#ifdef CONFIG_SMP
-      bool nopreempt = false;
-#else
-      /* In Non-SMP fast-path we may change the scheduler state */
+      /* In fast-path we may change the scheduler state */
 
       bool nopreempt = !delay;
-#endif
 
       ret      = OK;
       expected = delay ? clock_delay2abstick(delay) : clock_systime_ticks();

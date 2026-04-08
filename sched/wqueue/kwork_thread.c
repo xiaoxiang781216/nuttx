@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/nuttx.h>
 
 #include <unistd.h>
 #include <sched.h>
@@ -183,7 +184,7 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
    * should check the pending queue and dispatch the expired work.
    */
 
-  if (!WDOG_ISACTIVE(&wqueue->timer) && !list_is_empty(&wqueue->pending))
+  if (!list_is_empty(&wqueue->pending))
     {
       unsigned int count = 0u;
       clock_t      ticks = clock_systime_ticks();
@@ -204,8 +205,9 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
 
           if (!clock_compare(work->qtime, ticks))
             {
-              wd_start_abstick(&wqueue->timer, work->qtime,
-                               work_timer_expired, (wdparm_t)wqueue);
+              hrtimer_start(&wqueue->timer, work_timer_expired,
+                            TICK2NSEC((uint64_t)work->qtime),
+                            HRTIMER_MODE_ABS);
               break;
             }
 
@@ -445,14 +447,16 @@ __jumpfunc__ void work_queue_dispatch(FAR struct kwork_wqueue_s *wqueue)
  *
  ****************************************************************************/
 
-void work_timer_expired(wdparm_t arg)
+uint64_t work_timer_expired(FAR const hrtimer_t *timer, uint64_t expired)
 {
   /* The work time expired callback will wake up at least one worker thread
    * to dispatch the expired work.
    */
 
-  FAR struct kwork_wqueue_s *wq = (FAR struct kwork_wqueue_s *)arg;
+  FAR struct kwork_wqueue_s *wq = container_of(timer, struct kwork_wqueue_s,
+                                               timer);
   nxsem_post(&wq->sem);
+  return 0;
 }
 
 /****************************************************************************
@@ -502,6 +506,7 @@ FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
           nxsem_init(&wqueue->exsem, 0, 0u);
           wqueue->nthreads = nthreads;
           spin_lock_init(&wqueue->lock);
+          hrtimer_init(&wqueue->timer);
 
           /* Create the work queue thread pool */
 
@@ -542,7 +547,7 @@ int work_queue_free(FAR struct kwork_wqueue_s *wqueue)
   if (wqueue != NULL)
     {
       ret = OK;
-      wd_cancel(&wqueue->timer);
+      hrtimer_cancel_sync(&wqueue->timer);
 
       /* Mark the work queue as exiting */
 
