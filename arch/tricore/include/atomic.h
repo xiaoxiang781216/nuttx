@@ -114,6 +114,8 @@
   ARCH_ATOMIC_FETCH_OP(prefix ## _fetch_or_ ## n, t, n, |)               \
   ARCH_ATOMIC_FETCH_OP(prefix ## _fetch_xor_ ## n, t, n, ^)
 
+#define ARCH_HAVE_ATOMIC_4
+
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
