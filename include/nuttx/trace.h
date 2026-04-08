@@ -41,8 +41,10 @@
 #  define trace_mark(tag, s) sched_note_mark(tag, s)
 #  define trace_printf(tag, fmt, ...) \
     sched_note_printf(tag, LOG_DEBUG, fmt, ##__VA_ARGS__)
-#  define trace_event(tag, level, id, fmt, ...) \
+#  define trace_diag(tag, level, id, fmt, ...) \
     sched_note_printf_ip(tag, level, id, fmt, 0, ##__VA_ARGS__)
+#  define trace_diagv(tag, level, id, fmt, va) \
+    sched_note_vprintf_ip(tag, level, id, fmt, 0, &(va))
 #else
 #  define trace_begin(tag)
 #  define trace_end(tag)
@@ -50,7 +52,8 @@
 #  define trace_endex(tag, name)
 #  define trace_mark(tag, s)
 #  define trace_printf(...)
-#  define trace_event(...)
+#  define trace_diag(...)
+#  define trace_diagv(...)
 #endif
 
 #ifdef CONFIG_TRACE_APP
@@ -62,7 +65,7 @@
 #  define app_trace_printf(fmt, ...) \
     trace_printf(NXTAG_APP, fmt, ##__VA_ARGS__)
 #  define app_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_APP, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_APP, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define app_trace_begin()
 #  define app_trace_end()
@@ -82,7 +85,7 @@
 #  define analog_trace_printf(fmt, ...) \
     trace_printf(NXTAG_ANALOG, fmt, ##__VA_ARGS__)
 #  define analog_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_ANALOG, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_ANALOG, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define analog_trace_begin()
 #  define analog_trace_end()
@@ -102,7 +105,7 @@
 #  define audio_trace_printf(fmt, ...) \
     trace_printf(NXTAG_AUDIO, fmt, ##__VA_ARGS__)
 #  define audio_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_AUDIO, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_AUDIO, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define audio_trace_begin()
 #  define audio_trace_end()
@@ -122,7 +125,7 @@
 #  define battery_trace_printf(fmt, ...) \
     trace_printf(NXTAG_BATTERY, fmt, ##__VA_ARGS__)
 #  define battery_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_BATTERY, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_BATTERY, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define battery_trace_begin()
 #  define battery_trace_end()
@@ -142,7 +145,7 @@
 #  define binfmt_trace_printf(fmt, ...) \
     trace_printf(NXTAG_BINFMT, fmt, ##__VA_ARGS__)
 #  define binfmt_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_BINFMT, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_BINFMT, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define binfmt_trace_begin()
 #  define binfmt_trace_end()
@@ -162,7 +165,7 @@
 #  define can_trace_printf(fmt, ...) \
     trace_printf(NXTAG_CAN, fmt, ##__VA_ARGS__)
 #  define can_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_CAN, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_CAN, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define can_trace_begin()
 #  define can_trace_end()
@@ -182,7 +185,7 @@
 #  define capture_trace_printf(fmt, ...) \
     trace_printf(NXTAG_CAPTURE, fmt, ##__VA_ARGS__)
 #  define capture_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_CAPTURE, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_CAPTURE, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define capture_trace_begin()
 #  define capture_trace_end()
@@ -202,7 +205,7 @@
 #  define contactless_trace_printf(fmt, ...) \
     trace_printf(NXTAG_CONTACTLESS, fmt, ##__VA_ARGS__)
 #  define contactless_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_CONTACTLESS, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_CONTACTLESS, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define contactless_trace_begin()
 #  define contactless_trace_end()
@@ -222,7 +225,7 @@
 #  define crypto_trace_printf(fmt, ...) \
     trace_printf(NXTAG_CRYPTO, fmt, ##__VA_ARGS__)
 #  define crypto_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_CRYPTO, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_CRYPTO, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define crypto_trace_begin()
 #  define crypto_trace_end()
@@ -242,7 +245,7 @@
 #  define dma_trace_printf(fmt, ...) \
     trace_printf(NXTAG_DMA, fmt, ##__VA_ARGS__)
 #  define dma_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_DMA, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_DMA, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define dma_trace_begin()
 #  define dma_trace_end()
@@ -262,7 +265,7 @@
 #  define fs_trace_printf(fmt, ...) \
     trace_printf(NXTAG_FS, fmt, ##__VA_ARGS__)
 #  define fs_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_FS, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_FS, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define fs_trace_begin()
 #  define fs_trace_end()
@@ -282,7 +285,7 @@
 #  define gpio_trace_printf(fmt, ...) \
     trace_printf(NXTAG_GPIO, fmt, ##__VA_ARGS__)
 #  define gpio_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_GPIO, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_GPIO, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define gpio_trace_begin()
 #  define gpio_trace_end()
@@ -302,7 +305,7 @@
 #  define graphics_trace_printf(fmt, ...) \
     trace_printf(NXTAG_GRAPHICS, fmt, ##__VA_ARGS__)
 #  define graphics_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_GRAPHICS, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_GRAPHICS, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define graphics_trace_begin()
 #  define graphics_trace_end()
@@ -322,7 +325,7 @@
 #  define hwtracing_trace_printf(fmt, ...) \
     trace_printf(NXTAG_HWTRACING, fmt, ##__VA_ARGS__)
 #  define hwtracing_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_HWTRACING, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_HWTRACING, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define hwtracing_trace_begin()
 #  define hwtracing_trace_end()
@@ -342,7 +345,7 @@
 #  define i2c_trace_printf(fmt, ...) \
     trace_printf(NXTAG_I2C, fmt, ##__VA_ARGS__)
 #  define i2c_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_I2C, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_I2C, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define i2c_trace_begin()
 #  define i2c_trace_end()
@@ -362,7 +365,7 @@
 #  define i2s_trace_printf(fmt, ...) \
     trace_printf(NXTAG_I2S, fmt, ##__VA_ARGS__)
 #  define i2s_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_I2S, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_I2S, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define i2s_trace_begin()
 #  define i2s_trace_end()
@@ -382,7 +385,7 @@
 #  define i3c_trace_printf(fmt, ...) \
     trace_printf(NXTAG_I3C, fmt, ##__VA_ARGS__)
 #  define i3c_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_I3C, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_I3C, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define i3c_trace_begin()
 #  define i3c_trace_end()
@@ -402,7 +405,7 @@
 #  define input_trace_printf(fmt, ...) \
     trace_printf(NXTAG_INPUT, fmt, ##__VA_ARGS__)
 #  define input_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_INPUT, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_INPUT, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define input_trace_begin()
 #  define input_trace_end()
@@ -422,7 +425,7 @@
 #  define ipc_trace_printf(fmt, ...) \
     trace_printf(NXTAG_IPC, fmt, ##__VA_ARGS__)
 #  define ipc_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_IPC, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_IPC, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define ipc_trace_begin()
 #  define ipc_trace_end()
@@ -442,7 +445,7 @@
 #  define irq_trace_printf(fmt, ...) \
     trace_printf(NXTAG_IRQ, fmt, ##__VA_ARGS__)
 #  define irq_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_IRQ, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_IRQ, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define irq_trace_begin()
 #  define irq_trace_end()
@@ -462,7 +465,7 @@
 #  define lcd_trace_printf(fmt, ...) \
     trace_printf(NXTAG_LCD, fmt, ##__VA_ARGS__)
 #  define lcd_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_LCD, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_LCD, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define lcd_trace_begin()
 #  define lcd_trace_end()
@@ -482,7 +485,7 @@
 #  define leds_trace_printf(fmt, ...) \
     trace_printf(NXTAG_LEDS, fmt, ##__VA_ARGS__)
 #  define leds_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_LEDS, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_LEDS, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define leds_trace_begin()
 #  define leds_trace_end()
@@ -502,7 +505,7 @@
 #  define lib_trace_printf(fmt, ...) \
     trace_printf(NXTAG_LIB, fmt, ##__VA_ARGS__)
 #  define lib_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_LIB, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_LIB, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define lib_trace_begin()
 #  define lib_trace_end()
@@ -522,7 +525,7 @@
 #  define memcard_trace_printf(fmt, ...) \
     trace_printf(NXTAG_MEMCARD, fmt, ##__VA_ARGS__)
 #  define memcard_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_MEMCARD, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_MEMCARD, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define memcard_trace_begin()
 #  define memcard_trace_end()
@@ -542,7 +545,7 @@
 #  define mm_trace_printf(fmt, ...) \
     trace_printf(NXTAG_MM, fmt, ##__VA_ARGS__)
 #  define mm_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_MM, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_MM, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define mm_trace_begin()
 #  define mm_trace_end()
@@ -562,7 +565,7 @@
 #  define motor_trace_printf(fmt, ...) \
     trace_printf(NXTAG_MOTOR, fmt, ##__VA_ARGS__)
 #  define motor_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_MOTOR, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_MOTOR, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define motor_trace_begin()
 #  define motor_trace_end()
@@ -582,7 +585,7 @@
 #  define net_trace_printf(fmt, ...) \
     trace_printf(NXTAG_NET, fmt, ##__VA_ARGS__)
 #  define net_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_NET, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_NET, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define net_trace_begin()
 #  define net_trace_end()
@@ -602,7 +605,7 @@
 #  define paging_trace_printf(fmt, ...) \
     trace_printf(NXTAG_PAGING, fmt, ##__VA_ARGS__)
 #  define paging_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_PAGING, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_PAGING, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define paging_trace_begin()
 #  define paging_trace_end()
@@ -622,7 +625,7 @@
 #  define pci_trace_printf(fmt, ...) \
     trace_printf(NXTAG_PCI, fmt, ##__VA_ARGS__)
 #  define pci_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_PCI, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_PCI, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define pci_trace_begin()
 #  define pci_trace_end()
@@ -642,7 +645,7 @@
 #  define power_trace_printf(fmt, ...) \
     trace_printf(NXTAG_POWER, fmt, ##__VA_ARGS__)
 #  define power_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_POWER, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_POWER, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define power_trace_begin()
 #  define power_trace_end()
@@ -662,7 +665,7 @@
 #  define ptp_trace_printf(fmt, ...) \
     trace_printf(NXTAG_PTP, fmt, ##__VA_ARGS__)
 #  define ptp_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_PTP, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_PTP, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define ptp_trace_begin()
 #  define ptp_trace_end()
@@ -682,7 +685,7 @@
 #  define pwm_trace_printf(fmt, ...) \
     trace_printf(NXTAG_PWM, fmt, ##__VA_ARGS__)
 #  define pwm_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_PWM, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_PWM, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define pwm_trace_begin()
 #  define pwm_trace_end()
@@ -702,7 +705,7 @@
 #  define rc_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RC, fmt, ##__VA_ARGS__)
 #  define rc_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_RC, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_RC, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define rc_trace_begin()
 #  define rc_trace_end()
@@ -722,7 +725,7 @@
 #  define regmap_trace_printf(fmt, ...) \
     trace_printf(NXTAG_REGMAP, fmt, ##__VA_ARGS__)
 #  define regmap_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_REGMAP, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_REGMAP, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define regmap_trace_begin()
 #  define regmap_trace_end()
@@ -742,7 +745,7 @@
 #  define reset_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RESET, fmt, ##__VA_ARGS__)
 #  define reset_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_RESET, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_RESET, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define reset_trace_begin()
 #  define reset_trace_end()
@@ -762,7 +765,7 @@
 #  define rmt_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RMT, fmt, ##__VA_ARGS__)
 #  define rmt_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_RMT, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_RMT, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define rmt_trace_begin()
 #  define rmt_trace_end()
@@ -782,7 +785,7 @@
 #  define rpmsg_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RPMSG, fmt, ##__VA_ARGS__)
 #  define rpmsg_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_RPMSG, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_RPMSG, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define rpmsg_trace_begin()
 #  define rpmsg_trace_end()
@@ -802,7 +805,7 @@
 #  define rptun_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RPTUN, fmt, ##__VA_ARGS__)
 #  define rptun_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_RPTUN, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_RPTUN, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define rptun_trace_begin()
 #  define rptun_trace_end()
@@ -822,7 +825,7 @@
 #  define rtc_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RTC, fmt, ##__VA_ARGS__)
 #  define rtc_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_RTC, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_RTC, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define rtc_trace_begin()
 #  define rtc_trace_end()
@@ -842,7 +845,7 @@
 #  define safety_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SAFETY, fmt, ##__VA_ARGS__)
 #  define safety_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_SAFETY, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_SAFETY, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define safety_trace_begin()
 #  define safety_trace_end()
@@ -862,7 +865,7 @@
 #  define sched_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SCHED, fmt, ##__VA_ARGS__)
 #  define sched_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_SCHED, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_SCHED, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define sched_trace_begin()
 #  define sched_trace_end()
@@ -882,7 +885,7 @@
 #  define sensors_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SENSORS, fmt, ##__VA_ARGS__)
 #  define sensors_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_SENSORS, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_SENSORS, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define sensors_trace_begin()
 #  define sensors_trace_end()
@@ -902,7 +905,7 @@
 #  define spi_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SPI, fmt, ##__VA_ARGS__)
 #  define spi_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_SPI, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_SPI, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define spi_trace_begin()
 #  define spi_trace_end()
@@ -922,7 +925,7 @@
 #  define stepper_trace_printf(fmt, ...) \
     trace_printf(NXTAG_STEPPER, fmt, ##__VA_ARGS__)
 #  define stepper_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_STEPPER, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_STEPPER, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define stepper_trace_begin()
 #  define stepper_trace_end()
@@ -942,7 +945,7 @@
 #  define syscall_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SYSCALL, fmt, ##__VA_ARGS__)
 #  define syscall_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_SYSCALL, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_SYSCALL, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define syscall_trace_begin()
 #  define syscall_trace_end()
@@ -962,7 +965,7 @@
 #  define thermal_trace_printf(fmt, ...) \
     trace_printf(NXTAG_THERMAL, fmt, ##__VA_ARGS__)
 #  define thermal_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_THERMAL, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_THERMAL, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define thermal_trace_begin()
 #  define thermal_trace_end()
@@ -982,7 +985,7 @@
 #  define timer_trace_printf(fmt, ...) \
     trace_printf(NXTAG_TIMER, fmt, ##__VA_ARGS__)
 #  define timer_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_TIMER, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_TIMER, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define timer_trace_begin()
 #  define timer_trace_end()
@@ -1002,7 +1005,7 @@
 #  define usb_trace_printf(fmt, ...) \
     trace_printf(NXTAG_USB, fmt, ##__VA_ARGS__)
 #  define usb_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_USB, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_USB, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define usb_trace_begin()
 #  define usb_trace_end()
@@ -1022,7 +1025,7 @@
 #  define vhost_trace_printf(fmt, ...) \
     trace_printf(NXTAG_VHOST, fmt, ##__VA_ARGS__)
 #  define vhost_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_VHOST, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_VHOST, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define vhost_trace_begin()
 #  define vhost_trace_end()
@@ -1042,7 +1045,7 @@
 #  define video_trace_printf(fmt, ...) \
     trace_printf(NXTAG_VIDEO, fmt, ##__VA_ARGS__)
 #  define video_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_VIDEO, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_VIDEO, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define video_trace_begin()
 #  define video_trace_end()
@@ -1062,7 +1065,7 @@
 #  define virtio_trace_printf(fmt, ...) \
     trace_printf(NXTAG_VIRTIO, fmt, ##__VA_ARGS__)
 #  define virtio_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_VIRTIO, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_VIRTIO, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define virtio_trace_begin()
 #  define virtio_trace_end()
@@ -1082,7 +1085,7 @@
 #  define watchdog_trace_printf(fmt, ...) \
     trace_printf(NXTAG_WATCHDOG, fmt, ##__VA_ARGS__)
 #  define watchdog_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_WATCHDOG, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_WATCHDOG, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define watchdog_trace_begin()
 #  define watchdog_trace_end()
@@ -1102,7 +1105,7 @@
 #  define wireless_trace_printf(fmt, ...) \
     trace_printf(NXTAG_WIRELESS, fmt, ##__VA_ARGS__)
 #  define wireless_trace_diag(level, id, fmt, ...) \
-    trace_event(NXTAG_WIRELESS, level, id, fmt, ##__VA_ARGS__)
+    trace_diag(NXTAG_WIRELESS, level, id, fmt, ##__VA_ARGS__)
 #else
 #  define wireless_trace_begin()
 #  define wireless_trace_end()
