@@ -543,19 +543,14 @@ errout_with_sem:
 
 static off_t fatfs_seek(FAR struct file *filep, off_t offset, int whence)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
-  off_t ret;
 
   fp = filep->f_priv;
-  fs = filep->f_inode->i_private;
-  ret = nxmutex_lock(&fs->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
-  /* Map the offset according to the whence option */
+  /* No lock needed: this function only touches per-file state.
+   * f_size() reads obj.objsize which is stable while the file is open,
+   * and filep->f_pos is VFS-level per-fd state.
+   */
 
   switch (whence)
     {
@@ -571,7 +566,6 @@ static off_t fatfs_seek(FAR struct file *filep, off_t offset, int whence)
           break;
 
       default:
-          nxmutex_unlock(&fs->lock);
           return -EINVAL;
     }
 
@@ -581,11 +575,10 @@ static off_t fatfs_seek(FAR struct file *filep, off_t offset, int whence)
     }
   else
     {
-      ret = -EINVAL;
+      return -EINVAL;
     }
 
-  nxmutex_unlock(&fs->lock);
-  return ret < 0 ? ret : offset;
+  return offset;
 }
 
 /****************************************************************************
@@ -1064,28 +1057,18 @@ static int fatfs_opendir(FAR struct inode *mountpt,
 static int fatfs_closedir(FAR struct inode *mountpt,
                           FAR struct fs_dirent_s *dir)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_dir_s *fdir;
-  int ret;
 
-  /* Recover our private data from the inode instance */
-
-  fs = mountpt->i_private;
   fdir = (FAR struct fatfs_dir_s *)dir;
-  ret = nxmutex_lock(&fs->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
-  ret = fatfs_convert_result(f_closedir(&fdir->dir));
-  nxmutex_unlock(&fs->lock);
-  if (ret >= 0)
-    {
-      fs_heap_free(fdir);
-    }
+  /* f_closedir only invalidates the directory object (sets obj.fs = 0)
+   * and does not modify any shared filesystem state, so no lock is
+   * needed here.
+   */
 
-  return ret;
+  fdir->dir.obj.fs = 0;
+  fs_heap_free(fdir);
+  return OK;
 }
 
 /****************************************************************************
