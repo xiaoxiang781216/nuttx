@@ -43,7 +43,6 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 
-#include <nuttx/clock.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mutex_type.h>
 #include <nuttx/queue.h>
@@ -124,7 +123,7 @@
 #define AUDIOIOC_RECEIVEMSG         _AUDIOIOC(26)
 #define AUDIOIOC_GETPARAMTER        _AUDIOIOC(27)
 
-#define AUDIO_MQ_KERNEL             ((mqd_t)-1)
+#define AUDIO_MQ_KERNEL             (-1)
 
 /* Audio Device Types *******************************************************/
 
@@ -810,7 +809,7 @@ struct audio_msg_s
 struct audio_msg_timeout_s
 {
   struct audio_msg_s  msg;     /* Audio message */
-  sclock_t            ticks;   /* Timeout in ticks, -1=block forever */
+  int64_t             ticks;   /* Timeout in ticks, -1=block forever */
 };
 
 /* Structure defining the built-in sounds */

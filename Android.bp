@@ -40,6 +40,7 @@ genrule {
         "include/debug.h",
         "include/netdb.h",
         "include/nuttx/atomic.h",
+        "include/nuttx/audio/audio.h",
         "include/nuttx/compiler.h",
         "include/nuttx/crc32.h",
         "include/nuttx/fs/fs.h",
@@ -61,9 +62,11 @@ genrule {
         "include/nuttx/spawn.h",
         "include/nuttx/spinlock_type.h",
         "include/nuttx/streams.h",
+        "include/sys/ioctl.h",
         "include/sys/queue.h",
     ],
-    cmd: "mkdir -p $(genDir)/nuttx/fs; " +
+    cmd: "mkdir -p $(genDir)/nuttx/audio; " +
+         "mkdir -p $(genDir)/nuttx/fs; " +
          "mkdir -p $(genDir)/nuttx/lib; " +
          "mkdir -p $(genDir)/nuttx/mm; " +
          "mkdir -p $(genDir)/nuttx/net; " +
@@ -77,6 +80,7 @@ genrule {
         "debug.h",
         "netdb.h",
         "nuttx/atomic.h",
+        "nuttx/audio/audio.h",
         "nuttx/compiler.h",
         "nuttx/config.h",
         "nuttx/crc32.h",
@@ -99,6 +103,7 @@ genrule {
         "nuttx/spawn.h",
         "nuttx/spinlock_type.h",
         "nuttx/streams.h",
+        "sys/ioctl.h",
         "sys/queue.h",
     ],
 }
