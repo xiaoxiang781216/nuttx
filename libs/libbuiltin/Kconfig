@@ -166,7 +166,7 @@ config PROFILE_ALL
 config LIB_COMPILER_RT_VERSION
 	string "Select LLVM Compiler-rt version"
 	depends on LIB_COMPILER_RT
-	default "17.0.1"
+	default "21.1.1"
 
 config LIB_COMPILER_RT_HAS_BFLOAT16
 	bool "Enable support for bfloat16 in Compiler-rt"
