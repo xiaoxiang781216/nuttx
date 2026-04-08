@@ -216,7 +216,7 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
     {
       {
         CONFIG_DRIVERS_NOTERAM_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_UP
+#  ifndef CONFIG_UP
         CONFIG_DRIVERS_NOTERAM_CPUSET
 #  endif
       },
