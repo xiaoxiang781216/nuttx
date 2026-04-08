@@ -67,6 +67,7 @@ if(CONFIG_ARCH_TOOLCHAIN_CLANG)
 
   # Use lld linker for clang
   add_link_options(-fuse-ld=lld)
+  add_link_options(-Wl,-z,norelro)
 
 else()
   find_program(RV_COMPILER riscv-none-elf-gcc)
