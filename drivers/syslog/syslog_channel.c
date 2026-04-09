@@ -167,9 +167,6 @@ static syslog_channel_t g_netdev_channel =
 #  ifdef CONFIG_SYSLOG_IOCTL
   , "netdev"
 #  endif
-#  ifdef CONFIG_SYSLOG_CRLF
-  , SYSLOG_CHANNEL_DISABLE_CRLF
-#  endif
 };
 #endif
 
