@@ -215,7 +215,7 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
   intcount = (uint64_t)atomic_read(&copy.count) * TICK_PER_SEC;
   intpart  = intcount / elapsed;
   intcount = intcount - intpart * elapsed;
-  fracpart = intcount / elapsed;
+  fracpart = intcount * 1000 / elapsed;
 
   /* Make sure that the count is representable with snprintf format */
 
