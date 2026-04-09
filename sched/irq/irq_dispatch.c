@@ -234,4 +234,78 @@ void irq_monitor_disable(int irq)
       g_irqvector[ndx].monitor = false;
     }
 }
+
+/****************************************************************************
+ * Name: irq_monitor_get_freq
+ *
+ * Description:
+ *   Query the interrupt frequency (rate) for a specific IRQ.
+ *   Optionally reset the counters to restart the measurement window.
+ *
+ * Input Parameters:
+ *   irq      - The IRQ number to query
+ *   reset    - If true, reset counters after reading
+ *   freq     - Pointer to store the integer part of frequency
+ *              (interrupts/sec). Must not be NULL.
+ *   fracfreq - Pointer to store the fractional part (*1000) of
+ *              frequency. Can be NULL if not needed.
+ *
+ * Returned Value:
+ *   OK on success, -EINVAL on bad IRQ or NULL freq.
+ *
+ ****************************************************************************/
+
+int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
+                         FAR unsigned long *fracfreq)
+{
+  int ndx = IRQ_TO_NDX(irq);
+  clock_t elapsed;
+#ifdef CONFIG_HAVE_LONG_LONG
+  unsigned long long intcount;
+#else
+  unsigned long intcount;
+#endif
+
+  if (freq == NULL || ndx < 0 || ndx >= NUSER_IRQS)
+    {
+      return -EINVAL;
+    }
+
+  /* Calculate elapsed perf ticks since last reset */
+
+  elapsed = perf_gettime() - g_irqvector[ndx].start;
+  elapsed = elapsed ? elapsed : 1;
+
+  /* freq = count * perf_getfreq() / elapsed
+   * Use 64-bit arithmetic when available to avoid overflow.
+   */
+
+#ifdef CONFIG_HAVE_LONG_LONG
+  intcount = atomic_read(&g_irqvector[ndx].count) *
+             (unsigned long long)perf_getfreq();
+#else
+  intcount = atomic_read(&g_irqvector[ndx].count) *
+             (unsigned long)perf_getfreq();
+#endif
+  *freq    = intcount / elapsed;
+
+  if (fracfreq != NULL)
+    {
+      *fracfreq = (intcount - *freq * elapsed) * 1000 / elapsed;
+    }
+
+  /* Optionally restart the measurement window */
+
+  if (reset)
+    {
+      g_irqvector[ndx].start = perf_gettime();
+      g_irqvector[ndx].time  = 0;
+      atomic_set(&g_irqvector[ndx].count, 0);
+#ifdef CONFIG_ARCH_IRQPRIO
+      atomic_set(&g_irqvector[ndx].nests, 0);
+#endif
+    }
+
+  return OK;
+}
 #endif

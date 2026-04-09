@@ -149,29 +149,17 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
   FAR struct irq_file_s *irqfile = (FAR struct irq_file_s *)arg;
   struct irq_info_s copy;
   struct timespec delta;
-  clock_t elapsed;
-  clock_t now;
   size_t linesize;
   size_t copysize;
   unsigned long intpart;
   unsigned long fracpart;
   unsigned long count;
-#ifdef CONFIG_HAVE_LONG_LONG
-  uint64_t intcount;
-#endif
 
   DEBUGASSERT(irqfile != NULL);
 
-  /* Take a snapshot and reset the counts */
+  /* Take a snapshot */
 
   memcpy(&copy, info, sizeof(struct irq_info_s));
-  now         = perf_gettime();
-  info->start = now;
-  info->time  = 0;
-  info->count = 0;
-#ifdef CONFIG_ARCH_IRQPRIO
-  info->nests = 0;
-#endif
 
   /* Don't bother if count == 0.
    *
@@ -196,26 +184,10 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
       return 0;
     }
 
-  /* Calculate the interrupt rate from the interrupt count and the elapsed
-   * time.
-   *
-   * REVISIT: If these counts have not been samples and reset in a long time
-   * then the following will likely overflow.
-   */
+  /* Get the interrupt frequency and reset the counters */
 
-  elapsed = now - copy.start;
+  irq_monitor_get_freq(irq, true, &intpart, &fracpart);
   perf_convert(copy.time, &delta);
-
-#ifdef CONFIG_HAVE_LONG_LONG
-  /* elapsed = <current-time> - <start-time>, units=perf ticks
-   * rate    = <interrupt-count> * perf_getfreq() / elapsed
-   */
-
-  elapsed  = elapsed ? elapsed : 1;
-  intcount = (uint64_t)atomic_read(&copy.count) * perf_getfreq();
-  intpart  = intcount / elapsed;
-  intcount = intcount - intpart * elapsed;
-  fracpart = intcount * 1000 / elapsed;
 
   /* Make sure that the count is representable with snprintf format */
 
@@ -227,9 +199,6 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
     {
       count = (unsigned long)atomic_read(&copy.count);
     }
-#else
-#  error Missing logic
-#endif
 
   /* Output information about this interrupt */
 

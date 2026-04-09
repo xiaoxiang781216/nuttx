@@ -150,11 +150,6 @@ int irq_unexpected_isr(int irq, FAR void *context, FAR void *arg);
 int irq_foreach(irq_foreach_t callback, FAR void *arg);
 #endif
 
-#ifdef CONFIG_SCHED_IRQMONITOR
-void irq_monitor_enable(int irq);
-void irq_monitor_disable(int irq);
-#endif
-
 #ifdef CONFIG_IRQCHAIN
 void irqchain_initialize(void);
 bool is_irqchain(int ndx, xcpt_t isr);
