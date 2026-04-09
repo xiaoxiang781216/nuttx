@@ -350,7 +350,8 @@ static void gsmmux_uart_poll(FAR struct pollfd *fds)
       fds->revents &= ~POLLIN;
       gsmmux_uart_pollin(gsmmux);
     }
-  else if (fds->revents & POLLOUT)
+
+  if (fds->revents & POLLOUT)
     {
       fds->revents &= ~POLLOUT;
       gsmmux_uart_pollout(gsmmux);
