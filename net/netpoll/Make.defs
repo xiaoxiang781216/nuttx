@@ -21,7 +21,15 @@
 ############################################################################
 
 ifeq ($(CONFIG_NET_NETPOLL),y)
-NET_CSRCS += netpoll_pkt.c netpoll_udp.c
+NET_CSRCS += netpoll_pkt.c
+
+ifeq ($(CONFIG_NET_UDP),y)
+NET_CSRCS += netpoll_udp.c
+endif
+
+ifeq ($(CONFIG_NET_CAN),y)
+NET_CSRCS += netpoll_can.c
+endif
 
 # Include netpoll build support
 

@@ -200,6 +200,70 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf,
 int netpoll_udp_queue_send(FAR struct netpoll_s *np,
                            FAR netpkt_queue_t *pktq);
 
+/****************************************************************************
+ * Name: netpoll_can_init
+ *
+ * Description:
+ *   Initialize netpoll with CAN.
+ *
+ * Input Parameters:
+ *   np      - pointer to netpoll data
+ *   lower   - pointer to netdev lower
+ *   srcport - source port number
+ *
+ * Returned Value:
+ *   Returns OK on success
+ *
+ ****************************************************************************/
+
+int netpoll_can_init(FAR struct netpoll_s *np,
+                     FAR struct netdev_lowerhalf_s *lower,
+                     uint16_t srcport);
+
+/****************************************************************************
+ * Name: netpoll_can_queue_send
+ *
+ * Description:
+ *   Send all queued packets as CAN packets with netpoll.
+ *
+ *   Each queue entry holds a reserved CAN_HDR_SIZE-byte header slot
+ *   followed by the payload. This function fills the header in place at
+ *   io_data[io_offset] and hands the packet to the lower half.
+ *
+ *   CAN FD or classic CAN frames are emitted depending on whether
+ *   CONFIG_NET_CAN_CANFD is enabled at compile time.
+ *
+ * Input Parameters:
+ *   np  - pointer to netpoll data
+ *   pktq - packet queue to send
+ *
+ * Returned Value:
+ *   OK on success; negative errno on failure.
+ *
+ ****************************************************************************/
+
+int netpoll_can_queue_send(FAR struct netpoll_s *np,
+                           FAR netpkt_queue_t *pktq);
+
+/****************************************************************************
+ * Name: netpoll_can_send
+ *
+ * Description:
+ *   Send CAN packet with netpoll.
+ *
+ * Input Parameters:
+ *   np  - pointer to netpoll data
+ *   buf - data to send
+ *   len - length of data to send
+ *
+ * Returned Value:
+ *   OK on success; Negated errno on failure.
+ *
+ ****************************************************************************/
+
+int netpoll_can_send(FAR struct netpoll_s *np, FAR const void *buf,
+                     size_t len);
+
 #undef EXTERN
 #ifdef __cplusplus
 }

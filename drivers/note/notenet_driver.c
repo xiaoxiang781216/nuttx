@@ -41,6 +41,10 @@ struct notenet_driver_s
   spinlock_t            lock;    /* Lock */
   netpkt_queue_t        pktq;    /* Allocated net packet queue */
   struct netpoll_s      np;      /* Netpoll */
+
+  /* Send netpoll packet */
+
+  CODE int (*send)(FAR struct netpoll_s *np, FAR netpkt_queue_t *pktq);
 };
 
 /****************************************************************************
@@ -161,7 +165,7 @@ static int note_netdev_add(FAR struct note_driver_s *driver,
 
   if (iob_get_queue_size(&drv->pktq) > 3 * maxlen / 4)
     {
-      netpoll_udp_queue_send(&drv->np, &drv->pktq);
+      drv->send(&drv->np, &drv->pktq);
     }
 
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
@@ -179,7 +183,7 @@ static void note_netdev_flush(FAR struct note_driver_s *driver)
 
   if (!IOB_QEMPTY(&drv->pktq))
     {
-      netpoll_udp_queue_send(&drv->np, &drv->pktq);
+      drv->send(&drv->np, &drv->pktq);
     }
 
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
@@ -205,9 +209,32 @@ static void note_netdev_flush(FAR struct note_driver_s *driver)
 
 int notenet_init(FAR struct netdev_lowerhalf_s *dev)
 {
-  return netpoll_udp_init(&g_notenet.np, dev,
-                          CONFIG_DRIVERS_NOTENET_PORT,
-                          CONFIG_DRIVERS_NOTENET_IPADDR,
-                          CONFIG_DRIVERS_NOTENET_PORT,
-                          CONFIG_DRIVERS_NOTENET_MAC);
+  FAR struct notenet_driver_s *note = &g_notenet;
+
+  /* Initialize netpoll */
+
+#ifdef CONFIG_NET_UDP
+  if (dev->netdev.d_lltype == NET_LL_ETHERNET)
+    {
+      note->send = netpoll_udp_queue_send;
+
+      return netpoll_udp_init(&note->np, dev,
+                              CONFIG_DRIVERS_NOTENET_PORT,
+                              CONFIG_DRIVERS_NOTENET_IPADDR,
+                              CONFIG_DRIVERS_NOTENET_PORT,
+                              CONFIG_DRIVERS_NOTENET_MAC);
+    }
+#endif
+
+#ifdef CONFIG_NET_CAN
+  if (dev->netdev.d_lltype == NET_LL_CAN)
+    {
+      note->send = netpoll_can_queue_send;
+
+      return netpoll_can_init(&note->np, dev,
+                              CONFIG_DRIVERS_NOTENET_PORT);
+    }
+#endif
+
+  return -EINVAL;
 }

@@ -556,7 +556,8 @@ if SYSLOG_NETDEV
 
 config SYSLOG_NETDEV_INTF
 	string "Netdev SYSLOG interface"
-	default "eth0"
+	default "eth0" if NET_UDP
+	default "can0" if NET_CAN
 	---help---
 		Network interface used for SYSLOG.
 		Comma-separated list for multiple interfaces, e.g. "eth0.65,eth0.47".
@@ -577,9 +578,11 @@ config SYSLOG_NETDEV_MAC
 
 config SYSLOG_NETDEV_PORT
 	int "Netdev SYSLOG port"
-	default 6666
+	default 6666 if NET_UDP
+	default 1000 if NET_CAN
 	---help---
-		UDP port for SYSLOG output.
+		For UDP: UDP port for SYSLOG.
+		For CAN: TX CAN ID used by NuttX to send SYSLOG.
 
 endif # SYSLOG_NETDEV
 

@@ -400,7 +400,8 @@ if DRIVERS_NOTENET
 
 config DRIVERS_NOTENET_INTF
 	string "Note netdev interface"
-	default "eth0"
+	default "eth0" if NET_UDP
+	default "can0" if NET_CAN
 	---help---
 		Network interface used for netdev Note.
 		Comma-separated list for multiple interfaces, e.g. "eth0.65,eth0.47".
@@ -421,9 +422,11 @@ config DRIVERS_NOTENET_MAC
 
 config DRIVERS_NOTENET_PORT
 	int "Note netdev port"
-	default 50000
+	default 50000 if NET_UDP
+	default 500 if NET_CAN
 	---help---
-		UDP port for Note output.
+		For UDP: UDP port for Note.
+		For CAN: TX CAN ID used by NuttX to send Note.
 
 config DRIVERS_NOTENET_FILTER_DEFAULT_MODE
 	hex "Note netdev lower output filter mode"

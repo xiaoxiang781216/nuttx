@@ -39,6 +39,10 @@ struct syslog_netdev_s
   spinlock_t       lock;    /* Lock */
   netpkt_queue_t   pktq;    /* Allocated net packet queue */
   struct netpoll_s np;      /* Netpoll */
+
+  /* Send netpoll packet */
+
+  CODE int (*send)(struct netpoll_s *np, FAR netpkt_queue_t *pktq);
 };
 
 /****************************************************************************
@@ -79,7 +83,7 @@ int syslog_netdev_flush(FAR syslog_channel_t *channel)
 
   if (!IOB_QEMPTY(&priv->pktq))
     {
-      netpoll_udp_queue_send(&priv->np, &priv->pktq);
+      priv->send(&priv->np, &priv->pktq);
     }
 
   spin_unlock_irqrestore(&priv->lock, flags);
@@ -129,7 +133,7 @@ ssize_t syslog_netdev_write(FAR syslog_channel_t *channel,
 
   if (iob_get_queue_size(&priv->pktq) > 3 * maxlen / 4)
     {
-      netpoll_udp_queue_send(&priv->np, &priv->pktq);
+      priv->send(&priv->np, &priv->pktq);
     }
 
   spin_unlock_irqrestore(&priv->lock, flags);
@@ -158,15 +162,41 @@ int syslog_netdev_init(FAR struct netdev_lowerhalf_s *dev)
 
   flags = spin_lock_irqsave(&priv->lock);
 
-  /* Initialize netpoll */
-
-  ret = netpoll_udp_init(&priv->np, dev,
-                         CONFIG_SYSLOG_NETDEV_PORT,
-                         CONFIG_SYSLOG_NETDEV_IPADDR,
-                         CONFIG_SYSLOG_NETDEV_PORT,
-                         CONFIG_SYSLOG_NETDEV_MAC);
-  if (ret < 0)
+#ifdef CONFIG_NET_UDP
+  if (dev->netdev.d_lltype == NET_LL_ETHERNET)
     {
+      priv->send = netpoll_udp_queue_send;
+
+      ret = netpoll_udp_init(&priv->np, dev,
+                             CONFIG_SYSLOG_NETDEV_PORT,
+                             CONFIG_SYSLOG_NETDEV_IPADDR,
+                             CONFIG_SYSLOG_NETDEV_PORT,
+                             CONFIG_SYSLOG_NETDEV_MAC);
+      if (ret < 0)
+        {
+          goto errout;
+        }
+    }
+  else
+#endif
+
+#ifdef CONFIG_NET_CAN
+  if (dev->netdev.d_lltype == NET_LL_CAN)
+    {
+      priv->send = netpoll_can_queue_send;
+
+      ret = netpoll_can_init(&priv->np, dev,
+                             CONFIG_SYSLOG_NETDEV_PORT);
+      if (ret < 0)
+        {
+          goto errout;
+        }
+    }
+  else
+#endif
+
+    {
+      ret = -EINVAL;
       goto errout;
     }
 
