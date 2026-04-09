@@ -127,6 +127,16 @@
                                           **/
 #define ETHTOOL_SCHANNELS2    0x00000053 /* Turn on/off channels */
 
+/* Maximum length of a statistic name string */
+
+#define ETH_GSTRING_LEN       32
+
+/* String set IDs for ETHTOOL_GSSET_INFO / ETHTOOL_GSTRINGS */
+
+#define ETH_SS_TEST           0
+#define ETH_SS_STATS          1
+#define ETH_SS_PRIV_FLAGS     2
+
 /* Duplex, half or full. */
 
 #define DUPLEX_HALF           0x00
@@ -272,6 +282,51 @@ struct ethtool_chns2
   uint32_t rx_chns_map;
   uint32_t tx_chns_map;
   uint32_t combined_chns_map;
+};
+
+/* struct ethtool_sset_info - String set size query
+ * cmd: ETHTOOL_GSSET_INFO
+ * reserved: Reserved, must be zero
+ * sset_mask: On entry, bitmask of string sets to query (e.g.
+ *            1 << ETH_SS_STATS). On return, bitmask of supported sets.
+ * data: On return, the count of strings in each queried set
+ */
+
+struct ethtool_sset_info
+{
+  uint32_t cmd;
+  uint32_t reserved;
+  uint64_t sset_mask;
+  uint32_t data[];
+};
+
+/* struct ethtool_gstrings - String set data
+ * cmd: ETHTOOL_GSTRINGS
+ * string_set: String set ID (e.g. ETH_SS_STATS)
+ * len: On return, number of strings
+ * data: Buffer for strings, each null-padded to ETH_GSTRING_LEN bytes
+ */
+
+struct ethtool_gstrings
+{
+  uint32_t cmd;
+  uint32_t string_set;
+  uint32_t len;
+  uint8_t  data[];
+};
+
+/* struct ethtool_stats - Device statistics
+ * cmd: ETHTOOL_GSTATS
+ * n_stats: Number of statistics entries
+ * data: Array of uint32 statistic values, indexed same as
+ *       the string array returned by ETHTOOL_GSTRINGS
+ */
+
+struct ethtool_stats
+{
+  uint32_t cmd;
+  uint32_t n_stats;
+  uint32_t data[];
 };
 
 #endif /* __INCLUDE_NUTTX_ETHTOOL_H */

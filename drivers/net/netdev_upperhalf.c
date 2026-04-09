@@ -1019,6 +1019,52 @@ static int netdev_upper_ethtool_ioctl(FAR struct net_driver_s *dev,
           }
         break;
 
+      case ETHTOOL_GSSET_INFO:
+        if (lower->eth_ops->get_sset_count)
+          {
+            FAR struct ethtool_sset_info *info =
+                                  (FAR struct ethtool_sset_info *)arg;
+            uint64_t mask = info->sset_mask;
+            int i;
+            int n = 0;
+            int rc;
+
+            info->sset_mask = 0;
+            for (i = 0; mask != 0; i++, mask >>= 1)
+              {
+                if (!(mask & 1))
+                  {
+                    continue;
+                  }
+
+                rc = lower->eth_ops->get_sset_count(lower, i);
+                if (rc >= 0)
+                  {
+                    info->sset_mask |= ((uint64_t)1 << i);
+                    info->data[n++] = rc;
+                  }
+              }
+
+            ret = 0;
+          }
+        break;
+
+      case ETHTOOL_GSTRINGS:
+        if (lower->eth_ops->get_strings)
+          {
+            ret = lower->eth_ops->get_strings(lower,
+                                  (FAR struct ethtool_gstrings *)arg);
+          }
+        break;
+
+      case ETHTOOL_GSTATS:
+        if (lower->eth_ops->get_ethtool_stats)
+          {
+            ret = lower->eth_ops->get_ethtool_stats(lower,
+                                  (FAR struct ethtool_stats *)arg);
+          }
+        break;
+
       default:
         ret = -ENOTTY;
         nerr("ERROR: No such cmd in ethtool opt!");

@@ -252,6 +252,12 @@ struct wireless_ops_s
  * get_channels2: Get channels status, and return in form of bitmap.
  * set_channels2: Turn on/off channels, and input parameter in the form of
  *                bitmap.
+ * get_sset_count: Get number of strings in a string set
+ *                 (ETHTOOL_GSSET_INFO).
+ * get_strings: Get string set data (ETHTOOL_GSTRINGS).
+ *              Driver fills strs->data with null-padded names.
+ * get_ethtool_stats: Get device statistics (ETHTOOL_GSTATS).
+ *                    Driver fills stats->data with uint64 values.
  */
 
 struct ethtool_ops_s
@@ -264,6 +270,12 @@ struct ethtool_ops_s
                             FAR struct ethtool_chns2 *chns);
   CODE int (*set_channels2)(FAR struct netdev_lowerhalf_s *dev,
                             FAR struct ethtool_chns2 *chns);
+  CODE int (*get_sset_count)(FAR struct netdev_lowerhalf_s *dev,
+                             int sset);
+  CODE int (*get_strings)(FAR struct netdev_lowerhalf_s *dev,
+                          FAR struct ethtool_gstrings *strs);
+  CODE int (*get_ethtool_stats)(FAR struct netdev_lowerhalf_s *dev,
+                                FAR struct ethtool_stats *stats);
 };
 #endif
 
