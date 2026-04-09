@@ -55,10 +55,15 @@ import sys
 import termios
 import threading
 import time
-from collections import deque
 from enum import IntEnum
 
 import serial
+
+
+def _set_nonblocking(fd):
+    """Set a file descriptor to non-blocking mode."""
+    flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
 
 # GSM 07.10 protocol constants
@@ -90,7 +95,6 @@ class GSM0710:
     LENGTH_EA_BIT = 0x01  # Extension bit in length field
 
     # Maximum values
-    MAX_FRAME_SIZE = 256
     MAX_DLCI = 63
 
     # FCS calculation
@@ -515,7 +519,7 @@ class GSM0710Frame:
         # Extract data
         if idx + data_len + 2 > len(frame_bytes):  # +2 for FCS and flag
             _debug_out(
-                f"    [Decode] Data length mismatch: expected {data_len} actual {len(frame_bytes)-idx-2}"
+                f"    [Decode] Data length mismatch: expected {data_len} actual {len(frame_bytes) - idx - 2}"
             )
             return None
 
@@ -572,79 +576,98 @@ class GSM0710Decoder:
             # If no callback, don't print (silent debug mode)
 
     def feed(self, data):
-        """
-        Feed data byte stream, return list of decoded frames
+        """Feed data byte stream, return list of decoded frames.
 
-        Handles mixed data stream:
-        - GSM 07.10 frames (F9 ... F9)
-        - Raw data (non-frame data, collected and output via callback)
-
-        State machine logic (FIXED for fragmentation):
-        - INIT state (not in_frame): Only non-F9 bytes are raw data
-        - IN_FRAME state: Collecting frame data until closing F9
-        - Consecutive F9 flags are treated as single frame boundary
-        - Frame buffer persists across feed() calls to handle fragmentation
+        Uses length-based parsing for Basic Mode where payload may contain
+        0xF9. Frame boundaries are determined by the length field.
         """
         frames = []
         self.stats["total_bytes"] += len(data)
+        dlen = len(data)
+        idx = 0
 
-        for byte in data:
-            if byte == GSM0710.FLAG:
-                if self.in_frame:
-                    # End of current frame
-                    self.buffer.append(byte)
-
-                    # Only try to decode if we have more than just opening F9
-                    if len(self.buffer) > 1:
-                        frame = GSM0710Frame.decode(
-                            bytes(self.buffer),
-                            debug=self.debug,
-                            debug_callback=self._debug_print,
-                        )
-                        if frame:
-                            frames.append(frame)
-                            self.stats["frames_decoded"] += 1
-
-                            # Check if this was a fragmented frame
-                            if len(self.buffer) > 200:  # Likely fragmented
-                                self.stats["fragmented_frames"] += 1
-
-                            self._debug_print(
-                                f"[Decoder] Frame decoded: DLCI={frame.dlci} len={len(frame.data)} buffer={len(self.buffer)}"
-                            )
-                        else:
-                            self.stats["frames_failed"] += 1
-                            hex_preview = self.buffer[:50].hex()
-                            ellipsis = "..." if len(self.buffer) > 50 else ""
-                            self._debug_print(
-                                f"[Decoder] Frame decode failed "
-                                f"({len(self.buffer)} bytes): "
-                                f"{hex_preview}{ellipsis}"
-                            )
-
-                    # Reset for next frame - consecutive F9 is handled by staying in_frame
-                    self.buffer.clear()
-                    self.buffer.append(byte)  # This F9 is the start of next frame
-                    # Keep in_frame = True to handle consecutive F9
-                else:
-                    # Not in frame, flush any raw data before starting new frame
+        while idx < dlen:
+            byte = data[idx]
+            idx += 1
+            if not self.in_frame:
+                if byte == GSM0710.FLAG:
                     if len(self.raw_buffer) > 0:
                         self._flush_raw_data()
-
-                    # Start new frame
+                    self.buffer.clear()
                     self.buffer.append(byte)
                     self.in_frame = True
-            elif self.in_frame:
-                # In frame - accumulate data (may span multiple feed() calls)
+                    self._frame_data_len = -1
+                    self._frame_need = -1
+                else:
+                    self.raw_buffer.append(byte)
+                    self.stats["raw_bytes_collected"] += 1
+                    if byte == 0x0A:
+                        self._flush_raw_data()
+            else:
                 self.buffer.append(byte)
 
-                # Prevent buffer overflow - but increase limit for fragmented frames
-                if len(self.buffer) > GSM0710.MAX_FRAME_SIZE * 4:  # Increased from *2
+                if (
+                    self._frame_data_len == -1
+                    and byte == GSM0710.FLAG
+                    and len(self.buffer) <= 2
+                ):
+                    self.buffer.clear()
+                    self.buffer.append(byte)
+                    continue
+
+                # Parse length field: [F9, Addr, Ctrl, Len0, (Len1)]
+                if self._frame_data_len == -1 and len(self.buffer) >= 4:
+                    len_byte = self.buffer[3]
+                    if len_byte & GSM0710.LENGTH_EA_BIT:
+                        self._frame_data_len = len_byte >> 1
+                        self._frame_need = len(self.buffer) + self._frame_data_len + 2
+                    elif len(self.buffer) >= 5:
+                        len_high = self.buffer[4]
+                        self._frame_data_len = (len_high << 7) | (len_byte >> 1)
+                        self._frame_need = len(self.buffer) + self._frame_data_len + 2
+
+                # Bulk-copy remaining needed bytes instead of byte-by-byte
+                if self._frame_need > 0 and len(self.buffer) < self._frame_need:
+                    need = self._frame_need - len(self.buffer)
+                    avail = dlen - idx
+                    take = min(need, avail)
+                    if take > 0:
+                        self.buffer.extend(data[idx : idx + take])
+                        idx += take
+
+                if self._frame_need > 0 and len(self.buffer) >= self._frame_need:
+                    frame = GSM0710Frame.decode(
+                        bytes(self.buffer),
+                        debug=self.debug,
+                        debug_callback=self._debug_print,
+                    )
+                    if frame:
+                        frames.append(frame)
+                        self.stats["frames_decoded"] += 1
+                        if len(self.buffer) > 200:
+                            self.stats["fragmented_frames"] += 1
+                        self._debug_print(
+                            f"[Decoder] Frame decoded: DLCI={frame.dlci} len={len(frame.data)} buffer={len(self.buffer)}"
+                        )
+                    else:
+                        self.stats["frames_failed"] += 1
+                        hex_preview = self.buffer[:50].hex()
+                        ellipsis = "..." if len(self.buffer) > 50 else ""
+                        self._debug_print(
+                            f"[Decoder] Frame decode failed "
+                            f"({len(self.buffer)} bytes): "
+                            f"{hex_preview}{ellipsis}"
+                        )
+
+                    self.buffer.clear()
+                    self.in_frame = False
+                    self._frame_data_len = -1
+                    self._frame_need = -1
+
+                elif len(self.buffer) > 4096:
                     self._debug_print(
                         f"[Decoder] Buffer overflow, treating as raw data ({len(self.buffer)} bytes)"
                     )
-                    # This is likely corrupted data, not a valid frame
-                    # Treat the buffered data (except leading F9) as raw data
                     if self.buffer[0] == GSM0710.FLAG:
                         self.raw_buffer.extend(self.buffer[1:])
                         self.stats["raw_bytes_collected"] += len(self.buffer) - 1
@@ -654,14 +677,8 @@ class GSM0710Decoder:
                     self._flush_raw_data()
                     self.buffer.clear()
                     self.in_frame = False
-            else:
-                # Not in frame and not FLAG = raw data
-                self.raw_buffer.append(byte)
-                self.stats["raw_bytes_collected"] += 1
-
-                # Flush on newline for better real-time display
-                if byte == 0x0A:  # \n
-                    self._flush_raw_data()
+                    self._frame_data_len = -1
+                    self._frame_need = -1
 
         return frames
 
@@ -692,8 +709,7 @@ class VirtualSerialPort:
         self.slave_fd = None
         self.slave_name = None
         self.running = False
-        self.write_queue = deque()
-        self.write_lock = threading.Lock()
+        self._wbuf = bytearray()
 
     def open(self):
         """Create PTY device"""
@@ -701,6 +717,9 @@ class VirtualSerialPort:
 
         # Get slave device name
         self.slave_name = os.ttyname(self.slave_fd)
+
+        # Set master fd to non-blocking to avoid stalling the event loop
+        _set_nonblocking(self.master_fd)
 
         # Set raw mode
         attrs = termios.tcgetattr(self.slave_fd)
@@ -753,13 +772,26 @@ class VirtualSerialPort:
             return b""
 
     def write(self, data):
-        """Write data to master side"""
+        """Queue data for non-blocking write to master side."""
         if not self.running or not self.master_fd:
             return 0
-        try:
-            return os.write(self.master_fd, data)
-        except OSError:
-            return 0
+        self._wbuf.extend(data)
+        return len(data)
+
+    def drain_write(self):
+        """Drain write buffer to PTY master (non-blocking)."""
+        while self._wbuf:
+            try:
+                n = os.write(self.master_fd, self._wbuf)
+                del self._wbuf[:n]
+            except BlockingIOError:
+                break
+            except OSError:
+                break
+
+    def has_pending_write(self):
+        """Check if there's pending write data."""
+        return len(self._wbuf) > 0
 
     def fileno(self):
         """Return file descriptor for select"""
@@ -933,8 +965,7 @@ class GSMMultiplexerKernel:
                 except OSError as e:
                     if attempt < max_retries - 1:
                         print(
-                            f"Waiting for n_gsm link ({attempt + 1}/{max_retries}): "
-                            f"{e}"
+                            f"Waiting for n_gsm link ({attempt + 1}/{max_retries}): {e}"
                         )
                         time.sleep(1)
                     else:
@@ -1054,6 +1085,8 @@ class GSMMultiplexer:
         self.running = False
         self.threads = []
         self.initialized = False
+        self._tx_queue = bytearray()
+        self._serial_fd = -1
 
     def _debug_log(self, message):
         """Write debug message to file"""
@@ -1195,133 +1228,161 @@ class GSMMultiplexer:
         self.initialized = True
         print("GSM 07.10 multiplexer initialization completed")
 
-    def serial_read_thread(self):
-        """Serial read thread - read from physical port and distribute to virtual ports"""
-        print("Serial read thread started")
+    def _handle_serial_data(self, data):
+        if self.hex_dump_fd:
+            try:
+                self.hex_dump_fd.write(data.hex().encode() + b"\n")
+                self.hex_dump_fd.flush()
+            except Exception:
+                pass
+
+        frames = self.decoder.feed(data)
+
+        _data_ctrl = (GSM0710.UIH, GSM0710.UI, 0xFF)
+        for frame in frames:
+            self._debug_log(
+                f"[Frame] DLCI={frame.dlci} Control=0x{frame.control:02x}"
+                f" CR={frame.cr} PF={frame.pf} DataLen={len(frame.data)}"
+            )
+            if frame.control in _data_ctrl and frame.dlci in self.virtual_ports:
+                if len(frame.data) > 0:
+                    vport = self.virtual_ports[frame.dlci]
+                    vport.write(frame.data)
+                    vport.drain_write()
+            elif frame.control == GSM0710.SABM:
+                ua_frame = GSM0710Frame(
+                    dlci=frame.dlci,
+                    control=GSM0710.UA,
+                    cr=False,
+                    pf=True,
+                )
+                # Device restarted — respond with UA
+                self._write_serial_all(ua_frame.encode())
+
+    def _write_serial_all(self, data):
+        """Queue data for non-blocking serial write.
+
+        Before event_loop starts (_serial_fd == -1), uses blocking pyserial
+        write. After event_loop starts, queues into _tx_queue for
+        non-blocking drain via select().
+        """
+        if self._serial_fd < 0:
+            self.serial_port.write(data)
+        else:
+            self._tx_queue.extend(data)
+
+    def _drain_tx_queue(self, max_bytes=4096):
+        """Write up to max_bytes of queued TX data without blocking.
+
+        Limits per-call write to allow event loop to interleave RX reads,
+        preventing stalls during high-throughput transfers.
+        """
+        written = 0
+        while self._tx_queue and written < max_bytes:
+            try:
+                chunk = bytes(self._tx_queue[: max_bytes - written])
+                n = os.write(self._serial_fd, chunk)
+                del self._tx_queue[:n]
+                written += n
+            except BlockingIOError:
+                break
+
+    def _handle_vport_data(self, dlci, data):
+        self._debug_log(
+            f"[VPort←] DLCI {dlci} read {len(data)} bytes: {data[:20].hex()}"
+        )
+
+        # Fragment data to fit within CMUX MTU. Must match the device side
+        # CONFIG_UART_GSMMUX_BUFFER_SIZE (MRU). Default GSM 07.10 basic mode
+        # uses single-byte length (max 127), but NuttX supports larger MRU.
+
+        mtu = 127
+        offset = 0
+        while offset < len(data):
+            chunk = data[offset : offset + mtu]
+            frame = GSM0710Frame(dlci=dlci, control=GSM0710.UIH, data=chunk, cr=True)
+            encoded = frame.encode()
+            self._debug_log(f"[Serial→] DLCI {dlci} sent frame {len(encoded)} bytes")
+            self._tx_queue.extend(encoded)
+            offset += len(chunk)
+
+    def event_loop(self):
+        """Single-threaded select() loop with non-blocking TX queues.
+
+        All writes (serial and VPort) are queued and drained via select().
+        This prevents any write from blocking the event loop, ensuring
+        bidirectional data flow on real hardware UART links.
+        """
+        print("Event loop started")
+        serial_fd = self.serial_port.fileno()
+        self._serial_fd = serial_fd
+        self._tx_queue = bytearray()
+
+        # Set serial fd to non-blocking for better event loop behavior
+        _set_nonblocking(serial_fd)
+
+        fd_to_dlci = {}
+        for dlci, vport in self.virtual_ports.items():
+            fd_to_dlci[vport.fileno()] = dlci
+
+        read_fds = [serial_fd] + list(fd_to_dlci.keys())
+
         while self.running:
             try:
-                if self.serial_port.in_waiting > 0:
-                    data = self.serial_port.read(self.serial_port.in_waiting)
-                    if data:
-                        # Write hex dump if enabled
-                        if self.hex_dump_fd:
-                            try:
-                                self.hex_dump_fd.write(data.hex().encode() + b"\n")
-                                self.hex_dump_fd.flush()
-                            except Exception as e:
-                                self._debug_log(
-                                    f"[Error] Failed to write hex dump: {e}"
-                                )
+                # Build writable fd list for pending TX data
+                write_fds = []
+                if self._tx_queue:
+                    write_fds.append(serial_fd)
+                for dlci, vport in self.virtual_ports.items():
+                    if vport.has_pending_write():
+                        write_fds.append(vport.fileno())
 
-                        self._debug_log(
-                            f"[Serial←] Received {len(data)} bytes: {data.hex()}"
-                        )
+                readable, writable, _ = select.select(read_fds, write_fds, [], 0.05)
 
-                        frames = self.decoder.feed(data)
+                # Drain all writable fds
+                for fd in writable:
+                    if fd == serial_fd:
+                        self._drain_tx_queue()
+                    elif fd in fd_to_dlci:
+                        self.virtual_ports[fd_to_dlci[fd]].drain_write()
 
-                        if len(frames) > 0:
-                            buf_len = len(self.decoder.buffer)
-                            self._debug_log(
-                                f"[Parse] Successfully parsed "
-                                f"{len(frames)} frame(s), "
-                                f"decoder buffer: {buf_len} bytes"
-                            )
-                        elif len(self.decoder.buffer) > 0 and self.decoder.in_frame:
-                            buf_len = len(self.decoder.buffer)
-                            self._debug_log(
-                                f"[Parse] Incomplete frame "
-                                f"buffered: {buf_len} bytes "
-                                f"(waiting for more data)"
-                            )
-                        elif len(frames) == 0:
-                            self._debug_log(
-                                "[Parse] No frame parsed from " "this data block"
-                            )
-
-                        for frame in frames:
-                            self._debug_log(
-                                f"[Frame] DLCI={frame.dlci} "
-                                f"Control=0x{frame.control:02x} "
-                                f"CR={frame.cr} PF={frame.pf} "
-                                f"DataLen={len(frame.data)}"
-                            )
-
-                            # UIH/UI frame - data frames
-                            # UIH = 0xEF, UI = 0x03, but also accept 0xFF (some implementations use it)
-                            is_data_frame = frame.control in (
-                                GSM0710.UIH,
-                                GSM0710.UI,
-                                0xFF,
-                            )
-
-                            if is_data_frame and frame.dlci in self.virtual_ports:
-                                # Data frame - forward to virtual port
-                                if len(frame.data) > 0:
-                                    vport = self.virtual_ports[frame.dlci]
-                                    written = vport.write(frame.data)
-                                    hex_data = frame.data[:40].hex()
-                                    ellip = "..." if len(frame.data) > 40 else ""
-                                    self._debug_log(
-                                        f"[VPort→] DLCI {frame.dlci} "
-                                        f"wrote {written}/"
-                                        f"{len(frame.data)} bytes: "
-                                        f"{hex_data}{ellip}"
-                                    )
-                            elif frame.control == GSM0710.SABM:
-                                # SABM request - send UA response
-                                print(f"Received SABM request DLCI {frame.dlci}")
-                                ua_frame = GSM0710Frame(
-                                    dlci=frame.dlci,
-                                    control=GSM0710.UA,
-                                    cr=False,
-                                    pf=True,
-                                )
-                                self.serial_port.write(ua_frame.encode())
-                            else:
-                                self._debug_log(
-                                    f"[Ignore] Unhandled frame type: DLCI={frame.dlci} Control=0x{frame.control:02x}"
-                                )
-                else:
-                    time.sleep(0.01)
-            except Exception as e:
+                for fd in readable:
+                    if fd == serial_fd:
+                        try:
+                            data = os.read(serial_fd, 8192)
+                        except BlockingIOError:
+                            continue
+                        if data:
+                            self._handle_serial_data(data)
+                            # Drain TX after processing RX (responses queued)
+                            if self._tx_queue:
+                                self._drain_tx_queue()
+                    elif fd in fd_to_dlci:
+                        dlci = fd_to_dlci[fd]
+                        try:
+                            data = os.read(fd, 8192)
+                        except BlockingIOError:
+                            continue
+                        if data:
+                            self._handle_vport_data(dlci, data)
+                            # Drain TX immediately after queuing frames
+                            if self._tx_queue:
+                                self._drain_tx_queue()
+            except OSError as e:
                 if self.running:
-                    print(f"Serial read error: {e}")
+                    import errno as errno_mod
+
+                    if e.errno == errno_mod.EIO:
+                        print("Event loop: fd closed (EIO)")
+                        break
+                    print(f"Event loop error: {e}")
                     import traceback
 
                     traceback.print_exc()
                     time.sleep(0.1)
-
-    def virtual_port_read_thread(self, dlci):
-        """Virtual port read thread - read from virtual port and send to physical port"""
-        print(f"Virtual port DLCI {dlci} read thread started")
-        vport = self.virtual_ports[dlci]
-
-        while self.running:
-            try:
-                # Use select to check if data is available
-                readable, _, _ = select.select([vport.fileno()], [], [], 0.1)
-                if readable:
-                    data = vport.read(127)  # MTU limit
-                    if data:
-                        hex_preview = data[:20].hex()
-                        ellipsis = "..." if len(data) > 20 else ""
-                        self._debug_log(
-                            f"[VPort←] DLCI {dlci} read "
-                            f"{len(data)} bytes: "
-                            f"{hex_preview}{ellipsis}"
-                        )
-                        # Encapsulate in UIH frame and send
-                        frame = GSM0710Frame(
-                            dlci=dlci, control=GSM0710.UIH, data=data, cr=True
-                        )
-                        frame_bytes = frame.encode()
-                        self.serial_port.write(frame_bytes)
-                        self._debug_log(
-                            f"[Serial→] DLCI {dlci} sent frame {len(frame_bytes)} bytes"
-                        )
             except Exception as e:
                 if self.running:
-                    print(f"Virtual port DLCI {dlci} read error: {e}")
+                    print(f"Event loop error: {e}")
                     import traceback
 
                     traceback.print_exc()
@@ -1331,27 +1392,13 @@ class GSMMultiplexer:
         """Start multiplexer"""
         self.running = True
 
-        # Open physical serial port
         self.open_serial()
-
-        # Create virtual ports
         self.create_virtual_ports()
-
-        # Initialize GSM 07.10
         self.gsm_initialize()
 
-        # Start serial read thread
-        serial_thread = threading.Thread(target=self.serial_read_thread, daemon=True)
-        serial_thread.start()
-        self.threads.append(serial_thread)
-
-        # Start virtual port read threads
-        for dlci in self.virtual_ports:
-            vport_thread = threading.Thread(
-                target=self.virtual_port_read_thread, args=(dlci,), daemon=True
-            )
-            vport_thread.start()
-            self.threads.append(vport_thread)
+        loop_thread = threading.Thread(target=self.event_loop, daemon=True)
+        loop_thread.start()
+        self.threads.append(loop_thread)
 
         print("\nGSM 07.10 multiplexer running...")
         print(f"Physical serial port: {self.device_path}")
@@ -1508,7 +1555,7 @@ def test_frame_codec():
     print(f"   Parsed {len(frames)} frame(s)")
     for i, frame in enumerate(frames):
         print(
-            f"   Frame {i+1}: DLCI={frame.dlci}, Control=0x{frame.control:02x}, DataLen={len(frame.data)}"
+            f"   Frame {i + 1}: DLCI={frame.dlci}, Control=0x{frame.control:02x}, DataLen={len(frame.data)}"
         )
 
     print("\n=== Test completed ===\n")
