@@ -439,10 +439,6 @@ config DRIVERS_NOTENET_CPUSET
 	---help---
 		CPU set for note netdev
 
-config DRIVERS_NOTENET_WORK_DELAY
-	int "NOTE netdev work delay (ms)"
-	default 100
-
 endif
 
 endmenu # Note Driver Support

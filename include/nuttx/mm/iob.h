@@ -885,6 +885,23 @@ FAR struct iob_s *iob_peek_queue(FAR struct iob_queue_s *iobq)
 }
 
 /****************************************************************************
+ * Name: iob_peek_tail
+ *
+ * Description:
+ *   Return a reference to the I/O buffer chain at the tail of a queue.
+ *
+ * Returned Value:
+ *   Returns a reference to the I/O buffer chain at the tail of the queue.
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR struct iob_s *iob_peek_tail(FAR struct iob_queue_s *iobq)
+{
+  return iobq->qh_tail;
+}
+
+/****************************************************************************
  * Name: iob_free_queue
  *
  * Description:

@@ -29,13 +29,6 @@
 #include <nuttx/net/netpoll.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/syslog/syslog_netdev.h>
-#include <nuttx/wqueue.h>
-
-/****************************************************************************
- * Pre-processor definitions
- ****************************************************************************/
-
-#define SYSLOG_NETDEV_WORK_DELAY MSEC2TICK(CONFIG_SYSLOG_NETDEV_WORK_DELAY)
 
 /****************************************************************************
  * Private Types
@@ -44,18 +37,9 @@
 struct syslog_netdev_s
 {
   spinlock_t       lock;    /* Lock */
-  FAR netpkt_t    *pkt;     /* Allocated net packet */
-  size_t           next;    /* The next index (where data is added) */
-  struct work_s    work;    /* Used for deferred callback work */
+  netpkt_queue_t   pktq;    /* Allocated net packet queue */
   struct netpoll_s np;      /* Netpoll */
 };
-
-/****************************************************************************
- * Private Functions Prototypes
- ****************************************************************************/
-
-static bool syslog_netdev_transfer(FAR struct syslog_netdev_s *priv);
-static void syslog_netdev_work(FAR void *arg);
 
 /****************************************************************************
  * Private Data
@@ -65,63 +49,6 @@ static struct syslog_netdev_s g_syslog_netdev =
 {
   .lock = SP_UNLOCKED
 };
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-/****************************************************************************
- * Name: syslog_netdev_transfer
- ****************************************************************************/
-
-static bool syslog_netdev_transfer(FAR struct syslog_netdev_s *priv)
-{
-  irqstate_t flags;
-  int        ret;
-
-  flags = spin_lock_irqsave(&priv->lock);
-
-  /* Len can be zero if flush with no data in buffer */
-
-  if (priv->next == 0)
-    {
-      spin_unlock_irqrestore(&priv->lock, flags);
-      return true;
-    }
-
-  /* Send IOB */
-
-  ret = netpoll_udp_pkt_send(&priv->np, priv->pkt);
-  if (ret < 0)
-    {
-      spin_unlock_irqrestore(&priv->lock, flags);
-      return false;
-    }
-
-  /* Get IOB - blocking */
-
-  priv->pkt = netpoll_udp_pkt_alloc(&priv->np);
-  priv->next = 0;
-
-  spin_unlock_irqrestore(&priv->lock, flags);
-
-  return true;
-}
-
-/****************************************************************************
- * Name: syslog_netdev_work
- ****************************************************************************/
-
-static void syslog_netdev_work(FAR void *arg)
-{
-  FAR struct syslog_netdev_s *priv = arg;
-
-  if (!syslog_netdev_transfer(priv))
-    {
-      work_queue(HPWORK, &priv->work, syslog_netdev_work, priv,
-                 SYSLOG_NETDEV_WORK_DELAY);
-    }
-}
 
 /****************************************************************************
  * Public Functions
@@ -146,8 +73,16 @@ int syslog_netdev_putc(FAR syslog_channel_t *channel, int ch)
 int syslog_netdev_flush(FAR syslog_channel_t *channel)
 {
   FAR struct syslog_netdev_s *priv = &g_syslog_netdev;
+  irqstate_t                  flags;
 
-  syslog_netdev_transfer(priv);
+  flags = spin_lock_irqsave(&priv->lock);
+
+  if (!IOB_QEMPTY(&priv->pktq))
+    {
+      netpoll_udp_queue_send(&priv->np, &priv->pktq);
+    }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   return OK;
 }
@@ -160,54 +95,44 @@ ssize_t syslog_netdev_write(FAR syslog_channel_t *channel,
                             FAR const char *buffer, size_t buflen)
 {
   FAR struct syslog_netdev_s *priv   = &g_syslog_netdev;
-  clock_t                     delay  = SYSLOG_NETDEV_WORK_DELAY;
   size_t                      maxlen = netpoll_get_maxlen(&priv->np);
-  size_t                      space;
   irqstate_t                  flags;
+  int                         ret;
 
   flags = spin_lock_irqsave(&priv->lock);
 
   /* Ignore data if device is not ready */
 
-  if (!priv->pkt || buflen <= 0)
+  if (priv->np.lower == NULL || buflen == 0)
     {
       spin_unlock_irqrestore(&priv->lock, flags);
       return buflen;
     }
 
-try:
-  if (priv->next + buflen > maxlen)
+  /* Copy the whole buffer; netpoll_queue_copyin grows the queue as needed,
+   * splitting at maxlen boundaries (one queue entry per wire frame/packet).
+   */
+
+  ret = netpoll_queue_copyin(&priv->np, &priv->pktq, buffer, buflen);
+  if (ret < 0)
     {
-      /* Unlock before entering syslog_netdev_transfer,
-       * it is already locked internally
+      /* On copy failure (e.g. IOB exhaustion), discard the batch so the
+       * next write starts from a clean queue state.
        */
 
+      iob_free_queue(&priv->pktq);
       spin_unlock_irqrestore(&priv->lock, flags);
-      syslog_netdev_transfer(priv);
-      flags = spin_lock_irqsave(&priv->lock);
-      goto try;
+      return ret;
     }
 
-  /* Copy data to packet */
+  /* Flush immediately on queue overflow or >75% packet fill */
 
-  netpoll_pkt_copy(&priv->np, priv->pkt, buffer, buflen, priv->next);
-  priv->next += buflen;
-
-  /* Start work immediately when data more then 75% */
-
-  space = maxlen - priv->next;
-  if (space < maxlen / 4)
+  if (iob_get_queue_size(&priv->pktq) > 3 * maxlen / 4)
     {
-      delay = 0;
+      netpoll_udp_queue_send(&priv->np, &priv->pktq);
     }
 
   spin_unlock_irqrestore(&priv->lock, flags);
-
-  if (work_available(&priv->work))
-    {
-      work_queue(HPWORK, &priv->work, syslog_netdev_work, priv, delay);
-    }
-
   return buflen;
 }
 
@@ -244,10 +169,6 @@ int syslog_netdev_init(FAR struct netdev_lowerhalf_s *dev)
     {
       goto errout;
     }
-
-  /* Allocate packet */
-
-  priv->pkt = netpoll_udp_pkt_alloc(&priv->np);
 
 errout:
   spin_unlock_irqrestore(&priv->lock, flags);

@@ -149,10 +149,6 @@ int netpoll_udp_init(FAR struct netpoll_s *np,
   np->destipaddr = htonl(destipaddr);
   np->destport   = htons(destport);
 
-  /* Store lower half reference */
-
-  np->lower = lower;
-
   /* Store header length for later */
 
   np->hdrlen = NET_LL_HDRLEN(&lower->netdev) + IPv4UDP_HDRLEN;
@@ -161,87 +157,68 @@ int netpoll_udp_init(FAR struct netpoll_s *np,
 
   np->maxlen = NETDEV_PKTSIZE(&lower->netdev) - np->hdrlen;
 
+  /* Set lower last */
+
+  np->lower = lower;
+
   return OK;
 }
 
 /****************************************************************************
- * Name: netpoll_udp_pkt_alloc
+ * Name: netpoll_udp_queue_send
  *
  * Description:
- *   Allocate UDP packet.
- *
- * Input Parameters:
- *   np - pointer to netpoll data
- *
- * Returned Value:
- *   Pointer to packet on success; NULL on failure.
- *
- ****************************************************************************/
-
-FAR netpkt_t *netpoll_udp_pkt_alloc(FAR struct netpoll_s *np)
-{
-  FAR struct netdev_lowerhalf_s *lower = np->lower;
-  FAR netpkt_t                  *pkt;
-
-  /* Get packet */
-
-  pkt = netpoll_pkt_alloc(lower);
-  if (!pkt)
-    {
-      return NULL;
-    }
-
-  /* Initialize packet with header length */
-
-  netpkt_setdatalen(lower, pkt, np->hdrlen);
-
-  return pkt;
-}
-
-/****************************************************************************
- * Name: netpoll_udp_pkt_send
- *
- * Description:
- *   Send packet as UDP packet with netpoll.
+ *   Send queued packets as UDP packets with netpoll.
  *
  * Input Parameters:
  *   np  - pointer to netpoll data
- *   pkt - packet to send
+ *   pktq - packet queue to send
  *
  * Returned Value:
- *   Length of header if succes, negative value on failure
+ *   OK on success; negative errno on failure
  *
  * Assumption:
- *   Packet is ready to send, all packet headers are complete, only UDP
- *   payload len can change.
+ *   Packets in queue are ready to send. All packet headers are complete,
+ *   only UDP payload length can change.
  *
  ****************************************************************************/
 
-int netpoll_udp_pkt_send(FAR struct netpoll_s *np, FAR netpkt_t *pkt)
+int netpoll_udp_queue_send(FAR struct netpoll_s *np,
+                           FAR netpkt_queue_t *pktq)
 {
   FAR struct netdev_lowerhalf_s *lower = np->lower;
+  FAR netpkt_t                  *pkt;
   int                            ret;
 
   /* Don't send data if device is not ready */
 
   if (!IFF_IS_RUNNING(lower->netdev.d_flags))
     {
+      iob_free_queue(pktq);
       return -ENODEV;
     }
 
-  /* Fill header */
-
-  netpoll_udp_build_header(np, pkt);
-
-  /* Transmit packet */
-
-  ret = lower->ops->transmit(lower, pkt);
-  if (ret < 0)
+  while ((pkt = iob_remove_queue(pktq)) != NULL)
     {
-      return ret;
-    }
+      NETDEV_TXPACKETS(&lower->netdev);
 
-  NETDEV_TXDONE(&lower->netdev);
+      /* Fill header */
+
+      netpoll_udp_build_header(np, pkt);
+
+      /* Transmit packet */
+
+      ret = lower->ops->transmit(lower, pkt);
+      if (ret < 0)
+        {
+          NETDEV_TXERRORS(&lower->netdev);
+          netpkt_free(lower, pkt, NETPKT_TX);
+          iob_free_queue(pktq);
+          return ret;
+        }
+
+      NETDEV_TXDONE(&lower->netdev);
+    }
 
   return OK;
 }
@@ -265,27 +242,24 @@ int netpoll_udp_pkt_send(FAR struct netpoll_s *np, FAR netpkt_t *pkt)
 int netpoll_udp_send(FAR struct netpoll_s *np, FAR const void *buf,
                      size_t len)
 {
-  FAR netpkt_t *pkt;
-  int           ret;
+  netpkt_queue_t pktq;
+  int            ret;
 
-  /* Get packet */
+  IOB_QINIT(&pktq);
 
-  pkt = netpoll_udp_pkt_alloc(np);
-  if (!pkt)
+  ret = netpoll_queue_copyin(np, &pktq, buf, len);
+  if (ret < 0)
     {
-      return -ENOMEM;
+      iob_free_queue(&pktq);
+      return ret;
     }
-
-  /* Fill with data */
-
-  netpoll_pkt_copy(np, pkt, buf, len, 0);
 
   /* Send packet */
 
-  ret = netpoll_udp_pkt_send(np, pkt);
+  ret = netpoll_udp_queue_send(np, &pktq);
   if (ret < 0)
     {
-      netpkt_free(np->lower, pkt, NETPKT_TX);
+      return ret;
     }
 
   return ret;
@@ -347,6 +321,8 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf, size_t len)
           continue;
         }
 
+      NETDEV_RXPACKETS(&lower->netdev);
+
       /* Get IO data */
 
       data = netpkt_getdata(lower, pkt);
@@ -358,6 +334,7 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf, size_t len)
 
       if (eth->type != htons(ETHTYPE_IP))
         {
+          NETDEV_RXDROPPED(&lower->netdev);
           goto errout;
         }
 
@@ -371,6 +348,7 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf, size_t len)
       addr = net_ip4addr_conv32(ipv4->destipaddr);
       if (!net_ipv4addr_cmp(addr, lower->netdev.d_ipaddr))
         {
+          NETDEV_RXDROPPED(&lower->netdev);
           goto errout;
         }
 
@@ -378,6 +356,7 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf, size_t len)
 
       if (ipv4->proto != IP_PROTO_UDP)
         {
+          NETDEV_RXDROPPED(&lower->netdev);
           goto errout;
         }
 
@@ -388,6 +367,7 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf, size_t len)
 
       if (udp->destport != np->srcport)
         {
+          NETDEV_RXDROPPED(&lower->netdev);
           goto errout;
         }
 

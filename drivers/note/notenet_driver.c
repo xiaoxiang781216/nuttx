@@ -30,13 +30,6 @@
 #include <nuttx/net/netpoll.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/wqueue.h>
-
-/****************************************************************************
- * Pre-processor definitions
- ****************************************************************************/
-
-#define NOTENET_WORK_DELAY MSEC2TICK(CONFIG_DRIVERS_NOTENET_WORK_DELAY)
 
 /****************************************************************************
  * Private Types
@@ -46,9 +39,7 @@ struct notenet_driver_s
 {
   struct note_driver_s  driver;  /* Note driver part, must be first element */
   spinlock_t            lock;    /* Lock */
-  FAR netpkt_t         *pkt;     /* Allocated net packet */
-  size_t                next;    /* The next index (where data is added) */
-  struct work_s         work;    /* Used for deferred callback work */
+  netpkt_queue_t        pktq;    /* Allocated net packet queue */
   struct netpoll_s      np;      /* Netpoll */
 };
 
@@ -56,8 +47,6 @@ struct notenet_driver_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static bool notenetdev_transfer(FAR struct notenet_driver_s *drv);
-static void notenetdev_work(FAR void *priv);
 static int note_netdev_add(FAR struct note_driver_s *driver,
                            FAR const void *note, size_t notelen,
                            bool noswitches);
@@ -108,57 +97,6 @@ DEFINE_PER_CPU_BMP(struct notenet_driver_s, g_notenet) =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: notenetdev_transfer
- ****************************************************************************/
-
-static bool notenetdev_transfer(FAR struct notenet_driver_s *drv)
-{
-  irqstate_t flags;
-  int ret;
-
-  flags = spin_lock_irqsave_notrace(&drv->lock);
-
-  if (drv->next == 0)
-    {
-      spin_unlock_irqrestore_notrace(&drv->lock, flags);
-      return true;
-    }
-
-  /* Send IOB */
-
-  ret = netpoll_udp_pkt_send(&drv->np, drv->pkt);
-  if (ret < 0)
-    {
-      spin_unlock_irqrestore_notrace(&drv->lock, flags);
-      return false;
-    }
-
-  /* Get IOB - blocking */
-
-  drv->pkt = netpoll_udp_pkt_alloc(&drv->np);
-  drv->next = 0;
-
-  spin_unlock_irqrestore_notrace(&drv->lock, flags);
-
-  return true;
-}
-
-/****************************************************************************
- * Name: notenetdev_work
- ****************************************************************************/
-
-static void notenetdev_work(FAR void *arg)
-{
-  FAR struct notenet_driver_s *drv = arg;
-
-  if (!notenetdev_transfer(drv))
-    {
-      work_queue(HPWORK, &drv->work, notenetdev_work, arg,
-                 NOTENET_WORK_DELAY);
-    }
-}
-
-/****************************************************************************
  * Name: note_netdev_add
  *
  * Description:
@@ -183,54 +121,50 @@ static int note_netdev_add(FAR struct note_driver_s *driver,
 {
   FAR struct notenet_driver_s *drv =
     (FAR struct notenet_driver_s *)driver;
-  clock_t      delay  = NOTENET_WORK_DELAY;
   size_t       maxlen = netpoll_get_maxlen(&drv->np);
-  size_t       space;
   irqstate_t   flags;
+  int          ret;
 
   flags = spin_lock_irqsave_notrace(&drv->lock);
 
   /* Ignore data if device is not ready */
 
-  if (!drv->pkt || drv->np.lower == NULL ||
+  if (drv->np.lower == NULL ||
       IFF_IS_RUNNING(drv->np.lower->netdev.d_flags) == 0)
     {
       spin_unlock_irqrestore_notrace(&drv->lock, flags);
       return -ENODEV;
     }
 
-try:
-  if (drv->next + notelen > maxlen)
+  /* Copy the whole note; netpoll_queue_copyin grows the queue as needed,
+   * splitting at maxlen boundaries (one queue entry per wire frame/packet).
+   */
+
+  ret = netpoll_queue_copyin(&drv->np, &drv->pktq, note, notelen);
+  if (ret < 0)
     {
-      /* Unlock before entering syslog_netdev_transfer,
-       * it is already locked internally
+      /* On copy failure (e.g. IOB exhaustion), discard the batch so the
+       * next note starts from a clean queue state.
        */
 
+      iob_free_queue(&drv->pktq);
       spin_unlock_irqrestore_notrace(&drv->lock, flags);
-      notenetdev_transfer(drv);
-      flags = spin_lock_irqsave_notrace(&drv->lock);
-      goto try;
+      return ret;
     }
 
-  /* Copy data to packet */
+  /* Flush on any queue overflow or >75% packet fill. netpoll is safe
+   * from noswitches contexts (it bypasses the net stack), so we don't
+   * need to defer when !noswitches.
+   */
 
-  netpoll_pkt_copy(&drv->np, drv->pkt, note, notelen, drv->next);
-  drv->next += notelen;
+  UNUSED(noswitches);
 
-  /* Start work immediately when data more then 75% */
-
-  space = maxlen - drv->next;
-  if (space < maxlen / 4)
+  if (iob_get_queue_size(&drv->pktq) > 3 * maxlen / 4)
     {
-      delay = 0;
+      netpoll_udp_queue_send(&drv->np, &drv->pktq);
     }
 
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
-
-  if (!noswitches && work_available(&drv->work))
-    {
-      work_queue(HPWORK, &drv->work, notenetdev_work, drv, delay);
-    }
 
   return 0;
 }
@@ -239,8 +173,16 @@ static void note_netdev_flush(FAR struct note_driver_s *driver)
 {
   FAR struct notenet_driver_s *drv =
     (FAR struct notenet_driver_s *)driver;
+  irqstate_t flags;
 
-  notenetdev_transfer(drv);
+  flags = spin_lock_irqsave_notrace(&drv->lock);
+
+  if (!IOB_QEMPTY(&drv->pktq))
+    {
+      netpoll_udp_queue_send(&drv->np, &drv->pktq);
+    }
+
+  spin_unlock_irqrestore_notrace(&drv->lock, flags);
 }
 
 /****************************************************************************
@@ -263,30 +205,9 @@ static void note_netdev_flush(FAR struct note_driver_s *driver)
 
 int notenet_init(FAR struct netdev_lowerhalf_s *dev)
 {
-  FAR struct notenet_driver_s *note = &g_notenet;
-  FAR netpkt_t                *pkt;
-  irqstate_t                   flags;
-  int                          ret;
-
-  /* Initialize netpoll */
-
-  ret = netpoll_udp_init(&note->np, dev,
-                         CONFIG_DRIVERS_NOTENET_PORT,
-                         CONFIG_DRIVERS_NOTENET_IPADDR,
-                         CONFIG_DRIVERS_NOTENET_PORT,
-                         CONFIG_DRIVERS_NOTENET_MAC);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* Allocate iob */
-
-  pkt = netpoll_udp_pkt_alloc(&note->np);
-
-  flags = spin_lock_irqsave_notrace(&note->lock);
-  note->pkt = pkt;
-  spin_unlock_irqrestore_notrace(&note->lock, flags);
-
-  return 0;
+  return netpoll_udp_init(&g_notenet.np, dev,
+                          CONFIG_DRIVERS_NOTENET_PORT,
+                          CONFIG_DRIVERS_NOTENET_IPADDR,
+                          CONFIG_DRIVERS_NOTENET_PORT,
+                          CONFIG_DRIVERS_NOTENET_MAC);
 }

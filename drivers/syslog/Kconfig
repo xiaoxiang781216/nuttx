@@ -581,10 +581,6 @@ config SYSLOG_NETDEV_PORT
 	---help---
 		UDP port for SYSLOG output.
 
-config SYSLOG_NETDEV_WORK_DELAY
-	int "Netdev SYSLOG work delay(ms)"
-	default 100
-
 endif # SYSLOG_NETDEV
 
 config CONSOLE_SYSLOG

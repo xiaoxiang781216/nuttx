@@ -39,7 +39,7 @@ struct netpoll_s
 
   FAR struct netdev_lowerhalf_s *lower;
 
-  size_t    maxlen;                  /* Maximum MTU size */
+  size_t    maxlen;                  /* Max payload bytes per packet/frame */
   size_t    hdrlen;                  /* Total header length */
   uint16_t  srcport;                 /* Source port number */
   uint16_t  destport;                /* Destination port number */
@@ -60,23 +60,6 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Name: netpoll_pkt_alloc
- *
- * Description:
- *   Allocate a TX packet for netpoll.
- *   When there are no free IOBs, this function tries to free one netpkt.
- *
- * Input Parameters:
- *   dev - The lower half device driver structure
- *
- * Returned Value:
- *   Pointer to the packet, NULL on failure
- *
- ****************************************************************************/
-
-FAR netpkt_t *netpoll_pkt_alloc(FAR struct netdev_lowerhalf_s *dev);
-
-/****************************************************************************
  * Name: netpoll_get_maxlen
  *
  * Description:
@@ -93,30 +76,44 @@ FAR netpkt_t *netpoll_pkt_alloc(FAR struct netdev_lowerhalf_s *dev);
 #define netpoll_get_maxlen(np) ((np)->maxlen)
 
 /****************************************************************************
- * Name: netpoll_pkt_copy
+ * Name: netpoll_pkt_alloc
  *
  * Description:
- *   Copy 'len' bytes of data from a buffer into the netpkt
+ *   Allocate a TX netpkt via the lower half's TX accounting path and
+ *   reserve np->hdrlen bytes at the front for the header.  Blocks
+ *   (draining pending TX) until a TX quota slot is available.
  *
  * Input Parameters:
- *   np     - pointer to netpoll data
- *   pkt    - packet to send
- *   src    - The source buffer
- *   len    - How many bytes to copy
- *   offset - The offset of netpkt to put the data
+ *   np - pointer to netpoll data
+ *
+ * Returned Value:
+ *   Pointer to the allocated netpkt.
+ *
+ ****************************************************************************/
+
+FAR netpkt_t *netpoll_pkt_alloc(FAR struct netpoll_s *np);
+
+/****************************************************************************
+ * Name: netpoll_queue_copyin
+ *
+ * Description:
+ *   Append 'len' bytes of data to the packet queue. The queue grows as
+ *   needed, splitting at np->maxlen boundaries (one queue entry per wire
+ *   packet/frame).
+ *
+ * Input Parameters:
+ *   np   - pointer to netpoll data
+ *   pktq - packet queue to append into
+ *   src  - The source buffer
+ *   len  - How many bytes to copy
  *
  * Returned Value:
  *   0:Success; negated errno on failure
  *
  ****************************************************************************/
 
-static inline_function int netpoll_pkt_copy(FAR struct netpoll_s *np,
-                                            FAR netpkt_t *pkt,
-                                            FAR const void *src,
-                                            size_t len, int offset)
-{
-  return netpkt_copyin(np->lower, pkt, src, len, np->hdrlen + offset);
-}
+int netpoll_queue_copyin(FAR struct netpoll_s *np, FAR netpkt_queue_t *pktq,
+                         FAR const void *src, size_t len);
 
 /****************************************************************************
  * Name: netpoll_udp_init
@@ -142,22 +139,6 @@ int netpoll_udp_init(FAR struct netpoll_s *np,
                      FAR struct netdev_lowerhalf_s *lower,
                      uint16_t srcport, in_addr_t destipaddr,
                      uint16_t destport, FAR const char *destmac);
-
-/****************************************************************************
- * Name: netpoll_udp_pkt_alloc
- *
- * Description:
- *   Allocate UDP packet and prepare packet header (MAC, IPv4 and UDP).
- *
- * Input Parameters:
- *   np - pointer to netpoll data
- *
- * Returned Value:
- *   Pointer to PACKET on success; NULL on failure.
- *
- ****************************************************************************/
-
-FAR netpkt_t *netpoll_udp_pkt_alloc(FAR struct netpoll_s *np);
 
 /****************************************************************************
  * Name: netpoll_upd_send
@@ -198,21 +179,26 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf,
                          size_t len);
 
 /****************************************************************************
- * Name: netpoll_udp_pkt_send
+ * Name: netpoll_udp_queue_send
  *
  * Description:
- *   Send packet as UDP packet with netpoll.
+ *   Send queued packets as UDP packets with netpoll.
  *
  * Input Parameters:
  *   np  - pointer to netpoll data
- *   pkt - packet to send
+ *   pktq - packet queue to send
  *
  * Returned Value:
- *   OK on success; Negated errno on failure.
+ *   OK on success; negative errno on failure
+ *
+ * Assumption:
+ *   Packets in queue are ready to send. All packet headers are complete,
+ *   only UDP payload length can change.
  *
  ****************************************************************************/
 
-int netpoll_udp_pkt_send(FAR struct netpoll_s *np, FAR netpkt_t *pkt);
+int netpoll_udp_queue_send(FAR struct netpoll_s *np,
+                           FAR netpkt_queue_t *pktq);
 
 #undef EXTERN
 #ifdef __cplusplus
