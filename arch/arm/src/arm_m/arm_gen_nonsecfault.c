@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/syslog/syslog.h>
+#include <nuttx/reboot_notifier.h>
 
 #include <stdint.h>
 #include <arch/irq.h>
@@ -52,6 +53,81 @@
 
 static uint32_t g_psp_ns;
 static uint32_t g_msp_ns;
+
+static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
+                                     unsigned long action,
+                                     FAR void *data);
+
+static DEFINE_PER_CPU_BMP(struct notifier_block, g_switch_nse_panic_nb) =
+{
+  arm_secure_panic_notifier,  /* notifier_call */
+};
+#define g_switch_nse_panic_nb this_cpu_var_bmp(g_switch_nse_panic_nb)
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: arm_secure_panic_notifier
+ *
+ * Description:
+ *   Panic notifier callback to switch secure world to nonsecure world.
+ *
+ ****************************************************************************/
+
+static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
+                                     unsigned long action,
+                                     FAR void *data)
+{
+  UNUSED(nb);
+  UNUSED(data);
+
+  if (action == SYS_HALT)
+    {
+      __asm__ volatile ("mrs %0, msp_ns" : "=r" (g_msp_ns));
+
+      /* Reserve 32 bytes on MSP_NS for fake exception frame
+       * (8 registers × 4 bytes: R0, R1, R2, R3, R12, LR, PC, xPSR)
+       */
+
+      putreg32(0,          g_msp_ns - 32);
+      putreg32(0,          g_msp_ns - 28);
+      putreg32(0,          g_msp_ns - 24);
+      putreg32(0,          g_msp_ns - 20);
+      putreg32(0,          g_msp_ns - 16);
+      putreg32(0,          g_msp_ns - 12);
+      putreg32(0,          g_msp_ns - 8);
+      putreg32(0x01000000, g_msp_ns - 4);
+
+      /* Update MSP_NS */
+
+      __asm__ volatile ("msr msp_ns, %0" : : "r" (g_msp_ns - 32) : "memory");
+
+      /* Update MSP_NS and jump to NS via EXC_RETURN
+       *
+       * EXC_RETURN = 0xFFFFFFB1:
+       *   bit[6]  S     = 0  (NS stack frame)
+       *   bit[5]  DCRS  = 1  (default callee regs)
+       *   bit[4]  FType = 1  (no FP)
+       *   bit[3]  Mode  = 0  (Handler Mode)
+       *   bit[2]  SPSEL = 0  (MSP)
+       *   bit[0]  ES    = 1  (current fault recived by S)
+       */
+
+      __asm__ volatile (
+        "mov lr, #0xFFFFFFB1\n"
+        "bx  lr             \n"
+        :
+        :
+        : "lr"
+      );
+    }
+
+  /* Should never reach here */
+
+  return 0;
+}
 
 /****************************************************************************
  * Public Functions
@@ -164,4 +240,24 @@ int arm_gen_nonsecurefault(int irq, uint32_t *regs)
   putreg32(0, sp_ns + OFFSET_R15);
 
   return 1;
+}
+
+/****************************************************************************
+ * Name: arm_panic_switch_nsec_register
+ *
+ * Description:
+ *   This function is used to register a panic notifier to handle system
+ *   crash events. When triggered, it switches the system to the non-secure
+ *   world by constructing fake stack frames and "bx" instruction.
+ *
+ * Input Parameters:
+ *   None
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void arm_panic_switch_nsec_register(void)
+{
+  register_reboot_notifier(&g_switch_nse_panic_nb);
 }
