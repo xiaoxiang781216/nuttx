@@ -213,6 +213,13 @@ static inline_function bool
 cangw_rule_match(FAR const struct cangw_rule_s *rtrule,
                  FAR const struct cangw_rule_s *rule)
 {
+  /* Match gateway type */
+
+  if (rtrule->gwtype != rule->gwtype)
+    {
+      return false;
+    }
+
   /* Match filter if caller provided a non-zero filter */
 
   if (rule->gw.ccgw.filter.can_id != 0 ||

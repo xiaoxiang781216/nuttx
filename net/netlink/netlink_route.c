@@ -366,6 +366,21 @@ const struct nla_policy g_cgw_policy[CGW_MAX + 1] =
     {
       .len = sizeof(struct cgw_fdframe_mod)
     },
+
+  [CGW1722_DST_STREAM_ID] =
+    {
+      .type = NLA_U8
+    },
+
+  [CGW1722_SRC_CAN_BUS_ID] =
+    {
+      .type = NLA_U8
+    },
+
+  [CGW1722_ACF_CAN_MSG_TYPE] =
+    {
+      .type = NLA_U8
+    },
 };
 #endif
 
@@ -1471,6 +1486,42 @@ static int netlink_add_cangw_rule(FAR struct rtcanmsg *rt_msg,
       goto errout_with_rule;
     }
 
+  if (cgw_rule->gwtype == CGW_TYPE_CAN_ETH1722)
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+    {
+      ret = -EINVAL;
+
+      if (!tb[CGW1722_DST_STREAM_ID])
+        {
+          goto errout_with_rule;
+        }
+
+      cgw_rule->gw.cegw.stream_index =
+               nla_get_u8(tb[CGW1722_DST_STREAM_ID]);
+
+      if (!tb[CGW1722_SRC_CAN_BUS_ID])
+        {
+          goto errout_with_rule;
+        }
+
+      cgw_rule->gw.cegw.can_bus_id =
+               nla_get_u8(tb[CGW1722_SRC_CAN_BUS_ID]);
+
+      if (!tb[CGW1722_ACF_CAN_MSG_TYPE])
+        {
+          goto errout_with_rule;
+        }
+
+      cgw_rule->gw.cegw.acf_msg_type =
+               nla_get_u8(tb[CGW1722_ACF_CAN_MSG_TYPE]);
+    }
+#else
+    {
+      ret = -EAFNOSUPPORT;
+      goto errout_with_rule;
+    }
+#endif
+
   add_cangw_rule(src_dev, cgw_rule);
   return OK;
 
@@ -1511,7 +1562,10 @@ static int netlink_new_can_route(FAR const struct nlmsghdr *nlmsg)
 
   switch (rt_msg->gwtype)
     {
+      /* add can_can_gw_s can_eth_gw_s rule */
+
       case CGW_TYPE_CAN_CAN:
+      case CGW_TYPE_CAN_ETH1722:
         return netlink_add_cangw_rule(rt_msg, tb);
 
       default:
@@ -1583,6 +1637,8 @@ static int netlink_remove_cangw_rule(FAR struct rtcanmsg *rt_msg,
             }
         }
 
+      rule.gwtype = rt_msg->gwtype;
+
       /* Pass NULL for removed — let remove_cangw_rule free heap nodes
        * directly instead of collecting them.
        */
@@ -1632,6 +1688,7 @@ static int netlink_del_can_route(FAR const struct nlmsghdr *nlmsg)
   switch (rt_msg->gwtype)
     {
       case CGW_TYPE_CAN_CAN:
+      case CGW_TYPE_CAN_ETH1722:
         return netlink_remove_cangw_rule(rt_msg, tb);
 
       default:

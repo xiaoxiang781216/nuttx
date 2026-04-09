@@ -147,6 +147,12 @@
 
 #define nla_get_in_addr(nla) (*(FAR uint32_t *)nla_data(nla))
 
+/* nla_get_u8 - return payload of u8 attribute
+ * nla: netlink attribute
+ */
+
+#define nla_get_u8(nla) (*(FAR uint8_t *)nla_data(nla))
+
 /* nlmsg_attrdata - head of attributes data
  * nlh: netlink message header
  * hdrlen: length of family specific header

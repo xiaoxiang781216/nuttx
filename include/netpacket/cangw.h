@@ -112,6 +112,10 @@ enum
   CGW_FDMOD_XOR,  /* CAN FD frame modification binary XOR */
   CGW_FDMOD_SET,  /* CAN FD frame modification set alternate values */
 
+  CGW1722_DST_STREAM_ID,
+  CGW1722_SRC_CAN_BUS_ID,
+  CGW1722_ACF_CAN_MSG_TYPE,
+
   __CGW_MAX
 };
 
