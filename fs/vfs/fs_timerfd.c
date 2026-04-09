@@ -619,7 +619,9 @@ int timerfd_settime(int fd, int flags,
    * re-armed
    */
 
-  if (new_value->it_value.tv_sec <= 0 && new_value->it_value.tv_nsec <= 0)
+  if ((new_value->it_value.tv_sec <= 0 &&
+       new_value->it_value.tv_nsec <= 0) ||
+      (new_value->it_interval.tv_sec >= TICK2SEC(WDOG_MAX_DELAY)))
     {
       goto errout_with_csection;
     }

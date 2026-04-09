@@ -44,6 +44,35 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: timer_timespec_validate
+ *
+ * Description:
+ *   Validate that a timespec has legal values.
+ *
+ * Input Parameters:
+ *   ts - Pointer to the timespec to validate.
+ *
+ * Returned Value:
+ *   true if the timespec is valid, false otherwise.
+ *
+ ****************************************************************************/
+
+static inline_function bool
+timer_timespec_validate(FAR const struct timespec *ts)
+{
+  DEBUGASSERT(ts);
+  return ts->tv_sec >= 0 && ts->tv_nsec >= 0 &&
+         ts->tv_nsec < NSEC_PER_SEC;
+}
+
+static inline_function bool
+timer_delay_validate(FAR const struct timespec *ts)
+{
+  DEBUGASSERT(ts);
+  return ts->tv_sec < TICK2SEC(WDOG_MAX_DELAY);
+}
+
+/****************************************************************************
  * Name: timer_signotify
  *
  * Description:
@@ -215,22 +244,17 @@ int timer_settime(timer_t timerid, int flags,
 {
   FAR struct posix_timer_s *timer = timer_gethandle(timerid);
   clock_t delay;
-  int ret = OK;
+  int ret = -EINVAL;
 
   /* Some sanity checks */
 
-  if (timer == NULL ||
-      value->it_interval.tv_nsec < 0 ||
-      value->it_interval.tv_nsec >= NSEC_PER_SEC ||
-      value->it_interval.tv_sec < 0 ||
-      value->it_value.tv_nsec < 0 ||
-      value->it_value.tv_nsec >= NSEC_PER_SEC ||
-      value->it_value.tv_sec < 0)
+  if (timer != NULL && value != NULL &&
+      timer_timespec_validate(&value->it_interval) &&
+      timer_timespec_validate(&value->it_value) &&
+      timer_delay_validate(&value->it_interval))
     {
-      ret = -EINVAL;
-    }
-  else
-    {
+      ret = OK;
+
       if (ovalue)
         {
           /* Get the number of ticks before the underlying watchdog expires */
@@ -284,6 +308,8 @@ int timer_settime(timer_t timerid, int flags,
                * absolute time in 'value'.
                */
 
+              /* Note the timespec->tick conversion here may overflow. */
+
               clock_abstime2ticks(timer->pt_clock, &value->it_value, &delay);
             }
           else
@@ -299,9 +325,8 @@ int timer_settime(timer_t timerid, int flags,
 
           /* Then start the watchdog */
 
-          ret = wd_start_abstick(&timer->pt_timer,
-                                 clock_delay2abstick(delay),
-                                 timer_timeout, (wdparm_t)timer);
+          ret = wd_start(&timer->pt_timer, delay, timer_timeout,
+                         (wdparm_t)timer);
         }
     }
 

@@ -75,12 +75,7 @@ int timer_gettime(timer_t timerid, FAR struct itimerspec *value)
   FAR struct posix_timer_s *timer = timer_gethandle(timerid);
   int ret = OK;
 
-  if (!timer || !value)
-    {
-      set_errno(EINVAL);
-      ret = ERROR;
-    }
-  else
+  if (timer && value)
     {
       /* Get the number of ticks before the underlying watchdog expires */
 
@@ -90,6 +85,11 @@ int timer_gettime(timer_t timerid, FAR struct itimerspec *value)
 
       clock_ticks2time(&value->it_value, ticks);
       clock_ticks2time(&value->it_interval, timer->pt_delay);
+    }
+  else
+    {
+      set_errno(EINVAL);
+      ret = ERROR;
     }
 
   return ret;
