@@ -1144,6 +1144,8 @@ int dns_query(FAR const char *hostname, FAR union dns_addr_u *addr,
       return -ENOMEM;
     }
 
+  tls_cleanup_push(tls_get_info(), lib_free, qdata);
+
   /* Set up the query info structure */
 
   qdata->query.result   = -EADDRNOTAVAIL;
@@ -1193,7 +1195,7 @@ int dns_query(FAR const char *hostname, FAR union dns_addr_u *addr,
 
   /* Free the query data */
 
-  lib_free(qdata);
+  tls_cleanup_pop(tls_get_info(), 1);
 
   return ret;
 }

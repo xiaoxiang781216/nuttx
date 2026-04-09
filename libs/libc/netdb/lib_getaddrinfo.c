@@ -393,11 +393,13 @@ int getaddrinfo(FAR const char *hostname, FAR const char *servname,
       return EAI_MEMORY;
     }
 
+  tls_cleanup_push(tls_get_info(), lib_free, hostbuffer);
+
   gethostentbyname_r(hostname, &host,
                      hostbuffer, CONFIG_NETDB_BUFSIZE, &ret, flags);
   if (ret != OK)
     {
-      lib_free(hostbuffer);
+      tls_cleanup_pop(tls_get_info(), 1);
       return ret;
     }
 
@@ -421,7 +423,7 @@ int getaddrinfo(FAR const char *hostname, FAR const char *servname,
               freeaddrinfo(*res);
             }
 
-          lib_free(hostbuffer);
+          tls_cleanup_pop(tls_get_info(), 1);
           return EAI_MEMORY;
         }
 
@@ -450,6 +452,6 @@ int getaddrinfo(FAR const char *hostname, FAR const char *servname,
       prev_ai = ai;
     }
 
-  lib_free(hostbuffer);
+  tls_cleanup_pop(tls_get_info(), 1);
   return (*res != NULL) ? OK : EAI_FAMILY;
 }
