@@ -153,6 +153,15 @@
 
 #define nla_get_u8(nla) (*(FAR uint8_t *)nla_data(nla))
 
+/* nla_get_u16 - return payload of u16 attribute
+ * nla: netlink attribute
+ *
+ * Note: Returns value in host byte order. Netlink attributes
+ * are assumed to be in host byte order (same as Linux convention).
+ */
+
+#define nla_get_u16(nla) (*(FAR uint16_t *)nla_data(nla))
+
 /* nlmsg_attrdata - head of attributes data
  * nlh: netlink message header
  * hdrlen: length of family specific header

@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include <nuttx/kmalloc.h>
 #include <nuttx/net/cangw.h>
 #include <nuttx/net/ieee1722.h>
 #include <nuttx/net/netstats.h>
@@ -49,8 +50,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define MAX_1722ACF_STREAMS 128
 
 /****************************************************************************
  * Private Data
@@ -518,93 +517,189 @@ ieee1722acf_stream_flush(FAR struct net_driver_s *dev,
  * Name: del_1722acf_stream
  *
  * Description:
- *   Delete a acf stream structure from the list.
+ *   Remove ACF stream(s) from the device stream list and clean up
+ *   resources. If index is negative, all streams are removed; otherwise
+ *   only the stream matching index is removed.
  *
- * Assumptions: Input steam pointer should not be null
- *              which is assured by caller.
+ *   This function operates in two phases:
+ *   Phase 1 (locked):  Remove matching nodes from the device list.
+ *   Phase 2 (unlocked): Cancel pending work, free IOBs, close PTP.
+ *
+ * Input Parameters:
+ *   dev     - The network device whose stream list to modify.
+ *   index   - Stream index to match, or negative to remove all.
+ *   removed - If non-NULL, removed nodes are collected into this queue
+ *             and the caller is responsible for freeing them.
+ *             If NULL, heap-allocated nodes are freed immediately after
+ *             resource cleanup; non-heap nodes (e.g. embedded in a
+ *             static config struct) are only unlinked and cleaned up.
+ *
+ * Returned Value:
+ *   Number of streams removed.
  *
  ****************************************************************************/
 
-void del_1722acf_stream(FAR struct net_driver_s *dev,
-                        FAR struct ieee1722acf_stream_s *streams,
-                        size_t num)
+int del_1722acf_stream(FAR struct net_driver_s *dev,
+                       int index, FAR sq_queue_t *removed)
 {
-  int i;
+  FAR struct ieee1722acf_stream_s *stream;
+  sq_queue_t local_removed;
+  FAR sq_entry_t *current;
+  FAR sq_entry_t *tmp;
+  int count = 0;
 
-  DEBUGASSERT(dev != NULL && streams != NULL);
+  DEBUGASSERT(dev);
+
+  /* Use caller's queue if provided, otherwise use a local one so that
+   * Phase 2 cleanup can iterate over the removed nodes uniformly.
+   */
+
+  if (removed == NULL)
+    {
+      removed = &local_removed;
+    }
+
+  sq_init(removed);
+
+  /* Phase 1 (locked): unlink matching nodes from the device list */
 
   netdev_lock(dev);
 
-  for (i = 0; i < num; i++)
+  sq_for_every_safe(&dev->d_1722acf_streams, current, tmp)
     {
-      sq_rem(&streams[i].node, &dev->d_1722acf_streams);
+      stream = (FAR struct ieee1722acf_stream_s *)current;
+
+      if (index < 0 || stream->index == index)
+        {
+          sq_rem(current, &dev->d_1722acf_streams);
+          sq_addlast(current, removed);
+          count++;
+        }
     }
 
   netdev_unlock(dev);
 
-  for (i = 0; i < num; i++)
+  /* Phase 2 (unlocked): release resources held by each removed stream */
+
+  sq_for_every_safe(removed, current, tmp)
     {
-      work_cancel_sync(HPWORK, &streams[i].cycle_work);
-      iob_free_chain(streams[i].iob);
-      streams[i].iob = NULL;
-      streams[i].priv = NULL;
+      stream = (FAR struct ieee1722acf_stream_s *)current;
+      work_cancel_sync(HPWORK, &stream->cycle_work);
+      iob_free_chain(stream->iob);
+      stream->iob = NULL;
+      stream->priv = NULL;
 
 #if defined(CONFIG_NET_TIMESTAMP) && defined(CONFIG_PTP_CLOCK)
 
       /* Close PTP clock device */
 
-      file_close(&streams[i].ptp_filep);
+      file_close(&stream->ptp_filep);
 #endif
+
+      /* If caller did not provide a queue, free heap nodes directly.
+       * Non-heap nodes are only cleaned up above but not freed.
+       */
+
+      if (removed == &local_removed)
+        {
+          sq_rem(current, removed);
+          if (kmm_heapmember(current))
+            {
+              kmm_free(current);
+            }
+        }
     }
+
+  return count;
+}
+
+/****************************************************************************
+ * Name: find_1722acf_stream
+ *
+ * Description:
+ *   Find an ACF stream by index on the specified device.
+ *
+ * Input Parameters:
+ *   dev   - The network device to search on.
+ *   index - The stream index to find.
+ *
+ * Returned Value:
+ *   Pointer to the stream if found, NULL otherwise.
+ *
+ * Note:
+ *   Caller must hold netdev_lock(dev) before calling this function.
+ *
+ ****************************************************************************/
+
+FAR struct ieee1722acf_stream_s *
+find_1722acf_stream(FAR struct net_driver_s *dev, uint16_t index)
+{
+  FAR sq_entry_t *entry;
+
+  DEBUGASSERT(dev != NULL);
+
+  sq_for_every(&dev->d_1722acf_streams, entry)
+    {
+      FAR struct ieee1722acf_stream_s *stream =
+                (FAR struct ieee1722acf_stream_s *)entry;
+      if (stream->index == index)
+        {
+          return stream;
+        }
+    }
+
+  return NULL;
 }
 
 /****************************************************************************
  * Name: add_1722acf_stream
  *
  * Description:
- *   Add a acf stream structure to the list.
+ *   Add acf stream structure(s) to the device stream list.
+ *   Checks for duplicate stream index before adding.
  *
- * Assumptions: Input steam pointer should not be null
- *              which is assured by caller.
+ * Returned Value:
+ *   OK on success, -EEXIST if a stream with the same index already exists.
  *
  ****************************************************************************/
 
-void add_1722acf_stream(FAR struct net_driver_s *dev,
-                        FAR struct ieee1722acf_stream_s *streams,
-                        size_t num)
+int add_1722acf_stream(FAR struct net_driver_s *dev,
+                       FAR struct ieee1722acf_stream_s *streams)
 {
-  int i;
   DEBUGASSERT(dev != NULL && streams != NULL);
-
-  if (num == 0 || num > MAX_1722ACF_STREAMS)
-    {
-      return;
-    }
 
   netdev_lock(dev);
 
-  for (i = 0; i < num; i++)
+  /* Check for duplicate stream index */
+
+  if (find_1722acf_stream(dev, streams->index))
     {
-#if defined(CONFIG_NET_TIMESTAMP) && defined(CONFIG_PTP_CLOCK)
-
-      /* Open PTP clock device */
-
-      char path[16];
-
-      snprintf(path, sizeof(path), "/dev/ptp%d", streams[i].ptp_id);
-      int ret = file_open(&streams[i].ptp_filep, path,
-                          O_RDONLY | O_CLOEXEC);
-      if (ret < 0)
-        {
-          nerr("ERROR: Failed to open PTP clock device %s: %d\n", path, ret);
-        }
-#endif
-
-      streams[i].priv = dev;
-      sq_addlast(&streams[i].node, &dev->d_1722acf_streams);
+      netdev_unlock(dev);
+      nwarn("ERROR: Stream index %u already exists\n",
+            streams->index);
+      return -EEXIST;
     }
 
+#if defined(CONFIG_NET_TIMESTAMP) && defined(CONFIG_PTP_CLOCK)
+
+  /* Open PTP clock device */
+
+  char path[16];
+
+  snprintf(path, sizeof(path), "/dev/ptp%d", streams->ptp_id);
+  int ret = file_open(&streams->ptp_filep, path,
+                      O_RDONLY | O_CLOEXEC);
+  if (ret < 0)
+    {
+      nerr("ERROR: Failed to open PTP clock device %s: %d\n", path, ret);
+    }
+#endif
+
+  streams->priv = dev;
+  sq_addlast(&streams->node, &dev->d_1722acf_streams);
+
   netdev_unlock(dev);
+  return OK;
 }
 
 /****************************************************************************

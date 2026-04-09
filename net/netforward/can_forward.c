@@ -184,14 +184,37 @@ static inline_function int can_forward_filter(FAR struct can_filter *filter,
  *
  ****************************************************************************/
 
-void add_cangw_rule(FAR struct net_driver_s *dev,
-                    FAR struct cangw_rule_s *cgw_rules)
+int add_cangw_rule(FAR struct net_driver_s *dev,
+                   FAR struct cangw_rule_s *cgw_rules)
 {
   DEBUGASSERT(dev && cgw_rules);
+
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  if (cgw_rules->gwtype == CGW_TYPE_CAN_ETH1722)
+    {
+      /* Verify that the target stream exists on dest device */
+
+      netdev_lock(cgw_rules->dest_dev);
+      if (!find_1722acf_stream(cgw_rules->dest_dev,
+                               cgw_rules->gw.cegw.stream_index))
+        {
+          netdev_unlock(cgw_rules->dest_dev);
+          nwarn("WARNING: Target stream index %u not found on %s, "
+                "create stream first with eth1722acf tool\n",
+                cgw_rules->gw.cegw.stream_index,
+                cgw_rules->dest_dev->d_ifname);
+          return -ENOENT;
+        }
+
+      netdev_unlock(cgw_rules->dest_dev);
+    }
+#endif
 
   netdev_lock(dev);
   sq_addlast(&cgw_rules->node, &dev->d_cangw_rules);
   netdev_unlock(dev);
+
+  return OK;
 }
 
 /****************************************************************************

@@ -119,6 +119,21 @@ enum
   __CGW_MAX
 };
 
+/* ETH1722ACF stream rtnetlink attribute definitions */
+
+enum
+{
+  ETH1722ACF_UNSPEC,
+  ETH1722ACF_DST_IF,
+  ETH1722ACF_STREAM_ID,
+  ETH1722ACF_STREAM_SENDCYCLE,
+  ETH1722ACF_MSGCNT_LIMIT,
+  ETH1722ACF_STREAM_TYPE,
+  ETH1722ACF_DST_MAC,          /* destination MAC address (ETH_ALEN bytes) */
+  ETH1722ACF_STREAM_ID_VAL,    /* IEEE 1722 stream identifier (u16) */
+  __ETH1722ACF_MAX
+};
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -153,6 +168,10 @@ enum
 
 #define CGW_MODATTR_LEN sizeof(struct cgw_frame_mod)
 #define CGW_FDMODATTR_LEN sizeof(struct cgw_fdframe_mod)
+
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+#define ETH1722ACF_MAX (__ETH1722ACF_MAX - 1)
+#endif
 
 #endif /* CONFIG_NET_CANFORWARD */
 #endif /* __INCLUDE_NETPACKET_CANGW_H */

@@ -126,12 +126,10 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-void add_1722acf_stream(FAR struct net_driver_s *dev,
-                        FAR struct ieee1722acf_stream_s *streams,
-                        size_t num);
-void del_1722acf_stream(FAR struct net_driver_s *dev,
-                        FAR struct ieee1722acf_stream_s *streams,
-                        size_t num);
+int add_1722acf_stream(FAR struct net_driver_s *dev,
+                       FAR struct ieee1722acf_stream_s *streams);
+int del_1722acf_stream(FAR struct net_driver_s *dev,
+                       int index, FAR sq_queue_t *removed);
 
 #undef EXTERN
 #ifdef __cplusplus

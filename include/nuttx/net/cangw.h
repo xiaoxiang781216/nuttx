@@ -127,8 +127,8 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-void add_cangw_rule(FAR struct net_driver_s *dev,
-                    FAR struct cangw_rule_s *cgw_rules);
+int add_cangw_rule(FAR struct net_driver_s *dev,
+                   FAR struct cangw_rule_s *cgw_rules);
 
 int remove_cangw_rule(FAR struct net_driver_s *dev,
                       FAR const struct cangw_rule_s *rule,

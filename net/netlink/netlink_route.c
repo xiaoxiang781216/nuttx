@@ -45,6 +45,9 @@
 #ifdef CONFIG_NET_CANFORWARD
 #include <nuttx/net/cangw.h>
 #endif
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+#include <nuttx/net/ieee1722.h>
+#endif
 #include "netdev/netdev.h"
 #include "arp/arp.h"
 #include "inet/inet.h"
@@ -382,7 +385,48 @@ const struct nla_policy g_cgw_policy[CGW_MAX + 1] =
       .type = NLA_U8
     },
 };
-#endif
+
+#  ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+const struct nla_policy g_eth1722acf_policy[ETH1722ACF_MAX + 1] =
+{
+  [ETH1722ACF_DST_IF] =
+    {
+      .type = NLA_U32
+    },
+
+  [ETH1722ACF_STREAM_ID] =
+    {
+      .type = NLA_U8
+    },
+
+  [ETH1722ACF_STREAM_SENDCYCLE] =
+    {
+      .type = NLA_U16
+    },
+
+  [ETH1722ACF_MSGCNT_LIMIT] =
+    {
+      .type = NLA_U8
+    },
+
+  [ETH1722ACF_STREAM_TYPE] =
+    {
+      .type = NLA_U8
+    },
+
+  [ETH1722ACF_DST_MAC] =
+    {
+      .len = ETH_ALEN
+    },
+
+  [ETH1722ACF_STREAM_ID_VAL] =
+    {
+      .type = NLA_U16
+    },
+};
+
+#  endif /* CONFIG_NET_CANFORWARD_IEEE1722ACF */
+#endif /* CONFIG_NET_CANFORWARD && !CONFIG_NETLINK_DISABLE_NEWROUTE/DELROUTE */
 
 /****************************************************************************
  * Private Functions
@@ -1522,7 +1566,12 @@ static int netlink_add_cangw_rule(FAR struct rtcanmsg *rt_msg,
     }
 #endif
 
-  add_cangw_rule(src_dev, cgw_rule);
+  ret = add_cangw_rule(src_dev, cgw_rule);
+  if (ret < 0)
+    {
+      goto errout_with_rule;
+    }
+
   return OK;
 
 errout_with_rule:
@@ -1573,7 +1622,121 @@ static int netlink_new_can_route(FAR const struct nlmsghdr *nlmsg)
     }
 }
 
-#endif /* CONFIG_NET_CANFORWARD && !CONFIG_NETLINK_DISABLE_NEWROUTE */
+#  ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+static int netlink_new_eth1722acf_stream(NETLINK_HANDLE handle,
+                                         FAR const struct nlmsghdr *nlmsg)
+{
+  FAR struct net_driver_s *dev;
+  FAR struct nlattr *tb[ETH1722ACF_MAX + 1];
+  FAR struct ieee1722acf_stream_s *stream;
+  uint32_t dst_if;
+  uint8_t stream_idx;
+  int ret;
+
+  /* nlmsg boundary check */
+
+  if (nlmsg->nlmsg_len < nlmsg_msg_size(sizeof(struct rtgenmsg)))
+    {
+      return -EINVAL;
+    }
+
+  /* parse nlmsg and acquire tb. */
+
+  ret = nlmsg_parse(nlmsg, sizeof(struct rtgenmsg), tb,
+                    ETH1722ACF_MAX, g_eth1722acf_policy, NULL);
+
+  if (ret < 0)
+    {
+      nwarn("nlmsg_parse failed: %d\n", ret);
+      return ret;
+    }
+
+  /* Validate and extract destination interface */
+
+  if (!tb[ETH1722ACF_DST_IF])
+    {
+      nerr("ERROR: ETH1722ACF_DST_IF is NULL\n");
+      return -EINVAL;
+    }
+
+  dst_if = *(FAR uint32_t *)nla_data(tb[ETH1722ACF_DST_IF]);
+  dev = netdev_findbyindex(dst_if);
+
+  if (!dev)
+    {
+      nerr("ERROR: Destination device not found (ifindex=%u)\n",
+           dst_if);
+      return -ENODEV;
+    }
+
+  /* Validate and extract stream index */
+
+  if (!tb[ETH1722ACF_STREAM_ID])
+    {
+      nerr("ERROR: ETH1722ACF_STREAM_ID is NULL\n");
+      return -EINVAL;
+    }
+
+  stream_idx = nla_get_u8(tb[ETH1722ACF_STREAM_ID]);
+
+  /* Validate and extract stream type (mandatory) */
+
+  if (!tb[ETH1722ACF_STREAM_TYPE])
+    {
+      nerr("ERROR: ETH1722ACF_STREAM_TYPE is NULL\n");
+      return -EINVAL;
+    }
+
+  /* Allocate stream structure before taking the lock */
+
+  stream = kmm_zalloc(sizeof(struct ieee1722acf_stream_s));
+  if (!stream)
+    {
+      nwarn("Failed to allocate acf stream\n");
+      return -ENOMEM;
+    }
+
+  /* Fill stream configuration */
+
+  stream->index = stream_idx;
+  stream->stream_type = nla_get_u8(tb[ETH1722ACF_STREAM_TYPE]);
+
+  if (tb[ETH1722ACF_STREAM_SENDCYCLE])
+    {
+      stream->cycle_us = nla_get_u16(tb[ETH1722ACF_STREAM_SENDCYCLE]);
+    }
+
+  if (tb[ETH1722ACF_MSGCNT_LIMIT])
+    {
+      stream->msgcnt_limit = nla_get_u8(tb[ETH1722ACF_MSGCNT_LIMIT]);
+    }
+
+  if (tb[ETH1722ACF_DST_MAC])
+    {
+      nla_memcpy(stream->dest_mac, tb[ETH1722ACF_DST_MAC], ETH_ALEN);
+    }
+
+  if (tb[ETH1722ACF_STREAM_ID_VAL])
+    {
+      stream->stream_id = nla_get_u16(tb[ETH1722ACF_STREAM_ID_VAL]);
+    }
+
+  /* Add stream to device — add_1722acf_stream handles duplicate check
+   * and locking atomically.
+   */
+
+  ret = add_1722acf_stream(dev, stream);
+  if (ret < 0)
+    {
+      kmm_free(stream);
+      return ret;
+    }
+
+  return OK;
+}
+
+#  endif /* CONFIG_NET_CANFORWARD_IEEE1722ACF */
+#endif /* !CONFIG_NETLINK_DISABLE_NEWROUTE */
 
 #if !defined(CONFIG_NETLINK_DISABLE_DELROUTE) && \
     defined(CONFIG_NET_CANFORWARD)
@@ -1696,7 +1859,69 @@ static int netlink_del_can_route(FAR const struct nlmsghdr *nlmsg)
     }
 }
 
-#endif /* CONFIG_NET_CANFORWARD && !CONFIG_NETLINK_DISABLE_DELROUTE */
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+
+static int netlink_del_eth1722acf_stream(FAR const struct nlmsghdr *nlmsg)
+{
+  FAR struct net_driver_s *dev;
+  FAR struct nlattr *tb[ETH1722ACF_MAX + 1];
+  uint32_t dst_if;
+  uint8_t stream_idx;
+  int ret;
+
+  /* nlmsg boundary check */
+
+  if (nlmsg->nlmsg_len < nlmsg_msg_size(sizeof(struct rtgenmsg)))
+    {
+      return -EINVAL;
+    }
+
+  ret = nlmsg_parse(nlmsg, sizeof(struct rtgenmsg), tb,
+                    ETH1722ACF_MAX, g_eth1722acf_policy, NULL);
+  if (ret < 0)
+    {
+      nwarn("nlmsg_parse failed: %d\n", ret);
+      return ret;
+    }
+
+  if (!tb[ETH1722ACF_DST_IF])
+    {
+      return -EINVAL;
+    }
+
+  dst_if = *(FAR uint32_t *)nla_data(tb[ETH1722ACF_DST_IF]);
+  dev = netdev_findbyindex(dst_if);
+
+  if (!dev)
+    {
+      return -ENODEV;
+    }
+
+  if (!tb[ETH1722ACF_STREAM_ID])
+    {
+      /* No stream index specified — delete all streams on this device.
+       * Pass NULL for removed — let del_1722acf_stream clean up and
+       * free heap nodes directly.
+       */
+
+      ret = del_1722acf_stream(dev, -1, NULL);
+    }
+  else
+    {
+      stream_idx = nla_get_u8(tb[ETH1722ACF_STREAM_ID]);
+      ret = del_1722acf_stream(dev, stream_idx, NULL);
+      if (ret == 0)
+        {
+          nwarn("stream not found\n");
+          return -ENOENT;
+        }
+    }
+
+  return OK;
+}
+
+#endif /* CONFIG_NET_CANFORWARD_IEEE1722ACF */
+#endif /* !CONFIG_NETLINK_DISABLE_DELROUTE */
 
 #if (!defined(CONFIG_NETLINK_DISABLE_NEWROUTE) || \
      !defined(CONFIG_NETLINK_DISABLE_DELROUTE)) && \
@@ -2163,6 +2388,17 @@ ssize_t netlink_route_sendto(NETLINK_HANDLE handle,
           }
         else
 #endif
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+        if (req->gen.rtgen_family == AF_PACKET)
+          {
+            ret = netlink_new_eth1722acf_stream(handle, nlmsg);
+            if (nlmsg->nlmsg_flags & NLM_F_ACK)
+              {
+                netlink_can_ack(handle, nlmsg, ret);
+              }
+          }
+        else
+#endif
           {
             ret = -EAFNOSUPPORT;
             nwarn("Unsupported address family %d\n",
@@ -2177,6 +2413,17 @@ ssize_t netlink_route_sendto(NETLINK_HANDLE handle,
         if (req->gen.rtgen_family == AF_CAN)
           {
             ret = netlink_del_can_route(nlmsg);
+            if (nlmsg->nlmsg_flags & NLM_F_ACK)
+              {
+                netlink_can_ack(handle, nlmsg, ret);
+              }
+          }
+        else
+#endif
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+        if (req->gen.rtgen_family == AF_PACKET)
+          {
+            ret = netlink_del_eth1722acf_stream(nlmsg);
             if (nlmsg->nlmsg_flags & NLM_F_ACK)
               {
                 netlink_can_ack(handle, nlmsg, ret);
