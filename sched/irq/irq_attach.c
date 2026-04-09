@@ -29,6 +29,7 @@
 #include <errno.h>
 
 #include <nuttx/irq.h>
+#include <nuttx/clock.h>
 
 #include "irq/irq.h"
 
@@ -180,7 +181,7 @@ int irq_attach(int irq, xcpt_t isr, FAR void *arg)
           g_irqvector[ndx].arg     = arg;
     #ifdef CONFIG_SCHED_IRQMONITOR
           g_irqvector[ndx].monitor = false;
-          g_irqvector[ndx].start   = clock_systime_ticks();
+          g_irqvector[ndx].start   = perf_gettime();
           g_irqvector[ndx].time    = 0;
           g_irqvector[ndx].count   = 0;
     #endif

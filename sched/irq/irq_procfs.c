@@ -165,7 +165,7 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
   /* Take a snapshot and reset the counts */
 
   memcpy(&copy, info, sizeof(struct irq_info_s));
-  now         = clock_systime_ticks();
+  now         = perf_gettime();
   info->start = now;
   info->time  = 0;
   info->count = 0;
@@ -207,12 +207,12 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
   perf_convert(copy.time, &delta);
 
 #ifdef CONFIG_HAVE_LONG_LONG
-  /* elapsed = <current-time> - <start-time>, units=clock ticks
-   * rate    = <interrupt-count> * TICKS_PER_SEC / elapsed
+  /* elapsed = <current-time> - <start-time>, units=perf ticks
+   * rate    = <interrupt-count> * perf_getfreq() / elapsed
    */
 
   elapsed  = elapsed ? elapsed : 1;
-  intcount = (uint64_t)atomic_read(&copy.count) * TICK_PER_SEC;
+  intcount = (uint64_t)atomic_read(&copy.count) * perf_getfreq();
   intpart  = intcount / elapsed;
   intcount = intcount - intpart * elapsed;
   fracpart = intcount * 1000 / elapsed;
