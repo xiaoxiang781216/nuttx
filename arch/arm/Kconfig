@@ -52,6 +52,16 @@ config ARM_TOOLCHAIN_GHS
 
 endchoice # ARM Toolchain Selection
 
+config ARM_GCC_SECTION_PLUGIN
+	bool "GCC Section Plugin"
+	default n
+	depends on ARM_TOOLCHAIN_GNU_EABI
+	---help---
+		Enable the GCC section plugin which adds support for
+		pragma GCC section text/data/bss/rodata to control
+		linker section placement. Required for AUTOSAR MemMap
+		section control on ARM GCC targets.
+
 config ARM_DECODEFIQ
 	bool
 	default n
@@ -2012,4 +2022,5 @@ endif
 if ARCH_CHIP_CXD32XX
 source "arch/arm/src/cxd32xx/Kconfig"
 endif
+
 endif # ARCH_ARM

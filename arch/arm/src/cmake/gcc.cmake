@@ -242,6 +242,27 @@ if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
   add_compile_options(-ffunction-sections -fdata-sections)
 endif()
 
+# GCC Section Plugin for AUTOSAR MemMap
+
+if(CONFIG_ARM_GCC_SECTION_PLUGIN)
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} -print-file-name=plugin
+    OUTPUT_VARIABLE _GCC_PLUGIN_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} -dumpversion
+    OUTPUT_VARIABLE _GCC_VER
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX MATCH "^[0-9]+" _GCC_MAJOR "${_GCC_VER}")
+  set(_PLUGIN_SO "${_GCC_PLUGIN_DIR}/gccsection${_GCC_MAJOR}.so")
+  if(EXISTS "${_PLUGIN_SO}")
+    add_compile_options(-fplugin=${_PLUGIN_SO})
+    message(STATUS "GCC Section Plugin: ${_PLUGIN_SO}")
+  else()
+    message(WARNING "gccsection plugin not found: ${_PLUGIN_SO}")
+  endif()
+endif()
+
 # Debug link map
 
 if(CONFIG_DEBUG_LINK_MAP)

@@ -140,6 +140,14 @@ ifeq ($(CONFIG_ARCH_INSTRUMENT_ALL),y)
   ARCHOPTIMIZATION += -finstrument-functions
 endif
 
+# GCC Section Plugin
+
+ifeq ($(CONFIG_ARM_GCC_SECTION_PLUGIN),y)
+  GCCPLUGINDIR := $(shell $(CC) -print-file-name=plugin)
+  GCCMAJORVER  := $(shell $(CC) -dumpversion | cut -d. -f1)
+  ARCHOPTIMIZATION += -fplugin=$(GCCPLUGINDIR)/gccsection$(GCCMAJORVER).so
+endif
+
 ifeq ($(CONFIG_UNWINDER_ARM),y)
   ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
     ARCHOPTIMIZATION += -gtws
