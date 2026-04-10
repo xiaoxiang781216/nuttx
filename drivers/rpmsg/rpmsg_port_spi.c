@@ -45,8 +45,9 @@
  ****************************************************************************/
 
 #ifdef CONFIG_RPMSG_PORT_SPI_CRC
-#  define rpmsg_port_spi_crc16(hdr)     crc16xor((FAR uint8_t *)&(hdr)->cmd, \
-                                                  (hdr)->len - sizeof((hdr)->crc))
+#  define rpmsg_port_spi_crc16(hdr) \
+    (crc16xor((FAR uint8_t *)&(hdr)->cmd, \
+     (hdr)->len - sizeof((hdr)->crc)) ?: 1)
 #else
 #  define rpmsg_port_spi_crc16(hdr)     0
 #endif
