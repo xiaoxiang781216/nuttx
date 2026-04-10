@@ -271,8 +271,6 @@ static void virtio_serial_send(FAR struct uart_dev_s *dev, int ch)
       dev->xmit.buffer[dev->xmit.head] = ch;
       dev->xmit.head = nexthead;
     }
-
-  uart_dmatxavail(dev);
 }
 
 /****************************************************************************
