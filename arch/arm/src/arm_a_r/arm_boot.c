@@ -29,6 +29,7 @@
 
 #include "arm.h"
 #include "arm_internal.h"
+#include "init/init.h"
 #include "scu.h"
 #include "smp.h"
 
@@ -107,5 +108,73 @@ void arm_boot_primary(void)
 
   arm_finish_busy_wait();
 
+#ifdef CONFIG_BUILD_PROTECTED
+  arm_userspace();
+#endif
+
   nx_start();
 }
+
+/****************************************************************************
+ * Name: arm_boot_secondary
+ *
+ * Description:
+ *   Complete boot sequence for secondary CPUs on ARM-A/R SMP/BMP
+ *   platforms. Called from arm_cpuhead.S. This function does not return.
+ *   Chip-specific initialization is performed by arm_cpu_boot().
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_SMP) || defined(CONFIG_BMP)
+void arm_boot_secondary(int cpu)
+{
+  arm_fpuconfig();
+
+#ifdef CONFIG_PERCPU_SECTION
+  CP15_SET(TPIDRPRW, PERCPU_OFFSET * cpu);
+#  ifdef CONFIG_BUILD_PROTECTED
+  CP15_SET(TPIDRURO, USERSPACE->us_offset_percpu * cpu);
+#  endif
+
+#  ifdef CONFIG_BMP
+  memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
+         (void *)_ldata_percpu,
+         (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
+  memset((void *)((uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu),
+         0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
+#  endif
+#endif
+
+#ifdef CONFIG_ARM_MPU
+  mpu_priv_flash((uintptr_t)_stext,
+                 (uintptr_t)_etext - (uintptr_t)_stext);
+#endif
+
+#ifdef CONFIG_ARCH_PERF_EVENTS
+  up_perf_init(0);
+#endif
+
+  arm_enable_smp(cpu);
+
+  /* Chip-specific secondary CPU initialization */
+
+  arm_cpu_boot(cpu);
+
+#undef g_nx_initstate
+  while (!OSINIT_MM_READY());
+
+  up_irqinitialize();
+
+#ifdef CONFIG_BMP
+#  ifdef CONFIG_BUILD_PROTECTED
+  arm_userspace();
+#  endif
+  nx_start();
+#else
+#  ifdef CONFIG_ARM_HAVE_PTM
+  arm_timer_secondary_init(0);
+#  endif
+  nx_idle_trampoline();
+#endif
+}
+#endif

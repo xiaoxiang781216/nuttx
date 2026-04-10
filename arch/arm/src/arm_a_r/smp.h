@@ -134,20 +134,18 @@ void __cpu7_start(void);
  * Name: arm_cpu_boot
  *
  * Description:
- *   Continues the C-level initialization started by the assembly language
- *   __cpu[n]_start function.  At a minimum, this function needs to
- *   initialize interrupt handling and, perhaps, wait on WFI for
- *   arm_cpu_start() to issue an SGI.
- *
- *   This function must be provided by the each ARMv7-R MCU and implement
- *   MCU-specific initialization logic.
+ *   Chip-specific secondary CPU initialization hook, called by
+ *   arm_boot_secondary() after common setup (FPU, PERCPU, MPU, SMP)
+ *   is complete. Implement chip-specific logic here such as GIC init,
+ *   VBAR setup, etc. This function should return to let the common
+ *   boot sequence continue.
  *
  * Input Parameters:
  *   cpu - The CPU index.  This is the same value that would be obtained by
  *      calling this_cpu();
  *
  * Returned Value:
- *   Does not return.
+ *   None.
  *
  ****************************************************************************/
 

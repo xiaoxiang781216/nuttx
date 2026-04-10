@@ -75,25 +75,4 @@ extern uint8_t _vector_start[]; /* Beginning of vector block */
 
 void arm_cpu_boot(int cpu)
 {
-  /* Initialize the FPU */
-
-  arm_fpuconfig();
-
-  /* Enable SMP cache coherency for the CPU */
-
-  arm_enable_smp(cpu);
-
-  /* Initialize the Generic Interrupt Controller (GIC) for CPUn (n != 0) */
-
-  up_irqinitialize();
-
-  arm_timer_secondary_init(0);
-
-  /* The next thing that we expect to happen is for logic running on CPU0
-   * to call up_cpu_start() which generate an SGI and a context switch to
-   * the configured NuttX IDLE task.
-   * Transfer control to the IDLE task.
-   */
-
-  nx_idle_trampoline();
 }

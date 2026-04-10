@@ -809,7 +809,7 @@ __cpu7_boot:
  ****************************************************************************/
 
   .align  8
-  .globl  arm_cpu_boot
+  .globl  arm_boot_secondary
   .type .Lcpu_vstart, %function
 
 .Lcpu_vstart:
@@ -828,7 +828,7 @@ __cpu7_boot:
   mov   fp, #0        /* Clear framepointer */
   mov   lr, #0        /* LR = return address (none) */
   mov   r0, r5        /* Input parameter = CPU index */
-  b     arm_cpu_boot  /* Branch to C level CPU initialization */
+  b     arm_boot_secondary  /* Branch to C level CPU initialization */
   .size .Lcpu_vstart, .-.Lcpu_vstart
 
 /***************************************************************************

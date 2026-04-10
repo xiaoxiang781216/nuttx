@@ -34,15 +34,15 @@
 
 #include <arch/board/board_memorymap.h>
 
+#include "arm_internal.h"
 #include "mpu.h"
-#include "qemu_userspace.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: qemu_userspace
+ * Name: arm_userspace
  *
  * Description:
  *   For the case of the separate user-/kernel-space build, perform whatever
@@ -55,7 +55,7 @@
  *
  ****************************************************************************/
 
-void qemu_userspace(void)
+void arm_userspace(void)
 {
   uint8_t   *src;
   uint8_t   *start;

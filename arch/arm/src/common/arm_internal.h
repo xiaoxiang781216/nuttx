@@ -180,6 +180,10 @@ extern "C"
 
 EXTERN const uintptr_t g_idle_topstack;
 
+#ifdef CONFIG_BUILD_PROTECTED
+void arm_userspace(void);
+#endif
+
 /* Address of the saved user stack pointer */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3

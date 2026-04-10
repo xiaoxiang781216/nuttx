@@ -107,7 +107,7 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
   mpu_user_intsram(ubase, usize);
 #endif
 
-  /* user space access to user heap is done in qemu_userspace() */
+  /* user space access to user heap is done in arm_userspace() */
 }
 
 /****************************************************************************

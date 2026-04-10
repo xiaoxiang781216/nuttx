@@ -35,7 +35,6 @@
 
 #include "qemu_irq.h"
 #include "qemu_memorymap.h"
-#include "qemu_userspace.h"
 #include "smp.h"
 #include "gic.h"
 #include "scu.h"
@@ -88,10 +87,6 @@ void arm_boot(void)
 
 #ifdef CONFIG_DEVICE_TREE
   fdt_register((const char *)0x40000000);
-#endif
-
-#ifdef CONFIG_BUILD_PROTECTED
-  qemu_userspace();
 #endif
 }
 

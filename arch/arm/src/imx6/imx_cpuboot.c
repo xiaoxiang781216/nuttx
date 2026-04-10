@@ -247,26 +247,5 @@ void imx_cpu_enable(void)
 
 void arm_cpu_boot(int cpu)
 {
-  /* Initialize the FPU */
-
-  arm_fpuconfig();
-
-  /* Enable SMP cache coherency for the CPU */
-
-  arm_enable_smp(cpu);
-
-  /* Initialize the Generic Interrupt Controller (GIC) for CPUn (n != 0) */
-
-  up_irqinitialize();
-
-  /* The next thing that we expect to happen is for logic running on CPU0
-   * to call up_cpu_start() which generate an SGI and a context switch to
-   * the configured NuttX IDLE task.
-   */
-
-  for (; ; )
-    {
-      asm("WFI");
-    }
 }
 #endif /* CONFIG_SMP */
