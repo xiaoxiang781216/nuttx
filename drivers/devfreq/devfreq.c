@@ -418,15 +418,11 @@ static int devfreq_driver_target(FAR struct devfreq_s *devfreq,
 
   target_freq = devfreq->freq_table[idx];
 
-  /* Get current hardware frequency to check if transition is needed,
-   * and to record the old frequency for notifier chain.
+  /* Get current hardware frequency to record the old frequency
+   * for notifier chain.
    */
 
   cur_freq = devfreq_get_frequency(devfreq);
-  if (target_freq == cur_freq)
-    {
-      return 0;
-    }
 
   freq.old = cur_freq;
   freq.new = target_freq;
