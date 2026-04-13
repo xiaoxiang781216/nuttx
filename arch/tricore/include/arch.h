@@ -37,6 +37,7 @@
 #endif
 
 #include <arch/barriers.h>
+#include <arch/irq.h>
 #ifdef CONFIG_ARCH_JUMP_LABEL
 #  include <arch/jump_label.h>
 #endif
@@ -131,11 +132,11 @@ typedef struct arch_addrenv_s arch_addrenv_t;
 #define up_addrenv_enter_kernel() \
 do \
   { \
-    irqstate_t _flags = __disable_and_save(); \
+    irqstate_t _flags = up_irq_save(); \
     mpu_control(false); \
     mpu_set_active_set(g_mpu_kset); \
     mpu_control(true); \
-    __restore(_flags); \
+    up_irq_restore(_flags); \
   } \
 while (0);
 
@@ -150,7 +151,7 @@ while (0);
 #define up_addrenv_leave_kernel() \
 do \
   { \
-    irqstate_t _flags = __disable_and_save(); \
+    irqstate_t _flags = up_irq_save(); \
     struct tcb_s *tcb_ = this_task(); \
     if (tcb_ && tcb_->group && tcb_->group->tg_addrenv_own != NULL && \
         tcb_->group->tg_addrenv_own->addrenv.data) \
@@ -159,7 +160,7 @@ do \
         mpu_set_active_set(g_app_set); \
         mpu_control(true); \
       } \
-    __restore(_flags); \
+    up_irq_restore(_flags); \
   } \
 while (0);
 
