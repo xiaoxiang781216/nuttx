@@ -174,7 +174,10 @@ class GnuToolchain(Toolchain):
     ):
         extern_symbols_str = ""
         for name, addr in extern_symbols.items():
-            extern_symbols_str += f"{name} = 0x{addr:x};"
+            extern_symbols_str += (
+                f".extern.{name} 0x{addr:x} (NOLOAD) : {{ {name} = .; }}"
+            )
+
         cmd = (
             [
                 args.cc,
