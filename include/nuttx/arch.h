@@ -3122,6 +3122,27 @@ void up_memtag_tag_mem(const void *addr, size_t size);
 
 #endif /* CONFIG_ARCH_HAVE_MEMTAG */
 
+/****************************************************************************
+ * Name: up_static_branch_patch
+ *
+ * Description:
+ *   Patch a single jump_entry instruction at runtime. The arch
+ *   implementation replaces a NOP with a branch or vice-versa.
+ *
+ * Input Parameters:
+ *   entry  - Pointer to the jump_entry to patch
+ *   enable - true: emit branch; false: emit NOP
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_JUMP_LABEL
+struct jump_entry_s;
+void up_static_branch_patch(FAR struct jump_entry_s *entry, bool enable);
+#endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 }

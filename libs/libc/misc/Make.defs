@@ -78,6 +78,12 @@ ifeq ($(CONFIG_FDSAN),y)
 CSRCS += lib_fdsan.c
 endif
 
+# Jump label (static keys) support
+
+ifeq ($(CONFIG_ARCH_JUMP_LABEL),y)
+CSRCS += jump_label.c
+endif
+
 # Note support
 
 ifeq ($(CONFIG_DRIVERS_NOTE),y)

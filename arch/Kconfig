@@ -710,6 +710,28 @@ config ARCH_PERF_COUNT_BITWIDTH
 		Bit width of the perf count. When arch is tricore, the value is 31.
 		When arch is not tricore, the value is 32.
 
+config ARCH_HAVE_JUMP_LABEL
+	bool
+	default n
+	---help---
+		Selected by arch to indicate support for runtime code patching
+		(jump label / static keys). Requires the CPU to execute code
+		from writable memory and support atomic 4-byte instruction
+		replacement (e.g. Thumb-2 NOP.W <-> B.W).
+
+config ARCH_JUMP_LABEL
+	bool "Use static keys (jump label) optimization"
+	default n
+	depends on ARCH_HAVE_JUMP_LABEL && UP
+	---help---
+		Enable runtime code patching for static keys.
+		When enabled, static_branch_unlikely/likely() compiles
+		to a NOP or JMP instruction that is patched at runtime,
+		eliminating branch overhead for dormant features.
+		When disabled, static keys fall back to volatile bool
+		with branch prediction hints.
+		Currently only supports single-core (UP) configurations.
+
 config ARCH_HAVE_BOOTLOADER
 	bool
 	default n
