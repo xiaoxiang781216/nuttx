@@ -643,6 +643,38 @@ config RISCV_PERCPU_SCRATCH
 		This option will enable Scratch-based Per-CPU storage to distinguish
 		the real cpu index.
 
+choice
+	prompt "RISC-V D-Cache Implementation"
+	depends on ARCH_DCACHE
+	default RISCV_CACHE_LITEX if ARCH_CHIP_LITEX
+	default RISCV_CACHE_ZICBOM
+
+config RISCV_CACHE_ZICBOM
+	bool "Zicbom (standard)"
+	---help---
+		Use standard RISC-V Zicbom extension for cache management.
+		Provides cbo.clean, cbo.flush, cbo.inval operations.
+
+config RISCV_CACHE_LITEX
+	bool "LiteX"
+	depends on ARCH_CHIP_LITEX
+	---help---
+		Use LiteX vendor-specific cache instructions.
+
+endchoice
+
+if RISCV_CACHE_ZICBOM
+
+config RISCV_CACHE_LINE_SIZE
+	int "Cache line size in bytes"
+	default 64
+	---help---
+		Cache line size in bytes for RISC-V cache operations.
+		Common values are 32 or 64 bytes. This should match the
+		actual cache line size of the target processor.
+
+endif # RISCV_CACHE_ZICBOM
+
 # Option to run NuttX in supervisor mode. This is obviously not usable in
 # flat mode, is questionable in protected mode, but is mandatory in kernel
 # mode.

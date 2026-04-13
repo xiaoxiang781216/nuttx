@@ -125,6 +125,10 @@ if(CONFIG_RISCV_PERCPU_SCRATCH)
   list(APPEND SRCS riscv_percpu.c)
 endif()
 
+if(CONFIG_RISCV_CACHE_ZICBOM)
+  list(APPEND SRCS riscv_cache.c)
+endif()
+
 if(CONFIG_ARCH_USE_S_MODE)
   add_subdirectory(supervisor)
 endif()

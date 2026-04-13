@@ -124,6 +124,10 @@ ifeq ($(CONFIG_RISCV_PERCPU_SCRATCH),y)
 CMN_CSRCS += riscv_percpu.c
 endif
 
+ifeq ($(CONFIG_RISCV_CACHE_ZICBOM),y)
+CMN_CSRCS += riscv_cache.c
+endif
+
 # Kernel runs in supervisor mode or machine mode ?
 
 ifeq ($(CONFIG_ARCH_USE_S_MODE),y)
