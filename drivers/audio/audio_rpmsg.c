@@ -124,6 +124,11 @@ struct audio_rpmsg_s
   FAR const char *devname;      /* Audio rpmsg device name */
   bool consumer;                /* True: consumer, false: producer */
   bool sharebuf;                /* True: share memory, false: not */
+  bool faulted;                 /* True: remote peer reported fault via
+                                 * HWRESET, commands will not be forwarded
+                                 * to remote until cleared by local HWRESET
+                                 * or next start/resume.
+                                 */
   sem_t wait;                   /* Wait sem, used for preventing any
                                  * opreation until the connection
                                  * between two cpu established.
@@ -366,6 +371,16 @@ static int audio_rpmsg_local_ioctl(FAR struct audio_rpmsg_s *aud, int cmd,
 
       case AUDIOIOC_GETAUDIOINFO:
         memcpy((FAR void *)(uintptr_t)arg, &aud->info, sizeof(aud->info));
+        break;
+
+      case AUDIOIOC_HWRESET:
+        if (aud->faulted)
+          {
+            aud->faulted = false;
+            break;
+          }
+
+        ret = -ENOTTY;
         break;
 
       default:
@@ -685,6 +700,12 @@ static int audio_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
         {
           0
         };
+
+      nxrmutex_lock(&aud->mutex);
+      aud->faulted = true;
+      nxrmutex_unlock(&aud->mutex);
+
+      audwarn("%s recv remote reset!\n", aud->devname);
 
       msg.msg_id = AUDIO_MSG_IOERR;
       audio_rpmsg_callback(aud, AUDIO_CALLBACK_MESSAGE, &msg);
@@ -1356,6 +1377,12 @@ static int audio_rpmsg_start(FAR struct audio_lowerhalf_s *dev)
 
   audinfo("audio %s start.\n", aud->devname);
 
+  /* Clear remote error flag for new start cycle */
+
+  nxrmutex_lock(&aud->mutex);
+  aud->faulted = false;
+  nxrmutex_unlock(&aud->mutex);
+
   /* Notify peer to start */
 
   return audio_rpmsg_deliver_message(aud, AUDIO_RPMSG_START,
@@ -1399,6 +1426,17 @@ static int audio_rpmsg_stop(FAR struct audio_lowerhalf_s *dev)
 
   aud->navail = 0;
   audio_rpmsg_callback(aud, AUDIO_CALLBACK_COMPLETE, NULL);
+
+  /* If remote reported error, skip forwarding stop to peer.
+   * Remote side handles its own cleanup independently.
+   */
+
+  if (aud->faulted)
+    {
+      nxrmutex_unlock(&aud->mutex);
+      return OK;
+    }
+
   nxrmutex_unlock(&aud->mutex);
 
   /* Notify peer to stop */
@@ -1427,6 +1465,15 @@ static int audio_rpmsg_pause(FAR struct audio_lowerhalf_s *dev)
 
   audinfo("audio %s pause.\n", aud->devname);
 
+  nxrmutex_lock(&aud->mutex);
+  if (aud->faulted)
+    {
+      nxrmutex_unlock(&aud->mutex);
+      return OK;
+    }
+
+  nxrmutex_unlock(&aud->mutex);
+
   return audio_rpmsg_deliver_message(aud, AUDIO_RPMSG_PAUSE,
                                      AUDIO_MSG_PAUSE);
 }
@@ -1450,6 +1497,14 @@ static int audio_rpmsg_resume(FAR struct audio_lowerhalf_s *dev)
   FAR struct audio_rpmsg_s *aud = (FAR struct audio_rpmsg_s *)dev;
 
   audinfo("audio %s resume.\n", aud->devname);
+
+  /* Clear remote error flag, same as start - user intends to
+   * make the device work again.
+   */
+
+  nxrmutex_lock(&aud->mutex);
+  aud->faulted = false;
+  nxrmutex_unlock(&aud->mutex);
 
   /* Notify peer to resume */
 
