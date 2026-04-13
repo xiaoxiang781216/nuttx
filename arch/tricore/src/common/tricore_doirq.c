@@ -48,6 +48,7 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
   uintptr_t istackbase = up_get_intstackbase(up_cpu_index());
   struct tcb_s **running_task = &g_running_task;
   struct tcb_s *tcb;
+  int irq;
 
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
@@ -75,9 +76,9 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
 
   /* Deliver the IRQ */
 
-  tricore_ack_irq(NDX_TO_IRQ(icr.B.CCPN));
-
-  irq_dispatch(NDX_TO_IRQ(icr.B.CCPN), regs);
+  irq = tricore_srpn_to_irq(icr.B.CCPN);
+  tricore_ack_irq(irq);
+  irq_dispatch(irq, regs);
 
   tcb = this_task();
 
