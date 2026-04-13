@@ -25,22 +25,11 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/note/note_driver.h>
-#include <nuttx/streams.h>
+#include <nuttx/config.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/****************************************************************************
- * Public Types
- ****************************************************************************/
-
-struct notestream_driver_s
-{
-  struct note_driver_s driver;
-  struct lib_outstream_s *stream;
-};
 
 #if defined(__cplusplus)
 extern "C"

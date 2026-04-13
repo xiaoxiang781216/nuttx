@@ -83,7 +83,7 @@ DECLARE_PER_CPU_BMP(struct noterpmsg_driver_s, g_noterpmsg_driver);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTELOWEROUT
-DECLARE_PER_CPU_BMP(struct notestream_driver_s, g_notestream_lowerout);
+DECLARE_PER_CPU_BMP(struct note_driver_s, g_notelowout);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTET32FDX

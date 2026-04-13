@@ -26,8 +26,12 @@ if(CONFIG_DRIVERS_NOTE)
   list(APPEND SRCS note_initialize.c)
 endif()
 
-if(CONFIG_DRIVERS_NOTEFILE OR CONFIG_DRIVERS_NOTELOWEROUT)
+if(CONFIG_DRIVERS_NOTEFILE)
   list(APPEND SRCS notestream_driver.c)
+endif()
+
+if(CONFIG_DRIVERS_NOTELOWEROUT)
+  list(APPEND SRCS notelowout_driver.c)
 endif()
 
 if(CONFIG_DRIVERS_NOTERAM)

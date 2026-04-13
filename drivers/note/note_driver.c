@@ -177,7 +177,7 @@ FAR static DEFINE_PER_CPU_BMP(note_drivers_t, g_note_drivers) =
   (FAR struct note_driver_s *)&g_notelog_driver,
 #  endif
 #  ifdef CONFIG_DRIVERS_NOTELOWEROUT
-  (FAR struct note_driver_s *)&g_notestream_lowerout,
+  (FAR struct note_driver_s *)&g_notelowout,
 #  endif
 #  ifdef CONFIG_DRIVERS_NOTERPMSG
   (FAR struct note_driver_s *)&g_noterpmsg_driver,
@@ -371,7 +371,7 @@ static void note_drivers_initialize(void)
 #  endif
 #  ifdef CONFIG_DRIVERS_NOTELOWEROUT
       g_note_drivers[i++] =
-        (FAR struct note_driver_s *)&g_notestream_lowerout;
+        (FAR struct note_driver_s *)&g_notelowout;
 #  endif
 #  ifdef CONFIG_DRIVERS_NOTERPMSG
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_noterpmsg_driver;

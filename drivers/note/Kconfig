@@ -168,19 +168,23 @@ config DRIVERS_NOTELOWEROUT
 	---help---
 		Note uses lower output.
 
+if DRIVERS_NOTELOWEROUT
+
 config DRIVERS_NOTELOWEROUT_FILTER_DEFAULT_MODE
 	hex "Note lower output filter mode"
-	depends on DRIVERS_NOTELOWEROUT && SCHED_INSTRUMENTATION_FILTER
+	depends on SCHED_INSTRUMENTATION_FILTER
 	default SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 	---help---
 		Filter mode for notelowerout
 
 config DRIVERS_NOTELOWEROUT_CPUSET
 	hex "Note lower output CPU set"
-	depends on DRIVERS_NOTELOWEROUT && !UP && SCHED_INSTRUMENTATION_FILTER
+	depends on !UP && SCHED_INSTRUMENTATION_FILTER
 	default SCHED_INSTRUMENTATION_CPUSET
 	---help---
 		CPU set for notelowerout
+
+endif # DRIVERS_NOTELOWEROUT
 
 config DRIVERS_NOTEFILE
 	bool "Note file driver"
