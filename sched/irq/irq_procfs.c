@@ -195,7 +195,8 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
    * byte offset into the pseudo-file, f_pos.
    */
 
-  if (atomic_read(&copy.count) == 0)
+  count = atomic_read(&copy.count);
+  if (count == 0)
     {
       return 0;
     }
@@ -204,17 +205,6 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
 
   irq_monitor_get_freq(irq, true, &intpart, &fracpart);
   perf_convert(copy.time, &delta);
-
-  /* Make sure that the count is representable with snprintf format */
-
-  if (atomic_read(&copy.count) > ULONG_MAX)
-    {
-      count = ULONG_MAX;
-    }
-  else
-    {
-      count = (unsigned long)atomic_read(&copy.count);
-    }
 
   /* Output information about this interrupt */
 
