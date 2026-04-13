@@ -28,19 +28,18 @@
 #include <fcntl.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/streams.h>
 #include <nuttx/note/notestream_driver.h>
 
 /****************************************************************************
  * Private Types
  ****************************************************************************/
 
-#ifdef CONFIG_DRIVERS_NOTEFILE
-struct notestream_file_s
+struct notestream_s
 {
   struct note_driver_s driver;
   struct lib_fileoutstream_s filestream;
 };
-#endif
 
 /****************************************************************************
  * Private Function Prototypes
@@ -71,63 +70,60 @@ static void notestream_add(FAR struct note_driver_s *drv,
                            FAR const void *note, size_t len,
                            bool noswitches)
 {
-  FAR struct notestream_file_s *filep =
-      (FAR struct notestream_file_s *)drv;
+  FAR struct notestream_s *notestream =
+      (FAR struct notestream_s *)drv;
 
-  lib_stream_puts(&filep->filestream, note, len);
+  lib_stream_puts(&notestream->filestream, note, len);
 }
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#ifdef CONFIG_DRIVERS_NOTEFILE
-int notefile_register(FAR const char *filename)
+int notestream_register_file(FAR const char *path)
 {
-  FAR struct notestream_file_s *notefile;
+  FAR struct notestream_s *notestream;
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  size_t len = strlen(filename) + 1;
+  size_t len = strlen(path) + 1;
 #else
   size_t len = 0;
 #endif
   int ret;
 
-  notefile = kmm_zalloc(sizeof(struct notestream_file_s) + len);
-  if (notefile == NULL)
+  notestream = kmm_zalloc(sizeof(struct notestream_s) + len);
+  if (notestream == NULL)
     {
       return -ENOMEM;
     }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  memcpy(notefile + 1, filename, len);
-  notefile->driver.name  = (FAR const char *)(notefile + 1);
-  notefile->driver.filter.mode.type_mask =
-                      CONFIG_DRIVERS_NOTEFILE_FILTER_DEFAULT_MODE;
+  memcpy(notestream + 1, path, len);
+  notestream->driver.name = (FAR const char *)(notestream + 1);
+  notestream->driver.filter.mode.type_mask =
+                      CONFIG_DRIVERS_NOTESTREAM_FILTER_DEFAULT_MODE;
 
 #  ifndef CONFIG_UP
-  notefile->driver.filter.mode.cpuset =
-                      CONFIG_DRIVERS_NOTEFILE_CPUSET;
+  notestream->driver.filter.mode.cpuset =
+                      CONFIG_DRIVERS_NOTESTREAM_CPUSET;
 #  endif
-
 #endif
 
-  notefile->driver.ops = &g_notestream_ops;
-  ret = lib_fileoutstream_open(&notefile->filestream,
-                               filename, O_WRONLY, 0666);
+  notestream->driver.ops = &g_notestream_ops;
+  ret = lib_fileoutstream_open(&notestream->filestream,
+                               path, O_WRONLY, 0666);
   if (ret < 0)
     {
-      kmm_free(notefile);
+      kmm_free(notestream);
       return ret;
     }
 
-  ret = note_driver_register(&notefile->driver);
+  ret = note_driver_register(&notestream->driver);
   if (ret < 0)
     {
-      lib_fileoutstream_close(&notefile->filestream);
-      kmm_free(notefile);
+      lib_fileoutstream_close(&notestream->filestream);
+      kmm_free(notestream);
     }
 
   return ret;
 }
-#endif
 

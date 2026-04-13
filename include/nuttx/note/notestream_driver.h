@@ -49,10 +49,11 @@ extern "C"
  ****************************************************************************/
 
 /****************************************************************************
- * Name: note_driver_unregister
+ * Name: notestream_register_file
  ****************************************************************************/
-#ifdef CONFIG_DRIVERS_NOTEFILE
-int notefile_register(FAR const char *filename);
+
+#ifdef CONFIG_DRIVERS_NOTESTREAM
+int notestream_register_file(FAR const char *path);
 #endif
 
 #if defined(__cplusplus)

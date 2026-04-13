@@ -168,11 +168,11 @@ int note_initialize(void)
     }
 #endif
 
-#ifdef CONFIG_DRIVERS_NOTEFILE
-  ret = notefile_register(CONFIG_DRIVERS_NOTEFILE_PATH);
+#ifdef CONFIG_DRIVERS_NOTESTREAM
+  ret = notestream_register_file(CONFIG_DRIVERS_NOTESTREAM_PATH);
   if (ret < 0)
     {
-      serr("notefile_register failed %d\n", ret);
+      serr("notestream_register_file failed %d\n", ret);
       return ret;
     }
 #endif

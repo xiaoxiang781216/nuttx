@@ -63,6 +63,11 @@ config DRIVERS_NOTE_DEFAULT_LEVEL
 		LOG_INFO      6  /* Informational message */
 		LOG_DEBUG     7  /* Debug-level message */
 
+config DRIVERS_NOTE_STRIP_FORMAT
+	bool "Strip sched_note_printf format string"
+	---help---
+		Strip sched_note_printf format string.
+
 config DRIVERS_NOTERAM
 	bool "Note RAM driver"
 	select DRIVERS_NOTE
@@ -156,11 +161,6 @@ config DRIVERS_NOTERAM_CPUSET
 
 endif # DRIVERS_NOTERAM
 
-config DRIVERS_NOTE_STRIP_FORMAT
-	bool "Strip sched_note_printf format string"
-	---help---
-		Strip sched_note_printf format string.
-
 config DRIVERS_NOTELOWEROUT
 	bool "Note lower output"
 	select DRIVERS_NOTE
@@ -186,32 +186,35 @@ config DRIVERS_NOTELOWEROUT_CPUSET
 
 endif # DRIVERS_NOTELOWEROUT
 
-config DRIVERS_NOTEFILE
-	bool "Note file driver"
+config DRIVERS_NOTESTREAM
+	bool "Note stream driver"
 	select DRIVERS_NOTE
 	---help---
-		The Note driver output to file.
+		The Note driver output to stream.
 
-config DRIVERS_NOTEFILE_FILTER_DEFAULT_MODE
-	hex "Note file driver filter mode"
-	depends on DRIVERS_NOTEFILE && SCHED_INSTRUMENTATION_FILTER
+if DRIVERS_NOTESTREAM
+
+config DRIVERS_NOTESTREAM_FILTER_DEFAULT_MODE
+	hex "Note stream driver filter mode"
+	depends on SCHED_INSTRUMENTATION_FILTER
 	default SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 	---help---
-		Filter mode for notefile
+		Filter mode for notestream
 
-config DRIVERS_NOTEFILE_CPUSET
-	hex "Note file driver CPU set"
-	depends on DRIVERS_NOTEFILE && !UP && SCHED_INSTRUMENTATION_FILTER
+config DRIVERS_NOTESTREAM_CPUSET
+	hex "Note stream driver CPU set"
+	depends on !UP && SCHED_INSTRUMENTATION_FILTER
 	default SCHED_INSTRUMENTATION_CPUSET
 	---help---
-		CPU set for notefile
+		CPU set for notestream
 
-config DRIVERS_NOTEFILE_PATH
-	string "Note file path"
-	depends on DRIVERS_NOTEFILE
+config DRIVERS_NOTESTREAM_PATH
+	string "Note stream path"
 	default "/dev/ttyS1"
 	---help---
-		The Note driver output to file path.
+		The Note driver output to stream path.
+
+endif # DRIVERS_NOTESTREAM
 
 config DRIVERS_NOTELOG
 	bool "Note syslog driver"
