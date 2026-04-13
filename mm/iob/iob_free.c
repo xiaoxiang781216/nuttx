@@ -32,6 +32,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/mm/mempool.h>
@@ -117,6 +118,23 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
 
 #ifdef CONFIG_DEBUG_IOB
   iob->io_owner[0] = '\0';
+#endif
+
+#ifdef CONFIG_IOB_ALLOC
+  if (iob->io_free != NULL)
+    {
+      if (iob->io_data == iob->io_data_)
+        {
+          iob->io_free(iob);
+        }
+      else
+        {
+          iob->io_free(iob->io_data);
+          kmm_free(iob);
+        }
+
+      return next;
+    }
 #endif
 
   /* Free the I/O buffer using mempool */
