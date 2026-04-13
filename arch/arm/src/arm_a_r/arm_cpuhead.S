@@ -823,6 +823,16 @@ __cpu7_boot:
   bl  arm_sm_init
 #endif
 
+  /* Initialize FIQ mode stack pointer for this CPU so that the inline
+   * FIQ handler has a valid stack without per-entry reload.
+   */
+
+#if defined(CONFIG_ARCH_HIPRI_INTERRUPT) && CONFIG_ARCH_INTERRUPTSTACK > 7
+  cps   #PSR_MODE_FIQ
+  setfiqstack r0, r1
+  cps   #PSR_MODE_SYS
+#endif
+
   /* Branch to continue C level CPU initialization */
 
   mov   fp, #0        /* Clear framepointer */

@@ -155,7 +155,7 @@
 .endif
 	srsdb		sp!, #PSR_MODE_SYS
 
-#  if defined(CONFIG_ARM_DECODEFIQ) && !defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#  ifdef CONFIG_ARCH_TRUSTZONE_SECURE
 	cpsid		if, #PSR_MODE_SYS
 #  else
 	cpsid		i, #PSR_MODE_SYS
@@ -541,9 +541,8 @@ arm_vectorundefinsn:
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARM_DECODEFIQ
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
 	.globl	arm_decodefiq
-#endif
 	.globl	arm_vectorfiq
 	.type	arm_vectorfiq, %function
 
@@ -612,11 +611,9 @@ arm_vectorfiq:
 	.word	g_fiqstacktop
 #endif
 
-#else
-	subs	pc, lr, #4
-#endif
 	.cfi_endproc
 	.size	arm_vectorfiq, . - arm_vectorfiq
+#endif
 
 /****************************************************************************
  *  Name: arm_vectoraddrexcptn

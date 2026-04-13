@@ -35,6 +35,7 @@
 #  include "chip.h"
 #else
 #  include "cp15_cacheops.h"
+#  include "chip.h"
 #endif
 
 #if __ARM_ARCH < 7
@@ -907,6 +908,24 @@ __cpu0_start:
 	 */
 
 	bl		arm_sm_init
+#endif
+
+	/* Initialize FIQ mode stack pointer (sp_fiq) so that the FIQ handler
+	 * does not need to reload it on every entry.  sp_fiq is banked and
+	 * will not be modified by code running in other modes.
+	 *
+	 * UP: use g_fiqstacktop directly (single shared FIQ stack).
+	 * SMP: use the per-CPU setfiqstack macro from chip.h.
+	 */
+
+#if defined(CONFIG_ARCH_HIPRI_INTERRUPT) && CONFIG_ARCH_INTERRUPTSTACK > 7
+	cps		#PSR_MODE_FIQ
+#  ifdef CONFIG_UP
+	ldr		sp, =g_fiqstacktop
+#  else
+	setfiqstack	r0, r1
+#  endif
+	cps		#PSR_MODE_SYS
 #endif
 
 	/* Complete boot sequence: early init, platform init, nx_start.

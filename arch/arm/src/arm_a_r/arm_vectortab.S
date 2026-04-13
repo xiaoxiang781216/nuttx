@@ -68,7 +68,24 @@ _vector_start:
 	ldr		pc, .Ldataaborthandler		/* 0x10: Data abort */
 	ldr		pc, .Laddrexcptnhandler		/* 0x14: Address exception (reserved) */
 	ldr		pc, .Lirqhandler		/* 0x18: IRQ */
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+	/* 0x1c: FIQ - inline minimal-context handler directly at vector.
+	 * FIQ is the last vector entry, so we can place code here without
+	 * colliding with other vectors.  This eliminates one branch/load
+	 * from the FIQ entry path.
+	 */
+
+	sub		r8, lr, #4			/* r8_fiq = return PC (bl clobbers lr_fiq) */
+	stmdb		sp!, {r0-r3}			/* Save caller-saved only */
+	bic		sp, sp, #7			/* 8-byte align for C ABI */
+	bl		arm_decodefiq			/* Lightweight C handler */
+	ldmia		sp!, {r0-r3}			/* Restore r0-r3 */
+	movs		pc, r8				/* Return: CPSR = SPSR_fiq */
+#elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
 	ldr		pc, .Lfiqhandler		/* 0x1c: FIQ */
+#else
+	subs		pc, lr, #4			/* 0x1c: FIQ - just return */
+#endif
 
 	.globl	__start
 	.globl	arm_vectorundefinsn
@@ -77,7 +94,9 @@ _vector_start:
 	.globl	arm_vectordata
 	.globl	arm_vectoraddrexcptn
 	.globl	arm_vectorirq
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
 	.globl	arm_vectorfiq
+#endif
 
 .Lresethandler:
 	.long	__start
@@ -93,8 +112,10 @@ _vector_start:
 	.long	arm_vectoraddrexcptn
 .Lirqhandler:
 	.long	arm_vectorirq
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
 .Lfiqhandler:
 	.long	arm_vectorfiq
+#endif
 
 	.globl	_vector_end
 _vector_end:
