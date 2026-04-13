@@ -192,7 +192,8 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
       {
         FAR struct net_driver_s *dev;
         FAR struct udp_conn_s *conn = psock->s_conn;
-        int ifindex = *(FAR int *)value;
+        int ifindex = (value_len >= sizeof(int)) ?
+                      *(FAR int *)value : (int)*(FAR unsigned char *)value;
 
         if (ifindex > 0)
           {
