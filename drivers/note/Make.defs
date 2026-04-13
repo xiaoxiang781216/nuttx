@@ -37,6 +37,10 @@ ifeq ($(CONFIG_DRIVERS_NOTELOWEROUT),y)
   NOTE_CSRCS += notelowout_driver.c
 endif
 
+ifeq ($(CONFIG_DRIVERS_NOTEBUF),y)
+  NOTE_CSRCS += notebuf_driver.c
+endif
+
 ifeq ($(CONFIG_DRIVERS_NOTERAM),y)
   NOTE_CSRCS += noteram_driver.c
 endif

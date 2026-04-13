@@ -216,6 +216,49 @@ config DRIVERS_NOTESTREAM_PATH
 
 endif # DRIVERS_NOTESTREAM
 
+config DRIVERS_NOTEBUF
+	bool "Note buffer driver"
+	select DRIVERS_NOTE
+	default n
+	---help---
+		Buffered note driver that stores notes in a ring buffer
+		and forwards to lower note drivers via work queue.
+
+if DRIVERS_NOTEBUF
+
+config DRIVERS_NOTEBUF_BUFSIZE
+	int "Note buffer size"
+	default 4096
+	---help---
+		The size of the ring buffer in bytes.
+
+config DRIVERS_NOTEBUF_NOOVERWRITE
+	bool "Disable overwrite mode"
+	default n
+	---help---
+		Disables overwriting old notes when the buffer is full.
+		When enabled, new notes are dropped if the buffer is full.
+
+config DRIVERS_NOTEBUF_FLUSH_DELAY
+	int "Note buffer flush delay (usec)"
+	default 0
+	depends on SCHED_WORKQUEUE
+	---help---
+		Delay in microseconds before flushing buffered notes to
+		lower driver. Set 0 to disable work queue based flush.
+		Larger values reduce CPU load but increase latency.
+
+config DRIVERS_NOTEBUF_HPWORK
+	bool "Use high priority work queue for flush"
+	default n
+	depends on SCHED_HPWORK
+	depends on DRIVERS_NOTEBUF_FLUSH_DELAY > 0
+	---help---
+		Use HPWORK for note buffer flush.
+		If not set, LPWORK is used.
+
+endif # DRIVERS_NOTEBUF
+
 config DRIVERS_NOTELOG
 	bool "Note syslog driver"
 	select DRIVERS_NOTE
