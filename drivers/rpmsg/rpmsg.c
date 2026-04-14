@@ -863,7 +863,7 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
               up_write(&g_rpmsg_lock);
 
               rpmsg->nbpanic.notifier_call = rpmsg_panic_notifier;
-              rpmsg->nbpanic.priority = INT_MIN + 1;
+              rpmsg->nbpanic.priority = INT_MIN + 2;
               panic_notifier_chain_register(&rpmsg->nbpanic);
             }
           else
