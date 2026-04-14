@@ -36,6 +36,16 @@ config RPTUN_AUTO_RESET_IN_REBOOT_NOTIFIER
 
 endchoice # RPTUN_AUTO_RESET
 
+config RPTUN_REMOTE_PANIC_SILENT
+	bool "Silence syslog on remote-triggered panic"
+	default n
+	---help---
+		When a remote core triggers a panic on this core, silence
+		all syslog output by setting logmask to LOG_NONE. The log
+		mask is restored at PANIC_KERNEL_FINAL before coredump and
+		RAMLOG dump, so only the originating core's crash log is
+		printed during the panic sequence.
+
 config RPTUN_BMP
 	bool "rptun bmp support"
 	default n

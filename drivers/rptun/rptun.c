@@ -46,6 +46,7 @@
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/panic_notifier.h>
 #include <nuttx/reboot_notifier.h>
+#include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_rpmsg.h>
 #include <openamp/remoteproc_loader.h>
 #include <openamp/remoteproc_virtio.h>
@@ -850,6 +851,14 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
   if (RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC))
     {
       char msg[32];
+
+#ifdef CONFIG_RPTUN_REMOTE_PANIC_SILENT
+      /* Silence all syslog output for this passive panic.
+       * The mask will be restored at PANIC_KERNEL_FINAL.
+       */
+
+      nx_setlogmask(LOG_NONE);
+#endif
 
       snprintf(msg, sizeof(msg), "Panic by remote core: %s",
                RPTUN_GET_CPUNAME(priv->dev));

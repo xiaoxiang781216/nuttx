@@ -144,6 +144,7 @@
 #define LOG_MASK(p)   (1 << (LOG_GETPRI(p)))
 #define LOG_UPTO(p)   ((1 << ((LOG_GETPRI(p))+1)) - 1)
 #define LOG_ALL       0xff
+#define LOG_NONE      0
 
 /****************************************************************************
  * Public Function Prototypes
