@@ -184,20 +184,12 @@ static inline_function int can_forward_filter(FAR struct can_filter *filter,
  ****************************************************************************/
 
 void add_cangw_rule(FAR struct net_driver_s *dev,
-                    FAR struct cangw_rule_s *cgw_rules,
-                    size_t size)
+                    FAR struct cangw_rule_s *cgw_rules)
 {
-  size_t i;
-
   DEBUGASSERT(dev && cgw_rules);
 
   netdev_lock(dev);
-
-  for (i = 0; i < size; i++)
-    {
-      sq_addlast(&cgw_rules[i].node, &dev->d_cangw_rules);
-    }
-
+  sq_addlast(&cgw_rules->node, &dev->d_cangw_rules);
   netdev_unlock(dev);
 }
 
