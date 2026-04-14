@@ -205,7 +205,8 @@ static int ramlog_panic_notifier(FAR struct notifier_block *nb,
 
 static DEFINE_PER_CPU_BMP(struct notifier_block, g_ramlog_panic_nb) =
 {
-  ramlog_panic_notifier,  /* notifier_call */
+  .notifier_call = ramlog_panic_notifier,
+  .priority      = INT_MIN,
 };
 #  define g_ramlog_panic_nb this_cpu_var_bmp(g_ramlog_panic_nb)
 #endif
@@ -312,7 +313,7 @@ static int ramlog_panic_notifier(FAR struct notifier_block *nb,
   UNUSED(nb);
   UNUSED(data);
 
-  if (action == PANIC_KERNEL)
+  if (action == PANIC_KERNEL_FINAL)
     {
       ramlog_dump();
     }
