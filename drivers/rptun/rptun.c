@@ -832,6 +832,21 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
         }
     }
 
+  if (RPTUN_STATUS_CHECK(status, RPTUN_STATUS_PAUSE))
+    {
+      int timeout = CONFIG_RPTUN_STATUS_TIMEOUT_MS;
+
+      /* Wait for the crashing core to finish printing its log */
+
+      while (timeout-- > 0 &&
+             (!RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC)))
+        {
+          status = RPTUN_IS_MASTER(priv->dev) ? rsc_status->slave :
+                   rsc_status->master;
+          up_udelay(1000);
+        }
+    }
+
   if (RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC))
     {
       char msg[32];
@@ -1091,6 +1106,11 @@ static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
 
       RPTUN_STATUS_SET(priv->lstatus, val);
       rptun_set_status_notify(priv, val);
+
+      if (val == RPTUN_STATUS_PAUSE)
+        {
+          return OK;
+        }
 
       if (val == RPTUN_STATUS_PAUSE)
         {
@@ -1409,6 +1429,11 @@ static int rptun_notifier(FAR struct notifier_block *block,
         {
           rptun_ioctl_foreach(NULL, RPTUNIOC_DUMP, 0);
         }
+    }
+  else if (action == PANIC_KERNEL)
+    {
+      rptun_ioctl_foreach(NULL, RPTUNIOC_RESET,
+                          (unsigned long)RPTUN_STATUS_PAUSE);
     }
   else if (action == PANIC_KERNEL)
     {
