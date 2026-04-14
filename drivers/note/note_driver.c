@@ -922,7 +922,7 @@ note_driver_isenabled_type(FAR struct note_driver_s *driver, int type)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-static void note_spinlock(FAR volatile spinlock_t *spinlock, int type)
+static void note_spinlock(FAR volatile void *spinlock, int type)
 {
   FAR struct tcb_s *tcb = running_task();
   FAR struct note_driver_s **driver;
@@ -955,7 +955,8 @@ static void note_spinlock(FAR volatile spinlock_t *spinlock, int type)
           note_common(tcb, &note.nsp_cmn, sizeof(struct note_spinlock_s),
                       type);
           note.nsp_spinlock = (uintptr_t)spinlock;
-          note.nsp_value = (uint8_t)(uintptr_t)spinlock->lock;
+          note.nsp_value = (uint8_t)(uintptr_t)
+            ((FAR volatile spinlock_t *)spinlock)->lock;
         }
 
       /* Add the note to circular buffer */
