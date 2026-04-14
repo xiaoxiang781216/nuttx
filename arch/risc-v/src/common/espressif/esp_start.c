@@ -399,6 +399,10 @@ void __esp_start(void)
   uint32_t cache_mmu_irom_size;
 #endif
 
+  /* Configure FPU etc */
+
+  riscv_config(0);
+
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
   if (bootloader_init() != 0)
     {

@@ -232,6 +232,10 @@ static int map_rom_segments(void)
 
 void __esp32c3_start(void)
 {
+  /* Configure FPU etc */
+
+  riscv_config(0);
+
 #ifdef CONFIG_ESP32C3_APP_FORMAT_MCUBOOT
   if (map_rom_segments() != 0)
     {

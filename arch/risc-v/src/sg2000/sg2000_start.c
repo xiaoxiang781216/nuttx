@@ -204,9 +204,9 @@ void sg2000_clear_bss(void)
 
 void sg2000_start_s(int mhartid)
 {
-  /* Configure FPU */
+  /* Configure FPU etc */
 
-  riscv_fpuconfig();
+  riscv_config(mhartid);
 
   if (mhartid > 0)
     {

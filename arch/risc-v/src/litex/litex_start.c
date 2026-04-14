@@ -72,6 +72,10 @@ void __litex_start(int hart_index, const void * fdt, int arg)
   const uint32_t *src;
   uint32_t *dest;
 
+  /* Config FPU etc */
+
+  riscv_config();
+
   /* Clear .bss.  We'll do this inline (vs. calling memset) just to be
    * certain that there are no issues with the state of global variables.
    */

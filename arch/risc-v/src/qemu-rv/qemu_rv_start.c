@@ -156,6 +156,10 @@ static bool boot_secondary = false;
 
 void qemu_rv_start(int mhartid, const char *dtb)
 {
+  /* Configure FPU etc */
+
+  riscv_config(mhartid);
+
 #ifdef CONFIG_ARCH_USE_S_MODE
   /* Boot other cores */
 
@@ -164,16 +168,6 @@ void qemu_rv_start(int mhartid, const char *dtb)
       boot_secondary = true;
       qemu_boot_secondary(mhartid, (uintptr_t)dtb);
     }
-#endif
-
-  /* Configure FPU */
-
-  riscv_fpuconfig();
-
-  /* Configure VPU (Vector Processing Unit) if enabled */
-
-#ifdef CONFIG_ARCH_RV_ISA_V
-  riscv_vpuconfig();
 #endif
 
   if (mhartid > 0)

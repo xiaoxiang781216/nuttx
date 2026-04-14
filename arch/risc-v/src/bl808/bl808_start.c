@@ -205,9 +205,9 @@ void bl808_clear_bss(void)
 
 void bl808_start_s(int mhartid)
 {
-  /* Configure FPU */
+  /* Configure FPU etc */
 
-  riscv_fpuconfig();
+  riscv_config(mhartid);
 
   if (mhartid > 0)
     {

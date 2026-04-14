@@ -75,6 +75,10 @@ void __rv32m1_start(void)
   regval |= WDOG_CS_UPDATE;
   putreg32(regval, RV32M1_WDOG_CS);
 
+  /* Configs FPU etc */
+
+  riscv_config(0);
+
 #ifdef CONFIG_RV32M1_ITCM
 
   src = (uint32_t *)_slitcm;

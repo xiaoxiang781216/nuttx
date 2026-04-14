@@ -133,9 +133,9 @@ __cyg_profile_func_exit(void *this_fn, void *call_site)
 
 void bfl_main(void)
 {
-  /* Configure FPU */
+  /* Configure FPU etc */
 
-  riscv_fpuconfig();
+  riscv_config(0);
 
   /* set interrupt vector */
 

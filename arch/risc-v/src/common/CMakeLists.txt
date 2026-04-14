@@ -41,8 +41,9 @@ if(NOT CONFIG_ARCH_IDLE_CUSTOM)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS riscv_cpucall.c riscv_cpustart.c)
+  list(APPEND SRCS riscv_cpucall.c)
 endif()
+list(APPEND SRCS riscv_cpustart.c)
 
 if(CONFIG_ARCH_HAVE_MULTICPU)
   if(CONFIG_ARCH_USE_S_MODE)

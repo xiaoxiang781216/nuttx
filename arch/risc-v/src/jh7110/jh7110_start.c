@@ -80,9 +80,9 @@ void jh7110_clear_bss(void)
 
 void jh7110_start_s(int mhartid)
 {
-  /* Configure FPU */
+  /* Configure FPU etc */
 
-  riscv_fpuconfig();
+  riscv_config(mhartid);
 
   if (mhartid > 0)
     {

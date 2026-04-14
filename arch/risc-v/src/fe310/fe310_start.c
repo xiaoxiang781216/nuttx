@@ -60,6 +60,10 @@ void __fe310_start(void)
   const uint32_t *src;
   uint32_t *dest;
 
+  /* Configure FPU etc */
+
+  riscv_config(0);
+
   /* Clear .bss.  We'll do this inline (vs. calling memset) just to be
    * certain that there are no issues with the state of global variables.
    */

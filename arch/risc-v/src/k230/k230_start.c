@@ -111,6 +111,10 @@ static void k230_copy_init_data(void)
 
 void k230_start(int mhartid, const char *dtb)
 {
+  /* Configure FPU etc */
+
+  riscv_config(mhartid);
+
   if (0 == mhartid)
     {
       k230_clear_bss();
@@ -130,10 +134,6 @@ void k230_start(int mhartid, const char *dtb)
   /* Disable MMU */
 
   WRITE_CSR(CSR_SATP, 0x0);
-
-  /* Configure FPU */
-
-  riscv_fpuconfig();
 
   if (mhartid > 0)
     {

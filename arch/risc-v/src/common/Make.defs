@@ -42,8 +42,9 @@ ifneq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
 endif
 
 ifeq ($(CONFIG_SMP),y)
-CMN_CSRCS += riscv_cpucall.c riscv_cpustart.c
+CMN_CSRCS += riscv_cpucall.c
 endif
+CMN_CSRCS += riscv_cpustart.c
 
 ifeq ($(CONFIG_ARCH_HAVE_MULTICPU),y)
 ifeq ($(CONFIG_ARCH_USE_S_MODE),y)

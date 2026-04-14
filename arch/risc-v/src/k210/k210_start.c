@@ -61,9 +61,9 @@ void __k210_start(uint32_t mhartid)
   const uint32_t *src;
   uint32_t *dest;
 
-  /* Configure FPU */
+  /* Configure FPU etc */
 
-  riscv_fpuconfig();
+  riscv_config(mhartid);
 
   if (0 < mhartid)
     {
