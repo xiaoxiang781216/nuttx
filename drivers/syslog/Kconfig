@@ -417,6 +417,16 @@ config RAMLOG_DUMP_ON_PANIC_SIZE
 		When set to a positive value, only the most recent N bytes
 		will be dumped.
 
+config RAMLOG_DUMP_ON_PANIC_CPUID
+	int "The RAMLOG dump CPU ID"
+	default -1
+	depends on RAMLOG_DUMP_ON_PANIC && BMP
+	---help---
+		Specify which CPU is responsible for dumping RAMLOG on
+		panic in BMP mode. Set to a valid CPU ID (e.g., 0) so
+		only the designated CPU dumps RAMLOG; other CPUs skip it.
+		Set to -1 (default) to allow any CPU to dump RAMLOG.
+
 endif # RAMLOG_SYSLOG
 
 if SYSLOG_DEFAULT

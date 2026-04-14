@@ -313,7 +313,11 @@ static int ramlog_panic_notifier(FAR struct notifier_block *nb,
   UNUSED(nb);
   UNUSED(data);
 
-  if (action == PANIC_KERNEL_FINAL)
+  if (action == PANIC_KERNEL_FINAL
+#if defined(CONFIG_RAMLOG_DUMP_ON_PANIC_CPUID) && CONFIG_RAMLOG_DUMP_ON_PANIC_CPUID >= 0
+      && up_cpu_index() == CONFIG_RAMLOG_DUMP_ON_PANIC_CPUID
+#endif
+  )
     {
       ramlog_dump();
     }
