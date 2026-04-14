@@ -395,13 +395,12 @@ int addrenv_attach(FAR struct tcb_s *tcb, FAR struct addrenv_s *addrenv)
 {
   FAR struct task_group_s *group = tcb->group;
 
-  if (group == NULL)
+  if (group != NULL)
     {
-      group = (FAR struct task_group_s *)(tcb + 1);
+      group->tg_addrenv_own = addrenv;
     }
 
-  group->tg_addrenv_own = addrenv;
-  tcb->addrenv_curr = group->tg_addrenv_own;
+  tcb->addrenv_curr = addrenv;
 
   return OK;
 }

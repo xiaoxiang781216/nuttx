@@ -56,6 +56,27 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: release_group_cb
+ *
+ * Description:
+ *   Deferred callback for releasing the group container and its heap.
+ *   Called from the mm delay free list during the next allocation.
+ *
+ ****************************************************************************/
+
+static void release_group_cb(FAR void *group)
+{
+#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
+
+  /* Kernel build not use group_heap_initialize.
+   * If use addrenv, it will uninitialized in up_addrenv_destroy.
+   */
+
+  group_heap_uninitialize(((FAR struct task_group_s *)group)->tg_heap);
+#endif
+}
+
+/****************************************************************************
  * Name: group_release
  *
  * Description:
@@ -189,12 +210,6 @@ void group_leave(FAR struct tcb_s *tcb)
 
           group_release(group);
         }
-
-      /* In any event, we can detach the group from the TCB so that we won't
-       * do this again.
-       */
-
-      tcb->group = NULL;
     }
 }
 
@@ -240,16 +255,6 @@ void group_drop(FAR struct task_group_s *group)
 
   if ((atomic_read(&group->tg_flags) & GROUP_FLAG_DELETED))
     {
-#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
-      /* Kernel build not use group_heap_initialize.
-       * If use addrenv, it will uninitialized in up_addrenv_destroy.
-       */
-
-      group_heap_uninitialize(group->tg_heap);
-#endif
-
-      /* Release the group container itself */
-
-      kmm_free(group);
+      kmm_delayfreecb(group, release_group_cb);
     }
 }

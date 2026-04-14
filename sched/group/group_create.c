@@ -162,10 +162,11 @@ int group_allocate(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
                        (FAR void **)&group->tg_heap);
 #elif defined(CONFIG_MM_TASK_HEAP)
 #  ifdef CONFIG_ARCH_ADDRENV
-      if (group->tg_addrenv_own->addrenv.heap)
+      if (tcb->addrenv_curr && tcb->addrenv_curr->addrenv.heap)
         {
           group->tg_heap =
-            (FAR struct mm_heap_s *)group->tg_addrenv_own->addrenv.heap;
+            (FAR struct mm_heap_s *)tcb->addrenv_curr->addrenv.heap;
+          group->tg_addrenv_own = tcb->addrenv_curr;
         }
       else
 #  endif
@@ -176,6 +177,14 @@ int group_allocate(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
           if (ret >= 0)
             {
 #  ifdef CONFIG_ARCH_ADDRENV
+              group->tg_addrenv_own = addrenv_allocate();
+              if (group->tg_addrenv_own == NULL)
+                {
+                  group_heap_uninitialize(group->tg_heap);
+                  kmm_free(group);
+                  return -ENOMEM;
+                }
+
               group->tg_addrenv_own->addrenv.heap =
               (uintptr_t)group->tg_heap;
               group->tg_addrenv_own->addrenv.heapsize =

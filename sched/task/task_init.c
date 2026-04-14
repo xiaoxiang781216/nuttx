@@ -231,30 +231,6 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
   DEBUGASSERT(tcb && ttype != TCB_FLAG_TTYPE_PTHREAD);
 #endif
 
-#ifdef CONFIG_ARCH_ADDRENV
-  /* Kernel threads do not own any address environment */
-
-  if (ttype == TCB_FLAG_TTYPE_TASK)
-    {
-      FAR struct task_group_s *group =
-        (FAR struct task_group_s *)(tcb + 1);
-
-      if (group->tg_addrenv_own == NULL)
-        {
-          FAR struct addrenv_s *addrenv = addrenv_allocate();
-          if (addrenv == NULL)
-            {
-              ret = -ENOMEM;
-            }
-          else
-            {
-              addrenv_attach(tcb, addrenv);
-            }
-        }
-    }
-
-#endif
-
   if (ret == OK)
     {
       /* Create a new task group */
