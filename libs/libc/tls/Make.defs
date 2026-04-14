@@ -34,6 +34,17 @@ ifneq ($(CONFIG_TLS_NCLEANUP),0)
 CSRCS += tls_cleanup.c
 endif
 
+ifneq ($(CONFIG_SCHED_THREAD_LOCAL),y)
+ifneq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+ifneq ($(filter-out 0,$(CONFIG_TLS_NELEM)),)
+ifneq ($(filter-out 0,$(CONFIG_TLS_TASK_NELEM)),)
+CSRCS += tls_emutls.c
+LDFLAGS += -Wl,--wrap=__emutls_get_address -Wl,--wrap=__emutls_register_common
+endif
+endif
+endif
+endif
+
 # Include tls build support
 
 DEPPATH += --dep-path tls
