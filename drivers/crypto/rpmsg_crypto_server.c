@@ -1212,6 +1212,7 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
   rsp->data = msg->data;
   memset(&krp, 0, sizeof(krp));
   krp.krp_op = msg->data.cmd;
+  krp.krp_flags = msg->data.flag;
   switch (msg->data.cmd)
     {
       case CRK_ALLOCATE_KEY:

@@ -1269,6 +1269,7 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
   session = &rdev->sessions[sid];
   memset(msg, 0, sizeof(*msg));
   msg->data.cmd = krp->krp_op;
+  msg->data.flag = krp->krp_flags;
   switch (msg->data.cmd)
     {
       case CRK_ALLOCATE_KEY:
