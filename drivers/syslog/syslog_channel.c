@@ -260,7 +260,7 @@ static syslog_channel_t g_default_channel =
 static struct notifier_block g_default_channel_nb =
 {
   .notifier_call = syslog_default_panic_notifier,
-  .priority      = INT_MAX - 100,
+  .priority      = INT_MIN,
 };
 #  endif
 #endif
@@ -350,9 +350,14 @@ const syslog_channels_t g_syslog_channel =
  ****************************************************************************/
 #ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
 static int syslog_default_panic_notifier(FAR struct notifier_block *nb,
-                                         unsigned long event, FAR void *data)
+                                         unsigned long event,
+                                         FAR void *data)
 {
-  g_default_channel.sc_state &= ~SYSLOG_CHANNEL_DISABLE;
+  if (event == PANIC_KERNEL_FINAL)
+    {
+      g_default_channel.sc_state &= ~SYSLOG_CHANNEL_DISABLE;
+    }
+
   return OK;
 }
 #endif
