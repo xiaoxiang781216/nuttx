@@ -1082,6 +1082,16 @@ static void gsmmux_tty_dmasend(FAR struct uart_dev_s *dev)
 
   ret = gsmmux_send_data(channel, dev->dmatx.buffer,
                          dev->dmatx.length);
+  if (ret > 0 && dev->dmatx.nlength > 0)
+    {
+      ssize_t ret2 = gsmmux_send_data(channel, dev->dmatx.nbuffer,
+                                      dev->dmatx.nlength);
+      if (ret2 > 0)
+        {
+          ret += ret2;
+        }
+    }
+
   dev->dmatx.nbytes = ret > 0 ? ret : 0;
   uart_xmitchars_done(dev);
 }
