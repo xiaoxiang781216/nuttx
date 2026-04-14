@@ -480,9 +480,9 @@ def get_elf_fixup_s_size(elf_path: Path) -> int:
     )
     for line in result.stdout.splitlines():
         if "DW_AT_byte_size" in line:
-            m = re.search(r"\((\d+)\)", line)
+            m = re.search(r"\((0x[0-9a-fA-F]+|\d+)\)", line)
             if m:
-                return int(m.group(1))
+                return int(m.group(1), 0)
     return 0
 
 
