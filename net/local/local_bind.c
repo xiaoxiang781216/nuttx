@@ -109,6 +109,27 @@ int psock_local_bind(FAR struct socket *psock,
 
   strlcpy(conn->lc_path, &unaddr->sun_path[index], sizeof(conn->lc_path));
 
+#ifdef CONFIG_NET_LOCAL_DGRAM
+  if (psock->s_type == SOCK_DGRAM)
+    {
+      int ret;
+
+      ret = local_create_halfduplex(conn, conn->lc_path, conn->lc_rcvsize);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      ret = local_open_receiver(conn,
+              _SS_ISNONBLOCK(conn->lc_conn.s_flags));
+      if (ret < 0)
+        {
+          local_release_halfduplex(conn);
+          return ret;
+        }
+    }
+#endif
+
   conn->lc_state = LOCAL_STATE_BOUND;
   return OK;
 }

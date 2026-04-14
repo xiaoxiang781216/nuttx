@@ -161,7 +161,7 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
 
   if (conn->lc_proto == SOCK_DGRAM)
     {
-      return -ENOSYS;
+      return file_poll(&conn->lc_infile, fds, true);
     }
 
 #ifdef CONFIG_NET_LOCAL_STREAM
@@ -310,7 +310,7 @@ int local_pollteardown(FAR struct socket *psock, FAR struct pollfd *fds)
 
   if (conn->lc_proto == SOCK_DGRAM)
     {
-      return -ENOSYS;
+      return file_poll(&conn->lc_infile, fds, false);
     }
 
 #ifdef CONFIG_NET_LOCAL_STREAM
