@@ -211,6 +211,8 @@ static DEFINE_PER_CPU_BMP(struct notifier_block, g_ramlog_panic_nb) =
 #  define g_ramlog_panic_nb this_cpu_var_bmp(g_ramlog_panic_nb)
 #endif
 
+static atomic_t g_ramlog_lock_ready;
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -378,6 +380,39 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
 {
   uint32_t magic;
   irqstate_t flags;
+  uint32_t expected;
+
+  /* The ramlog header resides in .noinit memory, so rl_magic and the
+   * embedded spinlock survive a software reset. After such a reset, the
+   * spinlock may still be in locked state, which would deadlock the first
+   * syslog write on every CPU.
+   *
+   * g_ramlog_lock_ready lives in BSS (zeroed each boot) and is used to
+   * reinitialize the .noinit spinlock exactly once per boot via CAS:
+   * the winning CPU transitions PENDING -> INPROG, reinitializes the
+   * lock, and publishes DONE with release ordering; all other CPUs spin
+   * on acquire until they observe DONE.
+   *
+   * The whole claim/init/publish sequence runs with local IRQs disabled
+   * so that a nested interrupt on the winning CPU (e.g. an _info() call
+   * while the winner is between the CAS and the release store) cannot
+   * re-enter this function, see INPROG, fail the CAS, and then spin
+   * forever waiting for its own preempted context to publish DONE.
+   */
+
+  flags = irq_save();
+  expected = RAMLOG_LOCK_INIT_PENDING;
+  if (atomic_cmpxchg_relaxed(&g_ramlog_lock_ready, &expected,
+                             RAMLOG_LOCK_INIT_INPROG))
+    {
+      spin_lock_init(&dev->rl_header->rl_lock);
+      atomic_set_release(&g_ramlog_lock_ready, RAMLOG_LOCK_INIT_DONE);
+    }
+
+  irq_restore(flags);
+
+  while (atomic_read_acquire(&g_ramlog_lock_ready) !=
+         RAMLOG_LOCK_INIT_DONE);
 
   while ((magic = atomic_read_acquire(&dev->rl_header->rl_magic)) !=
          RAMLOG_MAGIC_READY)
