@@ -581,7 +581,8 @@ static void rpmsg_virtio_rx_dispatch(FAR struct rpmsg_virtio_priv_s *priv)
                     }
                 }
 
-              if (priority == RPMSG_PRIO_RT && ept != &rdev->ns_ept)
+              if (priority == RPMSG_PRIO_RT && ept != &rdev->ns_ept &&
+                  ept->dest_addr != RPMSG_ADDR_ANY)
                 {
                   status = rpmsg_virtio_process_rx_buffer(rdev, ept,
                                                           hdr);
