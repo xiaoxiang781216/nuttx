@@ -230,6 +230,7 @@ static int rpmsg_ioctl_foreach_cb(FAR struct rpmsg_s *rpmsg, FAR void *arg)
   return ret;
 }
 
+#if CONFIG_RPMSG_PANIC_DUMP_LEVEL > RPMSG_PANIC_DUMP_DISABLE
 static int rpmsg_panic_notifier(FAR struct notifier_block *nb,
                                 unsigned long action, FAR void *data)
 {
@@ -238,15 +239,13 @@ static int rpmsg_panic_notifier(FAR struct notifier_block *nb,
 
   if (action == PANIC_KERNEL_FINAL)
     {
-#ifdef CONFIG_RPMSG_PANIC_DUMP_VERBOSE
-      ret = rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP, 1ul);
-#else
-      ret = rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP, 0ul);
-#endif
+      ret = rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP,
+              CONFIG_RPMSG_PANIC_DUMP_LEVEL >= RPMSG_PANIC_DUMP_VERBOSE);
     }
 
   return ret;
 }
+#endif
 
 static int rpmsg_init_workrx(FAR struct rpmsg_s *rpmsg, uint16_t nrx)
 {
@@ -862,9 +861,11 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
               dq_addlast(&rpmsg->node, &g_rpmsg);
               up_write(&g_rpmsg_lock);
 
+#if CONFIG_RPMSG_PANIC_DUMP_LEVEL > RPMSG_PANIC_DUMP_DISABLE
               rpmsg->nbpanic.notifier_call = rpmsg_panic_notifier;
               rpmsg->nbpanic.priority = INT_MIN + 2;
               panic_notifier_chain_register(&rpmsg->nbpanic);
+#endif
             }
           else
             {
@@ -885,7 +886,9 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
 
 void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
 {
+#if CONFIG_RPMSG_PANIC_DUMP_LEVEL > RPMSG_PANIC_DUMP_DISABLE
   panic_notifier_chain_unregister(&rpmsg->nbpanic);
+#endif
 
   down_write(&g_rpmsg_lock);
   dq_rem(&rpmsg->node, &g_rpmsg);
