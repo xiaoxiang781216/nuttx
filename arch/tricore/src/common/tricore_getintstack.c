@@ -50,7 +50,7 @@ extern unsigned int __ISTACK3[];
 extern unsigned int __ISTACK4[];
 extern unsigned int __ISTACK5[];
 
-static uintptr_t g_idle_topstack[CONFIG_NCPUS] =
+uintptr_t g_idle_topstack[CONFIG_NCPUS] =
 {
   [0] = (uintptr_t)__USTACK0,
 #if CONFIG_NCPUS > 1
@@ -106,7 +106,6 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 }
 #else
 
-#define g_idle_topstack ((uintptr_t)__USTACK)
 #define g_intstackalloc ((uintptr_t)__ISTACK_END)
 #define g_intstacktop   ((uintptr_t)__ISTACK)
 

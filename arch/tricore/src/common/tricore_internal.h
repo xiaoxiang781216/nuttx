@@ -178,6 +178,12 @@ extern uintptr_t        _sbss_percpu[];  /* Start of .percpu_bss */
 extern uintptr_t        _ebss_percpu[];  /* End+1 of .percpu_bss */
 #  endif
 
+#  ifdef CONFIG_UP
+#    define  g_idle_topstack  ((uintptr_t)__USTACK)
+#  else
+extern uintptr_t        g_idle_topstack[CONFIG_NCPUS];
+#  endif
+
 #endif
 
 /****************************************************************************
