@@ -578,7 +578,7 @@ static int binder_translate_fd(uint32_t fd, binder_size_t fd_offset,
     }
 
   fixup->offset = fd_offset;
-  list_add_tail(&fixup->fixup_entry, &t->fd_fixups);
+  list_add_tail(&t->fd_fixups, &fixup->fixup_entry);
 
   return ret;
 
