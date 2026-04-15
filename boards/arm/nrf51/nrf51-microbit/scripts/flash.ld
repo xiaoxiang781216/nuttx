@@ -20,6 +20,8 @@
  *
  ****************************************************************************/
 
+#include "nuttx/config.h"
+
 MEMORY
 {
 #ifdef CONFIG_NRF51_LARGE
@@ -50,6 +52,11 @@ SECTIONS
         *(.got)
         *(.gcc_except_table)
         *(.gnu.linkonce.r.*)
+        . = ALIGN(4);
+        __start_jump_table = .;
+        KEEP(*(jump_table))
+        __stop_jump_table = .;
+        . = ALIGN(4);
         _etext = ABSOLUTE(.);
     } > flash
 
@@ -95,6 +102,7 @@ SECTIONS
         *(.data .data.*)
         *(.gnu.linkonce.d.*)
         CONSTRUCTORS
+        *(.ramfunc .ramfunc.*)
         . = ALIGN(4);
         _edata = ABSOLUTE(.);
     } > sram1 AT > flash
