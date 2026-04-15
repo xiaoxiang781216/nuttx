@@ -607,7 +607,7 @@ bool rspin_lock_is_hold(FAR volatile rspinlock_t *lock)
                         (uint32_t)this_cpu() + 1u;
   irq_restore(flags);
 #else
-  ret = RSPINLOCK_COUNT(&lock->local_val) > 0u;
+  ret = RSPINLOCK_COUNT(lock->local_val) > 0u;
 #endif
 
   return ret;
