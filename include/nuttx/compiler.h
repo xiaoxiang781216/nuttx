@@ -113,6 +113,14 @@
 
 #ifdef __GNUC__
 
+/* In strict C++ mode (-std=c++NN), typeof is not available as a keyword.
+ * Map it to __typeof__ which is a GCC built-in that works in all modes.
+ */
+
+#  if defined(__cplusplus) && defined(__STRICT_ANSI__)
+#    define typeof __typeof__
+#  endif
+
 /* Built-ins */
 #  if __GNUC__ >= 4 && !defined(__ghs__)
 #    define CONFIG_HAVE_BUILTIN_BSWAP16 1
