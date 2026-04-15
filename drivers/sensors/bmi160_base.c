@@ -57,7 +57,6 @@ static void bmi160_configspi(FAR struct spi_dev_s *spi)
   SPI_HWFEATURES(spi, 0);
   SPI_SETFREQUENCY(spi, BMI160_SPI_MAXFREQUENCY);
 }
-#endif
 
 static void bmi160_transferspi(FAR struct spi_dev_s *spi, bool write,
                                uint8_t regaddr, FAR void *data, int len)
@@ -116,6 +115,7 @@ static void bmi160_transferspi(FAR struct spi_dev_s *spi, bool write,
 
   SPI_LOCK(spi, false);
 }
+#endif
 
 /****************************************************************************
  * Private Data
