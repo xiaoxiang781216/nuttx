@@ -36,6 +36,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/percpu.h>
 #include <nuttx/wqueue.h>
 
 #include "wqueue/wqueue.h"
@@ -73,11 +74,13 @@ struct work_notifier_entry_s
  * Private Data
  ****************************************************************************/
 
-static spinlock_t g_notifier_lock = SP_UNLOCKED;
+static DEFINE_PER_CPU_BMP(spinlock_t, g_notifier_lock) = SP_UNLOCKED;
+#define g_notifier_lock this_cpu_var_bmp(g_notifier_lock)
 
 /* This is a doubly linked list of free notifications. */
 
-static dq_queue_t g_notifier_free;
+static DEFINE_PER_CPU_BMP(dq_queue_t, g_notifier_free);
+#define g_notifier_free this_cpu_var_bmp(g_notifier_free)
 
 /* This is a doubly linked list of pending notifications.  When an event
  * occurs available, *all* of the waiters for that event in this list will
@@ -87,7 +90,8 @@ static dq_queue_t g_notifier_free;
  * once again.
  */
 
-static dq_queue_t g_notifier_pending;
+static DEFINE_PER_CPU_BMP(dq_queue_t, g_notifier_pending);
+#define g_notifier_pending this_cpu_var_bmp(g_notifier_pending)
 
 /****************************************************************************
  * Private Functions
@@ -138,7 +142,8 @@ static FAR struct work_notifier_entry_s *work_notifier_find(int key)
 
 static int work_notifier_key(void)
 {
-  static int notifier_key;
+  static DEFINE_PER_CPU_BMP(int, notifier_key);
+#define notifier_key this_cpu_var_bmp(notifier_key)
 
   if (++notifier_key <= 0)
     {
