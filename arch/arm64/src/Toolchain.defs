@@ -49,8 +49,10 @@ else ifeq ($(CONFIG_ARCH_CORTEX_R82),y)
 endif
 
 ifeq ($(CONFIG_ARCH_ARMV8A),y)
-  ifeq ($(CONFIG_ARCH_AS_HAS_ARMV8_5),y)
+  ifeq ($(CONFIG_ARCH_ARMV8_5A),y)
     ARCHCPUFLAGS += -march=armv8.5-a$(OPTION_MARCH_FEATURE)
+  else ifeq ($(CONFIG_ARCH_ARMV8_2A),y)
+    ARCHCPUFLAGS += -march=armv8.2-a$(OPTION_MARCH_FEATURE)
   else
     ARCHCPUFLAGS += -march=armv8-a$(OPTION_MARCH_FEATURE)
   endif

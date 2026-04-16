@@ -143,19 +143,27 @@ config ARCH_ARMV8A
 	default n
 	select ARM64_HAVE_EL3
 
+config ARCH_ARMV8_2A
+	bool
+	default n
+	select ARCH_ARMV8A
+	---help---
+		ARMv8.2-A adds LSE atomics, FP16, RAS, statistical profiling.
+
+config ARCH_ARMV8_5A
+	bool
+	default n
+	select ARCH_ARMV8_2A
+	---help---
+		ARMv8.5-A adds MTE, BTI, RNG, FRINTTS.
+
 config ARCH_ARMV8R
 	bool
 	default n
 	select ARCH_SINGLE_SECURITY_STATE
 
-config ARCH_AS_HAS_ARMV8_5
-	bool "Support ARMv8.5 assembly"
-	depends on ARCH_ARMV8A
-	---help---
-		Support ARMv8.5 assembly instruction set
-
 menu "ARMv8.5 architectural features"
-	depends on ARCH_AS_HAS_ARMV8_5
+	depends on ARCH_ARMV8_5A
 
 config ARM64_MTE
 	bool "Memory Tagging Extension support"
@@ -267,7 +275,7 @@ config ARCH_CORTEX_A53
 config ARCH_CORTEX_A55
 	bool
 	default n
-	select ARCH_ARMV8A
+	select ARCH_ARMV8_2A
 	select ARCH_HAVE_TRUSTZONE
 	select ARCH_DCACHE
 	select ARCH_ICACHE
@@ -323,7 +331,7 @@ config ARCH_CORTEX_R82AE
 config ARCH_CPU_UNKNOWN
 	bool
 	default n
-	select ARCH_ARMV8A
+	select ARCH_ARMV8_5A
 	select ARCH_HAVE_TRUSTZONE
 	select ARCH_HAVE_DEBUG
 	select ARCH_DCACHE
