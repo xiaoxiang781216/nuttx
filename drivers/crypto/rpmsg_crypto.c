@@ -1650,7 +1650,7 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
   if (ret < 0)
     {
       rpmsgerr("rpmsg register callback failed, ret=%d\n", ret);
-      goto fail;
+      goto fail_alloc;
     }
 
   /* Register NuttX driver for cipher */
@@ -1670,7 +1670,7 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
   if (ret < 0)
     {
       rpmsgerr("rpmsg crypto cipher register failed, ret=%d\n", ret);
-      goto fail2;
+      goto fail_register;
     }
 
   /* Register NuttX driver for asymmetric algorithms */
@@ -1695,7 +1695,7 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
         }
 
       rpmsgerr("rpmsg crypto kprocess register failed, ret=%d\n", ret);
-      goto fail2;
+      goto fail_register;
     }
 
   /* Register NuttX driver for key management */
@@ -1720,18 +1720,19 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
   if (ret < 0)
     {
       rpmsgerr("rpmsg crypto key register failed, ret=%d\n", ret);
-      goto fail2;
+      goto fail_register;
     }
 
   return ret;
 
-fail:
-  kmm_free(rdev);
-fail2:
+fail_register:
   rpmsg_unregister_callback(rdev,
                             rpmsg_crypto_created,
                             rpmsg_crypto_destroy,
                             NULL,
                             NULL);
+fail_alloc:
+  nxsem_destroy(&rdev->wait);
+  kmm_free(rdev);
   return ret;
 }
