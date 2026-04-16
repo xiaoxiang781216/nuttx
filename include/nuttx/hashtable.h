@@ -50,7 +50,7 @@
 #define hashtable_init(table) \
   do \
     { \
-      int i; \
+      size_t i; \
       for (i = 0; i < hashtable_size(table); i++) \
         { \
           dq_init(&table[i]); \
@@ -61,7 +61,7 @@
 #define hashtable_init_n(table, size) \
   do \
     { \
-      int i; \
+      size_t i; \
       for (i = 0; i < (size); i++) \
         { \
           dq_init(&table[i]); \
