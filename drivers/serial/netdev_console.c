@@ -116,12 +116,12 @@ static struct netdev_consol_s g_netdev_console =
     .xmit =
     {
       .size   = CONFIG_CONSOLE_NETDEV_TXBUFSIZE,
-      .buffer = g_netdev_console_rxbuf,
+      .buffer = g_netdev_console_txbuf,
     },
     .recv =
     {
       .size   = CONFIG_CONSOLE_NETDEV_RXBUFSIZE,
-      .buffer = g_netdev_console_txbuf,
+      .buffer = g_netdev_console_rxbuf,
     },
     .isconsole = true
   },
