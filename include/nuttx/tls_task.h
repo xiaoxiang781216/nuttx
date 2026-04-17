@@ -172,6 +172,10 @@ struct task_info_s
 #if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
   tls_dtor_t            ta_tlsdtor[CONFIG_TLS_NELEM]; /* List of TLS destructors      */
 #endif
+#if defined(CONFIG_LIBCXX) && !defined(CONFIG_DISABLE_PTHREAD)
+  FAR void             *ta_thread_local_data;  /* C++ thread local  */
+  void                (*ta_thread_local_dtor)(FAR void *);
+#endif
 #ifdef CONFIG_LIBC_LOCALE
   char                  ta_domain[NAME_MAX]; /* Current domain for gettext */
   FAR struct mofile_s  *ta_mofile;
