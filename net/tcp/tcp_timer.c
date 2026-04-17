@@ -572,6 +572,7 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
           tcp_callback(dev, conn, TCP_TIMEDOUT);
 
           ninfo("TCP state: TCP_CLOSED\n");
+          goto done;
         }
       else
         {
