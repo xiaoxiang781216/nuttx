@@ -920,9 +920,9 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   uint32_t data_len = 0;
   uint32_t keybufsize;
   uint32_t keybits;
-  uint32_t keylen;
   uint32_t space;
   uint32_t sid;
+  ssize_t keylen;
   int ret;
 
   rdev = (FAR struct rpmsg_crypto_s *)crypto_driver_get_priv(krp->krp_hid);
@@ -991,6 +991,11 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
                 (FAR unsigned char *)n->crp_p, n->crp_nbits / 8,
                 (FAR unsigned char *)e->crp_p, e->crp_nbits / 8,
                 (FAR unsigned char *)keybuf, keybufsize);
+    }
+
+  if (keylen < 0)
+    {
+      return keylen;
     }
 
   keylen = ALIGN_UP(keylen, 4); /* keysize align to 4 bytes */

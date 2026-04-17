@@ -96,26 +96,27 @@
  * }
  */
 
-static inline_function int
+static inline_function ssize_t
 virtio_crypto_write_rsa_pubkey_der(FAR const unsigned char *n, size_t nlen,
                                    FAR const unsigned char *e, size_t elen,
                                    FAR unsigned char *buf, size_t size)
 {
   unsigned char *p;
-  int len = 0;
+  ssize_t len = 0;
 
   p = buf + size;
 
   /* Export E */
 
-  len += asn1_write_mpi(&p, buf, e, elen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&p, buf, e, elen));
 
   /* Export N */
 
-  len += asn1_write_mpi(&p, buf, n, nlen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&p, buf, n, nlen));
 
-  len += asn1_write_len(&p, buf, len);
-  len += asn1_write_tag(&p, buf, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  ASN1_CHK_ADD(len, asn1_write_len(&p, buf, len));
+  ASN1_CHK_ADD(len, asn1_write_tag(&p, buf,
+                                   ASN1_CONSTRUCTED | ASN1_SEQUENCE));
   return len;
 }
 
@@ -133,7 +134,7 @@ virtio_crypto_write_rsa_pubkey_der(FAR const unsigned char *n, size_t nlen,
  * }
  */
 
-static inline_function int
+static inline_function ssize_t
 virtio_crypto_write_rsa_key_der(FAR const unsigned char *n, size_t nlen,
                                 FAR const unsigned char *e, size_t elen,
                                 FAR const unsigned char *d, size_t dlen,
@@ -145,45 +146,46 @@ virtio_crypto_write_rsa_key_der(FAR const unsigned char *n, size_t nlen,
                                 FAR unsigned char *buf, size_t size)
 {
   unsigned char *pos;
-  int len = 0;
+  ssize_t len = 0;
 
   pos = buf + size;
 
   /* Export QP */
 
-  len += asn1_write_mpi(&pos, buf, qp, qplen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, qp, qplen));
 
   /* Export DQ */
 
-  len += asn1_write_mpi(&pos, buf, dq, dqlen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, dq, dqlen));
 
   /* Export DP */
 
-  len += asn1_write_mpi(&pos, buf, dp, dplen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, dp, dplen));
 
   /* Export Q */
 
-  len += asn1_write_mpi(&pos, buf, q, qlen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, q, qlen));
 
   /* Export P */
 
-  len += asn1_write_mpi(&pos, buf, p, plen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, p, plen));
 
   /* Export D */
 
-  len += asn1_write_mpi(&pos, buf, d, dlen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, d, dlen));
 
   /* Export E */
 
-  len += asn1_write_mpi(&pos, buf, e, elen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, e, elen));
 
   /* Export N */
 
-  len += asn1_write_mpi(&pos, buf, n, nlen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, n, nlen));
 
-  len += asn1_write_int(&pos, buf, 0);
-  len += asn1_write_len(&pos, buf, len);
-  len += asn1_write_tag(&pos, buf, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  ASN1_CHK_ADD(len, asn1_write_int(&pos, buf, 0));
+  ASN1_CHK_ADD(len, asn1_write_len(&pos, buf, len));
+  ASN1_CHK_ADD(len, asn1_write_tag(&pos, buf,
+                                   ASN1_CONSTRUCTED | ASN1_SEQUENCE));
   return len;
 }
 
@@ -195,27 +197,28 @@ virtio_crypto_write_rsa_key_der(FAR const unsigned char *n, size_t nlen,
  * }
  */
 
-static inline_function int
+static inline_function ssize_t
 virtio_crypto_write_rsa_key_der_no_crt(FAR unsigned char *buf, size_t size,
                                        FAR unsigned char *n, size_t nlen,
                                        FAR unsigned char *d, size_t dlen)
 {
   unsigned char *pos;
-  int len = 0;
+  ssize_t len = 0;
 
   pos = buf + size;
 
   /* Export D */
 
-  len += asn1_write_mpi(&pos, buf, d, dlen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, d, dlen));
 
   /* Export N */
 
-  len += asn1_write_mpi(&pos, buf, n, nlen);
+  ASN1_CHK_ADD(len, asn1_write_mpi(&pos, buf, n, nlen));
 
-  len += asn1_write_int(&pos, buf, 0);
-  len += asn1_write_len(&pos, buf, len);
-  len += asn1_write_tag(&pos, buf, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  ASN1_CHK_ADD(len, asn1_write_int(&pos, buf, 0));
+  ASN1_CHK_ADD(len, asn1_write_len(&pos, buf, len));
+  ASN1_CHK_ADD(len, asn1_write_tag(&pos, buf,
+                                   ASN1_CONSTRUCTED | ASN1_SEQUENCE));
   return len;
 }
 

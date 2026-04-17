@@ -42,14 +42,26 @@
 #define BYTE_0(x)              ((uint8_t)((x)        & 0xff))
 #define BYTE_1(x)              ((uint8_t)(((x) >> 8) & 0xff))
 
+#define ASN1_CHK_ADD(g, f)  \
+  do                        \
+    {                       \
+      ssize_t _ret = (f);   \
+      if (_ret < 0)         \
+        {                   \
+          return _ret;      \
+        }                   \
+      (g) += _ret;          \
+    }                       \
+  while (0)
+
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
 
 static inline_function
-int asn1_write_tag(FAR unsigned char **p,
-                   FAR const unsigned char *start,
-                   unsigned char tag)
+ssize_t asn1_write_tag(FAR unsigned char **p,
+                       FAR const unsigned char *start,
+                       unsigned char tag)
 {
   if (*p - start < 1)
     {
@@ -62,9 +74,9 @@ int asn1_write_tag(FAR unsigned char **p,
 }
 
 static inline_function
-int asn1_write_len(FAR unsigned char **p,
-                   FAR const unsigned char *start,
-                   size_t len)
+ssize_t asn1_write_len(FAR unsigned char **p,
+                       FAR const unsigned char *start,
+                       size_t len)
 {
   if (len < 0x80)
     {
@@ -106,11 +118,11 @@ int asn1_write_len(FAR unsigned char **p,
 }
 
 static inline_function
-int asn1_write_int(FAR unsigned char **p,
-                   FAR const unsigned char *start,
-                   int val)
+ssize_t asn1_write_int(FAR unsigned char **p,
+                       FAR const unsigned char *start,
+                       int val)
 {
-  int len = 0;
+  ssize_t len = 0;
 
   do
     {
@@ -136,18 +148,18 @@ int asn1_write_int(FAR unsigned char **p,
       len += 1;
     }
 
-  len += asn1_write_len(p, start, len);
-  len += asn1_write_tag(p, start, ASN1_INTEGER);
+  ASN1_CHK_ADD(len, asn1_write_len(p, start, len));
+  ASN1_CHK_ADD(len, asn1_write_tag(p, start, ASN1_INTEGER));
   return len;
 }
 
 static inline_function
-int asn1_write_mpi(FAR unsigned char **p,
-                   FAR const unsigned char *start,
-                   FAR unsigned char *mpi, size_t mpilen)
+ssize_t asn1_write_mpi(FAR unsigned char **p,
+                       FAR const unsigned char *start,
+                       FAR unsigned char *mpi, size_t mpilen)
 {
-  int len = mpilen;
-  int i;
+  ssize_t len = mpilen;
+  size_t i;
 
   /* DER represents 0 with a sign bit (0=nonnegative) and 7 value bits, not
    * as 0 digits. We need to end up with 020100, not with 0200.
@@ -158,7 +170,7 @@ int asn1_write_mpi(FAR unsigned char **p,
       len = 1;
     }
 
-  if (*p < start || (size_t)(*p - start) < len)
+  if (*p < start || (size_t)(*p - start) < (size_t)len)
     {
       return -ENOMEM;
     }
@@ -173,9 +185,9 @@ int asn1_write_mpi(FAR unsigned char **p,
     {
       /* convert to big-endian */
 
-      for (i = 0; i < len; i++)
+      for (i = 0; i < mpilen; i++)
         {
-          (*p)[len - i - 1] = mpi[i];
+          (*p)[mpilen - i - 1] = mpi[i];
         }
     }
 
@@ -191,8 +203,8 @@ int asn1_write_mpi(FAR unsigned char **p,
       len++;
     }
 
-  len += asn1_write_len(p, start, len);
-  len += asn1_write_tag(p, start, ASN1_INTEGER);
+  ASN1_CHK_ADD(len, asn1_write_len(p, start, len));
+  ASN1_CHK_ADD(len, asn1_write_tag(p, start, ASN1_INTEGER));
   return len;
 }
 

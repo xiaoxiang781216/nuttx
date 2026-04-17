@@ -569,7 +569,7 @@ static int virtio_crypto_rsa_get_session(FAR struct virtio_crypto_s *vcrypto,
   FAR struct crparam *u;
   uint32_t keybufsize;
   uint32_t keybits;
-  uint32_t keylen;
+  ssize_t keylen;
   sem_t sem;
 
   vq = vcrypto->vdev->vrings_info[vcrypto->max_data_queues].vq;
@@ -627,6 +627,11 @@ static int virtio_crypto_rsa_get_session(FAR struct virtio_crypto_s *vcrypto,
                 (FAR unsigned char *)n->crp_p, n->crp_nbits / 8,
                 (FAR unsigned char *)e->crp_p, e->crp_nbits / 8,
                 keybuf, keybufsize);
+    }
+
+  if (keylen < 0)
+    {
+      return keylen;
     }
 
   ctrl.op_flf.akcipher.key_len = keylen;
