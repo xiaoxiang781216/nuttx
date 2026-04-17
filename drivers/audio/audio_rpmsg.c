@@ -137,6 +137,7 @@ struct audio_rpmsg_s
 
   struct audio_info_s info;     /* Formats */
   struct ap_buffer_info_s binfo;
+  char params[4][64];           /* Cached parameter strings */
 
   FAR void *base;               /* Share memory address. */
   int count;                    /* Local apb allocated buffer count. */
@@ -348,6 +349,43 @@ static int audio_rpmsg_local_configure(FAR struct audio_rpmsg_s *aud,
   return ret;
 }
 
+static int audio_rpmsg_set_params(FAR struct audio_rpmsg_s *aud,
+                                  FAR const char *param)
+{
+  size_t keylen = strchrnul(param, '=') - param + 1;
+  size_t i;
+
+  for (i = 0; i < nitems(aud->params); i++)
+    {
+      if (aud->params[i][0] == '\0' ||
+          strncmp(aud->params[i], param, keylen) == 0)
+        {
+          strlcpy(aud->params[i], param, sizeof(aud->params[i]));
+          return OK;
+        }
+    }
+
+  return -ENOMEM;
+}
+
+static int audio_rpmsg_get_params(FAR struct audio_rpmsg_s *aud,
+                                  FAR char *param)
+{
+  size_t keylen = strlen(param);
+  size_t i;
+
+  for (i = 0; i < nitems(aud->params); i++)
+    {
+      if (strncmp(aud->params[i], param, keylen) == 0)
+        {
+          strlcpy(param, aud->params[i], sizeof(aud->params[i]));
+          return OK;
+        }
+    }
+
+  return -ENOENT;
+}
+
 static int audio_rpmsg_local_ioctl(FAR struct audio_rpmsg_s *aud, int cmd,
                                    unsigned long arg)
 {
@@ -371,6 +409,15 @@ static int audio_rpmsg_local_ioctl(FAR struct audio_rpmsg_s *aud, int cmd,
 
       case AUDIOIOC_GETAUDIOINFO:
         memcpy((FAR void *)(uintptr_t)arg, &aud->info, sizeof(aud->info));
+        break;
+
+      case AUDIOIOC_SETPARAMTER:
+        audio_rpmsg_set_params(aud, (FAR const char *)(uintptr_t)arg);
+        ret = -ENOTTY; /* Continue to forward via rpmsg */
+        break;
+
+      case AUDIOIOC_GETPARAMTER:
+        ret = audio_rpmsg_get_params(aud, (FAR char *)(uintptr_t)arg);
         break;
 
       case AUDIOIOC_HWRESET:
@@ -709,6 +756,13 @@ static int audio_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 
       msg.msg_id = AUDIO_MSG_IOERR;
       audio_rpmsg_callback(aud, AUDIO_CALLBACK_MESSAGE, &msg);
+      ret = 0;
+    }
+  else if (req->request == AUDIOIOC_SETPARAMTER && req->arglen > 0)
+    {
+      nxrmutex_lock(&aud->mutex);
+      audio_rpmsg_set_params(aud, (FAR const char *)req->data);
+      nxrmutex_unlock(&aud->mutex);
       ret = 0;
     }
   else
@@ -1599,6 +1653,8 @@ static ssize_t audio_rpmsg_ioctl_arglen(int cmd, unsigned long arg)
         return sizeof(struct ap_buffer_info_s);
       case AUDIOIOC_GETAUDIOINFO:
         return sizeof(struct audio_info_s);
+      case AUDIOIOC_SETPARAMTER:
+        return strlen((FAR const char *)(uintptr_t)arg) + 1;
       default:
         return -ENOTTY;
     }
