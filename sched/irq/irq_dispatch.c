@@ -300,6 +300,39 @@ void irq_monitor_disable(int irq)
 }
 
 /****************************************************************************
+ * Name: irq_monitor_enable_all / irq_monitor_disable_all
+ *
+ * Description:
+ *   Global enable/disable of IRQ statistics collection for all IRQs.
+ *   When disabled, no IRQ timing statistics, frequency information, or
+ *   counters are updated for any IRQ.
+ *
+ * Input Parameters:
+ *   None
+ *
+ ****************************************************************************/
+
+void irq_monitor_enable_all(void)
+{
+  int i;
+
+  for (i = 0; i < NUSER_IRQS; i++)
+    {
+      g_irqvector[i].monitor = true;
+    }
+}
+
+void irq_monitor_disable_all(void)
+{
+  int i;
+
+  for (i = 0; i < NUSER_IRQS; i++)
+    {
+      g_irqvector[i].monitor = false;
+    }
+}
+
+/****************************************************************************
  * Name: irq_monitor_get_freq
  *
  * Description:
