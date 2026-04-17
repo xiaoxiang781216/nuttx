@@ -568,7 +568,7 @@ static off_t romfs_seek(FAR struct file *filep, off_t offset, int whence)
   filep->f_pos = position;
   finfo("New file position: %jd\n", (intmax_t)filep->f_pos);
 
-  return ret < 0 ? ret : position;
+  return position;
 }
 
 /****************************************************************************
