@@ -30,6 +30,11 @@ if("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
   endif()
 endif()
 
+if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+  # Clang warns about 64-bit atomics on 32-bit targets not being lock-free
+  add_compile_options(-Wno-atomic-alignment)
+endif()
+
 # Set warning-as-error flag based on compiler type
 if(CONFIG_TRICORE_TOOLCHAIN_TASKING)
   set(WERROR_FLAG --warnings-as-errors)
