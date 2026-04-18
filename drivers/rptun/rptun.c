@@ -181,7 +181,11 @@ static DEFINE_PER_CPU_BMP(rmutex_t, g_rptun_lock) = NXRMUTEX_INITIALIZER;
 static DEFINE_PER_CPU_BMP(struct notifier_block, g_rptun_panic_nb) =
 {
   .notifier_call = rptun_notifier,
+#ifdef CONFIG_BMP
   .priority = INT_MIN, /* Panic notifier should be called at the last */
+#else
+  .priority = INT_MIN + 2,
+#endif
 };
 #  define g_rptun_panic_nb this_cpu_var_bmp(g_rptun_panic_nb)
 #endif
