@@ -46,7 +46,6 @@
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/panic_notifier.h>
 #include <nuttx/reboot_notifier.h>
-#include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_rpmsg.h>
 #include <openamp/remoteproc_loader.h>
 #include <openamp/remoteproc_virtio.h>
@@ -58,7 +57,7 @@
 
 #define RPTUN_RETRY_PERIOD_US    1000
 
-#define RPTUN_STATUS_CHECK(s, v) (((s) & (1u << (v))) != 0)
+#define RPTUN_STATUS_CHECK(s, v) ((s) & (1u << (v))) != 0
 #define RPTUN_STATUS_SET(s, v)   ((s) |= (1u << (v)))
 #define RPTUN_REASON_GET(s)      (ffs(s) - 1u)
 
@@ -66,9 +65,6 @@
   ((FAR struct rptun_status_s *)&((FAR struct resource_table *)(r))->reserved[0])
 
 #define rptunvbs(format, ...)    syslog(LOG_ALERT, format, ##__VA_ARGS__)
-
-#define RPTUN_STATUS_PAUSE       BOARDIOC_SOFTRESETCAUSE_MAX
-#define RPTUN_STATUS_STOP        (BOARDIOC_SOFTRESETCAUSE_MAX + 1)
 
 /****************************************************************************
  * Private Types
@@ -91,7 +87,9 @@ struct rptun_priv_s
   bool                        stop;
   pid_t                       pid;
   FAR const void             *trace_va;
+#if defined(CONFIG_BOARDCTL_RESET) || defined(CONFIG_BOARDCTL_POWEROFF)
   struct work_s               work;
+#endif
 };
 
 struct rptun_store_s
@@ -251,7 +249,7 @@ static int rptun_start(FAR struct remoteproc *rproc)
 static int rptun_stop(FAR struct remoteproc *rproc)
 {
   FAR struct rptun_priv_s *priv = rproc->priv;
-  int ret = -ENOTSUP;
+  int ret = OK;
 
   if (RPTUN_IS_MASTER(priv->dev))
     {
@@ -792,13 +790,6 @@ static void rptun_boardctl_work(FAR void *arg)
 }
 #endif
 
-static void rptun_stop_work(FAR void *arg)
-{
-  FAR struct rptun_priv_s *priv = arg;
-
-  rptun_dev_stop(&priv->rproc);
-}
-
 static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
 {
   uint32_t status;
@@ -833,48 +824,13 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
         }
     }
 
-  if (RPTUN_STATUS_CHECK(status, RPTUN_STATUS_PAUSE))
-    {
-      int timeout = CONFIG_RPTUN_STATUS_TIMEOUT_MS;
-
-      /* Wait for the crashing core to finish printing its log */
-
-      while (timeout-- > 0 &&
-             (!RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC)))
-        {
-          status = RPTUN_IS_MASTER(priv->dev) ? rsc_status->slave :
-                   rsc_status->master;
-          up_udelay(1000);
-        }
-    }
-
   if (RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC))
     {
       char msg[32];
 
-#ifdef CONFIG_RPTUN_REMOTE_PANIC_SILENT
-      /* Silence all syslog output for this passive panic.
-       * The mask will be restored at PANIC_KERNEL_FINAL.
-       */
-
-      nx_setlogmask(LOG_NONE);
-#endif
-
       snprintf(msg, sizeof(msg), "Panic by remote core: %s",
                RPTUN_GET_CPUNAME(priv->dev));
       PANIC_WITH_MSG(msg);
-    }
-  else if (RPTUN_STATUS_CHECK(status, RPTUN_STATUS_STOP))
-    {
-      /* Remote requested channel stop, stop local side.
-       * Clear rsc_table to prevent re-triggering from shared
-       * interrupt line (function returns early if rsc_table is NULL).
-       */
-
-      priv->rproc.rsc_table = NULL;
-      syslog(LOG_EMERG, "Stop by remote core: %s\n",
-             RPTUN_GET_CPUNAME(priv->dev));
-      work_queue(HPWORK, &priv->work, rptun_stop_work, priv, 0);
     }
   else if(status != 0u)
     {
@@ -1121,11 +1077,6 @@ static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
           return OK;
         }
 
-      if (val == RPTUN_STATUS_PAUSE)
-        {
-          return OK;
-        }
-
       ret = -ETIMEDOUT;
       while (timeout-- > 0)
         {
@@ -1220,29 +1171,6 @@ static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
   return ret;
 }
 
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-static int rptun_dev_unlink(FAR struct inode *inode)
-{
-  FAR struct rptun_priv_s *priv = inode->i_private;
-  int ret;
-
-  ret = rptun_dev_stop(&priv->rproc);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  nxrmutex_lock(&g_rptun_lock);
-  dq_rem(&priv->entry, &g_rptun_priv);
-  nxrmutex_unlock(&g_rptun_lock);
-
-  remoteproc_remove(&priv->rproc);
-  work_cancel_sync(HPWORK, &priv->work);
-  kmm_free(priv);
-  return OK;
-}
-#endif
-
 static int rptun_dev_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg)
 {
@@ -1265,11 +1193,10 @@ static int rptun_ioctl_foreach(FAR const char *cpuname, int cmd,
     {
       if (!cpuname || !strcmp(RPTUN_GET_CPUNAME(priv->dev), cpuname))
         {
-          int ret1 = rptun_do_ioctl(priv, cmd, value);
-          if (ret1 < 0)
+          ret = rptun_do_ioctl(priv, cmd, value);
+          if (ret < 0)
             {
-              ret = ret1;
-              continue;
+              break;
             }
         }
     }
@@ -1444,11 +1371,6 @@ static int rptun_notifier(FAR struct notifier_block *block,
       rptun_ioctl_foreach(NULL, RPTUNIOC_RESET,
                           (unsigned long)RPTUN_STATUS_PAUSE);
     }
-  else if (action == PANIC_KERNEL)
-    {
-      rptun_ioctl_foreach(NULL, RPTUNIOC_RESET,
-                          (unsigned long)RPTUN_STATUS_PAUSE);
-    }
 #ifdef CONFIG_RPTUN_AUTO_RESET_IN_PANIC_NOTIFIER
   else if (action == PANIC_KERNEL_FINAL)
     {
@@ -1535,10 +1457,12 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
 
   static const struct file_operations g_rptun_fops =
     {
-      .ioctl  = rptun_dev_ioctl,
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-      .unlink = rptun_dev_unlink,
-#endif
+      0,                /* open */
+      0,                /* close */
+      0,                /* read */
+      0,                /* write */
+      0,                /* seek */
+      rptun_dev_ioctl,  /* ioctl */
     };
 
   FAR struct rptun_priv_s *priv;
@@ -1631,14 +1555,6 @@ void rptun_dump_resource(FAR const struct resource_table *rsc)
             break;
         }
     }
-}
-
-int rptun_uninitialize(FAR const char *cpuname)
-{
-  char name[32];
-
-  snprintf(name, sizeof(name), "/dev/rptun/%s", cpuname);
-  return unregister_driver(name);
 }
 
 int rptun_boot(FAR const char *cpuname)
