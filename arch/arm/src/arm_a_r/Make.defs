@@ -112,6 +112,12 @@ ifeq ($(CONFIG_ARM_PSCI),y)
   CMN_CSRCS += arm_cpu_psci.c
 endif
 
+ifeq ($(CONFIG_ARCH_TRUSTZONE_NONSECURE),y)
+  ifneq ($(CONFIG_ARM_PSCI),y)
+    CMN_ASRCS += arm_smccc.S
+  endif
+endif
+
 ifeq ($(CONFIG_ARCH_USE_MMU),y)
   CMN_CSRCS += arm_mmu.c
 endif

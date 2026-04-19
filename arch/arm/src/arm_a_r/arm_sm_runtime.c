@@ -184,6 +184,28 @@ uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
   FAR uint32_t *nsec_r0 = (FAR uint32_t *)(&ctx->nsec.r0);
   FAR struct arm_smccc_res *args = (FAR struct arm_smccc_res *)nsec_r0;
 
+  /* Handle fast SMC: ARM_SMCCC_NUTTX_SEND_SECURE_SGI
+   * REE requests monitor to send a secure (Group 0) SGI to TEE.
+   * r0 = function ID, r1 = SGI ID (0-15).
+   *
+   * In monitor mode (secure state), write GICD_SGIR with NSATT=0
+   * to generate a Group 0 SGI targeting self. The SGI will pend in
+   * GIC and be delivered to TEE next time it runs.
+   * Return directly to non-secure world without entering TEE.
+   */
+
+#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
+  if (args->a0 == ARM_SMCCC_NUTTX_SEND_SECURE_SGI)
+    {
+      uint32_t sgi_id = (uint32_t)args->a1;
+      uint32_t cpuset = (uint32_t)args->a2;
+
+      up_trigger_irq(sgi_id, cpuset);
+      ctx->nsec.r0 = 0;
+      return SM_EXIT_TO_NON_SECURE;
+    }
+#endif
+
   arm_sm_save_banked_regs(&ctx->nsec.regs);
   arm_sm_restore_banked_regs(&ctx->sec.regs);
 

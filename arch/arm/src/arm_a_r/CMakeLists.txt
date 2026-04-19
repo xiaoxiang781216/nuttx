@@ -106,8 +106,12 @@ if(CONFIG_ARCH_TRUSTZONE_SECURE)
   list(APPEND CSRCS arm_sm_runtime.c arm_sm_vector.S)
 endif()
 
+if(CONFIG_ARM_PSCI OR CONFIG_ARCH_TRUSTZONE_NONSECURE)
+  list(APPEND CSRCS arm_smccc.S)
+endif()
+
 if(CONFIG_ARM_PSCI)
-  list(APPEND CSRCS arm_cpu_psci.c arm_smccc.S)
+  list(APPEND CSRCS arm_cpu_psci.c)
 endif()
 
 if(CONFIG_ARCH_USE_MMU)

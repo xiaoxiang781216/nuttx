@@ -38,11 +38,14 @@
 #include "arm_internal.h"
 #include "gic.h"
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_TRUSTZONE_NONSECURE)
-# if defined(CONFIG_ARCH_HIPRI_INTERRUPT)
-#  error "ARCH_HIPRI_INTERRUPT must configure with ARCH_TRUSTZONE_DISABLED or no trustzone"
-# endif
-#endif
+/* SGI group assignment bitmask:
+ *   IGROUPR_SGI_SECURE_VAL bit=1 -> Group 1 (non-secure)
+ *   IGROUPR_SGI_SECURE_VAL bit=0 -> Group 0 (secure)
+ *
+ * Default: SGI0-7 are non-secure (0xFF), SGI8-15 are secure.
+ */
+
+#define IGROUPR_SGI_SECURE_VAL 0x000000ffu
 
 /****************************************************************************
  * Private Data
@@ -257,7 +260,7 @@ void arm_gic_initialize(void)
    * All PPI config as secure interrupts.
    */
 
-  putreg32(0x000000ff, GIC_ICDISR(0));
+  putreg32(IGROUPR_SGI_SECURE_VAL, GIC_ICDISR(0));
 #else
   putreg32(0xffffffff, GIC_ICDISR(0));      /* SGIs and PPIs no-secure */
 #endif
@@ -648,7 +651,25 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
 {
   if (irq >= 0 && irq <= GIC_IRQ_SGI15)
     {
-      arm_cpu_sgi(irq, cpuset);
+#ifdef CONFIG_ARCH_TRUSTZONE_NONSECURE
+      /* If this SGI is configured as secure (bit=0 in
+       * IGROUPR_SGI_SECURE_VAL), REE cannot send it directly.
+       * Use SMC to request the secure world to trigger it.
+       */
+
+      if (!(IGROUPR_SGI_SECURE_VAL & BIT(irq)))
+        {
+          struct arm_smccc_res res;
+
+          arm_smccc_smc(ARM_SMCCC_NUTTX_SEND_SECURE_SGI,
+                        irq, cpuset,
+                        0, 0, 0, 0, 0, &res);
+        }
+      else
+#endif
+        {
+          arm_cpu_sgi(irq, cpuset);
+        }
     }
   else if (irq >= 0 && irq < NR_IRQS)
     {
