@@ -99,7 +99,8 @@ int mld_schedmsg(FAR struct mld_group_s *group, uint8_t msgtype)
  *
  ****************************************************************************/
 
-int mld_waitmsg(FAR struct mld_group_s *group, uint8_t msgtype)
+int mld_waitmsg(FAR struct net_driver_s *dev, FAR struct mld_group_s *group,
+                uint8_t msgtype)
 {
   int ret;
 
@@ -121,7 +122,9 @@ int mld_waitmsg(FAR struct mld_group_s *group, uint8_t msgtype)
     {
       /* Wait for the semaphore to be posted */
 
-      ret = nxsem_wait_uninterruptible(&group->sem);
+      ret = net_sem_timedwait2(&group->sem, false, UINT_MAX, &dev->d_lock,
+                               NULL);
+
       if (ret < 0)
         {
           break;

@@ -124,21 +124,29 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
                 }
             }
 
+          if (slot >= 0)
+            {
+              /* Reserve the slot before releasing conn_lock */
+
+              memcpy(&conn->mreq6[slot], mrec,
+                     sizeof(struct ipv6_mreq));
+            }
+
+          conn_unlock(&conn->sconn);
           if (slot < 0)
             {
-              conn_unlock(&conn->sconn);
               ret = slot;
             }
           else
             {
               ret = mld_joingroup(mrec);
-              if (ret == OK)
+              if (ret != OK)
                 {
-                  memcpy(&conn->mreq6[slot], mrec,
+                  conn_lock(&conn->sconn);
+                  memset(&conn->mreq6[slot], 0,
                          sizeof(struct ipv6_mreq));
+                  conn_unlock(&conn->sconn);
                 }
-
-              conn_unlock(&conn->sconn);
             }
         }
         break;

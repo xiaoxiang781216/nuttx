@@ -124,7 +124,8 @@ int igmp_schedmsg(FAR struct igmp_group_s *group, uint8_t msgid)
  *
  ****************************************************************************/
 
-int igmp_waitmsg(FAR struct igmp_group_s *group, uint8_t msgid)
+int igmp_waitmsg(struct net_driver_s *dev, FAR struct igmp_group_s *group,
+                 uint8_t msgid)
 {
   int ret;
 
@@ -146,7 +147,8 @@ int igmp_waitmsg(FAR struct igmp_group_s *group, uint8_t msgid)
     {
       /* Wait for the semaphore to be posted */
 
-      ret = nxsem_wait_uninterruptible(&group->sem);
+      ret = net_sem_timedwait2(&group->sem, false, UINT_MAX, &dev->d_lock,
+                               NULL);
       if (ret < 0)
         {
           break;

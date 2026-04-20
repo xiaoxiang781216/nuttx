@@ -128,6 +128,8 @@ int igmp_joingroup(struct net_driver_s *dev,
 
   DEBUGASSERT(dev != NULL && grpaddr != NULL);
 
+  netdev_lock(dev);
+
   /* Check if a this address is already in the group */
 
   group = igmp_grpfind(dev, &grpaddr->s_addr);
@@ -139,6 +141,8 @@ int igmp_joingroup(struct net_driver_s *dev,
       group = igmp_grpalloc(dev, &grpaddr->s_addr);
       if (group == NULL)
         {
+          nerr("ERROR: Failed to allocate group\n");
+          netdev_unlock(dev);
           return -EADDRNOTAVAIL;
         }
 
@@ -147,11 +151,12 @@ int igmp_joingroup(struct net_driver_s *dev,
       /* Send the Membership Report */
 
       IGMP_STATINCR(g_netstats.igmp.report_sched);
-      ret = igmp_waitmsg(group, IGMPv2_MEMBERSHIP_REPORT);
+      ret = igmp_waitmsg(dev, group, IGMPv2_MEMBERSHIP_REPORT);
       if (ret < 0)
         {
           nerr("ERROR: Failed to schedule message: %d\n", ret);
           igmp_grpfree(dev, group);
+          netdev_unlock(dev);
           return ret;
         }
 
@@ -166,6 +171,7 @@ int igmp_joingroup(struct net_driver_s *dev,
 
   DEBUGASSERT(group->njoins < UINT8_MAX);
   group->njoins++;
+  netdev_unlock(dev);
 
   return OK;
 }

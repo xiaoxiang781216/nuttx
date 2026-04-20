@@ -371,7 +371,8 @@ int mld_schedmsg(FAR struct mld_group_s *group, uint8_t msgtype);
  *
  ****************************************************************************/
 
-int mld_waitmsg(FAR struct mld_group_s *group, uint8_t msgtype);
+int mld_waitmsg(FAR struct net_driver_s *dev, FAR struct mld_group_s *group,
+                uint8_t msgtype);
 
 /****************************************************************************
  * Name:  mld_poll

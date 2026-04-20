@@ -133,6 +133,8 @@ int igmp_leavegroup(struct net_driver_s *dev,
 
   DEBUGASSERT(dev && grpaddr);
 
+  netdev_lock(dev);
+
   /* Find the entry corresponding to the address leaving the group */
 
   group = igmp_grpfind(dev, &grpaddr->s_addr);
@@ -148,6 +150,7 @@ int igmp_leavegroup(struct net_driver_s *dev,
 
       if (group->njoins > 0)
         {
+          netdev_unlock(dev);
           return OK;
         }
 
@@ -170,7 +173,7 @@ int igmp_leavegroup(struct net_driver_s *dev,
           ninfo("Schedule Leave Group message\n");
           IGMP_STATINCR(g_netstats.igmp.leave_sched);
 
-          ret = igmp_waitmsg(group, IGMP_LEAVE_GROUP);
+          ret = igmp_waitmsg(dev, group, IGMP_LEAVE_GROUP);
           if (ret < 0)
             {
               nerr("ERROR: Failed to schedule message: %d\n", ret);
@@ -184,12 +187,14 @@ int igmp_leavegroup(struct net_driver_s *dev,
       /* And remove the group address from the drivers MAC filter set */
 
       igmp_removemcastmac(dev, (FAR in_addr_t *)&grpaddr->s_addr);
+      netdev_unlock(dev);
       return OK;
     }
 
   /* Return ENOENT if the address is not a member of the group */
 
   ninfo("Return -ENOENT\n");
+  netdev_unlock(dev);
   return -ENOENT;
 }
 

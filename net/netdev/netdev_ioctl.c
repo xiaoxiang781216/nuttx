@@ -1483,7 +1483,6 @@ static int netdev_imsf_ioctl(FAR struct socket *psock, int cmd,
           dev = netdev_imsfdev(imsf);
           if (dev)
             {
-              netdev_lock(dev);
               if (imsf->imsf_fmode == MCAST_INCLUDE)
                 {
                   ret = igmp_joingroup(dev, &imsf->imsf_multiaddr);
@@ -1493,8 +1492,6 @@ static int netdev_imsf_ioctl(FAR struct socket *psock, int cmd,
                   DEBUGASSERT(imsf->imsf_fmode == MCAST_EXCLUDE);
                   ret = igmp_leavegroup(dev, &imsf->imsf_multiaddr);
                 }
-
-              netdev_unlock(dev);
             }
         }
         break;

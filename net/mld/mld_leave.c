@@ -104,6 +104,8 @@ int mld_leavegroup(FAR const struct ipv6_mreq *mrec)
           NTOHS(mrec->ipv6mr_multiaddr.s6_addr16[6]),
           NTOHS(mrec->ipv6mr_multiaddr.s6_addr16[7]));
 
+  netdev_lock(dev);
+
   /* Find the entry corresponding to the address leaving the group */
 
   group = mld_grpfind(dev, mrec->ipv6mr_multiaddr.s6_addr16);
@@ -123,6 +125,7 @@ int mld_leavegroup(FAR const struct ipv6_mreq *mrec)
 
       if (group->njoins > 0)
         {
+          netdev_unlock(dev);
           return OK;
         }
 
@@ -154,7 +157,7 @@ int mld_leavegroup(FAR const struct ipv6_mreq *mrec)
                * waiting for a message to be sent.  Can that happen?
                */
 
-              ret = mld_waitmsg(group, MLD_SEND_DONE);
+              ret = mld_waitmsg(dev, group, MLD_SEND_DONE);
               if (ret < 0)
                 {
                   mlderr("ERROR: Failed to schedule message: %d\n", ret);
@@ -196,12 +199,14 @@ int mld_leavegroup(FAR const struct ipv6_mreq *mrec)
             }
         }
 
+      netdev_unlock(dev);
       return OK;
     }
 
   /* Return ENOENT if the address is not a member of the group */
 
   mldinfo("Return -ENOENT\n");
+  netdev_unlock(dev);
   return -ENOENT;
 }
 

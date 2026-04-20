@@ -244,7 +244,8 @@ int igmp_schedmsg(FAR struct igmp_group_s *group, uint8_t msgid);
  *
  ****************************************************************************/
 
-int igmp_waitmsg(FAR struct igmp_group_s *group, uint8_t msgid);
+int igmp_waitmsg(struct net_driver_s *dev, FAR struct igmp_group_s *group,
+                 uint8_t msgid);
 
 /****************************************************************************
  * Name:  igmp_poll

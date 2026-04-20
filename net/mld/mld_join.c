@@ -69,7 +69,7 @@ static int mld_group_startup(FAR const struct ipv6_mreq *mrec,
 
   MLD_STATINCR(g_netstats.mld.report_sched);
 
-  ret = mld_waitmsg(group, MLD_SEND_V2REPORT);
+  ret = mld_waitmsg(dev, group, MLD_SEND_V2REPORT);
   if (ret < 0)
     {
       mlderr("ERROR: Failed to schedule Report: %d\n", ret);
@@ -158,6 +158,8 @@ int mld_joingroup(FAR const struct ipv6_mreq *mrec)
           NTOHS(mrec->ipv6mr_multiaddr.s6_addr16[6]),
           NTOHS(mrec->ipv6mr_multiaddr.s6_addr16[7]));
 
+  netdev_lock(dev);
+
   /* Check if a this address is already in the group */
 
   group = mld_grpfind(dev, mrec->ipv6mr_multiaddr.s6_addr16);
@@ -170,6 +172,8 @@ int mld_joingroup(FAR const struct ipv6_mreq *mrec)
       group = mld_grpalloc(dev, mrec->ipv6mr_multiaddr.s6_addr16);
       if (group == NULL)
         {
+          mlderr("ERROR: Failed to allocate group\n");
+          netdev_unlock(dev);
           return -ENOMEM;
         }
 
@@ -180,6 +184,7 @@ int mld_joingroup(FAR const struct ipv6_mreq *mrec)
         {
           mlderr("ERROR: Failed to start group: %d\n", ret);
           mld_grpfree(dev, group);
+          netdev_unlock(dev);
           return ret;
         }
 
@@ -215,6 +220,7 @@ int mld_joingroup(FAR const struct ipv6_mreq *mrec)
             {
               mlderr("ERROR: Failed to start group: %d\n", ret);
               mld_grpfree(dev, group);
+              netdev_unlock(dev);
               return ret;
             }
         }
@@ -233,6 +239,7 @@ int mld_joingroup(FAR const struct ipv6_mreq *mrec)
       MLD_STATINCR(g_netstats.mld.njoins);
     }
 
+  netdev_unlock(dev);
   return OK;
 }
 

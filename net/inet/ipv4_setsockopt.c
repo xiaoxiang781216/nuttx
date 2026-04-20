@@ -196,23 +196,31 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
                         }
                     }
 
+                  if (slot >= 0)
+                    {
+                      /* Reserve the slot before releasing conn_lock */
+
+                      conn->mreq[slot].imr_multiaddr =
+                          mrec->imr_multiaddr;
+                      conn->mreq[slot].imr_ifindex =
+                          dev->d_ifindex;
+                    }
+
+                  conn_unlock(&conn->sconn);
                   if (slot < 0)
                     {
-                      conn_unlock(&conn->sconn);
                       ret = slot;
                     }
                   else
                     {
                       ret = igmp_joingroup(dev, &mrec->imr_multiaddr);
-                      if (ret == OK)
+                      if (ret != OK)
                         {
-                          conn->mreq[slot].imr_multiaddr =
-                              mrec->imr_multiaddr;
-                          conn->mreq[slot].imr_ifindex =
-                              dev->d_ifindex;
+                          conn_lock(&conn->sconn);
+                          conn->mreq[slot].imr_multiaddr.s_addr = 0;
+                          conn->mreq[slot].imr_ifindex = 0;
+                          conn_unlock(&conn->sconn);
                         }
-
-                      conn_unlock(&conn->sconn);
                     }
                 }
               else
