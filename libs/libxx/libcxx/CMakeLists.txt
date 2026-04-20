@@ -167,8 +167,9 @@ if(CONFIG_LIBCXX)
   target_sources(libcxx PRIVATE ${SRCS})
 
   target_compile_options(libcxx PRIVATE ${FLAGS})
-  target_include_directories(libcxx BEFORE
-                             PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
+  target_include_directories(
+    libcxx BEFORE PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src
+                          ${CMAKE_CURRENT_LIST_DIR})
 
   # Map C++20 keyword constinit to compiler attribute for C++17 builds
   if(${CPP_STD_VER} LESS 20)

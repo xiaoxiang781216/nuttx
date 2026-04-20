@@ -822,6 +822,10 @@ static const char *g_white_files[] =
 
   "link.h",
 
+  /* Skip libcxx support header (C++ file, not NuttX style) */
+
+  "from_chars_support.h",
+
   NULL
 };
 
