@@ -93,7 +93,7 @@ extern "C"
  *     (if CONFIG_ARCH_HW_SHADOW_STACK enabled)
  */
 
-EXTERN uintptr_t g_idle_topstack;
+EXTERN const uintptr_t g_idle_topstack;
 
 /* Address of per-cpu idle stack base */
 
