@@ -156,7 +156,7 @@
 	srsdb		sp!, #PSR_MODE_SYS
 
 #  ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-	cpsid		if, #PSR_MODE_SYS
+	cpsid		f, #PSR_MODE_SYS
 #  else
 	cpsid		i, #PSR_MODE_SYS
 #  endif
