@@ -498,7 +498,6 @@ pid_t nxsched_waitpid(pid_t pid, FAR int *stat_loc, int options)
           ret = pid;
 
           spin_unlock_irqrestore(&group->tg_lock, flags);
-          group_drop(group);
         }
       else
         {

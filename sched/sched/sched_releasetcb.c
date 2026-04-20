@@ -95,6 +95,11 @@ static void release_tcb_cb(FAR void *arg)
   addrenv_leave(tcb);
 #endif
 
+  if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_GROUP)
+    {
+      group_drop(tcb->group);
+    }
+
   nxsem_destroy(&tcb->exit_sem);
 }
 

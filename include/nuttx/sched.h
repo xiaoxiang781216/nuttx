@@ -108,6 +108,7 @@
 #define TCB_FLAG_FREE_TCB          (1 << 13)                     /* Bit 13: Free tcb after exit */
 #define TCB_FLAG_PREEMPT_SCHED     (1 << 14)                     /* Bit 14: tcb is PREEMPT_SCHED */
 #define TCB_FLAG_KILL_PROCESSING   (1 << 15)                     /* Bit 15: tcb is killed */
+#define TCB_FLAG_FREE_GROUP        (1 << 16)                     /* Bit 16: Free group before tcb free */
 
 /* Values for struct task_group tg_flags */
 
