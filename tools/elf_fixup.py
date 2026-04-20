@@ -144,7 +144,7 @@ class Toolchain(ABC):
         for ph in elf.segments:
             phdr += (
                 "      {\n"
-                f"        .p_type=0x{ph.type.value:x},\n"
+                f"        .p_type=0x{0xffffffff & ph.type.value:x},\n"
                 f"        .p_offset=0x{ph.file_offset:x},\n"
                 f"        .p_vaddr=0x{ph.virtual_address:x},\n"
                 f"        .p_paddr=0x{ph.physical_address:x},\n"
