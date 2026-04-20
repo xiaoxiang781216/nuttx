@@ -221,7 +221,7 @@ int arm_svcall(int irq, void *context, void *arg)
             }
 #  endif
 
-#ifdef CONFIG_ARCH_KERNEL_STACK
+#  ifdef CONFIG_ARCH_KERNEL_STACK
           /* If this is the outermost SYSCALL and if there is a saved user
            * stack pointer, then restore the user stack pointer on this
            * final return to user code.
@@ -230,11 +230,19 @@ int arm_svcall(int irq, void *context, void *arg)
           if (index == 0 && tcb->xcp.ustkptr != NULL)
             {
               regs[REG_SP] = (uint32_t)tcb->xcp.ustkptr;
+#    ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
+              /* Restore PSPLIM back to the user stack base so the
+               * hardware stack-limit check matches the user stack we
+               * are about to return to.
+               */
+
+              regs[REG_SPLIM] = (uint32_t)tcb->stack_alloc_ptr;
+#    endif
               memcpy(tcb->xcp.ustkptr, regs, XCPTCONTEXT_SIZE);
               tcb->xcp.regs = tcb->xcp.ustkptr;
               tcb->xcp.ustkptr = NULL;
             }
-#endif
+#  endif
         }
         break;
 #endif
@@ -385,6 +393,9 @@ int arm_svcall(int irq, void *context, void *arg)
 
               regs[REG_SP] = usp + sizeof(siginfo_t);
               regs[REG_R2] = usp;
+#  ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
+              regs[REG_SPLIM] = (uint32_t)tcb->stack_alloc_ptr;
+#  endif
               memcpy((void *)regs[REG_SP], regs, XCPTCONTEXT_SIZE);
               tcb->xcp.regs = (void *)regs[REG_SP];
             }
@@ -416,7 +427,7 @@ int arm_svcall(int irq, void *context, void *arg)
 
           regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
           tcb->xcp.sigreturn  = 0;
-#ifdef CONFIG_ARCH_KERNEL_STACK
+#  ifdef CONFIG_ARCH_KERNEL_STACK
           /* We must enter here be using the user stack.  We need to switch
            * to back to the kernel user stack before returning to the kernel
            * mode signal trampoline.
@@ -429,10 +440,13 @@ int arm_svcall(int irq, void *context, void *arg)
               regs[REG_SP]      = (uint32_t)tcb->xcp.kstkptr;
               tcb->xcp.kstkptr = NULL;
 
+#    ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
+              regs[REG_SPLIM] = (uint32_t)tcb->xcp.kstack;
+#    endif
               tcb->xcp.regs = (void *)regs[REG_SP];
               memcpy((void *)tcb->xcp.regs, regs, XCPTCONTEXT_SIZE);
             }
-#endif
+#  endif
         }
         break;
 #endif
@@ -525,6 +539,15 @@ int arm_svcall(int irq, void *context, void *arg)
             {
               regs[REG_SP] = (uint32_t)tcb->xcp.kstack +
                              ARCH_KERNEL_STACKSIZE - XCPTCONTEXT_SIZE;
+#    ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
+              /* Switch PSPLIM to the kernel stack base. Otherwise the
+               * first 'sub sp' in arm_dispatch_syscall would trip the
+               * hardware stack-limit check when the kernel stack lives
+               * below the saved user-stack limit.
+               */
+
+              regs[REG_SPLIM] = (uint32_t)tcb->xcp.kstack;
+#    endif
               memcpy((void *)regs[REG_SP], tcb->xcp.regs, XCPTCONTEXT_SIZE);
               tcb->xcp.ustkptr = tcb->xcp.regs;
               tcb->xcp.regs = (void *)regs[REG_SP];
