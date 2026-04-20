@@ -29,7 +29,7 @@ CSRCS += clock_notifier.c
 # include the base delay definition (busy-loop) as a minimum-viable product. We
 # don't want the weak references to conflict.
 
-ifneq ($(CONFIG_TIMER_ARCH),y)
+ifeq ($(CONFIG_TIMER_ARCH)$(CONFIG_ALARM_ARCH),)
   CSRCS += delay.c
 endif
 

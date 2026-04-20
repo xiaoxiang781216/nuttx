@@ -44,8 +44,63 @@ static DEFINE_PER_CPU_BSS_BMP(clock_t, g_current_tick);
 #endif
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define CONFIG_BOARD_LOOPSPER100USEC ((CONFIG_BOARD_LOOPSPERMSEC+5)/10)
+#define CONFIG_BOARD_LOOPSPER10USEC  ((CONFIG_BOARD_LOOPSPERMSEC+50)/100)
+#define CONFIG_BOARD_LOOPSPERUSEC    ((CONFIG_BOARD_LOOPSPERMSEC+500)/1000)
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static void udelay_coarse(useconds_t microseconds)
+{
+  volatile int i;
+
+  /* We'll do this a little at a time because we expect that the
+   * CONFIG_BOARD_LOOPSPERUSEC is very inaccurate during to truncation in
+   * the divisions of its calculation.  We'll use the largest values that
+   * we can in order to prevent significant error buildup in the loops.
+   */
+
+  while (microseconds > 1000)
+    {
+      for (i = 0; i < CONFIG_BOARD_LOOPSPERMSEC; i++)
+        {
+        }
+
+      microseconds -= 1000;
+    }
+
+  while (microseconds > 100)
+    {
+      for (i = 0; i < CONFIG_BOARD_LOOPSPER100USEC; i++)
+        {
+        }
+
+      microseconds -= 100;
+    }
+
+  while (microseconds > 10)
+    {
+      for (i = 0; i < CONFIG_BOARD_LOOPSPER10USEC; i++)
+        {
+        }
+
+      microseconds -= 10;
+    }
+
+  while (microseconds > 0)
+    {
+      for (i = 0; i < CONFIG_BOARD_LOOPSPERUSEC; i++)
+        {
+        }
+
+      microseconds--;
+    }
+}
 
 static void oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
                              FAR void *arg)
@@ -72,6 +127,16 @@ static void oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
 
   ONESHOT_TICK_ABSOLUTE(g_oneshot_lower, now + 1);
 #endif
+}
+
+static void ndelay_accurate(uint64_t delay_ns)
+{
+  uint64_t expected = clock_systime_nsec() + delay_ns;
+
+  while (expected - clock_systime_nsec() <= delay_ns)
+    {
+      /* CPU Relax */
+    }
 }
 
 /****************************************************************************
@@ -361,4 +426,57 @@ void up_perf_convert(clock_t elapsed, FAR struct timespec *ts)
 #endif
 }
 #endif /* CONFIG_ARCH_PERF_EVENTS */
+
+/****************************************************************************
+ * Name: up_mdelay
+ *
+ * Description:
+ *   Delay inline for the requested number of milliseconds.
+ *
+ ****************************************************************************/
+
+void weak_function up_mdelay(unsigned int milliseconds)
+{
+  up_udelay(USEC_PER_MSEC * milliseconds);
+}
+
+/****************************************************************************
+ * Name: up_udelay
+ *
+ * Description:
+ *   Delay inline for the requested number of microseconds.
+ *
+ ****************************************************************************/
+
+void weak_function up_udelay(useconds_t microseconds)
+{
+  if (g_oneshot_lower != NULL)
+    {
+      ndelay_accurate(microseconds * (uint64_t)NSEC_PER_USEC);
+    }
+  else /* Period timer hasn't been initialized yet */
+    {
+      udelay_coarse(microseconds);
+    }
+}
+
+/****************************************************************************
+ * Name: up_ndelay
+ *
+ * Description:
+ *   Delay inline for the requested number of nanoseconds.
+ *
+ ****************************************************************************/
+
+void weak_function up_ndelay(unsigned long nanoseconds)
+{
+  if (g_oneshot_lower != NULL)
+    {
+      ndelay_accurate(nanoseconds);
+    }
+  else /* Period timer hasn't been initialized yet */
+    {
+      udelay_coarse((nanoseconds + NSEC_PER_USEC - 1) / NSEC_PER_USEC);
+    }
+}
 
