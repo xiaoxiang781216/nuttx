@@ -144,6 +144,10 @@ struct local_conn_s
   mutex_t lc_sendlock;           /* Make sending multi-thread safe */
   mutex_t lc_polllock;           /* Lock for net poll */
 
+#ifdef CONFIG_NET_LOCAL_DGRAM
+  struct sockaddr_un lc_daddr;   /* DGRAM: peer address set by connect() */
+#endif
+
 #ifdef CONFIG_NET_LOCAL_STREAM
   /* SOCK_STREAM fields common to both client and server */
 

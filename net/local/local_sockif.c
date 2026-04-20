@@ -829,9 +829,26 @@ static int local_connect(FAR struct socket *psock,
 #ifdef CONFIG_NET_LOCAL_DGRAM
       case SOCK_DGRAM:
         {
-          /* Perform the datagram connection logic */
+          FAR struct local_conn_s *conn = psock->s_conn;
+          FAR const struct sockaddr_un *unaddr =
+              (FAR const struct sockaddr_un *)addr;
 
-          return -ENOSYS;
+          if (addr->sa_family == AF_UNSPEC)
+            {
+              memset(&conn->lc_daddr, 0, sizeof(conn->lc_daddr));
+              if (conn->lc_state == LOCAL_STATE_CONNECTED)
+                {
+                  conn->lc_state = conn->lc_type == LOCAL_TYPE_UNNAMED
+                                   ? LOCAL_STATE_UNBOUND
+                                   : LOCAL_STATE_BOUND;
+                }
+
+              return OK;
+            }
+
+          memcpy(&conn->lc_daddr, unaddr, sizeof(conn->lc_daddr));
+          conn->lc_state = LOCAL_STATE_CONNECTED;
+          return OK;
         }
         break;
 #endif /* CONFIG_NET_LOCAL_DGRAM */

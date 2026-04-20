@@ -180,6 +180,10 @@ FAR struct local_conn_s *local_alloc(void)
       nxmutex_init(&conn->lc_sendlock);
       nxmutex_init(&conn->lc_polllock);
 
+      snprintf(conn->lc_path, sizeof(conn->lc_path),
+               "unnamed.%p", conn);
+      conn->lc_type = LOCAL_TYPE_PATHNAME;
+
       /* Use conn_init to initialize the connection structure */
 
       conn_init(&conn->lc_conn);

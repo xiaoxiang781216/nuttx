@@ -130,91 +130,6 @@ fail:
 #endif /* CONFIG_NET_LOCAL_SCM */
 
 /****************************************************************************
- * Name: local_send
- *
- * Description:
- *   Send a local packet as a stream.
- *
- * Input Parameters:
- *   psock    An instance of the internal socket structure.
- *   buf      Data to send
- *   len      Length of data to send
- *   flags    Send flags (ignored for now)
- *
- * Returned Value:
- *   On success, returns the number of characters sent.  On  error,
- *   -1 is returned, and errno is set appropriately (see send() for the
- *   list of errno numbers).
- *
- ****************************************************************************/
-
-static ssize_t local_send(FAR struct socket *psock,
-                          FAR const struct iovec *buf,
-                          size_t len, int flags)
-{
-  ssize_t ret;
-
-  switch (psock->s_type)
-    {
-#ifdef CONFIG_NET_LOCAL_STREAM
-      case SOCK_STREAM:
-#endif /* CONFIG_NET_LOCAL_STREAM */
-#ifdef CONFIG_NET_LOCAL_DGRAM
-      case SOCK_DGRAM:
-#endif /* CONFIG_NET_LOCAL_DGRAM */
-        {
-          FAR struct local_conn_s *conn = psock->s_conn;
-
-          /* Local TCP packet send */
-
-          DEBUGASSERT(buf);
-
-          /* Verify that this is a connected peer socket and that it has
-           * opened the outgoing FIFO for write-only access.
-           */
-
-          if (conn->lc_state != LOCAL_STATE_CONNECTED)
-            {
-              nerr("ERROR: not connected\n");
-              return -ENOTCONN;
-            }
-
-          /* Check shutdown state */
-
-          if (conn->lc_outfile.f_inode == NULL)
-            {
-              return -EPIPE;
-            }
-
-          /* Send the packet */
-
-          ret = nxmutex_lock(&conn->lc_sendlock);
-          if (ret < 0)
-            {
-              /* May fail because the task was canceled. */
-
-              return ret;
-            }
-
-          ret = local_send_packet(&conn->lc_outfile, buf, len);
-          nxmutex_unlock(&conn->lc_sendlock);
-        }
-        break;
-      default:
-        {
-          /* EDESTADDRREQ.  Signifies that the socket is not connection-mode
-           * and no peer address is set.
-           */
-
-          ret = -EDESTADDRREQ;
-        }
-        break;
-    }
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: local_sendto
  *
  * Description:
@@ -281,11 +196,13 @@ static ssize_t local_sendto(FAR struct socket *psock,
 
   /* Verify that this is not a connected peer socket.  It need not be
    * bound, however.  If unbound, recvfrom will see this as a nameless
-   * connection.
+   * connection.  DGRAM connected state is allowed since connect() only
+   * sets the default peer address without establishing a FIFO link.
    */
 
   if (conn->lc_state != LOCAL_STATE_UNBOUND &&
-      conn->lc_state != LOCAL_STATE_BOUND)
+      conn->lc_state != LOCAL_STATE_BOUND &&
+      conn->lc_state != LOCAL_STATE_CONNECTED)
     {
       /* Either not bound to address or it is connected */
 
@@ -386,6 +303,81 @@ errout_with_lock:
 #else
   return -EISCONN;
 #endif /* CONFIG_NET_LOCAL_DGRAM */
+}
+
+/****************************************************************************
+ * Name: local_send
+ *
+ * Description:
+ *   Send a local packet as a stream.
+ *
+ * Input Parameters:
+ *   psock    An instance of the internal socket structure.
+ *   buf      Data to send
+ *   len      Length of data to send
+ *   flags    Send flags (ignored for now)
+ *
+ * Returned Value:
+ *   On success, returns the number of characters sent.  On  error,
+ *   -1 is returned, and errno is set appropriately (see send() for the
+ *   list of errno numbers).
+ *
+ ****************************************************************************/
+
+static ssize_t local_send(FAR struct socket *psock,
+                          FAR const struct iovec *buf,
+                          size_t len, int flags)
+{
+  ssize_t ret;
+
+  switch (psock->s_type)
+    {
+      case SOCK_STREAM:
+        {
+          FAR struct local_conn_s *conn = psock->s_conn;
+
+          DEBUGASSERT(buf);
+
+          if (conn->lc_state != LOCAL_STATE_CONNECTED)
+            {
+              nerr("ERROR: not connected\n");
+              return -ENOTCONN;
+            }
+
+          if (conn->lc_outfile.f_inode == NULL)
+            {
+              return -EPIPE;
+            }
+
+          ret = local_send_packet(&conn->lc_outfile, buf, len);
+        }
+        break;
+
+#ifdef CONFIG_NET_LOCAL_DGRAM
+      case SOCK_DGRAM:
+        {
+          FAR struct local_conn_s *conn = psock->s_conn;
+
+          if (conn->lc_state != LOCAL_STATE_CONNECTED)
+            {
+              return -EDESTADDRREQ;
+            }
+
+          ret = local_sendto(psock, buf, len, flags,
+                  (FAR const struct sockaddr *)&conn->lc_daddr,
+                  sizeof(conn->lc_daddr));
+        }
+        break;
+#endif /* CONFIG_NET_LOCAL_DGRAM */
+
+      default:
+        {
+          ret = -EDESTADDRREQ;
+        }
+        break;
+    }
+
+  return ret;
 }
 
 /****************************************************************************
