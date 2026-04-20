@@ -151,7 +151,7 @@ void arm_boot_secondary(int cpu)
 #ifdef CONFIG_PERCPU_SECTION
   CP15_SET(TPIDRPRW, PERCPU_OFFSET * cpu);
 #  ifdef CONFIG_BUILD_PROTECTED
-  CP15_SET(TPIDRURO, USERSPACE->us_offset_percpu * cpu);
+  CP15_SET(TPIDRURW, USERSPACE->us_offset_percpu * cpu);
 #  endif
 
 #  ifdef CONFIG_BMP
