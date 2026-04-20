@@ -126,11 +126,8 @@ static int     irq_open(FAR struct file *filep, FAR const char *relpath,
 static int     irq_close(FAR struct file *filep);
 static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
-
-#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
 static ssize_t irq_write(FAR struct file *filep, FAR const char *buffer,
                  size_t buflen);
-#endif
 
 /****************************************************************************
  * Public Data
@@ -146,9 +143,7 @@ const struct procfs_operations g_irq_operations =
   irq_open,       /* open */
   irq_close,      /* close */
   irq_read,       /* read */
-#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
   irq_write,      /* write */
-#endif
 };
 
 /****************************************************************************
@@ -255,18 +250,6 @@ static int irq_open(FAR struct file *filep, FAR const char *relpath,
 
   finfo("Open '%s'\n", relpath);
 
-#ifndef CONFIG_ARCH_HAVE_IRQTRIGGER
-  /* This PROCFS file is read-only.  Any attempt to open with write access
-   * is not permitted.
-   */
-
-  if ((oflags & O_WRONLY) != 0 || (oflags & O_RDONLY) == 0)
-    {
-      ferr("ERROR: Only O_RDONLY supported\n");
-      return -EACCES;
-    }
-#endif
-
   /* Allocate a container to hold the file attributes */
 
   irqfile = kmm_zalloc(sizeof(struct irq_file_s));
@@ -349,26 +332,46 @@ static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
   return irqfile->ncopied;
 }
 
-#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
 static ssize_t irq_write(FAR struct file *filep, FAR const char *buffer,
-                 size_t buflen)
+                         size_t buflen)
 {
-  int ret;
   int irq;
 
   finfo("buffer=%p buflen=%d\n", buffer, (int)buflen);
 
-  /* Scan the IRQ number from buffer */
+  /* Command: "on" or "off" - enable/disable all IRQ monitor */
 
-  ret = sscanf(buffer, "%d", &irq);
-  if (ret == 1 && irq < NR_IRQS && irq > 0)
+  if (strncmp(buffer, "on", 2) == 0)
+    {
+      if (sscanf(buffer + 2, "%d", &irq) == 1)
+        {
+          irq_monitor_enable(irq);
+        }
+      else
+        {
+          irq_monitor_enable_all();
+        }
+    }
+  else if (strncmp(buffer, "off", 3) == 0)
+    {
+      if (sscanf(buffer + 3, "%d", &irq) == 1)
+        {
+          irq_monitor_disable(irq);
+        }
+      else
+        {
+          irq_monitor_disable_all();
+        }
+    }
+#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
+  else if (sscanf(buffer, "%d", &irq) == 1 && irq > 0 && irq < NR_IRQS)
     {
       up_trigger_irq(irq, 0);
     }
+#endif
 
   return buflen;
 }
-#endif
 
 /****************************************************************************
  * Public Functions
