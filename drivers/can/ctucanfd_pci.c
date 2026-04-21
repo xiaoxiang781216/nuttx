@@ -267,10 +267,11 @@ static DEFINE_PER_CPU_BMP(struct pci_driver_s, g_ctucanfd_drv) =
 };
 #define g_ctucanfd_drv this_cpu_var_bmp(g_ctucanfd_drv)
 
-#ifdef CONFIG_CAN_CTUCANFD_CHARDEV
-static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_ctucanfd_count);
-#define g_ctucanfd_count this_cpu_var_bmp(g_ctucanfd_count)
-#endif
+/* PCI device to CPU assignment map.
+ * Indexed by PCI device number, value is CPU core index.
+ */
+
+static const int g_ctucanfd_pci_map[] = CTUCANFD_PCI_MAP;
 
 /*****************************************************************************
  * Private Functions
@@ -1974,10 +1975,33 @@ static int ctucanfd_interrupt(int irq, FAR void *context, FAR void *arg)
 static void ctucanfd_init(FAR struct ctucanfd_driver_s *priv)
 {
   cpu_set_t cpuset;
+  int ret;
 
-  /* REVISIT: Only legacy IRQ supported in QEMU driver */
+  /* Try MSI first. Each device gets a unique IRQ number from
+   * GICv2m, avoiding the INTx 4-pin sharing issue where different
+   * CPUs' up_affinity_irq calls would overwrite each other's
+   * GICD_ITARGETSR settings. Fall back to legacy IRQ if MSI is
+   * not available (e.g. CONFIG_PCI_MSIX or CONFIG_ARM_GICv2M
+   * not enabled).
+   */
 
-  priv->irq = pci_get_irq(priv->pcidev);
+  ret = pci_alloc_irq(priv->pcidev, &priv->irq, 1);
+  if (ret >= 0)
+    {
+      /* Program the MSI address/data into the PCI device's MSI
+       * capability registers so the device can trigger the
+       * allocated GICv2m SPI via memory write.
+       */
+
+      pci_connect_irq(priv->pcidev, &priv->irq, 1);
+    }
+  else
+    {
+      /* Fall back to legacy INTx interrupt */
+
+      priv->irq = pci_get_irq(priv->pcidev);
+    }
+
   irq_attach(priv->irq, ctucanfd_interrupt, priv);
 
   CPU_ZERO(&cpuset);
@@ -2028,10 +2052,24 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
   FAR struct ctucanfd_driver_s  *priv   = NULL;
   uint8_t                        i      = 0;
   int                            ret;
+  uint8_t                        devid;
+  uint8_t                        canid;
 #ifdef CONFIG_CAN_CTUCANFD_CHARDEV
-  uint8_t                        count;
   char                           devpath[PATH_MAX];
 #endif
+
+  /* Derive device index from PCI slot number.
+   * Slot 0 is the PCIe root port, CAN devices start from slot 1,
+   * so devid = slot - 1 maps to PCI_MAP index.
+   */
+
+  devid = PCI_SLOT(dev->devfn) - 1;
+
+  if (devid >= nitems(g_ctucanfd_pci_map) ||
+       g_ctucanfd_pci_map[devid] != up_cpu_index())
+    {
+      return -ENODEV;
+    }
 
   /* Allocate the interface structure */
 
@@ -2100,6 +2138,13 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       goto errout;
     }
 
+  /* CAN channel ID derived from devid and channels per device.
+   * This avoids a global canid counter that requires
+   * synchronization across CPUs.
+   */
+
+  canid = devid * priv->count;
+
   /* Common initialziation for all channels */
 
   ctucanfd_init(priv);
@@ -2115,11 +2160,10 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       priv->devs[i].txbufcnt = CTUCANFD_TXBUF_CNT;
 
 #ifdef CONFIG_CAN_CTUCANFD_CHARDEV
-      count = g_ctucanfd_count++;
 
       /* Get devpath for this CTUCANFD device */
 
-      snprintf(devpath, PATH_MAX, "/dev/can%d", count);
+      snprintf(devpath, PATH_MAX, "/dev/can%d", canid + i);
 
       /* Initialize CTUCANFD channel */
 
@@ -2131,7 +2175,8 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       ret = can_register(devpath, &priv->devs[i].dev);
       if (ret < 0)
         {
-          pcierr("ERROR: failed to register count=%d, %d\n", i, ret);
+          pcierr("ERROR: failed to register can%d: %d\n",
+                 canid + i, ret);
           goto errout;
         }
 #endif
@@ -2145,6 +2190,8 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       netdev->quota[NETPKT_RX] = CTUCANFD_RX_QUOTA;
       netdev->ops = &g_ctucanfd_net_ops;
 
+      snprintf(netdev->netdev.d_ifname, IFNAMSIZ, "can%d", canid + i);
+
       /* Set the IFF Loopback flag */
 
       IFF_SET_LOOPBACK(netdev->netdev.d_flags);
@@ -2154,7 +2201,8 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       ret = netdev_lower_register(netdev, NET_LL_CAN);
       if (ret < 0)
         {
-          pcierr("ERROR: failed to register count=%d, %d\n", i, ret);
+          pcierr("ERROR: failed to register can%d: %d\n",
+                 canid + i, ret);
           goto errout;
         }
 

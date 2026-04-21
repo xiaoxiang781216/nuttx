@@ -361,6 +361,17 @@ config CAN_CTUCANFD_SOCKET
 
 endchoice # "CTU CAN FD PCI CAN device type"
 
+config CAN_CTUCANFD_PCI_MAP
+	string "PCI device to CPU assignment map"
+	default "{0,0,0,0,0,1,1,1,1}"
+	depends on CAN_CTUCANFD
+	---help---
+		Array indexed by PCI device number, value is CPU core index.
+		map[x]=y means PCI device x is owned by cpuY.
+		map[x]=-1 means PCI device x is not assigned.
+		e.g., 5 devices on core0, 4 on core1:
+		"{0,0,0,0,0,1,1,1,1}"
+
 endif # CAN_CTUCANFD
 
 config CAN_VCAN
