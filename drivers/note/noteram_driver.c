@@ -2169,11 +2169,15 @@ noteram_initialize_with_buffer(FAR const char *devname,
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   drv->driver.name = (FAR const char *)(drv + 1);
   drv->driver.filter.mode.type_mask =
-    CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE;
+    CONFIG_DRIVERS_NOTERAM_FILTER_DEFAULT_MODE;
 
 #  ifndef CONFIG_UP
   drv->driver.filter.mode.cpuset =
-    CONFIG_SCHED_INSTRUMENTATION_CPUSET;
+    CONFIG_DRIVERS_NOTERAM_CPUSET;
+#  endif
+
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+  drv->driver.filter.level.level = CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL;
 #  endif
 #endif
 
