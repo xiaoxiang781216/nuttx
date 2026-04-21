@@ -425,38 +425,6 @@ int addrenv_attach(FAR struct tcb_s *tcb, FAR struct addrenv_s *addrenv)
 int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb);
 
 /****************************************************************************
- * Name: addrenv_leave
- *
- * Description:
- *   Leave a process's address environment.
- *
- * Input Parameters:
- *   tcb  - The tcb of the process.
- *
- * Returned Value:
- *   This is a NuttX internal function so it follows the convention that
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
- *
- ****************************************************************************/
-
-static inline_function int addrenv_leave(FAR struct tcb_s *tcb)
-{
-  int ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
-  int ret;
-
-  ret = up_addrenv_detach(tcb);
-
-  addrenv_drop(tcb->group->tg_addrenv_own, false);
-  if (ttype == TCB_FLAG_TTYPE_TASK)
-    {
-      tcb->group->tg_addrenv_own = NULL;
-    }
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: addrenv_take
  *
  * Description:
@@ -577,6 +545,38 @@ int addrenv_restore(FAR struct addrenv_s *addrenv)
  ****************************************************************************/
 
 void addrenv_drop(FAR struct addrenv_s *addrenv, bool deferred);
+
+/****************************************************************************
+ * Name: addrenv_leave
+ *
+ * Description:
+ *   Leave a process's address environment.
+ *
+ * Input Parameters:
+ *   tcb  - The tcb of the process.
+ *
+ * Returned Value:
+ *   This is a NuttX internal function so it follows the convention that
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+static inline_function int addrenv_leave(FAR struct tcb_s *tcb)
+{
+  int ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
+  int ret;
+
+  ret = up_addrenv_detach(tcb);
+
+  addrenv_drop(tcb->group->tg_addrenv_own, false);
+  if (ttype == TCB_FLAG_TTYPE_TASK)
+    {
+      tcb->group->tg_addrenv_own = NULL;
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Address Environment Interfaces
