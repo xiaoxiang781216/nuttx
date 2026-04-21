@@ -53,10 +53,10 @@ GTEXT(arm64_smccc_smc)
 SECTION_FUNC(text, arm64_smccc_smc)
     smc   #0
     ldr   x4, [sp]
-    stp   x0, x1, [x4, #8 * ARM_SMCC_RES_A0]
-    stp   x2, x3, [x4, #8 * ARM_SMCC_RES_A2]
-    stp   x4, x5, [x4, #8 * ARM_SMCC_RES_A4]
-    stp   x6, x7, [x4, #8 * ARM_SMCC_RES_A6]
+    stp   x0, x1, [x4, #8 * ARM64_SMCC_RES_A0]
+    stp   x2, x3, [x4, #8 * ARM64_SMCC_RES_A2]
+    stp   x4, x5, [x4, #8 * ARM64_SMCC_RES_A4]
+    stp   x6, x7, [x4, #8 * ARM64_SMCC_RES_A6]
     ret
 
 /* The HVC instruction is used to generate a synchronous exception that is
@@ -67,8 +67,8 @@ GTEXT(arm64_smccc_hvc)
 SECTION_FUNC(text, arm64_smccc_hvc)
     hvc   #0
     ldr   x4, [sp]
-    stp   x0, x1, [x4, #8 * ARM_SMCC_RES_A0]
-    stp   x2, x3, [x4, #8 * ARM_SMCC_RES_A2]
-    stp   x4, x5, [x4, #8 * ARM_SMCC_RES_A4]
-    stp   x6, x7, [x4, #8 * ARM_SMCC_RES_A6]
+    stp   x0, x1, [x4, #8 * ARM64_SMCC_RES_A0]
+    stp   x2, x3, [x4, #8 * ARM64_SMCC_RES_A2]
+    stp   x4, x5, [x4, #8 * ARM64_SMCC_RES_A4]
+    stp   x6, x7, [x4, #8 * ARM64_SMCC_RES_A6]
     ret
