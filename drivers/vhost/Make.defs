@@ -42,6 +42,10 @@ ifeq ($(CONFIG_DRIVERS_VHOST_SERIAL),y)
   CSRCS += vhost-serial.c
 endif
 
+ifeq ($(CONFIG_DRIVERS_VHOST_NET),y)
+  CSRCS += vhost-net.c
+endif
+
 # Include build support
 
 DEPPATH += --dep-path vhost

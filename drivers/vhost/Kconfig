@@ -26,6 +26,14 @@ config DRIVERS_VHOST_BLK_STACKSIZE
 
 endif # DRIVERS_VHOST_BLK
 
+config DRIVERS_VHOST_NET
+	bool "Virtual Host Net Device Support"
+	depends on NETDEVICES
+	default n
+	select ARCH_HAVE_NETDEV_STATISTICS
+	select NETDEV_LATEINIT
+	select DRIVERS_VHOST
+
 config DRIVERS_VHOST_RNG
 	bool "Virtual Host Rng Device Support"
 	default n
@@ -36,7 +44,6 @@ config DRIVERS_VHOST_RPMSG
 	default n
 	select RPMSG_VIRTIO
 	select DRIVERS_VHOST
-
 
 config DRIVERS_VHOST_SERIAL
 	bool "Virtual Host Serial Device Support"
@@ -53,4 +60,3 @@ config DRIVERS_VHOST_SERIAL_STACKSIZE
 	default DEFAULT_TASK_STACKSIZE
 
 endif
-
