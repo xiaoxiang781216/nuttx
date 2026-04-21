@@ -170,6 +170,8 @@
   ((volatile Ifx_SRC_SRCR *)((uintptr_t)TRICORE_SRC_BASEADDR + (irq) * TRICORE_SRC_SPACING))
 #define TRICORE_GPSR2IRQ(src_cpu, dest_cpu) \
   TRICORE_SRC2IRQ(&SRC_GPSR0_SR0 + src_cpu * TRICORE_SRCNUM_PER_GPSR + dest_cpu)
+#define TRICORE_SCHEDIRQ \
+  TRICORE_GPSR2IRQ(up_this_cpu(), up_this_cpu())
 
 /* CPUCALL uses GPSR{cpu}_SR7 instead of GPSR7_SR{cpu} so that it works
  * on all TC4XX variants (TC48X/TC4ZX do not have GPSR7).
