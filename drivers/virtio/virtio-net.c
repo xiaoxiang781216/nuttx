@@ -37,6 +37,7 @@
 #include <nuttx/net/netdev_lowerhalf.h>
 #include <nuttx/percpu.h>
 #include <nuttx/virtio/virtio.h>
+#include <nuttx/virtio/virtio-net.h>
 #include <nuttx/net/wifi_sim.h>
 
 #include "virtio-net.h"
@@ -45,15 +46,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Virtio net feature bits */
-
-#define VIRTIO_NET_F_MAC      5
-
 /* Virtio net header size and packet buffer size */
 
-#define VIRTIO_NET_HDRSIZE    (sizeof(struct virtio_net_hdr_s))
 #define VIRTIO_NET_LLHDRSIZE  (sizeof(struct virtio_net_llhdr_s))
-#define VIRTIO_NET_BUFSIZE    (CONFIG_NET_ETH_PKTSIZE + CONFIG_NET_GUARDSIZE)
 
 /* Virtio net virtqueue index and number */
 
@@ -61,55 +56,9 @@
 #define VIRTIO_NET_TX         1
 #define VIRTIO_NET_NUM        2
 
-#define VIRTIO_NET_MAX_PKT_SIZE \
-    ((CONFIG_NET_LL_GUARDSIZE - ETH_HDRLEN) + VIRTIO_NET_BUFSIZE)
-#define VIRTIO_NET_MAX_NIOB \
-    ((VIRTIO_NET_MAX_PKT_SIZE + CONFIG_IOB_BUFSIZE_MAX - 1) / \
-     CONFIG_IOB_BUFSIZE_MAX)
-
-/* Ethernet header size: wider when 802.1Q VLAN tagging is enabled */
-
-#ifdef CONFIG_NET_VLAN
-#  define VIRTIO_NET_ETH_HDRSIZE  ETH_8021Q_HDRLEN
-#else
-#  define VIRTIO_NET_ETH_HDRSIZE  ETH_HDRLEN
-#endif
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
-
-/* Virtio net header, just define it here for further, now only use it
- * to calculate the virto net header size, see marco VIRTIO_NET_HDRSIZE
- */
-
-begin_packed_struct struct virtio_net_hdr_s
-{
-  uint8_t  flags;
-  uint8_t  gso_type;
-  uint16_t hdr_len;
-  uint16_t gso_size;
-  uint16_t csum_start;
-  uint16_t csum_offset;
-} end_packed_struct;
-
-/* The definition of the struct virtio_net_config refers to the link
- * https://docs.oasis-open.org/virtio/virtio/v1.2/cs01/
- * virtio-v1.2-cs01.html#x1-2230004.
- */
-
-begin_packed_struct struct virtio_net_config_s
-{
-  uint8_t  mac[IFHWADDRLEN];                 /* VIRTIO_NET_F_MAC */
-  uint16_t status;                           /* VIRTIO_NET_F_STATUS */
-  uint16_t max_virtqueue_pairs;              /* VIRTIO_NET_F_MQ */
-  uint16_t mtu;                              /* VIRTIO_NET_F_MTU */
-  uint32_t speed;                            /* VIRTIO_NET_F_SPEED_DUPLEX */
-  uint8_t  duplex;
-  uint8_t  rss_max_key_size;                 /* VIRTIO_NET_F_RSS */
-  uint16_t rss_max_indirection_table_length;
-  uint32_t supported_hash_types;
-} end_packed_struct;
 
 struct virtio_net_priv_s
 {
@@ -637,19 +586,9 @@ static int virtio_net_init(FAR struct virtio_net_priv_s *priv,
 
   virtio_set_status(vdev, VIRTIO_CONFIG_STATUS_DRIVER_OK);
 
-#if CONFIG_DRIVERS_VIRTIO_NET_BUFNUM > 0
-  priv->bufnum = CONFIG_DRIVERS_VIRTIO_NET_BUFNUM;
-#else
-  /* Calculate the virtio network buffer number:
-   * 1/4 for the TX netpkts, 1/4 for the RX netpkts.
-   */
-
-  priv->bufnum = CONFIG_IOB_NBUFFERS / VIRTIO_NET_MAX_NIOB / 4;
-#endif
-  priv->bufnum = MIN(vdev->vrings_info[VIRTIO_NET_RX].info.num_descs /
-                     (VIRTIO_NET_MAX_NIOB + 1), priv->bufnum);
-  priv->bufnum = MIN(vdev->vrings_info[VIRTIO_NET_TX].info.num_descs /
-                     (VIRTIO_NET_MAX_NIOB + 1), priv->bufnum);
+  priv->bufnum = virtio_net_calc_bufnum(
+      vdev->vrings_info[VIRTIO_NET_RX].info.num_descs,
+      vdev->vrings_info[VIRTIO_NET_TX].info.num_descs);
   return OK;
 }
 

@@ -85,7 +85,7 @@ config DRIVERS_VIRTIO_NET
 config DRIVERS_VIRTIO_NET_BUFNUM
 	int "Virtio network driver buffer number"
 	default 0
-	depends on DRIVERS_VIRTIO_NET
+	depends on DRIVERS_VIRTIO_NET || DRIVERS_VHOST_NET
 	---help---
 		The buffer number in each virtqueue. (We have 2 virtqueues.)
 		If this value equals to 0, use CONFIG_IOB_NBUFFERS / 4 for each.
