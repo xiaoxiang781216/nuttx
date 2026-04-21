@@ -265,7 +265,9 @@ static DEFINE_PER_CPU_BMP(struct notifier_block, g_note_reboot_nb) =
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-struct note_filter_s g_note_filter;
+#undef g_note_filter
+DEFINE_PER_CPU_BMP(struct note_filter_s, g_note_filter);
+#define g_note_filter this_cpu_var_bmp(g_note_filter)
 #endif
 
 /****************************************************************************

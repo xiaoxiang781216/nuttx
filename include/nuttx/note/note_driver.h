@@ -35,6 +35,7 @@
 #include <string.h>
 
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/percpu.h>
 #include <nuttx/tag.h>
 
 /* For system call numbers definition */
@@ -740,7 +741,8 @@ struct note_max_s
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-extern struct note_filter_s g_note_filter;
+DECLARE_PER_CPU_BMP(struct note_filter_s, g_note_filter);
+#  define g_note_filter this_cpu_var_bmp(g_note_filter)
 #endif
 
 /****************************************************************************
