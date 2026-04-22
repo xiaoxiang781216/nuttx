@@ -153,14 +153,14 @@ SECTIONS
       _snoinit = ABSOLUTE(.);
       *(.noinit*)
       _enoinit = ABSOLUTE(.);
-  } > ksram
+  } > ksram AT > kflash
 
   .bss : {                     /* BSS */
        _sbss = .;
        *(.bss*)
        . = ALIGN(4096);
        _ebss = .;
-  } > ksram
+  } > ksram AT > kflash
 
   /* Sections to be discarded */
   /DISCARD/ : {
