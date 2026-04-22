@@ -38,7 +38,9 @@ USER_BINFILE += $(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx_user.bin)
 
 USER_LDFLAGS = --undefined=userspace --undefined=$(ENTRYPT) --entry=$(ENTRYPT) -T $(addsuffix .tmp,$(USER_LDSCRIPT))
 USER_LDLIBS = $(patsubst lib%,-l%,$(basename $(notdir $(USERLIBS))))
-USER_LIBGCC = "${shell "$(CC)" $(ARCHCPUFLAGS) -print-libgcc-file-name}"
+
+USER_LDLIBS += "${shell "$(CC)" $(ARCHCPUFLAGS) -print-libgcc-file-name}"
+USER_LDLIBS += "${shell "$(CC)" $(ARCHCPUFLAGS) -print-file-name=libm.a}"
 
 # Objects needed for multiple linking
 
@@ -58,8 +60,7 @@ define LINK_ALLSYMS_KASAN
 	$(Q) $(TOPDIR)/tools/kasan_global.py -e nuttx_user -o kasan_globals.tmp -a $(CONFIG_MM_KASAN_GLOBAL_ALIGN)
 	$(Q) $(call COMPILE, kasan_globals.tmp, kasan_globals$(OBJEXT), -x c -fno-sanitize=kernel-address)
 	$(Q) $(call DELFILE, kasan_globals.tmp))
-	$(Q) $(LD) $(USER_LDFLAGS) $(USER_LIBPATHS) -o nuttx_user $(OBJS) $(EXTRA_UOBJS) \
-		--start-group $(USER_LDLIBS) $(USER_LIBGCC) --end-group
+	$(Q) $(LD) $(USER_LDFLAGS) $(USER_LIBPATHS) -o nuttx_user $(OBJS) $(EXTRA_UOBJS) --start-group $(USER_LDLIBS) --end-group
 endef
 
 # Source files
@@ -82,7 +83,7 @@ $(addsuffix .tmp,$(USER_LDSCRIPT)): $(USER_LDSCRIPT)
 
 nuttx_user: $(OBJS) $(addsuffix .tmp,$(USER_LDSCRIPT))
 ifeq ($(CONFIG_ALLSYMS)$(CONFIG_MM_KASAN_GLOBAL),)
-	$(Q) $(LD) -o $@ $(USER_LDFLAGS) $(USER_LIBPATHS) $(OBJS) --start-group $(USER_LDLIBS) $(USER_LIBGCC) --end-group
+	$(Q) $(LD) -o $@ $(USER_LDFLAGS) $(USER_LIBPATHS) $(OBJS) --start-group $(USER_LDLIBS) --end-group
 else
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 	$(Q) $(call LINK_ALLSYMS_KASAN)
