@@ -154,15 +154,15 @@
  * Fast SMCs: short atomic ops, non-preemptible.
  */
 
-#define ARM64_SMCCC_NUTTX_SEND_SECURE_SGI \
+#define ARM_SMCCC_NUTTX_SEND_SECURE_SGI \
   ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64, \
                      ARM_SMCCC_OWNER_TRUSTED_OS_END, 0x0000)
 
-#define ARM64_SMCCC_NUTTX_TEE_IDLE \
+#define ARM_SMCCC_NUTTX_TEE_IDLE \
   ARM_SMCCC_CALL_VAL(ARM_SMCCC_STD_CALL, ARM_SMCCC_SMC_64, \
                      ARM_SMCCC_OWNER_TRUSTED_OS_END, 0x0001)
 
-#define ARM64_SMCCC_NUTTX_REE_IDLE \
+#define ARM_SMCCC_NUTTX_REE_IDLE \
   ARM_SMCCC_CALL_VAL(ARM_SMCCC_STD_CALL, ARM_SMCCC_SMC_64, \
                      ARM_SMCCC_OWNER_TRUSTED_OS_END, 0x0002)
 
@@ -176,7 +176,7 @@
  * a0-a7 result values from registers 0 to 7
  */
 
-struct arm64_smccc_res
+struct arm_smccc_res
 {
   unsigned long a0;
   unsigned long a1;
@@ -188,9 +188,9 @@ struct arm64_smccc_res
   unsigned long a7;
 };
 
-typedef struct arm64_smccc_res arm64_smccc_res_t;
+typedef struct arm_smccc_res arm_smccc_res_t;
 
-enum arm64_smccc_conduit
+enum arm_smccc_conduit
 {
   SMCCC_CONDUIT_NONE,
   SMCCC_CONDUIT_SMC,
@@ -378,11 +378,11 @@ enum arm64_smccc_conduit
  * param res results
  */
 
-void arm64_smccc_hvc(unsigned long a0, unsigned long a1,
-                     unsigned long a2, unsigned long a3,
-                     unsigned long a4, unsigned long a5,
-                     unsigned long a6, unsigned long a7,
-                     struct arm64_smccc_res *res);
+void arm_smccc_hvc(unsigned long a0, unsigned long a1,
+                   unsigned long a2, unsigned long a3,
+                   unsigned long a4, unsigned long a5,
+                   unsigned long a6, unsigned long a7,
+                   struct arm_smccc_res *res);
 
 /* Make SMC calls
  *
@@ -391,11 +391,11 @@ void arm64_smccc_hvc(unsigned long a0, unsigned long a1,
  * param res results
  */
 
-void arm64_smccc_smc(unsigned long a0, unsigned long a1,
-                     unsigned long a2, unsigned long a3,
-                     unsigned long a4, unsigned long a5,
-                     unsigned long a6, unsigned long a7,
-                     struct arm64_smccc_res *res);
+void arm_smccc_smc(unsigned long a0, unsigned long a1,
+                   unsigned long a2, unsigned long a3,
+                   unsigned long a4, unsigned long a5,
+                   unsigned long a6, unsigned long a7,
+                   struct arm_smccc_res *res);
 
 /****************************************************************************
  * Name: up_assert

@@ -80,9 +80,9 @@ static unsigned long __invoke_psci_fn_hvc(unsigned long function_id,
                                           unsigned long arg1,
                                           unsigned long arg2)
 {
-  struct arm64_smccc_res res;
+  struct arm_smccc_res res;
 
-  arm64_smccc_hvc(function_id, arg0, arg1, arg2, 0, 0, 0, 0, &res);
+  arm_smccc_hvc(function_id, arg0, arg1, arg2, 0, 0, 0, 0, &res);
   return res.a0;
 }
 
@@ -91,9 +91,9 @@ static unsigned long __invoke_psci_fn_smc(unsigned long function_id,
                                           unsigned long arg1,
                                           unsigned long arg2)
 {
-  struct arm64_smccc_res res;
+  struct arm_smccc_res res;
 
-  arm64_smccc_smc(function_id, arg0, arg1, arg2, 0, 0, 0, 0, &res);
+  arm_smccc_smc(function_id, arg0, arg1, arg2, 0, 0, 0, 0, &res);
   return res.a0;
 }
 
