@@ -87,7 +87,7 @@ int timer_getoverrun(timer_t timerid)
     }
   else
     {
-      ret = timer->pt_overrun;
+      ret = atomic_read(&timer->pt_overrun);
       ret = ret > DELAYTIMER_MAX ? DELAYTIMER_MAX : ret;
     }
 

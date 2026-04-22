@@ -101,42 +101,41 @@ static inline void timer_free(struct posix_timer_s *timer, bool delay)
  *   timer - The per-thread timer, previously created by the call to
  *     timer_create(), to be deleted.
  *   delay - If true, timer_free will use delayfree.
+ *   in_expiration  - If true, we can not call wd_cancel.
  *
  * Returned Value:
- *   If the call succeeds, timer_release() will return 0 (OK) or 1 (meaning
- *   that the timer is still valid).  Otherwise, the function will return a
- *   negated errno value:
+ *   If the call succeeds, timer_release() will return false or true (meaning
+ *   that the timer is still valid).
  *
- *   -EINVAL - The timer specified timerid is not valid.
+ * Assumptions:
+ *   The timer should not be NULL.
  *
  ****************************************************************************/
 
-int timer_release(FAR struct posix_timer_s *timer, bool delay)
+bool timer_release(FAR struct posix_timer_s *timer, bool delay,
+                   bool in_expiration)
 {
-  FAR struct task_group_s *group = this_task()->group;
-  int ret = OK;
+  bool valid = true;
 
   /* Some sanity checks */
 
-  if (timer == NULL)
+  DEBUGASSERT(timer);
+
+  /* Wait the callback to finish then we acquire the ownership. */
+
+  if (!in_expiration)
     {
-      ret = -EINVAL;
+      wd_cancel(&timer->pt_timer);
     }
 
   /* Release one reference to timer.  Don't delete the timer until the count
-   * would decrement to zero.
+   * would decrement to zero. The thread that decreases the reference
+   * count to zero will become the timer owner.
    */
 
-  else if (timer->pt_crefs > 1u)
+  if (--timer->pt_crefs == 0u)
     {
-      timer->pt_crefs--;
-      ret = 1;
-    }
-  else
-    {
-      /* Cancel the underlying watchdog instance */
-
-      wd_cancel(&timer->pt_wdog);
+      FAR struct task_group_s *group = this_task()->group;
 
       /* Cancel any pending notification */
 
@@ -145,11 +144,12 @@ int timer_release(FAR struct posix_timer_s *timer, bool delay)
       /* Release the timer structure */
 
       timer_free(timer, delay);
+
+      atomic_sub(&group->itimer_count, 1);
+      valid = false;
     }
 
-  atomic_sub(&group->itimer_count, 1);
-
-  return ret;
+  return valid;
 }
 
 #endif /* CONFIG_DISABLE_POSIX_TIMERS */

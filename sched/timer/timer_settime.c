@@ -40,15 +40,6 @@
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
 
 /****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static inline void timer_signotify(FAR struct posix_timer_s *timer);
-static inline void timer_restart(FAR struct posix_timer_s *timer,
-                                 wdparm_t itimer);
-static void timer_timeout(wdparm_t itimer);
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -82,13 +73,14 @@ static inline void timer_signotify(FAR struct posix_timer_s *timer)
 }
 
 /****************************************************************************
- * Name: timer_restart
+ * Name: timer_timeout
  *
  * Description:
- *   If a periodic timer has been selected, then restart the watchdog.
+ *   This function is called if the timeout elapses before the condition is
+ *   signaled.
  *
  * Input Parameters:
- *   timer - A reference to the POSIX timer that just timed out
+ *   arg - A reference to the POSIX timer that just timed out
  *
  * Returned Value:
  *   None
@@ -98,85 +90,53 @@ static inline void timer_signotify(FAR struct posix_timer_s *timer)
  *
  ****************************************************************************/
 
-static inline void timer_restart(FAR struct posix_timer_s *timer,
-                                 wdparm_t itimer)
+static void timer_timeout(wdparm_t arg)
 {
-  clock_t ticks;
-  clock_t delay;
-  clock_t frame;
+  FAR struct posix_timer_s *timer = (FAR struct posix_timer_s *)arg;
+  clock_t                   delay = clock_systime_ticks() -
+                                    timer->pt_timer.expired;
 
-  /* If this is a repetitive timer, then restart the watchdog */
+  /* Send the specified signal to the specified task. Increment the
+   * reference count on the timer first so that will not be deleted until
+   * after the signal handler returns.
+   * If the timer->pt_crefs <= 0, it means the timer has been deleted by the
+   * user, we should return immediately.
+   */
 
-  if (timer->pt_delay)
+  if (timer->pt_crefs > 0u)
     {
-      /* Check whether next expected time is reached */
-
-      ticks = clock_systime_ticks();
-      delay = ticks - timer->pt_expected;
-
-      /* Calculate the number of timer overruns and the next expected tick.
-       * The next expired tick frame can be computed as align up:
-       * frame <- (elapsed_ticks + pt_delay) / pt_delay
-       * For instance:
-       *  |   pt_delay   |   pt_delay   |   pt_delay   | ... |
-       *  ^ pt_expected                    ^ ticks     ^ next pt_expected
-       * In this case, frame equals 3.
-       * Then, pt_overrun <- frame - 1 and
-       * the next pt_expected <- pt_expected + frame * pt_delay.
-       * Assumption of correctness:
-       * (delay + timer->pt_delay) should not overflow.
-       */
-
-      frame = (delay + timer->pt_delay) / timer->pt_delay;
-      timer->pt_overrun   = (int)(frame - 1u);
-      timer->pt_expected += frame * timer->pt_delay;
-
-      wd_start_abstick(&timer->pt_wdog, timer->pt_expected,
-                       timer_timeout, itimer);
-    }
-}
-
-/****************************************************************************
- * Name: timer_timeout
- *
- * Description:
- *   This function is called if the timeout elapses before the condition is
- *   signaled.
- *
- * Input Parameters:
- *   itimer - A reference to the POSIX timer that just timed out
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   This function executes in the context of the watchod timer interrupt.
- *
- ****************************************************************************/
-
-static void timer_timeout(wdparm_t itimer)
-{
-  FAR struct posix_timer_s *timer = timer_gethandle((timer_t)itimer);
-
-  if (timer)
-    {
-      /* Send the specified signal to the specified task.   Increment the
-       * reference count on the timer first so that will not be deleted until
-       * after the signal handler returns.
-       */
-
       timer->pt_crefs++;
       timer_signotify(timer);
 
       /* Release the reference. timer_release will return nonzero if
-       * the timer was not deleted.
+       * the timer was not deleted. The thread that decreases the reference
+       * count to zero will become the timer owner.
        */
 
-      if (timer_release(timer, false))
+      if (timer_release(timer, false, true) && timer->pt_delay)
         {
-          /* If this is a repetitive timer, the restart the watchdog */
+          /* If this is a repetitive timer, then restart the timer.
+           * First, calculate the number of timer overruns and the next
+           * expected tick.
+           * The next expired tick frame can be computed as align up:
+           * frame <- (elapsed_ticks + pt_delay) / pt_delay
+           * For instance:
+           *  |   pt_delay   |   pt_delay   |   pt_delay   | ... |
+           *  ^ expected                    ^ ticks        ^ next
+           * In this case, frame equals 3.
+           * Then, pt_overrun <- frame - 1 and
+           * the next expected <- expected + frame * pt_delay.
+           * Assumption of correctness:
+           * (delay + timer->pt_delay) should not overflow.
+           */
 
-          timer_restart(timer, itimer);
+          clock_t frame = (delay + timer->pt_delay) / timer->pt_delay;
+          clock_t next  = frame * timer->pt_delay;
+          atomic_set(&timer->pt_overrun, (int32_t)(frame - 1u));
+          DEBUGASSERT(frame <= INT_MAX + 1u);
+
+          wd_start_next(&timer->pt_timer, next, timer_timeout,
+                        (wdparm_t)timer);
         }
     }
 }
@@ -267,8 +227,7 @@ int timer_settime(timer_t timerid, int flags,
       value->it_value.tv_nsec >= NSEC_PER_SEC ||
       value->it_value.tv_sec < 0)
     {
-      set_errno(EINVAL);
-      return ERROR;
+      ret = -EINVAL;
     }
   else
     {
@@ -276,7 +235,7 @@ int timer_settime(timer_t timerid, int flags,
         {
           /* Get the number of ticks before the underlying watchdog expires */
 
-          delay = wd_gettime(&timer->pt_wdog);
+          delay = wd_gettime(&timer->pt_timer);
 
           /* Convert that to a struct timespec and return it */
 
@@ -288,7 +247,11 @@ int timer_settime(timer_t timerid, int flags,
        * timer_settime() is called).
        */
 
-      wd_cancel(&timer->pt_wdog);
+      wd_cancel(&timer->pt_timer);
+
+      /* Now we have the ownership of the timer, we can modify the
+       * timer without any lock.
+       */
 
       /* Cancel any pending notification */
 
@@ -334,12 +297,11 @@ int timer_settime(timer_t timerid, int flags,
               delay = clock_time2ticks(&value->it_value);
             }
 
-          timer->pt_expected = clock_delay2abstick(delay);
-
           /* Then start the watchdog */
 
-          ret = wd_start_abstick(&timer->pt_wdog, timer->pt_expected,
-                                timer_timeout, (wdparm_t)timer);
+          ret = wd_start_abstick(&timer->pt_timer,
+                                 clock_delay2abstick(delay),
+                                 timer_timeout, (wdparm_t)timer);
         }
     }
 

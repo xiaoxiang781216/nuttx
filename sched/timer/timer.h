@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/compiler.h>
 #include <nuttx/signal.h>
 #include <nuttx/wdog.h>
@@ -59,10 +60,9 @@ struct posix_timer_s
   uint8_t          pt_flags;       /* See PT_FLAGS_* definitions */
   uint8_t          pt_crefs;       /* Reference count */
   pid_t            pt_owner;       /* Creator of timer */
-  int              pt_overrun;     /* Overrun time */
+  atomic_t         pt_overrun;     /* Overrun time */
   clock_t          pt_delay;       /* If non-zero, used to reset repetitive timers */
-  clock_t          pt_expected;    /* Expected absolute time */
-  struct wdog_s    pt_wdog;        /* The watchdog that provides the timing */
+  struct wdog_s    pt_timer;       /* The watchdog that provides the timing */
   struct sigevent  pt_event;       /* Notification information */
 #ifdef CONFIG_SIG_EVTHREAD
   struct sigwork_s pt_work;
@@ -97,7 +97,8 @@ DECLARE_PER_CPU_BMP(spinlock_t, g_locktimers);
 
 void timer_initialize(void);
 void timer_deleteall(pid_t pid);
-int timer_release(FAR struct posix_timer_s *timer, bool delay);
+bool timer_release(FAR struct posix_timer_s *timer, bool delay,
+                   bool in_expiration);
 FAR struct posix_timer_s *timer_gethandle(timer_t timerid);
 
 #endif /* CONFIG_DISABLE_POSIX_TIMERS */

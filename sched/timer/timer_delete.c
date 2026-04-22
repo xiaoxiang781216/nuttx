@@ -64,11 +64,22 @@
 
 int timer_delete(timer_t timerid)
 {
-  int ret = timer_release(timer_gethandle(timerid), false);
-  if (ret < 0)
+  int ret;
+  FAR struct posix_timer_s *timer = timer_gethandle(timerid);
+
+  if (timer == NULL)
     {
-      set_errno(-ret);
+      set_errno(EINVAL);
       ret = ERROR;
+    }
+  else
+    {
+      /* Note that the timer_release may return 1, which is non-compliant
+       * with the POSIX standards.
+       */
+
+      timer_release(timer, false, false);
+      ret = OK;
     }
 
   return ret;
