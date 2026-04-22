@@ -49,6 +49,7 @@
 #include <nuttx/lib/math32.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/panic_notifier.h>
+#include <nuttx/ratelimit.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/streams.h>
 #include <nuttx/queue.h>
@@ -85,14 +86,6 @@
  * Private Types
  ****************************************************************************/
 
-struct noteram_ratelimit_s
-{
-  unsigned int interval; /* The interval in seconds */
-  unsigned int burst;    /* The max allowed note number during interval */
-  unsigned int printed;  /* The number of printed note during interval */
-  unsigned long begin;   /* The timestamp in seconds */
-};
-
 aligned_data(sizeof(uintptr_t))
 struct noteram_header_s
 {
@@ -118,7 +111,7 @@ struct noteram_driver_s
   atomic_t count_ref;       /* Reference count, init 1 at creation */
   bool dynamic;             /* true if dynamically allocated */
   struct notifier_block nb;
-  struct noteram_ratelimit_s ratelimit;
+  struct ratelimit_state_s ratelimit;
   dq_queue_t poll_list;     /* Registered poll users list */
   rspinlock_t lock;
   atomic_t poll_ref;        /* Poll notify in-flight reference */
@@ -377,65 +370,6 @@ static inline void noteram_header_init(FAR struct noteram_driver_s *drv)
       memset(drv->header, 0, sizeof(struct noteram_header_s));
       drv->header->magic = NOTERAM_MAGIC;
     }
-}
-
-/****************************************************************************
- * Name: noteram_ratelimit
- *
- * Description:
- *   Check whether the instrumentation is limited.
- *
- * Input Parameters:
- *   driver - The channel of note driver
- *
- * Returned Value:
- *   True is returned if the instrumentation is limited.
- *
- ****************************************************************************/
-
-static bool noteram_ratelimit(FAR struct noteram_driver_s *drv)
-{
-  bool ret;
-  clock_t ticks;
-  uint32_t seconds;
-  FAR struct noteram_ratelimit_s *limit;
-
-  limit = &drv->ratelimit;
-
-  if (limit->interval == 0)
-    {
-      return false;
-    }
-
-  ticks = clock_systime_ticks();
-  seconds = ticks * CONFIG_USEC_PER_TICK / 1000000;
-
-  if (limit->begin == 0)
-    {
-      limit->begin = seconds;
-    }
-
-  /* Reset statistical information */
-
-  if ((seconds - limit->begin) >= limit->interval)
-    {
-      limit->begin = seconds;
-      limit->printed = 0;
-    }
-
-  /* Check if the note is limited */
-
-  if (limit->burst && limit->burst > limit->printed)
-    {
-      limit->printed++;
-      ret = false;
-    }
-  else
-    {
-      ret = true;
-    }
-
-  return ret;
 }
 
 /****************************************************************************
@@ -1262,7 +1196,7 @@ static int noteram_add(FAR struct note_driver_s *driver,
 
   noteram_header_init(drv);
 
-  if (noteram_ratelimit(drv))
+  if (ratelimit_islimited(&drv->ratelimit))
     {
       goto out;
     }

@@ -53,6 +53,7 @@
 #include <nuttx/compiler.h>
 #include <nuttx/list.h>
 #include <nuttx/irq.h>
+#include <nuttx/ratelimit.h>
 
 #ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
 #  include <nuttx/panic_notifier.h>
@@ -78,14 +79,6 @@
 /****************************************************************************
  * Private Types
  ****************************************************************************/
-
-struct ramlog_ratelimit_s
-{
-  unsigned int  interval; /* The interval in seconds */
-  unsigned int  burst;    /* The max allowed note number during interval */
-  unsigned int  printed;  /* The number of printed note during interval */
-  unsigned long begin;    /* The timestamp in seconds */
-};
 
 struct ramlog_header_s
 {
@@ -130,7 +123,7 @@ struct ramlog_dev_s
   spinlock_t                 rl_lock;        /* The lock for ramlog */
 #endif
   dq_queue_t                 rl_queue;       /* The dq of ramlog_user_s */
-  struct ramlog_ratelimit_s  rl_ratelimit;   /* The ratelimit for ramlog */
+  struct ratelimit_state_s   rl_ratelimit;   /* The ratelimit for ramlog */
 #if CONFIG_RAMLOG_POLLTIMEOUT_MS > 0
   struct wdog_s              rl_wdog;        /* The wdog for poll timeout */
 #endif
@@ -403,65 +396,6 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
 }
 
 /****************************************************************************
- * Name: ramlog_ratelimit
- *
- * Description:
- *   Check whether the log is limited.
- *
- * Input Parameters:
- *   dev - The pointer of ramlog device.
- *
- * Returned Value:
- *   True is returned if the log is limited.
- *
- ****************************************************************************/
-
-static bool ramlog_ratelimit(FAR struct ramlog_dev_s *dev)
-{
-  bool ret;
-  clock_t ticks;
-  uint32_t seconds;
-  FAR struct ramlog_ratelimit_s *limit;
-
-  limit = &dev->rl_ratelimit;
-
-  if (limit->interval == 0)
-    {
-      return false;
-    }
-
-  ticks = clock_systime_ticks();
-  seconds = ticks * CONFIG_USEC_PER_TICK / 1000000;
-
-  if (limit->begin == 0)
-    {
-      limit->begin = seconds;
-    }
-
-  /* Reset statistical information */
-
-  if ((seconds - limit->begin) >= limit->interval)
-    {
-      limit->begin = seconds;
-      limit->printed = 0;
-    }
-
-  /* Check if the note is limited */
-
-  if (limit->burst && limit->burst > limit->printed)
-    {
-      limit->printed++;
-      ret = false;
-    }
-  else
-    {
-      ret = true;
-    }
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: ramlog_unread
  ****************************************************************************/
 
@@ -618,7 +552,7 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 
   flags = spin_lock_irqsave_nopreempt(RAMLOG_LOCK(priv));
 
-  if (ramlog_ratelimit(priv))
+  if (ratelimit_islimited(&priv->rl_ratelimit))
     {
       spin_unlock_irqrestore_nopreempt(RAMLOG_LOCK(priv), flags);
       return len;
