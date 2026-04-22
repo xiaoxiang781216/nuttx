@@ -810,7 +810,7 @@ static ssize_t tcp_recvfrom_one(FAR struct tcp_conn_s *conn, FAR void *buf,
 
   if (tcp_should_send_recvwindow(conn))
     {
-      netdev_txnotify_dev(conn->dev, TCP_POLL);
+      netdev_txnotify(conn->dev, TCP_POLL);
     }
 
   tcp_notify_recvcpu(conn);

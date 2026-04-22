@@ -383,7 +383,7 @@ int psock_tcp_connect(FAR struct socket *psock,
 
               /* Notify the device driver that new connection is available. */
 
-              netdev_txnotify_dev(conn->dev, TCP_POLL);
+              netdev_txnotify(conn->dev, TCP_POLL);
 
               /* Wait for either the connect to complete or for an
                * error/timeout to occur.
@@ -445,7 +445,7 @@ int psock_tcp_connect(FAR struct socket *psock,
 
           /* Notify the device driver that new connection is available. */
 
-          netdev_txnotify_dev(conn->dev, TCP_POLL);
+          netdev_txnotify(conn->dev, TCP_POLL);
         }
 
       conn_dev_unlock(&conn->sconn, conn->dev);

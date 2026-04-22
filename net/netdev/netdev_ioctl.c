@@ -1583,6 +1583,16 @@ static int netdev_arp_ioctl(FAR struct socket *psock, int cmd,
               ret = arp_update(dev, addr->sin_addr.s_addr,
                                (FAR const uint8_t *)req->arp_ha.sa_data,
                                req->arp_flags);
+
+              /* Trigger TX to flush any pending packets that were
+               * deferred during RX.  The d_polltype check is inside
+               * netdev_txnotify so no need to check here.
+               */
+
+              if (ret == OK)
+                {
+                  netdev_txnotify(dev, 0);
+                }
             }
           else
             {

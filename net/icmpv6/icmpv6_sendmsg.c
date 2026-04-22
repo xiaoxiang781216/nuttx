@@ -399,7 +399,7 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock,
 
       /* Notify the device driver of the availability of TX data */
 
-      netdev_txnotify_dev(dev, ICMPv6_POLL);
+      netdev_txnotify(dev, ICMPv6_POLL);
 
       /* Wait for either the send to complete or for timeout to occur.
        * conn_dev_sem_timedwait will also terminate if a signal is received.

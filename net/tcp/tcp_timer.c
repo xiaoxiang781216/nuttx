@@ -163,7 +163,7 @@ static void tcp_timer_expiry(FAR void *arg)
           conn->timeout = true;
           tcp_conn_list_unlock();
           netdev_lock(dev);
-          netdev_txnotify_dev(dev, TCP_POLL);
+          netdev_txnotify(dev, TCP_POLL);
           netdev_unlock(dev);
           return;
         }

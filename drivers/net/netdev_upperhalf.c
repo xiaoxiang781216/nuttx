@@ -1810,6 +1810,17 @@ void netdev_lower_rxready(FAR struct netdev_lowerhalf_s *dev)
   if (dev->rxtype == NETDEV_RX_DIRECT)
     {
       netdev_upper_rxpoll_work(dev->netdev.d_private);
+
+      /* After all RX packets are processed, if any protocol processing
+       * (e.g. ARP/neighbor resolution) has set d_polltype flags for
+       * deferred TX work, trigger txavail to flush pending packets
+       * outside the RX loop.
+       */
+
+      if (dev->netdev.d_polltype != 0)
+        {
+          netdev_upper_txavail_work(dev->netdev.d_private);
+        }
     }
   else
     {

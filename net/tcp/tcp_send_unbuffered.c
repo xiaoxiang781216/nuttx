@@ -604,7 +604,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock,
 
           /* Notify the device driver of the availability of TX data */
 
-          netdev_txnotify_dev(conn->dev, TCP_POLL);
+          netdev_txnotify(conn->dev, TCP_POLL);
 
           /* Wait for the send to complete or an error to occur:  NOTES:
            * conn_dev_sem_timedwait will also terminate if a signal is

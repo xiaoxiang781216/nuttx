@@ -247,7 +247,7 @@ int sixlowpan_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn,
 
           /* Notify the IEEE802.15.4 MAC that we have data to send. */
 
-          netdev_txnotify_dev(dev, UDP_POLL);
+          netdev_txnotify(dev, UDP_POLL);
 
           /* Wait for the send to complete or an error to occur.
            * conn_dev_sem_timedwait will also terminate if a signal is

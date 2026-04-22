@@ -357,7 +357,7 @@ int neighbor_send(FAR struct net_driver_s *dev,
 
       /* Notify the device driver that new TX data is available. */
 
-      netdev_txnotify_dev(dev, ICMPv6_POLL);
+      netdev_txnotify(dev, ICMPv6_POLL);
 
       /* Wait for the send to complete or an error to occur.
        * nxsem_wait will also terminate if a signal is received.

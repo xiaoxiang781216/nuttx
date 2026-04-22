@@ -236,7 +236,7 @@ static inline_function int netfwd_forward_notify(FAR struct forward_s *fwd)
 
       /* Notify the device driver of the availability of TX data */
 
-      netdev_txnotify_dev(fwd->f_dev, IPFWD_POLL);
+      netdev_txnotify(fwd->f_dev, IPFWD_POLL);
       return OK;
     }
 

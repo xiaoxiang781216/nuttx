@@ -499,7 +499,7 @@ static ssize_t ieee802154_sendto(FAR struct socket *psock,
 
           /* Notify the device driver that new TX data is available. */
 
-          netdev_txnotify_dev(&radio->r_dev, IEEE802154_POLL);
+          netdev_txnotify(&radio->r_dev, IEEE802154_POLL);
 
           /* Wait for the send to complete or an error to occur.
            * conn_dev_sem_timedwait will also terminate if a signal is

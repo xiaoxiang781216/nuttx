@@ -317,23 +317,36 @@ void netdev_ipv6_txnotify(FAR const net_ipv6addr_t lipaddr,
 #endif /* CONFIG_NET_IPv6 */
 
 /****************************************************************************
- * Name: netdev_txnotify_dev
+ * Name: netdev_txnotify / netdev_txnotify_defer
  *
  * Description:
  *   Notify the device driver that new TX data is available.  This variant
  *   would be called when the upper level logic already understands how the
  *   packet will be routed.
  *
+ *   netdev_txnotify(dev, polltype) is a convenience macro that calls
+ *   netdev_txnotify_defer with defer=false, triggering d_txavail
+ *   immediately.
+ *
+ *   When defer is true, only the poll type flags are set so that deferred
+ *   TX work will be triggered after the current RX processing completes,
+ *   avoiding interruption of an ongoing receive flow.
+ *
  * Input Parameters:
  *   dev      - The network device driver state structure.
  *   polltype - The type of poll to be triggered for the device.
+ *   defer    - If true, only set flags without calling d_txavail.
  *
  * Returned Value:
  *  None
  *
  ****************************************************************************/
 
-void netdev_txnotify_dev(FAR struct net_driver_s *dev, uint32_t polltype);
+#define netdev_txnotify(dev, polltype) \
+  netdev_txnotify_defer(dev, polltype, false)
+
+void netdev_txnotify_defer(FAR struct net_driver_s *dev, uint32_t polltype,
+                           bool defer);
 
 /****************************************************************************
  * Name: netdev_count

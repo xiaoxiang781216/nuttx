@@ -628,7 +628,7 @@ static int sixlowpan_send_packet(FAR struct socket *psock,
 
           /* Notify the IEEE802.15.4 MAC that we have data to send. */
 
-          netdev_txnotify_dev(dev, TCP_POLL);
+          netdev_txnotify(dev, TCP_POLL);
 
           /* Wait for the send to complete or an error to occur.
            * conn_dev_sem_timedwait will also terminate if a signal is

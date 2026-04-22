@@ -440,7 +440,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
       /* Notify the device driver of the availability of TX data */
 
-      netdev_txnotify_dev(state.st_dev, UDP_POLL);
+      netdev_txnotify(state.st_dev, UDP_POLL);
 
       /* Wait for either the receive to complete or for an error/timeout to
        * occur. NOTES: conn_dev_sem_timedwait will also terminate if a signal

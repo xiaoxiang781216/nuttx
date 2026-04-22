@@ -264,7 +264,7 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
       /* Notify the device driver that new TX data is available. */
 
-      netdev_txnotify_dev(dev, CAN_POLL);
+      netdev_txnotify(dev, CAN_POLL);
 
       /* Wait for the send to complete or an error to occur.
        * conn_dev_sem_timedwait will also terminate if a signal is received.

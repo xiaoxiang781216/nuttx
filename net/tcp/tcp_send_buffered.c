@@ -1636,7 +1636,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
       /* Notify the device driver of the availability of TX data */
 
-      netdev_txnotify_dev(conn->dev, TCP_POLL);
+      netdev_txnotify(conn->dev, TCP_POLL);
       conn_dev_unlock(&conn->sconn, conn->dev);
 
       if (chunk_result == 0)

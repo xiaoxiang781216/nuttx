@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <debug.h>
@@ -62,7 +63,7 @@ void netdev_ipv4_txnotify(in_addr_t lipaddr, in_addr_t ripaddr,
 {
   /* Find the device driver that serves the subnet of the remote address */
 
-  netdev_txnotify_dev(netdev_findby_ripv4addr(lipaddr, ripaddr), polltype);
+  netdev_txnotify(netdev_findby_ripv4addr(lipaddr, ripaddr), polltype);
 }
 #endif /* CONFIG_NET_IPv4 */
 
@@ -89,36 +90,49 @@ void netdev_ipv6_txnotify(FAR const net_ipv6addr_t lipaddr,
 {
   /* Find the device driver that serves the subnet of the remote address */
 
-  netdev_txnotify_dev(netdev_findby_ripv6addr(lipaddr, ripaddr), polltype);
+  netdev_txnotify(netdev_findby_ripv6addr(lipaddr, ripaddr), polltype);
 }
 #endif /* CONFIG_NET_IPv6 */
 
 /****************************************************************************
- * Name: netdev_txnotify_dev
+ * Name: netdev_txnotify_defer
  *
  * Description:
  *   Notify the device driver that new TX data is available.  This variant
  *   would be called when the upper level logic already understands how the
  *   packet will be routed.
  *
+ *   When defer is false, d_txavail is called immediately to trigger TX.
+ *   When defer is true, only the poll type flags are set so that deferred
+ *   TX work will be triggered after the current RX processing completes,
+ *   avoiding interruption of an ongoing receive flow.
+ *
  * Input Parameters:
- *   dev - The network device driver state structure.
+ *   dev      - The network device driver state structure.
+ *   polltype - The type of poll to be triggered for the device.
+ *   defer    - If true, only set flags without calling d_txavail.
  *
  * Returned Value:
  *  None
  *
  ****************************************************************************/
 
-void netdev_txnotify_dev(FAR struct net_driver_s *dev, uint32_t polltype)
+void netdev_txnotify_defer(FAR struct net_driver_s *dev, uint32_t polltype,
+                           bool defer)
 {
-  if (dev != NULL && dev->d_txavail != NULL)
+  if (dev != NULL)
     {
       /* Set the poll type flags */
 
       dev->d_polltype |= polltype;
 
-      /* Notify the device driver that new TX data is available. */
+      /* Notify the device driver only if not deferred and there is
+       * pending TX work.
+       */
 
-      dev->d_txavail(dev);
+      if (!defer && dev->d_polltype != 0 && dev->d_txavail != NULL)
+        {
+          dev->d_txavail(dev);
+        }
     }
 }
