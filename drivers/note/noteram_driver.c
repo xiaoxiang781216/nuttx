@@ -138,7 +138,6 @@ struct noteram_dump_context_s
   struct noteram_dump_cpu_context_s cpu[NCPUS];
   unsigned int mode;
   uint32_t read;
-  spinlock_t lock;          /* Serialize readers on same fd */
   unsigned int threshold;   /* Per-file poll threshold */
   FAR struct pollfd *pfd;   /* Per-file pollfd pointer */
   dq_entry_t poll_node;     /* Poll list node */
@@ -747,7 +746,6 @@ static int noteram_open(FAR struct file *filep)
 
   ctx->read = drv->header->tail;
   ctx->threshold = sizeof(struct note_common_s);
-  spin_lock_init(&ctx->lock);
 
   filep->f_priv = ctx;
 #if defined(CONFIG_DRIVERS_NOTERAM_TEXT_DUMP) || \
@@ -800,10 +798,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 {
   FAR struct noteram_dump_context_s *ctx = filep->f_priv;
   FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
-  irqstate_t flags;
   ssize_t ret = 0;
-
-  flags = spin_lock_irqsave_notrace(&ctx->lock);
 
 #ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
   if (ctx->mode == NOTE_MODE_READ_BINARY)
@@ -822,7 +817,6 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
           nread += ret;
         }
 
-      spin_unlock_irqrestore_notrace(&ctx->lock, flags);
       return nread > 0 ? nread : ret;
     }
 #ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
@@ -842,8 +836,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
                             &ctx->read);
           if (ret <= 0)
             {
-              spin_unlock_irqrestore_notrace(&ctx->lock, flags);
-              return ret;
+              break;
             }
 
           /* Parse notes into text format */
@@ -853,7 +846,6 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
         }
       while (ret == 0 && stream.common.nput < buflen);
 
-      spin_unlock_irqrestore_notrace(&ctx->lock, flags);
       return stream.common.nput;
     }
 #endif
@@ -941,9 +933,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            flags = spin_lock_irqsave_notrace(&ctx->lock);
             *(FAR unsigned int *)arg = ctx->mode;
-            spin_unlock_irqrestore_notrace(&ctx->lock, flags);
             ret = OK;
           }
         break;
@@ -960,9 +950,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            flags = spin_lock_irqsave_notrace(&ctx->lock);
             ctx->mode = arg;
-            spin_unlock_irqrestore_notrace(&ctx->lock, flags);
             ret = OK;
           }
         break;
@@ -1023,9 +1011,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
 
       case PIPEIOC_POLLINTHRD:
-        flags = spin_lock_irqsave_notrace(&ctx->lock);
         ctx->threshold = (uint32_t)arg;
-        spin_unlock_irqrestore_notrace(&ctx->lock, flags);
         ret = OK;
         break;
 
