@@ -851,7 +851,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
           ret = noteram_dump_one(&note,
                                  (FAR struct lib_outstream_s *)&stream, ctx);
         }
-      while (ret == 0);
+      while (ret == 0 && stream.common.nput < buflen);
 
       spin_unlock_irqrestore_notrace(&ctx->lock, flags);
       return stream.common.nput;
