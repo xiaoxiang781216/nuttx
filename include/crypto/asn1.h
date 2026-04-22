@@ -29,6 +29,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <sys/endian.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -371,7 +372,8 @@ int asn1_get_mpi(FAR unsigned char **p,
       memcpy(mpi + overhead, *p, len);
     }
 
-  for (left = mpi, right = mpi + mpilen - sizeof(*right);
+  for (left = (FAR uint32_t *)mpi,
+       right = (FAR uint32_t *)(mpi + mpilen - sizeof(*right));
        left <= right; left++, right--)
     {
       tmp    = betoh32(*left);
