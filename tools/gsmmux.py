@@ -1120,15 +1120,23 @@ class GSMMultiplexer:
 
     def open_serial(self):
         """Open physical serial port"""
-        self.serial_port = serial.Serial(
-            port=self.device_path,
-            baudrate=self.baudrate,
-            bytesize=serial.EIGHTBITS,
-            parity=serial.PARITY_NONE,
-            stopbits=serial.STOPBITS_ONE,
-            timeout=0.1,
-            write_timeout=1.0,
-        )
+        if self.device_path.startswith("socket://"):
+            self.serial_port = serial.serial_for_url(
+                self.device_path,
+                baudrate=self.baudrate,
+                timeout=0.1,
+                write_timeout=1.0,
+            )
+        else:
+            self.serial_port = serial.Serial(
+                port=self.device_path,
+                baudrate=self.baudrate,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                timeout=0.1,
+                write_timeout=1.0,
+            )
         print(f"Opened serial port: {self.device_path} @ {self.baudrate} baud")
 
         # Open raw data log file
@@ -1662,7 +1670,7 @@ Examples:
         print("Error: Device path must be specified (-d/--device)")
         return 1
 
-    if not os.path.exists(args.device):
+    if not args.device.startswith("socket://") and not os.path.exists(args.device):
         print(f"Error: Device file does not exist: {args.device}")
         return 1
 
