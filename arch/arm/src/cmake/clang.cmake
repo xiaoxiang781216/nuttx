@@ -46,6 +46,7 @@ set(CMAKE_RANLIB llvm-ranlib)
 
 add_compile_options(-fno-builtin)
 add_compile_options(--target=arm-none-eabi)
+add_link_options(--target=arm-none-eabi)
 
 # override the ARCHIVE command
 
