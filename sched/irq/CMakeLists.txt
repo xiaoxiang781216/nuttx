@@ -35,9 +35,10 @@ endif()
 
 if(CONFIG_SCHED_IRQMONITOR)
   list(APPEND SRCS irq_foreach.c)
-  if(CONFIG_FS_PROCFS)
-    list(APPEND SRCS irq_procfs.c)
-  endif()
+endif()
+
+if(CONFIG_SCHED_IRQMONITOR_PROCFS)
+  list(APPEND SRCS irq_procfs.c)
 endif()
 
 if(CONFIG_IRQCHAIN)

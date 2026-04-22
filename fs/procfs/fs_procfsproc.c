@@ -41,11 +41,9 @@
 #include <debug.h>
 #include <malloc.h>
 #include <execinfo.h>
+#include <time.h>
 
-#ifdef CONFIG_SCHED_CRITMONITOR
-#  include <time.h>
-#endif
-
+#include <nuttx/clock.h>
 #include <nuttx/arch.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
@@ -63,10 +61,6 @@
 
 #include "fs_heap.h"
 #include "sched/sched.h"
-
-#if !defined(CONFIG_SCHED_CPULOAD_NONE) || defined(CONFIG_SCHED_CRITMONITOR)
-#  include <nuttx/clock.h>
-#endif
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS)
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
@@ -97,7 +91,7 @@ enum proc_node_e
 #ifndef CONFIG_SCHED_CPULOAD_NONE
   PROC_LOADAVG,                       /* Average CPU utilization */
 #endif
-#ifdef CONFIG_SCHED_CRITMONITOR
+#ifdef CONFIG_SCHED_CRITMONITOR_PROCFS
   PROC_CRITMON,                       /* Critical section monitor */
 #endif
 #ifdef CONFIG_MM_RECORD_PID
@@ -186,7 +180,7 @@ static ssize_t proc_loadavg(FAR struct proc_file_s *procfile,
                  FAR struct tcb_s *tcb, FAR char *buffer, size_t buflen,
                  off_t offset);
 #endif
-#ifdef CONFIG_SCHED_CRITMONITOR
+#ifdef CONFIG_SCHED_CRITMONITOR_PROCFS
 static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
                  FAR struct tcb_s *tcb, FAR char *buffer, size_t buflen,
                  off_t offset);
@@ -292,7 +286,7 @@ static const struct proc_node_s g_loadavg =
 };
 #endif
 
-#ifdef CONFIG_SCHED_CRITMONITOR
+#ifdef CONFIG_SCHED_CRITMONITOR_PROCFS
 static const struct proc_node_s g_critmon =
 {
   "critmon",       "critmon", (uint8_t)PROC_CRITMON,     DTYPE_FILE        /* Critical Section Monitor */
@@ -350,7 +344,7 @@ static FAR const struct proc_node_s * const g_nodeinfo[] =
 #ifndef CONFIG_SCHED_CPULOAD_NONE
   &g_loadavg,      /* Average CPU utilization */
 #endif
-#ifdef CONFIG_SCHED_CRITMONITOR
+#ifdef CONFIG_SCHED_CRITMONITOR_PROCFS
   &g_critmon,      /* Critical section Monitor */
 #endif
 #ifdef CONFIG_MM_RECORD_PID
@@ -379,7 +373,7 @@ static const struct proc_node_s * const g_level0info[] =
 #ifndef CONFIG_SCHED_CPULOAD_NONE
   &g_loadavg,      /* Average CPU utilization */
 #endif
-#ifdef CONFIG_SCHED_CRITMONITOR
+#ifdef CONFIG_SCHED_CRITMONITOR_PROCFS
   &g_critmon,      /* Critical section monitor */
 #endif
 #ifdef CONFIG_MM_RECORD_PID
@@ -757,7 +751,7 @@ static ssize_t proc_loadavg(FAR struct proc_file_s *procfile,
  * Name: proc_critmon
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_CRITMONITOR
+#ifdef CONFIG_SCHED_CRITMONITOR_PROCFS
 static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
                             FAR struct tcb_s *tcb, FAR char *buffer,
                             size_t buflen, off_t offset)
@@ -1701,7 +1695,7 @@ static ssize_t proc_read(FAR struct file *filep, FAR char *buffer,
       ret = proc_loadavg(procfile, tcb, buffer, buflen, filep->f_pos);
       break;
 #endif
-#ifdef CONFIG_SCHED_CRITMONITOR
+#ifdef CONFIG_SCHED_CRITMONITOR_PROCFS
     case PROC_CRITMON: /* Critical section monitor */
       ret = proc_critmon(procfile, tcb, buffer, buflen, filep->f_pos);
       break;

@@ -42,9 +42,6 @@
 
 #include "irq/irq.h"
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS)
-#ifdef CONFIG_SCHED_IRQMONITOR
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -376,6 +373,3 @@ static ssize_t irq_write(FAR struct file *filep, FAR const char *buffer,
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-#endif /* CONFIG_SCHED_IRQMONITOR */
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */

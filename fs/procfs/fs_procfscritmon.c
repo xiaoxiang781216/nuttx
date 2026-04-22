@@ -48,9 +48,6 @@
 
 #include "fs_heap.h"
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
-     defined(CONFIG_SCHED_CRITMONITOR)
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -411,5 +408,3 @@ static ssize_t critmon_read(FAR struct file *filep, FAR char *buffer,
 
   return ret;
 }
-
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS && CONFIG_SCHED_CRITMONITOR */

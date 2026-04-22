@@ -29,9 +29,10 @@ endif
 
 ifeq ($(CONFIG_SCHED_IRQMONITOR),y)
 CSRCS += irq_foreach.c
-ifeq ($(CONFIG_FS_PROCFS),y)
-CSRCS += irq_procfs.c
 endif
+
+ifeq ($(CONFIG_SCHED_IRQMONITOR_PROCFS),y)
+CSRCS += irq_procfs.c
 endif
 
 ifeq ($(CONFIG_IRQCHAIN),y)

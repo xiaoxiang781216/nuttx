@@ -26,7 +26,6 @@ if(NOT CONFIG_DISABLE_MOUNTPOINT)
         fs_procfs.c
         fs_procfscpuinfo.c
         fs_procfscpuload.c
-        fs_procfscritmon.c
         fs_procfsfdt.c
         fs_procfsmeminfo.c
         fs_procfsproc.c
@@ -34,6 +33,10 @@ if(NOT CONFIG_DISABLE_MOUNTPOINT)
         fs_procfsuptime.c
         fs_procfsutil.c
         fs_procfsversion.c)
+
+    if(CONFIG_SCHED_CRITMONITOR_PROCFS)
+      list(APPEND SRCS fs_procfscritmon.c)
+    endif()
 
     if(CONFIG_FS_PROCFS_INCLUDE_PRESSURE)
       list(APPEND SRCS fs_procfspressure.c)

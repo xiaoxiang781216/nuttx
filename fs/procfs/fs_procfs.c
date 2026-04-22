@@ -59,9 +59,13 @@
 extern const struct procfs_operations g_clk_operations;
 extern const struct procfs_operations g_cpuinfo_operations;
 extern const struct procfs_operations g_cpuload_operations;
+#ifdef CONFIG_SCHED_CRITMONITOR_PROCFS
 extern const struct procfs_operations g_critmon_operations;
+#endif
 extern const struct procfs_operations g_fdt_operations;
+#ifdef CONFIG_SCHED_IRQMONITOR_PROCFS
 extern const struct procfs_operations g_irq_operations;
+#endif
 #ifdef CONFIG_DEBUG_IOB
 extern const struct procfs_operations g_iobinfo_operations;
 #endif
@@ -119,7 +123,7 @@ static const struct procfs_entry_s g_procfs_entries[] =
   { "cpuload",      &g_cpuload_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
-#ifdef CONFIG_SCHED_CRITMONITOR
+#ifdef CONFIG_SCHED_CRITMONITOR_PROCFS
   { "critmon",      &g_critmon_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
@@ -143,7 +147,7 @@ static const struct procfs_entry_s g_procfs_entries[] =
   { "fs/usage",     &g_mount_operations,    PROCFS_FILE_TYPE,   0444 },
 #endif
 
-#ifdef CONFIG_SCHED_IRQMONITOR
+#ifdef CONFIG_SCHED_IRQMONITOR_PROCFS
   { "irqs",         &g_irq_operations,      PROCFS_FILE_TYPE,   0666 },
 #endif
 

@@ -1019,16 +1019,28 @@ menu "Performance Monitoring"
 config SCHED_IRQMONITOR
 	bool "Enable IRQ monitoring"
 	default n
-	depends on FS_PROCFS
 	---help---
-		Enabling counting of interrupts from all interrupt sources.  These
-		counts will be available in the mounted procfs file systems at the
-		top-level file, "irqs".
+		Enable per-IRQ counting, execution-time and nest-level tracking
+		for every attached interrupt source.  The collected data is held
+		in the kernel and is independent of any specific output channel:
+		it can be exposed to user space via procfs (see
+		SCHED_IRQMONITOR_PROCFS), consumed by the in-kernel latency
+		watchdog (see SCHED_CRITMONITOR_MAXTIME_IRQ), or reported via any
+		tracing/diagnostics subsystem.
+
+config SCHED_IRQMONITOR_PROCFS
+	bool "Export IRQ monitor via procfs (/proc/irqs)"
+	default y
+	depends on SCHED_IRQMONITOR && FS_PROCFS && !DISABLE_MOUNTPOINT
+	---help---
+		Make the statistics collected by SCHED_IRQMONITOR readable from
+		user space through the procfs top-level file "irqs".  Disable
+		this if monitoring is consumed entirely in-kernel (panic on
+		latency threshold, tracing, DFX) and procfs is not mounted.
 
 config SCHED_CRITMONITOR
 	bool "Enable Critical Section monitoring"
 	default n
-	depends on FS_PROCFS
 	---help---
 		Enables logic that monitors the duration of time that a thread keeps
 		interrupts or pre-emption disabled.  These global locks can have
@@ -1037,6 +1049,12 @@ config SCHED_CRITMONITOR
 		the hardware can respond with the interrupt.  Disabling pre-emption
 		adds jitter in the time from when the event is posted in the
 		interrupt handler until the task that responds to the event can run.
+
+		The measurement logic is self-contained in the scheduler and is
+		independent of any output channel.  To read the collected data
+		from user space via procfs, also enable SCHED_CRITMONITOR_PROCFS.
+		The in-kernel latency watchdog (SCHED_CRITMONITOR_MAXTIME_*) works
+		regardless of procfs.
 
 if SCHED_CRITMONITOR
 
@@ -1097,6 +1115,17 @@ config SCHED_CRITMONITOR_MAXTIME_WDOG
 		Wdog callback execution time should be smaller than
 		SCHED_CRITMONITOR_MAXTIME_WDOG, or system will give a warning.
 		For debugging system latency, 0 means disabled.
+
+config SCHED_CRITMONITOR_PROCFS
+	bool "Export critical section monitor via procfs"
+	default y
+	depends on FS_PROCFS && !DISABLE_MOUNTPOINT
+	---help---
+		Expose the statistics collected by SCHED_CRITMONITOR (per-thread
+		execution/preemption/IRQ-disable/busywait hold times and the
+		system-wide maxima) to user space through the procfs file
+		"critmon" and the per-task entries under "/proc/<pid>/".
+		Disable this to keep monitoring active in-kernel only.
 
 endif # SCHED_CRITMONITOR
 
