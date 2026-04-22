@@ -208,7 +208,6 @@
 /* Exported symbols */
 
 	.global	__start
-	.global	arm_data_initialize
 	.global	g_idle_topstack
 
 /****************************************************************************
@@ -939,7 +938,6 @@ __cpu0_start:
  * Name: arm_data_initialize
  ***************************************************************************/
 
-	.global	arm_data_initialize
 	.weak	arm_data_initialize
 	.type	arm_data_initialize, #function
 
