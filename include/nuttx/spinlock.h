@@ -1137,10 +1137,6 @@ void rspin_unlock_irqrestore_notrace(FAR rspinlock_t *lock,
     {
       up_irq_restore(flags);
     }
-  else
-    {
-      nxsched_critmon_irqdisable(false, false, return_address(0));
-    }
 }
 
 static inline_function
@@ -1152,6 +1148,11 @@ void rspin_unlock_irqrestore(FAR rspinlock_t *lock, irqstate_t flags)
     }
   else
     {
+      /* Not last unlock, irq_restore is not called, but we need to
+       * balance the crit_count that was incremented by irq_save()
+       * in the corresponding rspin_lock_irqsave().
+       */
+
       nxsched_critmon_irqdisable(false, false, return_address(0));
     }
 }
@@ -1665,9 +1666,9 @@ void write_unlock_irqrestore(FAR rwlock_t *lock, irqstate_t flags);
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-#  define enter_critical_section_notrace() rspin_lock_irqsave(&g_schedlock)
+#  define enter_critical_section_notrace() rspin_lock_irqsave_notrace(&g_schedlock)
 #else
-#  define enter_critical_section_notrace() irq_save()
+#  define enter_critical_section_notrace() up_irq_save()
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
@@ -1718,9 +1719,9 @@ irqstate_t enter_critical_section(void) noinstrument_function;
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-#  define leave_critical_section_notrace(f) rspin_unlock_irqrestore(&g_schedlock, f)
+#  define leave_critical_section_notrace(f) rspin_unlock_irqrestore_notrace(&g_schedlock, f)
 #else
-#  define leave_critical_section_notrace(f) irq_restore(f)
+#  define leave_critical_section_notrace(f) up_irq_restore(f)
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
