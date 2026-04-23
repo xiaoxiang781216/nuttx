@@ -425,6 +425,7 @@ int snoop_dump(FAR struct snoop_s *snoop, FAR const void *buf,
       return -EINVAL;
     }
 
+  memset(&header, 0, sizeof(header));
   snoop_fill_packet_header(snoop, nbytes, drops, flags, &header);
 
   if (up_interrupt_context())
