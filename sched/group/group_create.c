@@ -142,7 +142,6 @@ int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
 #ifdef CONFIG_MM_TASK_HEAP
       group->tg_heap = KNR_HEAP;
 #endif
-      atomic_or(&group->tg_flags, GROUP_FLAG_STATIC);
       if (group->tg_info)
         {
           initialized = true;

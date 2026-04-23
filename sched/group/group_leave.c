@@ -62,7 +62,7 @@
  *   Release group resources after the last member has left the group.
  *
  * Input Parameters:
- *   group - The group to be removed.
+ *   group - The group to be released.
  *
  * Returned Value:
  *   None.
@@ -167,7 +167,6 @@ void group_leave(FAR struct tcb_s *tcb)
   FAR struct task_group_s *group;
 #ifdef HAVE_GROUP_MEMBERS
   irqstate_t flags;
-  bool last;
 #endif
 
   DEBUGASSERT(tcb);
@@ -177,18 +176,20 @@ void group_leave(FAR struct tcb_s *tcb)
   group = tcb->group;
   if (group)
     {
+      bool release = !(atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_KERNEL);
+
       /* Remove the member from group. */
 
 #ifdef HAVE_GROUP_MEMBERS
       flags = spin_lock_irqsave(&group->tg_lock);
       sq_rem(&tcb->member, &group->tg_members);
-      last = sq_empty(&group->tg_members);
+      release = release && sq_empty(&group->tg_members);
       spin_unlock_irqrestore(&group->tg_lock, flags);
 
       /* Have all of the members left the group? */
-
-      if (last)
 #endif
+
+      if (release)
         {
           /* Yes.. Release all of the resource held by the task group */
 
@@ -239,8 +240,7 @@ void group_drop(FAR struct task_group_s *group)
 #endif
   /* Finally, if no one needs the group and it has been deleted, remove it */
 
-  if ((atomic_read(&group->tg_flags) & GROUP_FLAG_DELETED) &&
-      !(atomic_read(&group->tg_flags) & GROUP_FLAG_STATIC))
+  if ((atomic_read(&group->tg_flags) & GROUP_FLAG_DELETED))
     {
       tcb = (FAR struct tcb_s *)
         ((uintptr_t)group - sizeof(struct tcb_s));
