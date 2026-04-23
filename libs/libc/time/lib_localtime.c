@@ -2798,12 +2798,22 @@ static int zoneinit(FAR const char *name)
 void tzset(void)
 {
   FAR const char *name;
+  char buf[TZNAME_MAX + 1];
 
   name = getenv("TZ");
   if (name == NULL)
     {
       return;
     }
+
+  /* Copy the TZ value to a stack buffer immediately to avoid
+   * use-after-free: getenv() returns a pointer into the environment
+   * array which may be freed/reallocated by another thread calling
+   * setenv()/unsetenv() after getenv() releases its lock.
+   */
+
+  strlcpy(buf, name, sizeof(buf));
+  name = buf;
 
   if (g_lcl_isset > 0 && strcmp(g_lcl_tzname, name) == 0)
     {
