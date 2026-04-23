@@ -155,6 +155,7 @@ endif()
 
 if(CONFIG_ARCH_SAFE_STACK)
   add_compile_options(-fsanitize=safe-stack)
+  list(APPEND COMPILE_ONLY_FLAGS -fsanitize=safe-stack)
 endif()
 
 if(CONFIG_HOST_LINUX)

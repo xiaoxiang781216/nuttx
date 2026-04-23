@@ -157,6 +157,7 @@ if(CONFIG_MM_KASAN_INSTRUMENT_ALL)
 
   file(WRITE ${CMAKE_BINARY_DIR}/kasan_params.cmd "${KASAN_PARAM_STR}")
   add_compile_options("@${CMAKE_BINARY_DIR}/kasan_params.cmd")
+  list(APPEND COMPILE_ONLY_FLAGS "@${CMAKE_BINARY_DIR}/kasan_params.cmd")
 endif()
 
 # Instrumentation options
