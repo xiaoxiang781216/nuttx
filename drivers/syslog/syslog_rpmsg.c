@@ -136,6 +136,11 @@ static void syslog_rpmsg_init_buffer(FAR struct syslog_rpmsg_s *priv)
 
       header->magic = SYSLOG_RPMSG_MAGIC_NUMBER;
     }
+  else
+    {
+      header->head = header->head % header->size;
+      header->tail = header->tail % header->size;
+    }
 
   spin_unlock_irqrestore(&priv->lock, flags);
 }
@@ -277,7 +282,7 @@ static void syslog_rpmsg_addbuf(FAR struct syslog_rpmsg_s *priv,
   header->head = (header->head + len) % header->size;
   if (overwritten)
     {
-      header->tail = header->head;
+      header->tail = header->head % header->size;
     }
 
   if (!priv->suspend && is_rpmsg_ept_ready(&priv->ept))
