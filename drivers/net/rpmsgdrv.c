@@ -805,7 +805,8 @@ static int net_rpmsg_drv_ifup(FAR struct netdev_lowerhalf_s *dev)
 
   /* Update net_driver_t field */
 
-  memcpy(&dev->netdev.d_mac, msg.lnkaddr.addr, msg.lnkaddr.length);
+  memcpy(&dev->netdev.d_mac, msg.lnkaddr.addr,
+         MIN(msg.lnkaddr.length, sizeof(msg.lnkaddr.addr)));
 
 #ifdef CONFIG_NET_IPv4
   net_ipv4addr_copy(dev->netdev.d_ipaddr, msg.ipaddr);
