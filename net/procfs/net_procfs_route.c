@@ -319,11 +319,11 @@ static int route_ipv4_entry(FAR struct net_route_ipv4_s *route,
  * Description:
  *   Format:
  *
- *            11111111112222222222333333333344444444445555
- *   12345678901234567890123456789012345678901234567890123
- *   nnnn. target:  xxxx:xxxx:xxxx:xxxxxxxx:xxxx:xxxx:xxxx
- *         netmask: xxxx:xxxx:xxxx:xxxxxxxx:xxxx:xxxx:xxxx
- *         router:  xxxx:xxxx:xxxx:xxxxxxxx:xxxx:xxxx:xxxx
+ *            1111111111222222222233333333334444444444555
+ *   1234567890123456789012345678901234567890123456789012
+ *   nnnn. TARGET  xxxx:xxxx:xxxx:xxxxxxxx:xxxx:xxxx:xxxx
+ *         NETMASK xxxx:xxxx:xxxx:xxxxxxxx:xxxx:xxxx:xxxx
+ *         ROUTER  xxxx:xxxx:xxxx:xxxxxxxx:xxxx:xxxx:xxxx
  *
  ****************************************************************************/
 
