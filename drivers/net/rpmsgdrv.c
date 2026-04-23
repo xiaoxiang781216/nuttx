@@ -778,7 +778,8 @@ static int net_rpmsg_drv_ifup(FAR struct netdev_lowerhalf_s *dev)
 
   /* Prepare the message */
 
-  msg.lnkaddr.length = netdev_lladdrsize(&dev->netdev);
+  msg.lnkaddr.length = MIN(netdev_lladdrsize(&dev->netdev),
+                          sizeof(msg.lnkaddr.addr));
   memcpy(msg.lnkaddr.addr, &dev->netdev.d_mac, msg.lnkaddr.length);
 
 #ifdef CONFIG_NET_IPv4
