@@ -929,7 +929,8 @@ static int net_rpmsg_drv_addmac(FAR struct netdev_lowerhalf_s *dev,
 
   /* Add the MAC address to the hardware multicast routing table */
 
-  msg.lnkaddr.length = netdev_lladdrsize(&dev->netdev);
+  msg.lnkaddr.length = MIN(netdev_lladdrsize(&dev->netdev),
+                          sizeof(msg.lnkaddr.addr));
   memcpy(msg.lnkaddr.addr, mac, msg.lnkaddr.length);
   return net_rpmsg_drv_send_recv(dev, &msg, NET_RPMSG_ADDMCAST, sizeof(msg));
 }
@@ -957,7 +958,8 @@ static int net_rpmsg_drv_rmmac(FAR struct netdev_lowerhalf_s *dev,
 
   /* Remove the MAC address from the hardware multicast routing table */
 
-  msg.lnkaddr.length = netdev_lladdrsize(&dev->netdev);
+  msg.lnkaddr.length = MIN(netdev_lladdrsize(&dev->netdev),
+                          sizeof(msg.lnkaddr.addr));
   memcpy(msg.lnkaddr.addr, mac, msg.lnkaddr.length);
   return net_rpmsg_drv_send_recv(dev, &msg, NET_RPMSG_RMMCAST, sizeof(msg));
 }
