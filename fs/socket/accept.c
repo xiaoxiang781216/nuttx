@@ -171,7 +171,7 @@ int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
   if (ret < 0)
     {
       errcode = -ret;
-      goto errout;
+      goto errout_with_filep;
     }
 
   newsock = fs_heap_zalloc(sizeof(*newsock));
