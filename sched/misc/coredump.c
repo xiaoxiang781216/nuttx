@@ -461,7 +461,7 @@ static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo)
 
       for (i = 0; i < g_npidhash; i++)
         {
-          tcb = nxsched_get_tcb(i);
+          tcb = nxsched_get_tcb_by_index(i);
           if (tcb)
             {
               if (tcb != rtcb)
@@ -562,7 +562,7 @@ static void elf_emit_stack(FAR struct elf_dumpinfo_s *cinfo)
 
       for (i = 0; i < g_npidhash; i++)
         {
-          tcb = nxsched_get_tcb(i);
+          tcb = nxsched_get_tcb_by_index(i);
           if (tcb)
             {
               if (tcb != rtcb)
@@ -764,7 +764,7 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
 
       for (i = 0; i < g_npidhash; i++)
         {
-          tcb = nxsched_get_tcb(i);
+          tcb = nxsched_get_tcb_by_index(i);
           if (tcb)
             {
               if (tcb != rtcb)
