@@ -200,8 +200,8 @@ static void snoop_fill_packet_header(FAR struct snoop_s *snoop,
       case SNOOP_DATALINK_TYPE_FDDI:
       case SNOOP_DATALINK_TYPE_OTHER:
         gettimeofday(&tv, NULL);
-        header->u2.ts.ts_sec = htobe32(tv.tv_sec);
-        header->u2.ts.ts_usec = htobe32(tv.tv_usec);
+        header->u2.ts.ts_sec = htobe32((uint32_t)tv.tv_sec);
+        header->u2.ts.ts_usec = htobe32((uint32_t)tv.tv_usec);
         header->u1.rec_len = htobe32(flags);
         break;
 
