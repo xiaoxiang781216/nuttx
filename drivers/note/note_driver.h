@@ -98,9 +98,46 @@ DECLARE_PER_CPU_BMP(struct notesnap_s, g_notesnap);
 extern struct notenet_driver_s g_notenet;
 #endif
 
+#ifdef CONFIG_DRIVERS_NOTESTREAM
+DECLARE_PER_CPU_BMP(struct notestream_s, g_notestream);
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+static inline bool note_is_safe(FAR const void *note, size_t len,
+                                bool noswitches)
+{
+  FAR const struct note_common_s *cmn =
+    (FAR const struct note_common_s *)note;
+
+  if (noswitches)
+    {
+      return false;
+    }
+
+  switch (cmn->nc_type)
+    {
+      case NOTE_SUSPEND:
+      case NOTE_RESUME:
+      case NOTE_PREEMPT_LOCK:
+      case NOTE_PREEMPT_UNLOCK:
+      case NOTE_CSECTION_ENTER:
+      case NOTE_CSECTION_LEAVE:
+      case NOTE_SPINLOCK_LOCK:
+      case NOTE_SPINLOCK_LOCKED:
+      case NOTE_SPINLOCK_UNLOCK:
+      case NOTE_SPINLOCK_ABORT:
+      case NOTE_IRQ_ENTER:
+      case NOTE_IRQ_LEAVE:
+      case NOTE_WDOG_ENTER:
+      case NOTE_WDOG_LEAVE:
+        return false;
+      default:
+        return true;
+    }
+}
 
 /****************************************************************************
  * Name: note_common

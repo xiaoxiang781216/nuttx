@@ -214,6 +214,11 @@ config DRIVERS_NOTESTREAM_PATH
 	---help---
 		The Note driver output to stream path.
 
+config DRIVERS_NOTESTREAM_IRQSAFE
+	bool "Enable irqsafe mode for notestream notebuf"
+	default n
+	depends on DRIVERS_NOTEBUF_FLUSH_DELAY > 0
+
 endif # DRIVERS_NOTESTREAM
 
 config DRIVERS_NOTEBUF

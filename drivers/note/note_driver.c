@@ -41,6 +41,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/timers/clkcnt.h>
 #include <nuttx/note/note_driver.h>
+#include <nuttx/note/notebuf_driver.h>
 #include <nuttx/reboot_notifier.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/sched_note.h>
@@ -59,7 +60,8 @@
     defined(CONFIG_DRIVERS_NOTESNAP) + defined(CONFIG_DRIVERS_NOTERTT) + \
     defined(CONFIG_SEGGER_SYSVIEW) + defined(CONFIG_DRIVERS_NOTELOWEROUT) + \
     defined(CONFIG_DRIVERS_NOTERPMSG) + defined(CONFIG_DRIVERS_NOTET32FDX) + \
-    defined(CONFIG_DRIVERS_NOTENET) > CONFIG_DRIVERS_NOTE_MAX
+    defined(CONFIG_DRIVERS_NOTENET) + defined(CONFIG_DRIVERS_NOTESTREAM) \
+    > CONFIG_DRIVERS_NOTE_MAX
 #  error "Maximum channel number exceeds. "
 #endif
 
@@ -170,6 +172,34 @@ static DEFINE_PER_CPU_BSS(unsigned int, g_note_disabled_irq_nest);
 #  define g_note_disabled_irq_nest this_cpu_var(g_note_disabled_irq_nest)
 #endif
 
+#if defined(CONFIG_DRIVERS_NOTESTREAM) && defined(CONFIG_DRIVERS_NOTEBUF)
+static DEFINE_PER_CPU_BMP(struct notebuf_driver_s, g_notebufstream) =
+{
+  {
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+    CONFIG_DRIVERS_NOTESTREAM_PATH,
+    {
+      {
+        CONFIG_DRIVERS_NOTESTREAM_FILTER_DEFAULT_MODE,
+#    ifndef CONFIG_UP
+        CONFIG_DRIVERS_NOTESTREAM_CPUSET,
+#    endif
+      },
+    },
+#  endif
+    &g_notebuf_ops,
+  },
+  (FAR struct note_driver_s *)&g_notestream,
+  SP_UNLOCKED,
+  RING_INIT(CONFIG_DRIVERS_NOTEBUF_BUFSIZE),
+#  ifdef CONFIG_DRIVERS_NOTESTREAM_IRQSAFE
+  true,
+#  endif
+};
+
+#  define g_notebufstream this_cpu_var_bmp(g_notebufstream)
+#endif
+
 FAR static DEFINE_PER_CPU_BMP(note_drivers_t, g_note_drivers) =
 {
 #ifndef CONFIG_BMP
@@ -191,9 +221,13 @@ FAR static DEFINE_PER_CPU_BMP(note_drivers_t, g_note_drivers) =
 #  ifdef CONFIG_DRIVERS_NOTESNAP
   (FAR struct note_driver_s *)&g_notesnap,
 #  endif
-#endif
-#ifdef CONFIG_DRIVERS_NOTENET
-  (FAR struct note_driver_s *)&g_notenet,
+#  ifdef CONFIG_DRIVERS_NOTESTREAM
+#    ifdef CONFIG_DRIVERS_NOTEBUF
+  (FAR struct note_driver_s *)&g_notebufstream,
+#    else
+  (FAR struct note_driver_s *)&g_notestream,
+#    endif
+#  endif
 #endif
   NULL
 };
@@ -407,6 +441,13 @@ static void note_drivers_initialize(void)
 #  endif
 #  ifdef CONFIG_DRIVERS_NOTESNAP
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notesnap;
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTESTREAM
+#    ifdef CONFIG_DRIVERS_NOTEBUF
+      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notebufstream;
+#    else
+      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notestream;
+#    endif
 #  endif
     }
 }

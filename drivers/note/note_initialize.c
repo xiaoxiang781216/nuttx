@@ -29,7 +29,6 @@
 #include <nuttx/instrument.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/noteram_driver.h>
-#include <nuttx/note/notestream_driver.h>
 #include <nuttx/rtt.h>
 #include <nuttx/t32.h>
 
@@ -164,15 +163,6 @@ int note_initialize(void)
   if (ret < 0)
     {
       serr("noteitm_register failed %d\n", ret);
-      return ret;
-    }
-#endif
-
-#ifdef CONFIG_DRIVERS_NOTESTREAM
-  ret = notestream_register_file(CONFIG_DRIVERS_NOTESTREAM_PATH);
-  if (ret < 0)
-    {
-      serr("notestream_register_file failed %d\n", ret);
       return ret;
     }
 #endif
