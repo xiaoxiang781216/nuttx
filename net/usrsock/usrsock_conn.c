@@ -336,7 +336,7 @@ FAR void *usrsock_state_alloc(void)
 
 void usrsock_state_release(FAR void *state)
 {
-  return mempool_release(&g_usrsock_state, state);
+  mempool_release(&g_usrsock_state, state);
 }
 
 /****************************************************************************
