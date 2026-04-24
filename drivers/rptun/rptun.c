@@ -67,6 +67,7 @@
 #define rptunvbs(format, ...)    syslog(LOG_ALERT, format, ##__VA_ARGS__)
 
 #define RPTUN_STATUS_PAUSE       BOARDIOC_SOFTRESETCAUSE_MAX
+#define RPTUN_STATUS_STOP        (BOARDIOC_SOFTRESETCAUSE_MAX + 1)
 
 /****************************************************************************
  * Private Types
@@ -89,9 +90,7 @@ struct rptun_priv_s
   bool                        stop;
   pid_t                       pid;
   FAR const void             *trace_va;
-#if defined(CONFIG_BOARDCTL_RESET) || defined(CONFIG_BOARDCTL_POWEROFF)
   struct work_s               work;
-#endif
 };
 
 struct rptun_store_s
@@ -251,11 +250,19 @@ static int rptun_start(FAR struct remoteproc *rproc)
 static int rptun_stop(FAR struct remoteproc *rproc)
 {
   FAR struct rptun_priv_s *priv = rproc->priv;
-  int ret = OK;
+  int ret = -ENOTSUP;
 
   if (RPTUN_IS_MASTER(priv->dev))
     {
-      ret = RPTUN_STOP(priv->dev);
+      if (priv->dev->ops->stop != NULL)
+        {
+          ret = RPTUN_STOP(priv->dev);
+        }
+
+      if (ret == -ENOTSUP)
+        {
+          rptun_set_status(priv, RPTUN_STATUS_STOP);
+        }
     }
 
   return ret;
@@ -765,6 +772,13 @@ static void rptun_boardctl_work(FAR void *arg)
 }
 #endif
 
+static void rptun_stop_work(FAR void *arg)
+{
+  FAR struct rptun_priv_s *priv = arg;
+
+  rptun_dev_stop(&priv->rproc);
+}
+
 static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
 {
   FAR struct rptun_status_s *rsc_status;
@@ -800,6 +814,18 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
       snprintf(msg, sizeof(msg), "Panic by remote core: %s",
                RPTUN_GET_CPUNAME(priv->dev));
       PANIC_WITH_MSG(msg);
+    }
+  else if (RPTUN_STATUS_CHECK(status, RPTUN_STATUS_STOP))
+    {
+      /* Remote requested channel stop, stop local side.
+       * Clear rsc_table to prevent re-triggering from shared
+       * interrupt line (function returns early if rsc_table is NULL).
+       */
+
+      priv->rproc.rsc_table = NULL;
+      syslog(LOG_EMERG, "Stop by remote core: %s\n",
+             RPTUN_GET_CPUNAME(priv->dev));
+      work_queue(HPWORK, &priv->work, rptun_stop_work, priv, 0);
     }
   else if(status != 0u)
     {
