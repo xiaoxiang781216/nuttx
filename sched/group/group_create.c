@@ -253,7 +253,7 @@ int group_allocate(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
           nxsem_init(&group->tg_exitsem, 0, 0);
 #endif
         }
-      else
+      else if (ttype != TCB_FLAG_TTYPE_KERNEL)
         {
           kmm_free(group);
         }
