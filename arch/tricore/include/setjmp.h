@@ -31,35 +31,27 @@
 #include <stdint.h>
 
 /****************************************************************************
- * Pre-processor Prototypes
- ****************************************************************************/
-
-#define JB_UPCXI     0
-#define JB_PSW       1
-#define JB_SP        2
-#define JB_A11       3
-#define JB_D8        4
-#define JB_D9        5
-#define JB_D10       6
-#define JB_D11       7
-#define JB_A12       8
-#define JB_A13       9
-#define JB_A14       10
-#define JB_A15       11
-#define JB_D12       12
-#define JB_D13       13
-#define JB_D14       14
-#define JB_D15       15
-#define JB_PC        16
-#define JB_REG_NUM   17
-
-/****************************************************************************
  * Public Types
  ****************************************************************************/
 
 struct setjmp_buf_s
 {
-  uintptr_t regs[JB_REG_NUM];
+  uintptr_t pcxi;
+  uintptr_t psw;
+  uintptr_t sp;
+  uintptr_t a11;
+  uintptr_t d8;
+  uintptr_t d9;
+  uintptr_t d10;
+  uintptr_t d11;
+  uintptr_t a12;
+  uintptr_t a13;
+  uintptr_t a14;
+  uintptr_t a15;
+  uintptr_t d12;
+  uintptr_t d13;
+  uintptr_t d14;
+  uintptr_t d15;
 };
 
 /* Traditional typedef for setjmp_buf */
@@ -79,7 +71,7 @@ extern "C"
 #endif
 
 int setjmp(jmp_buf env);
-void longjmp(jmp_buf env, int val);
+void longjmp(jmp_buf env, int val) noreturn_function;
 
 #undef EXTERN
 #ifdef __cplusplus
