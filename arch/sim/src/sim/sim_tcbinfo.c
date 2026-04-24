@@ -32,35 +32,39 @@
  * Private Data
  ****************************************************************************/
 
+/* coffset values below match the Linux host kernel's ELF gregset layout
+ * (user_regs_struct / user_pt_regs) used in the NT_PRSTATUS notes it emits
+ * when the sim process crashes, so tools like nxstub / nxgdb can locate
+ * each saved register directly in pr_reg.
+ */
+
 #if defined(CONFIG_HOST_X86_64) && !defined(CONFIG_SIM_M32)
 static const struct reginfo_s g_reginfo[] =
 {
-  REGINFO("rbx", 8, 1,  TCB_REG_OFF(JB_RBX), 8,   REGINFO_OFFSET_AUTO),
-  REGINFO("rbp", 8, 6,  TCB_REG_OFF(JB_RBP), 48,  REGINFO_OFFSET_AUTO),
-  REGINFO("rsp", 8, 7,  TCB_REG_OFF(JB_RSP), 56,  REGINFO_OFFSET_AUTO),
-  REGINFO("r12", 8, 12, TCB_REG_OFF(JB_R12), 96,  REGINFO_OFFSET_AUTO),
-  REGINFO("r13", 8, 13, TCB_REG_OFF(JB_R13), 104, REGINFO_OFFSET_AUTO),
-  REGINFO("r14", 8, 14, TCB_REG_OFF(JB_R14), 112, REGINFO_OFFSET_AUTO),
-  REGINFO("r15", 8, 15, TCB_REG_OFF(JB_R15), 120, REGINFO_OFFSET_AUTO),
-  REGINFO("rip", 8, 16, TCB_REG_OFF(JB_RIP), 128, REGINFO_OFFSET_AUTO),
+  REGINFO("rbx", 8, 1,  TCB_REG_OFF(JB_RBX), 8,   40),
+  REGINFO("rbp", 8, 6,  TCB_REG_OFF(JB_RBP), 48,  32),
+  REGINFO("rsp", 8, 7,  TCB_REG_OFF(JB_RSP), 56,  152),
+  REGINFO("r12", 8, 12, TCB_REG_OFF(JB_R12), 96,  24),
+  REGINFO("r13", 8, 13, TCB_REG_OFF(JB_R13), 104, 16),
+  REGINFO("r14", 8, 14, TCB_REG_OFF(JB_R14), 112, 8),
+  REGINFO("r15", 8, 15, TCB_REG_OFF(JB_R15), 120, 0),
+  REGINFO("rip", 8, 16, TCB_REG_OFF(JB_RIP), 128, 128),
 };
 #elif defined(CONFIG_HOST_X86) || defined(CONFIG_SIM_M32)
 static const struct reginfo_s g_reginfo[] =
 {
-  REGINFO("ebx", 4, 3, TCB_REG_OFF(JB_EBX), 12, REGINFO_OFFSET_AUTO),
-  REGINFO("esp", 4, 4, TCB_REG_OFF(JB_ESP), 16, REGINFO_OFFSET_AUTO),
-  REGINFO("ebp", 4, 5, TCB_REG_OFF(JB_EBP), 20, REGINFO_OFFSET_AUTO),
-  REGINFO("esi", 4, 6, TCB_REG_OFF(JB_ESI), 24, REGINFO_OFFSET_AUTO),
-  REGINFO("edi", 4, 7, TCB_REG_OFF(JB_EDI), 28, REGINFO_OFFSET_AUTO),
-  REGINFO("eip", 4, 8, TCB_REG_OFF(JB_EIP), 32, REGINFO_OFFSET_AUTO),
+  REGINFO("ebx", 4, 3, TCB_REG_OFF(JB_EBX), 12, 0),
+  REGINFO("esp", 4, 4, TCB_REG_OFF(JB_ESP), 16, 60),
+  REGINFO("ebp", 4, 5, TCB_REG_OFF(JB_EBP), 20, 20),
+  REGINFO("esi", 4, 6, TCB_REG_OFF(JB_ESI), 24, 12),
+  REGINFO("edi", 4, 7, TCB_REG_OFF(JB_EDI), 28, 16),
+  REGINFO("eip", 4, 8, TCB_REG_OFF(JB_EIP), 32, 48),
 };
 #elif defined(CONFIG_HOST_ARM64)
 static const struct reginfo_s g_reginfo[] =
 {
-  REGINFO("sp", 8, 31, TCB_REG_OFF(JB_SP), REGINFO_OFFSET_INVALID,
-          REGINFO_OFFSET_AUTO),
-  REGINFO("pc", 8, 32, TCB_REG_OFF(JB_PC), REGINFO_OFFSET_INVALID,
-          REGINFO_OFFSET_AUTO),
+  REGINFO("sp", 8, 31, TCB_REG_OFF(JB_SP), REGINFO_OFFSET_INVALID, 248),
+  REGINFO("pc", 8, 32, TCB_REG_OFF(JB_PC), REGINFO_OFFSET_INVALID, 256),
 };
 #elif defined(CONFIG_HOST_ARM)
 static const struct reginfo_s g_reginfo[] =
