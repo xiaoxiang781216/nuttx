@@ -230,6 +230,12 @@ int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb)
   FAR struct task_group_s *group = tcb->group;
   int ret;
 
+  if (group == NULL)
+    {
+      berr("ERROR: group is NULL for tcb=%p\n", tcb);
+      return -EINVAL;
+    }
+
   ret = up_addrenv_attach(ptcb, tcb);
   if (ret < 0)
     {
@@ -237,11 +243,6 @@ int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb)
     }
   else
     {
-      if (group == NULL)
-        {
-          group = (FAR struct task_group_s *)(tcb + 1);
-        }
-
       /* Take a reference to the address environment */
 
       addrenv_take(ptcb->group->tg_addrenv_own);

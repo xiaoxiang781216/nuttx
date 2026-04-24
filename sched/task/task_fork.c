@@ -266,19 +266,22 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
           heap_size = 0;
 #endif
 
-#if defined(CONFIG_ARCH_ADDRENV)
-          /* Join the parent address environment */
-
-          if (ttype != TCB_FLAG_TTYPE_KERNEL)
-            {
-              ret = addrenv_join(parent, child);
-            }
-#endif
-
+          ret = group_allocate(child, ttype, heap_size);
           if (ret >= OK)
             {
-              ret = group_allocate(child, ttype, heap_size);
-              if (ret >= 0)
+#if defined(CONFIG_ARCH_ADDRENV)
+              /* Join the parent address environment.
+               * Must be after group_allocate() so child->group
+               * is valid.
+               */
+
+              if (ttype != TCB_FLAG_TTYPE_KERNEL)
+                {
+                  ret = addrenv_join(parent, child);
+                }
+
+              if (ret >= OK)
+#endif
                 {
                   ret = task_setup(ptcb, parent, child, ttype, retaddr);
                   if (ret >= OK)
