@@ -37,6 +37,7 @@
 #include <sys/param.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/mempool.h>
+#include <nuttx/percpu.h>
 
 #ifdef CONFIG_IOB_NOTIFIER
 #  include <nuttx/wqueue.h>
@@ -67,7 +68,258 @@
 #  define CONFIG_IOB_THROTTLE 0
 #endif
 
-/* Some I/O buffers should be allocated */
+#ifdef CONFIG_BMP
+
+/* ------------------------------------------------------------------------
+ * BMP mode: per-CPU IOB pool configuration
+ * ------------------------------------------------------------------------
+ *
+ * In BMP mode, each CPU has its own independent IOB pools with separate
+ * bufsize, nbuffers, and section. The Kconfig defines per-CPU configs
+ * (CONFIG_IOB_NBUFFERS_CPUn, CONFIG_IOB_BUFSIZE_CPUn, etc.) for up to
+ * 6 CPUs and 3 pool levels.
+ *
+ * This section:
+ *   1) Fills in "0" defaults for CPUs/levels not configured.
+ *   2) Computes compile-time MAX macros for shared data structure sizing
+ *      (e.g. struct iob_s field widths, g_iob_pool 2D array dimensions).
+ *   3) Redirects the legacy CONFIG_IOB_NBUFFERS / CONFIG_IOB_BUFSIZE /
+ *      CONFIG_IOB_NPOOLS macros to per-CPU runtime accessors. This keeps
+ *      existing net/, drivers/, wireless/ code unchanged.
+ */
+
+/* Fill in 0 defaults so MAX macros and static arrays below are valid.
+ * CPU0 level 1 is always defined (no "depends on" in Kconfig).
+ * CPU1-5 and level 2/3 for all CPUs have "depends on" guards, so provide
+ * 0 defaults when not selected.
+ */
+
+#  ifndef CONFIG_IOB_NBUFFERS2_CPU0
+#    define CONFIG_IOB_NBUFFERS2_CPU0  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE2_CPU0
+#    define CONFIG_IOB_BUFSIZE2_CPU0   0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS3_CPU0
+#    define CONFIG_IOB_NBUFFERS3_CPU0  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE3_CPU0
+#    define CONFIG_IOB_BUFSIZE3_CPU0   0
+#  endif
+
+#  ifndef CONFIG_IOB_NPOOLS_CPU1
+#    define CONFIG_IOB_NPOOLS_CPU1     0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS1_CPU1
+#    define CONFIG_IOB_NBUFFERS1_CPU1   0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE1_CPU1
+#    define CONFIG_IOB_BUFSIZE1_CPU1    0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS2_CPU1
+#    define CONFIG_IOB_NBUFFERS2_CPU1  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE2_CPU1
+#    define CONFIG_IOB_BUFSIZE2_CPU1   0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS3_CPU1
+#    define CONFIG_IOB_NBUFFERS3_CPU1  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE3_CPU1
+#    define CONFIG_IOB_BUFSIZE3_CPU1   0
+#  endif
+
+#  ifndef CONFIG_IOB_NPOOLS_CPU2
+#    define CONFIG_IOB_NPOOLS_CPU2     0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS1_CPU2
+#    define CONFIG_IOB_NBUFFERS1_CPU2   0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE1_CPU2
+#    define CONFIG_IOB_BUFSIZE1_CPU2    0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS2_CPU2
+#    define CONFIG_IOB_NBUFFERS2_CPU2  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE2_CPU2
+#    define CONFIG_IOB_BUFSIZE2_CPU2   0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS3_CPU2
+#    define CONFIG_IOB_NBUFFERS3_CPU2  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE3_CPU2
+#    define CONFIG_IOB_BUFSIZE3_CPU2   0
+#  endif
+
+#  ifndef CONFIG_IOB_NPOOLS_CPU3
+#    define CONFIG_IOB_NPOOLS_CPU3     0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS1_CPU3
+#    define CONFIG_IOB_NBUFFERS1_CPU3   0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE1_CPU3
+#    define CONFIG_IOB_BUFSIZE1_CPU3    0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS2_CPU3
+#    define CONFIG_IOB_NBUFFERS2_CPU3  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE2_CPU3
+#    define CONFIG_IOB_BUFSIZE2_CPU3   0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS3_CPU3
+#    define CONFIG_IOB_NBUFFERS3_CPU3  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE3_CPU3
+#    define CONFIG_IOB_BUFSIZE3_CPU3   0
+#  endif
+
+#  ifndef CONFIG_IOB_NPOOLS_CPU4
+#    define CONFIG_IOB_NPOOLS_CPU4     0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS1_CPU4
+#    define CONFIG_IOB_NBUFFERS1_CPU4   0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE1_CPU4
+#    define CONFIG_IOB_BUFSIZE1_CPU4    0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS2_CPU4
+#    define CONFIG_IOB_NBUFFERS2_CPU4  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE2_CPU4
+#    define CONFIG_IOB_BUFSIZE2_CPU4   0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS3_CPU4
+#    define CONFIG_IOB_NBUFFERS3_CPU4  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE3_CPU4
+#    define CONFIG_IOB_BUFSIZE3_CPU4   0
+#  endif
+
+#  ifndef CONFIG_IOB_NPOOLS_CPU5
+#    define CONFIG_IOB_NPOOLS_CPU5     0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS1_CPU5
+#    define CONFIG_IOB_NBUFFERS1_CPU5   0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE1_CPU5
+#    define CONFIG_IOB_BUFSIZE1_CPU5    0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS2_CPU5
+#    define CONFIG_IOB_NBUFFERS2_CPU5  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE2_CPU5
+#    define CONFIG_IOB_BUFSIZE2_CPU5   0
+#  endif
+#  ifndef CONFIG_IOB_NBUFFERS3_CPU5
+#    define CONFIG_IOB_NBUFFERS3_CPU5  0
+#  endif
+#  ifndef CONFIG_IOB_BUFSIZE3_CPU5
+#    define CONFIG_IOB_BUFSIZE3_CPU5   0
+#  endif
+
+/* Maximum number of pool levels across all CPUs.
+ * Used as the second dimension of g_iob_pool[NCPUS][NPOOLS].
+ * Redefines CONFIG_IOB_NPOOLS so legacy code referring to it
+ * gets the compile-time maximum.
+ */
+
+#  define CONFIG_IOB_NPOOLS \
+    MAX(MAX(MAX(CONFIG_IOB_NPOOLS_CPU0, CONFIG_IOB_NPOOLS_CPU1), \
+            MAX(CONFIG_IOB_NPOOLS_CPU2, CONFIG_IOB_NPOOLS_CPU3)), \
+            MAX(CONFIG_IOB_NPOOLS_CPU4, CONFIG_IOB_NPOOLS_CPU5))
+
+/* Maximum bufsize across all CPUs.
+ * Used for struct iob_s io_len/io_offset field width selection
+ * (shared data structure, must fit all CPUs' buffer sizes).
+ * Only level 1 is checked because level 2/3 bufsize is always <=
+ * level 1 bufsize (enforced by Kconfig "range 1 IOB_BUFSIZE_CPUx").
+ */
+
+#  define CONFIG_IOB_BUFSIZE_MAX \
+    MAX(MAX(MAX(CONFIG_IOB_BUFSIZE1_CPU0, CONFIG_IOB_BUFSIZE1_CPU1), \
+            MAX(CONFIG_IOB_BUFSIZE1_CPU2, CONFIG_IOB_BUFSIZE1_CPU3)), \
+            MAX(CONFIG_IOB_BUFSIZE1_CPU4, CONFIG_IOB_BUFSIZE1_CPU5))
+
+/* Total nbuffers per CPU (sum across all pool levels) and the maximum
+ * total across all CPUs. Used to size single-instance mempools (e.g.
+ * net forward pool) that must cover the worst-case CPU's IOB budget.
+ */
+
+#  define CONFIG_IOB_NBUFFERS_CPU0 \
+    (CONFIG_IOB_NBUFFERS1_CPU0 + CONFIG_IOB_NBUFFERS2_CPU0 + \
+     CONFIG_IOB_NBUFFERS3_CPU0)
+#  define CONFIG_IOB_NBUFFERS_CPU1 \
+    (CONFIG_IOB_NBUFFERS1_CPU1 + CONFIG_IOB_NBUFFERS2_CPU1 + \
+     CONFIG_IOB_NBUFFERS3_CPU1)
+#  define CONFIG_IOB_NBUFFERS_CPU2 \
+    (CONFIG_IOB_NBUFFERS1_CPU2 + CONFIG_IOB_NBUFFERS2_CPU2 + \
+     CONFIG_IOB_NBUFFERS3_CPU2)
+#  define CONFIG_IOB_NBUFFERS_CPU3 \
+    (CONFIG_IOB_NBUFFERS1_CPU3 + CONFIG_IOB_NBUFFERS2_CPU3 + \
+     CONFIG_IOB_NBUFFERS3_CPU3)
+#  define CONFIG_IOB_NBUFFERS_CPU4 \
+    (CONFIG_IOB_NBUFFERS1_CPU4 + CONFIG_IOB_NBUFFERS2_CPU4 + \
+     CONFIG_IOB_NBUFFERS3_CPU4)
+#  define CONFIG_IOB_NBUFFERS_CPU5 \
+    (CONFIG_IOB_NBUFFERS1_CPU5 + CONFIG_IOB_NBUFFERS2_CPU5 + \
+     CONFIG_IOB_NBUFFERS3_CPU5)
+
+#  define CONFIG_IOB_NBUFFERS_MAX \
+    MAX(MAX(MAX(CONFIG_IOB_NBUFFERS_CPU0, CONFIG_IOB_NBUFFERS_CPU1), \
+            MAX(CONFIG_IOB_NBUFFERS_CPU2, CONFIG_IOB_NBUFFERS_CPU3)), \
+            MAX(CONFIG_IOB_NBUFFERS_CPU4, CONFIG_IOB_NBUFFERS_CPU5))
+
+/* Per-CPU per-level config lookup tables.
+ * Indexed by [cpu][level] where level 0/1/2 map to Level 1/2/3.
+ * Tables are declared here and defined once in mm/iob/iob_initialize.c,
+ * so each .c file that includes this header shares the same storage.
+ */
+
+extern const int g_iob_nbuffers[CONFIG_NCPUS][CONFIG_IOB_NPOOLS];
+extern const int g_iob_bufsize[CONFIG_NCPUS][CONFIG_IOB_NPOOLS];
+
+/* Per-CPU accessors. "level" is 0-based: 0=Level 1, 1=Level 2, 2=Level 3.
+ * Returns 0 if the requested level is beyond CONFIG_IOB_NPOOLS so callers
+ * can safely probe higher levels without bounds checking.
+ */
+
+static inline_function int iob_get_nbuffers(int level)
+{
+  if (level >= CONFIG_IOB_NPOOLS)
+    {
+      return 0;
+    }
+
+  return g_iob_nbuffers[this_cpu()][level];
+}
+
+static inline_function int iob_get_bufsize(int level)
+{
+  if (level >= CONFIG_IOB_NPOOLS)
+    {
+      return 0;
+    }
+
+  return g_iob_bufsize[this_cpu()][level];
+}
+
+/* Legacy CONFIG_IOB_NBUFFERS / CONFIG_IOB_BUFSIZE redirection.
+ *
+ * Existing code in net/, drivers/, wireless/ references these macros
+ * directly. In BMP mode, we redirect them to per-CPU runtime lookups
+ * via this_cpu() so the same source code works without modification.
+ */
+
+#  define CONFIG_IOB_NBUFFERS   iob_get_nbuffers(0)
+#  define CONFIG_IOB_NBUFFERS2  iob_get_nbuffers(1)
+#  define CONFIG_IOB_NBUFFERS3  iob_get_nbuffers(2)
+#  define CONFIG_IOB_BUFSIZE    iob_get_bufsize(0)
+#  define CONFIG_IOB_BUFSIZE2   iob_get_bufsize(1)
+#  define CONFIG_IOB_BUFSIZE3   iob_get_bufsize(2)
+
+#else /* !CONFIG_BMP */
+
+/* Non-BMP: original sanity checks and MAX alias */
 
 #if !defined(CONFIG_IOB_NBUFFERS)
 #  warning CONFIG_IOB_NBUFFERS not defined
@@ -81,6 +333,20 @@
 #if CONFIG_IOB_NBUFFERS <= CONFIG_IOB_THROTTLE
 #  error CONFIG_IOB_NBUFFERS <= CONFIG_IOB_THROTTLE
 #endif
+
+#  define CONFIG_IOB_BUFSIZE_MAX  CONFIG_IOB_BUFSIZE
+
+#  if CONFIG_IOB_NPOOLS <= 1
+#    define CONFIG_IOB_NBUFFERS_MAX CONFIG_IOB_NBUFFERS
+#  elif CONFIG_IOB_NPOOLS <= 2
+#    define CONFIG_IOB_NBUFFERS_MAX \
+       (CONFIG_IOB_NBUFFERS + CONFIG_IOB_NBUFFERS2)
+#  else
+#    define CONFIG_IOB_NBUFFERS_MAX \
+       (CONFIG_IOB_NBUFFERS + CONFIG_IOB_NBUFFERS2 + CONFIG_IOB_NBUFFERS3)
+#  endif
+
+#endif /* CONFIG_BMP */
 
 /* Default config of alignment and head padding size */
 
@@ -161,7 +427,7 @@ struct iob_s
 
   /* Payload */
 
-#if CONFIG_IOB_BUFSIZE < 256 && !defined(CONFIG_IOB_ALLOC)
+#if CONFIG_IOB_BUFSIZE_MAX < 256 && !defined(CONFIG_IOB_ALLOC)
   uint8_t  io_len;      /* Length of the data in the entry */
   uint8_t  io_offset;   /* Data begins at this offset */
 #else

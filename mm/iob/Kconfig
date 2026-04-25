@@ -14,6 +14,346 @@ config MM_IOB
 
 if MM_IOB
 
+if BMP
+
+# Per-CPU IOB pool configuration (up to 6 CPUs, up to 3 pool levels each).
+# In BMP mode, each CPU has its own independent IOB pools with separate
+# bufsize, nbuffers, and section. NCPUS must be <= 6.
+
+# --- CPU0 (always present in BMP) ---
+
+config IOB_NPOOLS_CPU0
+	int "Number of IOB pool levels for CPU0"
+	default 1
+	range 1 3
+
+config IOB_NBUFFERS1_CPU0
+	int "Number of I/O buffers (Level 1) for CPU0"
+	default 36 if NET_WRITE_BUFFERS
+	default 24 if !NET_WRITE_BUFFERS && NET_READAHEAD
+	default 8 if !NET_WRITE_BUFFERS && !NET_READAHEAD
+
+config IOB_BUFSIZE1_CPU0
+	int "Payload size of I/O buffer (Level 1) for CPU0"
+	range 196 65535 if NET_TCP_SELECTIVE_ACK && NET_IPv6 && RNDIS
+	range 128 65535 if NET_TCP_SELECTIVE_ACK && (NET_IPv4 || NET_IPv6)
+	default 196
+
+config IOB_SECTION1_CPU0
+	string "Section name of IOB buffer (Level 1) for CPU0"
+	default ""
+
+config IOB_NBUFFERS2_CPU0
+	int "Number of I/O buffers (Level 2) for CPU0"
+	default IOB_NBUFFERS1_CPU0
+	depends on IOB_NPOOLS_CPU0 > 1
+
+config IOB_BUFSIZE2_CPU0
+	int "Payload size of I/O buffer (Level 2) for CPU0"
+	range 1 IOB_BUFSIZE1_CPU0
+	default 128
+	depends on IOB_NPOOLS_CPU0 > 1
+
+config IOB_SECTION2_CPU0
+	string "Section name of IOB buffer (Level 2) for CPU0"
+	default IOB_SECTION1_CPU0
+	depends on IOB_NPOOLS_CPU0 > 1
+
+config IOB_NBUFFERS3_CPU0
+	int "Number of I/O buffers (Level 3) for CPU0"
+	default IOB_NBUFFERS2_CPU0
+	depends on IOB_NPOOLS_CPU0 > 2
+
+config IOB_BUFSIZE3_CPU0
+	int "Payload size of I/O buffer (Level 3) for CPU0"
+	range 1 IOB_BUFSIZE2_CPU0
+	default 64
+	depends on IOB_NPOOLS_CPU0 > 2
+
+config IOB_SECTION3_CPU0
+	string "Section name of IOB buffer (Level 3) for CPU0"
+	default IOB_SECTION2_CPU0
+	depends on IOB_NPOOLS_CPU0 > 2
+
+# --- CPU1 ---
+
+if NCPUS > 1
+
+config IOB_NPOOLS_CPU1
+	int "Number of IOB pool levels for CPU1"
+	default IOB_NPOOLS_CPU0
+	range 0 3
+
+config IOB_NBUFFERS1_CPU1
+	int "Number of I/O buffers (Level 1) for CPU1"
+	default IOB_NBUFFERS1_CPU0
+
+config IOB_BUFSIZE1_CPU1
+	int "Payload size of I/O buffer (Level 1) for CPU1"
+	default IOB_BUFSIZE1_CPU0
+
+config IOB_SECTION1_CPU1
+	string "Section name of IOB buffer (Level 1) for CPU1"
+	default IOB_SECTION1_CPU0
+
+config IOB_NBUFFERS2_CPU1
+	int "Number of I/O buffers (Level 2) for CPU1"
+	default IOB_NBUFFERS1_CPU1
+	depends on IOB_NPOOLS_CPU1 > 1
+
+config IOB_BUFSIZE2_CPU1
+	int "Payload size of I/O buffer (Level 2) for CPU1"
+	range 1 IOB_BUFSIZE1_CPU1
+	default 128
+	depends on IOB_NPOOLS_CPU1 > 1
+
+config IOB_SECTION2_CPU1
+	string "Section name of IOB buffer (Level 2) for CPU1"
+	default IOB_SECTION1_CPU1
+	depends on IOB_NPOOLS_CPU1 > 1
+
+config IOB_NBUFFERS3_CPU1
+	int "Number of I/O buffers (Level 3) for CPU1"
+	default IOB_NBUFFERS2_CPU1
+	depends on IOB_NPOOLS_CPU1 > 2
+
+config IOB_BUFSIZE3_CPU1
+	int "Payload size of I/O buffer (Level 3) for CPU1"
+	range 1 IOB_BUFSIZE2_CPU1
+	default 64
+	depends on IOB_NPOOLS_CPU1 > 2
+
+config IOB_SECTION3_CPU1
+	string "Section name of IOB buffer (Level 3) for CPU1"
+	default IOB_SECTION2_CPU1
+	depends on IOB_NPOOLS_CPU1 > 2
+
+endif # NCPUS > 1
+
+# --- CPU2 ---
+
+if NCPUS > 2
+
+config IOB_NPOOLS_CPU2
+	int "Number of IOB pool levels for CPU2"
+	default IOB_NPOOLS_CPU1
+	range 0 3
+
+config IOB_NBUFFERS1_CPU2
+	int "Number of I/O buffers (Level 1) for CPU2"
+	default IOB_NBUFFERS1_CPU1
+
+config IOB_BUFSIZE1_CPU2
+	int "Payload size of I/O buffer (Level 1) for CPU2"
+	default IOB_BUFSIZE1_CPU1
+
+config IOB_SECTION1_CPU2
+	string "Section name of IOB buffer (Level 1) for CPU2"
+	default IOB_SECTION1_CPU1
+
+config IOB_NBUFFERS2_CPU2
+	int "Number of I/O buffers (Level 2) for CPU2"
+	default IOB_NBUFFERS1_CPU2
+	depends on IOB_NPOOLS_CPU2 > 1
+
+config IOB_BUFSIZE2_CPU2
+	int "Payload size of I/O buffer (Level 2) for CPU2"
+	range 1 IOB_BUFSIZE1_CPU2
+	default 128
+	depends on IOB_NPOOLS_CPU2 > 1
+
+config IOB_SECTION2_CPU2
+	string "Section name of IOB buffer (Level 2) for CPU2"
+	default IOB_SECTION1_CPU2
+	depends on IOB_NPOOLS_CPU2 > 1
+
+config IOB_NBUFFERS3_CPU2
+	int "Number of I/O buffers (Level 3) for CPU2"
+	default IOB_NBUFFERS2_CPU2
+	depends on IOB_NPOOLS_CPU2 > 2
+
+config IOB_BUFSIZE3_CPU2
+	int "Payload size of I/O buffer (Level 3) for CPU2"
+	range 1 IOB_BUFSIZE2_CPU2
+	default 64
+	depends on IOB_NPOOLS_CPU2 > 2
+
+config IOB_SECTION3_CPU2
+	string "Section name of IOB buffer (Level 3) for CPU2"
+	default IOB_SECTION2_CPU2
+	depends on IOB_NPOOLS_CPU2 > 2
+
+endif # NCPUS > 2
+
+# --- CPU3 ---
+
+if NCPUS > 3
+
+config IOB_NPOOLS_CPU3
+	int "Number of IOB pool levels for CPU3"
+	default IOB_NPOOLS_CPU2
+	range 0 3
+
+config IOB_NBUFFERS1_CPU3
+	int "Number of I/O buffers (Level 1) for CPU3"
+	default IOB_NBUFFERS1_CPU2
+
+config IOB_BUFSIZE1_CPU3
+	int "Payload size of I/O buffer (Level 1) for CPU3"
+	default IOB_BUFSIZE1_CPU2
+
+config IOB_SECTION1_CPU3
+	string "Section name of IOB buffer (Level 1) for CPU3"
+	default IOB_SECTION1_CPU2
+
+config IOB_NBUFFERS2_CPU3
+	int "Number of I/O buffers (Level 2) for CPU3"
+	default IOB_NBUFFERS1_CPU3
+	depends on IOB_NPOOLS_CPU3 > 1
+
+config IOB_BUFSIZE2_CPU3
+	int "Payload size of I/O buffer (Level 2) for CPU3"
+	range 1 IOB_BUFSIZE1_CPU3
+	default 128
+	depends on IOB_NPOOLS_CPU3 > 1
+
+config IOB_SECTION2_CPU3
+	string "Section name of IOB buffer (Level 2) for CPU3"
+	default IOB_SECTION1_CPU3
+	depends on IOB_NPOOLS_CPU3 > 1
+
+config IOB_NBUFFERS3_CPU3
+	int "Number of I/O buffers (Level 3) for CPU3"
+	default IOB_NBUFFERS2_CPU3
+	depends on IOB_NPOOLS_CPU3 > 2
+
+config IOB_BUFSIZE3_CPU3
+	int "Payload size of I/O buffer (Level 3) for CPU3"
+	range 1 IOB_BUFSIZE2_CPU3
+	default 64
+	depends on IOB_NPOOLS_CPU3 > 2
+
+config IOB_SECTION3_CPU3
+	string "Section name of IOB buffer (Level 3) for CPU3"
+	default IOB_SECTION2_CPU3
+	depends on IOB_NPOOLS_CPU3 > 2
+
+endif # NCPUS > 3
+
+# --- CPU4 ---
+
+if NCPUS > 4
+
+config IOB_NPOOLS_CPU4
+	int "Number of IOB pool levels for CPU4"
+	default IOB_NPOOLS_CPU3
+	range 0 3
+
+config IOB_NBUFFERS1_CPU4
+	int "Number of I/O buffers (Level 1) for CPU4"
+	default IOB_NBUFFERS1_CPU3
+
+config IOB_BUFSIZE1_CPU4
+	int "Payload size of I/O buffer (Level 1) for CPU4"
+	default IOB_BUFSIZE1_CPU3
+
+config IOB_SECTION1_CPU4
+	string "Section name of IOB buffer (Level 1) for CPU4"
+	default IOB_SECTION1_CPU3
+
+config IOB_NBUFFERS2_CPU4
+	int "Number of I/O buffers (Level 2) for CPU4"
+	default IOB_NBUFFERS1_CPU4
+	depends on IOB_NPOOLS_CPU4 > 1
+
+config IOB_BUFSIZE2_CPU4
+	int "Payload size of I/O buffer (Level 2) for CPU4"
+	range 1 IOB_BUFSIZE1_CPU4
+	default 128
+	depends on IOB_NPOOLS_CPU4 > 1
+
+config IOB_SECTION2_CPU4
+	string "Section name of IOB buffer (Level 2) for CPU4"
+	default IOB_SECTION1_CPU4
+	depends on IOB_NPOOLS_CPU4 > 1
+
+config IOB_NBUFFERS3_CPU4
+	int "Number of I/O buffers (Level 3) for CPU4"
+	default IOB_NBUFFERS2_CPU4
+	depends on IOB_NPOOLS_CPU4 > 2
+
+config IOB_BUFSIZE3_CPU4
+	int "Payload size of I/O buffer (Level 3) for CPU4"
+	range 1 IOB_BUFSIZE2_CPU4
+	default 64
+	depends on IOB_NPOOLS_CPU4 > 2
+
+config IOB_SECTION3_CPU4
+	string "Section name of IOB buffer (Level 3) for CPU4"
+	default IOB_SECTION2_CPU4
+	depends on IOB_NPOOLS_CPU4 > 2
+
+endif # NCPUS > 4
+
+# --- CPU5 ---
+
+if NCPUS > 5
+
+config IOB_NPOOLS_CPU5
+	int "Number of IOB pool levels for CPU5"
+	default IOB_NPOOLS_CPU4
+	range 0 3
+
+config IOB_NBUFFERS1_CPU5
+	int "Number of I/O buffers (Level 1) for CPU5"
+	default IOB_NBUFFERS1_CPU4
+
+config IOB_BUFSIZE1_CPU5
+	int "Payload size of I/O buffer (Level 1) for CPU5"
+	default IOB_BUFSIZE1_CPU4
+
+config IOB_SECTION1_CPU5
+	string "Section name of IOB buffer (Level 1) for CPU5"
+	default IOB_SECTION1_CPU4
+
+config IOB_NBUFFERS2_CPU5
+	int "Number of I/O buffers (Level 2) for CPU5"
+	default IOB_NBUFFERS1_CPU5
+	depends on IOB_NPOOLS_CPU5 > 1
+
+config IOB_BUFSIZE2_CPU5
+	int "Payload size of I/O buffer (Level 2) for CPU5"
+	range 1 IOB_BUFSIZE1_CPU5
+	default 128
+	depends on IOB_NPOOLS_CPU5 > 1
+
+config IOB_SECTION2_CPU5
+	string "Section name of IOB buffer (Level 2) for CPU5"
+	default IOB_SECTION1_CPU5
+	depends on IOB_NPOOLS_CPU5 > 1
+
+config IOB_NBUFFERS3_CPU5
+	int "Number of I/O buffers (Level 3) for CPU5"
+	default IOB_NBUFFERS2_CPU5
+	depends on IOB_NPOOLS_CPU5 > 2
+
+config IOB_BUFSIZE3_CPU5
+	int "Payload size of I/O buffer (Level 3) for CPU5"
+	range 1 IOB_BUFSIZE2_CPU5
+	default 64
+	depends on IOB_NPOOLS_CPU5 > 2
+
+config IOB_SECTION3_CPU5
+	string "Section name of IOB buffer (Level 3) for CPU5"
+	default IOB_SECTION2_CPU5
+	depends on IOB_NPOOLS_CPU5 > 2
+
+endif # NCPUS > 5
+
+endif # BMP
+
+if !BMP
+
 config IOB_NPOOLS
 	int "Number of IOB mempool levels"
 	default 1
@@ -93,13 +433,6 @@ config IOB_BUFSIZE3
 		NOTE: This value must be <= IOB_BUFSIZE2 (enforced by range).
 		      Use smaller buffers for small packet optimization to save memory.
 
-config IOB_ALIGNMENT
-	int "Alignment size of each I/O buffer"
-	default 4
-	---help---
-		The member io_data of all I/O buffers is aligned to the value
-		specified by this configuration.
-
 config IOB_SECTION
 	string "The section where iob buffer is located (Level 1)"
 	default ""
@@ -126,6 +459,15 @@ config IOB_SECTION3
 		The section where iob buffer (Level 3) is located.
 		The section must be zero-initialized on system boot.
 		If not set, IOB_SECTION2 will be used.
+
+endif # !BMP
+
+config IOB_ALIGNMENT
+	int "Alignment size of each I/O buffer"
+	default 4
+	---help---
+		The member io_data of all I/O buffers is aligned to the value
+		specified by this configuration.
 
 config IOB_THROTTLE
 	int "I/O buffer throttle value"

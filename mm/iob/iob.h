@@ -44,9 +44,19 @@
  * Public Data
  ****************************************************************************/
 
-/* Multiple mempool for I/O buffers */
+/* Multiple mempool for I/O buffers.
+ *
+ * Non-BMP: flat array indexed by pool level.
+ * BMP: 2D array indexed by [cpu][level]; use g_iob_pool to
+ * get the current CPU's pool array.
+ */
 
-extern FAR struct mempool_s *g_iob_pool[];
+#ifdef CONFIG_BMP
+extern FAR struct mempool_s *g_iob_cpu_pool[CONFIG_NCPUS][CONFIG_IOB_NPOOLS];
+#  define g_iob_pool g_iob_cpu_pool[this_cpu()]
+#else
+extern FAR struct mempool_s *g_iob_pool[CONFIG_IOB_NPOOLS];
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
@@ -92,6 +102,7 @@ void iob_notifier_signal(void);
 static inline_function
 FAR struct mempool_s *iob_find_mempool(size_t size)
 {
+  FAR struct mempool_s **pool = g_iob_pool;
   int i = CONFIG_IOB_NPOOLS - 1;
 
   if (size > CONFIG_IOB_BUFSIZE)
@@ -100,14 +111,15 @@ FAR struct mempool_s *iob_find_mempool(size_t size)
     }
   else if (CONFIG_IOB_NPOOLS == 1)
     {
-      return g_iob_pool[0];
+      return pool[0];
     }
 
   do
     {
-      if (IOB_ALIGN_SIZE(size) <= g_iob_pool[i]->blocksize)
+      if (pool[i] != NULL && pool[i]->blocksize > 0 &&
+          IOB_ALIGN_SIZE(size) <= pool[i]->blocksize)
         {
-          return g_iob_pool[i];
+          return pool[i];
         }
     }
   while (--i >= 0);

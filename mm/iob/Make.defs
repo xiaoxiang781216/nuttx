@@ -40,6 +40,21 @@ ifeq ($(CONFIG_DEBUG_FEATURES),y)
   CSRCS += iob_dump.c
 endif
 
+ifeq ($(CONFIG_BMP),y)
+
+define IOB_DEFINE_SECTION
+  ifneq ($$(CONFIG_IOB_SECTION$(2)_CPU$(1)),"")
+    CFLAGS += $${DEFINE_PREFIX}IOB_SECTION$(2)_CPU$(1)=CONFIG_IOB_SECTION$(2)_CPU$(1)
+  endif
+endef
+
+$(foreach cpu,0 1 2 3 4 5, \
+  $(eval $(call IOB_DEFINE_SECTION,$(cpu),1)) \
+  $(eval $(call IOB_DEFINE_SECTION,$(cpu),2)) \
+  $(eval $(call IOB_DEFINE_SECTION,$(cpu),3)))
+
+else
+
 ifneq ($(CONFIG_IOB_SECTION),"")
   CFLAGS += ${DEFINE_PREFIX}IOB_SECTION=CONFIG_IOB_SECTION
 endif
@@ -50,6 +65,8 @@ endif
 
 ifneq ($(CONFIG_IOB_SECTION3),"")
   CFLAGS += ${DEFINE_PREFIX}IOB_SECTION3=CONFIG_IOB_SECTION3
+endif
+
 endif
 
 # Include iob build support

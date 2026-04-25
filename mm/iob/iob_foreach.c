@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
+#include <errno.h>
 
 #include <nuttx/mm/iob.h>
 #include <nuttx/mm/mempool.h>
@@ -81,7 +82,11 @@ void iob_foreach(iob_foreach_cb_t callback, FAR void *arg)
 
   for (i = 0; i < CONFIG_IOB_NPOOLS; i++)
     {
-      mempool_foreach_used(g_iob_pool[i], iob_foreach_mempool_cb, &ctx);
+      FAR struct mempool_s *pool = g_iob_pool[i];
+      if (pool != NULL)
+        {
+          mempool_foreach_used(pool, iob_foreach_mempool_cb, &ctx);
+        }
     }
 }
 
@@ -95,5 +100,18 @@ void iob_foreach(iob_foreach_cb_t callback, FAR void *arg)
 
 int iob_pool_info(int poolidx, FAR struct mempoolinfo_s *info)
 {
-  return mempool_info(g_iob_pool[poolidx], info);
+  FAR struct mempool_s *pool;
+
+  if (poolidx < 0 || poolidx >= CONFIG_IOB_NPOOLS)
+    {
+      return -EINVAL;
+    }
+
+  pool = g_iob_pool[poolidx];
+  if (pool == NULL)
+    {
+      return -ENOENT;
+    }
+
+  return mempool_info(pool, info);
 }

@@ -32,6 +32,7 @@
 #include <debug.h>
 
 #include <nuttx/mm/mempool.h>
+#include <nuttx/mm/iob.h>
 #include <nuttx/net/tcp.h>
 #include <nuttx/net/udp.h>
 #include <nuttx/net/icmp.h>
@@ -63,19 +64,9 @@
 
 #define MAX_HDRLEN (L2_MAXHDRLEN + L3_MAXHDRLEN)
 
-static_assert(MAX_HDRLEN <= CONFIG_IOB_BUFSIZE, "IOB buffer size too small");
+static_assert(MAX_HDRLEN <= CONFIG_IOB_BUFSIZE_MAX,
+              "IOB buffer size too small");
 #endif /* CONFIG_NET_IPFORWARD */
-
-#if CONFIG_IOB_NPOOLS <= 1
-#define MAX_ALLOC_NSTRUCT CONFIG_IOB_NBUFFERS
-#elif  CONFIG_IOB_NPOOLS <= 2
-#define MAX_ALLOC_NSTRUCT (CONFIG_IOB_NBUFFERS + CONFIG_IOB_NBUFFERS2)
-#else
-#define MAX_ALLOC_NSTRUCT (CONFIG_IOB_NBUFFERS + CONFIG_IOB_NBUFFERS2 + CONFIG_IOB_NBUFFERS3)
-#endif
-
-static_assert(MAX_ALLOC_NSTRUCT > CONFIG_NET_FORWARD_NSTRUCT,
-              "net forward may consume all the IOB and break netdev logic");
 
 /****************************************************************************
  * Private Data
@@ -85,7 +76,7 @@ static_assert(MAX_ALLOC_NSTRUCT > CONFIG_NET_FORWARD_NSTRUCT,
 
 MEMPOOL_DEFINE(g_fwdpool, sizeof(struct forward_s),
                CONFIG_NET_FORWARD_NSTRUCT,
-               MAX_ALLOC_NSTRUCT - CONFIG_IOB_THROTTLE,
+               CONFIG_IOB_NBUFFERS_MAX - CONFIG_IOB_THROTTLE,
                CONFIG_NET_FORWARD_ALLOC_STRUCT);
 
 /****************************************************************************

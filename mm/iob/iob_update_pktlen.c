@@ -81,7 +81,8 @@ int iob_update_pktlen(FAR struct iob_s *iob, unsigned int pktlen,
 
   if (remain > 0)
     {
-      nrequire += (remain + CONFIG_IOB_BUFSIZE - 1) / CONFIG_IOB_BUFSIZE;
+      size_t bufsize = CONFIG_IOB_BUFSIZE;
+      nrequire += (remain + bufsize - 1) / bufsize;
     }
 
   if (nrequire == 0)

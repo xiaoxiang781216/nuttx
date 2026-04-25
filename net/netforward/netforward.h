@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/mm/iob.h>
 
 #include <assert.h>
 #include <stdint.h>
@@ -45,18 +46,8 @@
 #  define CONFIG_NET_FORWARD_NSTRUCT 4
 #endif
 
-#if CONFIG_IOB_NPOOLS <= 1
-static_assert(CONFIG_IOB_NBUFFERS > CONFIG_NET_FORWARD_NSTRUCT,
+static_assert(CONFIG_IOB_NBUFFERS_MAX > CONFIG_NET_FORWARD_NSTRUCT,
               "net forward may consume all the IOB and break netdev logic");
-#elif  CONFIG_IOB_NPOOLS <= 2
-static_assert(CONFIG_IOB_NBUFFERS + CONFIG_IOB_NBUFFERS2 >
-              CONFIG_NET_FORWARD_NSTRUCT,
-              "net forward may consume all the IOB and break netdev logic");
-#else
-static_assert(CONFIG_IOB_NBUFFERS + CONFIG_IOB_NBUFFERS2 +
-              CONFIG_IOB_NBUFFERS3 > CONFIG_NET_FORWARD_NSTRUCT,
-              "net forward may consume all the IOB and break netdev logic");
-#endif
 
 /* Allocate a new IP forwarding data callback */
 
