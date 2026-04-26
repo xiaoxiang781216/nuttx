@@ -37,6 +37,17 @@ config DEV_OPTEE_NONE
 
 endchoice
 
+config DEV_OPTEE_CONNECT_TIMEOUT
+	int "OP-TEE socket connect timeout in seconds"
+	default 1
+	depends on DEV_OPTEE_LOCAL || DEV_OPTEE_RPMSG
+	---help---
+		Timeout in seconds for the socket connect to the OP-TEE server.
+		When the OP-TEE server is not available, connect() will block
+		for up to this many seconds before returning an error. A shorter
+		timeout improves responsiveness when TEE is unavailable.
+		Set to 0 to use the system default timeout.
+
 config DEV_OPTEE_SUPPLICANT
 	bool "Enables kernel driver for TEE supplicant"
 	default n

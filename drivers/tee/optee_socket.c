@@ -27,6 +27,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/net/net.h>
 #include <nuttx/kmalloc.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/param.h>
@@ -133,6 +134,9 @@ int optee_transport_open(FAR struct optee_priv_data **priv_)
   struct sockaddr_rpmsg addr;
 #endif
   int ret;
+#if CONFIG_DEV_OPTEE_CONNECT_TIMEOUT > 0
+  struct timeval tv;
+#endif
 
   priv = kmm_zalloc(sizeof(struct optee_socket_priv_data));
   if (priv == NULL)
@@ -150,6 +154,17 @@ int optee_transport_open(FAR struct optee_priv_data **priv_)
       kmm_free(priv);
       return ret;
     }
+
+  /* Set connect timeout to avoid blocking indefinitely when the
+   * OP-TEE server is not available.
+   */
+
+#if CONFIG_DEV_OPTEE_CONNECT_TIMEOUT > 0
+  tv.tv_sec  = CONFIG_DEV_OPTEE_CONNECT_TIMEOUT;
+  tv.tv_usec = 0;
+  psock_setsockopt(&priv->socket, SOL_SOCKET, SO_SNDTIMEO, &tv,
+                   sizeof(tv));
+#endif
 
   memset(&addr, 0, sizeof(addr));
 
