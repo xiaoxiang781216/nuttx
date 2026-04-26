@@ -46,6 +46,7 @@
 #include <nuttx/drivers/rpmsgdev.h>
 #include <nuttx/power/battery_ioctl.h>
 #include <nuttx/input/mouse.h>
+#include <nuttx/mtd/configdata.h>
 
 #include "rpmsgdev.h"
 
@@ -609,6 +610,53 @@ static off_t rpmsgdev_seek(FAR struct file *filep, off_t offset, int whence)
 }
 
 /****************************************************************************
+ * Name: rpmsgdev_marshal_cfgdata
+ ****************************************************************************/
+
+static void rpmsgdev_marshal_cfgdata(FAR void *buf, FAR void *cfg)
+{
+  FAR struct config_data_s *src = (FAR struct config_data_s *)cfg;
+  FAR struct config_data_s *dst = (FAR struct config_data_s *)buf;
+
+#ifdef CONFIG_MTD_CONFIG_NAMED
+  memcpy(dst->name, src->name, sizeof(dst->name));
+#else
+  dst->id = src->id;
+  dst->instance = src->instance;
+#endif
+  dst->len = src->len;
+  dst->configdata = (FAR uint8_t *)(dst + 1);
+  if (src->configdata != NULL && src->len > 0)
+    {
+      memcpy(dst->configdata, src->configdata, src->len);
+    }
+}
+
+/****************************************************************************
+ * Name: rpmsgdev_unmarshal_cfgdata
+ ****************************************************************************/
+
+static void rpmsgdev_unmarshal_cfgdata(FAR void *buf, FAR void *cfg)
+{
+  FAR struct config_data_s *src = (FAR struct config_data_s *)buf;
+  FAR struct config_data_s *dst = (FAR struct config_data_s *)cfg;
+
+  if (dst->configdata != NULL && src->len > 0)
+    {
+      memcpy(dst->configdata, (FAR uint8_t *)(src + 1),
+             MIN(src->len, dst->len));
+    }
+
+#ifdef CONFIG_MTD_CONFIG_NAMED
+  memcpy(dst->name, src->name, sizeof(dst->name));
+#else
+  dst->id = src->id;
+  dst->instance = src->instance;
+#endif
+  dst->len = src->len;
+}
+
+/****************************************************************************
  * Name: rpmsgdev_ioctl_arglen
  *
  * Description:
@@ -654,6 +702,14 @@ static ssize_t rpmsgdev_ioctl_arglen(int cmd, unsigned long arg)
                ((FAR struct mouse_vendor_cmd_s *)(uintptr_t)arg)->len;
       case MSIOC_GRAB:
         return 0;
+      case CFGDIOC_GETCONFIG:
+      case CFGDIOC_SETCONFIG:
+      case CFGDIOC_FIRSTCONFIG:
+      case CFGDIOC_NEXTCONFIG:
+        return sizeof(struct config_data_s) +
+               ((FAR struct config_data_s *)(uintptr_t)arg)->len;
+      case CFGDIOC_DELCONFIG:
+        return sizeof(struct config_data_s);
       case RPMSGDEV_PRIVATE_IOCTL:
         return sizeof(struct rpmsgdev_private_ioctl) +
                ((FAR struct rpmsgdev_private_ioctl *)(uintptr_t)arg)->len;
@@ -736,7 +792,14 @@ static int rpmsgdev_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   if (arglen > 0)
     {
-      memcpy(msg->buf, argp, arglen);
+      if (cmd >= CFGDIOC_GETCONFIG && cmd <= CFGDIOC_NEXTCONFIG)
+        {
+          rpmsgdev_marshal_cfgdata(msg->buf, argp);
+        }
+      else
+        {
+          memcpy(msg->buf, argp, arglen);
+        }
     }
 
   cookie = rpmsg_pool_alloc(sizeof(*cookie));
@@ -748,7 +811,15 @@ static int rpmsgdev_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
     {
       FAR struct rpmsgdev_ioctl_s *rsp = cookie->data;
 
-      memcpy(argp, rsp->buf, cookie->result);
+      if (cmd >= CFGDIOC_GETCONFIG && cmd <= CFGDIOC_NEXTCONFIG)
+        {
+          rpmsgdev_unmarshal_cfgdata(rsp->buf, argp);
+        }
+      else
+        {
+          memcpy(argp, rsp->buf, cookie->result);
+        }
+
       rpmsg_release_rx_buffer(&dev->ept, cookie->data);
     }
 #endif
@@ -1083,7 +1154,15 @@ static int rpmsgdev_ioctl_handler(FAR struct rpmsg_endpoint *ept,
       cookie->data = data;
       rpmsg_hold_rx_buffer(ept, data);
 #else
-      memcpy(cookie->data, rsp->buf, rsp->arglen);
+      if (rsp->request >= CFGDIOC_GETCONFIG &&
+          rsp->request <= CFGDIOC_NEXTCONFIG)
+        {
+          rpmsgdev_unmarshal_cfgdata(rsp->buf, cookie->data);
+        }
+      else
+        {
+          memcpy(cookie->data, rsp->buf, rsp->arglen);
+        }
 #endif
     }
 
