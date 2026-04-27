@@ -38,7 +38,6 @@
 
 #ifdef CONFIG_SMP
 DEFINE_PER_CPU_BSS_SMP(uintptr_t, g_hrtimer_running);
-#endif
 
 /* Global spinlock protecting the high-resolution timer subsystem.
  *
@@ -50,6 +49,7 @@ DEFINE_PER_CPU_BSS_SMP(uintptr_t, g_hrtimer_running);
 #undef g_hrtimer_lock
 DEFINE_PER_CPU_BMP(seqcount_t, g_hrtimer_lock) = SEQLOCK_INITIALIZER;
 #define g_hrtimer_lock this_cpu_var_bmp(g_hrtimer_lock)
+#endif
 
 /* HRTimer queue for all active high-resolution timers.
  *

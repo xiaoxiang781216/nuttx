@@ -22,7 +22,7 @@
 
 # Add hrtimer-related files to the build
 
-CSRCS += hrtimer_cancel.c hrtimer_initialize.c hrtimer_process.c hrtimer_start.c
+CSRCS += hrtimer_cancel.c hrtimer_initialize.c hrtimer_start.c
 CSRCS += hrtimer_gettime.c
 
 # Include hrtimer build support
