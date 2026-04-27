@@ -532,6 +532,12 @@ uint32_t *arm_syscall(uint32_t *regs)
           rtcb->xcp.syscall[index].r3        = regs[REG_R3];
           rtcb->xcp.syscall[index].r12       = regs[REG_R12];
 
+#  ifdef CONFIG_SCHED_BACKTRACE
+          rtcb->xcp.syscall[index].fp        = regs[REG_FP];
+          rtcb->xcp.syscall[index].sp        = regs[REG_SP];
+          rtcb->xcp.syscall[index].lr        = regs[REG_LR];
+#  endif
+
           if (cmd == SYS_ppccall)
             {
               if (!arm_dispatch_ppccall(regs))

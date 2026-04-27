@@ -798,6 +798,7 @@ int up_backtrace(struct tcb_s *tcb,
 
   if (tcb == NULL || tcb == rtcb)
     {
+      tcb = rtcb;
       frame.fp = (unsigned long)__builtin_frame_address(0);
       frame.lr = (unsigned long)__builtin_return_address(0);
       frame.sp = frame.fp;
@@ -867,6 +868,17 @@ int up_backtrace(struct tcb_s *tcb,
 
       ret = backtrace_unwind(&frame, buffer, size, &skip);
     }
+
+#ifdef CONFIG_LIB_SYSCALL
+  for (int i = tcb->xcp.nsyscalls - 1; ret < size && i >= 0; i--)
+    {
+      frame.pc = tcb->xcp.syscall[i].sysreturn;
+      frame.sp = tcb->xcp.syscall[i].sp;
+      frame.fp = tcb->xcp.syscall[i].fp;
+      frame.lr = tcb->xcp.syscall[i].lr;
+      ret += backtrace_unwind(&frame, &buffer[ret], size - ret, &skip);
+    }
+#endif
 
   return ret;
 }

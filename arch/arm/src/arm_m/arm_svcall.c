@@ -482,6 +482,12 @@ int arm_svcall(int irq, void *context, void *arg)
           tcb->xcp.syscall[index].r3         = regs[REG_R3];
           tcb->xcp.syscall[index].r12        = regs[REG_R12];
 
+#ifdef CONFIG_SCHED_BACKTRACE
+          tcb->xcp.syscall[index].fp         = regs[REG_FP];
+          tcb->xcp.syscall[index].sp         = regs[REG_SP];
+          tcb->xcp.syscall[index].lr         = regs[REG_LR];
+#endif
+
           if (cmd == SYS_ppccall)
             {
               if (!arm_dispatch_ppccall(regs))

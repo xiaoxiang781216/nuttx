@@ -238,6 +238,11 @@ struct xcpt_syscall_s
   uint32_t r2;          /* Saved R2 across syscall dispatch */
   uint32_t r3;          /* Saved R3 across syscall dispatch */
   uint32_t r12;         /* Saved R12 (ip) across syscall dispatch */
+#ifdef CONFIG_SCHED_BACKTRACE
+  uint32_t fp;          /* Saved FP for syscall backtrace */
+  uint32_t sp;          /* Saved SP for syscall backtrace */
+  uint32_t lr;          /* Saved LR for syscall backtrace */
+#endif
 };
 #endif
 

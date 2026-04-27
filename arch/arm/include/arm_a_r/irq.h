@@ -238,6 +238,11 @@ struct xcpt_syscall_s
 #ifdef CONFIG_ARCH_KERNEL_STACK
   uint32_t r11;          /* The r11 help unwind sp */
 #endif
+#ifdef CONFIG_SCHED_BACKTRACE
+  uint32_t fp;          /* Saved FP for syscall backtrace */
+  uint32_t sp;          /* Saved SP for syscall backtrace */
+  uint32_t lr;          /* Saved LR for syscall backtrace */
+#endif
 };
 #endif
 
