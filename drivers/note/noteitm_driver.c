@@ -39,9 +39,9 @@ struct noteitm_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static void noteitm_add(FAR struct note_driver_s *drv,
-                        FAR const void *buf, size_t notelen,
-                        bool noswitches);
+static int noteitm_add(FAR struct note_driver_s *drv,
+                       FAR const void *buf, size_t notelen,
+                       bool noswitches);
 
 /****************************************************************************
  * Private Data
@@ -96,13 +96,15 @@ struct noteitm_s g_noteitm =
  *
  ****************************************************************************/
 
-static void noteitm_add(FAR struct note_driver_s *drv,
-                        FAR const void *buf, size_t notelen,
-                        bool noswitches)
+static int noteitm_add(FAR struct note_driver_s *drv,
+                       FAR const void *buf, size_t notelen,
+                       bool noswitches)
 {
   FAR struct noteitm_s *note = (FAR struct noteitm_s *)drv;
+  int ret;
 
-  itm_send(note->stimulus, buf, notelen);
+  ret = itm_send(note->stimulus, buf, notelen);
+  return ret < 0 ? ret : 0;
 }
 
 /****************************************************************************

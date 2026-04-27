@@ -45,9 +45,9 @@ struct notestream_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static void notestream_add(FAR struct note_driver_s *drv,
-                           FAR const void *note, size_t len,
-                           bool noswitches);
+static int notestream_add(FAR struct note_driver_s *drv,
+                          FAR const void *note, size_t len,
+                          bool noswitches);
 
 /****************************************************************************
  * Private Data
@@ -66,14 +66,16 @@ static const struct note_driver_ops_s g_notestream_ops =
  * Private Functions
  ****************************************************************************/
 
-static void notestream_add(FAR struct note_driver_s *drv,
-                           FAR const void *note, size_t len,
-                           bool noswitches)
+static int notestream_add(FAR struct note_driver_s *drv,
+                          FAR const void *note, size_t len,
+                          bool noswitches)
 {
   FAR struct notestream_s *notestream =
       (FAR struct notestream_s *)drv;
+  int ret;
 
-  lib_stream_puts(&notestream->filestream, note, len);
+  ret = lib_stream_puts(&notestream->filestream, note, len);
+  return ret < 0 ? ret : 0;
 }
 
 /****************************************************************************

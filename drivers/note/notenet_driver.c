@@ -59,9 +59,9 @@ struct notenet_driver_s
 
 static bool notenetdev_transfer(FAR struct notenet_driver_s *drv);
 static void notenetdev_work(FAR void *priv);
-static void note_netdev_add(FAR struct note_driver_s *driver,
-                            FAR const void *note, size_t notelen,
-                            bool noswitches);
+static int note_netdev_add(FAR struct note_driver_s *driver,
+                           FAR const void *note, size_t notelen,
+                           bool noswitches);
 static int netdev_note_panic_callback(FAR struct notifier_block *nb,
                                       unsigned long action,
                                       FAR void *data);
@@ -178,9 +178,9 @@ static void notenetdev_work(FAR void *arg)
  *
  ****************************************************************************/
 
-static void note_netdev_add(FAR struct note_driver_s *driver,
-                            FAR const void *note, size_t notelen,
-                            bool noswitches)
+static int note_netdev_add(FAR struct note_driver_s *driver,
+                           FAR const void *note, size_t notelen,
+                           bool noswitches)
 {
   FAR struct notenet_driver_s *drv =
     (FAR struct notenet_driver_s *)driver;
@@ -196,7 +196,7 @@ static void note_netdev_add(FAR struct note_driver_s *driver,
   if (!drv->pkt)
     {
       spin_unlock_irqrestore_notrace(&drv->lock, flags);
-      return;
+      return -ENODEV;
     }
 
 try:
@@ -231,6 +231,8 @@ try:
     {
       work_queue(HPWORK, &drv->work, notenetdev_work, drv, delay);
     }
+
+  return 0;
 }
 
 /****************************************************************************

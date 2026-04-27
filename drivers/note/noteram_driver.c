@@ -162,9 +162,11 @@ static ssize_t noteram_read(FAR struct file *filep,
 static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup);
-static void noteram_add(FAR struct note_driver_s *drv,
-                        FAR const void *note, size_t len,
-                        bool noswitches);
+static int noteram_add(FAR struct note_driver_s *drv,
+                       FAR const void *note, size_t len,
+                       bool noswitches);
+#if defined(CONFIG_DRIVERS_NOTERAM_TEXT_DUMP) || \
+    defined(CONFIG_DRIVERS_NOTERAM_CRASH_DUMP)
 static void
 noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx);
 static int noteram_dump_one(FAR const struct note_max_s *p,
@@ -172,6 +174,7 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
                             FAR struct noteram_dump_context_s *ctx);
 static uint32_t noteram_unread_length(FAR struct noteram_driver_s *drv,
                                       uint32_t read);
+#endif
 
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
 static void noteram_timeout_handler(wdparm_t arg);
@@ -1232,9 +1235,9 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
  *
  ****************************************************************************/
 
-static void noteram_add(FAR struct note_driver_s *driver,
-                        FAR const void *note, size_t notelen,
-                        bool noswitches)
+static int noteram_add(FAR struct note_driver_s *driver,
+                       FAR const void *note, size_t notelen,
+                       bool noswitches)
 {
   FAR const char *buf = note;
   FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)driver;
@@ -1317,6 +1320,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
 out:
   rspin_unlock_irqrestore_notrace(&drv->lock, flags);
   noteram_timeout_reset(drv);
+  return 0;
 }
 
 /****************************************************************************
