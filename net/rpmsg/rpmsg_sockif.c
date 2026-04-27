@@ -876,8 +876,25 @@ static int rpmsg_socket_accept(FAR struct socket *psock,
 
       nxmutex_unlock(&server->recvlock);
 
-      if (conn && conn->sendsize > 0)
+      if (conn)
         {
+          if (conn->sendsize == 0)
+            {
+              /* Child dequeued but SYNC not yet complete, wait for it */
+
+              ret = net_sem_wait(&conn->sendsem);
+              if (ret < 0 || !conn->ept.rdev || conn->unbind)
+                {
+                  /* Wait failed or connection reset, release the child */
+
+                  conn->server = NULL;
+                  rpmsg_socket_destroy_ept(conn);
+                  break;
+                }
+
+              DEBUGASSERT(conn->sendsize > 0);
+            }
+
           newsock->s_domain = psock->s_domain;
           newsock->s_sockif = psock->s_sockif;
           newsock->s_type   = SOCK_STREAM;
@@ -1380,11 +1397,30 @@ static int rpmsg_socket_close(FAR struct socket *psock)
 
   if (conn->backlog > 0)
     {
+      FAR struct rpmsg_socket_conn_s *child;
+      FAR struct rpmsg_socket_conn_s *next;
+
       rpmsg_unregister_callback(conn,
                                 NULL,
                                 NULL,
                                 rpmsg_socket_ns_match,
                                 rpmsg_socket_ns_bind);
+
+      /* Drain pending children from the accept queue to prevent leak */
+
+      nxmutex_lock(&conn->recvlock);
+      child = conn->next;
+      conn->next = NULL;
+      nxmutex_unlock(&conn->recvlock);
+
+      while (child)
+        {
+          next = child->next;
+          child->next = NULL;
+          child->server = NULL;
+          rpmsg_socket_destroy_ept(child);
+          child = next;
+        }
     }
   else
     {
