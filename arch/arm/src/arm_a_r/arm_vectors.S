@@ -272,6 +272,8 @@
 arm_vectorirq:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
+	.cfi_signal_frame
+	.cfi_return_column 15
 
 	/* On entry: IRQ mode, spsr = SVC CPSR, lr = SVC PC */
 
@@ -339,6 +341,8 @@ arm_vectorirq:
 arm_vectorsvc:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
+	.cfi_signal_frame
+	.cfi_return_column 15
 
 	/* On entry: SVC mode, spsr = SVC CPSR, lr = SVC PC */
 
@@ -406,6 +410,8 @@ arm_vectorsvc:
 arm_vectordata:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
+	.cfi_signal_frame
+	.cfi_return_column 15
 
 	/* On entry: ABT mode, spsr = SVC CPSR, lr = SVC PC */
 
@@ -452,6 +458,8 @@ arm_vectordata:
 arm_vectorprefetch:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
+	.cfi_signal_frame
+	.cfi_return_column 15
 
 	/* On entry: ABT mode, spsr = SVC CPSR, lr = SVC PC */
 
@@ -496,6 +504,8 @@ arm_vectorprefetch:
 arm_vectorundefinsn:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
+	.cfi_signal_frame
+	.cfi_return_column 15
 
 	/* On entry: UND mode, spsr = SVC CPSR, lr = SVC PC */
 
@@ -540,6 +550,8 @@ arm_vectorundefinsn:
 arm_vectorfiq:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
+	.cfi_signal_frame
+	.cfi_return_column 15
 #ifdef CONFIG_ARM_DECODEFIQ
 
 	/* On entry: FIQ mode, spsr = SVC CPSR, lr = SVC PC */

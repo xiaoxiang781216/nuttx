@@ -127,6 +127,8 @@
 exception_common:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
+	.cfi_signal_frame
+	.cfi_return_column 15
 	mrs		r12, control				/* R12=control */
 
 #ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE

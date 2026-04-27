@@ -25,6 +25,12 @@
     .macro  .cfi_startproc
     .endm
 
+    .macro  .cfi_signal_frame
+    .endm
+
+    .macro  .cfi_return_column val
+    .endm
+
     .macro  .cfi_def_cfa val1 val2
     .endm
 
