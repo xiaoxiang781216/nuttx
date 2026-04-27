@@ -1789,10 +1789,18 @@ skip_rtt:
 
       case TCP_LAST_ACK:
         /* We can close this connection if the peer has acknowledged our
-         * FIN. This is indicated by the TCP_ACKDATA flag.
+         * FIN. Per RFC 793 p75: "The only thing that can arrive in this
+         * state is an acknowledgment of our FIN. If our FIN is now
+         * acknowledged, delete the TCB, enter the CLOSED state."
+         *
+         * We must check that tx_unacked == 0 (meaning the FIN has
+         * actually been acknowledged), not just that TCP_ACKDATA is set.
+         * A segment with an ACK that does not acknowledge the FIN
+         * (e.g., a FIN+ACK with an invalid ack number) must be ignored
+         * and the connection must remain in LAST-ACK state.
          */
 
-        if ((flags & TCP_ACKDATA) != 0)
+        if ((flags & TCP_ACKDATA) != 0 && conn->tx_unacked == 0)
           {
             conn->tcpstateflags = TCP_CLOSED;
             ninfo("TCP_LAST_ACK TCP state: TCP_CLOSED\n");
