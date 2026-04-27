@@ -44,13 +44,11 @@ endif()
 # failure logs more deterministic and most importantly makes builds more
 # deterministic. Debuggers usually have a path mapping feature to ensure the
 # files are still found.
-if((NOT MSVC) AND (NOT CONFIG_ARCH_TOOLCHAIN_GHS))
-  if(CONFIG_OUTPUT_STRIP_PATHS)
-    add_compile_options(-fmacro-prefix-map=${NUTTX_DIR}=)
-    add_compile_options(-fmacro-prefix-map=${NUTTX_APPS_DIR}=)
-    add_compile_options(-fmacro-prefix-map=${NUTTX_BOARD_ABS_DIR}=)
-    add_compile_options(-fmacro-prefix-map=${NUTTX_CHIP_ABS_DIR}=)
-  endif()
+if(CONFIG_ARCH_TOOLCHAIN_GCC AND CONFIG_OUTPUT_STRIP_PATHS)
+  add_compile_options(-fmacro-prefix-map=${NUTTX_DIR}=)
+  add_compile_options(-fmacro-prefix-map=${NUTTX_APPS_DIR}=)
+  add_compile_options(-fmacro-prefix-map=${NUTTX_BOARD_ABS_DIR}=)
+  add_compile_options(-fmacro-prefix-map=${NUTTX_CHIP_ABS_DIR}=)
 endif()
 
 # Support CMake to define additional configuration options
