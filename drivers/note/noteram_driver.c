@@ -335,7 +335,6 @@ static void noteram_timeout_handler(wdparm_t arg)
         {
           rspin_unlock_irqrestore_notrace(&drv->lock, flags);
           poll_notify(&ctx->pfd, 1, POLLIN);
-          noteram_timeout_reset(drv);
           flags = rspin_lock_irqsave_notrace(&drv->lock);
         }
     }
@@ -343,6 +342,8 @@ static void noteram_timeout_handler(wdparm_t arg)
   atomic_sub(&drv->poll_ref, 1);
 
   rspin_unlock_irqrestore_notrace(&drv->lock, flags);
+
+  noteram_timeout_reset(drv);
 }
 #else
 #  define noteram_timeout_reset(drv)
