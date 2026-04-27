@@ -139,18 +139,21 @@
 #define _POSIX_SIZE_MAX       65535        /* See sys/types.h */
 #define _POSIX_SIZE_MIN       0
 
-#define _POSIX_SSIZE_MAX      32767        /* See sys/types.h */
-#define _POSIX_SSIZE_MIN      -32768
-
 #else /* CONFIG_SMALL_MEMORY */
 
 #define _POSIX_SIZE_MAX       ULONG_MAX
 #define _POSIX_SIZE_MIN       0
 
-#define _POSIX_SSIZE_MAX      LONG_MAX
-#define _POSIX_SSIZE_MIN      LONG_MIN
-
 #endif /* CONFIG_SMALL_MEMORY */
+
+/* _POSIX_SSIZE_MAX / _POSIX_SSIZE_MIN are the POSIX-mandated minimums
+ * (SSIZE_MAX >= 32767 per POSIX.1-2017). They are fixed constants and
+ * must not vary with build configuration. See SSIZE_MAX / SSIZE_MIN
+ * below for the implementation's actual limit.
+ */
+
+#define _POSIX_SSIZE_MAX      32767
+#define _POSIX_SSIZE_MIN      -32768
 
 /* Required for sigqueue */
 
@@ -218,8 +221,13 @@
 #define SIZE_MAX       _POSIX_SIZE_MAX
 #define SIZE_MIN       _POSIX_SIZE_MIN
 #define RSIZE_MAX      _POSIX_SIZE_MAX
-#define SSIZE_MAX      _POSIX_SSIZE_MAX
-#define SSIZE_MIN      _POSIX_SSIZE_MIN
+#ifdef CONFIG_SMALL_MEMORY
+#  define SSIZE_MAX    _POSIX_SSIZE_MAX
+#  define SSIZE_MIN    _POSIX_SSIZE_MIN
+#else
+#  define SSIZE_MAX    LONG_MAX
+#  define SSIZE_MIN    LONG_MIN
+#endif
 
 /* STREAM_MAX: the implementation's guaranteed number of concurrently
  * open FILE* streams. POSIX requires >= _POSIX_STREAM_MAX (8). Kept
