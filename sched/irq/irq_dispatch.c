@@ -203,12 +203,13 @@ __jumpfunc__ void irq_dispatch(int irq, FAR void *context)
 #endif
   xcpt_t vector = irq_unexpected_isr;
   FAR void *arg = NULL;
-  int ndx = IRQ_TO_NDX(irq);
+  int ndx = irq;
 
 #if NR_IRQS > 0
   if (ndx >= 0)
     {
 #ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
+      ndx = g_irqmap[irq];
       if (ndx < CONFIG_ARCH_NUSER_INTERRUPTS)
         {
           if (g_irqvector[ndx].handler)

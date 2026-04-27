@@ -81,8 +81,14 @@ static int irqchain_dispatch(int irq, FAR void *context, FAR void *arg)
 {
   FAR struct irqchain_s *curr;
   FAR struct irqchain_s *prev;
-  int ndx = IRQ_TO_NDX(irq);
+  int ndx;
   int ret = 0;
+
+#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
+  ndx = g_irqmap[irq];
+#else
+  ndx = irq;
+#endif
 
   if (ndx < 0)
     {

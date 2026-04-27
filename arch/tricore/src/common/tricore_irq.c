@@ -59,9 +59,6 @@ typedef int srpn_to_irq_t[TRICORE_IRQ_MAX_PRIORITY + 1];
 static DEFINE_PER_CPU_BSS_BMP(srpn_to_irq_t, g_srpn_to_irq);
 #define g_srpn_to_irq this_cpu_var_bmp(g_srpn_to_irq)
 
-static spinlock_t g_irqlock = SP_UNLOCKED;
-static int g_irqmap_count = 1;
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -327,16 +324,9 @@ void up_irqinitialize(void)
 void up_disable_irq(int irq)
 {
   volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
-  Ifx_SRC_SRCR srctmp;
 
   IfxSrc_disable(src);
-
-  /* Clear, keep SRPN */
-
-  srctmp.U      = 0U;
-  srctmp.B.TOS  = ~0;
-  srctmp.B.SRPN = src->B.SRPN;
-  src->U = srctmp.U;
+  IfxSrc_deinit(src);
 }
 
 /****************************************************************************
@@ -436,43 +426,6 @@ int up_prioritize_irq(int irq, int priority)
   return OK;
 }
 #endif
-
-/****************************************************************************
- * Name: up_irq_to_ndx
- *
- * Description:
- *   Irq to ndx
- *
- ****************************************************************************/
-
-int up_irq_to_ndx(int irq)
-{
-  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
-  Ifx_SRC_SRCR srctmp;
-  irqstate_t flags;
-  int ndx;
-
-  ndx = src->B.SRPN;
-  if (ndx != 0)
-    {
-      return ndx;
-    }
-
-  flags = spin_lock_irqsave(&g_irqlock);
-  ndx = src->B.SRPN;
-  if (ndx == 0)
-    {
-      ndx = g_irqmap_count++;
-      g_irqrevmap[ndx] = irq;
-      srctmp.U = src->U;
-      srctmp.B.SRPN = ndx;
-      src->U = srctmp.U;
-    }
-
-  spin_unlock_irqrestore(&g_irqlock, flags);
-
-  return ndx;
-}
 
 /****************************************************************************
  * Name: up_affinity_irq

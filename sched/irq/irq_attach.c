@@ -40,8 +40,7 @@
 #undef g_irqlock
 static DEFINE_PER_CPU_BMP(spinlock_t, g_irqlock) = SP_UNLOCKED;
 #define g_irqlock this_cpu_var_bmp(g_irqlock)
-#if defined(CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC) && \
-    !defined(CONFIG_ARCH_IRQ_TO_NDX)
+#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC
 #undef g_irqmap_count
 DEFINE_PER_CPU_BMP(int, g_irqmap_count) = 1;
 #define g_irqmap_count this_cpu_var_bmp(g_irqmap_count)
@@ -62,11 +61,9 @@ DEFINE_PER_CPU_BMP(int, g_irqmap_count) = 1;
  * declaration is here for the time being.
  */
 
-#  if !defined(CONFIG_ARCH_IRQ_TO_NDX)
 #undef g_irqmap
 DEFINE_PER_CPU_BSS_BMP(irq_mapped_t, g_irqmap[NR_IRQS]);
 #define g_irqmap this_cpu_var_bmp(g_irqmap)
-#  endif
 #undef g_irqrevmap
 DEFINE_PER_CPU_BSS_BMP(int, g_irqrevmap[CONFIG_ARCH_NUSER_INTERRUPTS]);
 #define g_irqrevmap this_cpu_var_bmp(g_irqrevmap)
@@ -76,8 +73,7 @@ DEFINE_PER_CPU_BSS_BMP(int, g_irqrevmap[CONFIG_ARCH_NUSER_INTERRUPTS]);
  * Public Functions
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC) && \
-    !defined(CONFIG_ARCH_IRQ_TO_NDX)
+#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC
 int irq_to_ndx(int irq)
 {
   DEBUGASSERT(g_irqmap_count < CONFIG_ARCH_NUSER_INTERRUPTS);
@@ -93,8 +89,7 @@ int irq_to_ndx(int irq)
   spin_unlock_irqrestore(&g_irqlock, flags);
   return g_irqmap[irq];
 }
-#elif defined(CONFIG_ARCH_MINIMAL_VECTORTABLE) && \
-      !defined(CONFIG_ARCH_IRQ_TO_NDX)
+#elif defined(CONFIG_ARCH_MINIMAL_VECTORTABLE)
 int ndx_to_irq(int ndx)
 {
   int i;
