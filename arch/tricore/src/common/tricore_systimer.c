@@ -32,12 +32,6 @@
 #include "IfxStm.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define systimer_trigger_irq TRICORE_GPSR_IRQNUM(up_this_cpu(), up_this_cpu())
-
-/****************************************************************************
  * Private Types
  ****************************************************************************/
 
@@ -49,6 +43,7 @@
 struct tricore_systimer_lowerhalf_s
 {
   struct oneshot_lowerhalf_s lower;
+  int                        irq;
   volatile void             *tbase;
   volatile void             *freerun_tbase;
 };
@@ -90,7 +85,6 @@ static void tricore_systimer_updata(struct oneshot_lowerhalf_s *lower,
   irqstate_t flags;
   uint64_t   expected;
   uint64_t   current;
-  cpu_set_t  cpuset;
 
   flags = up_irq_save();
 
@@ -114,9 +108,7 @@ static void tricore_systimer_updata(struct oneshot_lowerhalf_s *lower,
   if (IfxStm_get(priv->tbase) > expected)
     {
       IfxStm_clearCompareFlag(priv->tbase, IfxStm_Comparator_0);
-      CPU_ZERO(&cpuset);
-      CPU_SET(up_this_cpu(), &cpuset);
-      up_trigger_irq(systimer_trigger_irq, cpuset);
+      IfxSrc_setRequest(TRICORE_IRQ2SRC(priv->irq));
     }
 
   up_irq_restore(flags);
@@ -290,6 +282,7 @@ tricore_systimer_initialize(volatile void *tbase, volatile void *fr_tbase,
   priv->lower.ops = &g_tricore_oneshot_ops;
   priv->tbase = tbase;
   priv->freerun_tbase = fr_tbase;
+  priv->irq = irq;
 
   ASSERT(freq <= UINT32_MAX);
 
@@ -308,9 +301,7 @@ tricore_systimer_initialize(volatile void *tbase, volatile void *fr_tbase,
   IfxStm_enableComparatorInterrupt(tbase, IfxStm_Comparator_0);
 
   irq_attach(irq, tricore_systimer_interrupt, priv);
-  irq_attach(systimer_trigger_irq, tricore_systimer_interrupt, priv);
   up_enable_irq(irq);
-  up_enable_irq(systimer_trigger_irq);
 
   return (struct oneshot_lowerhalf_s *)priv;
 }

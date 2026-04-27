@@ -161,11 +161,15 @@
 #define FCX_FCXS_MASK       (0xf    << FCX_FCXS)
 #define FCX_FREE            (FCX_FCXS_MASK | FCX_FCXO_MASK) /* Free CSA manipulation */
 
-#define TRICORE_SRCNUM_PER_GPSR  8
-#define TRICORE_SRC2IRQ(src_addr) \
-  (((uintptr_t)(src_addr) - (uintptr_t)&MODULE_SRC) / 4)
-#define TRICORE_GPSR_IRQNUM(src_cpu, dest_cpu)  \
-  TRICORE_SRC2IRQ(&SRC_GPSR0_SR0 + src_cpu * 8 + dest_cpu)
+#define TRICORE_SRCNUM_PER_GPSR 8
+#define TRICORE_SRC_SPACING     4
+#define TRICORE_SRC_BASEADDR    (&MODULE_SRC)
+#define TRICORE_SRC2IRQ(src) \
+  (((uintptr_t)(src) - (uintptr_t)TRICORE_SRC_BASEADDR) / TRICORE_SRC_SPACING)
+#define TRICORE_IRQ2SRC(irq) \
+  ((volatile Ifx_SRC_SRCR *)((uintptr_t)TRICORE_SRC_BASEADDR + (irq) * TRICORE_SRC_SPACING))
+#define TRICORE_GPSR2IRQ(src_cpu, dest_cpu) \
+  TRICORE_SRC2IRQ(&SRC_GPSR0_SR0 + src_cpu * TRICORE_SRCNUM_PER_GPSR + dest_cpu)
 
 /* CPUCALL uses GPSR{cpu}_SR7 instead of GPSR7_SR{cpu} so that it works
  * on all TC4XX variants (TC48X/TC4ZX do not have GPSR7).
