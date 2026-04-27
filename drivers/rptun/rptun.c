@@ -1163,6 +1163,29 @@ static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
   return ret;
 }
 
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+static int rptun_dev_unlink(FAR struct inode *inode)
+{
+  FAR struct rptun_priv_s *priv = inode->i_private;
+  int ret;
+
+  ret = rptun_dev_stop(&priv->rproc);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  nxrmutex_lock(&g_rptun_lock);
+  dq_rem(&priv->entry, &g_rptun_priv);
+  nxrmutex_unlock(&g_rptun_lock);
+
+  remoteproc_remove(&priv->rproc);
+  work_cancel_sync(HPWORK, &priv->work);
+  kmm_free(priv);
+  return OK;
+}
+#endif
+
 static int rptun_dev_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg)
 {
@@ -1452,12 +1475,10 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
 
   static const struct file_operations g_rptun_fops =
     {
-      0,                /* open */
-      0,                /* close */
-      0,                /* read */
-      0,                /* write */
-      0,                /* seek */
-      rptun_dev_ioctl,  /* ioctl */
+      .ioctl  = rptun_dev_ioctl,
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+      .unlink = rptun_dev_unlink,
+#endif
     };
 
   FAR struct rptun_priv_s *priv;
@@ -1542,6 +1563,14 @@ void rptun_dump_resource(FAR const struct resource_table *rsc)
             break;
         }
     }
+}
+
+int rptun_uninitialize(FAR const char *cpuname)
+{
+  char name[32];
+
+  snprintf(name, sizeof(name), "/dev/rptun/%s", cpuname);
+  return unregister_driver(name);
 }
 
 int rptun_boot(FAR const char *cpuname)
