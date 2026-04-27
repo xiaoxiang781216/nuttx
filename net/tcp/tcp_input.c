@@ -1857,6 +1857,23 @@ skip_rtt:
 
         if (dev->d_len > 0)
           {
+            /* Per RFC 793 and Linux tcp_rcv_state_process():
+             * If the connection was closed via close() (SHUT_DEAD),
+             * receiving new data after sending FIN is an error condition.
+             * Send RST to abort the connection, matching Linux behavior
+             * when RCV_SHUTDOWN is set.
+             *
+             * For shutdown(SHUT_WR) half-close, data is still accepted
+             * and processed normally (delayed ACK remains effective,
+             * consistent with Linux __tcp_ack_snd_check behavior).
+             */
+
+            if ((conn->shutdown & SHUT_DEAD) != 0)
+              {
+                nwarn("WARNING: Data received after close in FIN_WAIT_1\n");
+                goto reset;
+              }
+
             result = tcp_callback(dev, conn, TCP_NEWDATA);
             tcp_appsend(dev, conn, result);
             return;
@@ -1881,6 +1898,16 @@ skip_rtt:
 
         if (dev->d_len > 0)
           {
+            /* Same logic as FIN_WAIT_1 - reject data on closed sockets,
+             * accept on half-closed sockets.
+             */
+
+            if ((conn->shutdown & SHUT_DEAD) != 0)
+              {
+                nwarn("WARNING: Data received after close in FIN_WAIT_2\n");
+                goto reset;
+              }
+
             result = tcp_callback(dev, conn, TCP_NEWDATA);
             tcp_appsend(dev, conn, result);
             return;
