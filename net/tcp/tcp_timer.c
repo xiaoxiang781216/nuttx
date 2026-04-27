@@ -535,6 +535,22 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
   if (conn->tcpstateflags == TCP_TIME_WAIT ||
       conn->tcpstateflags == TCP_FIN_WAIT_2)
     {
+#ifdef CONFIG_NET_TCP_DELAYED_ACK
+      /* Flush pending delayed ACKs before checking the connection timer.
+       * The timer expiry (hsec) may have been driven by rx_acktimer
+       * rather than conn->timer, so we must handle delayed ACKs first.
+       * This matches Linux behavior where tcp_delack_timer_handler()
+       * fires regardless of TCP state.
+       */
+
+      if (conn->rx_unackseg > 0)
+        {
+          conn->rx_unackseg = 0;
+          tcp_send(dev, conn, TCP_ACK, hdrlen);
+          goto done;
+        }
+#endif
+
       /* Check if the timer exceeds the timeout value */
 
       if (conn->timer <= hsec)
@@ -856,6 +872,22 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
           tcp_appsend(dev, conn, result);
           goto done;
         }
+
+#ifdef CONFIG_NET_TCP_DELAYED_ACK
+      /* Flush pending delayed ACKs for connections that have transitioned
+       * out of ESTABLISHED/CLOSE_WAIT state (e.g., to FIN_WAIT_1/FIN_WAIT_2)
+       * while a delayed ACK was still pending.  This matches Linux behavior
+       * where tcp_delack_timer_handler() fires regardless of TCP state,
+       * ensuring delayed ACKs are never silently dropped during connection
+       * teardown.
+       */
+
+      if (conn->rx_unackseg > 0)
+        {
+          tcp_send(dev, conn, TCP_ACK, hdrlen);
+          goto done;
+        }
+#endif
     }
 
   /* Nothing to be done */
