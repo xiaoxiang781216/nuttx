@@ -90,7 +90,7 @@ FAR FILE *fdopen(int fd, FAR const char *mode)
           return NULL;
         }
 
-      if (list->sl_count >= _POSIX_STREAM_MAX)
+      if (list->sl_count >= STREAM_MAX)
         {
           nxmutex_unlock(&list->sl_lock);
           set_errno(EMFILE);

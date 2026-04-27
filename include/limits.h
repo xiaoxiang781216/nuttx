@@ -119,17 +119,18 @@
  */
 
 #define _POSIX_ARG_MAX        4096
-#define _POSIX_CHILD_MAX      6
+#define _POSIX_CHILD_MAX      25
 #define _POSIX_LINK_MAX       8
 #define _POSIX_MAX_CANON      255
 #define _POSIX_MAX_INPUT      255
 #define _POSIX_NAME_MAX       14
-#define _POSIX_NGROUPS_MAX    0
-#define _POSIX_OPEN_MAX       16
-#define _POSIX_PATH_MAX       CONFIG_PATH_MAX
+#define _POSIX_NGROUPS_MAX    8
+#define _POSIX_OPEN_MAX       20
+#define _POSIX_PATH_MAX       256
 #define _POSIX_PIPE_BUF       512
-#define _POSIX_STREAM_MAX     16
-#define _POSIX_TZNAME_MAX     3
+#define _POSIX_STREAM_MAX     8
+#define _POSIX_SYMLINK_MAX    255
+#define _POSIX_TZNAME_MAX     6
 #define _POSIX2_LINE_MAX      CONFIG_LINE_MAX
 
 #ifdef CONFIG_SMALL_MEMORY
@@ -211,14 +212,20 @@
 #else
 #  define OPEN_MAX     CONFIG_LIBC_OPEN_MAX
 #endif
-#define PATH_MAX       _POSIX_PATH_MAX
+#define PATH_MAX       CONFIG_PATH_MAX
 #define PIPE_BUF       _POSIX_PIPE_BUF
 #define SIZE_MAX       _POSIX_SIZE_MAX
 #define SIZE_MIN       _POSIX_SIZE_MIN
 #define RSIZE_MAX      _POSIX_SIZE_MAX
 #define SSIZE_MAX      _POSIX_SSIZE_MAX
 #define SSIZE_MIN      _POSIX_SSIZE_MIN
-#define STREAM_MAX     _POSIX_STREAM_MAX
+
+/* STREAM_MAX: the implementation's guaranteed number of concurrently
+ * open FILE* streams. POSIX requires >= _POSIX_STREAM_MAX (8). Kept
+ * at the historical NuttX value (16) for backward compatibility.
+ */
+
+#define STREAM_MAX     16
 #define TZNAME_MAX     _POSIX_TZNAME_MAX
 #define TZ_MAX_TIMES   CONFIG_LIBC_TZ_MAX_TIMES
 #define TZ_MAX_TYPES   CONFIG_LIBC_TZ_MAX_TYPES
@@ -226,6 +233,7 @@
 #define RTSIG_MAX      32
 #define SIGQUEUE_MAX   _POSIX_SIGQUEUE_MAX
 
+#define SYMLINK_MAX    CONFIG_PATH_MAX
 #define SYMLOOP_MAX    _POSIX_SYMLOOP_MAX
 
 #define DELAYTIMER_MAX _POSIX_DELAYTIMER_MAX
