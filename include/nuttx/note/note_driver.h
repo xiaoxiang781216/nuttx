@@ -313,6 +313,9 @@
  * NOTE_DESTROY
  *              - Dynamically destroy a note backend device
  *                Argument: A read-only pointer to the device name string
+ * NOTE_SYNCTASKNAME
+ *              - Sync all current task names into the note driver
+ *                Argument: Ignored
  */
 
 #define NOTE_CREATE                      _NOTEIOC(0x13)

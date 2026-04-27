@@ -688,6 +688,15 @@ static ssize_t note_driver_write(FAR struct file *filep,
   return -ENOSYS;
 }
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
+static void note_sync_taskname_cb(FAR const void *data,
+                                  size_t len, FAR void *arg)
+{
+  FAR struct note_driver_s *driver = arg;
+  note_do_add(driver, data, len, false);
+}
+#endif
+
 /****************************************************************************
  * Name: note_driver_ioctl
  *
@@ -702,6 +711,14 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
   int ret = OK;
   irqstate_t irq_mask;
   FAR struct note_driver_s *driver = filep->f_inode->i_private;
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
+  if (cmd == NOTE_SYNCTASKNAME)
+    {
+      note_taskname(note_sync_taskname_cb, driver);
+      return ret;
+    }
+#endif
 
   irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
   switch (cmd)
