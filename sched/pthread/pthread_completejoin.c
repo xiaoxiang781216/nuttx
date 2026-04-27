@@ -82,7 +82,12 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
   sinfo("pid=%d exit_value=%p\n", pid, exit_value);
 
   group = tcb->group;
-  nxrmutex_lock(&group->tg_mutex);
+  ret = nxrmutex_lock(&group->tg_mutex);
+  if (ret < 0)
+    {
+      nxsched_put_tcb(tcb);
+      return ret;
+    }
 
   if (!sq_empty(&tcb->join_queue))
     {
