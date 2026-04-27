@@ -41,6 +41,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/timers/clkcnt.h>
 #include <nuttx/note/note_driver.h>
+#include <nuttx/reboot_notifier.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>
@@ -144,6 +145,8 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
 static int note_driver_poll(FAR struct file *filep, FAR struct pollfd *fds,
                             bool setup);
 #endif
+static int note_reboot_handler(FAR struct notifier_block *nb,
+                               unsigned long action, FAR void *data);
 
 /****************************************************************************
  * Private Data
@@ -203,6 +206,12 @@ static DEFINE_PER_CPU_BSS_BMP(spinlock_t, g_note_lock);
 static DEFINE_PER_CPU_BSS_BMP(clock_t, g_note_perf_offset);
 #  define g_note_perf_offset this_cpu_var_bmp(g_note_perf_offset)
 #endif
+
+static DEFINE_PER_CPU_BMP(struct notifier_block, g_note_reboot_nb) =
+{
+  note_reboot_handler
+};
+#define g_note_reboot_nb this_cpu_var_bmp(g_note_reboot_nb)
 
 /****************************************************************************
  * Public Data
@@ -355,6 +364,23 @@ static void note_update_filter(void)
 #else
 #  define note_update_filter()
 #endif /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
+
+static int note_reboot_handler(FAR struct notifier_block *nb,
+                               unsigned long action,
+                               FAR void *data)
+{
+  FAR struct note_driver_s **driver;
+
+  for (driver = g_note_drivers; *driver; driver++)
+    {
+      if ((*driver)->ops->flush)
+        {
+          (*driver)->ops->flush(*driver);
+        }
+    }
+
+  return 0;
+}
 
 #ifdef CONFIG_BMP
 static void note_drivers_initialize(void)
@@ -2080,6 +2106,7 @@ int note_driver_initialize(void)
   int ret = 0;
 
   note_drivers_initialize();
+  register_reboot_notifier(&g_note_reboot_nb);
   note_update_filter();
 
   for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)

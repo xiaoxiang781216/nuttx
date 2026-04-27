@@ -28,7 +28,6 @@
 
 #include <nuttx/net/netpoll.h>
 #include <nuttx/note/note_driver.h>
-#include <nuttx/panic_notifier.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 
@@ -50,7 +49,6 @@ struct notenet_driver_s
   size_t                next;    /* The next index (where data is added) */
   struct work_s         work;    /* Used for deferred callback work */
   struct netpoll_s      np;      /* Netpoll */
-  struct notifier_block nb;      /* Panic notifer */
 };
 
 /****************************************************************************
@@ -62,9 +60,7 @@ static void notenetdev_work(FAR void *priv);
 static int note_netdev_add(FAR struct note_driver_s *driver,
                            FAR const void *note, size_t notelen,
                            bool noswitches);
-static int netdev_note_panic_callback(FAR struct notifier_block *nb,
-                                      unsigned long action,
-                                      FAR void *data);
+static void note_netdev_flush(FAR struct note_driver_s *driver);
 
 /****************************************************************************
  * Private Data
@@ -72,7 +68,8 @@ static int netdev_note_panic_callback(FAR struct notifier_block *nb,
 
 static const struct note_driver_ops_s g_notenetdev_ops =
 {
-  note_netdev_add
+  .add = note_netdev_add,
+  .flush = note_netdev_flush,
 };
 
 /****************************************************************************
@@ -235,27 +232,12 @@ try:
   return 0;
 }
 
-/****************************************************************************
- * Name: netdev_note_panic_callback
- *
- * Description:
- *   This is panic callback for note driver.
- *
- ****************************************************************************/
-
-static int netdev_note_panic_callback(FAR struct notifier_block *nb,
-                                      unsigned long action,
-                                      FAR void *data)
+static void note_netdev_flush(FAR struct note_driver_s *driver)
 {
-  FAR struct notenet_driver_s *note =
-    container_of(nb, struct notenet_driver_s, nb);
+  FAR struct notenet_driver_s *drv =
+    (FAR struct notenet_driver_s *)driver;
 
-  if (action == PANIC_KERNEL_FINAL)
-    {
-      notenetdev_transfer(note);
-    }
-
-  return 0;
+  notenetdev_transfer(drv);
 }
 
 /****************************************************************************
@@ -298,11 +280,6 @@ int notenet_init(FAR struct netdev_lowerhalf_s *dev)
   /* Allocate iob */
 
   pkt = netpoll_udp_pkt_alloc(&note->np);
-
-  /* Register panic notifier */
-
-  note->nb.notifier_call = netdev_note_panic_callback;
-  panic_notifier_chain_register(&note->nb);
 
   flags = spin_lock_irqsave_notrace(&note->lock);
   note->pkt = pkt;

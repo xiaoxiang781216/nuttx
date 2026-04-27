@@ -434,6 +434,7 @@ struct note_driver_ops_s
                        uint8_t level, uintptr_t ip, uint64_t type,
                        FAR const char *fmt, va_list va) printf_like(6, 0);
 #endif
+  CODE void (*flush)(FAR struct note_driver_s *drv);
   CODE int (*open)(FAR struct file *filep);
   CODE int (*close)(FAR struct file *filep);
   CODE ssize_t (*read)(FAR struct file *filep, FAR char *buffer,
