@@ -120,6 +120,7 @@
 
 #define _POSIX_ARG_MAX        4096
 #define _POSIX_CHILD_MAX      25
+#define _POSIX_HOST_NAME_MAX  255
 #define _POSIX_LINK_MAX       8
 #define _POSIX_MAX_CANON      255
 #define _POSIX_MAX_INPUT      255
@@ -335,7 +336,14 @@
 
 #define IOV_MAX        INT_MAX
 
-#define HOST_NAME_MAX  32
+/* HOST_NAME_MAX tracks CONFIG_LIBC_HOST_NAME_MAX (default 32 for
+ * memory-constrained device deployments). Values above the POSIX
+ * minimum (255) are capped: POSIX only mandates 255 as a floor,
+ * and DNS FQDNs are limited to 253 characters (RFC 1035), so no
+ * practical hostname benefits from a larger buffer.
+ */
+
+#define HOST_NAME_MAX  CONFIG_LIBC_HOST_NAME_MAX
 
 /* ptrdiff_t limits */
 

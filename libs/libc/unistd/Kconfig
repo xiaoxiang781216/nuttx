@@ -117,3 +117,30 @@ config LIBC_OPEN_MAX
 	---help---
 		The maximum number of files that a process can have open
 		at any time.  Must not be less than _POSIX_OPEN_MAX.
+
+config LIBC_HOST_NAME_MAX
+	int "HOST_NAME_MAX for this device"
+	default 32
+	range 8 255
+	---help---
+		Maximum hostname length (excluding terminating NUL).
+		Sizes struct utsname.nodename[], the g_hostname[] BSS
+		buffer, and every application buffer declared as
+		'char buf[HOST_NAME_MAX]'.
+
+		Default 32 preserves the legacy NuttX value and suits
+		memory-constrained devices (smartwatch, earbuds, IoT
+		endpoints) where hostnames are unused or set to a short
+		CONFIG_LIBC_HOSTNAME.
+
+		Set to 255 for POSIX.1-2017 conformance, long FQDN
+		handling, or porting Linux applications. Values above
+		_POSIX_HOST_NAME_MAX (255) are capped at 255 by the
+		header: POSIX only mandates 255 as the minimum, and DNS
+		FQDNs are limited to 253 characters (RFC 1035), so no
+		practical hostname benefits from a larger buffer.
+
+		Memory cost of raising from 32 to 255:
+		  - g_hostname[] BSS: +223 bytes (system-wide, once)
+		  - struct utsname on stack: +223 bytes per uname() caller
+		  - Each 'char buf[HOST_NAME_MAX]' call site: +223 bytes
