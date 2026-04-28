@@ -77,6 +77,9 @@ SECTIONS
       KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
       KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
       _einit = ABSOLUTE(.);
+      __start__llvm_prf_names = .;
+      KEEP (*(__llvm_prf_names));
+      __end__llvm_prf_names = .;
       . = ALIGN(4096);
       _etext = .; /* End_1 of .text */
       _sztext = _etext - _stext;
@@ -107,6 +110,9 @@ SECTIONS
       *(.rodata*)
       *(.data.rel.ro*)
       KEEP(*(SORT(.scattered_array*)));
+      __start__llvm_prf_data = .;
+      KEEP(*(__llvm_prf_data));
+      __end__llvm_prf_data = .;
       . = ALIGN(4096);
       _erodata = .;
   } > kflash
@@ -152,6 +158,9 @@ SECTIONS
   .noinit : {
       _snoinit = ABSOLUTE(.);
       *(.noinit*)
+      __start__llvm_prf_cnts = .;
+      KEEP(*(__llvm_prf_cnts));
+      __end__llvm_prf_cnts = .;
       _enoinit = ABSOLUTE(.);
   } > ksram AT > kflash
 

@@ -53,6 +53,9 @@ SECTIONS
         *(.got)
         *(.gcc_except_table)
         *(.gnu.linkonce.r.*)
+        __start__llvm_prf_names = .;
+        KEEP (*(__llvm_prf_names));
+        __end__llvm_prf_names = .;
         _etext = ABSOLUTE(.);
     } > uflash
 
@@ -85,6 +88,9 @@ SECTIONS
         *(.rodata*)
         *(.data.rel.ro*)
         KEEP(*(SORT(.scattered_array*)));
+        __start__llvm_prf_data = .;
+        KEEP(*(__llvm_prf_data));
+        __end__llvm_prf_data = .;
         . = ALIGN(4096);
         _erodata = .;
     } > uflash
@@ -132,6 +138,9 @@ SECTIONS
         *(.bss .bss.*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
+        __start__llvm_prf_cnts = .;
+        KEEP(*(__llvm_prf_cnts));
+        __end__llvm_prf_cnts = .;
         . = ALIGN(64);
         _ebss = ABSOLUTE(.);
     } > usram
