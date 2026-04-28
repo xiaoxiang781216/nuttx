@@ -158,7 +158,7 @@ if(CONFIG_COVERAGE_COMPILER_RT)
   target_sources(rt.profile PRIVATE ${RT_PROFILE_SRCS})
 
 elseif(CONFIG_COVERAGE_MINI AND CONFIG_ARCH_TOOLCHAIN_CLANG)
-  nuttx_add_system_library(rt.miniprofile)
+  nuttx_add_kernel_library(rt.miniprofile SPLIT)
 
   target_include_directories(
     rt.miniprofile PRIVATE ${INCDIR}

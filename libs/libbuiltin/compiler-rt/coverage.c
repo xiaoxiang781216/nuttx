@@ -37,6 +37,8 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/streams.h>
 
+#include <gcov.h>
+
 #include "profile.h"
 
 /****************************************************************************
@@ -428,3 +430,25 @@ size_t __gcov_dump_to_memory(FAR void *ptr, size_t size)
 void __gcov_reset(void)
 {
 }
+
+#if defined(CONFIG_LIB_SYSCALL) && defined(__KERNEL__)
+int gcov(int op)
+{
+  if (op < GCOV_OP_MIN || op > GCOV_OP_MAX)
+    {
+      return -EINVAL;
+    }
+
+  switch (op)
+    {
+      case GCOV_OP_RESET:
+        __gcov_reset();
+        break;
+      case GCOV_OP_DUMP:
+        __gcov_dump();
+        break;
+    }
+
+  return 0;
+}
+#endif
