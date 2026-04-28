@@ -211,7 +211,17 @@ int load_module(FAR struct binary_s *bin, FAR const char *filename,
               /* Release the traversal handle */
 
               envpath_release(handle);
-              return ret;
+
+              /* On success, return immediately.  Otherwise fall through to
+               * load_absmodule(filename) so that binfmts which resolve by
+               * basename (e.g. the builtin loader) still get a chance when
+               * no on-disk file was found via PATH.
+               */
+
+              if (ret == OK)
+                {
+                  return ret;
+                }
             }
         }
 
