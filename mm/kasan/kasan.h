@@ -30,8 +30,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <nuttx/list.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -58,7 +56,6 @@ struct kasan_region_s
 {
   uintptr_t begin;
   uintptr_t end;
-  struct list_node node;           /* for global linked list */
 #ifdef CONFIG_MM_KASAN_GENERIC
   uintptr_t shadow[1];
 #endif
