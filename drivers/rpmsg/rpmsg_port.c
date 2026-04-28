@@ -482,14 +482,17 @@ static int rpmsg_port_ns_callback(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsg_port_s *port = priv;
   FAR struct rpmsg_device *rdev = &port->rdev;
   FAR struct rpmsg_ns_msg *msg = data;
-  FAR const char *name = msg->name;
-  uint32_t dest = msg->addr;
+  FAR const char *name;
+  uint32_t dest;
   bool decref = false;
 
-  if (len != sizeof(*msg))
+  if (rdev == NULL || len != sizeof(*msg))
     {
       return RPMSG_SUCCESS;
     }
+
+  name = msg->name;
+  dest = msg->addr;
 
   metal_mutex_acquire(&rdev->lock);
   ept = rpmsg_get_endpoint(rdev, name, RPMSG_ADDR_ANY, dest);
