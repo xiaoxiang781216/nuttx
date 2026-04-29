@@ -39,12 +39,53 @@
 #ifdef CONFIG_STACK_COLORATION
 
 /****************************************************************************
- * Private Function Prototypes
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Public Functions
+ * Name: tricore_find_first_color
+ *
+ * Description:
+ *   Scan the space used by csa and locate first STACK_COLOR.
+ *
  ****************************************************************************/
+
+static inline_function
+uint32_t *tricore_find_first_color(uint32_t *ptr, uint32_t *end)
+{
+  while (ptr < end && *(ptr + 1) != STACK_COLOR)
+    {
+      ptr += TC_CONTEXT_REGS;
+    }
+
+  return ptr;
+}
+
+/****************************************************************************
+ * Name: tricore_count_check_region
+ *
+ * Description:
+ *   Count remaining space within the check region.
+ *
+ ****************************************************************************/
+
+static inline_function
+size_t tricore_count_check_region(uint32_t *ptr, uint32_t *end,
+                                  size_t checksize)
+{
+  while (checksize > 0 && ptr < end)
+    {
+      if (*ptr != STACK_COLOR && !TC_CONTEXT_ALIGNED(ptr))
+        {
+          break;
+        }
+
+      checksize--;
+      ptr++;
+    }
+
+  return checksize;
+}
 
 /****************************************************************************
  * Name: tricore_stack_check
@@ -67,9 +108,10 @@
 static inline_function
 size_t tricore_stack_check(uintptr_t alloc, size_t size, size_t checksize)
 {
-  uintptr_t start;
-  uintptr_t end;
   uint32_t *ptr;
+  uint32_t *end;
+  uint32_t *snapshot;
+  size_t    cnt;
 
   if (size == 0)
     {
@@ -78,48 +120,38 @@ size_t tricore_stack_check(uintptr_t alloc, size_t size, size_t checksize)
 
   /* Get aligned addresses of the top and bottom of the stack */
 
-  start = (alloc + 3) & ~3;
-  end   = (alloc + size) & ~3;
-
-  /* Get the adjusted size based on the top and bottom of the stack */
-
-  size  = (end - start) >> 2;
+  ptr = (uint32_t *)((alloc + 3) & ~3);
+  end = (uint32_t *)((alloc + size) & ~3);
 
   /* Get the adjusted size of the checksize */
 
   checksize = (checksize & ~3) >> 2;
+  cnt = checksize;
 
-  /* Find the first STACK_COLOR, jumping with size of csa */
+  /* Locate the first STACK_COLOR from the bottom of the stack */
 
-  for (ptr = (uint32_t *)start; size > 0;
-       size -= TC_CONTEXT_REGS, ptr += TC_CONTEXT_REGS)
+  ptr = tricore_find_first_color(ptr, end);
+
+  while (ptr < end)
     {
-      if (*(ptr + 1) == STACK_COLOR)
+      snapshot = ptr;
+      cnt = tricore_count_check_region(ptr, end, checksize);
+
+      /* Re-locate from the snapshot position. */
+
+      ptr = tricore_find_first_color(ptr, end);
+      if (ptr == snapshot)
         {
           break;
         }
     }
 
-  /* Count remaining STACK_COLOR */
-
-  for (; checksize > 0 && size > 0; size--, ptr++)
-    {
-      /* In tricore, a csa linked list built on task's stack, and pcxi
-       * words are considered as unused.
-       */
-
-      if (*ptr == STACK_COLOR || TC_CONTEXT_ALIGNED(ptr))
-        {
-          checksize--;
-        }
-      else
-        {
-          break;
-        }
-    }
-
-  return checksize << 2;
+  return cnt << 2;
 }
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Name: up_check_tcbstack and friends
