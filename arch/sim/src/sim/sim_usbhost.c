@@ -54,7 +54,7 @@
 
 /* Use 2KB buffer for BTHCI to fit full HCI packets(ACL/ISO) */
 #define SIM_USBHOST_BUFSIZE     2048
-#define SIM_USBHOST_PERIOD      MSEC2TICK(CONFIG_SIM_LOOP_INTERVAL)
+#define SIM_USBHOST_PERIOD      MSEC2TICK(CONFIG_SIM_USBHOST_LOOP_INTERVAL)
 
 #define RHPNDX(rh)              ((rh)->hport.hport.port)
 #define RHPORT(rh)              (RHPNDX(rh)+1)
