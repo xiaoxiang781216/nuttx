@@ -41,7 +41,7 @@
  ****************************************************************************/
 
 #define SIM_USRSOCK_BUFSIZE (400 * 1024)
-#define SIM_USRSOCK_PERIOD  MSEC2TICK(CONFIG_SIM_LOOP_INTERVAL)
+#define SIM_USRSOCK_PERIOD  MSEC2TICK(CONFIG_SIM_USRSOCK_LOOP_INTERVAL)
 
 /****************************************************************************
  * Private Type Declarations
