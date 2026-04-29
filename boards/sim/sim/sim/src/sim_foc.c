@@ -40,7 +40,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SIM_FOC_PERIOD    MSEC2TICK(CONFIG_SIM_LOOP_INTERVAL)
+#define SIM_FOC_PERIOD    MSEC2TICK(CONFIG_SIM_FOC_LOOP_INTERVAL)
 
 /****************************************************************************
  * Private Data

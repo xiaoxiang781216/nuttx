@@ -169,11 +169,11 @@ config SIM_WALLTIME_SIGNAL
 
 endchoice
 
-config SIM_LOOP_INTERVAL
-	int "loop interval in ms"
+config SIM_FOC_LOOP_INTERVAL
+	int "Simulator foc loop interval in ms"
 	default 10
 	---help---
-		Loop event sleep time
+		Simulator foc loop event sleep time
 
 config SIM_AUDIO_LOOP_INTERVAL
 	int "Simulator audio loop interval in ms"
