@@ -99,7 +99,7 @@
 #else
 #  define SIM_USB_SPEED                   USB_SPEED_FULL
 #endif
-#define SIM_USB_PERIOD                    MSEC2TICK(CONFIG_SIM_LOOP_INTERVAL)
+#define SIM_USB_PERIOD                    MSEC2TICK(CONFIG_SIM_USBDEV_LOOP_INTERVAL)
 
 /****************************************************************************
  * Private Types
