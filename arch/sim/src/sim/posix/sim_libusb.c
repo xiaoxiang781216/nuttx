@@ -54,6 +54,7 @@
 
 #define HOST_LIBUSB_EP_NUM(addr)   ((addr) & USB_ENDPOINT_NUMBER_MASK)
 #define HOST_LIBUSB_EP_DIR(addr)   ((addr) & USB_ENDPOINT_DIR_MASK)
+#define HOST_LIBUSB_NINTERFACES(c) ((c)->bNumInterfaces)
 
 #define HOST_LIBUSB_FIFO_NUM    8
 
@@ -389,31 +390,47 @@ static int host_libusb_ep0outhandle(struct host_libusb_hostdev_s *dev,
         switch (ctrlreq->bRequest)
           {
             case USB_REQ_SET_CONFIGURATION:
-              ret = host_uninterruptible(libusb_detach_kernel_driver,
-                                         dev->handle, 0);
-              if (ret == LIBUSB_SUCCESS)
-                {
-                  ret = host_uninterruptible(libusb_set_configuration,
-                                             dev->handle,
-                                             ctrlreq->wValue);
-                  ret |= host_uninterruptible(libusb_claim_interface,
-                                              dev->handle, 0);
-                }
-              else if (ret == LIBUSB_ERROR_NOT_FOUND)
-                {
-                  return LIBUSB_SUCCESS;
-                }
+              {
+                struct libusb_config_descriptor *config = NULL;
+                int i;
+
+                ret = host_uninterruptible(libusb_set_configuration,
+                                           dev->handle,
+                                           ctrlreq->wValue);
+                if (ret < 0 && ret != LIBUSB_ERROR_NOT_FOUND &&
+                    ret != LIBUSB_ERROR_BUSY)
+                  {
+                    ERROR("set_configuration failed: %d\n", ret);
+                    return ret;
+                  }
+
+                /* Claim all interfaces so that SET_INTERFACE can
+                 * succeed for any interface (UVC, UAC, etc).
+                 */
+
+                ret = host_uninterruptible(
+                      libusb_get_active_config_descriptor,
+                      dev->priv, &config);
+                if (ret == LIBUSB_SUCCESS && config)
+                  {
+                    for (i = 0; i < HOST_LIBUSB_NINTERFACES(config); i++)
+                      {
+                        host_uninterruptible(libusb_claim_interface,
+                                             dev->handle, i);
+                      }
+
+                    libusb_free_config_descriptor(config);
+                  }
+
+                ret = LIBUSB_SUCCESS;
+              }
               break;
-            case USB_REQ_SET_DESCRIPTOR:
-              ret = host_uninterruptible(libusb_control_transfer,
-                                         dev->handle,
-                                         ctrlreq->bRequestType,
-                                         ctrlreq->bRequest,
-                                         ctrlreq->wValue,
-                                         ctrlreq->wIndex,
-                                         datareq->data,
-                                         datareq->len,
-                                         0);
+            case USB_REQ_SET_INTERFACE:
+              host_uninterruptible(libusb_claim_interface,
+                                   dev->handle, ctrlreq->wIndex);
+              ret = host_uninterruptible(libusb_set_interface_alt_setting,
+                                         dev->handle, ctrlreq->wIndex,
+                                         ctrlreq->wValue);
               break;
             default:
               ERROR("Unsupported standard request: 0x%02X\n",
