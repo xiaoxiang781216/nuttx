@@ -443,7 +443,12 @@ void sim_x11loop(void)
 
   if (fb_peek_paninfo(&g_fbobject, &info, FB_NO_OVERLAY) == OK)
     {
-      sim_x11setoffset(info.planeinfo.yoffset * info.planeinfo.stride);
+      uint32_t yoffset = info.planeinfo.yoffset;
+#if CONFIG_SIM_FB_INTERVAL_LINE > 0
+      yoffset += (yoffset / CONFIG_SIM_FBHEIGHT)
+                  * CONFIG_SIM_FB_INTERVAL_LINE;
+#endif
+      sim_x11setoffset(yoffset * info.planeinfo.stride);
     }
 
   sim_x11update();
