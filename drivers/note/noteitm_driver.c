@@ -52,7 +52,7 @@ static const struct note_driver_ops_s g_noteitm_ops =
   noteitm_add,
 };
 
-struct noteitm_s g_noteitm =
+DEFINE_PER_CPU_BMP(struct noteitm_s, g_noteitm) =
 {
   {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
@@ -75,6 +75,7 @@ struct noteitm_s g_noteitm =
     &g_noteitm_ops
   }
 };
+#define g_noteitm this_cpu_var_bmp(g_noteitm)
 
 /****************************************************************************
  * Private Functions
