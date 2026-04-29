@@ -77,7 +77,7 @@
 
 #define SIM_NETDEV_BUFSIZE (CONFIG_SIM_NETDEV_MTU + ETH_8021Q_HDRLEN + \
                             CONFIG_NET_GUARDSIZE)
-#define SIM_NETDEV_PERIOD  MSEC2TICK(CONFIG_SIM_LOOP_INTERVAL)
+#define SIM_NETDEV_PERIOD  MSEC2TICK(CONFIG_SIM_NETDEV_LOOP_INTERVAL)
 
 /* We don't know packet length before receiving, so we can only offload it
  * when netpkt's buffer is long enough.
