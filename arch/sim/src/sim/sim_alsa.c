@@ -41,7 +41,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SIM_AUDIO_PERIOD  MSEC2TICK(CONFIG_SIM_LOOP_INTERVAL)
+#define SIM_AUDIO_PERIOD  MSEC2TICK(CONFIG_SIM_AUDIO_LOOP_INTERVAL)
 
 /****************************************************************************
  * Private Types
