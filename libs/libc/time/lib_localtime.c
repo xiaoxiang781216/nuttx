@@ -2798,7 +2798,7 @@ static int zoneinit(FAR const char *name)
 void tzset(void)
 {
   FAR const char *name;
-  char buf[TZNAME_MAX + 1];
+  char buf[MY_TZNAME_MAX + 1];
 
   name = getenv("TZ");
   if (name == NULL)
