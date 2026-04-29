@@ -535,9 +535,9 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
                   ret = -EAGAIN;
                 }
             }
-        }
 
-      leave_critical_section(flags);
+          leave_critical_section(flags);
+        }
     }
 
   rtcb->sigunbinfo = NULL;
