@@ -54,6 +54,12 @@ typedef struct
   struct timeval *next_ts;
   struct host_video_dev_s *vdev;
   struct work_s work;
+
+  /* Simulated sensor controls */
+
+  int32_t brightness;
+  int32_t exposure_time;
+  int32_t gain;
 } sim_camera_priv_t;
 
 /****************************************************************************
@@ -78,6 +84,15 @@ static int sim_camera_start_capture(struct imgsensor_s *sensor,
                                     imgsensor_interval_t *interval);
 static int sim_camera_stop_capture(struct imgsensor_s *sensor,
                                    imgsensor_stream_type_t type);
+static int sim_camera_get_supported_value(struct imgsensor_s *sensor,
+                                          uint32_t id,
+                                          imgsensor_supported_value_t *val);
+static int sim_camera_get_value(struct imgsensor_s *sensor,
+                                uint32_t id, uint32_t size,
+                                imgsensor_value_t *val);
+static int sim_camera_set_value(struct imgsensor_s *sensor,
+                                uint32_t id, uint32_t size,
+                                imgsensor_value_t val);
 
 /* Video image data operations */
 
@@ -114,6 +129,9 @@ static const struct imgsensor_ops_s g_sim_camera_ops =
   .validate_frame_setting = sim_camera_validate_frame_setting,
   .start_capture          = sim_camera_start_capture,
   .stop_capture           = sim_camera_stop_capture,
+  .get_supported_value    = sim_camera_get_supported_value,
+  .get_value              = sim_camera_get_value,
+  .set_value              = sim_camera_set_value,
 };
 
 static const struct imgdata_ops_s g_sim_camera_data_ops =
@@ -255,6 +273,92 @@ static int sim_camera_stop_capture(struct imgsensor_s *sensor,
                                    imgsensor_stream_type_t type)
 {
   return 0;
+}
+
+static int sim_camera_get_supported_value(struct imgsensor_s *sensor,
+                                          uint32_t id,
+                                          imgsensor_supported_value_t *val)
+{
+  switch (id)
+    {
+      case IMGSENSOR_ID_BRIGHTNESS:
+        val->type = IMGSENSOR_CTRL_TYPE_INTEGER;
+        val->u.range.minimum = -100;
+        val->u.range.maximum = 100;
+        val->u.range.step = 1;
+        val->u.range.default_value = 0;
+        return 0;
+
+      case IMGSENSOR_ID_EXPOSURE_ABSOLUTE:
+        val->type = IMGSENSOR_CTRL_TYPE_INTEGER;
+        val->u.range.minimum = 1;
+        val->u.range.maximum = 10000;
+        val->u.range.step = 1;
+        val->u.range.default_value = 100;
+        return 0;
+
+      case IMGSENSOR_ID_EXPOSURE_AUTO:
+        val->type = IMGSENSOR_CTRL_TYPE_INTEGER;
+        val->u.range.minimum = 0;
+        val->u.range.maximum = 3;
+        val->u.range.step = 1;
+        val->u.range.default_value = 0;
+        return 0;
+
+      default:
+        return -EINVAL;
+    }
+}
+
+static int sim_camera_get_value(struct imgsensor_s *sensor,
+                                uint32_t id, uint32_t size,
+                                imgsensor_value_t *val)
+{
+  sim_camera_priv_t *priv = (sim_camera_priv_t *)
+    ((uintptr_t)sensor - offsetof(sim_camera_priv_t, sensor));
+
+  switch (id)
+    {
+      case IMGSENSOR_ID_BRIGHTNESS:
+        val->value32 = priv->brightness;
+        return 0;
+
+      case IMGSENSOR_ID_EXPOSURE_ABSOLUTE:
+        val->value32 = priv->exposure_time;
+        return 0;
+
+      case IMGSENSOR_ID_EXPOSURE_AUTO:
+        val->value32 = 0;
+        return 0;
+
+      default:
+        return -EINVAL;
+    }
+}
+
+static int sim_camera_set_value(struct imgsensor_s *sensor,
+                                uint32_t id, uint32_t size,
+                                imgsensor_value_t val)
+{
+  sim_camera_priv_t *priv = (sim_camera_priv_t *)
+    ((uintptr_t)sensor - offsetof(sim_camera_priv_t, sensor));
+
+  switch (id)
+    {
+      case IMGSENSOR_ID_BRIGHTNESS:
+        priv->brightness = val.value32;
+        return 0;
+
+      case IMGSENSOR_ID_EXPOSURE_ABSOLUTE:
+        priv->exposure_time = val.value32;
+        return 0;
+
+      case IMGSENSOR_ID_EXPOSURE_AUTO:
+        return 0;
+
+      default:
+        return -EINVAL;
+    }
 }
 
 /* Data op functions do all the real work */
