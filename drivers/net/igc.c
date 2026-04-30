@@ -78,14 +78,6 @@
 
 /* NOTE: CONFIG_IOB_ALIGNMENT must match system D-CACHE line size */
 
-#if CONFIG_IOB_NBUFFERS < IGC_RX_QUOTA + IGC_TX_QUOTA
-#  error CONFIG_IOB_NBUFFERS must be > (IGC_RX_QUOTA + IGC_TX_QUOTA)
-#endif
-
-#if CONFIG_IOB_BUFSIZE < IGC_PKTBUF_SIZE
-#  error CONFIG_IOB_BUFSIZE must be > IGC_PKTBUF_SIZE
-#endif
-
 /* PCI BARs */
 
 #define IGC_MMIO_BAR           0

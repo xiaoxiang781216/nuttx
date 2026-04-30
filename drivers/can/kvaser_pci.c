@@ -84,11 +84,6 @@
 #ifdef CONFIG_CAN_KVASER_SOCKET
 #  define KVASER_TX_QUOTA              1
 #  define KVASER_RX_QUOTA              1
-
-#  if CONFIG_IOB_NBUFFERS < (KVASER_RX_QUOTA + KVASER_TX_QUOTA)
-#    error CONFIG_IOB_NBUFFERS must be > (KVASER_RX_QUOTA + KVASER_TX_QUOTA)
-#  endif
-
 #endif /* CONFIG_CAN_KVASER_SOCKET */
 
 #ifndef CONFIG_NET_CAN_ERRORS

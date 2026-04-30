@@ -78,14 +78,6 @@
 
 /* NOTE: CONFIG_IOB_ALIGNMENT must match system D-CACHE line size */
 
-#if CONFIG_IOB_NBUFFERS < (E1000_RX_QUOTA + E1000_TX_QUOTA)
-#  error CONFIG_IOB_NBUFFERS must be > (E1000_RX_QUOTA + E1000_TX_QUOTA)
-#endif
-
-#if CONFIG_IOB_BUFSIZE < E1000_PKTBUF_SIZE
-#  error CONFIG_IOB_BUFSIZE must be > E1000_PKTBUF_SIZE
-#endif
-
 /* PCI BARs */
 
 #define E1000_MMIO_BAR        0
