@@ -163,7 +163,8 @@ system_heap_dma_buf_begin_cpu_access(FAR struct dma_buf *dmabuf,
 
   if (mapped)
     {
-      up_invalidate_dcache(buffer->buf, buffer->buf + buffer->len);
+      up_invalidate_dcache((uintptr_t)buffer->buf,
+                           (uintptr_t)buffer->buf + buffer->len);
     }
 
   return 0;
@@ -189,7 +190,8 @@ system_heap_dma_buf_end_cpu_access(FAR struct dma_buf *dmabuf,
 
   if (mapped)
     {
-      up_flush_dcache(buffer->buf, buffer->buf + buffer->len);
+      up_flush_dcache((uintptr_t)buffer->buf,
+                      (uintptr_t)buffer->buf + buffer->len);
     }
 
   return 0;
@@ -209,6 +211,7 @@ static void system_heap_dma_buf_release(FAR struct dma_buf *dmabuf)
 {
   FAR struct system_heap_buffer *buffer = dmabuf->priv;
 
+  kumm_free(buffer->buf);
   kmm_free(buffer);
 }
 
@@ -220,16 +223,29 @@ system_heap_allocate(FAR struct dma_heap *heap, size_t len,
   struct dma_buf_export_info exp_info;
   FAR struct dma_buf *dmabuf;
 
-  buffer = kmm_zalloc(sizeof(*buffer) + len);
+  buffer = kmm_zalloc(sizeof(*buffer));
   if (buffer == NULL)
     {
       return NULL;
     }
 
+  /* Allocate the data buffer with 32-byte alignment so that
+   * drivers requiring DMA-aligned addresses (e.g. camera) work
+   * correctly when importing this dma_buf.
+   */
+
+  buffer->buf = kumm_memalign(32, len);
+  if (buffer->buf == NULL)
+    {
+      kmm_free(buffer);
+      return NULL;
+    }
+
+  memset(buffer->buf, 0, len);
+
   list_initialize(&buffer->attachments);
   buffer->heap = heap;
   buffer->len = len;
-  buffer->buf = buffer + 1;
 
   exp_info.exp_name = heap->name;
   exp_info.ops = &g_system_heap_buf_ops;
@@ -239,6 +255,7 @@ system_heap_allocate(FAR struct dma_heap *heap, size_t len,
   dmabuf = dma_buf_export(&exp_info);
   if (dmabuf == NULL)
     {
+      kumm_free(buffer->buf);
       kmm_free(buffer);
     }
 
