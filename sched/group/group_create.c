@@ -185,6 +185,7 @@ int group_allocate(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
                   return -ENOMEM;
                 }
 
+              tcb->addrenv_curr = group->tg_addrenv_own;
               group->tg_addrenv_own->addrenv.heap =
               (uintptr_t)group->tg_heap;
               group->tg_addrenv_own->addrenv.heapsize =
