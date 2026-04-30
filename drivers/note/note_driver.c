@@ -810,12 +810,14 @@ void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
       struct timespec ts;
       unsigned long freq;
 
-      clock_gettime(CONFIG_DRIVERS_NOTE_CLOCKID, &ts);
-      freq = perf_getfreq();
+      if (clock_gettime(CONFIG_DRIVERS_NOTE_CLOCKID, &ts) == 0)
+        {
+          freq = perf_getfreq();
 
-      g_note_perf_offset =
-        clkcnt_delta_time2cnt(ts.tv_nsec, freq, NSEC_PER_SEC) +
-        ts.tv_sec * freq - perftime;
+          g_note_perf_offset =
+            clkcnt_delta_time2cnt(ts.tv_nsec, freq, NSEC_PER_SEC) +
+            ts.tv_sec * freq - perftime;
+        }
     }
 
   note->nc_systime = perftime + g_note_perf_offset;
