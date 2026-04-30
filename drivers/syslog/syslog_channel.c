@@ -257,11 +257,12 @@ static syslog_channel_t g_default_channel =
 };
 
 #  ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
-static struct notifier_block g_default_channel_nb =
+static DEFINE_PER_CPU_BMP(struct notifier_block, g_default_channel_nb) =
 {
   .notifier_call = syslog_default_panic_notifier,
   .priority      = INT_MIN,
 };
+#    define g_default_channel_nb this_cpu_var_bmp(g_default_channel_nb)
 #  endif
 #endif
 
