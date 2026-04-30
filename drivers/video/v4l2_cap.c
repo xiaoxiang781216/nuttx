@@ -4144,7 +4144,8 @@ static int capture_poll(FAR struct file *filep,
     }
   else if (fds->priv)
     {
-      type_inf->fds = NULL;
+      FAR struct pollfd **slot = (FAR struct pollfd **)fds->priv;
+      *slot         = NULL;
       fds->priv     = NULL;
     }
 
