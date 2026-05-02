@@ -135,3 +135,69 @@ cc_library_static {
     local_include_dirs:["libs/libc/"],
     proprietary: true,
 }
+
+cc_defaults {
+    name: "nuttx_libc_defaults_system",
+    cflags: [
+        "-DCONFIG_DISABLE_MOUNTPOINT",
+        "-DCONFIG_HAVE_DOUBLE",
+        "-DCONFIG_HAVE_FLOAT",
+        "-DCONFIG_HAVE_LONG_DOUBLE",
+        "-DCONFIG_HAVE_LONG_LONG",
+        "-DCONFIG_LIBC_FLOATINGPOINT",
+        "-DCONFIG_LIBC_NETDB",
+        "-DCONFIG_LIBC_NUMBERED_ARGS",
+        "-DCONFIG_LIBC_PRINT_EXTENSION",
+        "-DCONFIG_LIBC_SCANSET",
+        "-DCONFIG_STDIO_DISABLE_BUFFERING",
+        "-DCONFIG_STREAM_BASE64_BUFFER_SIZE=128",
+        "-DCONFIG_STREAM_HEXDUMP_BUFFER_SIZE=128",
+        "-DCONFIG_STREAM_OUT_BUFFER_SIZE=64",
+        "-DCONFIG_NFILE_DESCRIPTORS_PER_BLOCK=16",
+        "-DDEBUGASSERT=assert",
+        "-DFAR=",
+        "-DOK=0",
+        "-D_NX_GETERRVAL(r)=(-errno)",
+        "-Dget_errno()=errno",
+        "-Dset_errno(e)=do{errno = (int)(e);}while(0)",
+    ],
+}
+
+cc_library_headers {
+    name: "nuttx_libc_headers_system",
+    generated_headers: [
+        "nuttx_headers_gen",
+    ],
+    export_generated_headers: ["nuttx_headers_gen"],
+}
+
+cc_library_static {
+    name: "libnuttx_libc_system",
+    header_libs: [
+        "nuttx_libc_headers_system",
+        "kernel_modules_headers",
+    ],
+    srcs: [
+        "libs/libc/misc/lib_crc32.c",
+        "libs/libc/netdb/lib_freeaddrinfo.c",
+        "libs/libc/netdb/lib_getaddrinfo.c",
+        "libs/libc/netdb/lib_gethostentbynamer.c",
+        "libs/libc/netdb/lib_rexec.c",
+        "libs/libc/stream/lib_dtoa_data.c",
+        "libs/libc/stream/lib_dtoa_engine.c",
+        "libs/libc/stream/lib_libosprintf.c",
+        "libs/libc/stream/lib_libvscanf.c",
+        "libs/libc/stream/lib_libvsprintf.c",
+        "libs/libc/stream/lib_ultoa_invert.c",
+        "libs/libc/stream/lib_libnoflush.c",
+        "libs/libc/stream/lib_meminstream.c",
+        "libs/libc/stream/lib_memoutstream.c",
+        "libs/libc/stream/lib_stdoutstream.c",
+    ],
+    cflags: [
+        "-DCONFIG_NET_RPMSG",
+        "-DERROR=-1",
+    ],
+    defaults: ["nuttx_libc_defaults_system"],
+    local_include_dirs: ["libs/libc/"],
+}
