@@ -970,6 +970,18 @@ void _assert(FAR const char *filename, int linenum,
     {
       /* Already in fatal state, reset board directly. */
 
+      /* Flush any buffered SYSLOG data before we reset so that
+       * diagnostics queued by the outer assertion (e.g. the
+       * "Data abort. PC:" line emitted from arm_dataabort() prior
+       * to PANIC_WITH_REGS) are not lost.  The outer _assert()
+       * invocation calls syslog_flush() only after
+       * panic_notifier_call_chain(); if a notifier triggers a
+       * secondary fault that lands us here, that late flush would
+       * never run and the original fault context would be gone.
+       */
+
+      syslog_flush();
+
 #if defined(CONFIG_ARCH_LOWPUTC) && !defined(CONFIG_NDEBUG)
       dump_mini_info(regs);
 #endif
