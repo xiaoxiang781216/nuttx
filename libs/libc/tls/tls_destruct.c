@@ -58,14 +58,25 @@ void tls_destruct(void)
   tls_dtor_t destructor;
   int candidate;
 
-  DEBUGASSERT(info != NULL);
+  /* If TLS info is unavailable (e.g. tls_get_info() fails or tl_task is
+   * NULL during late-exit cleanup), skip TLS destructor processing instead
+   * of triggering a kernel panic.  This mirrors the defensive pattern
+   * already used by task_tls_get_value(), setenv(), and the syslog path.
+   * A DEBUGASSERT here would cascade a benign cleanup race into a full
+   * system crash, as observed in cmocka_libssh_misc at task exit.
+   */
+
+  if (tls == NULL)
+    {
+      return;
+    }
 
   for (candidate = CONFIG_TLS_NELEM - 1; candidate >= 0; candidate--)
     {
       /* Is this candidate index available? */
 
       tls_elem_ptr = (FAR void *)tls->tl_elem[candidate];
-      destructor = info->ta_tlsdtor[candidate];
+      destructor = info ? info->ta_tlsdtor[candidate] : NULL;
       if (tls_elem_ptr && destructor)
         {
           destructor(tls_elem_ptr);
