@@ -3566,80 +3566,92 @@ static reg_errcode_t tre_ast_to_tnfa(tre_ast_node_t *node,
   tre_iteration_t   *iter;
   reg_errcode_t     errcode = REG_OK;
 
-  /* XXX - recurse using a stack!. */
+  /* Walk the AST iteratively: the last recursive call in each branch is
+   * turned into a loop step so the stack depth does not grow with the
+   * regex length.  A naive recursive walk produced one frame per AST
+   * node, which could overflow small task stacks for long literal
+   * concatenations (the AST is right-leaning, e.g. "abcdef" becomes
+   * CAT(a, CAT(b, CAT(c, ...)))).
+   */
 
-  switch (node->type)
+  for (; ; )
     {
-    case LITERAL:
-    {
-    }
-    break;
-
-    case UNION:
-    {
-      uni       = (tre_union_t *)node->obj;
-      errcode   = tre_ast_to_tnfa(uni->left, transitions, counts, offs);
-      if (errcode != REG_OK)
+      switch (node->type)
         {
+        case LITERAL:
           return errcode;
-        }
 
-      errcode = tre_ast_to_tnfa(uni->right, transitions, counts, offs);
-    }
-    break;
+        case UNION:
+          uni     = (tre_union_t *)node->obj;
+          errcode = tre_ast_to_tnfa(uni->left, transitions, counts, offs);
+          if (errcode != REG_OK)
+            {
+              return errcode;
+            }
 
-    case CATENATION:
-    {
-      cat = (tre_catenation_t *)node->obj;
+          /* Tail call: continue with uni->right without growing stack. */
 
-      /* Add a transition from each position in cat->left->lastpos
-       * to each position in cat->right->firstpos.
-       */
+          node = uni->right;
+          continue;
 
-      errcode = tre_make_trans(cat->left->lastpos, cat->right->firstpos,
-                               transitions, counts, offs);
-      if (errcode != REG_OK)
-        {
-          return errcode;
-        }
+        case CATENATION:
+          cat = (tre_catenation_t *)node->obj;
 
-      errcode = tre_ast_to_tnfa(cat->left, transitions, counts, offs);
-      if (errcode != REG_OK)
-        {
-          return errcode;
-        }
-
-      errcode = tre_ast_to_tnfa(cat->right, transitions, counts, offs);
-    }
-    break;
-
-    case ITERATION:
-    {
-      iter = (tre_iteration_t *)node->obj;
-      ASSERT(iter->max == -1 || iter->max == 1);
-
-      if (iter->max == -1)
-        {
-          ASSERT(iter->min == 0 || iter->min == 1);
-
-          /* Add a transition from each last position in the iterated
-           * expression to each first position.
+          /* Add a transition from each position in cat->left->lastpos
+           * to each position in cat->right->firstpos.
            */
 
-          errcode = tre_make_trans(iter->arg->lastpos, iter->arg->firstpos,
+          errcode = tre_make_trans(cat->left->lastpos, cat->right->firstpos,
                                    transitions, counts, offs);
           if (errcode != REG_OK)
             {
               return errcode;
             }
+
+          errcode = tre_ast_to_tnfa(cat->left, transitions, counts, offs);
+          if (errcode != REG_OK)
+            {
+              return errcode;
+            }
+
+          /* Tail call: continue with cat->right without growing stack. */
+
+          node = cat->right;
+          continue;
+
+        case ITERATION:
+          iter = (tre_iteration_t *)node->obj;
+          ASSERT(iter->max == -1 || iter->max == 1);
+
+          if (iter->max == -1)
+            {
+              ASSERT(iter->min == 0 || iter->min == 1);
+
+              /* Add a transition from each last position in the iterated
+               * expression to each first position.
+               */
+
+              errcode = tre_make_trans(iter->arg->lastpos,
+                                       iter->arg->firstpos,
+                                       transitions, counts, offs);
+              if (errcode != REG_OK)
+                {
+                  return errcode;
+                }
+            }
+
+          /* Tail call: continue with iter->arg without growing stack. */
+
+          node = iter->arg;
+          continue;
         }
 
-      errcode = tre_ast_to_tnfa(iter->arg, transitions, counts, offs);
-    }
-    break;
-    }
+      /* Unknown node type — preserve the original silent fall-through
+       * behaviour that returned REG_OK.
+       */
 
-  return errcode;
+      return errcode;
+    }
 }
 
 #define ERROR_EXIT(err)      \
