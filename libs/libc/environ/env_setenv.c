@@ -103,7 +103,19 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
 
   info = task_get_info();
 
-  DEBUGASSERT(info != NULL);
+  /* Mirror getenv()/unsetenv(): gracefully handle a missing task_info_s
+   * instead of turning a recoverable "no environment available" state into
+   * a fatal DEBUGASSERT.  The assert here is especially hazardous because
+   * the panic path (abort -> __assert) also relies on libc routines that
+   * can re-enter setenv, which has been observed to trigger a recursive
+   * assert and force a board reset.
+   */
+
+  if (info == NULL)
+    {
+      ret = EINVAL;
+      goto errout;
+    }
 
   nxrmutex_lock(&info->ta_lock);
 
