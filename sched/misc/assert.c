@@ -155,6 +155,7 @@ static int assert_tracecallback(FAR struct usbtrace_s *trace, FAR void *arg)
  * Name: stack_dump
  ****************************************************************************/
 
+nosanitize_address
 static void stack_dump(uintptr_t sp, uintptr_t stack_top)
 {
   uintptr_t stack;
