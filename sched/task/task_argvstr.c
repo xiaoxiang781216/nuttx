@@ -28,12 +28,26 @@
 
 #include <sched.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include <nuttx/addrenv.h>
 #include <nuttx/tls.h>
 
 #include "sched/sched.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Upper bound for the number of argv[] entries we will walk.  Matches the
+ * MAX_STACK_ARGS limit enforced in nxtask_setup_stackargs(); any TCB with a
+ * valid argv vector will have fewer entries than this.  Bounding the walk
+ * keeps a corrupted (non-NUL-terminated) argv[] array from looping through
+ * garbage during a panic dump.
+ */
+
+#define NXTASK_ARGVSTR_MAX_ARGS 64
 
 /****************************************************************************
  * Public Functions
@@ -97,12 +111,69 @@ size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
 #endif
         {
           FAR char **argv = nxsched_get_stackargs(tcb);
+          uintptr_t stack_lo = (uintptr_t)tcb->stack_base_ptr;
+          uintptr_t stack_hi = stack_lo + (uintptr_t)tcb->adj_stack_size;
 
-          if (argv++)
+          /* nxtask_setup_stackargs() places the argv[] array and all of
+           * its strings on the task's own stack, so every valid pointer we
+           * are about to dereference here must fall within
+           * [stack_base_ptr, stack_base_ptr + adj_stack_size).  This
+           * invariant lets us guard the panic-dump path: when a task's
+           * stack has overflowed or its TLS is corrupted, tl_argv (and the
+           * array it points at) can contain arbitrary garbage.
+           * Dereferencing that garbage through snprintf("%s", ...) would
+           * data-abort inside strnlen, triggering a recursive assert that
+           * resets the board before the original crash info is flushed.
+           * Reject out-of-range pointers instead so the original assert is
+           * allowed to complete its dump.
+           */
+
+          if (argv != NULL && stack_hi > stack_lo &&
+              (uintptr_t)argv >= stack_lo &&
+              (uintptr_t)(argv + 1) <= stack_hi)
             {
-              while (*argv != NULL && n < size)
+              int count;
+
+              argv++; /* Skip argv[0], the task name. */
+
+              for (count = 0; count < NXTASK_ARGVSTR_MAX_ARGS; count++)
                 {
-                  int ret = snprintf(args + n, size - n, " %s", *argv++);
+                  FAR const char *arg;
+                  int ret;
+
+                  /* The array cell itself must still lie within the
+                   * task's stack.
+                   */
+
+                  if ((uintptr_t)argv < stack_lo ||
+                      (uintptr_t)(argv + 1) > stack_hi)
+                    {
+                      break;
+                    }
+
+                  arg = *argv++;
+                  if (arg == NULL || n >= size)
+                    {
+                      break;
+                    }
+
+                  /* The string arg itself must lie within the task's
+                   * stack (that is where nxtask_setup_stackargs()
+                   * copied it).  Anything else indicates corruption.
+                   * Also cap the read length to the remaining stack
+                   * range so snprintf never scans past stack_hi
+                   * looking for a NUL terminator.
+                   */
+
+                  if ((uintptr_t)arg < stack_lo ||
+                      (uintptr_t)arg >= stack_hi)
+                    {
+                      break;
+                    }
+
+                  ret = snprintf(args + n, size - n, " %.*s",
+                                 (int)(stack_hi - (uintptr_t)arg),
+                                 arg);
                   if (ret < 0)
                     {
                       break;
