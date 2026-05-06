@@ -49,8 +49,6 @@
 #  define __ARM_ARCH 8
 #endif
 
-#define up_getsp()          (uintptr_t)__builtin_frame_address(0)
-
 /****************************************************************************
  * Exception stack frame format:
  *
@@ -387,6 +385,13 @@ static inline_function bool up_interrupt_context(void)
   up_irq_restore(flags);
 #endif
   return ret;
+}
+
+static inline_function uintptr_t up_getsp(void)
+{
+  register uintptr_t sp;
+  __asm__ __volatile__("mov %0, sp" : "=r"(sp));
+  return sp;
 }
 
 /****************************************************************************
