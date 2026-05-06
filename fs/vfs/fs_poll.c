@@ -50,7 +50,8 @@
 struct pollfd_s
 {
   FAR struct pollfd *fds;
-  nfds_t nfds;
+  FAR struct file  **fileps;
+  nfds_t             nfds;
 };
 
 /****************************************************************************
@@ -67,6 +68,7 @@ struct pollfd_s
  ****************************************************************************/
 
 static inline void poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
+                                 FAR struct file **fileps,
                                  FAR int *count)
 {
   unsigned int i;
@@ -76,24 +78,14 @@ static inline void poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
   *count = 0;
   for (i = 0; i < nfds; i++)
     {
-      if (fds[i].fd >= 0)
+      FAR struct file *filep = fileps[i];
+
+      if (filep != NULL)
         {
-          FAR struct file *filep;
-          int ret;
+          int ret = file_poll(filep, &fds[i], false);
 
-          ret = file_get(fds[i].fd, &filep);
-          if (ret >= 0)
-            {
-              ret = file_poll(filep, &fds[i], false);
-
-              /* Calling putfilep twice to ensure reference counting
-               * for filep remains consistent with its state for
-               * before the poll.
-               */
-
-              file_put(filep);
-              file_put(filep);
-            }
+          file_put(filep);
+          fileps[i] = NULL;
 
           if (ret < 0)
             {
@@ -124,6 +116,7 @@ static inline void poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
  ****************************************************************************/
 
 static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
+                             FAR struct file **fileps,
                              FAR sem_t *sem)
 {
   unsigned int i;
@@ -147,6 +140,7 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
       fds[i].cb      = poll_default_cb;
       fds[i].revents = 0;
       fds[i].priv    = NULL;
+      fileps[i]      = NULL;
 
       /* Check for invalid descriptors. "If the value of fd is less than 0,
        * events shall be ignored, and revents shall be set to 0 in that entry
@@ -169,11 +163,15 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
                 {
                   file_put(filep);
                 }
+              else
+                {
+                  fileps[i] = filep;
+                }
             }
 
           if (ret < 0)
             {
-              poll_teardown(fds, i, &count);
+              poll_teardown(fds, i, fileps, &count);
               fds[i].revents |= POLLERR;
               fds[i].arg = NULL;
               fds[i].cb = NULL;
@@ -192,7 +190,7 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
        * we execute teardown and return immediately.
        */
 
-      poll_teardown(fds, i, &count);
+      poll_teardown(fds, i, fileps, &count);
     }
 
   return count;
@@ -211,7 +209,7 @@ static void poll_cleanup(FAR void *arg)
   FAR struct pollfd_s *fdsinfo = (FAR struct pollfd_s *)arg;
   int count;
 
-  poll_teardown(fdsinfo->fds, fdsinfo->nfds, &count);
+  poll_teardown(fdsinfo->fds, fdsinfo->nfds, fdsinfo->fileps, &count);
 }
 
 /****************************************************************************
@@ -415,13 +413,11 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
 {
   FAR struct pollfd *kfds;
+  FAR struct file **fileps;
+  FAR void *tempbuf;
   FAR sem_t *sem;
   int count = 0;
   int ret = OK;
-#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_BUILD_PROTECTED)
-  sem_t local_sem;
-  sem = &local_sem;
-#endif
 
   DEBUGASSERT(nfds == 0 || fds != NULL);
 
@@ -432,8 +428,10 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
 #if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
   /* Allocate kernel memory for the fds */
 
-  kfds = lib_get_tempbuffer(nfds * sizeof(struct pollfd) + sizeof(sem_t));
-  if (!kfds)
+  tempbuf = lib_get_tempbuffer(nfds * sizeof(struct pollfd) +
+                               sizeof(sem_t) +
+                               nfds * sizeof(FAR struct file *));
+  if (tempbuf == NULL)
     {
       /* Out of memory */
 
@@ -441,11 +439,26 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
       goto out_with_cancelpt;
     }
 
+  kfds   = (FAR struct pollfd *)tempbuf;
+  sem    = (FAR sem_t *)((uintptr_t)kfds +
+                         nfds * sizeof(struct pollfd));
+  fileps = (FAR struct file **)((uintptr_t)sem + sizeof(sem_t));
+
   /* Copy the user fds to neutral kernel memory */
 
   memcpy(kfds, fds, nfds * sizeof(struct pollfd));
-  sem = (FAR sem_t *)((uintptr_t)kfds + nfds * sizeof(struct pollfd));
 #else
+  tempbuf = lib_get_tempbuffer(sizeof(sem_t) +
+                               nfds * sizeof(FAR struct file *));
+  if (tempbuf == NULL)
+    {
+      ret = -ENOMEM;
+      goto out_with_cancelpt;
+    }
+
+  sem    = (FAR sem_t *)tempbuf;
+  fileps = (FAR struct file **)((uintptr_t)sem + sizeof(sem_t));
+
   /* Can use the user fds directly */
 
   kfds = fds;
@@ -459,7 +472,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
    * we return immediately
    */
 
-  count = poll_setup(kfds, nfds, sem);
+  count = poll_setup(kfds, nfds, fileps, sem);
   if (count == 0)
     {
       struct pollfd_s fdsinfo;
@@ -468,8 +481,9 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
        * the thread is canceled.
        */
 
-      fdsinfo.fds = kfds;
-      fdsinfo.nfds = nfds;
+      fdsinfo.fds    = kfds;
+      fdsinfo.fileps = fileps;
+      fdsinfo.nfds   = nfds;
       tls_cleanup_push(tls_get_info(), poll_cleanup, &fdsinfo);
 
       if (timeout > 0)
@@ -517,7 +531,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
        * Preserve ret, if negative, since it holds the result of the wait.
        */
 
-      poll_teardown(kfds, nfds, &count);
+      poll_teardown(kfds, nfds, fileps, &count);
 
       /* Pop the cancellation point */
 
@@ -537,14 +551,13 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
           fds[i].revents = kfds[i].revents;
         }
     }
+#endif
 
   /* Free the temporary buffer */
 
-  lib_put_tempbuffer(kfds);
+  lib_put_tempbuffer(tempbuf);
 
 out_with_cancelpt:
-#endif
-
   leave_cancellation_point();
 
   if (ret < 0)
