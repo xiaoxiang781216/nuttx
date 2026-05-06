@@ -66,40 +66,17 @@ static spinlock_t g_lock;
  ****************************************************************************/
 
 static inline_function FAR uintptr_t *
-kasan_mem_to_shadow(FAR const void *ptr, size_t size,
+kasan_mem_to_shadow(FAR struct kasan_region_s *region[], size_t count,
+                    FAR const void *ptr, size_t size,
                     FAR unsigned int *bit)
 {
   uintptr_t addr = (uintptr_t)ptr;
   size_t i;
 
-  for (i = 0; i < g_region_count; i++)
-    {
-      FAR struct kasan_region_s *r = g_region[i];
-      if (r && addr >= r->begin && addr < r->end)
-        {
-          DEBUGASSERT(addr + size <= r->end);
-          addr -= r->begin;
-          addr /= KASAN_SHADOW_SCALE;
-          *bit  = addr % KASAN_BITS_PER_WORD;
-          return &r->shadow[addr / KASAN_BITS_PER_WORD];
-        }
-    }
-
-  return NULL;
-}
-
-static inline_function FAR uintptr_t *
-kasan_mem_to_shadow2(FAR struct kasan_region_s *region[],
-                     FAR const void *ptr, size_t size,
-                     FAR unsigned int *bit)
-{
-  uintptr_t addr = (uintptr_t)ptr;
-  int i;
-
-  for (i = 0; i < CONFIG_MM_REGIONS && region[i]; i++)
+  for (i = 0; i < count; i++)
     {
       FAR struct kasan_region_s *r = region[i];
-      if (addr >= r->begin && addr < r->end)
+      if (r && addr >= r->begin && addr < r->end)
         {
           DEBUGASSERT(addr + size <= r->end);
           addr -= r->begin;
@@ -120,7 +97,7 @@ kasan_is_poisoned(FAR const void *addr, size_t size)
   unsigned int nbit;
   uintptr_t mask;
 
-  p = kasan_mem_to_shadow(addr, size, &bit);
+  p = kasan_mem_to_shadow(g_region, g_region_count, addr, size, &bit);
   if (p == NULL)
     {
       return kasan_global_is_poisoned(addr, size);
@@ -212,7 +189,7 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
   FAR uintptr_t *p;
   unsigned int bit;
 
-  p = kasan_mem_to_shadow(addr, size, &bit);
+  p = kasan_mem_to_shadow(g_region, g_region_count, addr, size, &bit);
   if (p)
     {
       kasan_do_poison(p, size, bit, poisoned);
@@ -226,7 +203,7 @@ static void kasan_set_poison2(FAR struct kasan_region_s *region[],
   FAR uintptr_t *p;
   unsigned int bit;
 
-  p = kasan_mem_to_shadow2(region, addr, size, &bit);
+  p = kasan_mem_to_shadow(region, CONFIG_MM_REGIONS, addr, size, &bit);
   if (p)
     {
       kasan_do_poison(p, size, bit, poisoned);
