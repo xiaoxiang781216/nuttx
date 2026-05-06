@@ -798,6 +798,15 @@ void host_usbhost_close(void)
 
   if (dev->config_desc)
     {
+      int i;
+      for (i = 0; i < dev->dev_desc.bNumConfigurations; i++)
+        {
+          if (dev->config_desc[i])
+            {
+              libusb_free_config_descriptor(dev->config_desc[i]);
+            }
+        }
+
       host_uninterruptible(free, dev->config_desc);
       dev->config_desc = NULL;
     }
