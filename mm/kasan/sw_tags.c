@@ -29,7 +29,6 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "kasan/kasan.h"
 
@@ -51,7 +50,7 @@
  ****************************************************************************/
 
 static FAR struct kasan_region_s *g_region[CONFIG_MM_KASAN_REGIONS];
-static volatile size_t g_region_count;
+static size_t g_region_count;
 static spinlock_t g_lock;
 
 /****************************************************************************
@@ -73,16 +72,16 @@ static inline_function FAR uint8_t *
 kasan_mem_to_shadow(FAR const void *ptr, size_t size)
 {
   uintptr_t addr = (uintptr_t)kasan_clear_tag(ptr);
-  size_t n = g_region_count;
   size_t i;
 
-  for (i = 0; i < n; i++)
+  for (i = 0; i < g_region_count; i++)
     {
-      if (addr >= g_region[i]->begin && addr < g_region[i]->end)
+      FAR struct kasan_region_s *r = g_region[i];
+      if (r && addr >= r->begin && addr < r->end)
         {
-          DEBUGASSERT(addr + size <= g_region[i]->end);
-          addr -= g_region[i]->begin;
-          return &g_region[i]->shadow[addr / KASAN_SHADOW_SCALE];
+          DEBUGASSERT(addr + size <= r->end);
+          addr -= r->begin;
+          return &r->shadow[addr / KASAN_SHADOW_SCALE];
         }
     }
 
@@ -98,11 +97,12 @@ kasan_mem_to_shadow2(FAR struct kasan_region_s *region[],
 
   for (i = 0; i < CONFIG_MM_REGIONS && region[i]; i++)
     {
-      if (addr >= region[i]->begin && addr < region[i]->end)
+      FAR struct kasan_region_s *r = region[i];
+      if (addr >= r->begin && addr < r->end)
         {
-          DEBUGASSERT(addr + size <= region[i]->end);
-          addr -= region[i]->begin;
-          return &region[i]->shadow[addr / KASAN_SHADOW_SCALE];
+          DEBUGASSERT(addr + size <= r->end);
+          addr -= r->begin;
+          return &r->shadow[addr / KASAN_SHADOW_SCALE];
         }
     }
 
@@ -246,7 +246,8 @@ FAR void *kasan_register(FAR void *addr, FAR size_t *size)
 
   for (i = 0; i < g_region_count; i++)
     {
-      if (start >= g_region[i]->begin && end <= g_region[i]->end)
+      if (g_region[i] &&
+          start >= g_region[i]->begin && end <= g_region[i]->end)
         {
           /* Already registered */
 
@@ -262,8 +263,21 @@ FAR void *kasan_register(FAR void *addr, FAR size_t *size)
   region->end   = region->begin + *size;
 
   flags = spin_lock_irqsave(&g_lock);
-  DEBUGASSERT(g_region_count < CONFIG_MM_KASAN_REGIONS);
-  g_region[g_region_count++] = region;
+  for (i = 0; i < g_region_count; i++)
+    {
+      if (g_region[i] == NULL)
+        {
+          g_region[i] = region;
+          break;
+        }
+    }
+
+  if (i == g_region_count)
+    {
+      DEBUGASSERT(g_region_count < CONFIG_MM_KASAN_REGIONS);
+      g_region[g_region_count++] = region;
+    }
+
   spin_unlock_irqrestore(&g_lock, flags);
 
   kasan_start();
@@ -280,14 +294,10 @@ void kasan_unregister(FAR void *addr, size_t size)
   flags = spin_lock_irqsave(&g_lock);
   for (i = 0; i < g_region_count; i++)
     {
-      if (g_region[i]->begin == (uintptr_t)addr)
+      if (g_region[i] && g_region[i]->begin == (uintptr_t)addr)
         {
-          g_region_count--;
-          memmove(&g_region[i], &g_region[i + 1],
-                  (g_region_count - i) * sizeof(g_region[0]));
-          g_region[g_region_count] = NULL;
-          spin_unlock_irqrestore(&g_lock, flags);
-          return;
+          g_region[i] = NULL;
+          break;
         }
     }
 
