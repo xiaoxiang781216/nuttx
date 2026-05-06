@@ -327,6 +327,15 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock,
       goto errout;
     }
 
+  /* Make sure the device carrier is up before sending */
+
+  if (IFF_IS_RUNNING(dev->d_flags) == 0)
+    {
+      nwarn("WARNING: device is not RUNNING\n");
+      ret = -EHOSTUNREACH;
+      goto errout;
+    }
+
 #ifndef CONFIG_NET_IPFRAG
   /* Sanity check if the request len is greater than the net payload len */
 
