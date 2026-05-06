@@ -68,7 +68,7 @@ FAR struct net_driver_s *netdev_default(void)
     {
       /* Is the interface in the "up" state? */
 
-      if (IFF_IS_RUNNING(dev->d_flags) != 0)
+      if (IFF_IS_UP(dev->d_flags))
         {
           /* Return a reference to the first device that we find in the UP
            * state (but not the loopback device unless it is the only

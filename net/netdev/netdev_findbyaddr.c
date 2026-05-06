@@ -85,7 +85,7 @@ netdev_prefixlen_findby_lipv4addr(in_addr_t lipaddr, FAR int8_t *prefixlen)
     {
       /* Is the interface in the "up" state? */
 
-      if (IFF_IS_RUNNING(dev->d_flags) != 0 &&
+      if (IFF_IS_UP(dev->d_flags) &&
           !net_ipv4addr_cmp(dev->d_ipaddr, INADDR_ANY))
         {
 #ifndef CONFIG_ROUTE_LONGEST_MATCH
@@ -196,7 +196,7 @@ netdev_prefixlen_findby_lipv6addr(const net_ipv6addr_t lipaddr,
     {
       /* Is the interface in the "up" state? */
 
-      if (IFF_IS_RUNNING(dev->d_flags) != 0 && NETDEV_HAS_V6ADDR(dev))
+      if (IFF_IS_UP(dev->d_flags) && NETDEV_HAS_V6ADDR(dev))
         {
 #ifndef CONFIG_ROUTE_LONGEST_MATCH
           /* Yes.. check for an address match (under the netmask) */
