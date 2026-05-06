@@ -374,6 +374,16 @@ void arm_gic_initialize(void)
   putreg32(icddcr, GIC_ICDDCR);
   arm_gic_dump("Exit arm_gic_initialize", true, 0);
   arm_gic_init_done();
+
+#ifdef CONFIG_BMP
+  /* In BMP mode, g_irqvector[] is per-CPU (DEFINE_PER_CPU_BSS_BMP), so the
+   * CPU_CALL SGI handler must be registered on EACH CPU's per-CPU vector,
+   * not only on CPU0.  Without this, cross-core SGI (e.g. autocore cpucall
+   * RPC) delivered to secondary CPUs hits irq_unexpected_isr.
+   */
+
+  DEBUGVERIFY(irq_attach(GIC_CPU_CALL, nxsched_cpu_call_handler, NULL));
+#endif
 }
 
 /****************************************************************************
