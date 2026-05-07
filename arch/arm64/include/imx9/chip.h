@@ -95,8 +95,21 @@
 
 .macro  get_cpu_id xreg0
   mrs    \xreg0, mpidr_el1
+#if defined(CONFIG_IMX95_ACRN_GUEST)
+  /* ACRN hypervisor sets VMPIDR with vcpu_id in Aff0 (bits [7:0]).
+   * Physical i.MX95 cores use Aff1, but under ACRN the guest sees
+   * virtual MPIDRs: 0x0, 0x1, 0x2, ... so we extract Aff0.
+   */
+
+  ubfx   \xreg0, \xreg0, #0, #8
+#else
+  /* Physical i.MX95 cores: MPIDR = 0x0, 0x100, 0x200, ...
+   * Core ID is in Aff1 (bits [15:8]).
+   */
+
   lsr    \xreg0, \xreg0, 8
   ubfx   \xreg0, \xreg0, #0, #8
+#endif
 .endm
 
 #endif /* __ASSEMBLY__ */

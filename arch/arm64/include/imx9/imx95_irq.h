@@ -404,8 +404,21 @@
 
 #define NR_IRQS                  (IMX9_IRQ_EXT + 376)
 
-/* Cores are at 100h offset from each other (affinity 1) */
+/* Core ID extraction from MPIDR.
+ *
+ * Bare-metal i.MX95: cores at 100h offset (Aff1 = core_id).
+ * ACRN guest: VMPIDR has vcpu_id in Aff0 (0x0, 0x1, 0x2, ...).
+ *
+ * up_cpu_index() uses MPID_TO_CORE(GET_MPIDR()) to compute the CPU
+ * index at C level. If this extracts the wrong affinity field, all
+ * per-CPU data (GICR base, idle stacks, scheduler locks) will alias
+ * to CPU 0, causing the SMP assert at nx_smpstart.c:82.
+ */
 
+#if defined(CONFIG_ARCH_BOARD_IMX95_A55_ACRN)
+#define MPID_TO_CORE(mpid)              (((mpid) >> MPIDR_AFF0_SHIFT) & MPIDR_AFFLVL_MASK)
+#else
 #define MPID_TO_CORE(mpid)              (((mpid) >> MPIDR_AFF1_SHIFT) & MPIDR_AFFLVL_MASK)
+#endif
 
 #endif /* __ARCH_ARM64_INCLUDE_IMX9_IMX95_IRQ_H */

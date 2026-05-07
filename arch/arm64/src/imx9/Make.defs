@@ -26,8 +26,37 @@ endif
 
 # i.MX9-specific C source files
 
-CHIP_CSRCS  = imx9_boot.c 
-CHIP_CSRCS += imx9_clockconfig.c imx9_iomuxc.c imx9_lpuart.c imx9_lowputc.c
+# Boot / MMU region table selection (mutually exclusive with imx9_boot.c):
+#
+#   * CONFIG_ARCH_BOARD_IMX95_A55_ACRN => imx9_acrn_boot.c. NuttX runs
+#     as an ACRN guest, so the native bring-up path (DDR, TRDC, MIX,
+#     LPUART) is skipped and the MMU table describes the guest HPA
+#     window + emulated device range rather than the EVK memory map.
+#
+#   * Otherwise => imx9_boot.c, which owns real-hardware bring-up and
+#     the chip-default RAMBANK1 layout from arch/arm64/include/imx9/chip.h.
+ifeq ($(CONFIG_IMX95_ACRN_GUEST),y)
+  CHIP_CSRCS  = imx9_acrn_boot.c
+else
+  CHIP_CSRCS  = imx9_boot.c
+endif
+CHIP_CSRCS += imx9_clockconfig.c imx9_iomuxc.c imx9_lowputc.c
+
+# Serial lower-half selection (mutually exclusive):
+#
+#   * CONFIG_IMX9_LPUART => native LPUART driver (imx9_lpuart.c)
+#     which provides its own arm64_{early,}serialinit(). Every
+#     CONFIG_IMX9_LPUARTn 'select's CONFIG_IMX9_LPUART in Kconfig,
+#     so this single symbol covers all eight instances.
+#
+#   * Else CONFIG_UART_PL011 => thin shim (imx9_serial_pl011.c) that
+#     forwards to drivers/serial/uart_pl011.c. Used by boards running
+#     NuttX as an ACRN guest where the console is a PL011 vuart.
+ifeq ($(CONFIG_IMX9_LPUART),y)
+  CHIP_CSRCS += imx9_lpuart.c
+else ifeq ($(CONFIG_UART_PL011),y)
+  CHIP_CSRCS += imx9_serial_pl011.c
+endif
 
 ifeq ($(CONFIG_ARCH_CHIP_IMX93),y)
 CHIP_CSRCS  += imx9_ccm.c imx9_gpio.c imx9_gpiobase.c

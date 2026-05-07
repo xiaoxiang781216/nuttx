@@ -20,22 +20,18 @@
  *
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 OUTPUT_ARCH(aarch64)
 
 ENTRY(__start)
 EXTERN(__start)
 
-/* Memory is organized as follows:
- * - Uboot reserved area is 0x00000000 - 0x00a00000
- * - NuttX is loaded to 0xa0100000, u-boot expects us here
- * - NuttX ROM and RAM are one continuous region, starting from 0xa0100000
-      with a size of 512MB
- * - Heap memory is allocated from dram end to idlestack top
- */
+/* Load address derived from CONFIG_RAM_START (set in defconfig) */
 
 MEMORY
 {
-  dram (rwx) : ORIGIN = 0xa0100000, LENGTH = 512M
+  dram (rwx) : ORIGIN = CONFIG_RAM_START, LENGTH = CONFIG_RAM_SIZE
 }
 
 PHDRS

@@ -39,6 +39,18 @@ config IMX9_HAVE_MU
 	bool
 	default n
 
+config IMX95_ACRN_GUEST
+	bool "Run as ACRN hypervisor guest"
+	default n
+	depends on ARCH_CHIP_IMX95
+	---help---
+		Select this when building NuttX to run as a guest VM under the
+		ACRN hypervisor on i.MX95. This switches the boot file to
+		imx9_acrn_boot.c (minimal MMU table for the guest HPA window,
+		no DDR/TRDC/MIX init), uses PL011 vuart instead of native
+		LPUART, and adjusts the MPIDR parsing for ACRN's virtual
+		MPIDR layout (vcpu_id in Aff0).
+
 config IMX9_BIN_ROMFS
 	bool "Register the /bin ROMFS file system at /dev/ram0"
 	depends on FS_ROMFS

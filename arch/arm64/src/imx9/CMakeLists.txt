@@ -20,8 +20,44 @@
 #
 # ##############################################################################
 
-set(SRCS imx9_boot.c imx9_clockconfig.c imx9_iomuxc.c imx9_lpuart.c
-         imx9_lowputc.c)
+set(SRCS imx9_clockconfig.c imx9_iomuxc.c imx9_lowputc.c)
+
+# Boot / MMU region table selection:
+#
+# * On the ACRN guest board (imx95-a55-acrn) NuttX runs inside a VM carved out
+#   by the hypervisor. The native chip bring-up path (DDR training, TRDC, MIX
+#   power-up, LPUART pin muxing) is not applicable, and the MMU region table has
+#   to describe the HPA window + emulated device range the guest actually sees
+#   rather than the raw EVK memory map.
+#
+# * For any other board we use imx9_boot.c, which owns the real hardware
+#   bring-up sequence and the chip-default RAMBANK1 layout from
+#   arch/arm64/include/imx9/chip.h.
+if(CONFIG_IMX95_ACRN_GUEST)
+  list(APPEND SRCS imx9_acrn_boot.c)
+else()
+  list(APPEND SRCS imx9_boot.c)
+endif()
+
+# Serial lower-half selection:
+#
+# * If any CONFIG_IMX9_LPUARTn is selected, build the native i.MX9 LPUART driver
+#   (imx9_lpuart.c). It provides its own arm64_{early,}serialinit() against the
+#   common upper-half. (Every CONFIG_IMX9_LPUARTn 'select's the umbrella
+#   CONFIG_IMX9_LPUART in Kconfig, so the single symbol covers all eight
+#   instances.)
+#
+# * Otherwise, if CONFIG_UART_PL011 is selected (e.g. NuttX running as an ACRN
+#   VM where the console is a PL011 vuart), build the thin PL011 shim
+#   (imx9_serial_pl011.c) which forwards to drivers/serial/uart_pl011.c.
+#
+# The two are mutually exclusive; at most one is compiled to keep the
+# arm64_{early,}serialinit() symbols unique.
+if(CONFIG_IMX9_LPUART)
+  list(APPEND SRCS imx9_lpuart.c)
+elseif(CONFIG_UART_PL011)
+  list(APPEND SRCS imx9_serial_pl011.c)
+endif()
 
 if(CONFIG_ARCH_CHIP_IMX93)
   list(APPEND SRCS imx9_ccm.c imx9_gpio.c imx9_gpiobase.c)
