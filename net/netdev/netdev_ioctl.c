@@ -1504,6 +1504,35 @@ static int netdev_imsf_ioctl(FAR struct socket *psock, int cmd,
         break;
 
       case SIOCGIPMSFILTER:  /* Retrieve source filter addresses */
+        {
+          FAR struct igmp_group_s *group;
+
+          dev = netdev_imsfdev(imsf);
+          if (dev == NULL)
+            {
+              ret = -ENODEV;
+              break;
+            }
+
+          /* Look up the multicast group on the interface.  NuttX currently
+           * implements IGMPv2 which has no notion of source filtering, so
+           * the reported filter is always EXCLUDE with zero sources (i.e.
+           * accept all sources for the joined group), per RFC 3678.
+           */
+
+          group = igmp_grpfind(dev, &imsf->imsf_multiaddr.s_addr);
+          if (group == NULL)
+            {
+              ret = -EADDRNOTAVAIL;
+              break;
+            }
+
+          imsf->imsf_fmode  = MCAST_INCLUDE;
+          imsf->imsf_numsrc = group->njoins;
+          ret = OK;
+        }
+        break;
+
       default:
         ret = -ENOTTY;
         break;
