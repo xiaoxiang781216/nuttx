@@ -131,7 +131,7 @@ int imx9_iomux_configure(iomux_cfg_t cfg)
   pinctrl.channel         = SCMI_PLATFORM_A2P;
   pinctrl.mux_register    = cfg.padcfg.ctlreg;
   pinctrl.mux_mode        = cfg.padcfg.mode;
-  pinctrl.input_register  = cfg.padcfg.dsy;
+  pinctrl.input_register  = cfg.padcfg.dsyreg;
   pinctrl.input_daisy     = cfg.padcfg.dsy;
   pinctrl.config_register = cfg.padcfg.padreg;
   pinctrl.config_value    = cfg.pad;
