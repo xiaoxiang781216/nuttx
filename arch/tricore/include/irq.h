@@ -441,7 +441,7 @@ static inline_function bool up_interrupt_context(void)
 
 static inline_function uintptr_t up_getusrsp(void *regs)
 {
-  return ((uintptr_t *)regs)[REG_SP];
+  return regs ? ((uintptr_t *)regs)[REG_SP] : 0;
 }
 
 /****************************************************************************
