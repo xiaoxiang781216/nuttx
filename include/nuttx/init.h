@@ -47,6 +47,7 @@
 #define OSINIT_OS_READY()        (g_nx_initstate >= OSINIT_OSREADY)
 #define OSINIT_IDLELOOP()        (g_nx_initstate >= OSINIT_IDLELOOP)
 #define OSINIT_IS_PANIC()        (g_nx_initstate >= OSINIT_PANIC)
+#define OSINIT_IS_FATAL()        (g_nx_initstate >= OSINIT_FATAL)
 #define OSINIT_OS_INITIALIZING() (g_nx_initstate  < OSINIT_OSREADY)
 
 /****************************************************************************
@@ -75,7 +76,12 @@ enum nx_initstate_e
                           * active. */
   OSINIT_IDLELOOP  = 6,  /* The OS enter idle loop. */
   OSINIT_RESET     = 7,  /* The OS is in resetting process. */
-  OSINIT_PANIC     = 8   /* Fatal error happened. */
+  OSINIT_PANIC     = 8,  /* Fatal error happened.  panic_notifier
+                          * runs on the Level-1 _assert() path only. */
+  OSINIT_FATAL     = 9   /* Recursive _assert() detected.  Only
+                          * up_puts() and reset_board() are allowed;
+                          * panic_notifier and any subsystem that
+                          * could fault are off-limits. */
 };
 
 /****************************************************************************

@@ -987,7 +987,11 @@ void _assert(FAR const char *filename, int linenum,
 
   if (OSINIT_IS_PANIC() || !OSINIT_TASK_READY())
     {
-      /* Already in fatal state, reset board directly. */
+      if (!OSINIT_IS_FATAL())
+        {
+          g_nx_initstate = OSINIT_FATAL;
+          syslog_flush();
+        }
 
       /* Flush any buffered SYSLOG data before we reset so that
        * diagnostics queued by the outer assertion (e.g. the
