@@ -1,0 +1,5 @@
+#include <nuttx/config.h>
+
+#ifdef CONFIG_MMCSD
+mount -t fatfs /dev/mmcsd0p2 /data
+#endif
