@@ -177,13 +177,12 @@ static void host_libusb_ep0transfer_cb(struct libusb_transfer *transfer)
 
   if (transfer->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      datareq->success = true;
-      datareq->xfer += transfer->actual_length;
+      datareq->xfer = transfer->actual_length;
       memcpy(datareq->data, buffer, transfer->actual_length);
     }
   else
     {
-      datareq->success = false;
+      datareq->xfer = -EIO;
     }
 
   host_uninterruptible(free, buffer - LIBUSB_CONTROL_SETUP_SIZE);
@@ -209,15 +208,14 @@ static void host_libusb_bulktransfer_cb(struct libusb_transfer *transfer)
 
   if (transfer->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      datareq->success = false;
+      datareq->xfer = -EIO;
       goto transfer_end;
     }
 
   datareq->xfer += transfer->actual_length;
-  if ((datareq->xfer >= datareq->len) ||
+  if ((datareq->xfer >= (ssize_t)datareq->len) ||
       (datareq->addr & USB_DIR_IN) != 0)
     {
-      datareq->success = true;
       goto transfer_end;
     }
 
@@ -230,7 +228,7 @@ static void host_libusb_bulktransfer_cb(struct libusb_transfer *transfer)
   if (host_uninterruptible(libusb_submit_transfer, transfer) !=
       LIBUSB_SUCCESS)
     {
-      datareq->success = false;
+      datareq->xfer = -EIO;
       goto transfer_end;
     }
 
@@ -258,12 +256,11 @@ static void host_libusb_inttransfer_cb(struct libusb_transfer *transfer)
 
   if (transfer->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      datareq->success = true;
-      datareq->xfer += transfer->actual_length;
+      datareq->xfer = transfer->actual_length;
     }
   else
     {
-      datareq->success = false;
+      datareq->xfer = -EIO;
     }
 
   host_libusb_fifopush(&dev->completed, datareq);
@@ -273,10 +270,10 @@ static void host_libusb_inttransfer_cb(struct libusb_transfer *transfer)
 #ifndef CONFIG_USBHOST_ISOC_DISABLE
 static void host_libusb_isotransfer_cb(struct libusb_transfer *transfer)
 {
+  struct host_libusb_hostdev_s *dev = &g_libusb_dev;
   struct libusb_iso_packet_descriptor *packet;
   struct host_usb_datareq_s *datareq;
-  usbhost_asynch_t callback;
-  size_t length;
+  ssize_t total = 0;
   int i;
 
   if (!transfer)
@@ -288,24 +285,26 @@ static void host_libusb_isotransfer_cb(struct libusb_transfer *transfer)
     }
 
   datareq = (struct host_usb_datareq_s *)transfer->user_data;
-  callback = datareq->callback;
+
+  if (transfer->status != LIBUSB_TRANSFER_COMPLETED)
+    {
+      datareq->xfer = -EIO;
+      goto transfer_end;
+    }
 
   for (i = 0; i < transfer->num_iso_packets; i++)
     {
       packet = &transfer->iso_packet_desc[i];
-      length = packet->status == LIBUSB_TRANSFER_COMPLETED ?
-                                      packet->actual_length : 0;
-
-      /* If there are multiple isoc packages, only the actual length
-       * of the data in each package is returned here. Because each
-       * package has the same size, the number of packages returned
-       * needs to be recorded in class driver.
-       */
-
-      callback(datareq->priv, length);
+      if (packet->status == LIBUSB_TRANSFER_COMPLETED)
+        {
+          total += packet->actual_length;
+        }
     }
 
-  host_uninterruptible(free, datareq);
+  datareq->xfer = total > 0 ? total : -EIO;
+
+transfer_end:
+  host_libusb_fifopush(&dev->completed, datareq);
   host_uninterruptible(libusb_free_transfer, transfer);
 }
 #endif
@@ -456,16 +455,14 @@ static int host_libusb_ep0outhandle(struct host_libusb_hostdev_s *dev,
 
   if (ret >= 0)
     {
-      datareq->success = true;
-      datareq->xfer = ret; /* Actual bytes transferred */
+      datareq->xfer = ret;
     }
   else
     {
-      datareq->success = false;
-      datareq->xfer = 0;
+      datareq->xfer = -EIO;
     }
 
-  return datareq->success ? LIBUSB_SUCCESS : ret;
+  return ret >= 0 ? LIBUSB_SUCCESS : ret;
 }
 
 static int
@@ -674,7 +671,11 @@ int host_usbhost_ep0trans(struct host_usb_ctrlreq_s *ctrlreq,
   if (!(libusb_ctrlreq.bRequestType & USB_DIR_IN))
     {
       ret = host_libusb_ep0outhandle(dev, &libusb_ctrlreq, datareq);
-      datareq->success = (ret != LIBUSB_SUCCESS) ? false : true;
+      if (ret != LIBUSB_SUCCESS)
+        {
+          datareq->xfer = -EIO;
+        }
+
       host_libusb_fifopush(&dev->completed, datareq);
     }
   else
@@ -683,7 +684,7 @@ int host_usbhost_ep0trans(struct host_usb_ctrlreq_s *ctrlreq,
                                     datareq, 0);
       if (ret != LIBUSB_SUCCESS)
         {
-          datareq->success = false;
+          datareq->xfer = -EIO;
           host_libusb_fifopush(&dev->completed, datareq);
         }
     }
@@ -713,12 +714,6 @@ int host_usbhost_eptrans(struct host_usb_datareq_s *datareq)
         ERROR("Unsupported transfer type");
         ret = LIBUSB_ERROR_NOT_SUPPORTED;
         break;
-    }
-
-  if (ret != LIBUSB_SUCCESS)
-    {
-      datareq->success = false;
-      host_libusb_fifopush(&dev->completed, datareq);
     }
 
   return ret;

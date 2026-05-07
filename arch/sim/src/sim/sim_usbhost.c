@@ -186,15 +186,7 @@ static struct usbhost_connection_s g_sim_usbconn =
 
 static struct host_usb_datareq_s *sim_usbhost_allocrq(void)
 {
-  struct host_usb_datareq_s *req;
-
-  req = zalloc(sizeof(struct host_usb_datareq_s));
-  if (req)
-    {
-      req->success = false;
-    }
-
-  return req;
+  return zalloc(sizeof(struct host_usb_datareq_s));
 }
 
 /****************************************************************************
@@ -702,10 +694,7 @@ static void sim_usbhost_rqcomplete(struct sim_usbhost_s *drvr)
     {
       if (datareq->callback)
         {
-          usbhost_asynch_t callback = datareq->callback;
-          ssize_t result = datareq->success ? datareq->xfer : -EIO;
-
-          callback(datareq->priv, result);
+          datareq->callback(datareq->priv, datareq->xfer);
         }
 
       sim_usbhost_freerq(datareq);

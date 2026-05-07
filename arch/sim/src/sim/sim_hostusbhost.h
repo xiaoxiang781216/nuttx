@@ -78,11 +78,10 @@ struct host_usb_datareq_s
   uint8_t                     xfrtype;
   uint16_t                    maxpacketsize;
   uint8_t                    *data;
-  uint16_t                    len;
-  uint16_t                    xfer;
-  bool                        success;
+  size_t                      len;
   void                       *priv;
   usbhost_asynch_t            callback;
+  ssize_t                     xfer;
 };
 
 /****************************************************************************
