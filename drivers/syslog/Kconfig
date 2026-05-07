@@ -136,6 +136,31 @@ config RAMLOG_PRESERVE_SIZE
 		other readers whose read position falls behind tail will be clamped
 		on next read. This frees buffer space for new log data.
 		This default can be changed at runtime via SYSLOGIOC_SETPRESERVE ioctl.
+
+config RAMLOG_SHARED_LOCK
+	bool "Place ramlog spinlock in shared header (for BMP multi-core)"
+	default y if BMP
+	default n
+	---help---
+		Place the ramlog spinlock inside the shared ramlog_header_s (which
+		typically resides in a reserved/shared DRAM region accessed by
+		multiple NuttX instances in BMP configurations).
+
+		Enable this when multiple independent NuttX instances (each with
+		its own .bss/.data) must serialize writes to the same g_sysbuffer.
+		Under BMP, the lock cannot live in .bss because each NuttX instance
+		has its own copy of global variables.
+
+		WARNING: The shared region is typically mapped Non-Cacheable so it
+		survives across reboots. ARMv7-A LDREX/STREX on Non-Cacheable memory
+		is IMPLEMENTATION DEFINED and may deadlock. Ensure the shared region
+		is mapped Write-Back Cacheable with correct cache maintenance when
+		using this option.
+
+		When disabled, the lock is placed in ramlog_dev_s (regular Cacheable
+		.bss). This works for a single NuttX instance (SMP or UP).
+
+		Auto-enabled when CONFIG_BMP is selected.
 endif
 
 config SYSLOG_BUFFER
