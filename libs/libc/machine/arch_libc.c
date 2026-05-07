@@ -89,6 +89,10 @@ size_t ARCH_LIBCFUN(strnlen)(FAR const char *s, size_t maxlen);
 FAR char *ARCH_LIBCFUN(strrchr)(FAR const char *s, int c);
 #endif
 
+#ifdef CONFIG_LIBC_ARCH_STRNLEN
+size_t ARCH_LIBCFUN(strnlen)(FAR const char *s, size_t maxlen);
+#endif
+
 #  ifdef CONFIG_MM_KASAN_INSTRUMENT
 #    ifndef CONFIG_MM_KASAN_DISABLE_READS_CHECK
 extern void __asan_loadN(FAR void *addr, size_t size);
