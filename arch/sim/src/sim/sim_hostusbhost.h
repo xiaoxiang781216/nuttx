@@ -81,7 +81,8 @@ struct host_usb_datareq_s
   size_t                      len;
   void                       *priv;
   usbhost_asynch_t            callback;
-  ssize_t                     xfer;
+  size_t                      nxfer;
+  ssize_t                     xfer[];
 };
 
 /****************************************************************************

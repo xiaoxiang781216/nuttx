@@ -177,12 +177,12 @@ static void host_libusb_ep0transfer_cb(struct libusb_transfer *transfer)
 
   if (transfer->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      datareq->xfer = transfer->actual_length;
+      datareq->xfer[0] = transfer->actual_length;
       memcpy(datareq->data, buffer, transfer->actual_length);
     }
   else
     {
-      datareq->xfer = -EIO;
+      datareq->xfer[0] = -EIO;
     }
 
   host_uninterruptible(free, buffer - LIBUSB_CONTROL_SETUP_SIZE);
@@ -208,12 +208,12 @@ static void host_libusb_bulktransfer_cb(struct libusb_transfer *transfer)
 
   if (transfer->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      datareq->xfer = -EIO;
+      datareq->xfer[0] = -EIO;
       goto transfer_end;
     }
 
-  datareq->xfer += transfer->actual_length;
-  if ((datareq->xfer >= (ssize_t)datareq->len) ||
+  datareq->xfer[0] += transfer->actual_length;
+  if ((datareq->xfer[0] >= (ssize_t)datareq->len) ||
       (datareq->addr & USB_DIR_IN) != 0)
     {
       goto transfer_end;
@@ -221,20 +221,21 @@ static void host_libusb_bulktransfer_cb(struct libusb_transfer *transfer)
 
   host_uninterruptible(libusb_fill_bulk_transfer,
                        transfer, dev->handle, datareq->addr,
-                       datareq->data + datareq->xfer,
-                       datareq->len - datareq->xfer,
+                       datareq->data + datareq->xfer[0],
+                       datareq->len - datareq->xfer[0],
                        host_libusb_bulktransfer_cb,
                        datareq, 0);
   if (host_uninterruptible(libusb_submit_transfer, transfer) !=
       LIBUSB_SUCCESS)
     {
-      datareq->xfer = -EIO;
+      datareq->xfer[0] = -EIO;
       goto transfer_end;
     }
 
   return;
 
 transfer_end:
+  datareq->nxfer = 1;
   host_libusb_fifopush(&dev->completed, datareq);
   host_uninterruptible(libusb_free_transfer, transfer);
 }
@@ -256,13 +257,14 @@ static void host_libusb_inttransfer_cb(struct libusb_transfer *transfer)
 
   if (transfer->status == LIBUSB_TRANSFER_COMPLETED)
     {
-      datareq->xfer = transfer->actual_length;
+      datareq->xfer[0] = transfer->actual_length;
     }
   else
     {
-      datareq->xfer = -EIO;
+      datareq->xfer[0] = -EIO;
     }
 
+  datareq->nxfer = 1;
   host_libusb_fifopush(&dev->completed, datareq);
   host_uninterruptible(libusb_free_transfer, transfer);
 }
@@ -273,7 +275,6 @@ static void host_libusb_isotransfer_cb(struct libusb_transfer *transfer)
   struct host_libusb_hostdev_s *dev = &g_libusb_dev;
   struct libusb_iso_packet_descriptor *packet;
   struct host_usb_datareq_s *datareq;
-  ssize_t total = 0;
   int i;
 
   if (!transfer)
@@ -288,20 +289,18 @@ static void host_libusb_isotransfer_cb(struct libusb_transfer *transfer)
 
   if (transfer->status != LIBUSB_TRANSFER_COMPLETED)
     {
-      datareq->xfer = -EIO;
+      datareq->nxfer = 1;
+      datareq->xfer[0] = -EIO;
       goto transfer_end;
     }
 
+  datareq->nxfer = transfer->num_iso_packets;
   for (i = 0; i < transfer->num_iso_packets; i++)
     {
       packet = &transfer->iso_packet_desc[i];
-      if (packet->status == LIBUSB_TRANSFER_COMPLETED)
-        {
-          total += packet->actual_length;
-        }
+      datareq->xfer[i] = (packet->status == LIBUSB_TRANSFER_COMPLETED)
+                          ? packet->actual_length : 0;
     }
-
-  datareq->xfer = total > 0 ? total : -EIO;
 
 transfer_end:
   host_libusb_fifopush(&dev->completed, datareq);
@@ -455,11 +454,11 @@ static int host_libusb_ep0outhandle(struct host_libusb_hostdev_s *dev,
 
   if (ret >= 0)
     {
-      datareq->xfer = ret;
+      datareq->xfer[0] = ret;
     }
   else
     {
-      datareq->xfer = -EIO;
+      datareq->xfer[0] = -EIO;
     }
 
   return ret >= 0 ? LIBUSB_SUCCESS : ret;
@@ -673,7 +672,7 @@ int host_usbhost_ep0trans(struct host_usb_ctrlreq_s *ctrlreq,
       ret = host_libusb_ep0outhandle(dev, &libusb_ctrlreq, datareq);
       if (ret != LIBUSB_SUCCESS)
         {
-          datareq->xfer = -EIO;
+          datareq->xfer[0] = -EIO;
         }
 
       host_libusb_fifopush(&dev->completed, datareq);
@@ -684,7 +683,7 @@ int host_usbhost_ep0trans(struct host_usb_ctrlreq_s *ctrlreq,
                                     datareq, 0);
       if (ret != LIBUSB_SUCCESS)
         {
-          datareq->xfer = -EIO;
+          datareq->xfer[0] = -EIO;
           host_libusb_fifopush(&dev->completed, datareq);
         }
     }

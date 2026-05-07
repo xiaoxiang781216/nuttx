@@ -184,9 +184,18 @@ static struct usbhost_connection_s g_sim_usbconn =
  * Name: sim_usbhost_allocrq
  ****************************************************************************/
 
-static struct host_usb_datareq_s *sim_usbhost_allocrq(void)
+static struct host_usb_datareq_s *sim_usbhost_allocrq(size_t nxfer)
 {
-  return zalloc(sizeof(struct host_usb_datareq_s));
+  struct host_usb_datareq_s *req;
+
+  req = zalloc(sizeof(struct host_usb_datareq_s) +
+               nxfer * sizeof(ssize_t));
+  if (req)
+    {
+      req->nxfer = nxfer;
+    }
+
+  return req;
 }
 
 /****************************************************************************
@@ -527,7 +536,7 @@ static int sim_usbhost_ctrlin(struct usbhost_driver_s *drvr,
 
   DEBUGASSERT(ep0info != NULL && req != NULL);
 
-  datareq = sim_usbhost_allocrq();
+  datareq = sim_usbhost_allocrq(1);
   if (!datareq)
     {
       uerr("sim_usbhost_allocrq fail\n");
@@ -593,11 +602,14 @@ static int sim_usbhost_asynch(struct usbhost_driver_s *drvr,
   struct sim_usbhost_s *priv = (struct sim_usbhost_s *)drvr;
   struct sim_epinfo_s *epinfo = (struct sim_epinfo_s *)ep;
   struct host_usb_datareq_s *datareq;
+  size_t nxfer;
   int ret;
 
   DEBUGASSERT(epinfo && buffer && buflen > 0);
 
-  datareq = sim_usbhost_allocrq();
+  nxfer = (buflen - 1) / epinfo->maxpacket + 1;
+
+  datareq = sim_usbhost_allocrq(nxfer);
   if (!datareq)
     {
       uerr("sim_usbhost_allocrq fail\n");
@@ -689,12 +701,16 @@ static void sim_usbhost_disconnect(struct usbhost_driver_s *drvr,
 static void sim_usbhost_rqcomplete(struct sim_usbhost_s *drvr)
 {
   struct host_usb_datareq_s *datareq;
+  size_t i;
 
   while ((datareq = host_usbhost_getcomplete()) != NULL)
     {
       if (datareq->callback)
         {
-          datareq->callback(datareq->priv, datareq->xfer);
+          for (i = 0; i < datareq->nxfer; i++)
+            {
+              datareq->callback(datareq->priv, datareq->xfer[i]);
+            }
         }
 
       sim_usbhost_freerq(datareq);
