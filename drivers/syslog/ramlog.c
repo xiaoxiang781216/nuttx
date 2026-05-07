@@ -211,7 +211,9 @@ static DEFINE_PER_CPU_BMP(struct notifier_block, g_ramlog_panic_nb) =
 #  define g_ramlog_panic_nb this_cpu_var_bmp(g_ramlog_panic_nb)
 #endif
 
+#ifdef CONFIG_RAMLOG_SHARED_LOCK
 static atomic_t g_ramlog_lock_ready;
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -380,12 +382,13 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
 {
   uint32_t magic;
   irqstate_t flags;
+#ifdef CONFIG_RAMLOG_SHARED_LOCK
   uint32_t expected;
 
-  /* The ramlog header resides in .noinit memory, so rl_magic and the
-   * embedded spinlock survive a software reset. After such a reset, the
-   * spinlock may still be in locked state, which would deadlock the first
-   * syslog write on every CPU.
+  /* When the lock lives in the shared ramlog_header_s (BMP), the header is
+   * in .noinit memory, so rl_magic and the embedded spinlock survive a
+   * software reset. After such a reset, the spinlock may still be in locked
+   * state, which would deadlock the first syslog write on every CPU.
    *
    * g_ramlog_lock_ready lives in BSS (zeroed each boot) and is used to
    * reinitialize the .noinit spinlock exactly once per boot via CAS:
@@ -398,6 +401,9 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
    * while the winner is between the CAS and the release store) cannot
    * re-enter this function, see INPROG, fail the CAS, and then spin
    * forever waiting for its own preempted context to publish DONE.
+   *
+   * When the lock lives in ramlog_dev_s (.bss), every boot zeroes it
+   * automatically, so this bootstrap dance is not needed.
    */
 
   flags = irq_save();
@@ -413,6 +419,7 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
 
   while (atomic_read_acquire(&g_ramlog_lock_ready) !=
          RAMLOG_LOCK_INIT_DONE);
+#endif
 
   while ((magic = atomic_read_acquire(&dev->rl_header->rl_magic)) !=
          RAMLOG_MAGIC_READY)
