@@ -54,7 +54,7 @@ static void note_driver_instrument_enter(FAR void *this_fn,
                                          FAR void *call_site,
                                          FAR void *arg)
 {
-  sched_note_event_ip(NOTE_TAG_ALWAYS, LOG_INFO, (uintptr_t)this_fn,
+  sched_note_event_ip(NXTAG_GLOBAL, LOG_INFO, (uintptr_t)this_fn,
                       NOTE_DUMP_BEGIN, NULL, 0);
 }
 
@@ -62,7 +62,7 @@ static void note_driver_instrument_leave(FAR void *this_fn,
                                          FAR void *call_site,
                                          FAR void *arg)
 {
-  sched_note_event_ip(NOTE_TAG_ALWAYS, LOG_INFO, (uintptr_t)this_fn,
+  sched_note_event_ip(NXTAG_GLOBAL, LOG_INFO, (uintptr_t)this_fn,
                       NOTE_DUMP_END, NULL, 0);
 }
 #endif

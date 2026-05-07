@@ -56,26 +56,6 @@
 #  define trace_diagv(...)
 #endif
 
-#ifdef CONFIG_TRACE_APP
-#  define app_trace_begin() trace_begin(NXTAG_APP)
-#  define app_trace_end() trace_end(NXTAG_APP)
-#  define app_trace_beginex(name) trace_beginex(NXTAG_APP, name)
-#  define app_trace_endex(name) trace_endex(NXTAG_APP, name)
-#  define app_trace_mark(s) trace_mark(NXTAG_APP, s)
-#  define app_trace_printf(fmt, ...) \
-    trace_printf(NXTAG_APP, fmt, ##__VA_ARGS__)
-#  define app_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_APP, level, id, fmt, ##__VA_ARGS__)
-#else
-#  define app_trace_begin()
-#  define app_trace_end()
-#  define app_trace_beginex(name)
-#  define app_trace_endex(name)
-#  define app_trace_mark(s)
-#  define app_trace_printf(...)
-#  define app_trace_diag(...)
-#endif
-
 #ifdef CONFIG_TRACE_ANALOG
 #  define analog_trace_begin() trace_begin(NXTAG_ANALOG)
 #  define analog_trace_end() trace_end(NXTAG_ANALOG)

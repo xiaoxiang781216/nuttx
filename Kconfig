@@ -2697,10 +2697,6 @@ menuconfig TRACE
 		the kernel will be enabled.
 
 if TRACE
-config TRACE_APP
-	bool "Enable tracepoints in app"
-	default n
-
 config TRACE_ANALOG
 	bool "Enable tracepoints in analog"
 	default n

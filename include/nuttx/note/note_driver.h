@@ -57,15 +57,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Backward compatibility: map old NOTE_TAG_* to new NXTAG_* */
-
-#define NOTE_TAG_ALWAYS   NXTAG_GLOBAL
-#define NOTE_TAG_LOG      NXTAG_LOG
-#define NOTE_TAG_APP      NXTAG_APP
-#define NOTE_TAG_GRAPHICS NXTAG_GRAPHICS
-#define NOTE_TAG_LAST     NXTAG_KERNEL_MAX
-#define NOTE_TAG_MAX      NXTAG_MAX
-
 /* Provide defaults for some configuration settings (could be undefined with
  * old configuration files)
  */
