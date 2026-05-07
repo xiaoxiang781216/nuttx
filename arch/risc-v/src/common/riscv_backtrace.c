@@ -24,6 +24,8 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
+#include <stdint.h>
+
 #include "sched/sched.h"
 #include "riscv_internal.h"
 
@@ -160,6 +162,7 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 
   if (tcb == NULL || tcb == rtcb)
     {
+      tcb = rtcb;
       if (up_interrupt_context())
         {
           ret = backtrace(rtcb->stack_base_ptr,
@@ -213,6 +216,17 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
                           buffer, size, &skip);
         }
     }
+
+#ifdef CONFIG_LIB_SYSCALL
+  if (ret < size && tcb->xcp.sregs)
+    {
+      ret += backtrace(tcb->stack_base_ptr,
+                       tcb->stack_base_ptr + tcb->adj_stack_size,
+                       (void *)*(((uintreg_t *)tcb->xcp.sregs[REG_FP]) - 1),
+                       (void *)tcb->xcp.sregs[REG_RA],
+                       &buffer[ret], size - ret, &skip);
+    }
+#endif
 
   return ret;
 }
