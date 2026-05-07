@@ -79,6 +79,10 @@ if(CONFIG_USBHOST)
     list(APPEND SRCS usbhost_xhci_pci.c usbhost_xhci_trace.c)
   endif()
 
+  if(CONFIG_USBHOST_UVC)
+    list(APPEND SRCS usbhost_uvc.c)
+  endif()
+
   # HCD debug/trace logic
 
   if(CONFIG_USBHOST_TRACE)
