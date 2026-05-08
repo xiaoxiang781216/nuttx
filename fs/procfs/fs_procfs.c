@@ -746,7 +746,7 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
     }
   else
     {
-      int x;
+      int x = 0;
       int ret;
       int len = strlen(relpath);
 
