@@ -36,6 +36,9 @@
 #include "imx9_gpio.h"
 #include "imx9_lowputc.h"
 #include "imx9_system_ctl.h"
+#ifdef CONFIG_IMX9_SCMI
+#include "imx9_scmi.h"
+#endif
 #ifdef CONFIG_IMX9_DDR_TRAINING
 #include "ddr/imx9_ddr_training.h"
 #endif
@@ -183,6 +186,10 @@ void arm64_chip_boot(void)
 #endif
 
   /* Do UART early initialization & pin muxing */
+
+#ifdef CONFIG_IMX9_SCMI
+  imx9_scmi_initialize();
+#endif
 
 #ifdef CONFIG_IMX9_LPUART
   imx9_lowsetup();
