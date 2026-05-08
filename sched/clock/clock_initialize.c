@@ -58,8 +58,7 @@
 #  undef g_system_ticks
 #  undef g_system_tick_lock
 
-DEFINE_PER_CPU_BMP(volatile clock_t, g_system_ticks) =
-  INITIAL_SYSTEM_TIMER_TICKS;
+DEFINE_PER_CPU_BSS_BMP(volatile clock_t, g_system_ticks);
 DEFINE_PER_CPU_BMP(seqcount_t, g_system_tick_lock) = SEQLOCK_INITIALIZER;
 
 #  define g_system_ticks this_cpu_var_bmp(g_system_ticks)
