@@ -95,6 +95,7 @@ static int sim_camera_data_start_capture(struct imgdata_s *data,
                                          imgdata_capture_t callback,
                                          void *arg);
 static int sim_camera_data_stop_capture(struct imgdata_s *data);
+static void sim_camera_work(void *arg);
 static int sim_camera_data_set_buf(struct imgdata_s *data,
                                    uint8_t nr_datafmts,
                                    imgdata_format_t *datafmts,
@@ -280,7 +281,14 @@ static int sim_camera_data_uninit(struct imgdata_s *data)
 
 static int sim_camera_data_validate_buf(uint8_t *addr, uint32_t size)
 {
-  if (!addr || ((uintptr_t)(addr) & 0x1f))
+  /* NULL addr is valid: signals drop-frame mode (size must be 0) */
+
+  if (addr == NULL)
+    {
+      return size == 0 ? 0 : -EINVAL;
+    }
+
+  if ((uintptr_t)(addr) & 0x1f)
     {
       return -EINVAL;
     }
@@ -347,15 +355,32 @@ static int sim_camera_data_start_capture(struct imgdata_s *data,
 
   priv->capture_cb = callback;
   priv->capture_arg = arg;
-  return host_video_start_capture(priv->vdev);
+
+  ret = host_video_start_capture(priv->vdev);
+  if (ret < 0)
+    {
+      priv->capture_cb = NULL;
+      priv->capture_arg = NULL;
+      return ret;
+    }
+
+  work_queue_wq(g_work_queue, &priv->work, sim_camera_work, priv,
+                SIM_CAMERA_PERIOD);
+  return 0;
 }
 
 static int sim_camera_data_stop_capture(struct imgdata_s *data)
 {
   sim_camera_priv_t *priv = (sim_camera_priv_t *)data;
 
+  work_cancel_sync_wq(g_work_queue, &priv->work);
+
+  priv->capture_cb = NULL;
+  priv->capture_arg = NULL;
   priv->next_buf = NULL;
-  return host_video_stop_capture(priv->vdev);
+  priv->buf_size = 0;
+  host_video_stop_capture(priv->vdev);
+  return 0;
 }
 
 static void sim_camera_work(void *arg)
@@ -365,19 +390,22 @@ static void sim_camera_work(void *arg)
   struct timeval tv;
   int ret;
 
-  if (priv->next_buf)
+  if (priv->capture_cb == NULL)
     {
-      irqstate_t flags = irq_save_nopreempt();
-      ret = host_video_dqbuf(priv->vdev, priv->next_buf, priv->buf_size);
-      if (ret > 0)
-        {
-          clock_gettime(CLOCK_MONOTONIC, &ts);
-          TIMESPEC_TO_TIMEVAL(&tv, &ts);
-          priv->capture_cb(0, ret, &tv, priv->capture_arg);
-        }
-
-      irq_restore_nopreempt(flags);
+      return;
     }
+
+  irqstate_t flags = irq_save_nopreempt();
+  ret = host_video_dqbuf(priv->vdev, priv->next_buf, priv->buf_size);
+  if (ret > 0)
+    {
+      clock_gettime(CLOCK_MONOTONIC, &ts);
+      TIMESPEC_TO_TIMEVAL(&tv, &ts);
+      priv->capture_cb(0, priv->next_buf ? ret : 0,
+                       &tv, priv->capture_arg);
+    }
+
+  irq_restore_nopreempt(flags);
 
   work_queue_next_wq(g_work_queue, &priv->work, sim_camera_work, arg,
                      SIM_CAMERA_PERIOD);
@@ -393,8 +421,5 @@ int sim_camera_initialize(void)
 
   imgsensor_register(&priv->sensor);
   imgdata_register(&priv->data);
-
-  work_queue_wq(g_work_queue, &priv->work, sim_camera_work, priv,
-                SIM_CAMERA_PERIOD);
   return 0;
 }

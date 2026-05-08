@@ -2191,6 +2191,15 @@ static int complete_capture(uint8_t err_code,
       return -EINVAL;
     }
 
+  /* Drop-frame callback (size=0): skip frame processing,
+   * go directly to set next buffer.
+   */
+
+  if (datasize == 0)
+    {
+      goto set_next_buf;
+    }
+
   poll_notify(&type_inf->fds, 1, POLLIN);
 
   if (err_code == 0)
@@ -2226,6 +2235,7 @@ static int complete_capture(uint8_t err_code,
       nxsem_post(&type_inf->wait_capture.dqbuf_wait_flg);
     }
 
+set_next_buf:
   if (type_inf->remaining_capnum == 0)
     {
       stop_capture(cmng, buf_type);
@@ -2244,28 +2254,23 @@ static int complete_capture(uint8_t err_code,
   else
     {
       container = video_framebuff_get_vacant_container(&type_inf->bufinf);
-      if (container == NULL)
-        {
-          stop_capture(cmng, buf_type);
-          type_inf->state = CAPTURE_STATE_STREAMON;
-        }
-      else
-        {
-          get_clipped_format(type_inf->nr_fmt,
-                             type_inf->fmt,
-                             &type_inf->clip,
-                             c_fmt);
 
-          convert_to_imgdatafmt(&c_fmt[CAPTURE_FMT_MAIN],
-                                &df[IMGDATA_FMT_MAIN]);
-          convert_to_imgdatafmt(&c_fmt[CAPTURE_FMT_SUB],
-                                &df[IMGDATA_FMT_SUB]);
+      get_clipped_format(type_inf->nr_fmt,
+                         type_inf->fmt,
+                         &type_inf->clip,
+                         c_fmt);
+      convert_to_imgdatafmt(&c_fmt[CAPTURE_FMT_MAIN],
+                            &df[IMGDATA_FMT_MAIN]);
+      convert_to_imgdatafmt(&c_fmt[CAPTURE_FMT_SUB],
+                            &df[IMGDATA_FMT_SUB]);
 
-          IMGDATA_SET_BUF(cmng->imgdata,
-            type_inf->nr_fmt,
-            df,
-            (FAR uint8_t *)container->buf.m.userptr,
-            container->buf.length);
+      IMGDATA_SET_BUF(cmng->imgdata,
+        type_inf->nr_fmt, df,
+        container ? (FAR uint8_t *)container->buf.m.userptr : NULL,
+        container ? container->buf.length : 0);
+
+      if (container)
+        {
           container->buf.sequence = type_inf->seqnum++;
         }
     }

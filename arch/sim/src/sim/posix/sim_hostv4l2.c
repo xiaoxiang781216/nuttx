@@ -148,7 +148,11 @@ int host_video_dqbuf(struct host_video_dev_s *vdev, uint8_t *addr,
       size = buf.bytesused;
     }
 
-  memcpy(addr, vdev->addrs[buf.index], size);
+  if (addr != NULL)
+    {
+      memcpy(addr, vdev->addrs[buf.index], size);
+    }
+
   if (-1 == host_video_ioctl(vdev->fd, VIDIOC_QBUF, &buf))
     {
       host_uninterruptible(perror, "VIDIOC_QBUF");
