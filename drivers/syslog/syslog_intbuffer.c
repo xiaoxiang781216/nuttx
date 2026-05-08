@@ -209,7 +209,7 @@ void syslog_add_intbuffer(FAR const char *buffer, size_t buflen)
 
 void syslog_flush_intbuffer(bool force)
 {
-  syslog_flush_internal(force, sizeof(g_syslog_intbuffer.buffer));
+  syslog_flush_internal(force, CONFIG_SYSLOG_INTBUFSIZE);
 }
 
 #endif /* CONFIG_SYSLOG_INTBUFFER */
