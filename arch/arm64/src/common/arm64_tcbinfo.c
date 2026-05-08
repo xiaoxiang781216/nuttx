@@ -67,6 +67,7 @@ static const struct reginfo_s g_reginfo[] =
   REGINFO_AUTO("x30", 8, 30, TCB_REG_OFF(REG_X30)),
   REGINFO_AUTO("sp",  8, 31, TCB_REG_OFF(REG_SP_ELX)),
   REGINFO_AUTO("pc",  8, 32, TCB_REG_OFF(REG_ELR)),
+  REGINFO_AUTO("cpsr", 4, 33, TCB_REG_OFF(REG_SPSR)),
 };
 
 /****************************************************************************
