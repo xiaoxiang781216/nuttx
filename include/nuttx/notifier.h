@@ -41,7 +41,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ATOMIC_NOTIFIER_INITVALUE {NULL, SP_UNLOCKED}
+#define ATOMIC_NOTIFIER_INITVALUE {NULL, RSPINLOCK_INITIALIZER}
 #define ATOMIC_NOTIFIER_INIT(name) ATOMIC_NOTIFIER_INITVALUE
 
 #define ATOMIC_NOTIFIER_HEAD(name) \
@@ -90,7 +90,7 @@ struct notifier_block
 struct atomic_notifier_head
 {
   FAR struct notifier_block *head;
-  spinlock_t lock;
+  rspinlock_t lock;
 };
 
 struct blocking_notifier_head
@@ -189,9 +189,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = spin_lock_irqsave_nopreempt(&nh->lock); \
+      flags = rspin_lock_irqsave_nopreempt(&nh->lock); \
       notifier_chain_register(nh->head, (nb), false); \
-      spin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
+      rspin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
     } \
   while(0)
 
@@ -200,9 +200,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = spin_lock_irqsave_nopreempt(&nh->lock); \
+      flags = rspin_lock_irqsave_nopreempt(&nh->lock); \
       notifier_chain_register(nh->head, (nb), true); \
-      spin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
+      rspin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
     } \
   while(0)
 
@@ -211,9 +211,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = spin_lock_irqsave_nopreempt(&nh->lock); \
+      flags = rspin_lock_irqsave_nopreempt(&nh->lock); \
       notifier_chain_unregister(nh->head, (nb)); \
-      spin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
+      rspin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
     } \
   while(0)
 
@@ -223,9 +223,9 @@ extern "C"
       FAR struct atomic_notifier_head *nh = (nhead); \
       if (nh->head) \
         { \
-          irqstate_t flags = spin_lock_irqsave_nopreempt(&nh->lock); \
+          irqstate_t flags = rspin_lock_irqsave_nopreempt(&nh->lock); \
           notifier_call_chain(nh->head, (val), (v), -1, NULL); \
-          spin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
+          rspin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
         } \
     } \
   while(0)
