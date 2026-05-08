@@ -118,7 +118,7 @@ int sim_tsc_initialize(int minor)
   snprintf(devname, sizeof(devname), DEV_FORMAT, minor);
   iinfo("Registering %s\n", devname);
 
-  ret = touch_register(&priv->lower, devname, 1);
+  ret = touch_register(&priv->lower, devname, 8);
   if (ret < 0)
     {
       ierr("ERROR: touch_register() failed: %d\n", ret);
