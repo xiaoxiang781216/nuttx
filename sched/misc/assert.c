@@ -970,10 +970,20 @@ void _assert(FAR const char *filename, int linenum,
   static DEFINE_PER_CPU_BMP(spinlock_t, g_assert_lock) = SP_UNLOCKED;
 #define g_assert_lock this_cpu_var_bmp(g_assert_lock)
 
-  /* Save registers to this point */
+  /* Snapshot the _assert() entry into g_last_regs on every call so the
+   * per-CPU slot always reflects the most recent assertion.  Only fall
+   * back to it for the local regs when the caller did not supply a
+   * fault context; exception/syscall handlers pass the real fault
+   * frame and we must keep it for the recursive-assert early-exit
+   * path where only dump_mini_info(regs) is printed before
+   * reset_board().
+   */
 
   up_saveusercontext(this_cpu_var(g_last_regs));
-  regs = this_cpu_var(g_last_regs);
+  if (regs == NULL)
+    {
+      regs = this_cpu_var(g_last_regs);
+    }
 
   if (OSINIT_IS_PANIC() || !OSINIT_TASK_READY())
     {
