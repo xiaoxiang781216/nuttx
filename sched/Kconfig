@@ -457,14 +457,28 @@ endchoice
 config CPU_CALL_POOL_COUNT
 	int "Number of pre-allocated SMP CALl cookie etc"
 	depends on BMP
-	default 0
+	default 16
 	---help---
-		Default 0 feature disabled. Set to >0 value In BMP mode to
-		use prealloc smp call param pool.
-		For SMP case is not required and always use stack variable,
-		Disabled feature or SMP should use stack variable.
-		For BMP or protected, disable feature will not compatibility
-		with asynchronous smp call.
+		Number of pre-allocated cpu_call cookies used by synchronous
+		and asynchronous cross-CPU calls in BMP (Bound Multi-Processing)
+		mode.
+
+		In BMP mode each CPU runs an independent scheduler and owns
+		its own readytorun list. A non-zero pool enables the ack-based
+		wakeup path in nxsched_cpu_call_handler(): after the target CPU
+		finishes the request, it posts an ack back into the source CPU's
+		call queue and triggers the source CPU to run nxsem_post() on
+		its own side, so the caller's waiter TCB is re-queued to the
+		correct CPU.
+
+		Setting this to 0 (or selecting SMP instead of BMP) falls back
+		to direct cross-CPU nxsem_post() from the target CPU, which is
+		only valid under SMP where all CPUs share one scheduler. Under
+		BMP it leaves the waiter on the wrong CPU's readytorun list and
+		the caller will hang forever.
+
+		SMP and UP builds do not use this pool; they rely on stack-
+		allocated cookies in the caller context.
 
 config SMP_NCPUS
 	int "Number of CPUs"
