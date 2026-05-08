@@ -35,7 +35,9 @@ initializer_t _sinit[] =
   NULL
 };
 
+#pragma warning 534
 extern initializer_t __attribute__((alias ("_sinit"))) _einit[];
+#pragma warning restore
 #endif /* __TASKING__ */
 
 /****************************************************************************
