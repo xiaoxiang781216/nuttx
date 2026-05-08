@@ -505,7 +505,7 @@ void tricore_trapcall(volatile void *trap)
 void tricore_trapinit(void)
 {
 #ifdef CONFIG_COREDUMP
-  coredump_add_memory_region(&g_trapinfo, sizeof(g_trapinfo),
+  coredump_add_memory_region(&g_trapinfo, sizeof(IfxCpu_Trap),
                              PF_REGISTER);
 #endif
 }
