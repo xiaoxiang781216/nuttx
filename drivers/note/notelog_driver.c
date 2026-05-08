@@ -44,6 +44,8 @@ static void notelog_suspend(FAR struct note_driver_s *drv,
                             FAR struct tcb_s *tcb);
 static void notelog_resume(FAR struct note_driver_s *drv,
                            FAR struct tcb_s *tcb);
+static void notelog_ready(FAR struct note_driver_s *drv,
+                          FAR struct tcb_s *tcb, uint8_t state);
 #endif
 #ifdef CONFIG_SMP
 static void notelog_cpu_start(FAR struct note_driver_s *drv,
@@ -97,6 +99,7 @@ static const struct note_driver_ops_s g_notelog_ops =
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   notelog_suspend,       /* suspend */
   notelog_resume,        /* resume */
+  notelog_ready,         /* ready */
 #endif
 #ifdef CONFIG_SMP
   notelog_cpu_start,     /* cpu_start */
@@ -238,6 +241,18 @@ static void notelog_resume(FAR struct note_driver_s *drv,
 #else
   syslog(LOG_INFO, "Resume %s, TCB@%p, state=%d\n",
          get_task_name(tcb), tcb, tcb->task_state);
+#endif
+}
+
+static void notelog_ready(FAR struct note_driver_s *drv,
+                          FAR struct tcb_s *tcb, uint8_t state)
+{
+#ifdef CONFIG_SMP
+  syslog(LOG_INFO, "CPU%d: Ready %s, TCB@%p, state=%d\n",
+         tcb->cpu, get_task_name(tcb), tcb, state);
+#else
+  syslog(LOG_INFO, "Ready %s, TCB@%p, state=%d\n",
+         get_task_name(tcb), tcb, state);
 #endif
 }
 #endif

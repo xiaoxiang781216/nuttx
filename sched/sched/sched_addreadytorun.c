@@ -29,6 +29,8 @@
 #include <stdbool.h>
 #include <assert.h>
 
+#include <nuttx/sched_note.h>
+
 #include "irq/irq.h"
 #include "sched/queue.h"
 #include "sched/sched.h"
@@ -85,6 +87,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 
       nxsched_add_prioritized(btcb, list_pendingtasks());
       btcb->task_state = TSTATE_TASK_PENDING;
+      sched_note_ready(btcb, TSTATE_TASK_PENDING);
       ret = false;
     }
 
@@ -108,6 +111,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
       /* The new btcb was added in the middle of the ready-to-run list */
 
       btcb->task_state = TSTATE_TASK_READYTORUN;
+      sched_note_ready(btcb, TSTATE_TASK_READYTORUN);
       ret = false;
     }
 
@@ -257,6 +261,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 
   btcb->task_state = TSTATE_TASK_READYTORUN;
   nxsched_add_prioritized(btcb, list_readytorun());
+  sched_note_ready(btcb, TSTATE_TASK_READYTORUN);
 
   /* In some cases, such as setaffinity, cpu need to be used. */
 

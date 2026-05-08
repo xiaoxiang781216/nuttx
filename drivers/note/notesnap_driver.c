@@ -71,6 +71,8 @@ static void notesnap_suspend(FAR struct note_driver_s *drv,
                              FAR struct tcb_s *tcb);
 static void notesnap_resume(FAR struct note_driver_s *drv,
                             FAR struct tcb_s *tcb);
+static void notesnap_ready(FAR struct note_driver_s *drv,
+                           FAR struct tcb_s *tcb, uint8_t state);
 #endif
 #ifdef CONFIG_SMP
 static void notesnap_cpu_start(FAR struct note_driver_s *drv,
@@ -123,6 +125,7 @@ static const struct note_driver_ops_s g_notesnap_ops =
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   notesnap_suspend,
   notesnap_resume,
+  notesnap_ready,
 #endif
 #ifdef CONFIG_SMP
   notesnap_cpu_start,
@@ -159,6 +162,7 @@ static FAR const char *g_notesnap_type[] =
   "NOTE_STOP",
   "NOTE_SUSPEND",
   "NOTE_RESUME",
+  "NOTE_READY",
   "NOTE_TASKNAME",
   "NOTE_CPU_START",
   "NOTE_CPU_STARTED",
@@ -285,6 +289,12 @@ static void notesnap_resume(FAR struct note_driver_s *drv,
                             FAR struct tcb_s *tcb)
 {
   notesnap_common(drv, tcb, NOTE_RESUME, 0);
+}
+
+static void notesnap_ready(FAR struct note_driver_s *drv,
+                           FAR struct tcb_s *tcb, uint8_t state)
+{
+  notesnap_common(drv, tcb, NOTE_READY, state);
 }
 #endif
 

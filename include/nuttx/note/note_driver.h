@@ -79,8 +79,8 @@
 #define NOTE_FILTER_MODE_FLAG_SWITCH                         \
   ((1ULL << NOTE_START)       | (1ULL << NOTE_STOP)        | \
    (1ULL << NOTE_SUSPEND)     | (1ULL << NOTE_RESUME)      | \
-   (1ULL << NOTE_TASKNAME)    | (1ULL << NOTE_CPU_START)   | \
-   (1ULL << NOTE_CPU_STARTED))
+   (1ULL << NOTE_READY)       | (1ULL << NOTE_TASKNAME)    | \
+   (1ULL << NOTE_CPU_START)   | (1ULL << NOTE_CPU_STARTED))
 
 #define NOTE_FILTER_MODE_FLAG_SYSCALL                         \
   ((1ULL << NOTE_SYSCALL_ENTER) | (1ULL << NOTE_SYSCALL_LEAVE))
@@ -337,6 +337,7 @@ enum note_type_e
   NOTE_STOP,
   NOTE_SUSPEND,
   NOTE_RESUME,
+  NOTE_READY,
   NOTE_TASKNAME,
   NOTE_CPU_START,
   NOTE_CPU_STARTED,
@@ -389,6 +390,8 @@ struct note_driver_ops_s
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   CODE void (*suspend)(FAR struct note_driver_s *drv, FAR struct tcb_s *tcb);
   CODE void (*resume)(FAR struct note_driver_s *drv, FAR struct tcb_s *tcb);
+  CODE void (*ready)(FAR struct note_driver_s *drv,
+                     FAR struct tcb_s *tcb, uint8_t state);
 #endif
 #ifdef CONFIG_SMP
   CODE void (*cpu_start)(FAR struct note_driver_s *drv,
@@ -797,6 +800,7 @@ void note_start(FAR struct tcb_s *tcb);
 void note_stop(FAR struct tcb_s *tcb);
 void note_suspend(FAR struct tcb_s *tcb);
 void note_resume(FAR struct tcb_s *tcb);
+void note_ready(FAR struct tcb_s *tcb, uint8_t state);
 void note_taskname(void (FAR *handler)(FAR const void *,
                                       size_t, FAR void *),
                    FAR void *arg);

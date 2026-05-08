@@ -202,11 +202,21 @@ extern "C"
              } \
          } \
        while (0)
+#  define sched_note_ready(t,s) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_READY)) \
+             { \
+               note_ready(t,s); \
+             } \
+         } \
+       while (0)
 #else
 #  define sched_note_stop(t)
 #  define sched_note_start(t)
 #  define sched_note_suspend(t)
 #  define sched_note_resume(t)
+#  define sched_note_ready(t,s)
 #endif
 
 #if defined(CONFIG_SMP) && defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && defined(CONFIG_DRIVERS_NOTE)

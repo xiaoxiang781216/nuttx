@@ -1611,6 +1611,22 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
           }
       }
       break;
+
+    case NOTE_READY:
+      {
+        /* This note informs the task to be ready to run.
+         * Output sched_waking using the note's own pid/priority,
+         * which identifies the task that just became runnable.
+         */
+
+        nxtask_namepool_get(pid, buf, TASK_NAME_SIZE);
+        ret += noteram_dump_header(s, note, ctx);
+        ret += lib_sprintf(s, "sched_waking: comm=%s "
+                            "pid=%d prio=%d target_cpu=%d\n",
+                            buf, get_pid(pid),
+                            note->nc_priority, cpu);
+      }
+      break;
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL

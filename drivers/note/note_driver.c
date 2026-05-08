@@ -75,6 +75,8 @@
   ((drv)->ops->suspend && ((drv)->ops->suspend(drv, tcb), true))
 #define note_do_resume(drv, tcb)                                                \
   ((drv)->ops->resume && ((drv)->ops->resume(drv, tcb), true))
+#define note_do_ready(drv, tcb, state)                                          \
+  ((drv)->ops->ready && ((drv)->ops->ready(drv, tcb, state), true))
 #define note_do_cpu_start(drv, tcb, cpu)                                        \
   ((drv)->ops->cpu_start && ((drv)->ops->cpu_start(drv, tcb, cpu), true))
 #define note_do_cpu_started(drv, tcb)                                           \
@@ -1468,6 +1470,58 @@ void note_cpu_started(FAR struct tcb_s *tcb)
     }
 }
 #endif /* CONFIG_SMP */
+
+/****************************************************************************
+ * Name: note_ready
+ *
+ * Description:
+ *   Record a task state transition to ready-to-run.
+ *
+ * Input Parameters:
+ *   tcb   - The TCB of the task
+ *   state - Target state (running/ready/pending)
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void note_ready(FAR struct tcb_s *tcb, uint8_t state)
+{
+  FAR struct note_driver_s **driver;
+  struct note_common_s note;
+  bool formatted = false;
+
+  note_drivers_initialize();
+  for (driver = g_note_drivers; *driver; driver++)
+    {
+      if (!note_driver_isenabled_type(*driver, NOTE_READY))
+        {
+          continue;
+        }
+
+      if (note_do_ready(*driver, tcb, state))
+        {
+          continue;
+        }
+
+      if ((*driver)->ops->add == NULL)
+        {
+          continue;
+        }
+
+      if (!formatted)
+        {
+          formatted = true;
+          note_common(tcb, &note, sizeof(note),
+                      NOTE_READY);
+        }
+
+      /* Add the note to circular buffer */
+
+      note_do_add(*driver, &note, note.nc_length, true);
+    }
+}
 #endif /* CONFIG_SCHED_INSTRUMENTATION_SWITCH */
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
