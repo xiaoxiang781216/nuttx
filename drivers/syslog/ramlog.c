@@ -433,13 +433,14 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
           dev->rl_header->rl_tail = 0;
           spin_lock_init(RAMLOG_LOCK(dev));
           atomic_set_release(&dev->rl_header->rl_magic, RAMLOG_MAGIC_READY);
-#ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
-          panic_notifier_chain_register(&g_ramlog_panic_nb);
-#endif
         }
 
         irq_restore(flags);
     }
+
+#ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
+  panic_notifier_chain_register(&g_ramlog_panic_nb);
+#endif
 }
 
 /****************************************************************************
