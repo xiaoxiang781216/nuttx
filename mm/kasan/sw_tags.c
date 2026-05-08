@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/nuttx.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/compiler.h>
 #include <nuttx/spinlock.h>
@@ -159,6 +160,71 @@ static void kasan_set_poison2(FAR struct kasan_region_s *region[],
   if (p)
     {
       kasan_do_poison(p, size, value);
+    }
+}
+
+static void kasan_show_shadow_memory(FAR const void *addr, size_t size,
+                                     size_t dumpsize)
+{
+  FAR const uint8_t *start;
+  FAR const uint8_t *end;
+  FAR const uint8_t *p;
+  char buffer[256];
+
+  dumpsize /= KASAN_SHADOW_SCALE;
+
+  /* Clamp start to avoid underflow */
+
+  if ((uintptr_t)addr > dumpsize * KASAN_SHADOW_SCALE)
+    {
+      start = (FAR const uint8_t *)
+        (((uintptr_t)addr & ~(KASAN_SHADOW_SCALE - 1)) -
+         dumpsize * KASAN_SHADOW_SCALE);
+    }
+  else
+    {
+      start = (FAR const uint8_t *)0;
+    }
+
+  end = (FAR const uint8_t *)
+    (((uintptr_t)addr & ~(KASAN_SHADOW_SCALE - 1)) +
+     dumpsize * KASAN_SHADOW_SCALE);
+
+  _alert("Shadow bytes around the buggy address:\n");
+  for (p = start; p < end; p += 16 * KASAN_SHADOW_SCALE)
+    {
+      int ret = sprintf(buffer, "  %p: ", p);
+      int i;
+
+      for (i = 0; i < 16; i++)
+        {
+          FAR const uint8_t *cur = p + i * KASAN_SHADOW_SCALE;
+          bool poisoned = kasan_is_poisoned(cur, 1);
+
+          if (cur == (FAR const uint8_t *)
+              ((uintptr_t)addr & ~(KASAN_SHADOW_SCALE - 1)))
+            {
+              ret += sprintf(buffer + ret,
+                             "\b[\033[31m%02x\033[0m ",
+                             poisoned ? 0xff : 0x00);
+            }
+          else if (cur == (FAR const uint8_t *)
+                   ((uintptr_t)addr & ~(KASAN_SHADOW_SCALE - 1))
+                   + ALIGN_UP(size, KASAN_SHADOW_SCALE) -
+                   KASAN_SHADOW_SCALE)
+            {
+              ret += sprintf(buffer + ret,
+                             "\033[31m%02x\033[0m]",
+                             poisoned ? 0xff : 0x00);
+            }
+          else
+            {
+              ret += sprintf(buffer + ret, "%02x ",
+                             poisoned ? 0xff : 0x00);
+            }
+        }
+
+      _alert("%s\n", buffer);
     }
 }
 

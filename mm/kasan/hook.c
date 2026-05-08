@@ -47,6 +47,7 @@
 #  include "sim_asan.c"
 #else
 #  define kasan_is_poisoned(addr, size) false
+#  define kasan_show_shadow_memory(addr, size, dumpsize)
 #endif
 
 /****************************************************************************
@@ -134,49 +135,6 @@ static spinlock_t g_kasan_lock = SP_UNLOCKED;
  * Private Functions
  ****************************************************************************/
 
-static void kasan_show_memory(FAR const uint8_t *addr, size_t size,
-                              size_t dumpsize)
-{
-  FAR const uint8_t *start = (FAR const uint8_t *)
-                             (((uintptr_t)addr) & ~0xf) - dumpsize;
-  FAR const uint8_t *end = start + 2 * dumpsize;
-  FAR const uint8_t *p = start;
-  char buffer[256];
-
-  _alert("Shadow bytes around the buggy address:\n");
-  for (p = start; p < end; p += 16)
-    {
-      int ret = sprintf(buffer, "%p: ", p);
-      int i;
-
-      for (i = 0; i < 16; i++)
-        {
-          if (kasan_is_poisoned(p + i, 1))
-            {
-              if (p + i == addr)
-                {
-                  ret += sprintf(buffer + ret,
-                                 "\b[\033[31m%02x\033[0m ", p[i]);
-                }
-              else if (p + i == addr + size - 1)
-                {
-                  ret += sprintf(buffer + ret, "\033[31m%02x\033[0m]", p[i]);
-                }
-              else
-                {
-                  ret += sprintf(buffer + ret, "\033[31m%02x\033[0m ", p[i]);
-                }
-            }
-          else
-            {
-              ret += sprintf(buffer + ret, "\033[37m%02x\033[0m ", p[i]);
-            }
-        }
-
-      _alert("%s\n", buffer);
-    }
-}
-
 static void kasan_report(FAR const void *addr, size_t size,
                          bool is_write, FAR void *return_address)
 {
@@ -196,7 +154,7 @@ static void kasan_report(FAR const void *addr, size_t size,
          is_write ? "write" : "read",
          addr, size, return_address);
 
-  kasan_show_memory(addr, size, 80);
+  kasan_show_shadow_memory(addr, size, 80);
 
   if (dump_only)
     {
