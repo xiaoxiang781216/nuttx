@@ -89,6 +89,12 @@ static DEFINE_PER_CPU_BMP(struct ipt_table_s, g_tables[]) =
   {NULL, ipt_filter_init, ipt_filter_apply},
 #endif
 };
+
+enum
+{
+  IPT_NTABLES = nitems(g_tables)
+};
+
 #define g_tables this_cpu_var_bmp(g_tables)
 
 /****************************************************************************
@@ -122,7 +128,7 @@ static void ipt_table_init(FAR struct ipt_table_s *table)
 static FAR struct ipt_table_s *ipt_table(FAR const char *name)
 {
   int i;
-  for (i = 0; i < nitems(g_tables); i++)
+  for (i = 0; i < IPT_NTABLES; i++)
     {
       ipt_table_init(&g_tables[i]);
       if (g_tables[i].repl != NULL &&
