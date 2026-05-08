@@ -21,6 +21,18 @@ config NET_ICMP_NO_STACK
 
 if NET_ICMP && !NET_ICMP_NO_STACK
 
+config NET_ICMP_ECHO_BROADCASTS
+	bool "Respond to broadcast/multicast ICMP echo requests"
+	default n
+	---help---
+		If set, the system will respond to ICMP echo requests (pings) sent
+		to broadcast or multicast addresses, including any multicast group
+		the interface has joined and the subnet broadcast address.
+
+		If not set (default), ICMP echo requests addressed to broadcast or
+		multicast destinations will be silently dropped. This matches Linux's
+		net.ipv4.icmp_echo_ignore_broadcasts=1 default behavior.
+
 config NET_ICMP_PMTU_ENTRIES
 	int "Path MTU Discovery (PMTUD) ICMP pmtu entry number"
 	default 0

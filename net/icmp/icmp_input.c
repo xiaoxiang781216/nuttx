@@ -354,6 +354,9 @@ void icmp_input(FAR struct net_driver_s *dev)
   if (icmp->type == ICMP_ECHO_REQUEST)
     {
       in_addr_t src_ipaddr;
+#ifndef CONFIG_NET_ICMP_ECHO_BROADCASTS
+      in_addr_t dst_ipaddr;
+#endif
 
       /* Accordding to RFC1122 section 3.2.2.6， an ICMP Echo Request
        * wihch has a broadcast/multicast ip address should be discarded
@@ -367,6 +370,24 @@ void icmp_input(FAR struct net_driver_s *dev)
           ninfo("ICMP ECHO request from broadcast/multicast address\n");
           goto typeerr;
         }
+
+#ifndef CONFIG_NET_ICMP_ECHO_BROADCASTS
+      /* Drop ICMP echo requests sent to broadcast or multicast destination
+       * addresses. This is the default behavior, matching Linux's
+       * net.ipv4.icmp_echo_ignore_broadcasts=1.
+       */
+
+      dst_ipaddr = net_ip4addr_conv32(ipv4->destipaddr);
+
+      if (net_ipv4addr_cmp(dst_ipaddr, INADDR_BROADCAST) ||
+          net_ipv4addr_broadcast(dst_ipaddr, dev->d_netmask) ||
+          IN_MULTICAST(NTOHL(dst_ipaddr)))
+        {
+          ninfo("ICMP ECHO request to broadcast/multicast address "
+                "dropped\n");
+          goto typeerr;
+        }
+#endif
 
       /* Change the ICMP type */
 

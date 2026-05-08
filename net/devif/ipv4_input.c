@@ -396,6 +396,20 @@ static int ipv4_in(FAR struct net_driver_s *dev)
     }
   else
 #endif
+#ifdef CONFIG_NET_BROADCAST
+  /* Allow broadcast ICMP packets (e.g., broadcast ping) to reach
+   * the local protocol stack. The ICMP input handler will decide
+   * whether to respond based on CONFIG_NET_ICMP_ECHO_BROADCASTS.
+   */
+
+  if (ipv4->proto == IP_PROTO_ICMP &&
+      (net_ipv4addr_cmp(destipaddr, INADDR_BROADCAST) ||
+       net_ipv4addr_broadcast(destipaddr, dev->d_netmask)))
+    {
+      goto local_deliver;
+    }
+  else
+#endif
   /* Check if the packet is destined for our IP address. */
 
   if (!net_ipv4addr_cmp(destipaddr, dev->d_ipaddr))
@@ -419,7 +433,11 @@ static int ipv4_in(FAR struct net_driver_s *dev)
             {
               goto done;
             }
+
 #endif
+          /* Accept this multicast packet for local delivery */
+
+          goto local_deliver;
         }
 
 #endif
@@ -475,6 +493,9 @@ static int ipv4_in(FAR struct net_driver_s *dev)
     }
 #endif
 
+#if defined(CONFIG_NET_IGMP) || defined(CONFIG_NET_BROADCAST)
+local_deliver:
+#endif
 #ifdef CONFIG_NET_IPV4_CHECKSUMS
   if (((dev->d_features & NETDEV_RX_CSUM) == 0)
       && (ipv4_chksum(IPv4BUF) != 0xffff))
