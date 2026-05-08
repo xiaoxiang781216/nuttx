@@ -1069,18 +1069,28 @@ static int fatfs_opendir(FAR struct inode *mountpt,
 static int fatfs_closedir(FAR struct inode *mountpt,
                           FAR struct fs_dirent_s *dir)
 {
+  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_dir_s *fdir;
+  int ret;
 
+  /* Recover our private data from the inode instance */
+
+  fs = mountpt->i_private;
   fdir = (FAR struct fatfs_dir_s *)dir;
+  ret = nxmutex_lock(&fs->lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
-  /* f_closedir only invalidates the directory object (sets obj.fs = 0)
-   * and does not modify any shared filesystem state, so no lock is
-   * needed here.
-   */
+  ret = fatfs_convert_result(f_closedir(&fdir->dir));
+  nxmutex_unlock(&fs->lock);
+  if (ret >= 0)
+    {
+      fs_heap_free(fdir);
+    }
 
-  fdir->dir.obj.fs = 0;
-  fs_heap_free(fdir);
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
