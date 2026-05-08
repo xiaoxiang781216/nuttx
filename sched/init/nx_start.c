@@ -634,7 +634,7 @@ static void memory_initialize(void)
     }
 #endif
 
-  g_pidhash = kmm_zalloc(sizeof(*g_pidhash) * (size_t)i);
+  g_pidhash = kmm_zalloc(sizeof(FAR struct tcb_s *) * (size_t)i);
   DEBUGASSERT(g_pidhash);
 
   g_npidhash = i;
