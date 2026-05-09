@@ -1470,6 +1470,26 @@ static int audio_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 #endif
 
 /****************************************************************************
+ * Name: audio_check_mq
+ *
+ * Description:
+ *   Check if the message queue has pending messages.
+ *
+ ****************************************************************************/
+
+static bool audio_check_mq(FAR struct file *mq)
+{
+  struct mq_attr attr;
+
+  if (mq == NULL || file_mq_getattr(mq, &attr) < 0)
+    {
+      return false;
+    }
+
+  return attr.mq_curmsgs > 0;
+}
+
+/****************************************************************************
  * Name: audio_poll
  *
  * Description:
@@ -1494,15 +1514,27 @@ static int audio_poll(FAR struct file *filep,
     {
       priv->fd = fds;
       fds->priv = &priv->fd;
+      eventset = 0;
 
-      if (priv->head - upper->status->tail != upper->periods)
+      if (upper->periods > 0)
         {
-          eventset = POLLIN | POLLOUT;
+          if (priv->head - upper->status->tail != upper->periods)
+            {
+              eventset = POLLIN | POLLOUT;
+            }
+
           if ((long)(priv->head - upper->status->tail) <= 0)
             {
               eventset |= POLLERR;
             }
+        }
+      else if (audio_check_mq(priv->usermq))
+        {
+          eventset = POLLIN | POLLOUT;
+        }
 
+      if (eventset)
+        {
           poll_notify(&fds, 1, eventset);
         }
     }
@@ -1546,7 +1578,8 @@ static inline void audio_sendmsg(FAR struct audio_upperhalf_s *upper,
       if (priv->fd)
         {
           eventset = POLLIN | POLLOUT;
-          if ((long)(priv->head - upper->status->tail) <= 0)
+          if (upper->periods > 0 &&
+              (long)(priv->head - upper->status->tail) <= 0)
             {
               eventset |= POLLERR;
             }
