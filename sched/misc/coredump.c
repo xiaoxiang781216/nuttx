@@ -294,13 +294,16 @@ static bool elf_exist_hdr(FAR struct lib_instream_s *instream)
 
 static int elf_get_ntcb(void)
 {
+  FAR struct tcb_s *tcb;
   int count = 0;
   int i;
 
   for (i = 0; i < g_npidhash; i++)
     {
-      if (nxsched_verify_pid(i))
+      tcb = nxsched_get_tcb_by_index(i);
+      if (tcb)
         {
+          nxsched_put_tcb(tcb);
           count++;
         }
     }
