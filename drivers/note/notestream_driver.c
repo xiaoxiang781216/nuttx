@@ -82,7 +82,7 @@ DEFINE_PER_CPU_BMP(struct notestream_s, g_notestream) =
 {
   {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-    CONFIG_DRIVERS_NOTESTREAM_PATH,
+    "stream",
     {
       {
         CONFIG_DRIVERS_NOTESTREAM_FILTER_DEFAULT_MODE,

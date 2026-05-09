@@ -177,7 +177,7 @@ static DEFINE_PER_CPU_BMP(struct notebuf_driver_s, g_notebufstream) =
 {
   {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-    CONFIG_DRIVERS_NOTESTREAM_PATH,
+    "stream",
     {
       {
         CONFIG_DRIVERS_NOTESTREAM_FILTER_DEFAULT_MODE,
