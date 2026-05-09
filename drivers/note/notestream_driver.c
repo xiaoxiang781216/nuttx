@@ -123,7 +123,6 @@ static int notestream_add(FAR struct note_driver_s *drv,
 {
   FAR struct notestream_s *stream = (FAR struct notestream_s *)drv;
   int32_t expected = NOTESTREAM_IDLE;
-  FAR char *slash;
   int ret;
 
   if (atomic_read(&stream->state) != NOTESTREAM_READY)
@@ -140,12 +139,17 @@ static int notestream_add(FAR struct note_driver_s *drv,
                                    O_WRONLY | O_CREAT, 0666);
       if (ret == -ENOENT)
         {
-          slash = strrchr(stream->path, '/');
-          if (slash > stream->path)
+          /* Use a stack buffer to avoid modifying the const path string */
+
+          char dir[PATH_MAX];
+          FAR char *slash;
+
+          strlcpy(dir, stream->path, sizeof(dir));
+          slash = strrchr(dir, '/');
+          if (slash > dir)
             {
               *slash = '\0';
-              mkdir(stream->path, 0777);
-              *slash = '/';
+              mkdir(dir, 0777);
               ret = lib_fileoutstream_open(&stream->filestream,
                                            stream->path,
                                            O_WRONLY | O_CREAT,
