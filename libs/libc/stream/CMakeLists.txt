@@ -34,8 +34,6 @@ list(
   lib_zeroinstream.c
   lib_nullinstream.c
   lib_nulloutstream.c
-  lib_mtdoutstream.c
-  lib_mtdsostream.c
   lib_libnoflush.c
   lib_libsnoflush.c
   lib_syslogstream.c
@@ -71,8 +69,18 @@ if(CONFIG_LIBC_LZF)
   list(APPEND SRCS lib_lzfcompress.c lib_lzfdecompress.c)
 endif()
 
-if(NOT CONFIG_DISABLE_MOUNTPOINT)
-  list(APPEND SRCS lib_blkoutstream.c lib_blksistream.c lib_mtdsistream.c)
+# Block device streams operate through the block driver inode helpers
+# (open_blockdriver / i_bops), so they follow CONFIG_FS_BLOCK_DRIVER.
+
+if(CONFIG_FS_BLOCK_DRIVER)
+  list(APPEND SRCS lib_blkoutstream.c lib_blksistream.c)
+endif()
+
+# MTD device streams operate directly on the MTD interface (find_mtddriver /
+# i_mtd / MTD_ERASE / MTD_BWRITE), so they follow CONFIG_MTD.
+
+if(CONFIG_MTD)
+  list(APPEND SRCS lib_mtdoutstream.c lib_mtdsostream.c lib_mtdsistream.c)
 endif()
 
 target_sources(c PRIVATE ${SRCS})

@@ -39,11 +39,9 @@
 #endif
 #include <stdio.h>
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
-#  include <nuttx/fs/fs.h>
-#  ifdef CONFIG_MTD
-#    include <nuttx/mtd/mtd.h>
-#  endif
+#include <nuttx/fs/fs.h>
+#ifdef CONFIG_MTD
+#  include <nuttx/mtd/mtd.h>
 #endif
 
 /****************************************************************************
@@ -230,7 +228,6 @@ struct lib_rawsostream_s
   int                    fd;
 };
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
 struct lib_filesistream_s
 {
   struct lib_sistream_s  common;
@@ -242,7 +239,6 @@ struct lib_fileoutstream_s
   struct lib_outstream_s common;
   struct file            file;
 };
-#endif
 
 struct lib_bufferedoutstream_s
 {
@@ -326,7 +322,7 @@ struct lib_lzfoutstream_s
 };
 #endif
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
+#ifdef CONFIG_FS_BLOCK_DRIVER
 struct lib_blksistream_s
 {
   struct lib_sistream_s  common;
@@ -345,7 +341,7 @@ struct lib_blkoutstream_s
 };
 #endif
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+#ifdef CONFIG_MTD
 struct lib_mtdoutstream_s
 {
   struct lib_sostream_s  common;
@@ -476,14 +472,12 @@ void lib_stdsostream(FAR struct lib_stdsostream_s *stream,
  *
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
 int lib_filesistream_open(FAR struct lib_filesistream_s *stream,
                           FAR const char *path, int oflag, mode_t mode);
 void lib_filesistream_close(FAR struct lib_filesistream_s *stream);
 int lib_fileoutstream_open(FAR struct lib_fileoutstream_s *stream,
                            FAR const char *path, int oflag, mode_t mode);
 void lib_fileoutstream_close(FAR struct lib_fileoutstream_s *stream);
-#endif
 
 /****************************************************************************
  * Name: lib_rawinstream, lib_rawoutstream, lib_rawsistream, and
@@ -760,7 +754,7 @@ void lib_lzfoutstream(FAR struct lib_lzfoutstream_s *stream,
  *
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
+#ifdef CONFIG_FS_BLOCK_DRIVER
 int lib_blkoutstream_open(FAR struct lib_blkoutstream_s *stream,
                           FAR const char *name);
 void lib_blkoutstream_close(FAR struct lib_blkoutstream_s *stream);
@@ -810,7 +804,7 @@ void lib_blksistream_close(FAR struct lib_blksistream_s *stream);
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+#ifdef CONFIG_MTD
 int lib_mtdoutstream_open(FAR struct lib_mtdoutstream_s *stream,
                           FAR const char *name);
 #endif
@@ -830,7 +824,7 @@ int lib_mtdoutstream_open(FAR struct lib_mtdoutstream_s *stream,
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+#ifdef CONFIG_MTD
 void lib_mtdoutstream_close(FAR struct lib_mtdoutstream_s *stream);
 #endif
 
@@ -850,7 +844,7 @@ void lib_mtdoutstream_close(FAR struct lib_mtdoutstream_s *stream);
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+#ifdef CONFIG_MTD
 int lib_mtdsostream_open(FAR struct lib_mtdsostream_s *stream,
                          FAR const char *name);
 #endif
@@ -870,7 +864,7 @@ int lib_mtdsostream_open(FAR struct lib_mtdsostream_s *stream,
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+#ifdef CONFIG_MTD
 void lib_mtdsostream_close(FAR struct lib_mtdsostream_s *stream);
 
 /****************************************************************************

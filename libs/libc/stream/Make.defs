@@ -27,9 +27,8 @@ CSRCS += lib_meminstream.c lib_memoutstream.c lib_memsistream.c
 CSRCS += lib_memsostream.c lib_lowoutstream.c lib_rawinstream.c
 CSRCS += lib_rawoutstream.c lib_rawsistream.c lib_rawsostream.c
 CSRCS += lib_zeroinstream.c lib_nullinstream.c lib_nulloutstream.c
-CSRCS += lib_mtdoutstream.c lib_libnoflush.c lib_libsnoflush.c
+CSRCS += lib_libnoflush.c lib_libsnoflush.c lib_base64outstream.c
 CSRCS += lib_syslogstream.c lib_bufferedoutstream.c lib_hexdumpstream.c
-CSRCS += lib_base64outstream.c lib_mtdsostream.c
 CSRCS += lib_filesistream.c lib_fileoutstream.c lib_libosprintf.c
 CSRCS += lib_libbsprintf.c lib_libvscanf.c lib_libvsprintf.c lib_ultoa_invert.c
 
@@ -56,8 +55,18 @@ ifeq ($(CONFIG_LIBC_LZF),y)
 CSRCS += lib_lzfcompress.c lib_lzfdecompress.c
 endif
 
-ifeq ($(CONFIG_DISABLE_MOUNTPOINT),)
-CSRCS += lib_blkoutstream.c lib_blksistream.c lib_mtdsistream.c
+# Block device streams operate through the block driver inode helpers
+# (open_blockdriver / i_bops), so they follow CONFIG_FS_BLOCK_DRIVER.
+
+ifeq ($(CONFIG_FS_BLOCK_DRIVER),y)
+CSRCS += lib_blkoutstream.c lib_blksistream.c
+endif
+
+# MTD device streams operate directly on the MTD interface (find_mtddriver /
+# i_mtd / MTD_ERASE / MTD_BWRITE), so they follow CONFIG_MTD.
+
+ifeq ($(CONFIG_MTD),y)
+CSRCS += lib_mtdoutstream.c lib_mtdsostream.c lib_mtdsistream.c
 endif
 
 # Add the stdio directory to the build

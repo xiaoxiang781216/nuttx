@@ -32,12 +32,6 @@
 #include "libc.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -355,5 +349,3 @@ int lib_mtdsostream_open(FAR struct lib_mtdsostream_s *stream,
 
   return OK;
 }
-
-#endif /* CONFIG_MTD */
