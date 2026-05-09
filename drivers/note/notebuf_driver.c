@@ -26,6 +26,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <nuttx/note/notebuf_driver.h>
 
 #define NOTEBUF_MAX_NOTELEN 256
@@ -52,7 +53,9 @@
 
 static void notebuf_skip(FAR struct notebuf_driver_s *buf, size_t len)
 {
-#ifndef CONFIG_DRIVERS_NOTEBUF_NOOVERWRITE
+#ifdef CONFIG_DRIVERS_NOTEBUF_NOOVERWRITE
+  DEBUGASSERT(ring_space(&buf->ring) >= len);
+#else
   irqstate_t flags;
   uint8_t skip;
 
@@ -78,25 +81,6 @@ static void notebuf_flush(FAR void *arg)
 {
   FAR struct notebuf_driver_s *buf = (FAR struct notebuf_driver_s *)arg;
   FAR struct note_driver_s *lower = buf->lower;
-
-#ifdef CONFIG_DRIVERS_NOTEBUF_NOOVERWRITE
-  irqstate_t flags;
-  uint8_t note[NOTEBUF_MAX_NOTELEN];
-
-  flags = spin_lock_irqsave_notrace(&buf->lock);
-  while (ring_mpsc_dequeue(&buf->ring, note, 1) > 0)
-    {
-      uint8_t notelen = note[0];
-
-      notelen = ring_mpsc_dequeue(&buf->ring, &note[1], notelen - 1);
-
-      spin_unlock_irqrestore_notrace(&buf->lock, flags);
-      lower->ops->add(lower, note, notelen + 1, false);
-      flags = spin_lock_irqsave_notrace(&buf->lock);
-    }
-
-  spin_unlock_irqrestore_notrace(&buf->lock, flags);
-#else
   struct ring_buf_s rb;
 
   ring_mpsc_dequeue_start(&buf->ring,
@@ -112,7 +96,6 @@ static void notebuf_flush(FAR void *arg)
     }
 
   ring_mpsc_dequeue_finish(&buf->ring, &rb);
-#endif
 }
 
 static void notebuf_flush_all(FAR struct note_driver_s *drv)
@@ -150,7 +133,8 @@ static int notebuf_add(FAR struct note_driver_s *drv,
   ring_mpsc_enqueue(&buf->ring, note, len);
 
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_DELAY > 0
-  if (!noswitches)
+  if (ring_space(&buf->ring) <= ring_capacity(&buf->ring) / 2
+      && work_available(&buf->work))
     {
       work_queue(NOTEBUF_HPWORK, &buf->work,
                  notebuf_flush, buf,
