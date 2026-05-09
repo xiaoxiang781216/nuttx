@@ -97,7 +97,7 @@ if(CONFIG_ARCH_JUMP_LABEL)
   list(APPEND SRCS tricore_jump_label.c)
 endif()
 
-set(IFXFLAGS -DIFX_CFG_EXTEND_TRAP_HOOKS -DIFX_USE_SW_MANAGED_INT)
+set(IFXFLAGS -DIFX_CFG_EXTEND_TRAP_HOOKS)
 
 target_sources(arch PRIVATE ${SRCS})
 nuttx_add_aux_library(STARTUP_OBJS crt0.c)
@@ -105,7 +105,7 @@ target_compile_options(
   STARTUP_OBJS
   PRIVATE
     $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_COMPILE_OPTIONS>>)
-target_sources(nuttx PRIVATE tricore_doirq.c)
+target_sources(nuttx PRIVATE tricore_doirq.c tricore_vectors.c)
 target_compile_options(arch PRIVATE ${IFXFLAGS})
 target_compile_options(nuttx PRIVATE ${IFXFLAGS})
 target_include_directories(
