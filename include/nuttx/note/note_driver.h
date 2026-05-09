@@ -313,6 +313,7 @@
 
 #define NOTE_CREATE                      _NOTEIOC(0x13)
 #define NOTE_DESTROY                     _NOTEIOC(0x14)
+#define NOTE_FLUSH                       _NOTEIOC(0x15)
 
 /* Overwrite mode definitions */
 

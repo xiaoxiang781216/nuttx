@@ -709,6 +709,15 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
         break;
 #endif
 
+      case NOTE_FLUSH:
+        spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
+        if (driver->ops->flush)
+          {
+            driver->ops->flush(driver);
+          }
+
+        return OK;
+
       default:
         ret = -ENOTTY;
         break;
