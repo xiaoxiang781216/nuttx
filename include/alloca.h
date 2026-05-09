@@ -39,14 +39,6 @@
 #  undef  __alloca
 #  define alloca(size)   _alloca(size)
 #  define __alloca(size) _alloca(size)
-#elif defined(__TASKING__)
-#  undef  alloca
-#  define alloca(size)                                          \
-    ({                                                          \
-      char __alloca_array[size] aligned_data(8);                \
-      (FAR void *)__alloca_array;                               \
-    })
-
 #endif
 
 #endif /* __INCLUDE_ALLOCA_H */
