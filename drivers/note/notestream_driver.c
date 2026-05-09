@@ -29,6 +29,7 @@
 
 #include <nuttx/atomic.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/init.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/streams.h>
 #include <nuttx/note/note_driver.h>
@@ -127,7 +128,8 @@ static int notestream_add(FAR struct note_driver_s *drv,
 
   if (atomic_read(&stream->state) != NOTESTREAM_READY)
     {
-      if (!note_is_safe(note, len, noswitches) ||
+      if (!OSINIT_IDLELOOP() ||
+          !note_is_safe(note, len, noswitches) ||
           !atomic_cmpxchg(&stream->state, &expected, NOTESTREAM_OPENING))
         {
           return -EAGAIN;
