@@ -44,9 +44,26 @@
  ****************************************************************************/
 
 #ifdef CONFIG_HAVE_LONG_DOUBLE
+#if LDBL_MANT_DIG == DBL_MANT_DIG
+
+/* long double has the same representation as double on this target
+ * (e.g. ARM EABI, RISC-V without Q-ext, etc.).  Delegate to trunc() to
+ * avoid the 80-bit x87 union punning below, which would read past the
+ * end of x on a 64-bit long double.
+ */
+
+long double truncl(long double x)
+{
+  return trunc(x);
+}
+
+#else
+
 static const long double toint = 1 / LDBL_EPSILON;
 
-/* FIXME This will only work if long double is 64 bit and little endian */
+/* This implementation assumes long double is 80-bit x87 extended
+ * precision, little endian.
+ */
 
 union ldshape
 {
@@ -62,8 +79,10 @@ long double truncl(long double x)
 {
   union ldshape u =
     {
-      x
+      0
     };
+
+  u.f = x;
 
   int e = u.i.se & 0x7fff;
   int s = u.i.se >> 15;
@@ -100,4 +119,6 @@ long double truncl(long double x)
   x += y;
   return s ? -x : x;
 }
-#endif
+
+#endif /* LDBL_MANT_DIG == DBL_MANT_DIG */
+#endif /* CONFIG_HAVE_LONG_DOUBLE */
