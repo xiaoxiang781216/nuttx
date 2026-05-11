@@ -44,7 +44,12 @@ USER_LDFLAGS += --cref -Map="$(TOPDIR)$(DELIM)User.map"
 endif
 
 USER_LDLIBS = $(patsubst lib%,-l%,$(basename $(notdir $(USERLIBS))))
-USER_LIBGCC = "${shell "$(CC)" $(ARCHCPUFLAGS) -print-libgcc-file-name}"
+
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+  RTLIB="-rtlib=compiler-rt"
+endif
+
+USER_LIBGCC = "${shell "$(CC)"  $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) -print-libgcc-file-name $(RTLIB)}"
 
 # Source files
 

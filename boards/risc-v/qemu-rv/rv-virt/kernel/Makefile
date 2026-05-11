@@ -39,7 +39,12 @@ USER_BINFILE += $(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx_user.bin)
 
 USER_LDFLAGS = --undefined=$(ENTRYPT) --entry=$(ENTRYPT) -T $(addsuffix .tmp,$(USER_LDSCRIPT))
 USER_LDLIBS = $(patsubst lib%,-l%,$(basename $(notdir $(USERLIBS))))
-USER_LIBGCC = "${shell "$(CC)" $(ARCHCPUFLAGS) -print-libgcc-file-name}"
+
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+  RTLIB="-rtlib=compiler-rt"
+endif
+
+USER_LIBGCC = "${shell "$(CC)"  $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) -print-libgcc-file-name $(RTLIB)}"
 
 ifeq ($(CONFIG_ARCH_RV32),y)
   USER_LDFLAGS += --oformat elf32-littleriscv
