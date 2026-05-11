@@ -91,6 +91,14 @@
 #  define IRQ_LINELEN 96
 #endif
 
+/* This is the number of entries in the interrupt vector table */
+
+#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
+#  define TAB_SIZE CONFIG_ARCH_NUSER_INTERRUPTS
+#else
+#  define TAB_SIZE NR_IRQS
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -299,40 +307,60 @@ static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
   FAR struct irq_file_s *irqfile;
   size_t linesize;
   size_t copysize;
+  int irq;
+  int ret;
 
-  finfo("buffer=%p buflen=%d\n", buffer, (int)buflen);
+  finfo("buffer=%p buflen=%zu\n", buffer, buflen);
 
   /* Recover our private data from the struct file instance */
 
   irqfile = (FAR struct irq_file_s *)filep->f_priv;
   DEBUGASSERT(irqfile);
 
-  /* Save the file offset and the user buffer information */
+  /* Since f_pos tracks the IRQ index and each read() starts from the
+   * next unprocessed IRQ, offset and ncopied always begin at zero.
+   */
 
-  irqfile->offset    = filep->f_pos;
+  irqfile->offset    = 0;
+  irqfile->ncopied   = 0;
   irqfile->buffer    = buffer;
   irqfile->remaining = buflen;
 
-  /* The first line to output is the header */
+  /* Output the header only on the first read (f_pos == 0) */
 
-  linesize = snprintf(irqfile->line, IRQ_LINELEN, HDR_FMT);
+  if (filep->f_pos == 0)
+    {
+      linesize = snprintf(irqfile->line, IRQ_LINELEN, HDR_FMT);
 
-  copysize = procfs_memcpy(irqfile->line, linesize, irqfile->buffer,
-                           irqfile->remaining, &irqfile->offset);
+      copysize = procfs_memcpy(irqfile->line, linesize, irqfile->buffer,
+                              irqfile->remaining, &irqfile->offset);
 
-  irqfile->ncopied    = copysize;
-  irqfile->buffer    += copysize;
-  irqfile->remaining -= copysize;
+      irqfile->ncopied    = copysize;
+      irqfile->buffer    += copysize;
+      irqfile->remaining -= copysize;
+    }
 
-  /* Now traverse the list of attached interrupts, generating output for
-   * each.
+  /* Iterate directly over the IRQ vector table starting from the last
+   * position.  This replaces irq_foreach() to allow resuming from a
+   * specific IRQ index across multiple read() calls.
    */
 
-  irq_foreach(irq_callback, (FAR void *)irqfile);
+  for (irq = filep->f_pos; irq < TAB_SIZE; irq++)
+    {
+      if (g_irqvector[irq].handler != NULL &&
+          g_irqvector[irq].handler != irq_unexpected_isr)
+        {
+          ret = irq_callback(irq, &g_irqvector[irq], irqfile);
+          if (ret != 0)
+            {
+              break;
+            }
+        }
+    }
 
-  /* Update the file position */
+  /* Update f_pos to the current IRQ index for the next read() call */
 
-  filep->f_pos += irqfile->ncopied;
+  filep->f_pos = irq;
   return irqfile->ncopied;
 }
 
