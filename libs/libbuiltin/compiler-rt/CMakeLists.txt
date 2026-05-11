@@ -68,7 +68,7 @@ list(APPEND INCDIR ${CMAKE_CURRENT_LIST_DIR}/compiler-rt/include)
 
 if(CONFIG_BUILTIN_COMPILER_RT)
 
-  nuttx_add_system_library(rt.buitlins)
+  nuttx_add_kernel_library(rt.buitlins SPLIT)
 
   target_include_directories(
     rt.buitlins PRIVATE ${INCDIR}
