@@ -33,6 +33,7 @@
 #include <errno.h>
 
 #include <nuttx/irq.h>
+#include <nuttx/nuttx.h>
 
 #include "clock/clock.h"
 #include "timer/timer.h"
@@ -69,7 +70,7 @@ static inline_function bool
 timer_delay_validate(FAR const struct timespec *ts)
 {
   DEBUGASSERT(ts);
-  return ts->tv_sec < TICK2SEC(WDOG_MAX_DELAY);
+  return ts->tv_sec < HRTIMER_MAX_DELAY / NSEC_PER_SEC;
 }
 
 /****************************************************************************
@@ -86,7 +87,7 @@ timer_delay_validate(FAR const struct timespec *ts)
  *   None
  *
  * Assumptions:
- *   This function executes in the context of the watchod timer interrupt.
+ *   This function executes within the critical sections.
  *
  ****************************************************************************/
 
@@ -109,21 +110,24 @@ static inline void timer_signotify(FAR struct posix_timer_s *timer)
  *   signaled.
  *
  * Input Parameters:
- *   arg - A reference to the POSIX timer that just timed out
- *
- * Returned Value:
- *   None
+ *   hrtimer - The hrtimer pointer
+ *   expired - Expired time in nanoseconds.
  *
  * Assumptions:
- *   This function executes in the context of the watchdog timer interrupt.
+ *   This function executes in the context of the timer interrupt.
+ *   The hrtimer is not NULL.
  *
  ****************************************************************************/
 
-static void timer_timeout(wdparm_t arg)
+static uint64_t timer_timeout(FAR const hrtimer_t *hrtimer, uint64_t expired)
 {
-  FAR struct posix_timer_s *timer = (FAR struct posix_timer_s *)arg;
-  clock_t                   delay = clock_systime_ticks() -
-                                    timer->pt_timer.expired;
+  FAR struct posix_timer_s *timer = container_of(hrtimer,
+                                                 struct posix_timer_s,
+                                                 pt_timer);
+  uint64_t delay      = clock_systime_nsec() - expired;
+  uint64_t next_delay = 0u;
+
+  DEBUGASSERT(timer);
 
   /* Send the specified signal to the specified task. Increment the
    * reference count on the timer first so that will not be deleted until
@@ -159,15 +163,23 @@ static void timer_timeout(wdparm_t arg)
            * (delay + timer->pt_delay) should not overflow.
            */
 
-          clock_t frame = (delay + timer->pt_delay) / timer->pt_delay;
-          clock_t next  = frame * timer->pt_delay;
+          uint64_t frame = (delay + timer->pt_delay) / timer->pt_delay;
+          next_delay     = frame * timer->pt_delay;
           atomic_set(&timer->pt_overrun, (int32_t)(frame - 1u));
           DEBUGASSERT(frame <= INT_MAX + 1u);
 
-          wd_start_next(&timer->pt_timer, next, timer_timeout,
-                        (wdparm_t)timer);
+          /* To avoid the periodical hrtimer starving,
+           * we have to round-up the minimal interval to NSEC_PER_TICK.
+           */
+
+          next_delay = next_delay < NSEC_PER_TICK ?
+                       NSEC_PER_TICK : next_delay;
         }
     }
+
+  DEBUGASSERT(next_delay <= HRTIMER_MAX_DELAY);
+
+  return next_delay;
 }
 
 /****************************************************************************
@@ -243,7 +255,6 @@ int timer_settime(timer_t timerid, int flags,
                   FAR struct itimerspec *ovalue)
 {
   FAR struct posix_timer_s *timer = timer_gethandle(timerid);
-  clock_t delay;
   int ret = -EINVAL;
 
   /* Some sanity checks */
@@ -257,21 +268,16 @@ int timer_settime(timer_t timerid, int flags,
 
       if (ovalue)
         {
-          /* Get the number of ticks before the underlying watchdog expires */
+          /* Get the remaining time */
 
-          delay = wd_gettime(&timer->pt_timer);
-
-          /* Convert that to a struct timespec and return it */
-
-          clock_ticks2time(&ovalue->it_value, delay);
-          clock_ticks2time(&ovalue->it_interval, timer->pt_delay);
+          clock_nsec2time(&ovalue->it_value,
+                          hrtimer_gettime(&timer->pt_timer));
+          clock_nsec2time(&ovalue->it_interval, timer->pt_delay);
         }
 
-      /* Disarm the timer (in case the timer was already armed when
-       * timer_settime() is called).
-       */
+      /* Disarm the timer and wait the callback to finish. */
 
-      wd_cancel(&timer->pt_timer);
+      hrtimer_cancel_sync(&timer->pt_timer);
 
       /* Now we have the ownership of the timer, we can modify the
        * timer without any lock.
@@ -287,13 +293,14 @@ int timer_settime(timer_t timerid, int flags,
 
       if (value->it_value.tv_sec > 0 || value->it_value.tv_nsec > 0)
         {
+          uint64_t delay = 0u;
+
           /* Setup up any repetitive timer */
 
           if (value->it_interval.tv_sec > 0 ||
               value->it_interval.tv_nsec > 0)
             {
-              delay = clock_time2ticks(&value->it_interval);
-              timer->pt_delay = delay;
+              timer->pt_delay = clock_time2nsec(&value->it_interval);
             }
           else
             {
@@ -308,25 +315,26 @@ int timer_settime(timer_t timerid, int flags,
                * absolute time in 'value'.
                */
 
-              /* Note the timespec->tick conversion here may overflow. */
+              struct timespec now;
+              struct timespec reltime;
 
-              clock_abstime2ticks(timer->pt_clock, &value->it_value, &delay);
+              nxclock_gettime(timer->pt_clock, &now);
+              clock_timespec_subtract(&value->it_value, &now, &reltime);
+              delay = clock_time2nsec(&reltime);
             }
           else
             {
               /* Calculate a delay assuming that 'value' holds the
                * relative time to wait.
-               * We have internal knowledge that clock_time2ticks always
-               * returns success.
                */
 
-              delay = clock_time2ticks(&value->it_value);
+              delay = clock_time2nsec(&value->it_value);
             }
 
-          /* Then start the watchdog */
+          /* Then start the timer */
 
-          ret = wd_start(&timer->pt_timer, delay, timer_timeout,
-                         (wdparm_t)timer);
+          hrtimer_start(&timer->pt_timer, timer_timeout, delay,
+                        HRTIMER_MODE_REL);
         }
     }
 

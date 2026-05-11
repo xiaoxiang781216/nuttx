@@ -101,7 +101,7 @@ static inline void timer_free(struct posix_timer_s *timer, bool delay)
  *   timer - The per-thread timer, previously created by the call to
  *     timer_create(), to be deleted.
  *   delay - If true, timer_free will use delayfree.
- *   in_expiration  - If true, we can not call wd_cancel.
+ *   in_expiration  - If true, we can not call hrtimer_cancel_sync.
  *
  * Returned Value:
  *   If the call succeeds, timer_release() will return false or true (meaning
@@ -125,7 +125,7 @@ bool timer_release(FAR struct posix_timer_s *timer, bool delay,
 
   if (!in_expiration)
     {
-      wd_cancel(&timer->pt_timer);
+      hrtimer_cancel_sync(&timer->pt_timer);
     }
 
   /* Release one reference to timer.  Don't delete the timer until the count

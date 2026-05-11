@@ -34,8 +34,8 @@
 
 #include <nuttx/atomic.h>
 #include <nuttx/compiler.h>
+#include <nuttx/hrtimer.h>
 #include <nuttx/signal.h>
-#include <nuttx/wdog.h>
 #include <nuttx/spinlock.h>
 
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
@@ -61,8 +61,8 @@ struct posix_timer_s
   uint8_t          pt_crefs;       /* Reference count */
   pid_t            pt_owner;       /* Creator of timer */
   atomic_t         pt_overrun;     /* Overrun time */
-  clock_t          pt_delay;       /* If non-zero, used to reset repetitive timers */
-  struct wdog_s    pt_timer;       /* The watchdog that provides the timing */
+  uint64_t         pt_delay;       /* If non-zero, periodic interval in nanoseconds */
+  struct hrtimer_s pt_timer;       /* High-resolution timer */
   struct sigevent  pt_event;       /* Notification information */
 #ifdef CONFIG_SIG_EVTHREAD
   struct sigwork_s pt_work;

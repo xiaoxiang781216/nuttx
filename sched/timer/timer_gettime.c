@@ -77,14 +77,11 @@ int timer_gettime(timer_t timerid, FAR struct itimerspec *value)
 
   if (timer && value)
     {
-      /* Get the number of ticks before the underlying watchdog expires */
-
-      clock_t ticks = wd_gettime(&timer->pt_timer);
+      clock_nsec2time(&value->it_value, hrtimer_gettime(&timer->pt_timer));
 
       /* Convert that to a struct timespec and return it */
 
-      clock_ticks2time(&value->it_value, ticks);
-      clock_ticks2time(&value->it_interval, timer->pt_delay);
+      clock_nsec2time(&value->it_interval, timer->pt_delay);
     }
   else
     {
