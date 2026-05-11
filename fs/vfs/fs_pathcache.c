@@ -523,8 +523,15 @@ errout_with_pathbuffer:
  * Name: pathcache_close
  *
  * Description:
- *   Close a file with caching support. If the file was opened with WRONLY
- *   or TRUNC, update the cache entry.
+ *   Close a file with caching support.  For files opened with write
+ *   access we drop any cache entry that may have been inserted by a
+ *   concurrent reader while the write was in flight.  We deliberately
+ *   do NOT insert a fresh cache entry here: the path passed in is
+ *   obtained via F_GETPATH and may have been invalidated by a mid-open
+ *   rename/unlink, and re-inserting under such a path would resurrect
+ *   a dangling reference whose f_priv points to blocks the file system
+ *   has already freed.  Rebuilding the cache is left to the next read
+ *   open, which goes through the normal miss path.
  *
  * Input Parameters:
  *   filep   - File structure being closed
@@ -537,15 +544,14 @@ errout_with_pathbuffer:
 
 int pathcache_close(FAR struct file *filep, FAR const char *path)
 {
-  FAR struct inode *inode;
   FAR char *pathbuffer;
   FAR char *abspath;
   int ret = OK;
 
   DEBUGASSERT(filep != NULL && path != NULL);
 
-  /* Check if the file is opened with WRONLY or TRUNC.
-   * If not, no need to update the cache.
+  /* Read-only files never touched the cache during close, and their
+   * entry is still valid, so there is nothing to do.
    */
 
   if (!(filep->f_oflags & O_WRONLY))
@@ -553,7 +559,7 @@ int pathcache_close(FAR struct file *filep, FAR const char *path)
       return OK;
     }
 
-  /* Get the canonical absolute path for creating new entry */
+  /* Get the canonical absolute path for locating the cache entry */
 
   pathbuffer = lib_get_tempbuffer(PATH_MAX);
   if (pathbuffer == NULL)
@@ -568,36 +574,12 @@ int pathcache_close(FAR struct file *filep, FAR const char *path)
       goto errout_with_pathbuffer;
     }
 
-  /* Sync (flush) the file before snapshotting it into the cache.
-   *
-   * pathcache_close() is called from file_close() BEFORE the underlying
-   * i_ops->close() which is where the filesystem (e.g. littlefs) would
-   * normally run its final sync and update on-disk metadata such as
-   * ctz.size.  If we dup the file before that sync, the cached copy
-   * captures a pre-flush state (e.g. lfs_file_t.ctz.size == 0 even
-   * though 16 KB was written), causing every subsequent read from the
-   * cached descriptor to hit EOF immediately.
-   *
-   * By explicitly calling i_mops->sync here we force the file to be
-   * flushed now so that the dup inside pathcache_create sees the correct
-   * final state.  The redundant flush that happens later inside
-   * i_ops->close() is a no-op because there is nothing left to flush.
+  /* Drop any entry a concurrent reader may have inserted while we
+   * were holding the file open for write.  Such an entry would have
+   * captured a mid-write snapshot of the file state.
    */
 
-  inode = filep->f_inode;
-  if (inode->u.i_mops->sync != NULL)
-    {
-      ret = inode->u.i_mops->sync(filep);
-      if (ret < 0)
-        {
-          goto errout_with_pathbuffer;
-        }
-    }
-
-  /* Remove the old cache entry and create a fresh one. */
-
   lru_cache_remove(&g_pathcache, abspath);
-  pathcache_create(filep, abspath);
 
 errout_with_pathbuffer:
   lib_put_tempbuffer(pathbuffer);
