@@ -209,7 +209,8 @@ static inline_function bool syslog_is_enabled(int priority)
       tag = NXTAG_GLOBAL;
     }
 
-  return (g_syslog_mask[tag] & LOG_MASK(level)) != 0;
+  return (g_syslog_mask[NXTAG_GLOBAL] & LOG_MASK(level)) != 0 &&
+         (g_syslog_mask[tag] & LOG_MASK(level)) != 0;
 }
 
 /****************************************************************************
