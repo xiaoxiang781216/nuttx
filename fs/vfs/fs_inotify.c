@@ -884,6 +884,7 @@ static void notify_queue_path_event(FAR const char *path, uint32_t mask)
   FAR char *abspath;
   FAR char *pathbuffer;
   FAR char *pathcopy;
+  size_t pathlen;
   uint32_t cookie = 0;
 
   if (path == NULL || *path == '\0')
@@ -900,6 +901,13 @@ static void notify_queue_path_event(FAR const char *path, uint32_t mask)
   /* Copy path to a separate buffer before lib_realpath reads it,
    * to avoid KASAN use-after-free when the caller's path buffer
    * has adjacent poisoned memory from a concurrent free.
+   *
+   * Use strnlen + memcpy instead of strlcpy to bound the read on
+   * the source buffer: strlcpy's return-value path walks src past
+   * dsize looking for the terminating NUL, which triggers an
+   * out-of-bounds read when the caller's path buffer happens to
+   * have no NUL within its first PATH_MAX bytes (observed as an
+   * ASan heap-buffer-overflow during close()).
    */
 
   pathcopy = lib_get_tempbuffer(PATH_MAX);
@@ -909,7 +917,10 @@ static void notify_queue_path_event(FAR const char *path, uint32_t mask)
       return;
     }
 
-  strlcpy(pathcopy, path, PATH_MAX);
+  pathlen = strnlen(path, PATH_MAX - 1);
+  memcpy(pathcopy, path, pathlen);
+  pathcopy[pathlen] = '\0';
+
   abspath = lib_realpath(pathcopy, pathbuffer, true);
   lib_put_tempbuffer(pathcopy);
   if (abspath == NULL)
