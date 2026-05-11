@@ -165,6 +165,13 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
 
   DEBUGASSERT(irqfile != NULL);
 
+  /* Check buffer space first to avoid false counter reset */
+
+  if (irqfile->remaining < IRQ_LINELEN)
+    {
+      return 1;
+    }
+
   /* Take a snapshot */
 
   memcpy(&copy, info, sizeof(struct irq_info_s));
