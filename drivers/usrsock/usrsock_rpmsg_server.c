@@ -1197,7 +1197,6 @@ static void usrsock_rpmsg_poll_setup(FAR struct pollfd *pfds,
 {
   FAR struct usrsock_rpmsg_s *priv = (FAR struct usrsock_rpmsg_s *)pfds->arg;
   FAR struct socket *psock = &priv->socks[pfds->fd];
-  FAR struct socket_conn_s *conn = psock->s_conn;
   int ret = 0;
 
   /* No poll for SOCK_CTRL. */
@@ -1207,13 +1206,24 @@ static void usrsock_rpmsg_poll_setup(FAR struct pollfd *pfds,
       return;
     }
 
-  nxrmutex_lock(&conn->s_lock);
-
   if (events)
     {
       if (pfds->events)
         {
           ret = psock_poll(psock, pfds, false);
+
+          /* poll_cb running in hpwork may concurrently nest into
+           * poll_setup(pfds, 0) and tear the callback down between our
+           * read of pfds->events above and the call to psock_poll()
+           * here. When that happens udp_pollteardown()/tcp_pollteardown()
+           * return -EINVAL because fds->priv has already been cleared.
+           * Treat that as benign and proceed to setup the fresh callback.
+           */
+
+          if (ret == -EINVAL)
+            {
+              ret = 0;
+            }
         }
 
       if (ret >= 0)
@@ -1241,8 +1251,6 @@ static void usrsock_rpmsg_poll_setup(FAR struct pollfd *pfds,
            ret, psock->s_domain, psock->s_type, pfds->fd,
            pfds->events, pfds->revents);
     }
-
-  nxrmutex_unlock(&conn->s_lock);
 }
 
 static void usrsock_rpmsg_poll_cb(FAR struct pollfd *pfds)
