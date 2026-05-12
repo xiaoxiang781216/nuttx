@@ -81,6 +81,10 @@ static void notelog_syscall_leave(FAR struct note_driver_s *drv,
 static void notelog_wdog(FAR struct note_driver_s *drv, uint8_t event,
                          FAR void *handler, FAR const void *arg);
 #endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+static void notelog_wqueue(FAR struct note_driver_s *drv, uint8_t event,
+                           FAR void *worker, FAR const void *arg);
+#endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
 static void notelog_heap(FAR struct note_driver_s *drv, uint8_t event,
                          FAR void *heap, FAR void *mem, size_t size,
@@ -123,6 +127,9 @@ static const struct note_driver_ops_s g_notelog_ops =
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
   notelog_wdog,          /* wdog */
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+  notelog_wqueue,        /* wqueue */
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
   notelog_heap,          /* heap */
@@ -377,5 +384,19 @@ static void notelog_heap(FAR struct note_driver_s *drv, uint8_t event,
 
   syslog(LOG_INFO, "heap: %s heap@%p mem@%p size=%zu used=%zu\n",
          name[event - NOTE_HEAP_ADD], heap, mem, size, curused);
+}
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+static void notelog_wqueue(FAR struct note_driver_s *drv, uint8_t event,
+                           FAR void *worker, FAR const void *arg)
+{
+  FAR static const char * const name[] =
+    {
+      "enqueue", "cancel", "enter", "leave"
+    };
+
+  syslog(LOG_INFO, "wqueue: %s worker@%p arg@%p\n",
+         name[event - NOTE_WQUEUE_START], worker, arg);
 }
 #endif

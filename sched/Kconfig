@@ -1428,6 +1428,15 @@ config SCHED_INSTRUMENTATION_WDOG
 
 			void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg);
 
+config SCHED_INSTRUMENTATION_WQUEUE
+	bool "Work queue monitor hooks"
+	default n
+	select SCHED_INSTRUMENTATION
+	---help---
+		Enables additional hooks for work queue.
+
+			void sched_note_wqueue(uint8_t event, FAR void *worker, FAR const void *arg);
+
 config SCHED_INSTRUMENTATION_DUMP
 	bool "Use note dump for instrumentation"
 	default n

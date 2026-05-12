@@ -1906,6 +1906,36 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
       }
       break;
 #endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+    case NOTE_WQUEUE_START:
+    case NOTE_WQUEUE_CANCEL:
+      {
+        FAR struct note_wqueue_s *nwq;
+
+        nwq = (FAR struct note_wqueue_s *)p;
+        ret += noteram_dump_header(s, note, ctx);
+        ret += lib_sprintf(s, "tracing_mark_write: I|%d|"
+                           "wqueue_%s: worker=%pS arg=0x%" PRIxPTR "\n",
+                           pid,
+                           note->nc_type == NOTE_WQUEUE_START
+                           ? "enqueue" : "cancel",
+                           (FAR void *)nwq->worker, nwq->arg);
+      }
+      break;
+    case NOTE_WQUEUE_ENTER:
+    case NOTE_WQUEUE_LEAVE:
+      {
+        FAR struct note_wqueue_s *nwq;
+
+        nwq = (FAR struct note_wqueue_s *)p;
+        ret += noteram_dump_header(s, note, ctx);
+        ret += lib_sprintf(s, "tracing_mark_write: %c|%d|"
+                           "wqueue: worker=%pS arg=0x%" PRIxPTR "\n",
+                           note->nc_type == NOTE_WQUEUE_ENTER ? 'B' : 'E',
+                           pid, (FAR void *)nwq->worker, nwq->arg);
+      }
+      break;
+#endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
     case NOTE_HEAP_ADD:
     case NOTE_HEAP_REMOVE:

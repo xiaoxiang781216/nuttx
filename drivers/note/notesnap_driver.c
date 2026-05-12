@@ -107,6 +107,10 @@ static void notesnap_irqhandler(FAR struct note_driver_s *drv, int irq,
 static void notesnap_wdog(FAR struct note_driver_s *drv, uint8_t event,
                           FAR void *handler, FAR const void *arg);
 #endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+static void notesnap_wqueue(FAR struct note_driver_s *drv, uint8_t event,
+                            FAR void *worker, FAR const void *arg);
+#endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
 static void notesnap_heap(FAR struct note_driver_s *drv, uint8_t event,
                           FAR void *heap, FAR void *mem, size_t size,
@@ -150,6 +154,9 @@ static const struct note_driver_ops_s g_notesnap_ops =
 #ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
   notesnap_wdog,
 #endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+  notesnap_wqueue,
+#endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
   notesnap_heap,
 #endif
@@ -182,6 +189,10 @@ static FAR const char *g_notesnap_type[] =
   "NOTE_WDOG_CANCEL",
   "NOTE_WDOG_ENTER",
   "NOTE_WDOG_LEAVE",
+  "NOTE_WQUEUE_START",
+  "NOTE_WQUEUE_CANCEL",
+  "NOTE_WQUEUE_ENTER",
+  "NOTE_WQUEUE_LEAVE",
   "NOTE_HEAP_ADD",
   "NOTE_HEAP_REMOVE",
   "NOTE_HEAP_ALLOC",
@@ -367,6 +378,14 @@ static void notesnap_wdog(FAR struct note_driver_s *drv, uint8_t event,
                           FAR void *handler, FAR const void *arg)
 {
   notesnap_common(drv, this_task(), event, (uintptr_t)handler);
+}
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+static void notesnap_wqueue(FAR struct note_driver_s *drv, uint8_t event,
+                            FAR void *worker, FAR const void *arg)
+{
+  notesnap_common(drv, this_task(), event, (uintptr_t)worker);
 }
 #endif
 

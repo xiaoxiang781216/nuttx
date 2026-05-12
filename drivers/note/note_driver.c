@@ -101,6 +101,9 @@
   ((drv)->ops->heap && ((drv)->ops->heap(drv, event, data, mem, size, used), true))
 #define note_do_wdog(drv, event, handler, arg)                                  \
   ((drv)->ops->wdog && ((drv)->ops->wdog(drv, event, handler, arg), true))
+#define note_do_wqueue(drv, event, worker, arg)                                 \
+  ((drv)->ops->wqueue &&                                                     \
+  ((drv)->ops->wqueue(drv, event, worker, arg), true))
 #define note_do_event(drv, tag, level, ip, event, buf, len)                          \
   ((drv)->ops->event && ((drv)->ops->event(drv, tag, level, ip, event, buf, len), true))
 #define note_do_vprintf(drv, tag, level, ip, type, fmt, va)                                \
@@ -1873,6 +1876,63 @@ void note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
     }
 
   leave_critical_section_notrace(flags);
+}
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+/****************************************************************************
+ * Name: note_wqueue
+ *
+ * Description:
+ *   Record a work queue item start or end.
+ *
+ * Input Parameters:
+ *   event   - NOTE_WQUEUE_START or NOTE_WQUEUE_END
+ *   worker  - The worker function address
+ *   arg     - The worker function argument
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void note_wqueue(uint8_t event, FAR void *worker, FAR const void *arg)
+{
+  FAR struct note_driver_s **driver;
+  struct note_wqueue_s note;
+  bool formatted = false;
+  FAR struct tcb_s *tcb = this_task();
+
+  note_drivers_initialize();
+  for (driver = g_note_drivers; *driver; driver++)
+    {
+      if (!note_driver_isenabled_type(*driver, event))
+        {
+          continue;
+        }
+
+      if (note_do_wqueue(*driver, event, worker, arg))
+        {
+          continue;
+        }
+
+      if ((*driver)->ops->add == NULL)
+        {
+          continue;
+        }
+
+      if (!formatted)
+        {
+          formatted = true;
+          note_common(tcb, &note.nwq_cmn, sizeof(note), event);
+          note.worker = (uintptr_t)worker;
+          note.arg = (uintptr_t)arg;
+        }
+
+      /* Add the note to circular buffer */
+
+      note_do_add(*driver, &note, note.nwq_cmn.nc_length, false);
+    }
 }
 #endif
 

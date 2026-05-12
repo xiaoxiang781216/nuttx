@@ -36,6 +36,7 @@
 #include <nuttx/list.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/sched_note.h>
 
 #include "wqueue/wqueue.h"
 #include "wdog/wdog.h"
@@ -62,6 +63,10 @@ void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
   work->worker = worker;   /* Work callback. non-NULL means queued */
   work->arg    = arg;      /* Callback argument */
   work->qtime  = expected; /* Expected time */
+
+  /* Record enqueue trace for scheduling latency analysis */
+
+  sched_note_wqueue(NOTE_WQUEUE_START, (FAR void *)worker, arg);
 
   /* Insert to the pending list of the wqueue. */
 

@@ -108,6 +108,10 @@
   ((1ULL << NOTE_WDOG_START) | (1ULL << NOTE_WDOG_CANCEL) |   \
    (1ULL << NOTE_WDOG_ENTER) | (1ULL << NOTE_WDOG_LEAVE))
 
+#define NOTE_FILTER_MODE_FLAG_WQUEUE                          \
+  ((1ULL << NOTE_WQUEUE_START) | (1ULL << NOTE_WQUEUE_CANCEL) | \
+   (1ULL << NOTE_WQUEUE_ENTER) | (1ULL << NOTE_WQUEUE_LEAVE))
+
 #define NOTE_FILTER_MODE_FLAG_HEAP                            \
   ((1ULL << NOTE_HEAP_ADD) | (1ULL << NOTE_HEAP_REMOVE) |     \
    (1ULL << NOTE_HEAP_ALLOC) | (1ULL << NOTE_HEAP_FREE))
@@ -357,6 +361,10 @@ enum note_type_e
   NOTE_WDOG_CANCEL,
   NOTE_WDOG_ENTER,
   NOTE_WDOG_LEAVE,
+  NOTE_WQUEUE_START,
+  NOTE_WQUEUE_CANCEL,
+  NOTE_WQUEUE_ENTER,
+  NOTE_WQUEUE_LEAVE,
   NOTE_HEAP_ADD,
   NOTE_HEAP_REMOVE,
   NOTE_HEAP_ALLOC,
@@ -424,6 +432,10 @@ struct note_driver_ops_s
 #ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
   CODE void (*wdog)(FAR struct note_driver_s *drv, uint8_t event,
                     FAR void *handler, FAR const void *arg);
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+  CODE void (*wqueue)(FAR struct note_driver_s *drv, uint8_t event,
+                      FAR void *worker, FAR const void *arg);
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
   CODE void (*heap)(FAR struct note_driver_s *drv, uint8_t event,
@@ -644,6 +656,13 @@ struct note_wdog_s
   uintptr_t arg;
 };
 
+struct note_wqueue_s
+{
+  struct note_common_s nwq_cmn;      /* Common note parameters */
+  uintptr_t worker;
+  uintptr_t arg;
+};
+
 struct note_heap_s
 {
   struct note_common_s nhp_cmn;      /* Common note parameters */
@@ -857,6 +876,14 @@ void note_irqhandler(int irq, FAR void *handler, bool enter);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
 void note_wdog(uint8_t event, FAR void *handler, FAR const void *arg);
+#endif
+
+/****************************************************************************
+ * Name: note_wqueue
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
+void note_wqueue(uint8_t event, FAR void *worker, FAR const void *arg);
 #endif
 
 /****************************************************************************

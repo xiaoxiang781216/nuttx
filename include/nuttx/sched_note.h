@@ -351,6 +351,20 @@ extern "C"
 #  define sched_note_heap(e,h,m,s,c)
 #endif
 
+#if defined(CONFIG_SCHED_INSTRUMENTATION_WQUEUE) && defined(CONFIG_DRIVERS_NOTE)
+#  define sched_note_wqueue(e,w,a) \
+       do \
+         { \
+           if (!note_filter_type(e)) \
+             { \
+               note_wqueue(e,w,a); \
+             } \
+         } \
+       while (0)
+#else
+#  define sched_note_wqueue(e,w,a)
+#endif
+
 #if defined(CONFIG_SCHED_INSTRUMENTATION_DUMP) && defined(CONFIG_DRIVERS_NOTE)
 #  ifndef CONFIG_LIB_SYSCALL
 #    define sched_note_event_ip(t,l,i,e,b,n) \

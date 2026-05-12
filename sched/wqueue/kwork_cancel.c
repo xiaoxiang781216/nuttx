@@ -34,6 +34,7 @@
 #include <nuttx/list.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/sched_note.h>
 
 #include "wqueue/wqueue.h"
 
@@ -71,6 +72,9 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
             {
               work_timer_reset(wqueue);
             }
+
+          sched_note_wqueue(NOTE_WQUEUE_CANCEL,
+                            (FAR void *)work->worker, work->arg);
         }
       else
         {
