@@ -135,7 +135,7 @@ int host_video_dqbuf(struct host_video_dev_s *vdev, uint8_t *addr,
 
             /* No buffer in the outgoing queue */
 
-            return 0;
+            return -EAGAIN;
 
           default:
             host_uninterruptible(perror, "VIDIOC_DQBUF");

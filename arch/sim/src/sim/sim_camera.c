@@ -397,7 +397,7 @@ static void sim_camera_work(void *arg)
 
   irqstate_t flags = irq_save_nopreempt();
   ret = host_video_dqbuf(priv->vdev, priv->next_buf, priv->buf_size);
-  if (ret > 0)
+  if (ret >= 0)
     {
       clock_gettime(CLOCK_MONOTONIC, &ts);
       TIMESPEC_TO_TIMEVAL(&tv, &ts);
