@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <inttypes.h>
 #include <syslog.h>
 
 #include <nuttx/note/note_driver.h>
@@ -68,6 +69,21 @@ static void note_spinlock(FAR struct note_driver_s *drv,
 static void notelog_irqhandler(FAR struct note_driver_s *drv, int irq,
                                FAR void *handler, bool enter);
 #endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+static void notelog_syscall_enter(FAR struct note_driver_s *drv,
+                                  int nr, int argc, FAR va_list *ap);
+static void notelog_syscall_leave(FAR struct note_driver_s *drv,
+                                  int nr, uintptr_t result);
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
+static void notelog_wdog(FAR struct note_driver_s *drv, uint8_t event,
+                         FAR void *handler, FAR const void *arg);
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+static void notelog_heap(FAR struct note_driver_s *drv, uint8_t event,
+                         FAR void *heap, FAR void *mem, size_t size,
+                         size_t curused);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -96,11 +112,17 @@ static const struct note_driver_ops_s g_notelog_ops =
   note_spinlock,         /* spinlock */
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-  NULL,                  /* syscall_enter */
-  NULL,                  /* syscall_leave */
+  notelog_syscall_enter, /* syscall_enter */
+  notelog_syscall_leave, /* syscall_leave */
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
   notelog_irqhandler,    /* irqhandler */
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
+  notelog_wdog,          /* wdog */
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+  notelog_heap,          /* heap */
 #endif
 };
 
@@ -296,5 +318,49 @@ static void notelog_irqhandler(FAR struct note_driver_s *drv, int irq,
 {
   syslog(LOG_INFO, "IRQ%d handler@%p %s\n",
          irq, handler, enter ? "ENTER" : "LEAVE");
+}
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+static void notelog_syscall_enter(FAR struct note_driver_s *drv,
+                                  int nr, int argc, FAR va_list *ap)
+{
+  syslog(LOG_INFO, "syscall_enter: nr=%d argc=%d\n", nr, argc);
+}
+
+static void notelog_syscall_leave(FAR struct note_driver_s *drv,
+                                  int nr, uintptr_t result)
+{
+  syslog(LOG_INFO, "syscall_leave: nr=%d result=0x%" PRIxPTR "\n",
+         nr, result);
+}
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
+static void notelog_wdog(FAR struct note_driver_s *drv, uint8_t event,
+                         FAR void *handler, FAR const void *arg)
+{
+  FAR static const char * const name[] =
+    {
+      "start", "cancel", "enter", "leave"
+    };
+
+  syslog(LOG_INFO, "wdog: %s handler@%p arg@%p\n",
+         name[event - NOTE_WDOG_START], handler, arg);
+}
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+static void notelog_heap(FAR struct note_driver_s *drv, uint8_t event,
+                         FAR void *heap, FAR void *mem, size_t size,
+                         size_t curused)
+{
+  FAR static const char * const name[] =
+    {
+      "add", "remove", "alloc", "free"
+    };
+
+  syslog(LOG_INFO, "heap: %s heap@%p mem@%p size=%zu used=%zu\n",
+         name[event - NOTE_HEAP_ADD], heap, mem, size, curused);
 }
 #endif

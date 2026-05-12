@@ -101,6 +101,15 @@ static void notesnap_syscall_leave(FAR struct note_driver_s *drv, int nr,
 static void notesnap_irqhandler(FAR struct note_driver_s *drv, int irq,
                                 FAR void *handler, bool enter);
 #endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
+static void notesnap_wdog(FAR struct note_driver_s *drv, uint8_t event,
+                          FAR void *handler, FAR const void *arg);
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+static void notesnap_heap(FAR struct note_driver_s *drv, uint8_t event,
+                          FAR void *heap, FAR void *mem, size_t size,
+                          size_t curused);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -134,6 +143,12 @@ static const struct note_driver_ops_s g_notesnap_ops =
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
   notesnap_irqhandler,
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
+  notesnap_wdog,
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+  notesnap_heap,
 #endif
 };
 
@@ -334,6 +349,23 @@ static void notesnap_syscall_leave(FAR struct note_driver_s *drv, int nr,
                                    uintptr_t result)
 {
   notesnap_common(drv, this_task(), NOTE_SYSCALL_LEAVE, nr);
+}
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
+static void notesnap_wdog(FAR struct note_driver_s *drv, uint8_t event,
+                          FAR void *handler, FAR const void *arg)
+{
+  notesnap_common(drv, this_task(), event, (uintptr_t)handler);
+}
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+static void notesnap_heap(FAR struct note_driver_s *drv, uint8_t event,
+                          FAR void *heap, FAR void *mem, size_t size,
+                          size_t curused)
+{
+  notesnap_common(drv, this_task(), event, (uintptr_t)mem);
 }
 #endif
 
