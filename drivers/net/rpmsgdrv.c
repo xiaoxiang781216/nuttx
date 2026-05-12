@@ -1028,6 +1028,7 @@ net_rpmsg_drv_alloc(FAR const char *devname, enum net_lltype_e lltype)
 {
   FAR struct net_rpmsg_drv_s *drv = kmm_zalloc(sizeof(*drv));
   FAR struct netdev_lowerhalf_s *netdev;
+  int ret;
 
   if (!drv)
     {
@@ -1075,7 +1076,14 @@ net_rpmsg_drv_alloc(FAR const char *devname, enum net_lltype_e lltype)
 
   strlcpy(netdev->netdev.d_ifname, devname, IFNAMSIZ);
 
-  netdev_lower_register(netdev, lltype);
+  ret = netdev_lower_register(netdev, lltype);
+  if (ret < 0)
+    {
+      nerr("ERROR: netdev_lower_register failed: %d\n", ret);
+      nxsem_destroy(&drv->wait);
+      kmm_free(drv);
+      return NULL;
+    }
 
   return drv;
 }
