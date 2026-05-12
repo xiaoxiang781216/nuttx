@@ -190,6 +190,11 @@ static DEFINE_PER_CPU_BMP(struct notebuf_driver_s, g_notebufstream) =
         CONFIG_DRIVERS_NOTESTREAM_CPUSET,
 #    endif
       },
+#    ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+      {
+        CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL,
+      },
+#    endif
     },
 #  endif
     &g_notebuf_ops,

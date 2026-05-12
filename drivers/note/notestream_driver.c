@@ -90,6 +90,11 @@ DEFINE_PER_CPU_BMP(struct notestream_s, g_notestream) =
         CONFIG_DRIVERS_NOTESTREAM_CPUSET,
 #  endif
       },
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+      {
+        CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL,
+      },
+#  endif
     },
 #endif
     &g_notestream_ops,
