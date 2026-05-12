@@ -154,15 +154,6 @@ static inline void putreg64(uint64_t v, const volatile uintreg_t a)
 #define riscv_append_pmp_region(a, b, s) \
   riscv_config_pmp_region(riscv_next_free_pmp_region(), a, b, s)
 
-static inline void riscv_tp_boot(int cpu)
-{
-  uintptr_t val = g_idle_topstack -
-                  SMP_STACK_SIZE * (CONFIG_SMP_NCPUS - cpu);
-
-  val += sizeof(struct tls_info_s) + ARCH_TP_OFFSET;
-  __asm__ volatile("mv tp, %0" :: "r" (val) : "tp");
-}
-
 #endif
 
 /****************************************************************************
@@ -206,6 +197,16 @@ int riscv_swint(int irq, void *context, void *arg);
 uintptr_t riscv_get_newintctx(void);
 void riscv_set_idleintctx(void);
 void riscv_exception_attach(void);
+
+void riscv_set_tp(uintptr_t val);
+static inline void riscv_tp_boot(int cpu)
+{
+  uintptr_t val = g_idle_topstack -
+                  SMP_STACK_SIZE * (CONFIG_SMP_NCPUS - cpu);
+
+  val += sizeof(struct tls_info_s) + ARCH_TP_OFFSET;
+  riscv_set_tp(val);
+}
 
 #ifdef CONFIG_ARCH_FPU
 void riscv_fpuconfig(void);

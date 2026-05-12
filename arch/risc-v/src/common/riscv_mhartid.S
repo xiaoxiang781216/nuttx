@@ -33,6 +33,7 @@
  ****************************************************************************/
 
     .globl  riscv_mhartid
+    .globl  riscv_set_tp
 
 /****************************************************************************
  * Name: riscv_mhartid
@@ -50,4 +51,23 @@
 riscv_mhartid:
 
   riscv_mhartid a0
+  ret
+
+/****************************************************************************
+ * Name: riscv_set_tp
+ *
+ * Description:
+ *   Setup to to given value. This needs be done in assembly as tp is callee
+ *   saved thus Clang 15 restores it in C function.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+.type riscv_set_tp, function
+
+riscv_set_tp:
+
+  mv tp, a0
   ret
