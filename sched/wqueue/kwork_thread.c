@@ -91,6 +91,7 @@ aligned_data(64)
 DEFINE_PER_CPU_BMP(struct hp_wqueue_s, g_hpwork) =
 {
   {
+    SP_UNLOCKED,
     {
       NULL,
       NULL,
@@ -122,6 +123,7 @@ aligned_data(64)
 DEFINE_PER_CPU_BMP(struct lp_wqueue_s, g_lpwork) =
 {
   {
+    SP_UNLOCKED,
     {
       NULL,
       NULL,
@@ -499,6 +501,7 @@ FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
           nxsem_init(&wqueue->sem, 0, 0u);
           nxsem_init(&wqueue->exsem, 0, 0u);
           wqueue->nthreads = nthreads;
+          spin_lock_init(&wqueue->lock);
 
           /* Create the work queue thread pool */
 

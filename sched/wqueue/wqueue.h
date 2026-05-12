@@ -73,6 +73,7 @@ struct kworker_s
 
 struct kwork_wqueue_s
 {
+  spinlock_t       lock;      /* Spinlock */
   struct list_node expired;   /* The queue of expired work. */
   struct list_node pending;   /* The queue of pending work. */
   sem_t            sem;       /* The counting semaphore of the wqueue */
@@ -293,13 +294,13 @@ void work_timer_reset(FAR struct kwork_wqueue_s *wqueue)
  * Name: wqueue_lock
  *
  * Description:
- *   Enter critical section and save interrupt state.
- *   When nopreempt is true, additionally call sched_lock (for non-SMP or
+ *   Lock the workqueue spinlock and save interrupt state.
+ *   When nopreempt is true, use the nopreempt variant (for non-SMP or
  *   contexts that must not trigger preemption on non-SMP).
  *
  * Input Parameters:
  *   wqueue    - The work queue.
- *   nopreempt - Use sched_lock when true on non-SMP.
+ *   nopreempt - Use spin_lock_irqsave_nopreempt when true on non-SMP.
  *
  * Returned Value:
  *   The saved interrupt state.
@@ -312,13 +313,13 @@ irqstate_t wqueue_lock(FAR struct kwork_wqueue_s *wqueue, bool nopreempt)
   if (nopreempt)
     {
       irqstate_t flags;
-      flags = enter_critical_section_notrace();
+      flags = spin_lock_irqsave_notrace(&wqueue->lock);
       sched_lock();
       return flags;
     }
   else
     {
-      return enter_critical_section_notrace();
+      return spin_lock_irqsave_notrace(&wqueue->lock);
     }
 }
 
@@ -326,13 +327,13 @@ irqstate_t wqueue_lock(FAR struct kwork_wqueue_s *wqueue, bool nopreempt)
  * Name: wqueue_unlock
  *
  * Description:
- *   Leave critical section and restore interrupt state.
+ *   Unlock the workqueue spinlock and restore interrupt state.
  *   The nopreempt flag must match the one used in wqueue_lock.
  *
  * Input Parameters:
  *   wqueue    - The work queue.
  *   flags     - The saved interrupt state from wqueue_lock.
- *   nopreempt - Use sched_unlock when true on non-SMP.
+ *   nopreempt - Use spin_unlock_irqrestore_nopreempt when true on non-SMP.
  *
  * Returned Value:
  *   None.
@@ -345,12 +346,12 @@ void wqueue_unlock(FAR struct kwork_wqueue_s *wqueue,
 {
   if (nopreempt)
     {
-      leave_critical_section_notrace(flags);
+      spin_unlock_irqrestore_notrace(&wqueue->lock, flags);
       sched_unlock();
     }
   else
     {
-      leave_critical_section_notrace(flags);
+      spin_unlock_irqrestore_notrace(&wqueue->lock, flags);
     }
 }
 
