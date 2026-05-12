@@ -31,11 +31,8 @@ libcxx/libcxx: libcxx-$(LIBCXX_VERSION).src.tar.xz
 	$(Q) tar -xf $< \
 	         --exclude libcxx-$(LIBCXX_VERSION).src/test/std/pstl
 	$(Q) mv libcxx-$(LIBCXX_VERSION).src $@
-	$(Q) patch -p0 < libcxx/0001_fix_stdatomic_h_miss_typedef.patch -d libcxx
-	$(Q) patch -p2 < libcxx/mbstate_t.patch -d libcxx
-	$(Q) patch -p0 < libcxx/0001-libcxx-remove-mach-time-h.patch -d libcxx
-	$(Q) patch -p0 < libcxx/0001-libcxx-fix-ld-errors.patch -d libcxx
-	$(Q) patch -p0 < libcxx/0001-Fix-build-error-about-__GLIBC__.patch -d libcxx
+	$(Q) patch -p1 < libcxx/mbstate_t.patch -d libcxx
+	$(Q) patch -p1 < libcxx/0001-Fix-build-error-about-__GLIBC__.patch -d libcxx
 
 endif
 

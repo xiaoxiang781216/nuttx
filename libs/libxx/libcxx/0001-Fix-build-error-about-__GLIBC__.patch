@@ -1,17 +1,32 @@
-diff --git libcxx/src/locale.cpp libcxx/src/locale.cpp
---- libcxx/src/locale.cpp
-+++ libcxx/src/locale.cpp
-@@ -41,6 +41,10 @@
+From 43fc95cebae3cf2098bea51faea51a4567ccd64a Mon Sep 17 00:00:00 2001
+From: v-zhangxiaomeng5 <v-zhangxiaomeng5@xiaomi.com>
+Date: Tue, 12 May 2026 20:13:44 +0800
+Subject: [PATCH] libcxx: undef __GLIBC__ on NuttX to avoid glibc-specific code
+ paths
+
+On NuttX sim platform, host glibc headers may define __GLIBC__ which
+causes locale.cpp to use glibc-specific struct members (e.g.
+__ctype_b) that do not exist in NuttX. Undefine it early to ensure
+the correct code path is taken.
+---
+ src/locale.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/locale.cpp b/src/locale.cpp
+index da73586..68bfff3 100644
+--- a/src/locale.cpp
++++ b/src/locale.cpp
+@@ -37,6 +37,10 @@
  #include "include/atomic_support.h"
  #include "include/sso_allocator.h"
-
+ 
 +#if defined(__NuttX__) && defined(__GLIBC__)
-+#   undef __GLIBC__
++#  undef __GLIBC__
 +#endif
 +
  // On Linux, wint_t and wchar_t have different signed-ness, and this causes
  // lots of noise in the build log, but no bugs that I know of.
  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wsign-conversion")
---
+-- 
 2.34.1
 
