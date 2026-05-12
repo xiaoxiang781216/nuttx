@@ -82,7 +82,11 @@ void arm_boot(void)
 #endif
 
 #ifdef CONFIG_ARM_PSCI
+#  ifdef CONFIG_ARCH_TRUSTZONE_NONSECURE
+  arm_psci_init("smc");
+#  else
   arm_psci_init("hvc");
+#  endif
 #endif
 
 #ifdef CONFIG_DEVICE_TREE

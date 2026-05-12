@@ -4,3 +4,14 @@
 #
 
 comment "ARM_A_R Configuration Options"
+
+config ARM_PSCI_SERVER
+	bool "PSCI server in secure monitor"
+	default n
+	depends on ARCH_TRUSTZONE_SECURE
+	---help---
+		Enable PSCI server implementation in the secure monitor.
+		When enabled, the TEE secure monitor handles PSCI calls
+		(SYSTEM_RESET, SYSTEM_OFF, etc.) from the non-secure world
+		via semihosting. This is needed when QEMU is launched with
+		-bios which disables the built-in PSCI firmware.

@@ -40,10 +40,27 @@
 #include "arm.h"
 #include "sm.h"
 #include "gic.h"
+#include "arm_cpu_psci.h"
+
+#ifdef CONFIG_ARM_PSCI_SERVER
+#  include <arch/syscall.h>
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* QEMU virt secure GPIO (PL061) at 0x090b0000 for system reset/poweroff.
+ * gpio-poweroff: pin 0 active-high triggers poweroff.
+ * gpio-restart:  pin 1 active-high triggers system reset.
+ */
+
+#ifdef CONFIG_ARM_PSCI_SERVER
+#  define SECURE_GPIO_BASE        0x090b0000
+#  define SECURE_GPIO_POWEROFF    0
+#  define SECURE_GPIO_RESET       1
+#  define PL061_GPIODIR           0x400
+#endif
 
 #define MONITOR_STACK_ALIGNMENT 64 /* (sizeof(long) * U(2)) */
 #define MONITOR_STACK_NSEC_SIZE ALIGN_UP(sizeof(struct arm_sm_nsec_ctx), \
@@ -81,6 +98,61 @@ static DEFINE_PER_CPU_BMP(struct notifier_block, g_switch_nse_panic_nb) =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_ARM_PSCI_SERVER
+
+/****************************************************************************
+ * Name: arm_psci_server_reset
+ *
+ * Description:
+ *   Trigger system reset via QEMU virt secure GPIO (PL061).
+ *   Pin 1 active-high triggers hardware reset.
+ *
+ ****************************************************************************/
+
+static void arm_psci_server_reset(void)
+{
+  volatile uint8_t *dir = (volatile uint8_t *)
+                          (SECURE_GPIO_BASE + PL061_GPIODIR);
+  volatile uint8_t *data = (volatile uint8_t *)
+                           (SECURE_GPIO_BASE +
+                            (1 << (SECURE_GPIO_RESET + 2)));
+
+  /* Set pin 1 as output */
+
+  *dir |= (1 << SECURE_GPIO_RESET);
+
+  /* Drive pin 1 high to trigger reset (gpio-restart is active-high) */
+
+  *data = (1 << SECURE_GPIO_RESET);
+}
+
+/****************************************************************************
+ * Name: arm_psci_server_poweroff
+ *
+ * Description:
+ *   Trigger system poweroff via QEMU virt secure GPIO (PL061).
+ *   Pin 0 active-high triggers poweroff.
+ *
+ ****************************************************************************/
+
+static void arm_psci_server_poweroff(void)
+{
+  volatile uint8_t *dir = (volatile uint8_t *)
+                          (SECURE_GPIO_BASE + PL061_GPIODIR);
+  volatile uint8_t *data = (volatile uint8_t *)
+                           (SECURE_GPIO_BASE +
+                            (1 << (SECURE_GPIO_POWEROFF + 2)));
+
+  /* Set pin 0 as output */
+
+  *dir |= (1 << SECURE_GPIO_POWEROFF);
+
+  /* Drive pin 0 high to trigger poweroff (gpio-poweroff is active-high) */
+
+  *data = (1 << SECURE_GPIO_POWEROFF);
+}
+#endif
 
 /****************************************************************************
  * Name: arm_secure_panic_notifier
@@ -203,6 +275,52 @@ uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
       up_trigger_irq(sgi_id, cpuset);
       ctx->nsec.r0 = 0;
       return SM_EXIT_TO_NON_SECURE;
+    }
+#endif
+
+  /* Handle PSCI calls from non-secure world.
+   * TEE acts as PSCI server: intercept standard PSCI function IDs,
+   * perform the requested action, and return directly to NS world.
+   */
+
+#ifdef CONFIG_ARM_PSCI_SERVER
+  switch (args->a0)
+    {
+      case PSCI_0_2_FN_PSCI_VERSION:
+        ctx->nsec.r0 = (1 << PSCI_VERSION_MAJOR_SHIFT) | 0;
+        return SM_EXIT_TO_NON_SECURE;
+
+      case PSCI_0_2_FN_SYSTEM_OFF:
+        arm_psci_server_poweroff();
+
+        /* Should not reach here */
+
+        for (; ; );
+        break;
+
+      case PSCI_0_2_FN_SYSTEM_RESET:
+        arm_psci_server_reset();
+
+        /* Should not reach here */
+
+        for (; ; );
+        break;
+
+      case PSCI_0_2_FN_CPU_OFF:
+      case PSCI_0_2_FN_CPU_SUSPEND:
+      case PSCI_0_2_FN_AFFINITY_INFO:
+      case PSCI_0_2_FN_MIGRATE:
+      case PSCI_0_2_FN_MIGRATE_INFO_TYPE:
+      case PSCI_0_2_FN_MIGRATE_INFO_UP_CPU:
+        ctx->nsec.r0 = PSCI_RET_NOT_SUPPORTED;
+        return SM_EXIT_TO_NON_SECURE;
+
+      case PSCI_0_2_FN_CPU_ON:
+        ctx->nsec.r0 = PSCI_RET_NOT_SUPPORTED;
+        return SM_EXIT_TO_NON_SECURE;
+
+      default:
+        break;
     }
 #endif
 
