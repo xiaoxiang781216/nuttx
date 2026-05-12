@@ -41,9 +41,14 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ELF_FIXUP_TABLE \
+#ifdef CONFIG_ELF_FIXUP_CUSTOM_TABLE
+#  define ELF_FIXUP_TABLE \
+  (&g_elf_fixup_table[g_elf_fixup_table_size - 1])
+#else
+#  define ELF_FIXUP_TABLE \
   ((FAR const struct elf_fixup_s *) \
   (CONFIG_ELF_FIXUP_FLASH_START + CONFIG_ELF_FIXUP_FLASH_SIZE) - 1)
+#endif
 
 #ifdef CONFIG_ELF_FIXUP_KERNEL_ELF
 #  define ELF_FIXUP_KERNEL_TABLE \
@@ -74,6 +79,15 @@ static struct binfmt_s g_elf_fixup_binfmt =
   elf_fixup_loadbinary, /* load */
   NULL,                 /* unload */
 };
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+#ifdef CONFIG_ELF_FIXUP_CUSTOM_TABLE
+extern const struct elf_fixup_s g_elf_fixup_table[];
+extern const size_t g_elf_fixup_table_size;
+#endif
 
 /****************************************************************************
  * Private Functions

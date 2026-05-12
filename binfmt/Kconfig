@@ -118,6 +118,22 @@ config ELF_FIXUP_KERNEL_ELF
 		Only needed when kernel apps are built as loadable ELF modules
 		(m-mode), not when statically linked (y-mode).
 
+config ELF_FIXUP_CUSTOM_TABLE
+	bool "Use externally-defined elf fixup table"
+	default n
+	---help---
+		Bypass the auto-generated table from tools/elf_fixup.py and
+		require the user to provide the fixup table in their own
+		translation unit:
+
+		  extern const struct elf_fixup_s g_elf_fixup_table[];
+		  extern const size_t g_elf_fixup_table_size;
+
+		The first element MUST be { .entry = 0 } (head sentinel) so
+		the existing reverse scan terminates correctly. The user file
+		is typically placed under the board source directory and added
+		to the board build via Make.defs/CMakeLists.txt.
+
 endif # ELF_FIXUP
 
 config NXFLAT
