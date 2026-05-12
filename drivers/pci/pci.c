@@ -2175,14 +2175,14 @@ int pci_register_device(FAR struct pci_device_s *dev)
 {
   FAR const struct pci_device_id_s *id;
   FAR struct pci_driver_s *drv;
-  uint16_t cmd;
   int ret;
 
-  /* Skip devices already initialized by another CPU. In BMP
-   * environments where multiple CPUs scan the same PCI bus,
-   * a device with IO or MEMORY enabled was probed by a prior
-   * CPU's driver (via pci_enable_device) - skip to avoid
-   * duplicate probe.
+#ifdef CONFIG_PCI_ASSIGN_ALL_BUSES
+  uint16_t cmd;
+
+  /* Skip devices already probed by another CPU in BMP environments.
+   * Only valid when NuttX owns PCI enumeration; firmware-managed
+   * platforms (e.g. SeaBIOS) pre-set these bits.
    */
 
   pci_read_config_word(dev, PCI_COMMAND, &cmd);
@@ -2190,6 +2190,7 @@ int pci_register_device(FAR struct pci_device_s *dev)
     {
       return -EBUSY;
     }
+#endif
 
   ret = nxmutex_lock(&g_pci_lock);
   if (ret < 0)

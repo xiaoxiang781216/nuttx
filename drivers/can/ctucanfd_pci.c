@@ -274,7 +274,15 @@ static DEFINE_PER_CPU_BMP(struct pci_driver_s, g_ctucanfd_drv) =
  * Indexed by PCI device number, value is CPU core index.
  */
 
+#ifdef CTUCANFD_PCI_MAP
+/* BMP multi-core: static map for deterministic device-to-CPU assignment */
+
 static const int g_ctucanfd_pci_map[] = CTUCANFD_PCI_MAP;
+#else
+/* Single-core / firmware-managed PCI: sequential channel ID assignment */
+
+static uint8_t g_ctucanfd_count;
+#endif
 
 /*****************************************************************************
  * Private Functions
@@ -2134,11 +2142,13 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
   FAR struct ctucanfd_driver_s  *priv   = NULL;
   uint8_t                        i      = 0;
   int                            ret;
-  uint8_t                        devid;
   uint8_t                        canid;
 #ifdef CONFIG_CAN_CTUCANFD_CHARDEV
   char                           devpath[PATH_MAX];
 #endif
+
+#ifdef CTUCANFD_PCI_MAP
+  uint8_t                        devid;
 
   /* Derive device index from PCI slot number.
    * Slot 0 is the PCIe root port, CAN devices start from slot 1,
@@ -2152,6 +2162,7 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
     {
       return -ENODEV;
     }
+#endif
 
   /* Allocate the interface structure */
 
@@ -2220,12 +2231,14 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       goto errout;
     }
 
-  /* CAN channel ID derived from devid and channels per device.
-   * This avoids a global canid counter that requires
-   * synchronization across CPUs.
-   */
+  /* CAN channel ID assignment */
 
+#ifdef CTUCANFD_PCI_MAP
   canid = devid * priv->count;
+#else
+  canid = g_ctucanfd_count;
+  g_ctucanfd_count += priv->count;
+#endif
 
   /* Common initialziation for all channels */
 

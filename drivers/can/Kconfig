@@ -396,7 +396,7 @@ endchoice # "CTU CAN FD PCI CAN device type"
 config CAN_CTUCANFD_PCI_MAP
 	string "PCI device to CPU assignment map"
 	default "{0,0,0,0,0,1,1,1,1}"
-	depends on CAN_CTUCANFD
+	depends on BMP
 	---help---
 		Array indexed by PCI device number, value is CPU core index.
 		map[x]=y means PCI device x is owned by cpuY.

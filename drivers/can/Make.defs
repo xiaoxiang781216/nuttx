@@ -40,6 +40,12 @@ endif
 
 ifeq ($(CONFIG_CAN_CTUCANFD),y)
 CSRCS += ctucanfd_pci.c
+
+# PCI_MAP enables BMP multi-core device-to-CPU assignment
+
+ifneq ($(CONFIG_CAN_CTUCANFD_PCI_MAP),)
+CFLAGS += ${DEFINE_PREFIX}CTUCANFD_PCI_MAP=$(CONFIG_CAN_CTUCANFD_PCI_MAP)
+endif
 endif
 
 ifeq ($(CONFIG_CAN_VCAN),y)

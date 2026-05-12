@@ -37,8 +37,12 @@ endif()
 if(CONFIG_CAN_CTUCANFD)
   list(APPEND SRCS ctucanfd_pci.c)
 
-  set(CTUCANFD_DEFS "#define CTUCANFD_PCI_MAP ${CONFIG_CAN_CTUCANFD_PCI_MAP}")
-  nuttx_target_compile_definitions_with_include(drivers CTUCANFD_DEFS)
+  # PCI_MAP enables BMP multi-core device-to-CPU assignment
+
+  if(CONFIG_CAN_CTUCANFD_PCI_MAP)
+    set(CTUCANFD_DEFS "#define CTUCANFD_PCI_MAP ${CONFIG_CAN_CTUCANFD_PCI_MAP}")
+    nuttx_target_compile_definitions_with_include(drivers CTUCANFD_DEFS)
+  endif()
 endif()
 
 if(CONFIG_CAN_VCAN)
