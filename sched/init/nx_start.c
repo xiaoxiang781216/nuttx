@@ -66,6 +66,7 @@
 #include "instrument/instrument.h"
 #include "tls/tls.h"
 #include "wqueue/wqueue.h"
+#include "wdog/wdog.h"
 #include "hrtimer/hrtimer.h"
 
 /****************************************************************************

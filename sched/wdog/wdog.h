@@ -152,6 +152,19 @@ static inline_function clock_t wd_get_next_expire(clock_t curr)
   return (sclock_t)(next - curr) <= 0 ? 0u : next;
 }
 
+/****************************************************************************
+ * Name: wdlist_initialize
+ *
+ * Description:
+ *   This function do list initialize, list should prefer runtime init.
+ *
+ ****************************************************************************/
+
+static inline_function void wdlist_initialize(void)
+{
+  list_initialize(&g_wdactivelist);
+}
+
 #undef EXTERN
 #ifdef __cplusplus
 }
