@@ -430,6 +430,7 @@ int board_usbmsc_initialize(int port);
 
 #ifdef CONFIG_USBDEV_COMPOSITE
 int board_composite_initialize(int port);
+int board_composite_uninitialize(int port);
 #endif
 #endif
 

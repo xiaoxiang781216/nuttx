@@ -349,6 +349,7 @@ enum boardioc_usbdev_action_e
   BOARDIOC_USBDEV_INITIALIZE = 0, /* Initialize USB device */
   BOARDIOC_USBDEV_CONNECT,        /* Connect the USB device */
   BOARDIOC_USBDEV_DISCONNECT,     /* Disconnect the USB device */
+  BOARDIOC_USBDEV_UNINITIALIZE,   /* Uninitialize USB device */
 };
 
 struct boardioc_usbdev_ctrl_s

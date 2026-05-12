@@ -68,6 +68,13 @@
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_USBDEV_COMPOSITE
+weak_function int board_composite_uninitialize(int port)
+{
+  return OK;
+}
+#endif
+
 /****************************************************************************
  * Name: boardctl_usbdevctrl
  *
@@ -236,6 +243,12 @@ static inline int
               {
                 DEBUGASSERT(ctrl->handle != NULL && *ctrl->handle != NULL);
                 composite_uninitialize(*ctrl->handle);
+              }
+              break;
+
+            case BOARDIOC_USBDEV_UNINITIALIZE: /* Uninitialize Composite device */
+              {
+                ret = board_composite_uninitialize(ctrl->instance);
               }
               break;
 
