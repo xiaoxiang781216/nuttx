@@ -465,6 +465,12 @@ static void gicv3_cpuif_init(void)
   /* Allow group1 interrupts */
 
   CP15_SET(ICC_IGRPEN1, 1);
+
+  /* Allow group0 interrupts (FIQ) */
+
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+  CP15_SET(ICC_IGRPEN0, 1);
+#endif
 }
 
 static void gicv3_dist_init(void)
@@ -473,6 +479,7 @@ static void gicv3_dist_init(void)
   unsigned int  intid;
   unsigned int  idx;
   unsigned long base = GIC_DIST_BASE;
+  uint32_t      regval;
 
   num_ints  = getreg32(GICD_TYPER);
   num_ints  &= GICD_TYPER_ITLINESNUM_MASK;
@@ -554,23 +561,23 @@ static void gicv3_dist_init(void)
    * the GIC is under single security state which has
    * only two groups:
    *  group 0 and group 1.
-   * Then set GICD_CTLR_ARE and GICD_CTLR_ENABLE_G1 to enable Group 1
-   * interrupt.
    * Since the GICD_CTLR_ARE and GICD_CTRL_ARE_S share BIT(4), and
    * similarly the GICD_CTLR_ENABLE_G1 and GICD_CTLR_ENABLE_G1NS share
    * BIT(1), we can reuse them.
    */
 
-  putreg32(BIT(GICD_CTRL_ARE_S) | BIT(GICD_CTLR_ENABLE_G1NS),
-                 GICD_CTLR);
-
+  regval = BIT(GICD_CTRL_ARE_S) | BIT(GICD_CTLR_ENABLE_G1NS);
 #else
   /* Enable distributor with ARE */
 
-  putreg32(BIT(GICD_CTRL_ARE_NS) | BIT(GICD_CTLR_ENABLE_G1NS),
-           GICD_CTLR);
+  regval = BIT(GICD_CTRL_ARE_NS) | BIT(GICD_CTLR_ENABLE_G1NS);
 #endif
 
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+  regval |= BIT(GICD_CTLR_ENABLE_G0);
+#endif
+
+  putreg32(regval, GICD_CTLR);
 #ifdef CONFIG_SMP
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
@@ -843,3 +850,82 @@ void arm_gic_initialize(void)
 {
   arm_gic_init();
 }
+
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+uint32_t *arm_decodefiq(uint32_t *regs)
+{
+  int irq;
+
+  /* Read the Group 0 interrupt acknowledge register (ICC_IAR0)
+   * for FIQ/Group 0 interrupts on GICv3.
+   */
+
+  irq = CP15_GET(ICC_IAR0);
+
+  /* Ignore spurious IRQs.  IAR will report 1023 if there is no pending
+   * interrupt.
+   */
+
+  DEBUGASSERT(irq < NR_IRQS || irq >= 1022);
+
+  if (irq < NR_IRQS)
+    {
+      /* Dispatch the interrupt */
+
+#  ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+      regs = arm_dofiq(irq, regs);
+#  else
+      regs = arm_doirq(irq, regs);
+#  endif
+    }
+
+  /* Write to the Group 0 end-of-interrupt register (ICC_EOIR0) */
+
+  UP_DSB();
+  CP15_SET(ICC_EOIR0, irq);
+
+  return regs;
+}
+
+/***************************************************************************
+ * Name: up_set_secure_irq
+ *
+ * Description:
+ *   Secure an IRQ
+ *
+ ***************************************************************************/
+
+void up_secure_irq(int irq, bool secure)
+{
+  uint32_t mask      = BIT(irq & (GIC_NUM_INTR_PER_REG - 1));
+  uint32_t idx       = irq / GIC_NUM_INTR_PER_REG;
+  unsigned long base = GET_DIST_BASE(irq);
+  unsigned int val;
+
+  val = getreg32(IGROUPR(base, idx));
+
+  if (secure)
+    {
+      val &= ~mask;   /* IGROUPR=0 */
+    }
+  else
+    {
+      val |= mask;    /* IGROUPR=1 */
+    }
+
+  putreg32(val, IGROUPR(base, idx));
+
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+  /* In dual security state, IGROUPMODR selects between:
+   *   secure:     IGROUPR=0, IGROUPMODR=1 -> Group 1 Secure (IRQ)
+   *   non-secure: IGROUPR=1, IGROUPMODR=1 -> Group 1 Non-secure
+   * Keep IGROUPMODR=1 for both cases so secure interrupts are
+   * delivered as IRQ (Group 1 Secure) rather than FIQ (Group 0).
+   */
+
+  val = getreg32(IGROUPMODR(base, idx));
+  val |= mask;
+  putreg32(val, IGROUPMODR(base, idx));
+#endif
+}
+#endif
