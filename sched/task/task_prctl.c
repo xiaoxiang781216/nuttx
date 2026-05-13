@@ -33,6 +33,7 @@
 #include <debug.h>
 
 #include <nuttx/sched.h>
+#include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
 #include "task/task.h"
@@ -134,6 +135,7 @@ int prctl(int option, ...)
 
               strlcpy(tcb->name, name, sizeof(tcb->name));
               tcb->name[CONFIG_TASK_NAME_SIZE] = '\0';
+              sched_note_taskname(tcb);
             }
           else
             {
