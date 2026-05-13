@@ -31,6 +31,7 @@
 #include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 #include <nuttx/cache.h>
+#include <nuttx/percpu.h>
 #include <nuttx/tls.h>
 #include <nuttx/mm/mm.h>
 
@@ -46,17 +47,24 @@
 /* Records the stack mpu region id */
 
 #ifdef CONFIG_ARCH_STACK_PROTECT
-static unsigned int g_addrenv_stack_region;
+static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_addrenv_stack_region);
+#  define g_addrenv_stack_region this_cpu_var_bmp(g_addrenv_stack_region)
 #endif
 
 #ifdef CONFIG_MM_TASK_HEAP
-static unsigned int g_addrenv_heap_region;
-static unsigned int g_addrenv_text_region;
+static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_addrenv_heap_region);
+static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_addrenv_text_region);
+#  define g_addrenv_heap_region this_cpu_var_bmp(g_addrenv_heap_region)
+#  define g_addrenv_text_region this_cpu_var_bmp(g_addrenv_text_region)
 #endif
 
 #ifdef CONFIG_LIB_PPCCALL
-static unsigned int g_addrenv_callee_heap_region;
-static unsigned int g_addrenv_callee_text_region;
+static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_addrenv_callee_heap_region);
+static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_addrenv_callee_text_region);
+#  define g_addrenv_callee_heap_region \
+          this_cpu_var_bmp(g_addrenv_callee_heap_region)
+#  define g_addrenv_callee_text_region \
+          this_cpu_var_bmp(g_addrenv_callee_text_region)
 #endif
 
 /****************************************************************************
