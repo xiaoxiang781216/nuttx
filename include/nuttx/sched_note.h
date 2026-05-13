@@ -196,12 +196,22 @@ extern "C"
              } \
          } \
        while (0)
+#  define sched_note_taskname(t) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_TASKNAME)) \
+             { \
+               note_taskname(t); \
+             } \
+         } \
+       while (0)
 #else
 #  define sched_note_stop(t)
 #  define sched_note_start(t)
 #  define sched_note_suspend(t)
 #  define sched_note_resume(t)
 #  define sched_note_ready(t,s)
+#  define sched_note_taskname(t)
 #endif
 
 #if defined(CONFIG_SMP) && defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && defined(CONFIG_DRIVERS_NOTE)

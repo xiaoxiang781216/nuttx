@@ -1468,6 +1468,17 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
       }
       break;
 
+    case NOTE_TASKNAME:
+      {
+        FAR const char *name =
+          (FAR const char *)p + sizeof(struct note_common_s);
+
+        ret += noteram_dump_header(s, note, ctx);
+        ret += lib_sprintf(s, "task_rename: pid=%d comm=%s\n",
+                           get_pid(pid), name);
+      }
+      break;
+
     case NOTE_SUSPEND:
       {
         FAR struct note_suspend_s *nsu = (FAR struct note_suspend_s *)p;

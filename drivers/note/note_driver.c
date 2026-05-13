@@ -72,6 +72,8 @@
   ((drv)->ops->start && ((drv)->ops->start(drv, tcb), true))
 #define note_do_stop(drv, tcb)                                                  \
   ((drv)->ops->stop && ((drv)->ops->stop(drv, tcb), true))
+#define note_do_taskname(drv, tcb)                                              \
+  ((drv)->ops->taskname && ((drv)->ops->taskname(drv, tcb), true))
 #define note_do_suspend(drv, tcb)                                               \
   ((drv)->ops->suspend && ((drv)->ops->suspend(drv, tcb), true))
 #define note_do_resume(drv, tcb)                                                \
@@ -715,7 +717,7 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   if (cmd == NOTE_SYNCTASKNAME)
     {
-      note_taskname(note_sync_taskname_cb, driver);
+      note_taskname_foreach(note_sync_taskname_cb, driver);
       return ret;
     }
 #endif
@@ -1455,16 +1457,54 @@ void note_add(FAR const void *data, size_t len)
  *
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: note_format_taskname
+ *
+ * Description:
+ *   Format the task-name payload shared by NOTE_START and NOTE_TASKNAME
+ *   events.  The caller supplies the pre-allocated note buffer, the owning
+ *   TCB (may be NULL when emitting on behalf of the name pool), the task
+ *   name string and the concrete event type.
+ *
+ * Returned Value:
+ *   Total length of the formatted note, suitable for note_do_add().
+ *
+ ****************************************************************************/
+
+static unsigned int
+note_format_taskname(FAR struct note_startalloc_s *note,
+                     FAR struct tcb_s *tcb, FAR const char *name,
+                     uint8_t type)
+{
+  unsigned int length;
+
+#if CONFIG_TASK_NAME_SIZE > 0
+  int namelen = 0;
+
+  if (name != NULL && name[0] != '\0')
+    {
+      namelen = strlen(name);
+    }
+
+  DEBUGASSERT(namelen <= CONFIG_TASK_NAME_SIZE);
+  strlcpy(note->nsa_name, name != NULL ? name : "",
+          sizeof(note->nsa_name));
+  length = SIZEOF_NOTE_START(namelen + 1);
+#else
+  UNUSED(name);
+  length = SIZEOF_NOTE_START(0);
+#endif
+
+  note_common(tcb, &note->nsa_cmn, length, type);
+  return length;
+}
+
 void note_start(FAR struct tcb_s *tcb)
 {
   struct note_startalloc_s note;
   unsigned int length;
   FAR struct note_driver_s **driver;
   bool formatted = false;
-
-#if CONFIG_TASK_NAME_SIZE > 0
-  int namelen = 0;
-#endif
 
   nxtask_namepool_record(tcb->pid, tcb->name);
 
@@ -1489,28 +1529,7 @@ void note_start(FAR struct tcb_s *tcb)
       if (!formatted)
         {
           formatted = true;
-
-          /* Copy the task name (if possible) and
-           * get the length of the note
-           */
-
-#if CONFIG_TASK_NAME_SIZE > 0
-          if (tcb->name[0] != '\0')
-            {
-              namelen = strlen(tcb->name);
-            }
-
-          DEBUGASSERT(namelen <= CONFIG_TASK_NAME_SIZE);
-          strlcpy(note.nsa_name, tcb->name, sizeof(note.nsa_name));
-
-          length = SIZEOF_NOTE_START(namelen + 1);
-#else
-          length = SIZEOF_NOTE_START(0);
-#endif
-
-          /* Finish formatting the note */
-
-          note_common(tcb, &note.nsa_cmn, length, NOTE_START);
+          length = note_format_taskname(&note, tcb, tcb->name, NOTE_START);
         }
 
       /* Add the note to circular buffer */
@@ -1558,31 +1577,65 @@ void note_stop(FAR struct tcb_s *tcb)
     }
 }
 
-static void note_taskname_handler(pid_t pid, FAR const char *name,
-                                  FAR void *arg)
+static void note_taskname_foreach_handler(pid_t pid, FAR const char *name,
+                                          FAR void *arg)
 {
   FAR struct note_taskname_foreach_s *ctx = arg;
   struct note_startalloc_s note;
   size_t length;
-  int namelen;
 
-  namelen = strlen(name);
-  strlcpy(note.nsa_name, name, sizeof(note.nsa_name));
-  length = SIZEOF_NOTE_START(namelen + 1);
-  note_common(NULL, &note.nsa_cmn, length, NOTE_TASKNAME);
+  length = note_format_taskname(&note, NULL, name, NOTE_TASKNAME);
   note.nsa_cmn.nc_pid = pid;
   ctx->handler(&note, length, ctx->arg);
 }
 
-void note_taskname(void (FAR *handler)(FAR const void *,
-                                      size_t, FAR void *),
-                   FAR void *arg)
+void note_taskname_foreach(void (FAR *handler)(FAR const void *,
+                                               size_t, FAR void *),
+                           FAR void *arg)
 {
   struct note_taskname_foreach_s ctx;
 
   ctx.handler = handler;
   ctx.arg = arg;
-  nxtask_namepool_foreach(note_taskname_handler, &ctx);
+  nxtask_namepool_foreach(note_taskname_foreach_handler, &ctx);
+}
+
+void note_taskname(FAR struct tcb_s *tcb)
+{
+  struct note_startalloc_s note;
+  unsigned int length;
+  FAR struct note_driver_s **driver;
+  bool formatted = false;
+
+  nxtask_namepool_record(tcb->pid, tcb->name);
+
+  note_drivers_initialize();
+  for (driver = g_note_drivers; *driver; driver++)
+    {
+      if (!note_driver_isenabled_type(*driver, NOTE_TASKNAME))
+        {
+          continue;
+        }
+
+      if (note_do_taskname(*driver, tcb))
+        {
+          continue;
+        }
+
+      if ((*driver)->ops->add == NULL)
+        {
+          continue;
+        }
+
+      if (!formatted)
+        {
+          formatted = true;
+          length = note_format_taskname(&note, tcb, tcb->name,
+                                        NOTE_TASKNAME);
+        }
+
+      note_do_add(*driver, &note, length, false);
+    }
 }
 
 void note_suspend(FAR struct tcb_s *tcb)

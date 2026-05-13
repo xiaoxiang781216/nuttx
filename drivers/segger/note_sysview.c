@@ -57,6 +57,8 @@ static void note_sysview_start(FAR struct note_driver_s *drv,
                                FAR struct tcb_s *tcb);
 static void note_sysview_stop(FAR struct note_driver_s *drv,
                               FAR struct tcb_s *tcb);
+static void note_sysview_taskname(FAR struct note_driver_s *drv,
+                                  FAR struct tcb_s *tcb);
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
 static void note_sysview_suspend(FAR struct note_driver_s *drv,
                                  FAR struct tcb_s *tcb);
@@ -98,6 +100,7 @@ static const struct note_driver_ops_s g_note_sysview_ops =
   NULL,                       /* add */
   note_sysview_start,         /* start */
   note_sysview_stop,          /* stop */
+  note_sysview_taskname,      /* taskname */
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   note_sysview_suspend,       /* suspend */
   note_sysview_resume,        /* resume */
@@ -236,6 +239,12 @@ static void note_sysview_stop(FAR struct note_driver_s *drv,
                               FAR struct tcb_s *tcb)
 {
   SEGGER_SYSVIEW_OnTaskTerminate(tcb->pid);
+}
+
+static void note_sysview_taskname(FAR struct note_driver_s *drv,
+                                  FAR struct tcb_s *tcb)
+{
+  note_sysview_send_taskinfo(tcb);
 }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH

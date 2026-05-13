@@ -398,6 +398,8 @@ struct note_driver_ops_s
                   FAR const void *note, size_t notelen, bool noswitches);
   CODE void (*start)(FAR struct note_driver_s *drv, FAR struct tcb_s *tcb);
   CODE void (*stop)(FAR struct note_driver_s *drv, FAR struct tcb_s *tcb);
+  CODE void (*taskname)(FAR struct note_driver_s *drv,
+                        FAR struct tcb_s *tcb);
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   CODE void (*suspend)(FAR struct note_driver_s *drv, FAR struct tcb_s *tcb);
   CODE void (*resume)(FAR struct note_driver_s *drv, FAR struct tcb_s *tcb);
@@ -834,9 +836,10 @@ void note_stop(FAR struct tcb_s *tcb);
 void note_suspend(FAR struct tcb_s *tcb);
 void note_resume(FAR struct tcb_s *tcb);
 void note_ready(FAR struct tcb_s *tcb, uint8_t state);
-void note_taskname(void (FAR *handler)(FAR const void *,
-                                      size_t, FAR void *),
-                   FAR void *arg);
+void note_taskname(FAR struct tcb_s *tcb);
+void note_taskname_foreach(void (FAR *handler)(FAR const void *,
+                                               size_t, FAR void *),
+                           FAR void *arg);
 #  ifdef CONFIG_SMP
 void note_cpu_start(FAR struct tcb_s *tcb, int cpu);
 void note_cpu_started(FAR struct tcb_s *tcb);

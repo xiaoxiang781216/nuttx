@@ -39,6 +39,8 @@ static void notelog_start(FAR struct note_driver_s *drv,
                           FAR struct tcb_s *tcb);
 static void notelog_stop(FAR struct note_driver_s *drv,
                          FAR struct tcb_s *tcb);
+static void notelog_taskname(FAR struct note_driver_s *drv,
+                             FAR struct tcb_s *tcb);
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
 static void notelog_suspend(FAR struct note_driver_s *drv,
                             FAR struct tcb_s *tcb);
@@ -100,6 +102,7 @@ static const struct note_driver_ops_s g_notelog_ops =
   NULL,                  /* add */
   notelog_start,         /* start */
   notelog_stop,          /* stop */
+  notelog_taskname,      /* taskname */
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   notelog_suspend,       /* suspend */
   notelog_resume,        /* resume */
@@ -202,6 +205,18 @@ static void notelog_stop(FAR struct note_driver_s *drv,
 #else
   syslog(LOG_INFO, "Stop %s, TCB@%p, state=%d\n",
          get_task_name(tcb), tcb, tcb->task_state);
+#endif
+}
+
+static void notelog_taskname(FAR struct note_driver_s *drv,
+                             FAR struct tcb_s *tcb)
+{
+#ifdef CONFIG_SMP
+  syslog(LOG_INFO, "CPU%d: Taskname %s, TCB@%p\n",
+         tcb->cpu, get_task_name(tcb), tcb);
+#else
+  syslog(LOG_INFO, "Taskname %s, TCB@%p\n",
+         get_task_name(tcb), tcb);
 #endif
 }
 

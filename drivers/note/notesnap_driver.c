@@ -66,6 +66,8 @@ static void notesnap_start(FAR struct note_driver_s *drv,
                            FAR struct tcb_s *tcb);
 static void notesnap_stop(FAR struct note_driver_s *drv,
                           FAR struct tcb_s *tcb);
+static void notesnap_taskname(FAR struct note_driver_s *drv,
+                              FAR struct tcb_s *tcb);
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
 static void notesnap_suspend(FAR struct note_driver_s *drv,
                              FAR struct tcb_s *tcb);
@@ -126,6 +128,7 @@ static const struct note_driver_ops_s g_notesnap_ops =
   NULL,
   notesnap_start,
   notesnap_stop,
+  notesnap_taskname,
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   notesnap_suspend,
   notesnap_resume,
@@ -287,6 +290,12 @@ static void notesnap_stop(FAR struct note_driver_s *drv,
                           FAR struct tcb_s *tcb)
 {
   notesnap_common(drv, tcb, NOTE_STOP, 0);
+}
+
+static void notesnap_taskname(FAR struct note_driver_s *drv,
+                              FAR struct tcb_s *tcb)
+{
+  notesnap_common(drv, tcb, NOTE_TASKNAME, 0);
 }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
