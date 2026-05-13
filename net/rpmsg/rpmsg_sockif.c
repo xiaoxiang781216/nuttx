@@ -118,6 +118,7 @@ struct rpmsg_socket_conn_s
 
   FAR struct rpmsg_socket_conn_s *server;
   FAR struct rpmsg_socket_conn_s *next;
+  FAR struct rpmsg_socket_conn_s *pend;
 
   /* server listen-scoket listening: backlog > 0;
    * others: backlog = 0;
@@ -361,19 +362,34 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
       rpmsg_socket_poll_notify(conn, POLLOUT);
       nxmutex_unlock(&conn->sendlock);
 
-      /* Accept new connection and complete the final handshake */
+      /* Move child from pend to next list and notify server */
 
+      nxmutex_lock(&conn->recvlock);
       if (conn->server)
         {
-          FAR struct rpmsg_socket_conn_s *tmp;
+          FAR struct rpmsg_socket_conn_s *server = conn->server;
+          FAR struct rpmsg_socket_conn_s **pp;
 
-          nxmutex_lock(&conn->server->recvlock);
-          for (tmp = conn->server; tmp->next; tmp = tmp->next);
-          tmp->next = conn;
-          rpmsg_socket_post(&conn->server->recvsem);
-          rpmsg_socket_poll_notify(conn->server, POLLIN);
-          nxmutex_unlock(&conn->server->recvlock);
+          conn->server = NULL;
+          nxmutex_lock(&server->recvlock);
+
+          for (pp = &server->pend; *pp; pp = &(*pp)->next)
+            {
+              if (*pp == conn)
+                {
+                  *pp = conn->next;
+                  conn->next = server->next;
+                  server->next = conn;
+                  rpmsg_socket_post(&server->recvsem);
+                  rpmsg_socket_poll_notify(server, POLLIN);
+                  break;
+                }
+            }
+
+          nxmutex_unlock(&server->recvlock);
         }
+
+      nxmutex_unlock(&conn->recvlock);
     }
   else if (head->cmd == RPMSG_SOCKET_CMD_DATA)
     {
@@ -635,6 +651,12 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
       return;
     }
 
+  new->rpaddr.rp_family = AF_RPMSG;
+  strlcpy(new->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev),
+          sizeof(new->rpaddr.rp_cpu));
+  strlcpy(new->rpaddr.rp_name, name + RPMSG_SOCKET_NAME_PREFIX_LEN,
+          sizeof(new->rpaddr.rp_name));
+
   nxmutex_lock(&server->recvlock);
   if (server->pending >= server->backlog)
     {
@@ -647,14 +669,10 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
       return;
     }
 
+  new->next = server->pend;
+  server->pend = new;
   server->pending++;
   nxmutex_unlock(&server->recvlock);
-
-  new->rpaddr.rp_family = AF_RPMSG;
-  strlcpy(new->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev),
-          sizeof(new->rpaddr.rp_cpu));
-  strlcpy(new->rpaddr.rp_name, name + RPMSG_SOCKET_NAME_PREFIX_LEN,
-          sizeof(new->rpaddr.rp_name));
 
   rpmsg_socket_ns_bound(&new->ept);
 }
@@ -878,23 +896,6 @@ static int rpmsg_socket_accept(FAR struct socket *psock,
 
       if (conn)
         {
-          if (conn->sendsize == 0)
-            {
-              /* Child dequeued but SYNC not yet complete, wait for it */
-
-              ret = net_sem_wait(&conn->sendsem);
-              if (ret < 0 || !conn->ept.rdev || conn->unbind)
-                {
-                  /* Wait failed or connection reset, release the child */
-
-                  conn->server = NULL;
-                  rpmsg_socket_destroy_ept(conn);
-                  break;
-                }
-
-              DEBUGASSERT(conn->sendsize > 0);
-            }
-
           newsock->s_domain = psock->s_domain;
           newsock->s_sockif = psock->s_sockif;
           newsock->s_type   = SOCK_STREAM;
@@ -1398,6 +1399,7 @@ static int rpmsg_socket_close(FAR struct socket *psock)
   if (conn->backlog > 0)
     {
       FAR struct rpmsg_socket_conn_s *child;
+      FAR struct rpmsg_socket_conn_s *pend;
       FAR struct rpmsg_socket_conn_s *next;
 
       rpmsg_unregister_callback(conn,
@@ -1406,20 +1408,34 @@ static int rpmsg_socket_close(FAR struct socket *psock)
                                 rpmsg_socket_ns_match,
                                 rpmsg_socket_ns_bind);
 
-      /* Drain pending children from the accept queue to prevent leak */
-
       nxmutex_lock(&conn->recvlock);
       child = conn->next;
       conn->next = NULL;
+      pend = conn->pend;
+      conn->pend = NULL;
       nxmutex_unlock(&conn->recvlock);
+
+      /* Drain ready children */
 
       while (child)
         {
           next = child->next;
           child->next = NULL;
-          child->server = NULL;
           rpmsg_socket_destroy_ept(child);
           child = next;
+        }
+
+      /* Drain pending children */
+
+      while (pend)
+        {
+          next = pend->next;
+          pend->next = NULL;
+          nxmutex_lock(&pend->recvlock);
+          pend->server = NULL;
+          nxmutex_unlock(&pend->recvlock);
+          rpmsg_socket_destroy_ept(pend);
+          pend = next;
         }
     }
   else
