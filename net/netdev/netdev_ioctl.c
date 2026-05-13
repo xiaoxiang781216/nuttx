@@ -690,7 +690,14 @@ static int netdev_vlan_ioctl(FAR struct socket *psock, int cmd,
         {
           /* Just forward the IOCTL to the network driver */
 
-          ret = dev->d_ioctl(dev, cmd, (unsigned long)(uintptr_t)req);
+          if (dev->d_ioctl)
+            {
+              ret = dev->d_ioctl(dev, cmd, (unsigned long)(uintptr_t)req);
+            }
+          else
+            {
+              ret = -ENOSYS;
+            }
         }
       else
         {
