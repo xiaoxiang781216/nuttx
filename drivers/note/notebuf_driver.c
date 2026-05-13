@@ -27,6 +27,9 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
+
+#include <nuttx/fs/fs.h>
+#include <nuttx/note/note_driver.h>
 #include <nuttx/note/notebuf_driver.h>
 
 #define NOTEBUF_MAX_NOTELEN 256
@@ -145,6 +148,24 @@ static int notebuf_add(FAR struct note_driver_s *drv,
   return 0;
 }
 
+static int notebuf_ioctl(FAR struct file *filep, int cmd,
+                         unsigned long arg)
+{
+  FAR struct note_driver_s *driver = filep->f_inode->i_private;
+  FAR struct notebuf_driver_s *buf =
+    (FAR struct notebuf_driver_s *)driver;
+
+  switch (cmd)
+    {
+      case NOTE_CLEAR:
+        ring_reset(&buf->ring);
+        return OK;
+
+      default:
+        return -ENOTTY;
+    }
+}
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -153,4 +174,5 @@ const struct note_driver_ops_s g_notebuf_ops =
 {
   .add = notebuf_add,
   .flush = notebuf_flush_all,
+  .ioctl = notebuf_ioctl,
 };
