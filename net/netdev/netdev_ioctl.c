@@ -46,6 +46,7 @@
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/radiodev.h>
 #include <nuttx/net/vlan.h>
+#include <nuttx/trace.h>
 
 #ifdef CONFIG_NET_6LOWPAN
 #  include <nuttx/net/sixlowpan.h>
@@ -2173,6 +2174,9 @@ int netdev_ifup(FAR struct net_driver_s *dev)
             {
               nerr("ERROR: Failed to bring up %s: %d\n",
                    dev->d_ifname, ret);
+              net_trace_diag(LOG_ERR, DIAG_NET_NIC_START_FAIL,
+                             "ErrorCode:%d,InterfaceInfo:%s/%u",
+                             ret, dev->d_ifname, dev->d_lltype);
             }
         }
       else
