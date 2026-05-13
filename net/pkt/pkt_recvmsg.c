@@ -131,7 +131,7 @@ static void pkt_recvfrom_newdata(FAR struct net_driver_s *dev,
                                  FAR struct pkt_recvfrom_s *pstate)
 {
   unsigned int offset = 0;
-  size_t recvlen;
+  ssize_t recvlen;
 
 #ifdef CONFIG_NET_TIMESTAMP
   cmsg_store_timestamp(pstate->pr_msg, &dev->d_iob->io_time,
@@ -149,6 +149,11 @@ static void pkt_recvfrom_newdata(FAR struct net_driver_s *dev,
 
   recvlen = iob_copyout(pstate->pr_msg->msg_iov->iov_base,
                         dev->d_iob, recvlen, offset);
+
+  if (recvlen <= 0)
+    {
+      return;
+    }
 
   ninfo("Received %d bytes (of %d)\n", (int)recvlen, (int)dev->d_len);
 
