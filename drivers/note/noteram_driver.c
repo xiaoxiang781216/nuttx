@@ -1729,20 +1729,30 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
 #ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
     case NOTE_WDOG_START:
     case NOTE_WDOG_CANCEL:
+      {
+        FAR struct note_wdog_s *nw;
+
+        nw = (FAR struct note_wdog_s *)p;
+        ret += noteram_dump_header(s, note, ctx);
+        ret += lib_sprintf(s, "tracing_mark_write: I|%d|"
+                           "wdog_%s: handler=%pS arg=0x%" PRIxPTR "\n",
+                           pid,
+                           note->nc_type == NOTE_WDOG_START
+                           ? "start" : "cancel",
+                           (FAR void *)nw->handler, nw->arg);
+      }
+      break;
     case NOTE_WDOG_ENTER:
     case NOTE_WDOG_LEAVE:
       {
         FAR struct note_wdog_s *nw;
-        FAR const char *name[] =
-          {
-            "start", "cancel", "enter", "leave",
-          };
 
         nw = (FAR struct note_wdog_s *)p;
         ret += noteram_dump_header(s, note, ctx);
-        ret += lib_sprintf(s, "tracing_mark_write: I|%d|wdog: %s-%pS %p\n",
-                           pid, name[note->nc_type - NOTE_WDOG_START],
-                           (FAR void *)nw->handler, (FAR void *)nw->arg);
+        ret += lib_sprintf(s, "tracing_mark_write: %c|%d|"
+                           "wdog: handler=%pS arg=0x%" PRIxPTR "\n",
+                           note->nc_type == NOTE_WDOG_ENTER ? 'B' : 'E',
+                           pid, (FAR void *)nw->handler, nw->arg);
       }
       break;
 #endif
