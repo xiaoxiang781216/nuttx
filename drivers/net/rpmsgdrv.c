@@ -780,7 +780,10 @@ static int net_rpmsg_drv_ifup(FAR struct netdev_lowerhalf_s *dev)
 
   msg.lnkaddr.length = MIN(netdev_lladdrsize(&dev->netdev),
                           sizeof(msg.lnkaddr.addr));
-  memcpy(msg.lnkaddr.addr, &dev->netdev.d_mac, msg.lnkaddr.length);
+  if (msg.lnkaddr.length > 0)
+    {
+      memcpy(msg.lnkaddr.addr, &dev->netdev.d_mac, msg.lnkaddr.length);
+    }
 
 #ifdef CONFIG_NET_IPv4
   net_ipv4addr_copy(msg.ipaddr, dev->netdev.d_ipaddr);
@@ -805,8 +808,11 @@ static int net_rpmsg_drv_ifup(FAR struct netdev_lowerhalf_s *dev)
 
   /* Update net_driver_t field */
 
-  memcpy(&dev->netdev.d_mac, msg.lnkaddr.addr,
-         MIN(msg.lnkaddr.length, sizeof(msg.lnkaddr.addr)));
+  if (msg.lnkaddr.length > 0)
+    {
+      memcpy(&dev->netdev.d_mac, msg.lnkaddr.addr,
+             MIN(msg.lnkaddr.length, sizeof(msg.lnkaddr.addr)));
+    }
 
 #ifdef CONFIG_NET_IPv4
   net_ipv4addr_copy(dev->netdev.d_ipaddr, msg.ipaddr);
@@ -931,7 +937,11 @@ static int net_rpmsg_drv_addmac(FAR struct netdev_lowerhalf_s *dev,
 
   msg.lnkaddr.length = MIN(netdev_lladdrsize(&dev->netdev),
                           sizeof(msg.lnkaddr.addr));
-  memcpy(msg.lnkaddr.addr, mac, msg.lnkaddr.length);
+  if (msg.lnkaddr.length > 0)
+    {
+      memcpy(msg.lnkaddr.addr, mac, msg.lnkaddr.length);
+    }
+
   return net_rpmsg_drv_send_recv(dev, &msg, NET_RPMSG_ADDMCAST, sizeof(msg));
 }
 
@@ -960,7 +970,11 @@ static int net_rpmsg_drv_rmmac(FAR struct netdev_lowerhalf_s *dev,
 
   msg.lnkaddr.length = MIN(netdev_lladdrsize(&dev->netdev),
                           sizeof(msg.lnkaddr.addr));
-  memcpy(msg.lnkaddr.addr, mac, msg.lnkaddr.length);
+  if (msg.lnkaddr.length > 0)
+    {
+      memcpy(msg.lnkaddr.addr, mac, msg.lnkaddr.length);
+    }
+
   return net_rpmsg_drv_send_recv(dev, &msg, NET_RPMSG_RMMCAST, sizeof(msg));
 }
 #endif
