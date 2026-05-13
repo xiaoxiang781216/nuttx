@@ -207,8 +207,10 @@ static int nxtask_spawn_exec(FAR pid_t *pidp, FAR const char *name,
 
           /* Set the default priority to the same priority as this task */
 
-          nxsched_get_param(0, &param);
-          posix_spawnattr_setpriority(&tmp, param.sched_priority);
+          if (nxsched_get_param(0, &param) == OK)
+            {
+              posix_spawnattr_setpriority(&tmp, param.sched_priority);
+            }
         }
 
       if (tmp.stacksize == 0)
