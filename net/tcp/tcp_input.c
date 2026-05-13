@@ -535,7 +535,10 @@ static void tcp_input_ofosegs(FAR struct net_driver_s *dev,
     }
 
 prepare:
-  netdev_iob_prepare(dev, false, 0);
+  if (netdev_iob_prepare(dev, false, 0) != OK)
+    {
+      nwarn("WARNING: netdev_iob_prepare failed\n");
+    }
 }
 #endif /* CONFIG_NET_TCP_OUT_OF_ORDER */
 
