@@ -455,7 +455,7 @@ void tcp_set_zero_probe(FAR struct tcp_conn_s *conn, uint32_t flags)
 void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 {
   int hsec = tcp_get_timeout(conn);
-  uint16_t result;
+  uint32_t result;
   uint8_t hdrlen;
 
   /* NOTE: It is important to decrease conn->timer at "hsec" pace,

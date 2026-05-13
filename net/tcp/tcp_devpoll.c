@@ -85,7 +85,7 @@
 
 void tcp_poll(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 {
-  uint16_t result;
+  uint32_t result;
 
   DEBUGASSERT(dev != NULL && conn != NULL && dev == conn->dev);
 

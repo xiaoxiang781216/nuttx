@@ -1371,7 +1371,7 @@ void tcp_synack(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
  ****************************************************************************/
 
 void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
-                 uint16_t result);
+                 uint32_t result);
 
 /****************************************************************************
  * Name: tcp_rexmit
@@ -1393,7 +1393,7 @@ void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
  ****************************************************************************/
 
 void tcp_rexmit(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
-                uint16_t result);
+                uint32_t result);
 
 /****************************************************************************
  * Name: tcp_ipv4_input
