@@ -60,12 +60,22 @@
 #include <nuttx/net/netstats.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/tcp.h>
+#include <nuttx/ratelimit.h>
+#include <nuttx/trace.h>
 
 #include "devif/devif.h"
 #include "utils/utils.h"
 #include "tcp/tcp.h"
 
 #define IPDATA(hl) (*(FAR uint8_t *)IPBUF(hl))
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+#ifndef CONFIG_NET_TCP_FIXED_RTO
+static DEFINE_RATELIMIT_STATE(g_tcp_latency_rl, 600, 5);
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -1336,6 +1346,25 @@ found:
           m = m - (conn->sv >> 2);
           conn->sv += m;
           conn->rto = (conn->sa >> 3) + conn->sv;
+
+          /* Report high TCP latency via DFX.
+           * rto unit is half-second, convert to ms.
+           * Use ratelimit to avoid flooding: aggregate suppressed events.
+           */
+
+          if (conn->rto > CONFIG_NET_TCP_RTO * 4)
+            {
+              if (!ratelimit_islimited(&g_tcp_latency_rl))
+                {
+                  net_trace_diag(LOG_ERR, DIAG_NET_TCP_LATENCY_HIGH,
+                                 "Latency:%u,InterfaceInfo:%s/%04x/%u/%08x"
+                                 ",Suppressed:%u",
+                                 conn->rto * 500,
+                                 dev->d_ifname, dev->d_flags,
+                                 dev->d_lltype, dev->d_ipaddr,
+                                 ratelimit_missed(&g_tcp_latency_rl));
+                }
+            }
         }
 #endif
 
