@@ -472,15 +472,18 @@ if(CONFIG_BUILTIN_TOOLCHAIN)
         OUTPUT_VARIABLE extra_lib_path)
       nuttx_add_extra_library(${extra_lib_path})
     else()
+      if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+        set(RTLIB -rtlib=compiler-rt)
+      endif()
       execute_process(
         COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-                --print-libgcc-file-name -rtlib=compiler-rt
+                --print-libgcc-file-name ${RTLIB}
         OUTPUT_STRIP_TRAILING_WHITESPACE
         OUTPUT_VARIABLE libgcc_path)
       get_filename_component(libgcc_name ${libgcc_path} NAME)
       execute_process(
         COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-                --print-file-name=${libgcc_name} -rtlib=compiler-rt
+                --print-file-name=${libgcc_name} {RTLIB}
         OUTPUT_STRIP_TRAILING_WHITESPACE
         OUTPUT_VARIABLE libgcc)
       nuttx_add_extra_library(${libgcc})
