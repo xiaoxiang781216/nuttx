@@ -163,11 +163,6 @@ static int do_sendto_request(FAR struct usrsock_conn_s *conn,
       req.buflen += msg->msg_iov[i].iov_len;
     }
 
-  if (req.buflen > UINT32_MAX)
-    {
-      req.buflen = UINT32_MAX;
-    }
-
   bufs[0].iov_base = (FAR void *)&req;
   bufs[0].iov_len  = sizeof(req);
   bufs[1].iov_base = msg->msg_name;
