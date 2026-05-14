@@ -286,6 +286,35 @@ config MODULES
 		has no effect unless you wish to build loadable applications
 		in a FLAT build.
 
+config BUILD_INFO
+	bool "Embed build metadata in ELF"
+	default n
+	---help---
+		Embed build metadata (sysinfo, .config snapshot, and any
+		vendor-registered payloads) into the final nuttx ELF as
+		entries of a single SHT_NOTE section named
+		.note.nuttx.buildinfo.
+
+		The section carries no SHF_ALLOC flag:
+		  - it is not mapped into any PT_LOAD segment;
+		  - 'objcopy -O binary' does not include it in nuttx.bin;
+		  - '--gc-sections' does not collect it.
+
+		Reading:
+		  tools/buildinfo.py list <elf>
+		  tools/buildinfo.py extract <elf> -n <key>
+		  readelf -n <elf>   # native, all binutils/LLVM versions
+
+		Boards and vendors can register additional entries by calling
+		nuttx_add_note(<source-file> [DEPENDS <target>]) in their
+		CMakeLists.txt. The note's owner (KEY in 'readelf -n') is the
+		file's basename; DEPENDS names a custom target that produces
+		the file. See cmake/nuttx_add_buildinfo.cmake for details.
+
+		Requires an assembler that supports the '.incbin' directive
+		(GNU as, clang-integrated-as). Supported on all currently
+		upstreamed NuttX toolchains.
+
 choice
 	prompt "Memory organization"
 	default BUILD_FLAT

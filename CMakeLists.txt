@@ -878,6 +878,24 @@ if(CONFIG_DRIVERS_NOTE_STRIP_FORMAT)
   endif()
 endif()
 
+# Embed build information as an ELF .note.nuttx.buildinfo section
+
+if(CONFIG_BUILD_INFO)
+  include(nuttx_add_buildinfo)
+
+  add_custom_target(
+    nuttx_buildinfo_sysinfo ALL
+    BYPRODUCTS ${CMAKE_BINARY_DIR}/sysinfo.h
+    COMMAND ${Python3_EXECUTABLE} ${NUTTX_DIR}/tools/host_info_dump.py
+            ${CMAKE_BINARY_DIR} -c -p -k -m > ${CMAKE_BINARY_DIR}/sysinfo.h
+    COMMENT "Collecting sysinfo")
+
+  nuttx_add_note(${CMAKE_BINARY_DIR}/sysinfo.h DEPENDS nuttx_buildinfo_sysinfo)
+  nuttx_add_note(${CMAKE_BINARY_DIR}/.config)
+
+  nuttx_generate_buildinfo(nuttx)
+endif()
+
 # TODO: if we use an install target a manifest may not be needed
 if(CONFIG_ARCH_SIM)
   file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "nuttx\n")
