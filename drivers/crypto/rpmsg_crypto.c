@@ -820,6 +820,7 @@ static int rpmsg_crypto_process(FAR struct cryptop *crp)
   FAR void *opaque = crp->crp_opaque;
   int ret;
 
+  memset(&info, 0, sizeof(info));
   rdev = (FAR struct rpmsg_crypto_s *)crypto_driver_get_priv(hid);
   if (rdev == NULL)
     {
