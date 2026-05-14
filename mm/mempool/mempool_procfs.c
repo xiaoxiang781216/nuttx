@@ -209,7 +209,11 @@ static ssize_t mempool_write(FAR struct file *filep, FAR const char *buffer,
 
       for (entry = g_mempool_procfs; entry != NULL; entry = entry->next)
         {
-          struct mempoolinfo_s poolinfo;
+          struct mempoolinfo_s poolinfo =
+          {
+            0
+          };
+
           FAR struct mempool_s *pool = container_of(entry,
                                                     struct mempool_s,
                                                     procfs);
