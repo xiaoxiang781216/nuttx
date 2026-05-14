@@ -440,6 +440,7 @@ static int rpmsg_crypto_fill_data_request(
         return -ENOTSUP;
     }
 
+  header->flag = crp->crp_flags;
   return OK;
 }
 
@@ -816,6 +817,7 @@ static int rpmsg_crypto_process(FAR struct cryptop *crp)
   struct rpmsg_crypto_process_s info;
   uint32_t hid = (uint32_t)(crp->crp_sid >> 32);
   uint32_t sid = (uint32_t)crp->crp_sid;
+  FAR void *opaque = crp->crp_opaque;
   int ret;
 
   rdev = (FAR struct rpmsg_crypto_s *)crypto_driver_get_priv(hid);
@@ -837,6 +839,15 @@ static int rpmsg_crypto_process(FAR struct cryptop *crp)
     {
       rpmsgerr("Failed to fill data request\n");
       return ret;
+    }
+
+  if (crp->crp_flags & CRYPTO_F_CBIMM)
+    {
+      session->data = opaque;
+    }
+  else
+    {
+      session->data = NULL;
     }
 
   info.header.tid = session->tid;
@@ -1369,8 +1380,35 @@ static int rpmsg_crypto_process_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsg_crypto_header_s *header = data;
   FAR struct rpmsg_crypto_session_s *session =
     (FAR struct rpmsg_crypto_session_s *)(uintptr_t)header->cookie;
+  FAR struct rpmsg_crypto_process_s *msg = data;
+  FAR struct cryptop *crp = session->data;
 
   session->result = header->result;
+  if (crp != NULL && (crp->crp_flags & CRYPTO_F_CBIMM))
+    {
+      crp->crp_etype = header->result;
+      if (session->result == 0)
+        {
+          len -= sizeof(*msg);
+          if (crp->crp_dst && len > 0)
+            {
+              memcpy(crp->crp_dst, msg->buf, len);
+            }
+          else if (crp->crp_mac && len > 0)
+            {
+              memcpy(crp->crp_mac, msg->buf, len);
+            }
+        }
+
+      if (crp->crp_callback)
+        {
+          crp->crp_callback(crp);
+        }
+
+      session->data = NULL;
+      return rpmsg_post(ept, &session->sem);
+    }
+
   if (session->result == 0)
     {
       rpmsg_hold_rx_buffer(ept, data);
