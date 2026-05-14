@@ -2067,28 +2067,24 @@ static void ctucanfd_init(FAR struct ctucanfd_driver_s *priv)
   cpu_set_t cpuset;
   int ret;
 
-  /* Try MSI first. Each device gets a unique IRQ number from
-   * GICv2m, avoiding the INTx 4-pin sharing issue where different
-   * CPUs' up_affinity_irq calls would overwrite each other's
-   * GICD_ITARGETSR settings. Fall back to legacy IRQ if MSI is
-   * not available (e.g. CONFIG_PCI_MSIX or CONFIG_ARM_GICv2M
-   * not enabled).
-   */
+  /* Try MSI first. Fall back to legacy INTx if MSI cannot be connected. */
 
   ret = pci_alloc_irq(priv->pcidev, &priv->irq, 1);
-  if (ret >= 0)
+  if (ret == 1)
     {
-      /* Program the MSI address/data into the PCI device's MSI
-       * capability registers so the device can trigger the
-       * allocated GICv2m SPI via memory write.
-       */
-
-      pci_connect_irq(priv->pcidev, &priv->irq, 1);
+      ret = pci_connect_irq(priv->pcidev, &priv->irq, 1);
+      if (ret < 0)
+        {
+          pci_release_irq(priv->pcidev, &priv->irq, 1);
+        }
     }
   else
     {
-      /* Fall back to legacy INTx interrupt */
+      ret = -ENOTSUP;
+    }
 
+  if (ret < 0)
+    {
       priv->irq = pci_get_irq(priv->pcidev);
     }
 
