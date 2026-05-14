@@ -50,8 +50,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifndef CONFIG_CAN_MAX_CONNS
-#  define CONFIG_CAN_MAX_CONNS 0
+#ifndef CONFIG_NET_CAN_MAX_CONNS
+#  define CONFIG_NET_CAN_MAX_CONNS 0
 #endif
 
 /****************************************************************************
@@ -70,8 +70,8 @@ DEFINE_PER_CPU_BMP(rmutex_t, g_can_connections_lock) = NXRMUTEX_INITIALIZER;
 /* The array containing all CAN connections. */
 
 MEMPOOL_DEFINE(g_can_connections, sizeof(struct can_conn_s),
-               CONFIG_CAN_PREALLOC_CONNS, CONFIG_CAN_MAX_CONNS,
-               CONFIG_CAN_ALLOC_CONNS);
+               CONFIG_NET_CAN_PREALLOC_CONNS, CONFIG_NET_CAN_MAX_CONNS,
+               CONFIG_NET_CAN_ALLOC_CONNS);
 
 /* A list of all allocated CAN connections */
 
