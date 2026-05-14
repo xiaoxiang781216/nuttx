@@ -53,5 +53,12 @@ can_sockif(sa_family_t family, int type, int protocol)
   UNUSED(type);
   UNUSED(protocol);
 
+#ifdef CONFIG_NET_CAN_ISOTP
+  if (protocol == CAN_ISOTP && type == SOCK_DGRAM)
+    {
+      return &g_can_isotp_sockif;
+    }
+#endif
+
   return &g_can_raw_sockif;
 }

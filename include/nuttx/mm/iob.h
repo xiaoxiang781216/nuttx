@@ -902,6 +902,32 @@ FAR struct iob_s *iob_peek_tail(FAR struct iob_queue_s *iobq)
 }
 
 /****************************************************************************
+ * Name: iob_next_queue_entry
+ *
+ * Description:
+ *   Given an I/O buffer that belongs to a chain within a queue, return the
+ *   head of the next chain in that queue.  Walks to the end of the current
+ *   chain (the IOB marked with IOB_CHAIN_END) and follows its link to the
+ *   next entry.
+ *
+ * Returned Value:
+ *   The head of the next chain in the queue, or NULL if 'iob' is NULL or
+ *   belongs to the last chain in the queue.
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR struct iob_s *iob_next_queue_entry(FAR struct iob_s *iob)
+{
+  while (iob != NULL && !IOB_FLAG_TEST(iob, IOB_CHAIN_END))
+    {
+      iob = IOB_LINK_GET(iob);
+    }
+
+  return iob == NULL ? NULL : IOB_LINK_GET(iob);
+}
+
+/****************************************************************************
  * Name: iob_free_queue
  *
  * Description:

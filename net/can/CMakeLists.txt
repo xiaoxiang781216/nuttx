@@ -24,5 +24,9 @@ if(CONFIG_NET_CAN)
 
   # Socket layer
   list(APPEND SRCS can_sockif.c can_raw.c can.c)
+
+  if(CONFIG_NET_CAN_ISOTP)
+    list(APPEND SRCS can_isotp.c)
+  endif()
   target_sources(net PRIVATE ${SRCS})
 endif()

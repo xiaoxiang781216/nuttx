@@ -59,3 +59,30 @@ SocketCAN Device Drivers
      matches the size of a ``struct can_frame`` or
      ``struct canfd_frame`` then you cast the content of the
      ``net_driver_s.d_buf`` pointer to the correct CAN frame struct
+
+ISO-TP
+======
+
+ISO-TP (``CAN_ISOTP``) is a socket protocol that provides message-oriented
+communication over CAN. It is enabled with ``CONFIG_NET_CAN_ISOTP=y`` option.
+
+By default a message may carry up to 4095 bytes, the maximum length the
+classic 12-bit First Frame ``FF_DL`` field can encode. Selecting
+``CONFIG_LIBC_CAN_ISOTP_LONG_PDU=y`` enables the 32-bit ``FF_DL`` escape
+sequence (ISO 15765-2:2016), extending the maximum message length to
+2^32-1 bytes at the cost of a larger First Frame header and wider internal
+length fields.
+Leave it disabled on classic-CAN-only configurations that never transfer long
+messages so no extra code or memory is spent. A ``send`` of a message larger
+than the configured limit fails with ``EMSGSIZE``.
+
+A socket is created with ``AF_CAN`` / ``SOCK_DGRAM`` / ``CAN_ISOTP`` and
+bound to a ``sockaddr_can`` specifying the interface and the TX/RX CAN IDs
+via ``can_addr.tp.tx_id`` and ``can_addr.tp.rx_id``. Each ``send`` call
+transmits one complete message; each ``recv`` call returns one complete
+reassembled message.
+
+Segmentation, flow control, and reassembly are handled transparently by the
+kernel. The N_Cr timeout (1000 ms) applies on both TX (waiting for a Flow
+Control frame after the First Frame) and RX (waiting for Consecutive Frames
+after a First Frame).

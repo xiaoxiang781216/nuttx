@@ -131,6 +131,9 @@ extern "C"
 #endif
 
 EXTERN const struct sock_intf_s g_can_raw_sockif;
+#ifdef CONFIG_NET_CAN_ISOTP
+EXTERN const struct sock_intf_s g_can_isotp_sockif;
+#endif
 
 /* The CAN connections lock */
 

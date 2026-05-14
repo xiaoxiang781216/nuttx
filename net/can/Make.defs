@@ -29,6 +29,9 @@ ifeq ($(CONFIG_NET_CAN),y)
 SOCK_CSRCS += can_sockif.c
 SOCK_CSRCS += can_raw.c
 SOCK_CSRCS += can.c
+ifeq ($(CONFIG_NET_CAN_ISOTP),y)
+SOCK_CSRCS += can_isotp.c
+endif
 # Include can build support
 
 DEPPATH += --dep-path can
