@@ -448,6 +448,30 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
     }
 
 #endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION */
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0
+
+  /* Did this task disable interrupts? If so, accumulate the elapsed
+   * time before context switch so that sleep time is not counted.
+   */
+
+  if (tcb->irqdis_count > 0)
+    {
+      elapsed = current - tcb->irqdis_start;
+      if (elapsed > tcb->irqdis_max)
+        {
+          tcb->irqdis_max        = elapsed;
+          tcb->irqdis_max_caller = tcb->irqdis_caller;
+          CHECK_IRQDIS(tcb->pid, elapsed);
+        }
+
+      if (elapsed > g_irqdis_max)
+        {
+          g_irqdis_max = elapsed;
+        }
+    }
+
+#endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE */
 }
 
 /****************************************************************************
@@ -484,6 +508,18 @@ void nxsched_resume_critmon(FAR struct tcb_s *tcb)
       tcb->premp_start = current;
     }
 #endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION */
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0
+
+  /* Did this task disable interrupts? Reset the start time so that
+   * sleep time is not counted toward irq-disable duration.
+   */
+
+  if (tcb->irqdis_count > 0)
+    {
+      tcb->irqdis_start = current;
+    }
+#endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE */
 }
 
 void nxsched_update_critmon(FAR struct tcb_s *tcb)
