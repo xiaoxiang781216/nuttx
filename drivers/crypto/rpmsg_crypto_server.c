@@ -48,9 +48,16 @@
 struct rpmsg_crypto_server_data_s
 {
   uint64_t tid;
-  struct   cryptop crp;
-  struct   cryptodesc crda;
-  struct   cryptodesc crde;
+  struct cryptop crp;
+  struct cryptodesc crda;
+  struct cryptodesc crde;
+
+  /* Async callback context */
+
+  FAR struct rpmsg_endpoint *ept;     /* rpmsg endpoint for response */
+  FAR void *rsp;                      /* tx response buffer */
+  FAR void *rxbuf;                    /* held rx buffer */
+  uint32_t rsplen;                    /* response length */
 };
 
 struct rpmsg_crypto_server_s
@@ -80,6 +87,14 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
                                            FAR void *data, size_t len,
                                            uint32_t src, FAR void *priv);
 
+/* Async completion callback */
+
+static int rpmsg_crypto_done_cb(FAR struct cryptop *crp);
+static int rpmsg_crypto_dispatch(
+    FAR struct rpmsg_crypto_server_data_s *rcsdata,
+    FAR struct rpmsg_endpoint *ept, FAR void *msg,
+    FAR void *rsp, uint32_t rsplen);
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -100,6 +115,56 @@ static const rpmsg_ept_cb g_rpmsg_crypto_handler[] =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: rpmsg_crypto_done_cb
+ *
+ * Description:
+ *   Completion callback for symmetric crypto operations. Sends the pre-
+ *   filled response, releases the held rx buffer, and clears rsp as a
+ *   guard against unexpected double completion from the backend.
+ *
+ ****************************************************************************/
+
+static int rpmsg_crypto_done_cb(FAR struct cryptop *crp)
+{
+  FAR struct rpmsg_crypto_server_data_s *rcsdata = crp->crp_opaque;
+  FAR struct rpmsg_crypto_process_s *rsp = rcsdata->rsp;
+
+  rsp->header.result = crp->crp_etype;
+  rpmsg_send_nocopy(rcsdata->ept, rsp, rcsdata->rsplen);
+  rpmsg_release_rx_buffer(rcsdata->ept, rcsdata->rxbuf);
+  rcsdata->rsp = NULL;
+  return OK;
+}
+
+/****************************************************************************
+ * Name: rpmsg_crypto_dispatch
+ *
+ * Description:
+ *   Common dispatch helper for symmetric crypto operations: holds the rx
+ *   buffer, saves async context, sets the completion callback, and
+ *   dispatches to hardware via crypto_invoke.
+ *
+ ****************************************************************************/
+
+static int rpmsg_crypto_dispatch(
+    FAR struct rpmsg_crypto_server_data_s *rcsdata,
+    FAR struct rpmsg_endpoint *ept, FAR void *msg,
+    FAR void *rsp, uint32_t rsplen)
+{
+  rpmsg_hold_rx_buffer(ept, msg);
+
+  rcsdata->ept = ept;
+  rcsdata->rsp = rsp;
+  rcsdata->rxbuf = msg;
+  rcsdata->rsplen = rsplen;
+
+  rcsdata->crp.crp_callback = rpmsg_crypto_done_cb;
+  rcsdata->crp.crp_opaque = rcsdata;
+
+  return crypto_invoke(&rcsdata->crp);
+}
 
 /****************************************************************************
  * Name: rpmsg_crypto_newsession_handler
@@ -271,7 +336,7 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_endpoint *ept,
   if (crde->crd_alg < 0)
     {
       rsp->header.result = crde->crd_alg;
-      goto out;
+      return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp));
     }
 
   if (msg->data.header.opcode == VIRTIO_CRYPTO_CIPHER_ENCRYPT)
@@ -305,14 +370,8 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_endpoint *ept,
   crp->crp_dst = rsp->buf;
   rsp->header = msg->header;
   rsp->data = msg->data;
-  rsp->header.result = crypto_invoke(crp);
-  if (rsp->header.result == 0)
-    {
-      rsp->header.result = crp->crp_etype;
-    }
-
-out:
-  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + crp->crp_olen);
+  return rpmsg_crypto_dispatch(rcsdata, ept, msg, rsp,
+                               sizeof(*rsp) + crp->crp_olen);
 }
 
 static int
@@ -353,18 +412,14 @@ rpmsg_crypto_process_hash(FAR struct rpmsg_endpoint *ept,
       rsp->data = msg->data;
       crp->crp_olen = result_len;
       crp->crp_mac = rsp->buf;
-      rsp->header.result = crypto_invoke(crp);
-      if (rsp->header.result == 0)
-        {
-          rsp->header.result = crp->crp_etype;
-        }
-
-      return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + crp->crp_olen);
+      return rpmsg_crypto_dispatch(rcsdata, ept, msg, rsp,
+                                   sizeof(*rsp) + crp->crp_olen);
     }
 
   crda->crd_flags |= CRD_F_UPDATE;
   crp->crp_ilen = msglen - sizeof(*msg);
   crda->crd_len = crp->crp_ilen;
+  crp->crp_callback = NULL;
   crp->crp_buf = msg->buf;
   return crypto_invoke(crp);
 }
@@ -415,19 +470,15 @@ rpmsg_crypto_process_mac(FAR struct rpmsg_endpoint *ept,
       crp->crp_ilen = 0;
       crp->crp_olen = result_len;
       crp->crp_mac = rsp->buf;
-      rsp->header.result = crypto_invoke(crp);
-      if (rsp->header.result == 0)
-        {
-          rsp->header.result = crp->crp_etype;
-        }
-
-      return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + crp->crp_olen);
+      return rpmsg_crypto_dispatch(rcsdata, ept, msg, rsp,
+                                   sizeof(*rsp) + crp->crp_olen);
     }
 
   crda->crd_flags |= CRD_F_UPDATE;
   crp->crp_ilen = msglen - sizeof(*msg);
   crda->crd_len = crp->crp_ilen;
   crde->crd_len = crp->crp_ilen;
+  crp->crp_callback = NULL;
   crp->crp_buf = msg->buf;
   return crypto_invoke(crp);
 }
@@ -536,13 +587,8 @@ static int rpmsg_crypto_process_aead_update(
 
   rsp->header = msg->header;
   rsp->data = msg->data;
-  rsp->header.result = crypto_invoke(crp);
-  if (rsp->header.result == 0)
-    {
-      rsp->header.result = crp->crp_etype;
-    }
-
-  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + crp->crp_olen);
+  return rpmsg_crypto_dispatch(rcsdata, ept, msg, rsp,
+                               sizeof(*rsp) + crp->crp_olen);
 }
 
 static int
@@ -600,13 +646,8 @@ rpmsg_crypto_process_aead_final(
   crp->crp_olen = 0;
   crp->crp_dst = NULL;
   crp->crp_mac = rsp->buf;
-  rsp->header.result = crypto_invoke(crp);
-  if (rsp->header.result == 0)
-    {
-      rsp->header.result = crp->crp_etype;
-    }
-
-  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + taglen);
+  return rpmsg_crypto_dispatch(rcsdata, ept, msg, rsp,
+                               sizeof(*rsp) + taglen);
 }
 
 static int
