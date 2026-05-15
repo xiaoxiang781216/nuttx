@@ -90,10 +90,6 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
 /* Async completion callback */
 
 static int rpmsg_crypto_done_cb(FAR struct cryptop *crp);
-static int rpmsg_crypto_dispatch(
-    FAR struct rpmsg_crypto_server_data_s *rcsdata,
-    FAR struct rpmsg_endpoint *ept, FAR void *msg,
-    FAR void *rsp, uint32_t rsplen);
 
 /****************************************************************************
  * Private Data
@@ -150,20 +146,34 @@ static int rpmsg_crypto_done_cb(FAR struct cryptop *crp)
 
 static int rpmsg_crypto_dispatch(
     FAR struct rpmsg_crypto_server_data_s *rcsdata,
-    FAR struct rpmsg_endpoint *ept, FAR void *msg,
-    FAR void *rsp, uint32_t rsplen)
+    FAR struct rpmsg_endpoint *ept,
+    FAR struct rpmsg_crypto_process_s *msg,
+    FAR struct rpmsg_crypto_process_s *rsp, uint32_t rsplen)
 {
-  rpmsg_hold_rx_buffer(ept, msg);
-
   rcsdata->ept = ept;
-  rcsdata->rsp = rsp;
   rcsdata->rxbuf = msg;
   rcsdata->rsplen = rsplen;
 
-  rcsdata->crp.crp_callback = rpmsg_crypto_done_cb;
-  rcsdata->crp.crp_opaque = rcsdata;
+  if (msg->data.header.flag & CRYPTO_F_CBIMM)
+    {
+      /* Async path: hold rx buffer, set callback, let ISR send response */
 
-  return crypto_invoke(&rcsdata->crp);
+      rcsdata->rsp = rsp;
+      rcsdata->crp.crp_callback = rpmsg_crypto_done_cb;
+      rcsdata->crp.crp_opaque = rcsdata;
+      rpmsg_hold_rx_buffer(ept, msg);
+      crypto_invoke(&rcsdata->crp);
+    }
+  else
+    {
+      /* Sync path: invoke and send response directly */
+
+      crypto_invoke(&rcsdata->crp);
+      rsp->header.result = rcsdata->crp.crp_etype;
+      rpmsg_send_nocopy(ept, rsp, rsplen);
+    }
+
+  return 0;
 }
 
 /****************************************************************************
