@@ -510,14 +510,17 @@ uint16_t udp_select_port(uint8_t domain, FAR union ip_binding_u *u)
 
   if (g_last_udp_port == 0)
     {
-      NET_PORT_RANDOM_INIT(g_last_udp_port);
+      NET_PORT_RANDOM_INIT(portno);
+      g_last_udp_port = portno;
     }
+  else
+    {
+      /* Find an unused local port number.  Loop until we find a valid
+       * listen port number that is not being used by any other connection.
+       */
 
-  /* Find an unused local port number.  Loop until we find a valid
-   * listen port number that is not being used by any other connection.
-   */
-
-  portno = g_last_udp_port; /* Record a starting port number */
+      portno = g_last_udp_port; /* Record a starting port number */
+    }
 
   do
     {

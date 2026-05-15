@@ -539,7 +539,9 @@ int tcp_selectport(uint8_t domain,
 
   if (g_last_tcp_port == 0)
     {
-      NET_PORT_RANDOM_INIT(g_last_tcp_port);
+      uint16_t port;
+      NET_PORT_RANDOM_INIT(port);
+      g_last_tcp_port = port;
     }
 
   tcp_conn_list_lock();
