@@ -225,6 +225,25 @@
 #define RING_DEFINE(name, type, cap)                     \
   RING_DECLARE(name, type, cap) = RING_INIT(cap)
 
+/* RING_DEFINE_BMP - define a char-buffer ring with PER_CPU_BMP storage.
+ *
+ * name  - variable name
+ * cap   - capacity in bytes (must be power-of-2)
+ *
+ * Requires <nuttx/percpu.h> to be included before use.
+ *
+ * Usage:
+ *   static RING_DEFINE_BMP(g_my_ring, 1024);
+ *   ring_init(&g_my_ring, 1024);
+ */
+
+#define RING_DEFINE_BMP(name, cap)                       \
+  DEFINE_PER_CPU_BMP(struct                              \
+  {                                                      \
+    struct ring_s base;                                  \
+    char          buf[cap];                              \
+  }, name) = RING_INIT(cap)
+
 /* RING_BASE - convert a RING_DECLARE/RING_DEFINE variable to
  * struct ring_s pointer for use with internal APIs.
  */

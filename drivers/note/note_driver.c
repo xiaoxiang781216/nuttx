@@ -196,6 +196,20 @@ static DEFINE_PER_CPU_BSS(unsigned int, g_note_disabled_irq_nest);
 #endif
 
 #if defined(CONFIG_DRIVERS_NOTESTREAM) && defined(CONFIG_DRIVERS_NOTEBUF)
+
+/* Buffer defined independently so it can be placed in a specific section */
+
+static_assert((CONFIG_DRIVERS_NOTEBUF_BUFSIZE &
+              (CONFIG_DRIVERS_NOTEBUF_BUFSIZE - 1)) == 0,
+              "NOTEBUF_BUFSIZE must be power of 2");
+
+static
+#ifdef DRIVERS_NOTEBUF_SECTION
+locate_data(CONFIG_DRIVERS_NOTEBUF_SECTION)
+#endif
+RING_DEFINE_BMP(g_notebuf_buffer, CONFIG_DRIVERS_NOTEBUF_BUFSIZE);
+#define g_notebuf_buffer this_cpu_var_bmp(g_notebuf_buffer)
+
 static DEFINE_PER_CPU_BMP(struct notebuf_driver_s, g_notebufstream) =
 {
   {
@@ -219,7 +233,7 @@ static DEFINE_PER_CPU_BMP(struct notebuf_driver_s, g_notebufstream) =
   },
   (FAR struct note_driver_s *)&g_notestream,
   SP_UNLOCKED,
-  RING_INIT(CONFIG_DRIVERS_NOTEBUF_BUFSIZE),
+  (FAR struct ring_s *)&g_notebuf_buffer,
 #  ifdef CONFIG_DRIVERS_NOTESTREAM_IRQSAFE
   true,
 #  endif
@@ -545,6 +559,8 @@ static void note_drivers_initialize(void)
 #  ifdef CONFIG_DRIVERS_NOTESTREAM
 #    ifdef CONFIG_DRIVERS_NOTEBUF
       g_notebufstream.lower = (FAR struct note_driver_s *)&g_notestream;
+      g_notebufstream.ring = (FAR struct ring_s *)&g_notebuf_buffer;
+      ring_init(g_notebufstream.ring, CONFIG_DRIVERS_NOTEBUF_BUFSIZE);
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notebufstream;
 #    else
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notestream;

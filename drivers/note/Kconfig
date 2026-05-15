@@ -243,6 +243,15 @@ config DRIVERS_NOTEBUF_BUFSIZE
 	default 4096
 	---help---
 		The size of the ring buffer in bytes.
+		Must be a power of 2 (e.g. 512, 1024, 2048, 4096).
+
+config DRIVERS_NOTEBUF_SECTION
+	string "Note buffer section"
+	default ""
+	---help---
+		Place the notebuf ring buffer in a specific linker section.
+		Leave empty to use default placement.
+		Example: ".standbyram_errlog_cs"
 
 config DRIVERS_NOTEBUF_NOOVERWRITE
 	bool "Disable overwrite mode"

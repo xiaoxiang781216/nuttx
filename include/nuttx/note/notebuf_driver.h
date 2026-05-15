@@ -44,7 +44,7 @@ struct notebuf_driver_s
   struct note_driver_s driver;
   FAR struct note_driver_s *lower;
   spinlock_t lock;
-  RING_DECLARE(ring, char, CONFIG_DRIVERS_NOTEBUF_BUFSIZE);
+  FAR struct ring_s *ring;
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_DELAY > 0
   bool irqsafe;
   struct work_s work;

@@ -35,6 +35,9 @@ if(CONFIG_DRIVERS_NOTELOWEROUT)
 endif()
 
 if(CONFIG_DRIVERS_NOTEBUF)
+  if(NOT "${CONFIG_DRIVERS_NOTEBUF_SECTION}" STREQUAL "")
+    target_compile_definitions(drivers PRIVATE -DDRIVERS_NOTEBUF_SECTION)
+  endif()
   list(APPEND SRCS notebuf_driver.c)
 endif()
 
