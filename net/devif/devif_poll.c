@@ -271,7 +271,7 @@ devif_poll_pkt_connections(FAR struct net_driver_s *dev,
  * Name: devif_poll_can_connections
  *
  * Description:
- *   Poll all packet connections for available packets to send.
+ *   Poll all CAN connections for available packets to send.
  *
  * Assumptions:
  *   This function is called from the MAC device driver with the network
@@ -287,14 +287,13 @@ devif_poll_can_connections(FAR struct net_driver_s *dev,
   FAR struct can_conn_s *can_conn = NULL;
   int bstop = 0;
 
-  /* Traverse all of the allocated packet connections and
-   * perform the poll action
+  /* Traverse allocated CAN connections and perform the poll action.
    */
 
   can_conn_list_lock();
-  while (!bstop && (can_conn = can_nextconn(can_conn)))
+  while (!bstop && (can_conn = can_conn_next(can_conn)) != NULL)
     {
-      /* Skip connections that are bound to other polling devices */
+      /* Skip sockets that are bound to other polling devices */
 
       if (dev == can_conn->dev)
         {
@@ -977,7 +976,7 @@ static int devif_poll_connections(FAR struct net_driver_s *dev,
 #ifdef CONFIG_NET_CAN
           case CAN_POLL:
 
-            /* Check for pending CAN socket transfer */
+            /* Check for pending CAN connection transfer */
 
             bstop = devif_poll_can_connections(dev, callback);
             break;

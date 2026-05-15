@@ -64,19 +64,21 @@
 
 /* This is a container that holds the poll-related information */
 
+struct can_conn_s;
+
 struct can_poll_s
 {
-  FAR struct socket *psock;        /* Needed to handle loss of connection */
+  FAR struct can_conn_s *conn;     /* Needed to handle loss of connection */
   FAR struct net_driver_s *dev;    /* Needed to free the callback structure */
   FAR struct pollfd *fds;          /* Needed to handle poll events */
   FAR struct devif_callback_s *cb; /* Needed to teardown the poll */
 };
 
-/* This "connection" structure describes the underlying state of the socket */
+/* This structure describes common PF_CAN connection state */
 
 struct can_conn_s
 {
-  /* Common prologue of all connection structures. */
+  /* Common prologue of all PF_CAN connection structures. */
 
   struct socket_conn_s sconn;
 
@@ -104,31 +106,16 @@ struct can_conn_s
   FAR struct devif_callback_s *sndcb;
 #endif
 
-  /* CAN-specific content follows */
-
-  int16_t crefs;                     /* Reference count */
-
   /* The following is a list of poll structures of threads waiting for
    * socket events.
    */
 
   struct can_poll_s pollinfo[CONFIG_NET_CAN_NPOLLWAITERS];
 
-  /* Rx sync callback.
-   *
-   *    rx_sync_callback_args - the user data passed to the callback
-   */
-
-  can_rx_cb_t rxcb;
-  FAR void *rxarg;
-
-#ifdef CONFIG_NET_CANPROTO_OPTIONS
-  struct can_filter filters[CONFIG_NET_CAN_RAW_FILTER_MAX];
-  int32_t filter_count;
-#  ifdef CONFIG_NET_CAN_ERRORS
-  can_err_mask_t err_mask;
-#  endif
-#endif
+  bool (*match)(FAR struct can_conn_s *conn,
+                FAR struct net_driver_s *dev);
+  uint32_t (*input)(FAR struct can_conn_s *conn,
+                    FAR struct net_driver_s *dev);
 };
 
 /****************************************************************************
@@ -143,12 +130,12 @@ extern "C"
 #  define EXTERN extern
 #endif
 
-EXTERN const struct sock_intf_s g_can_sockif;
+EXTERN const struct sock_intf_s g_can_raw_sockif;
 
-/* The CAN connections rmutex */
+/* The CAN connections lock */
 
-DECLARE_PER_CPU_BMP(rmutex_t, g_can_connections_lock);
-#define g_can_connections_lock this_cpu_var_bmp(g_can_connections_lock)
+DECLARE_PER_CPU_BMP(rmutex_t, g_can_conn_lock);
+#define g_can_conn_lock this_cpu_var_bmp(g_can_conn_lock)
 
 /****************************************************************************
  * Name: can_conn_list_lock
@@ -165,12 +152,12 @@ DECLARE_PER_CPU_BMP(rmutex_t, g_can_connections_lock);
 
 static inline_function void can_conn_list_lock(void)
 {
-  nxrmutex_lock(&g_can_connections_lock);
+  nxrmutex_lock(&g_can_conn_lock);
 }
 
 static inline_function void can_conn_list_unlock(void)
 {
-  nxrmutex_unlock(&g_can_connections_lock);
+  nxrmutex_unlock(&g_can_conn_lock);
 }
 
 /****************************************************************************
@@ -178,58 +165,80 @@ static inline_function void can_conn_list_unlock(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: can_alloc()
+ * Name: can_get_ifindex
  *
  * Description:
- *   Allocate a new, uninitialized NetLink connection structure.  This is
- *   normally something done by the implementation of the socket() API
+ *   Return the bound interface index for a CAN connection, or zero if the
+ *   socket is not bound to a device.
  *
  ****************************************************************************/
 
-FAR struct can_conn_s *can_alloc(void);
+int can_get_ifindex(FAR struct can_conn_s *conn);
 
 /****************************************************************************
- * Name: can_free()
+ * Name: can_sockif
  *
  * Description:
- *   Free a NetLink connection structure that is no longer in use. This
- *   should be done by the implementation of close().
- *
- ****************************************************************************/
-
-void can_free(FAR struct can_conn_s *conn);
-
-/****************************************************************************
- * Name: can_nextconn()
- *
- * Description:
- *   Traverse the list of allocated NetLink connections
- *
- * Assumptions:
- *   This function is called from NetLink device logic.
- *
- ****************************************************************************/
-
-FAR struct can_conn_s *can_nextconn(FAR struct can_conn_s *conn);
-
-/****************************************************************************
- * Name: can_active()
- *
- * Description:
- *   Traverse the list of NetLink connections that match dev
+ *   Return the socket interface associated with the CAN address family.
  *
  * Input Parameters:
- *   dev  - The device to search for.
- *   conn - The current connection; may be NULL to start the search at the
- *          beginning
+ *   family   - Socket address family
+ *   type     - Socket type
+ *   protocol - Socket protocol
  *
- * Assumptions:
- *   This function is called from NetLink device logic.
+ * Returned Value:
+ *   On success, a non-NULL instance of struct sock_intf_s is returned.  NULL
+ *   is returned only if the address family is not supported.
  *
  ****************************************************************************/
 
-FAR struct can_conn_s *can_active(FAR struct net_driver_s *dev,
-                                  FAR struct can_conn_s *conn);
+FAR const struct sock_intf_s *
+can_sockif(sa_family_t family, int type, int protocol);
+
+/****************************************************************************
+ * Name: can_conn_bind
+ *
+ * Description:
+ *   Bind a CAN connection to a local address.
+ *
+ ****************************************************************************/
+
+int can_conn_bind(FAR struct can_conn_s *conn,
+                  FAR const struct sockaddr *addr,
+                  socklen_t addrlen);
+
+/****************************************************************************
+ * Name: can_conn_init()
+ *
+ * Description:
+ *   Initialize an already allocated CAN connection structure.
+ *
+ ****************************************************************************/
+
+void can_conn_init(FAR struct can_conn_s *conn);
+
+/****************************************************************************
+ * Name: can_conn_uninit()
+ *
+ * Description:
+ *   Uninitialize an already allocated CAN connection structure.
+ *
+ ****************************************************************************/
+
+void can_conn_uninit(FAR struct can_conn_s *conn);
+
+/****************************************************************************
+ * Name: can_conn_next()
+ *
+ * Description:
+ *   Traverse the list of allocated CAN connections
+ *
+ * Assumptions:
+ *   This function is called from CAN device logic.
+ *
+ ****************************************************************************/
+
+FAR struct can_conn_s *can_conn_next(FAR struct can_conn_s *conn);
 
 /****************************************************************************
  * Name: can_callback
@@ -249,55 +258,6 @@ uint32_t can_callback(FAR struct net_driver_s *dev,
                       FAR struct can_conn_s *conn, uint32_t flags);
 
 /****************************************************************************
- * Name: can_datahandler
- *
- * Description:
- *   Handle data that is not accepted by the application.  This may be called
- *   either (1) from the data receive logic if it cannot buffer the data, or
- *   (2) from the CAN event logic is there is no listener in place ready to
- *   receive the data.
- *
- * Input Parameters:
- *   dev  - The device which as active when the event was detected.
- *   conn - A pointer to the CAN connection structure
- *
- * Returned Value:
- *   The number of bytes actually buffered is returned.  This will be
- *   negative or zero or equal to buflen; partial packets are not buffered.
- *
- * Assumptions:
- * - The caller has checked that CAN_NEWDATA is set in flags and that is no
- *   other handler available to process the incoming data.
- * - Called from network stack logic with the network stack locked
- *
- ****************************************************************************/
-
-int can_datahandler(FAR struct net_driver_s *dev,
-                    FAR struct can_conn_s *conn);
-
-/****************************************************************************
- * Name: can_recvmsg
- *
- * Description:
- *   recvmsg() receives messages from a socket, and may be used to receive
- *   data on a socket whether or not it is connection-oriented.
- *
- *   If from is not NULL, and the underlying protocol provides the source
- *   address, this source address is filled in. The argument 'msg_namelen'
- *   initialized to the size of the buffer associated with from, and modified
- *   on return to indicate the actual size of the address stored there.
- *
- * Input Parameters:
- *   psock    A pointer to a NuttX-specific, internal socket structure
- *   msg      Buffer to receive the message
- *   flags    Receive flags (ignored)
- *
- ****************************************************************************/
-
-ssize_t can_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
-                    int flags);
-
-/****************************************************************************
  * Name: can_poll
  *
  * Description:
@@ -305,7 +265,7 @@ ssize_t can_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
  *
  * Input Parameters:
  *   dev - The device driver structure to use in the send operation
- *   conn - The CAN "connection" to poll for TX data
+ *   conn - The CAN connection to poll for TX data
  *
  * Returned Value:
  *   None
@@ -318,159 +278,39 @@ ssize_t can_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 void can_poll(FAR struct net_driver_s *dev, FAR struct can_conn_s *conn);
 
 /****************************************************************************
- * Name: psock_can_cansend
+ * Name: can_cansend
  *
  * Description:
- *   psock_can_cansend() returns a value indicating if a write to the socket
- *   would block.  It is still possible that the write may block if another
- *   write occurs first.
- *
- * Input Parameters:
- *   psock    An instance of the internal socket structure.
- *
- * Returned Value:
- *   OK
- *     At least one byte of data could be successfully written.
- *   -EWOULDBLOCK
- *     There is no room in the output buffer.
- *   -EBADF
- *     An invalid descriptor was specified.
- *
- * Assumptions:
- *   None
+ *   Return whether a CAN connection can send without blocking.
  *
  ****************************************************************************/
 
-int psock_can_cansend(FAR struct socket *psock);
+int can_cansend(FAR struct can_conn_s *conn);
 
 /****************************************************************************
- * Name: can_sendmsg
+ * Name: can_sendiob
  *
  * Description:
- *   The can_sendmsg() call may be used only when the packet socket is
- *   in a connected state (so that the intended recipient is known).
- *
- * Input Parameters:
- *   psock    An instance of the internal socket structure.
- *   msg      CAN frame and optional CMSG
- *   flags    Send flags (ignored)
- *
- * Returned Value:
- *   On success, returns the number of characters sent.  On  error,
- *   a negated errno value is retruend.  See sendmsg() for the complete list
- *   of return values.
+ *   Send one complete CAN/CAN FD frame stored in an IOB.  The helper takes
+ *   ownership of iob only on success.
  *
  ****************************************************************************/
 
-ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
-                    int flags);
+int can_sendiob(FAR struct can_conn_s *conn, FAR struct iob_s *iob,
+                int flags);
 
 /****************************************************************************
- * Name: can_readahead_signal
+ * Name: can_recviob
  *
  * Description:
- *   Read-ahead data has been buffered.  Signal all threads waiting for
- *   read-ahead data to become available.
- *
- *   When read-ahead data becomes available, *all* of the workers waiting
- *   for read-ahead data will be executed.  If there are multiple workers
- *   waiting for read-ahead data then only the first to execute will get the
- *   data.  Others will need to call can_readahead_notifier_setup() once
- *   again.
- *
- * Input Parameters:
- *   conn  - The CAN connection where read-ahead data was just buffered.
- *
- * Returned Value:
- *   None.
+ *   Receive one complete CAN/CAN FD frame IOB from read-ahead or from the
+ *   next CAN_NEWDATA event.  Ownership of the returned IOB is transferred to
+ *   the caller.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_CAN_NOTIFIER
-void can_readahead_signal(FAR struct can_conn_s *conn);
-#endif
-
-/****************************************************************************
- * Name: can_sendbuffer_notify
- *
- * Description:
- *   Notify the send buffer semaphore
- *
- * Input Parameters:
- *   conn - The CAN connection of interest
- *
- * Assumptions:
- *   Called from user logic with the network locked.
- *
- ****************************************************************************/
-
-#if CONFIG_NET_SEND_BUFSIZE > 0
-void can_sendbuffer_notify(FAR struct can_conn_s *conn);
-#endif /* CONFIG_NET_SEND_BUFSIZE */
-
-/****************************************************************************
- * Name: can_setsockopt
- *
- * Description:
- *   can_setsockopt() sets the CAN-protocol option specified by the
- *   'option' argument to the value pointed to by the 'value' argument for
- *   the socket specified by the 'psock' argument.
- *
- *   See <nuttx/can.h> for the a complete list of values of CAN protocol
- *   options.
- *
- * Input Parameters:
- *   psock     Socket structure of socket to operate on
- *   level     Protocol level to set the option
- *   option    identifies the option to set
- *   value     Points to the argument value
- *   value_len The length of the argument value
- *
- * Returned Value:
- *   Returns zero (OK) on success.  On failure, it returns a negated errno
- *   value to indicate the nature of the error.  See psock_setcockopt() for
- *   the list of possible error values.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_CANPROTO_OPTIONS
-int can_setsockopt(FAR struct socket *psock, int level, int option,
-                   FAR const void *value, socklen_t value_len);
-#endif
-
-/****************************************************************************
- * Name: can_getsockopt
- *
- * Description:
- *   can_getsockopt() retrieves the value for the option specified by the
- *   'option' argument for the socket specified by the 'psock' argument.  If
- *   the size of the option value is greater than 'value_len', the value
- *   stored in the object pointed to by the 'value' argument will be silently
- *   truncated. Otherwise, the length pointed to by the 'value_len' argument
- *   will be modified to indicate the actual length of the 'value'.
- *
- *   See <sys/socket.h> a complete list of values for the socket-level
- *   'option' argument.  Protocol-specific options are are protocol specific
- *   header files (such as nuttx/can.h for the case of the CAN protocol).
- *
- * Input Parameters:
- *   psock     Socket structure of the socket to query
- *   level     Protocol level to set the option
- *   option    identifies the option to get
- *   value     Points to the argument value
- *   value_len The length of the argument value
- *
- * Returned Value:
- *   Returns zero (OK) on success.  On failure, it returns a negated errno
- *   value to indicate the nature of the error.  See psock_getsockopt() for
- *   the complete list of appropriate return error codes.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_CANPROTO_OPTIONS
-int can_getsockopt(FAR struct socket *psock, int level, int option,
-                   FAR void *value, FAR socklen_t *value_len);
-#endif
+int can_recviob(FAR struct can_conn_s *conn, FAR struct iob_s **iob,
+                int flags, unsigned int timeout);
 
 #undef EXTERN
 #ifdef __cplusplus
