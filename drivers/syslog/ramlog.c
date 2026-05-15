@@ -68,7 +68,11 @@
 #define RAMLOG_MAGIC_INIT  0x12340000
 #define RAMLOG_MAGIC_READY (0x56780000 | sizeof(struct ramlog_header_s))
 
-#define RAMLOG_IS_OVERWRITE(priv) ((priv)->rl_preserve == (uint32_t)-1)
+#ifdef CONFIG_RAMLOG_NOOVERWRITE
+#  define RAMLOG_IS_OVERWRITE false
+#else
+#  define RAMLOG_IS_OVERWRITE true
+#endif
 
 #ifdef CONFIG_RAMLOG_SHARED_LOCK
 #  define RAMLOG_LOCK(priv)     (&(priv)->rl_header->rl_lock)
@@ -116,7 +120,6 @@ struct ramlog_dev_s
   FAR struct ramlog_header_s *rl_header;
 
   uint32_t                   rl_bufsize;     /* Size of the circular buffer */
-  uint32_t                   rl_preserve;    /* Max old data bytes to protect */
   dq_queue_t                 rl_queue;       /* The dq of ramlog_user_s */
   struct ratelimit_state_s   rl_ratelimit;   /* The ratelimit for ramlog */
 #if CONFIG_RAMLOG_POLLTIMEOUT_MS > 0
@@ -188,7 +191,6 @@ static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_sysdev) =
 {
   (FAR struct ramlog_header_s *)g_sysbuffer,            /* rl_header */
   sizeof(g_sysbuffer) - sizeof(struct ramlog_header_s), /* rl_bufsize */
-  CONFIG_RAMLOG_PRESERVE_SIZE,                          /* rl_preserve */
 };
 #  define g_sysdev this_cpu_var_bmp(g_sysdev)
 #endif
@@ -603,10 +605,9 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
   uint32_t used = header->rl_head - header->rl_tail;
   uint32_t free = priv->rl_bufsize - used;
 
-  /* Reject if new data would encroach on protected region */
+  /* Reject if buffer is full and not in overwrite mode */
 
-  if (!RAMLOG_IS_OVERWRITE(priv) &&
-      buflen + (priv->rl_preserve < used ? priv->rl_preserve : used) > free)
+  if (!RAMLOG_IS_OVERWRITE && buflen > free)
     {
       spin_unlock_irqrestore_nopreempt(&header->rl_lock, flags);
       return len;
@@ -768,7 +769,7 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
            * behind tail will be clamped on next read.
            */
 
-          if (!RAMLOG_IS_OVERWRITE(priv))
+          if (!RAMLOG_IS_OVERWRITE)
             {
               header->rl_tail = upriv->rl_read;
             }
@@ -831,9 +832,6 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
         break;
       case SYSLOGIOC_CLEAR:
         ramlog_bufferflush(priv);
-        break;
-      case SYSLOGIOC_SETPRESERVE:
-        priv->rl_preserve = (uint32_t)arg;
         break;
 
       case SYSLOGIOC_SETRATELIMIT:
@@ -1027,7 +1025,6 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
 
       priv->rl_bufsize = buflen - sizeof(struct ramlog_header_s);
       priv->rl_header = (FAR struct ramlog_header_s *)buffer;
-      priv->rl_preserve = CONFIG_RAMLOG_PRESERVE_SIZE;
 
       /* Initialize the ramlog header if it has not been initialized yet. */
 
