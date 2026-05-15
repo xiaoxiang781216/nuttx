@@ -28,24 +28,28 @@ Examples:
 
 This bridge forwards raw bytes exactly as received in CAN/CAN-FD payload.
 No decoding, filtering, or NUL stripping is performed.
+
+Requires the python-can package:
+  pip install python-can
 """
 
 import argparse
 import os
 import pty
-import select
-import socket
-import struct
 import sys
 import threading
 import tty
 
-CAN_FRAME_FMT = "=IB3x8s"
-CAN_FRAME_SIZE = struct.calcsize(CAN_FRAME_FMT)
-CANFD_FRAME_FMT = "=IB3x64s"
-CANFD_FRAME_SIZE = struct.calcsize(CANFD_FRAME_FMT)
+try:
+    import can
+except ImportError:
+    print(
+        "error: python-can is required; install with `pip install python-can`",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
 CAN_EFF_FLAG = 0x80000000
-CAN_RAW_FD_FRAMES = 5
 DEFAULT_SYMLINK = "/tmp/can-pty"
 
 
@@ -73,56 +77,56 @@ def parse_args():
     return parser.parse_args()
 
 
-def open_can_socket(interface, can_id):
-    sock = socket.socket(socket.AF_CAN, socket.SOCK_RAW, socket.CAN_RAW)
+def open_can_bus(interface, can_id):
+    """Open a python-can SocketCAN bus filtered to the selected CAN ID."""
 
-    # Accept CAN FD frames in addition to classic CAN.
-    sock.setsockopt(socket.SOL_CAN_RAW, CAN_RAW_FD_FRAMES, 1)
+    extended = bool(can_id & CAN_EFF_FLAG)
+    if extended:
+        filter_id = can_id & 0x1FFFFFFF
+        mask = 0x1FFFFFFF
+    else:
+        filter_id = can_id & 0x7FF
+        mask = 0x7FF
 
-    # Filter only the selected CAN ID.
-    mask = 0x1FFFFFFF if can_id & CAN_EFF_FLAG else 0x7FF
-    can_filter = struct.pack("=II", can_id, mask)
-    sock.setsockopt(socket.SOL_CAN_RAW, socket.CAN_RAW_FILTER, can_filter)
+    filters = [{"can_id": filter_id, "can_mask": mask, "extended": extended}]
 
-    sock.bind((interface,))
-    return sock
+    return can.Bus(
+        channel=interface,
+        interface="socketcan",
+        fd=True,
+        can_filters=filters,
+    )
 
 
-def can_to_pty(sock, master_fd, stop, debug):
+def can_to_pty(bus, master_fd, stop, debug):
     """Forward selected CAN frame payload bytes to PTY."""
 
     while not stop.is_set():
         try:
-            ready, _, _ = select.select([sock], [], [], 0.2)
+            msg = bus.recv(timeout=0.2)
+        except can.CanError as e:
+            print(f"[can->pty] recv error ({e})", file=sys.stderr, flush=True)
+            continue
         except Exception:
             break
 
-        if not ready:
+        if msg is None:
             continue
 
-        try:
-            data = sock.recv(CANFD_FRAME_SIZE)
-        except OSError as e:
-            print(f"[can->pty] recv error ({e})", file=sys.stderr, flush=True)
+        if msg.is_error_frame or msg.is_remote_frame:
             continue
 
-        if len(data) == CANFD_FRAME_SIZE:
-            can_id, dlc, payload = struct.unpack(CANFD_FRAME_FMT, data)
-            can_id &= 0x1FFFFFFF
-            dlc = min(dlc, 64)
-        elif len(data) == CAN_FRAME_SIZE:
-            can_id, dlc, payload = struct.unpack(CAN_FRAME_FMT, data)
-            can_id &= 0x1FFFFFFF
-            dlc = min(dlc, 8)
-        else:
-            continue
-
-        chunk = payload[:dlc]
+        can_id = msg.arbitration_id & 0x1FFFFFFF
+        dlc = min(msg.dlc, len(msg.data))
+        chunk = bytes(msg.data[:dlc])
 
         if debug:
             raw = " ".join(f"{b:02X}" for b in chunk)
-            print(f"[can->pty] ID=0x{can_id:X} DLC={dlc} DATA={raw}",
-                  file=sys.stderr, flush=True)
+            print(
+                f"[can->pty] ID=0x{can_id:X} DLC={dlc} DATA={raw}",
+                file=sys.stderr,
+                flush=True,
+            )
 
         try:
             os.write(master_fd, chunk)
@@ -137,9 +141,9 @@ def main():
     args = parse_args()
 
     try:
-        sock = open_can_socket(args.interface, args.can_id)
-    except OSError as e:
-        print(f"Cannot open CAN socket on {args.interface}: {e}", file=sys.stderr)
+        bus = open_can_bus(args.interface, args.can_id)
+    except (OSError, can.CanError) as e:
+        print(f"Cannot open CAN bus on {args.interface}: {e}", file=sys.stderr)
         sys.exit(1)
 
     master_fd, slave_fd = pty.openpty()
@@ -168,7 +172,7 @@ def main():
     stop = threading.Event()
     worker = threading.Thread(
         target=can_to_pty,
-        args=(sock, master_fd, stop, args.debug),
+        args=(bus, master_fd, stop, args.debug),
         daemon=True,
     )
     worker.start()
@@ -179,7 +183,10 @@ def main():
         pass
     finally:
         stop.set()
-        sock.close()
+        try:
+            bus.shutdown()
+        except Exception:
+            pass
         try:
             os.close(master_fd)
         except OSError:
