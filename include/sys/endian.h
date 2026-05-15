@@ -139,6 +139,14 @@
 #  endif
 #endif
 
+/* Define GCC-style byte order macros for compilers that lack them */
+
+#ifndef __BYTE_ORDER__
+#  define __ORDER_LITTLE_ENDIAN__  LITTLE_ENDIAN
+#  define __ORDER_BIG_ENDIAN__     BIG_ENDIAN
+#  define __BYTE_ORDER__           BYTE_ORDER
+#endif
+
 /* OpenBSD style */
 
 #define swap16                __swap_uint16
