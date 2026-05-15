@@ -25,7 +25,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/spinlock.h>
 
 #include <sys/types.h>
 #include <stdint.h>
@@ -39,6 +38,7 @@
 #include <debug.h>
 
 #include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 #include <nuttx/wdog.h>
