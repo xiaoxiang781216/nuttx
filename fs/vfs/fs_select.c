@@ -137,13 +137,13 @@ int select(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
           set_errno(ENOMEM);
           return ERROR;
         }
-    }
 
-  memset(pollset, 0, npfds * sizeof(struct pollfd));
+      memset(pollset, 0, npfds * sizeof(struct pollfd));
+    }
 
   /* Initialize the descriptor list for poll() */
 
-  for (fd = 0, ndx = 0; fd < nfds; fd++)
+  for (fd = 0, ndx = 0; pollset != NULL && fd < nfds; fd++)
     {
       int incr = 0;
 
