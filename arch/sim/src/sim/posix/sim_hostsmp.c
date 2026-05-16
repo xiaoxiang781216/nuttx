@@ -32,6 +32,7 @@
 
 #include "sim_internal.h"
 
+#ifdef CONFIG_SMP
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -49,8 +50,6 @@ struct sim_cpuinfo_s
  ****************************************************************************/
 
 static pthread_key_t g_cpu_key;
-
-#ifdef CONFIG_SMP
 static pthread_t     g_cpu_thread[CONFIG_SMP_NCPUS];
 
 /****************************************************************************
@@ -267,7 +266,11 @@ void host_send_func_call_ipi(int cpu)
 #ifdef CONFIG_ARCH_HAVE_MULTICPU
 int up_cpu_index(void)
 {
+#ifdef CONFIG_SMP
   void *value = pthread_getspecific(g_cpu_key);
   return (int)((uintptr_t)value);
+#else
+  return 0;
+#endif
 }
 #endif
