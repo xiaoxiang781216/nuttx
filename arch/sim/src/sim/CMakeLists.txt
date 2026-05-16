@@ -305,7 +305,7 @@ target_include_directories(arch PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_sources(arch PRIVATE ${SRCS})
 target_compile_options(arch PRIVATE -fvisibility=default)
 
-if(CONFIG_WINDOWS_NATIVE)
+if(WIN32)
   set(HOSTDIR win)
 else()
   set(HOSTDIR posix)

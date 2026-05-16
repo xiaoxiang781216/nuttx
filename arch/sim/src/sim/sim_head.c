@@ -140,7 +140,7 @@ int sim_main(int argc, char **argv, char **envp)
 
   /* Start NuttX */
 
-#ifdef CONFIG_ARCH_HAVE_MULTICPU
+#ifdef CONFIG_SMP
   /* Start the CPU0 emulation.  This should not return. */
 
   host_cpu0_start();
