@@ -1608,6 +1608,7 @@ static void rpmsg_crypto_created(FAR struct rpmsg_device *rdev,
     {
       priv->ept.priv = priv;
       priv->ept.ns_bound_cb = rpmsg_crypto_ns_bound;
+      rpmsg_set_priority(&priv->ept, RPMSG_PRIO_RT);
       rpmsg_create_ept(&priv->ept, rdev, RPMSG_CRYPTO_NAME_PREFIX,
                        RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
                        rpmsg_crypto_ept_cb, NULL);
