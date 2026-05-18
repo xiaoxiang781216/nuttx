@@ -876,7 +876,8 @@ static int wifidriver_start_connect(FAR struct wifi_sim_s *wifidev)
               wifidev->error_code  = WLAN_STA_CONNERR_WRONG_KEY;
               free(bss_info);
 
-              ret = WLAN_REASON_CIPHER_SUITE_REJECTED;
+              nerr("wrong password for %s\n", wifidev->ssid);
+              ret = -EACCES;
             }
 
 error:
