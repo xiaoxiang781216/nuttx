@@ -50,6 +50,10 @@ list(
   lib_libvsprintf.c
   lib_ultoa_invert.c)
 
+if(CONFIG_NET_NETPOLL)
+  list(APPEND SRCS lib_netpolloutstream.c)
+endif()
+
 if(CONFIG_SYSLOG)
   list(APPEND SRCS lib_syslograwstream.c)
 endif()

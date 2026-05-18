@@ -30,10 +30,15 @@
 #include <nuttx/compiler.h>
 #include <nuttx/percpu.h>
 
+#ifdef CONFIG_NET_NETPOLL
+#  include <netinet/in.h>
+#endif
+
 #ifdef CONFIG_LIBC_LZF
 #  include <lzf.h>
 #endif
 #include <stdio.h>
+
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 #  include <nuttx/fs/fs.h>
 #  ifdef CONFIG_MTD
@@ -264,6 +269,15 @@ struct lib_base64outstream_s
   size_t                      nbytes;
   char                        buffer[CONFIG_STREAM_BASE64_BUFFER_SIZE + 1];
 };
+
+#ifdef CONFIG_NET_NETPOLL
+struct netpoll_s;
+struct lib_netpolloutstream_s
+{
+  struct lib_outstream_s common;
+  FAR struct netpoll_s *np;
+};
+#endif
 
 /* This is a special stream that does buffered character I/O.  NOTE that is
  * CONFIG_SYSLOG_BUFFER is not defined, it is the same as struct
@@ -536,6 +550,31 @@ void lib_hexdumpstream(FAR struct lib_hexdumpstream_s *stream,
 
 void lib_base64outstream(FAR struct lib_base64outstream_s *stream,
                          FAR struct lib_outstream_s *backend);
+
+#ifdef CONFIG_NET_NETPOLL
+/****************************************************************************
+ * Name: lib_netpolloutstream_init
+ *
+ * Description:
+ *   Initialize a netpoll output stream backend from a named network device.
+ *
+ * Input Parameters:
+ *   stream    - User allocated stream instance.
+ *   intf      - Network interface name.
+ *   port      - UDP port or CAN ISO-TP TX ID.
+ *   ipaddr    - UDP destination IP address.
+ *   mac       - UDP destination MAC address.
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int lib_netpolloutstream_init(FAR struct lib_netpolloutstream_s *stream,
+                              FAR const char *intf, uint16_t port,
+                              in_addr_t ipaddr, FAR const char *mac);
+
+#endif
 
 /****************************************************************************
  * Name: lib_lowoutstream
