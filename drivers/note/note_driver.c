@@ -544,6 +544,7 @@ static void note_drivers_initialize(void)
 #  endif
 #  ifdef CONFIG_DRIVERS_NOTESTREAM
 #    ifdef CONFIG_DRIVERS_NOTEBUF
+      g_notebufstream.lower = (FAR struct note_driver_s *)&g_notestream;
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notebufstream;
 #    else
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notestream;
