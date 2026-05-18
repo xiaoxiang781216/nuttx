@@ -163,7 +163,7 @@ static void stack_dump(uintptr_t sp, uintptr_t stack_top)
     {
       FAR uintptr_t *ptr = (FAR uintptr_t *)stack;
 
-      _alert(DUMP_FORMAT ":" DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT
+      _emerg(DUMP_FORMAT ":" DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT
              DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT "\n",
              stack, DUMP_PTR(ptr, 0), DUMP_PTR(ptr, 1),
              DUMP_PTR(ptr, 2), DUMP_PTR(ptr, 3), DUMP_PTR(ptr, 4),
@@ -180,13 +180,13 @@ static void dump_stackinfo(FAR const char *tag, uintptr_t sp,
 {
   uintptr_t top = base + size;
 
-  _alert("%s Stack:\n", tag);
-  _alert("  base: 0x%" PRIxPTR "\n", base);
-  _alert("  size: %08zu\n", size);
+  _emerg("%s Stack:\n", tag);
+  _emerg("  base: 0x%" PRIxPTR "\n", base);
+  _emerg("  size: %08zu\n", size);
 
   if (sp)
     {
-      _alert("    sp: 0x%" PRIxPTR "\n", sp);
+      _emerg("    sp: 0x%" PRIxPTR "\n", sp);
 
       /* Get more information */
 
@@ -275,7 +275,7 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
   else
     {
       force = true;
-      _alert("ERROR: Stack pointer is not within the stack\n");
+      _emerg("ERROR: Stack pointer is not within the stack\n");
     }
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
@@ -398,7 +398,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 
   /* Dump interesting properties of this task */
 
-  _alert("   %4d %5d"
+  _emerg("   %4d %5d"
 #ifndef CONFIG_UP
          "  %4d"
 #endif
@@ -480,7 +480,7 @@ static void dump_tasks(void)
 
   /* Dump interesting properties of each task in the crash environment */
 
-  _alert("   PID GROUP"
+  _emerg("   PID GROUP"
 #ifndef CONFIG_UP
          "   CPU"
 #endif
@@ -515,7 +515,7 @@ static void dump_tasks(void)
         }
 #  endif
 
-      _alert("  ----   ---"
+      _emerg("  ----   ---"
 #  ifndef CONFIG_UP
              "  %4d"
 #  endif
@@ -602,7 +602,7 @@ static void dump_lockholder(pid_t tid)
   nxsched_put_tcb(tcb);
   backtrace_format(buf, sizeof(buf), stack, depth);
 
-  _alert("Deadlock(%d) holder(%d) backtrace: %s\n", tid, holder, buf);
+  _emerg("Deadlock(%d) holder(%d) backtrace: %s\n", tid, holder, buf);
 }
 
 /****************************************************************************
@@ -715,11 +715,11 @@ static void dump_assert_info(FAR struct tcb_s *rtcb,
     }
 
   uname(&name);
-  _alert("Current Version: %s %s %s %s %s\n",
+  _emerg("Current Version: %s %s %s %s %s\n",
          name.sysname, name.nodename,
          name.release, name.version, name.machine);
 
-  _alert("Assertion failed %s: at file: %s:%d task"
+  _emerg("Assertion failed %s: at file: %s:%d task"
 #ifndef CONFIG_UP
          "(CPU%d)"
 #endif
@@ -768,7 +768,7 @@ static void dump_fatal_info(FAR struct tcb_s *rtcb,
           continue;
         }
 
-      _alert("Dump CPU%d: %s\n", cpu,
+      _emerg("Dump CPU%d: %s\n", cpu,
              per_cpu_var_smp(g_cpu_paused, cpu) ? "PAUSED" : "RUNNING");
 
       if (per_cpu_var_smp(g_cpu_paused, cpu))
