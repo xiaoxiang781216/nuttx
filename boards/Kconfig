@@ -4804,6 +4804,14 @@ config BOARD_COREDUMP_MEMDEV
 	---help---
 		Enable save coredump to memory device when crash.
 
+config BOARD_COREDUMP_NETPOLL
+	bool "Enable Core Dump to netpoll"
+	depends on COREDUMP && NET_NETPOLL
+	---help---
+		Enable sending coredump over a netpoll device when crash.
+		Ethernet devices use UDP netpoll. CAN devices use ISO-TP over
+		CAN netpoll.
+
 config BOARD_CRASHDUMP_NONE
 	bool "No Board level crash dump"
 
@@ -4868,6 +4876,40 @@ config BOARD_COREDUMP_BASE64STREAM
 	depends on BOARD_COREDUMP_SYSLOG
 	---help---
 		Enable based64 encoded stream instead of default hexstream.
+
+if BOARD_COREDUMP_NETPOLL
+
+config BOARD_COREDUMP_NETPOLL_INTF
+	string "Core dump netpoll interface"
+	default "eth0" if NET_UDP
+	default "can0" if NET_CAN
+	---help---
+		Network interface used for netpoll coredump output.
+
+config BOARD_COREDUMP_NETPOLL_IPADDR
+	hex "Core dump netpoll UDP destination IP address"
+	default 0xffffffff
+	---help---
+		Destination IPv4 address for UDP netpoll coredump output.
+		Default: broadcast IP address.
+
+config BOARD_COREDUMP_NETPOLL_MAC
+	string "Core dump netpoll UDP destination MAC"
+	default "ff:ff:ff:ff:ff:ff"
+	---help---
+		Destination MAC address for UDP netpoll coredump output.
+		Default: broadcast MAC address.
+
+config BOARD_COREDUMP_NETPOLL_PORT
+	int "Core dump netpoll port / CAN TX ID"
+	default 6677 if NET_UDP
+	default 1800 if NET_CAN
+	---help---
+		For UDP: UDP source and destination port.
+		For CAN ISO-TP: TX CAN ID. The RX CAN ID is derived as
+		BOARD_COREDUMP_NETPOLL_PORT + 1.
+
+endif # BOARD_COREDUMP_NETPOLL
 
 config BOARD_ENTROPY_POOL
 	bool "Enable Board level storing of entropy pool structure"

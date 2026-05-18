@@ -121,6 +121,10 @@ static DEFINE_PER_CPU_BSS_BMP(struct lib_filesistream_s, g_devinstream);
 #define g_devinstream this_cpu_var_bmp(g_devinstream)
 static DEFINE_PER_CPU_BSS_BMP(struct lib_fileoutstream_s, g_devstream);
 #define g_devstream this_cpu_var_bmp(g_devstream)
+#elif defined(CONFIG_BOARD_COREDUMP_NETPOLL)
+static DEFINE_PER_CPU_BSS_BMP(struct lib_netpolloutstream_s,
+                              g_netpollstream);
+#define g_netpollstream this_cpu_var_bmp(g_netpollstream)
 #endif
 
 #ifdef CONFIG_BOARD_MEMORY_RANGE
@@ -845,6 +849,40 @@ coredump_print_memory_regions(FAR const struct memory_region_s *regions)
     }
 }
 
+#ifdef CONFIG_BOARD_COREDUMP_NETPOLL
+/****************************************************************************
+ * Name: coredump_dump_netpoll
+ *
+ * Description:
+ *   Send coredump to netpoll.
+ *
+ ****************************************************************************/
+
+static void coredump_dump_netpoll(pid_t pid)
+{
+  FAR struct lib_netpolloutstream_s *netstream = &g_netpollstream;
+  FAR struct lib_outstream_s *stream;
+  int ret;
+
+  stream = &netstream->common;
+
+#  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+  lib_lzfoutstream(&g_lzfstream, stream);
+  stream = (FAR struct lib_outstream_s *)&g_lzfstream;
+#  endif
+
+  ret = coredump(g_regions, stream, pid);
+  if (ret < 0)
+    {
+      _alert("Coredump fail %d\n", ret);
+      return;
+    }
+
+  _alert("Finish coredump, send %" PRIuOFF " bytes over netpoll\n",
+         netstream->common.nput);
+}
+#endif
+
 /****************************************************************************
  * Name: coredump_dump_syslog
  *
@@ -1158,6 +1196,18 @@ int coredump_initialize(void)
   ret = lib_fileoutstream_open(&g_devstream,
                                CONFIG_BOARD_COREDUMP_DEVPATH,
                                O_WRONLY, 0666);
+#elif defined(CONFIG_BOARD_COREDUMP_NETPOLL)
+  ret = lib_netpolloutstream_init(&g_netpollstream,
+                                  CONFIG_BOARD_COREDUMP_NETPOLL_INTF,
+                                  CONFIG_BOARD_COREDUMP_NETPOLL_PORT,
+                                  CONFIG_BOARD_COREDUMP_NETPOLL_IPADDR,
+                                  CONFIG_BOARD_COREDUMP_NETPOLL_MAC);
+  if (ret < 0)
+    {
+      _alert("%s Coredump netpoll init failed:%d\n",
+             CONFIG_BOARD_COREDUMP_NETPOLL_INTF, ret);
+      return ret;
+    }
 #endif
 
 #ifdef CONFIG_BOARD_COREDUMP_DEV
@@ -1201,6 +1251,8 @@ void coredump_dump(pid_t pid)
   coredump_dump_syslog(pid);
 #elif defined(CONFIG_BOARD_COREDUMP_DEV)
   coredump_dump_dev(pid);
+#elif defined(CONFIG_BOARD_COREDUMP_NETPOLL)
+  coredump_dump_netpoll(pid);
 #endif
 }
 
