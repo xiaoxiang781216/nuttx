@@ -1038,38 +1038,44 @@ static int inet_connect(FAR struct socket *psock,
   FAR const struct sockaddr_in *inaddr =
     (FAR const struct sockaddr_in *)addr;
 
-  /* Verify that a valid address has been provided */
+  /* Verify that a valid address has been provided.
+   * NULL addr is only meaningful for SOCK_DGRAM disconnection
+   * (handled in the per-protocol switch below).
+   */
 
-  switch (inaddr->sin_family)
+  if (addr != NULL)
     {
+      switch (inaddr->sin_family)
+        {
 #ifdef CONFIG_NET_IPv4
-    case AF_INET:
-      {
-        if (addrlen < sizeof(struct sockaddr_in))
-          {
-            return -EINVAL;
-          }
-      }
-      break;
+          case AF_INET:
+            {
+              if (addrlen < sizeof(struct sockaddr_in))
+                {
+                  return -EINVAL;
+                }
+            }
+            break;
 #endif
 
 #ifdef CONFIG_NET_IPv6
-    case AF_INET6:
-      {
-        if (addrlen < sizeof(struct sockaddr_in6))
-          {
-            return -EINVAL;
-          }
-      }
-      break;
+          case AF_INET6:
+            {
+              if (addrlen < sizeof(struct sockaddr_in6))
+                {
+                  return -EINVAL;
+                }
+            }
+            break;
 #endif
 
-    case AF_UNSPEC:
-      break;
+          case AF_UNSPEC:
+            break;
 
-    default:
-      DEBUGPANIC();
-      return -EAFNOSUPPORT;
+          default:
+            DEBUGPANIC();
+            return -EAFNOSUPPORT;
+        }
     }
 
   /* Perform the connection depending on the protocol type */
