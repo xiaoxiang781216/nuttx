@@ -108,7 +108,7 @@ void pm_auto_update(int domain, bool auto_update)
   DEBUGASSERT(domain >= 0 && domain < CONFIG_PM_NDOMAINS);
   pdom = &g_pmdomains[domain];
 
-  flags = spin_lock_irqsave(&pdom->lock);
+  flags = pm_domain_lock(domain);
   pdom->auto_update = auto_update;
-  spin_unlock_irqrestore(&pdom->lock, flags);
+  pm_domain_unlock(domain, flags);
 }
