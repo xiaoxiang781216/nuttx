@@ -374,7 +374,10 @@ void nxsched_timer_start(clock_t ticks, clock_t interval)
 void nxsched_process_timer(void)
 {
   uint64_t        nsec;
-  struct timespec ts;
+  struct timespec ts =
+    {
+      0
+    };
 
   up_timer_gettime(&ts);
   nsec = clock_time2nsec(&ts);
