@@ -93,7 +93,9 @@
 	.thumb_func
 	.type	arm_dispatch_syscall, function
 arm_dispatch_syscall:
+#ifdef CONFIG_UNWINDER_ARM
 	.fnstart
+#endif
 	.cfi_sections	.debug_frame
 	.cfi_startproc
 	sub sp, sp, #32                            /* Create a stack frame to hold params */
@@ -108,8 +110,10 @@ arm_dispatch_syscall:
 	.cfi_offset lr, -20
 	str ip, [sp, #16]                          /* Save ip is pc backup */
 	.cfi_offset pc, -16
+#ifdef CONFIG_UNWINDER_ARM
 	.save {r4, r5, r6, lr}                     /* Declare in Unwind table */
 	.pad #32
+#endif
 #ifdef CONFIG_ARCH_ARMV6M
 	ldr r4, =g_stublookup                      /* R4=The base of the stub lookup table */
 	lsl r0, r0, #2                             /* R0=Offset of the stub for this syscall */
@@ -127,6 +131,8 @@ arm_dispatch_syscall:
 	mov r0, SYS_syscall_return                 /* R0=SYS_syscall_return */
 	svc SYS_syscall                            /* Return from the SYSCALL */
 	.cfi_endproc
+#ifdef CONFIG_UNWINDER_ARM
 	.fnend
+#endif
 	.size	arm_dispatch_syscall, .-arm_dispatch_syscall
 	.end

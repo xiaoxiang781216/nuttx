@@ -78,7 +78,9 @@
 #endif
 	.type	arm_dispatch_syscall, function
 arm_dispatch_syscall:
+#ifdef CONFIG_UNWINDER_ARM
 	.fnstart
+#endif
 	.cfi_sections	.debug_frame
 	.cfi_startproc
 	sub	sp, sp, #32
@@ -93,12 +95,14 @@ arm_dispatch_syscall:
 	.cfi_offset lr, -20
 	str	ip, [sp, #16]
 	.cfi_offset pc, -16
+#ifdef CONFIG_UNWINDER_ARM
 	.save {r4, r5, r6, lr}
+	.pad #32
+#endif
 #ifdef CONFIG_ARCH_KERNEL_STACK
 	str	r11, [sp, #20]
 	.cfi_offset sp, -12
 #endif
-	.pad #32
 	ldr	ip, =g_stublookup
 	ldr	ip, [ip, r0, lsl #2]
 	blx	ip
@@ -108,6 +112,8 @@ arm_dispatch_syscall:
 	mov	r0, SYS_syscall_return
 	svc	SYS_syscall
 	.cfi_endproc
+#ifdef CONFIG_UNWINDER_ARM
 	.fnend
+#endif
 	.size	arm_dispatch_syscall, .-arm_dispatch_syscall
 	.end
