@@ -30,6 +30,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/queue.h>
+#include <nuttx/mutex.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/clock.h>
 #include <nuttx/power/pm.h>
@@ -88,9 +89,13 @@ struct pm_domain_s
 
   FAR const struct pm_governor_s *governor;
 
-  /* Spinlock for data read/write protect inside this struct */
+  /* Spinlock/Rmutex for data read/write protect inside this struct */
 
-  spinlock_t lock;
+  union
+  {
+    spinlock_t slock;
+    rmutex_t   rlock;
+  } u;
 };
 
 /****************************************************************************
@@ -113,6 +118,22 @@ EXTERN struct pm_domain_s g_pmdomains[CONFIG_PM_NDOMAINS];
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: pm_domain_initlock
+ *
+ * Description:
+ *   Initialize the lock for a PM domain.
+ *
+ * Input Parameters:
+ *   domain - The PM domain to initialize lock
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void pm_domain_initlock(int domain);
 
 /****************************************************************************
  * Name: pm_domain_lock

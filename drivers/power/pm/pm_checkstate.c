@@ -72,7 +72,6 @@
 enum pm_state_e pm_checkstate(int domain)
 {
   irqstate_t flags;
-  FAR struct pm_domain_s *pdom = &g_pmdomains[domain];
   enum pm_state_e newstate = PM_NORMAL;
 
   DEBUGASSERT(domain >= 0 && domain < CONFIG_PM_NDOMAINS);
@@ -81,14 +80,14 @@ enum pm_state_e pm_checkstate(int domain)
    * invoked, which modifies the stay count which we are about to read
    */
 
-  flags = spin_lock_irqsave(&pdom->lock);
+  flags = pm_domain_lock(domain);
 
   if (g_pmdomains[domain].governor->checkstate)
     {
       newstate = g_pmdomains[domain].governor->checkstate(domain);
     }
 
-  spin_unlock_irqrestore(&pdom->lock, flags);
+  pm_domain_unlock(domain, flags);
 
   return newstate;
 }
