@@ -98,9 +98,7 @@ struct ramlog_user_s
   dq_entry_t        rl_entry;      /* The dq entry of reader */
   volatile uint32_t rl_read;       /* The read index (per-reader position) */
   uint32_t          rl_threashold; /* The threashold of the reader to read log */
-#ifndef CONFIG_RAMLOG_NONBLOCKING
   sem_t             rl_waitsem;    /* Used to wait for data */
-#endif
 
   /* The following the poll structures of threads waiting for driver events.
    * The 'struct pollfd' reference for each open is also  retained in the
@@ -133,9 +131,7 @@ struct ramlog_dev_s
 
 /* Helper functions */
 
-#ifndef CONFIG_RAMLOG_NONBLOCKING
 static void    ramlog_readnotify(FAR struct ramlog_dev_s *priv);
-#endif
 static void    ramlog_pollnotify(FAR struct ramlog_dev_s *priv);
 #if CONFIG_RAMLOG_POLLTIMEOUT_MS > 0
 static void    ramlog_timeout_handler(wdparm_t arg);
@@ -454,7 +450,6 @@ static uint32_t ramlog_unread(FAR struct ramlog_dev_s *priv,
  * Name: ramlog_readnotify
  ****************************************************************************/
 
-#ifndef CONFIG_RAMLOG_NONBLOCKING
 static void ramlog_readnotify(FAR struct ramlog_dev_s *priv)
 {
   FAR dq_entry_t *entry;
@@ -480,7 +475,6 @@ static void ramlog_readnotify(FAR struct ramlog_dev_s *priv)
         }
     }
 }
-#endif
 
 /****************************************************************************
  * Name: ramlog_pollnotify
@@ -619,11 +613,10 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 
   if (len > 0)
     {
-#ifndef CONFIG_RAMLOG_NONBLOCKING
       /* Are there threads waiting for read data? */
 
       ramlog_readnotify(priv);
-#endif
+
       /* Notify all poll/select waiters that they can read from the FIFO */
 
       ramlog_pollnotify(priv);
@@ -677,11 +670,6 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
               break;
             }
 
-#ifdef CONFIG_RAMLOG_NONBLOCKING
-          /* Return what we have (with zero mean the end-of-file) */
-
-          break;
-#else
           int ret;
 
           /* Did we read anything? */
@@ -727,7 +715,6 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
             {
               flags = spin_lock_irqsave(&header->rl_lock);
             }
-#endif /* CONFIG_RAMLOG_NONBLOCKING */
         }
       else
         {
@@ -959,9 +946,7 @@ static int ramlog_file_open(FAR struct file *filep)
     }
 
   upriv->rl_threashold = CONFIG_RAMLOG_POLLTHRESHOLD;
-#ifndef CONFIG_RAMLOG_NONBLOCKING
   nxsem_init(&upriv->rl_waitsem, 0, 0);
-#endif
 
   flags = spin_lock_irqsave(&header->rl_lock);
   dq_addlast(&upriv->rl_entry, &priv->rl_queue);
@@ -988,9 +973,7 @@ static int ramlog_file_close(FAR struct file *filep)
   dq_rem(&upriv->rl_entry, &priv->rl_queue);
   spin_unlock_irqrestore(&header->rl_lock, flags);
 
-#ifndef CONFIG_RAMLOG_NONBLOCKING
   nxsem_destroy(&upriv->rl_waitsem);
-#endif
   kmm_free(upriv);
   return 0;
 }

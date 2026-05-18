@@ -98,13 +98,6 @@ config RAMLOG
 		details as needed to support logging.
 
 if RAMLOG
-config RAMLOG_NONBLOCKING
-	bool "RAMLOG non-block reads"
-	default y
-	---help---
-		Reading from the RAMLOG will never block if the RAMLOG is empty.  If the RAMLOG
-		is empty, then zero is returned (usually interpreted as end-of-file).
-
 config RAMLOG_POLLTHRESHOLD
 	int "The threshold value of circular buffer to notify poll waiters"
 	default 1
@@ -123,8 +116,7 @@ config RAMLOG_NOOVERWRITE
 	bool "Discard new data when buffer is full"
 	default n
 	---help---
-		When enabled, new data is discarded (or writer blocks if
-		CONFIG_RAMLOG_NONBLOCKING is not set) when the buffer is full.
+		When enabled, new data is discarded when the buffer is full.
 		Clear-on-read is enabled: any reader consuming data advances
 		the tail pointer, freeing buffer space for new log data.
 
