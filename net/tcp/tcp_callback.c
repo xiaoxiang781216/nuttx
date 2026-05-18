@@ -347,9 +347,10 @@ uint32_t tcp_callback(FAR struct net_driver_s *dev,
 
   /* Re-prepare the device buffer if d_iob is consumed by the stack */
 
-  if (dev->d_iob == NULL)
+  if (dev->d_iob == NULL &&
+      netdev_iob_prepare(dev, false, 0) != OK)
     {
-      netdev_iob_prepare(dev, false, 0);
+      nwarn("WARNING: netdev_iob_prepare failed\n");
     }
 
   return flags;
