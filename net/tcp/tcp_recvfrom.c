@@ -119,7 +119,7 @@ static size_t tcp_recvfrom_newdata(FAR struct net_driver_s *dev,
                                    FAR struct tcp_recvfrom_s *pstate)
 {
   unsigned int offset;
-  size_t recvlen;
+  ssize_t recvlen;
 
   /* Get the length of the data to return */
 
@@ -137,6 +137,12 @@ static size_t tcp_recvfrom_newdata(FAR struct net_driver_s *dev,
   offset = (dev->d_appdata - dev->d_iob->io_data) - dev->d_iob->io_offset;
 
   recvlen = iob_copyout(pstate->ir_buffer, dev->d_iob, recvlen, offset);
+  if (recvlen <= 0)
+    {
+      /* iob_copyout failed or copied nothing, return 0 without trimming. */
+
+      return 0;
+    }
 
   /* Trim the copied buffers */
 
@@ -149,7 +155,7 @@ static size_t tcp_recvfrom_newdata(FAR struct net_driver_s *dev,
 
   tcp_update_recvlen(pstate, recvlen);
 
-  return pstate->ir_flags & MSG_PEEK ? 0: recvlen;
+  return pstate->ir_flags & MSG_PEEK ? 0 : recvlen;
 }
 
 /****************************************************************************
