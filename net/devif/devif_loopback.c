@@ -75,6 +75,8 @@ bool devif_is_loopback(FAR struct net_driver_s *dev)
 
                 return false;
               }
+
+            /* fall through */
 #endif
 
           default:
