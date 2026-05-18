@@ -288,7 +288,7 @@ else ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
   # https://github.com/apache/nuttx/pull/5971
 
   ARCHOPTIMIZATION += -fno-builtin
-  ARCHOPTIMIZATION += --target=arm-arm-none-eabi
+  ARCHOPTIMIZATION += --target=arm-none-eabi
 
   # Suppress license warning
 
