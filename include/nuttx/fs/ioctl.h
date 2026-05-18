@@ -115,6 +115,7 @@
 #define _PTPBASE        (0x4500) /* PTP ioctl commands */
 #define _MTDLOGBASE     (0x4600) /* MTD LOG ioctl commands */
 #define _VIRTIOBASE     (0x4700) /* VirtIO ioctl commands */
+#define _VHOSTBASE      (0x4800) /* VHost ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 #define _SAFETYBASE     (0x8c00) /* Safety modules ioctl commands */
 #define _DMABUFBASE     (0x8d00) /* DMA-Buf modules ioctl commands */
@@ -811,6 +812,13 @@
 
 #define _VIRTIOIOCVALID(c)    (_IOC_TYPE(c)==_VIRTIOBASE)
 #define _VIRTIOIOC(nr)        _IOC(_VIRTIOBASE,nr)
+
+/* VHost driver ioctl definitions *******************************************/
+
+/* see nuttx/include/nuttx/vhost/vhost.h */
+
+#define _VHOSTIOCVALID(c)     (_IOC_TYPE(c)==_VHOSTBASE)
+#define _VHOSTIOC(nr)         _IOC(_VHOSTBASE,nr)
 
 /* DMA-Buf driver ioctl definitions *****************************************/
 

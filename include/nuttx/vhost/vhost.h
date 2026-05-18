@@ -31,6 +31,7 @@
 #ifdef CONFIG_DRIVERS_VHOST
 
 #include <nuttx/compiler.h>
+#include <nuttx/fs/ioctl.h>
 #include <nuttx/queue.h>
 #include <nuttx/virtio/virtio-config.h>
 #include <openamp/open_amp.h>
@@ -38,6 +39,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* VHost ioctl command definitions */
+
+#define VHOSTIOC_DUMP         _VHOSTIOC(1)
 
 /****************************************************************************
  * Public Type Definitions
@@ -69,6 +74,7 @@ struct vhost_driver
   uint32_t           device;   /* device id */
   CODE int         (*probe)(FAR struct vhost_device *hdev);
   CODE void        (*remove)(FAR struct vhost_device *hdev);
+  CODE void        (*dump)(FAR struct vhost_device *hdev);
   struct dq_entry_s  node;
 };
 
