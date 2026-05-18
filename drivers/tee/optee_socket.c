@@ -134,7 +134,7 @@ int optee_transport_open(FAR struct optee_priv_data **priv_)
   struct sockaddr_rpmsg addr;
 #endif
   int ret;
-#if CONFIG_DEV_OPTEE_CONNECT_TIMEOUT > 0
+#if CONFIG_DEV_OPTEE_CONNECT_TIMEOUT > 0 || CONFIG_DEV_OPTEE_CALL_TIMEOUT > 0
   struct timeval tv;
 #endif
 
@@ -163,6 +163,21 @@ int optee_transport_open(FAR struct optee_priv_data **priv_)
   tv.tv_sec  = CONFIG_DEV_OPTEE_CONNECT_TIMEOUT;
   tv.tv_usec = 0;
   psock_setsockopt(&priv->socket, SOL_SOCKET, SO_SNDTIMEO, &tv,
+                   sizeof(tv));
+#endif
+
+  /* Set recv timeout to avoid blocking indefinitely in
+   * optee_transport_call() when the rpmsg/socket endpoint accepts
+   * the connection but the OP-TEE daemon (e.g., opteed) is
+   * unresponsive (failed to load, crashed, or stuck). Without this
+   * bound, psock_recv() in optee_socket_recv() waits forever and
+   * cascades into test/host hangs.
+   */
+
+#if defined(CONFIG_DEV_OPTEE_CALL_TIMEOUT) && CONFIG_DEV_OPTEE_CALL_TIMEOUT > 0
+  tv.tv_sec  = CONFIG_DEV_OPTEE_CALL_TIMEOUT;
+  tv.tv_usec = 0;
+  psock_setsockopt(&priv->socket, SOL_SOCKET, SO_RCVTIMEO, &tv,
                    sizeof(tv));
 #endif
 

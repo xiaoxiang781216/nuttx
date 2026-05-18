@@ -48,6 +48,21 @@ config DEV_OPTEE_CONNECT_TIMEOUT
 		timeout improves responsiveness when TEE is unavailable.
 		Set to 0 to use the system default timeout.
 
+config DEV_OPTEE_CALL_TIMEOUT
+	int "OP-TEE socket call (recv) timeout in seconds"
+	default 30
+	depends on DEV_OPTEE_LOCAL || DEV_OPTEE_RPMSG
+	---help---
+		Timeout in seconds for receiving the OP-TEE server response on
+		the transport socket after a successful connect. Without this
+		bound, optee_transport_call() can block indefinitely when the
+		rpmsg/socket endpoint accepts the connection but the OP-TEE
+		daemon (e.g., opteed) is not running, has crashed, or fails to
+		respond. The default is generous enough to accommodate slow
+		TEE crypto operations while still preventing test/host hangs
+		when TEE becomes unresponsive. Set to 0 to use the system
+		default (no bound).
+
 config DEV_OPTEE_SUPPLICANT
 	bool "Enables kernel driver for TEE supplicant"
 	default n
