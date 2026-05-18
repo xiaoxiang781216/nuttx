@@ -64,7 +64,6 @@ If the core file is post-processed by lzf compress and hexdump stream, execute t
       $ ./nuttx/tools/coredump.py elf.dump
       Core file conversion completed: elf.core
 
-
 5. Analysis by gdb
 
 After generating elf.core, combined with compiled nuttx.elf, you can view the call stack and related register information of all threads directly through gdb:
@@ -76,3 +75,44 @@ After generating elf.core, combined with compiled nuttx.elf, you can view the ca
       $ prebuilts/gcc/linux/arm/bin/arm-none-eabi-gdb -c elf.core nuttx
 
     .. image:: image/coredump-gdb.png
+
+Netpoll coredump
+----------------
+
+Netpoll coredump sends the crash dump through a netpoll network device.
+Ethernet devices use UDP. CAN devices use ISO-TP over CAN netpoll.
+
+Enable the netpoll backend with:
+
+.. code-block:: console
+
+  CONFIG_COREDUMP=y
+  CONFIG_BOARD_COREDUMP_NETPOLL=y
+  CONFIG_NET_NETPOLL=y
+
+For UDP, configure ``CONFIG_BOARD_COREDUMP_NETPOLL_INTF`` and
+``CONFIG_BOARD_COREDUMP_NETPOLL_PORT``.
+``CONFIG_BOARD_COREDUMP_NETPOLL_IPADDR`` and
+``CONFIG_BOARD_COREDUMP_NETPOLL_MAC`` select the destination address.
+
+For CAN, configure ``CONFIG_BOARD_COREDUMP_NETPOLL_INTF`` and
+``CONFIG_BOARD_COREDUMP_NETPOLL_PORT``. The port value is the CAN ID used by
+NuttX. The host replies on the next CAN ID.
+
+Capture UDP coredumps on the host with:
+
+.. code-block:: console
+
+  $ ./tools/coredump.py --decompress -o elf.core udp 6677
+
+Capture CAN coredumps on the host with:
+
+.. code-block:: console
+
+  $ ./tools/coredump.py --decompress -o elf.core isotp can0 1800
+
+The CAN capture mode uses Linux CAN ISO-TP sockets.
+
+Start the capture tool before triggering the crash. The netpoll stream contains
+only the coredump bytes; the host tool writes the core file after an idle
+timeout. Use ``--timeout`` if the target or transport is slow.
