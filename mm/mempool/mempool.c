@@ -867,7 +867,7 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
       mempool_try_init(pool);
 
       blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
-      flags = spin_lock_irqsave(&pool->lock);
+      flags = spin_lock_irqsave_notrace(&pool->lock);
       bypass = kasan_bypass(true);
 
       info->ordblks = pool->ntotal - pool->nalloc;
@@ -882,7 +882,7 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
                     pool->ntotal * blocksize;
       info->maxalloc = pool->maxalloc;
       kasan_bypass(bypass);
-      spin_unlock_irqrestore(&pool->lock, flags);
+      spin_unlock_irqrestore_notrace(&pool->lock, flags);
       info->sizeblks = blocksize;
       if (pool->wait && pool->expandsize == 0u)
         {
@@ -923,23 +923,23 @@ mempool_info_task(FAR struct mempool_s *pool,
 
   if (task->pid == PID_MM_FREE)
     {
-      irqstate_t flags = spin_lock_irqsave(&pool->lock);
+      irqstate_t flags = spin_lock_irqsave_notrace(&pool->lock);
       bypass = kasan_bypass(true);
       size_t count = pool->ntotal - pool->nalloc;
 
       kasan_bypass(bypass);
-      spin_unlock_irqrestore(&pool->lock, flags);
+      spin_unlock_irqrestore_notrace(&pool->lock, flags);
       info.aordblks += count;
       info.uordblks += count * blocksize;
     }
   else if (task->pid == PID_MM_ALLOC)
     {
-      irqstate_t flags = spin_lock_irqsave(&pool->lock);
+      irqstate_t flags = spin_lock_irqsave_notrace(&pool->lock);
       bypass = kasan_bypass(true);
       size_t nalloc = pool->nalloc;
 
       kasan_bypass(bypass);
-      spin_unlock_irqrestore(&pool->lock, flags);
+      spin_unlock_irqrestore_notrace(&pool->lock, flags);
 
       info.aordblks += nalloc;
       info.uordblks += nalloc * blocksize;
@@ -1040,7 +1040,7 @@ void mempool_foreach_used(FAR struct mempool_s *pool,
 
   mempool_try_init(pool);
 
-  flags = spin_lock_irqsave(&pool->lock);
+  flags = spin_lock_irqsave_notrace(&pool->lock);
 
   if (pool->initialbase != NULL && pool->initialsize > 0)
     {
@@ -1080,7 +1080,7 @@ void mempool_foreach_used(FAR struct mempool_s *pool,
         }
     }
 
-  spin_unlock_irqrestore(&pool->lock, flags);
+  spin_unlock_irqrestore_notrace(&pool->lock, flags);
 }
 
 /****************************************************************************
@@ -1102,7 +1102,7 @@ void mempool_foreach_free(FAR struct mempool_s *pool,
 
   mempool_try_init(pool);
 
-  flags = spin_lock_irqsave(&pool->lock);
+  flags = spin_lock_irqsave_notrace(&pool->lock);
   bypass = kasan_bypass(true);
 
   sq_for_every(&pool->queue, entry)
@@ -1111,7 +1111,7 @@ void mempool_foreach_free(FAR struct mempool_s *pool,
     }
 
   kasan_bypass(bypass);
-  spin_unlock_irqrestore(&pool->lock, flags);
+  spin_unlock_irqrestore_notrace(&pool->lock, flags);
 }
 
 /****************************************************************************
