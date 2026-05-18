@@ -536,13 +536,16 @@ endif
 
 # Add the builtin library
 ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),)
+  ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+    RTLIB="-rtlib=compiler-rt"
+  endif
   ifeq ($(CONFIG_BUILTIN_TOOLCHAIN),y)
-    COMPILER_RT_LIB = $(shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name)
+    COMPILER_RT_LIB = $(shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name $(RTLIB))
     ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
       ifeq ($(wildcard $(COMPILER_RT_LIB)),)
         # if "--print-libgcc-file-name" unable to find the correct libgcc PATH
         # then go ahead and try "--print-file-name"
-        COMPILER_RT_LIB := $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name $(notdir $(COMPILER_RT_LIB))))
+        COMPILER_RT_LIB := $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) $(RTLIB) --print-file-name $(notdir $(COMPILER_RT_LIB))))
       endif
     endif
   endif

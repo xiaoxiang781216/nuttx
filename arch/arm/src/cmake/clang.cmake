@@ -263,6 +263,10 @@ endif()
 
 set(NUTTX_FIND_TOOLCHAIN_LIB_DEFINED true)
 
+if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+  set(RTLIB -rtlib=compiler-rt)
+endif()
+
 if(CONFIG_BUILTIN_TOOLCHAIN)
   function(nuttx_find_toolchain_lib)
     if(ARGN)
@@ -275,13 +279,13 @@ if(CONFIG_BUILTIN_TOOLCHAIN)
     else()
       execute_process(
         COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-                --print-libgcc-file-name
+                --print-libgcc-file-name ${RTLIB}
         OUTPUT_STRIP_TRAILING_WHITESPACE
         OUTPUT_VARIABLE libgcc_path)
       get_filename_component(libgcc_name ${libgcc_path} NAME)
       execute_process(
         COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-                --print-file-name=${libgcc_name}
+                --print-file-name=${libgcc_name} ${RTLIB}
         OUTPUT_STRIP_TRAILING_WHITESPACE
         OUTPUT_VARIABLE libgcc)
       nuttx_add_extra_library(${libgcc})
