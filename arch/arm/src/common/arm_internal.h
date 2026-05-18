@@ -168,6 +168,23 @@ extern "C"
 #define EXTERN extern
 #endif
 
+/****************************************************************************
+ * Trustzone shared timing data
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_TRUSTZONE_MONITOR
+struct trustzone_monitor_s
+{
+  volatile clock_t secure_total;     /* Accumulated trustzone execution time (ticks) */
+  volatile clock_t secure_max;       /* Maximum single trustzone execution time (ticks) */
+  volatile clock_t secure_start;     /* Last trustzone entry timestamp */
+  volatile uint32_t secure_count;    /* Number of trustzone entries from NS */
+};
+
+extern struct trustzone_monitor_s g_trustzone_monitor;
+int arm_trustzone_monitor_init(void);
+#endif /* CONFIG_ARCH_TRUSTZONE_MONITOR */
+
 /* This is the beginning of heap as provided from arm_head.S.
  * This is the first address in DRAM after the loaded
  * program+bss+idle stack.  The end of the heap is

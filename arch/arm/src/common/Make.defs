@@ -29,6 +29,10 @@ CMN_CSRCS += arm_stackframe.c arm_modifyreg.c
 CMN_CSRCS += arm_usestack.c arm_fork.c arm_poweroff.c
 CMN_CSRCS += arm_tcbinfo.c
 
+ifeq ($(CONFIG_ARCH_TRUSTZONE_MONITOR),y)
+  CMN_CSRCS += arm_trustzone_monitor.c
+endif
+
 ifeq ($(CONFIG_STACK_COLORATION),y)
   CMN_CSRCS += arm_checkstack.c
 endif

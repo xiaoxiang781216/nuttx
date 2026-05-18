@@ -123,5 +123,9 @@ void up_initialize(void)
   arm_panic_switch_nsec_register();
 #endif
 
+#ifdef CONFIG_ARCH_TRUSTZONE_MONITOR
+  arm_trustzone_monitor_init();
+#endif
+
   board_autoled_on(LED_IRQSENABLED);
 }

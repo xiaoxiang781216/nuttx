@@ -807,6 +807,15 @@ config ARCH_TRUSTZONE_CPU_BITMASK
 	---help---
 		Set Security bitmap for multicore, bit 0 means core 0.
 
+config ARCH_TRUSTZONE_MONITOR
+	bool "Trustzone execution timing monitor via /proc/trustzone"
+	default n
+	depends on ARCH_HAVE_TRUSTZONE && !ARCH_TRUSTZONE_DISABLED
+	---help---
+		Enable secure/nonsecure shared memory timing instrumentation.
+		When enabled, arm_doirq tracks Trustzone execution time via
+		shared SRAM and exposes statistics through /proc/trustzone.
+
 config ARCH_FPU
 	bool "FPU support"
 	default y

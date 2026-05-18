@@ -42,6 +42,10 @@ set(SRCS
     arm_tcbinfo.c
     ${ARCH_TOOLCHAIN_PATH}/fork.S)
 
+if(CONFIG_ARCH_TRUSTZONE_MONITOR)
+  list(APPEND SRCS arm_trustzone_monitor.c)
+endif()
+
 if(CONFIG_ARCH_FPU)
   list(APPEND SRCS arm_fpucmp.c)
 endif()

@@ -40,14 +40,134 @@
 #include "psr.h"
 
 /****************************************************************************
+ * Trustzone latency measurement via shared memory
+ *
+ * arm_doirq need to track Trustzone execution time:
+ *
+ * Secure arm_doirq:
+ *   Entry: if incoming LR shows "Secure interrupted Non-secure"
+ *          (bit0=1,bit6=0) → Secure starts, record secure_start
+ *   Exit:  if outgoing LR shows "returning to Non-secure" (bit0=1,bit6=0)
+ *          → Secure ends, record accumulate
+ *
+ * Non-secure arm_doirq:
+ *   Entry: if incoming LR shows "Non-secure interrupted Secure"
+ *          (bit0=0,bit6=1) → Secure was running and got interrupted,
+ *   Exit:  if outgoing LR shows "returning to Secure" (bit0=0,bit6=1)
+ *          → Secure resumes, record secure_start
+ *
+ * All data stored in shared SRAM (via linker symbol __trustzone_shared).
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_TRUSTZONE_MONITOR
+/* Helper: record Secure start (Secure begins/resumes execution) */
+
+static inline_function void arm_enter_secure(void)
+{
+  if (g_trustzone_monitor.secure_start == 0)
+    {
+      g_trustzone_monitor.secure_start = perf_gettime();
+    }
+}
+
+static inline_function void arm_leave_secure(void)
+{
+  if (g_trustzone_monitor.secure_start != 0)
+    {
+      clock_t start = g_trustzone_monitor.secure_start;
+      clock_t now = perf_gettime();
+      clock_t duration = now - start;
+
+      g_trustzone_monitor.secure_start = 0;
+      g_trustzone_monitor.secure_total += duration;
+      g_trustzone_monitor.secure_count++;
+      if (duration > g_trustzone_monitor.secure_max)
+        {
+          g_trustzone_monitor.secure_max = duration;
+        }
+    }
+}
+
+/****************************************************************************
+ * Name: arm_enter_irq
+ *
+ * Description:
+ *   Check EXC_RETURN at IRQ entry to track Secure execution time.
+ *   - Secure side (bit0=1, bit6=0): Secure interrupted Non-secure →
+ *                 Secure starts
+ *   - Non-secure side (bit0=0, bit6=1): Non-secure interrupted Secure →
+ *                                       Secure ends
+ *
+ ****************************************************************************/
+
+static inline_function void arm_enter_irq(uint32_t exc_lr)
+{
+  bool exc_secure = (exc_lr & EXC_RETURN_EXC_SECURE) != 0;
+  bool sec_stack  = (exc_lr & EXC_RETURN_SECURE_STACK) != 0;
+
+  if (exc_secure && !sec_stack)
+    {
+      /* Secure exception interrupted Non-secure: Secure starts */
+
+      arm_enter_secure();
+    }
+  else if (!exc_secure && sec_stack)
+    {
+      /* Non-secure exception interrupted Secure: Secure ends */
+
+      arm_leave_secure();
+    }
+}
+
+/****************************************************************************
+ * Name: arm_leave_irq
+ *
+ * Description:
+ *   Check EXC_RETURN at IRQ exit to track Secure execution time.
+ *   - Secure side (bit0=1, bit6=0): returning to Non-secure → Secure ends
+ *   - Non-secure side (bit0=0, bit6=1): returning to Secure →
+ *                                       Secure resumes
+ *
+ ****************************************************************************/
+
+static inline_function void arm_leave_irq(uint32_t exc_lr)
+{
+  bool exc_secure = (exc_lr & EXC_RETURN_EXC_SECURE) != 0;
+  bool sec_stack = (exc_lr & EXC_RETURN_SECURE_STACK) != 0;
+
+  if (exc_secure && !sec_stack)
+    {
+      /* Returning from Secure to Non-secure: Secure ends */
+
+      arm_leave_secure();
+    }
+  else if (!exc_secure && sec_stack)
+    {
+      /* Returning from Non-secure to Secure: Secure resumes */
+
+      arm_enter_secure();
+    }
+}
+
+#else
+#  define arm_enter_irq(exc_lr)
+#  define arm_leave_irq(exc_lr)
+#endif /* CONFIG_ARCH_TRUSTZONE_MONITOR */
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 void exception_direct(void)
 {
   int irq = getipsr();
+  uint32_t exc_lr;
 
+  __asm__ __volatile__("mov %0, lr" : "=r"(exc_lr));
   up_addrenv_enter_kernel();
+
+  arm_enter_irq(exc_lr);
+
 #ifdef CONFIG_ARCH_FPU
   __asm__ __volatile__
     (
@@ -67,7 +187,17 @@ void exception_direct(void)
       up_trigger_irq(NVIC_IRQ_PENDSV, 0);
     }
 
+  if ((getreg32(NVIC_INTCTRL) & NVIC_INTCTRL_PENDSVSET) == 0)
+    {
+      /* No context switch and no PendSV pending, returning to the
+       * same world we interrupted. Reverse the entry timing action.
+       */
+
+      arm_leave_irq(exc_lr);
+    }
+
   up_addrenv_leave_kernel();
+  UNUSED(exc_lr);
 }
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
@@ -76,6 +206,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
   struct tcb_s *tcb;
 
   up_addrenv_enter_kernel();
+  arm_enter_irq(regs[REG_EXC_RETURN]);
   running_task = &g_running_task;
   tcb = *running_task;
 
@@ -167,6 +298,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
    */
 
   (*running_task)->xcp.regs = NULL;
+  arm_leave_irq(regs[REG_EXC_RETURN]);
   up_addrenv_leave_kernel();
   return regs;
 }
