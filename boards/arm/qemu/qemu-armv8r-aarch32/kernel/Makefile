@@ -39,8 +39,14 @@ USER_BINFILE += $(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx_user.bin)
 USER_LDFLAGS = --undefined=userspace --undefined=$(ENTRYPT) --entry=$(ENTRYPT) -T $(addsuffix .tmp,$(USER_LDSCRIPT))
 USER_LDLIBS = $(patsubst lib%,-l%,$(basename $(notdir $(USERLIBS))))
 
-USER_LDLIBS += "${shell "$(CC)" $(ARCHCPUFLAGS) -print-libgcc-file-name}"
-USER_LDLIBS += "${shell "$(CC)" $(ARCHCPUFLAGS) -print-file-name=libm.a}"
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+  RTLIB="-rtlib=compiler-rt"
+endif
+
+USER_LDLIBS += "${shell "$(CC)" $(ARCHCPUFLAGS) $(RTLIB) -print-libgcc-file-name}"
+ifeq ($(CONFIG_LIBM_TOOLCHAIN),y)
+  USER_LDLIBS += "${shell "$(CC)" $(ARCHCPUFLAGS) $(RTLIB) -print-file-name=libm.a}"
+endif
 
 # Objects needed for multiple linking
 
