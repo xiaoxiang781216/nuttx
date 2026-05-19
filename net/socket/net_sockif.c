@@ -49,6 +49,8 @@
  ****************************************************************************/
 
 static int ctrl_setup(FAR struct socket *psock);
+static sockcaps_t ctrl_sockcaps(FAR struct socket *psock);
+static void ctrl_addref(FAR struct socket *psock);
 static int ctrl_close(FAR struct socket *psock);
 #ifdef CONFIG_NET_SOCKOPTS
 static int ctrl_getsockopt(FAR struct socket *psock, int level, int option,
@@ -64,8 +66,8 @@ static int ctrl_setsockopt(FAR struct socket *psock, int level, int option,
 static const struct sock_intf_s g_ctrl_sockif =
 {
   ctrl_setup,       /* si_setup */
-  NULL,             /* si_sockcaps */
-  NULL,             /* si_addref */
+  ctrl_sockcaps,    /* si_sockcaps */
+  ctrl_addref,      /* si_addref */
   NULL,             /* si_bind */
   NULL,             /* si_getsockname */
   NULL,             /* si_getpeername */
@@ -120,6 +122,48 @@ static int ctrl_setup(FAR struct socket *psock)
 {
   psock->s_conn = &g_ctrl_conn;
   return 0;
+}
+
+/****************************************************************************
+ * Name: ctrl_sockcaps
+ *
+ * Description:
+ *   Return the bit encoded capabilities of this socket.
+ *
+ * Input Parameters:
+ *   psock - Socket structure of the socket whose capabilities are being
+ *           queried.
+ *
+ * Returned Value:
+ *   The set of socket capabilities is returned.
+ *
+ ****************************************************************************/
+
+static sockcaps_t ctrl_sockcaps(FAR struct socket *psock)
+{
+  return SOCKCAP_NONBLOCKING;
+}
+
+/****************************************************************************
+ * Name: ctrl_addref
+ *
+ * Description:
+ *   Stub implementation to prevent NULL pointer dereference when the
+ *   socket framework calls si_addref on g_ctrl_sockif. Since g_ctrl_conn
+ *   is a static per-CPU variable without dynamic allocation, no actual
+ *   reference counting is needed.
+ *
+ * Input Parameters:
+ *   psock - Socket structure of the socket whose reference count will be
+ *           incremented.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void ctrl_addref(FAR struct socket *psock)
+{
 }
 
 static int ctrl_close(FAR struct socket *psock)
