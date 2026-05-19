@@ -32,14 +32,13 @@
 #include <unistd.h>
 #include <nuttx/lib/lib.h>
 
-#if defined(CONFIG_LIBC_MEMFD_TMPFS) || defined(CONFIG_LIBC_MEMFD_SHMFS)
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #ifdef CONFIG_LIBC_MEMFD_TMPFS
 #  define LIBC_MEM_FD_VFS_PATH CONFIG_LIBC_TMPDIR "/" CONFIG_LIBC_MEM_FD_VFS_PATH
-#else
+#elif defined(CONFIG_LIBC_MEMFD_SHMFS)
 #  define LIBC_MEM_FD_VFS_PATH CONFIG_LIBC_MEM_FD_VFS_PATH
 #endif
 
@@ -51,7 +50,7 @@
 
 int memfd_create(FAR const char *name, unsigned int flags)
 {
-#ifdef CONFIG_LIBC_MEMFD_ERROR
+#ifdef CONFIG_LIBC_MEMFD_NONE
   set_errno(ENOSYS);
   return -1;
 #else
@@ -93,4 +92,3 @@ retry:
   return ret;
 #endif
 }
-#endif

@@ -107,7 +107,7 @@ config LIBC_MEMFD_TMPFS
 	bool "memfd base on tmpfs"
 	depends on FS_TMPFS
 
-config LIBC_MEMFD_ERROR
+config LIBC_MEMFD_NONE
 	bool "memfd return error"
 
 endchoice
@@ -115,7 +115,7 @@ endchoice
 config LIBC_MEM_FD_VFS_PATH
 	string "Relative path to memfd storage"
 	default "memfd"
-	depends on !LIBC_MEMFD_ERROR
+	depends on !LIBC_MEMFD_NONE
 	---help---
 		The relative path to where memfd will exist in the tmpfs namespace.
 
