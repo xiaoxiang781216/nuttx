@@ -1548,36 +1548,41 @@ static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
 
   /* CAN 2.0 or CAN FD */
 
-  if (pkt->io_len == sizeof(struct can_frame))
-    {
-      FAR struct can_frame *frame =
-        (FAR struct can_frame *)netpkt_getdata(dev, pkt);
+#ifndef CONFIG_NET_CAN_CANFD
+  FAR struct can_frame *frame =
+    (FAR struct can_frame *)netpkt_getdata(dev, pkt);
 
-      ctucanfd_sock_queue_one(dev, priv, frame->can_id,
-                              (frame->can_id & CAN_RTR_FLAG) != 0,
-                              false, false, false,
-                              frame->data, frame->can_dlc, pkt);
-      return OK;
+  if (frame->can_dlc > CAN_MAX_DLEN)
+    {
+      goto err_out;
     }
 
-#ifdef CONFIG_NET_CAN_CANFD
-  if (pkt->io_len == sizeof(struct canfd_frame))
+  ctucanfd_sock_queue_one(dev, priv, frame->can_id,
+                          (frame->can_id & CAN_RTR_FLAG) != 0,
+                          false, false, false,
+                          frame->data, frame->can_dlc, pkt);
+#else
+  FAR struct canfd_frame *frame =
+    (FAR struct canfd_frame *)netpkt_getdata(dev, pkt);
+
+  if (frame->len > CANFD_MAX_DLEN)
     {
-      FAR struct canfd_frame *frame =
-        (FAR struct canfd_frame *)netpkt_getdata(dev, pkt);
-
-      ctucanfd_sock_queue_one(dev, priv, frame->can_id,
-                              (frame->can_id & CAN_RTR_FLAG) != 0,
-                              (frame->flags & CANFD_FDF) != 0,
-                              (frame->flags & CANFD_BRS) != 0,
-                              (frame->flags & CANFD_ESI) != 0,
-                              frame->data, frame->len, pkt);
-
-      return OK;
+      goto err_out;
     }
+
+  ctucanfd_sock_queue_one(dev, priv, frame->can_id,
+                          (frame->can_id & CAN_RTR_FLAG) != 0,
+                          (frame->flags & CANFD_FDF) != 0,
+                          (frame->flags & CANFD_BRS) != 0,
+                          (frame->flags & CANFD_ESI) != 0,
+                          frame->data, frame->len, pkt);
+
 #endif
 
-  canerr("ERROR: unsupported netpkt len %u\n", pkt->io_len);
+  return OK;
+
+err_out:
+  canerr("ERROR: invalid CAN frame len %u\n", pkt->io_len);
   netpkt_free(dev, pkt, NETPKT_TX);
   return -EINVAL;
 }
