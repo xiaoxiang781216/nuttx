@@ -364,10 +364,20 @@ int gai_suspend(FAR const struct gaicb * const list[], int n,
           pthread_mutex_lock(&req->ar_lock);
           if (req->ar_return == EAI_INPROGRESS)
             {
-              int rc = timeout != NULL
-                  ? pthread_cond_timedwait(&req->ar_cond,
-                                           &req->ar_lock, &timeout_abs)
-                  : pthread_cond_wait(&req->ar_cond, &req->ar_lock);
+              int rc = 0;
+
+              /* Wait in a loop to defend against spurious wakeups, as
+               * required by POSIX for pthread_cond_*wait().
+               */
+
+              while (req->ar_return == EAI_INPROGRESS && rc == 0)
+                {
+                  rc = timeout != NULL
+                      ? pthread_cond_timedwait(&req->ar_cond,
+                                               &req->ar_lock,
+                                               &timeout_abs)
+                      : pthread_cond_wait(&req->ar_cond, &req->ar_lock);
+                }
 
               if (rc == EINTR)
                 {
