@@ -158,27 +158,9 @@ int syslog_netdev_init(FAR struct netdev_lowerhalf_s *dev)
 {
   FAR struct syslog_netdev_s *priv = &g_syslog_netdev;
   irqstate_t                  flags;
-  int                         ret;
+  int                         ret = -EINVAL;
 
   flags = spin_lock_irqsave(&priv->lock);
-
-#ifdef CONFIG_NET_UDP
-  if (dev->netdev.d_lltype == NET_LL_ETHERNET)
-    {
-      priv->send = netpoll_udp_queue_send;
-
-      ret = netpoll_udp_init(&priv->np, dev,
-                             CONFIG_SYSLOG_NETDEV_PORT,
-                             CONFIG_SYSLOG_NETDEV_IPADDR,
-                             CONFIG_SYSLOG_NETDEV_PORT,
-                             CONFIG_SYSLOG_NETDEV_MAC);
-      if (ret < 0)
-        {
-          goto errout;
-        }
-    }
-  else
-#endif
 
 #ifdef CONFIG_NET_CAN
   if (dev->netdev.d_lltype == NET_LL_CAN)
@@ -187,20 +169,21 @@ int syslog_netdev_init(FAR struct netdev_lowerhalf_s *dev)
 
       ret = netpoll_can_init(&priv->np, dev,
                              CONFIG_SYSLOG_NETDEV_PORT);
-      if (ret < 0)
-        {
-          goto errout;
-        }
     }
   else
 #endif
-
     {
-      ret = -EINVAL;
-      goto errout;
+#ifdef CONFIG_NET_UDP
+      priv->send = netpoll_udp_queue_send;
+
+      ret = netpoll_udp_init(&priv->np, dev,
+                             CONFIG_SYSLOG_NETDEV_PORT,
+                             CONFIG_SYSLOG_NETDEV_IPADDR,
+                             CONFIG_SYSLOG_NETDEV_PORT,
+                             CONFIG_SYSLOG_NETDEV_MAC);
+#endif
     }
 
-errout:
   spin_unlock_irqrestore(&priv->lock, flags);
   return ret;
 }

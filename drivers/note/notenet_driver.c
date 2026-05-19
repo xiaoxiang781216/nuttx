@@ -210,31 +210,31 @@ static void note_netdev_flush(FAR struct note_driver_s *driver)
 int notenet_init(FAR struct netdev_lowerhalf_s *dev)
 {
   FAR struct notenet_driver_s *note = &g_notenet;
+  int ret = -EINVAL;
 
   /* Initialize netpoll */
-
-#ifdef CONFIG_NET_UDP
-  if (dev->netdev.d_lltype == NET_LL_ETHERNET)
-    {
-      note->send = netpoll_udp_queue_send;
-
-      return netpoll_udp_init(&note->np, dev,
-                              CONFIG_DRIVERS_NOTENET_PORT,
-                              CONFIG_DRIVERS_NOTENET_IPADDR,
-                              CONFIG_DRIVERS_NOTENET_PORT,
-                              CONFIG_DRIVERS_NOTENET_MAC);
-    }
-#endif
 
 #ifdef CONFIG_NET_CAN
   if (dev->netdev.d_lltype == NET_LL_CAN)
     {
       note->send = netpoll_can_queue_send;
 
-      return netpoll_can_init(&note->np, dev,
-                              CONFIG_DRIVERS_NOTENET_PORT);
+      ret = netpoll_can_init(&note->np, dev,
+                             CONFIG_DRIVERS_NOTENET_PORT);
     }
+  else
 #endif
+    {
+#ifdef CONFIG_NET_UDP
+      note->send = netpoll_udp_queue_send;
 
-  return -EINVAL;
+      ret = netpoll_udp_init(&note->np, dev,
+                             CONFIG_DRIVERS_NOTENET_PORT,
+                             CONFIG_DRIVERS_NOTENET_IPADDR,
+                             CONFIG_DRIVERS_NOTENET_PORT,
+                             CONFIG_DRIVERS_NOTENET_MAC);
+#endif
+    }
+
+  return ret;
 }
