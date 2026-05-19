@@ -651,20 +651,20 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
       return;
     }
 
-  ret = rpmsg_create_ept(&new->ept, rdev, name,
-                         RPMSG_ADDR_ANY, dest,
-                         rpmsg_socket_ept_cb, rpmsg_socket_ns_unbind);
-  if (ret < 0)
-    {
-      rpmsg_socket_free(new);
-      return;
-    }
+  /* Set rpaddr before create_ept, because ept_cb may fire inside
+   * rpmsg_create_ept when the remote side replies SYNC immediately
+   * via interrupt (doorbell/mailbox).
+   */
 
   new->rpaddr.rp_family = AF_RPMSG;
   strlcpy(new->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev),
           sizeof(new->rpaddr.rp_cpu));
   strlcpy(new->rpaddr.rp_name, name + RPMSG_SOCKET_NAME_PREFIX_LEN,
           sizeof(new->rpaddr.rp_name));
+
+  /* Enqueue to pend list before create_ept, so that ept_cb can find
+   * this conn when processing the SYNC reply.
+   */
 
   flags = spin_lock_irqsave(&server->recvlock);
   if (server->pending >= server->backlog)
@@ -673,7 +673,6 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
 
       nerr("Reject the connection, Max listen %d\n", server->backlog);
       spin_unlock_irqrestore(&server->recvlock, flags);
-      rpmsg_destroy_ept(&new->ept);
       rpmsg_socket_free(new);
       return;
     }
@@ -682,6 +681,37 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   server->pend = new;
   server->pending++;
   spin_unlock_irqrestore(&server->recvlock, flags);
+
+  ret = rpmsg_create_ept(&new->ept, rdev, name,
+                         RPMSG_ADDR_ANY, dest,
+                         rpmsg_socket_ept_cb, rpmsg_socket_ns_unbind);
+  if (ret < 0)
+    {
+      /* Remove from pend list on failure */
+
+      flags = spin_lock_irqsave(&server->recvlock);
+      if (server->pend == new)
+        {
+          server->pend = new->next;
+        }
+      else
+        {
+          FAR struct rpmsg_socket_conn_s **pp;
+          for (pp = &server->pend; *pp; pp = &(*pp)->next)
+            {
+              if (*pp == new)
+                {
+                  *pp = new->next;
+                  break;
+                }
+            }
+        }
+
+      server->pending--;
+      spin_unlock_irqrestore(&server->recvlock, flags);
+      rpmsg_socket_free(new);
+      return;
+    }
 
   rpmsg_socket_ns_bound(&new->ept);
 }
