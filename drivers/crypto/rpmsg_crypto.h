@@ -42,8 +42,6 @@
 #define RPMSG_CRYPTO_KPROCESS        3
 #define RPMSG_CRYPTO_KEYPROCESS      4
 
-#define RPMSG_CRYPTO_RSA_PRIVATE_KEY_SIZE  1536
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/

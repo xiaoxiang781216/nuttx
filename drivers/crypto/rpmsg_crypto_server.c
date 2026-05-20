@@ -904,7 +904,7 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   FAR struct crparam *input = NULL;
   FAR struct crparam *dp = NULL;
   struct cryptkop krp;
-  unsigned char keybuf[RPMSG_CRYPTO_RSA_PRIVATE_KEY_SIZE];
+  unsigned char keybuf[CONFIG_CRYPTO_RPMSG_RSA_KEYBUF_SIZE];
   uint32_t data_len = 0;
   uint32_t space;
   uint32_t keylen;

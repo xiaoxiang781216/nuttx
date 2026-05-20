@@ -933,7 +933,7 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   FAR struct crparam *dp;
   FAR struct crparam *dq;
   FAR struct crparam *u;
-  unsigned char keybuf[RPMSG_CRYPTO_RSA_PRIVATE_KEY_SIZE];
+  unsigned char keybuf[CONFIG_CRYPTO_RPMSG_RSA_KEYBUF_SIZE];
   uint32_t data_len = 0;
   uint32_t keybufsize;
   uint32_t keybits;
