@@ -116,6 +116,7 @@
 #define _MTDLOGBASE     (0x4600) /* MTD LOG ioctl commands */
 #define _VIRTIOBASE     (0x4700) /* VirtIO ioctl commands */
 #define _VHOSTBASE      (0x4800) /* VHost ioctl commands */
+#define _PULSECOUNTBASE (0x4900) /* Pulse count driver ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 #define _SAFETYBASE     (0x8c00) /* Safety modules ioctl commands */
 #define _DMABUFBASE     (0x8d00) /* DMA-Buf modules ioctl commands */
@@ -826,6 +827,11 @@
 
 #define _DMABUFIOCVALID(c)    (_IOC_TYPE(c)==_DMABUFBASE)
 #define _DMABUFIOC(nr)        _IOC(_DMABUFBASE,nr)
+
+/* Pulse count driver ioctl definitions *************************************/
+
+#define _PULSECOUNTIOCVALID(c) (_IOC_TYPE(c)==_PULSECOUNTBASE)
+#define _PULSECOUNTIOC(nr)     _IOC(_PULSECOUNTBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions
