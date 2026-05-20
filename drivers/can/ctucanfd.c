@@ -77,11 +77,6 @@
 
 /* SocketCAN specific */
 
-#ifdef CONFIG_CAN_CTUCANFD_SOCKET
-#  define CTUCANFD_TX_QUOTA   CONFIG_CAN_CTUCANFD_TX_QUOTA
-#  define CTUCANFD_RX_QUOTA   CONFIG_CAN_CTUCANFD_RX_QUOTA
-#endif /* CONFIG_CAN_CTUCANFD_SOCKET */
-
 #ifndef CONFIG_NET_CAN_ERRORS
 #  define CTUCANFD_SOCK_RXINT (CTUCANFD_INT_RBNEI)
 #else
@@ -1718,22 +1713,8 @@ ctucanfd_sock_txconfirm(FAR struct netdev_lowerhalf_s *dev)
     {
       if (priv->tx_pktbuf[i])
         {
-          /* subtract 1 from the RX buffer quota counter */
-
-          if (atomic_sub(&dev->quota_ptr[NETPKT_RX], 1) <= 0)
-            {
-              atomic_add(&dev->quota_ptr[NETPKT_RX], 1);
-              canerr("alloc rx buffer failed\n");
-              return NULL;
-            }
-
           pkt = priv->tx_pktbuf[i];
           priv->tx_pktbuf[i] = NULL;
-
-          /* add 1 from the TX buffer quota counter */
-
-          atomic_add(&dev->quota_ptr[NETPKT_TX], 1);
-
           return pkt;
         }
     }
@@ -2345,8 +2326,6 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
 
       /* Register the network device */
 
-      netdev->quota[NETPKT_TX] = CTUCANFD_TX_QUOTA;
-      netdev->quota[NETPKT_RX] = CTUCANFD_RX_QUOTA;
       netdev->ops = &g_ctucanfd_net_ops;
 
       snprintf(netdev->netdev.d_ifname, IFNAMSIZ, "can%d", canid + i);
@@ -2491,9 +2470,7 @@ int ctucanfd_register(uintptr_t base, int irq, uint32_t id)
 #endif
 
 #ifdef CONFIG_CAN_CTUCANFD_SOCKET
-  dev->dev.quota[NETPKT_TX] = CTUCANFD_TX_QUOTA;
-  dev->dev.quota[NETPKT_RX] = CTUCANFD_RX_QUOTA;
-  dev->dev.ops              = &g_ctucanfd_net_ops;
+  dev->dev.ops = &g_ctucanfd_net_ops;
 
   snprintf(dev->dev.netdev.d_ifname, IFNAMSIZ, "can%" PRIu32, id);
 

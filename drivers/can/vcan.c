@@ -107,8 +107,6 @@ static FAR netpkt_t *vcan_receive(FAR struct netdev_lowerhalf_s *dev)
       return NULL;
     }
 
-  atomic_sub(&dev->quota_ptr[NETPKT_RX], 1);
-  atomic_add(&dev->quota_ptr[NETPKT_TX], 1);
   netdev_lower_txdone(dev);
 
   return pkt;
@@ -222,9 +220,6 @@ int vcan_initialize(void)
       priv->dev.rxtype = NETDEV_RX_THREAD;
       priv->dev.priority = CONFIG_CAN_VCAN_RXTHREAD_PRIORITY;
 #endif
-
-      priv->dev.quota[NETPKT_TX] = CONFIG_CAN_VCAN_NPKTS;
-      priv->dev.quota[NETPKT_RX] = 1;
 
       /* register vcanX */
 

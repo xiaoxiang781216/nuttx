@@ -130,11 +130,11 @@ struct netdev_lowerhalf_s
   FAR const struct wireless_ops_s *iw_ops;
 #endif
 
-  /* Max # of buffer held by driver */
+  /* Set by the lower half (transmit() returning -EBUSY) to ask the upper
+   * half to pause TX until netdev_lower_txdone() re-arms it.
+   */
 
-  FAR atomic_t *quota_ptr; /* Shared quota, ingore `quota` if ptr is set */
-  atomic_t quota[NETPKT_TYPENUM];
-  bool txdone;
+  bool txpause;
 
   uint8_t rxtype;
   uint8_t priority;
@@ -420,21 +420,6 @@ void netdev_lower_rxready(FAR struct netdev_lowerhalf_s *dev);
  ****************************************************************************/
 
 void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev);
-
-/****************************************************************************
- * Name: netdev_lower_quota_load
- *
- * Description:
- *   Fetch the quota, use this interface when device is running.
- *
- * Input Parameters:
- *   dev  - The lower half device driver structure
- *   type - Whether get quota for TX or RX
- *
- ****************************************************************************/
-
-int netdev_lower_quota_load(FAR struct netdev_lowerhalf_s *dev,
-                            enum netpkt_type_e type);
 
 /****************************************************************************
  * Name: netdev_lower_vlan_add

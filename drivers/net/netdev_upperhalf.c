@@ -117,53 +117,6 @@ static int netdev_upper_txavail(FAR struct net_driver_s *dev);
  ****************************************************************************/
 
 /****************************************************************************
- * Name: quota_is_valid
- *
- * Description:
- *   Check if the quota of the lower half is not too big.
- *
- ****************************************************************************/
-
-static bool quota_is_valid(FAR struct netdev_lowerhalf_s *lower,
-                           enum net_lltype_e lltype)
-{
-  int total = 0;
-  int bufnum;
-  enum netpkt_type_e type;
-
-  for (type = NETPKT_TX; type < NETPKT_TYPENUM; type++)
-    {
-      total += netdev_lower_quota_load(lower, type);
-    }
-
-#ifdef CONFIG_NET_CAN
-  if (lltype == NET_LL_CAN)
-    {
-      bufnum = iob_navail_with_size(NET_CAN_BUFSIZE, false);
-    }
-  else
-#endif
-    {
-      bufnum = NETPKT_BUFNUM;
-    }
-
-  if (total > bufnum)
-    {
-      nerr("ERROR: Too big quota when registering device: %d\n", total);
-      return false;
-    }
-
-  if (total > bufnum / 2)
-    {
-      nwarn("WARNING: The quota of the registering device may consume more "
-            "than half of the network buffers, which may hurt performance. "
-            "Please consider decreasing driver quota or increasing nIOB.\n");
-    }
-
-  return true;
-}
-
-/****************************************************************************
  * Name: netpkt_get
  *
  * Description:
@@ -177,25 +130,13 @@ static bool quota_is_valid(FAR struct netdev_lowerhalf_s *lower,
 static FAR netpkt_t *netpkt_get(FAR struct net_driver_s *dev,
                                 enum netpkt_type_e type)
 {
-  FAR struct netdev_upperhalf_s *upper;
   FAR netpkt_t *pkt;
 
   DEBUGASSERT(dev && dev->d_iob);
 
-  upper = (FAR struct netdev_upperhalf_s *)dev->d_private;
   pkt = dev->d_iob;
 
   netdev_iob_clear(dev);
-
-  /* Do not limit quota here (simply relay iob instead of dropping), most
-   * cases will be limited by netdev_upper_can_tx and seldom reaches here.
-   */
-
-  if (atomic_sub(&upper->lower->quota_ptr[type], 1) <= 0)
-    {
-      nwarn("WARNING: Allowing temperarily exceeding quota of %s.\n",
-            dev->d_ifname);
-    }
 
   return pkt;
 }
@@ -214,11 +155,7 @@ static FAR netpkt_t *netpkt_get(FAR struct net_driver_s *dev,
 static void netpkt_put(FAR struct net_driver_s *dev, FAR netpkt_t *pkt,
                        enum netpkt_type_e type)
 {
-  FAR struct netdev_upperhalf_s *upper = dev->d_private;
-
   DEBUGASSERT(dev && pkt);
-
-  atomic_add(&upper->lower->quota_ptr[type], 1);
   netdev_iob_replace_l2(dev, pkt);
 }
 
@@ -226,7 +163,19 @@ static void netpkt_put(FAR struct net_driver_s *dev, FAR netpkt_t *pkt,
  * Name: netdev_upper_can_tx
  *
  * Description:
- *   Check if we allow tx on this device.
+ *   Check if we allow tx on this device.  After quota tracking was removed,
+ *   backpressure from the lower-half driver is signalled via the
+ *   `lower->txpause` flag:
+ *
+ *   - When transmit() returns -EBUSY, netdev_upper_txpoll sets txpause=true
+ *     to mark the driver as paused.  We refuse further TX attempts so the
+ *     upper half stops hammering an unwilling driver.
+ *   - The driver clears the pause by calling netdev_lower_txdone() once a
+ *     TX slot frees up; that path resets txpause=false and re-arms TX.
+ *
+ *   When not paused we always return true so the polling loop can both
+ *   drain pending packets in txq and let devif_poll() pull fresh packets
+ *   from the network stack.
  *
  * Assumptions:
  *   Called with the network locked.
@@ -235,15 +184,7 @@ static void netpkt_put(FAR struct net_driver_s *dev, FAR netpkt_t *pkt,
 
 static inline bool netdev_upper_can_tx(FAR struct netdev_upperhalf_s *upper)
 {
-  FAR struct netdev_lowerhalf_s *lower = upper->lower;
-
-  if (netdev_lower_quota_load(lower, NETPKT_TX) <= 0)
-    {
-      lower->txdone = true;
-      return false;
-    }
-
-  return true;
+  return !upper->lower->txpause;
 }
 
 /****************************************************************************
@@ -312,15 +253,18 @@ static int netdev_upper_txpoll(FAR struct net_driver_s *dev)
        * Head-insert preserves packet ordering.  The retry will
        * be driven by txdone callback from the lower half driver.
        *
-       * Note: We manually restore quota instead of using
-       * netpkt_put() because the pkt is moved to txq, not back
-       * to dev->d_iob.  After netpkt_get(), dev->d_iob is
-       * already NULL.
+       * Set txpause=true to pause the upper-half TX path until the
+       * lower-half driver calls netdev_lower_txdone() to signal that
+       * a TX slot has freed up.  Without this gate, the upper half
+       * would keep feeding packets into an already-busy driver,
+       * burning CPU and bouncing packets via the txq head-insert.
+       *
+       * Note: After netpkt_get(), dev->d_iob is already NULL.
        */
 
       nwarn("WARNING: Transmit busy (%d), re-queue pkt\n", ret);
       iob_add_queue_head(pkt, &upper->txq);
-      atomic_add(&upper->lower->quota_ptr[NETPKT_TX], 1);
+      lower->txpause = true;
       return ret;
     }
 
@@ -872,7 +816,7 @@ static void netdev_upper_work(FAR void *arg)
   netdev_upper_vlan_foreach(upper, netdev_lower_txdone);
 #endif
 
-  /* RX may release quota and driver buffer, so do RX first. */
+  /* RX path may release driver-side resources, so do RX first. */
 
   netdev_upper_rxpoll_work(upper);
   netdev_upper_txavail_work(upper);
@@ -1657,16 +1601,6 @@ int netdev_lower_register(FAR struct netdev_lowerhalf_s *dev,
       return -EINVAL;
     }
 
-  if (dev->quota_ptr == NULL)
-    {
-      dev->quota_ptr = dev->quota;
-    }
-
-  if (quota_is_valid(dev, lltype) == false)
-    {
-      return -EINVAL;
-    }
-
   switch (dev->rxtype)
     {
       case NETDEV_RX_WORK:
@@ -1900,11 +1834,10 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
   FAR struct netdev_upperhalf_s *upper = dev->netdev.d_private;
 
 #ifdef CONFIG_NET_VLAN
-  /* VLAN children share TX quota with the real device (vlan->dev.quota_ptr
-   * == real->quota_ptr).  A TX completion on the physical releases quota
-   * for everybody, so we must always notify VLAN children even when the
-   * physical itself has no pending TX (txdone == false && txq empty);
-   * otherwise per-VLAN upper->txq packets and per-VLAN txdone flags
+  /* A TX completion on the physical device may also let its VLAN children
+   * make progress, so we must always notify VLAN children even when the
+   * physical itself has no pending TX (txpause == false && txq empty);
+   * otherwise per-VLAN upper->txq packets and per-VLAN txpause flags
    * accumulate and never drain.
    *
    * The recursion is bounded: VLAN devices do not have grand-children,
@@ -1921,9 +1854,9 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
     }
 #endif
 
-  if (dev->txdone || !IOB_QEMPTY(&upper->txq))
+  if (dev->txpause || !IOB_QEMPTY(&upper->txq))
     {
-      dev->txdone = false;
+      dev->txpause = false;
       if (dev->rxtype == NETDEV_RX_DIRECT)
         {
           netdev_upper_txavail_work(dev->netdev.d_private);
@@ -1947,24 +1880,6 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
 #endif
 
   NETDEV_TXDONE(&dev->netdev);
-}
-
-/****************************************************************************
- * Name: netdev_lower_quota_load
- *
- * Description:
- *   Fetch the quota, works like atomic_read.
- *
- * Input Parameters:
- *   dev  - The lower half device driver structure
- *   type - Whether get quota for TX or RX
- *
- ****************************************************************************/
-
-int netdev_lower_quota_load(FAR struct netdev_lowerhalf_s *dev,
-                            enum netpkt_type_e type)
-{
-  return atomic_read(&dev->quota_ptr[type]);
 }
 
 /****************************************************************************
@@ -2123,18 +2038,11 @@ FAR netpkt_t *netpkt_alloc(FAR struct netdev_lowerhalf_s *dev,
 {
   FAR netpkt_t *pkt;
 
-  if (atomic_sub(&dev->quota_ptr[type], 1) <= 0)
-    {
-      atomic_add(&dev->quota_ptr[type], 1);
-      return NULL;
-    }
-
   pkt = netdev_iob_tryalloc(&dev->netdev,
                             MIN(dev->netdev.d_pktsize, CONFIG_IOB_BUFSIZE),
                             false);
   if (pkt == NULL)
     {
-      atomic_add(&dev->quota_ptr[type], 1);
       return NULL;
     }
 
@@ -2160,7 +2068,6 @@ FAR netpkt_t *netpkt_alloc(FAR struct netdev_lowerhalf_s *dev,
 void netpkt_free(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt,
                  enum netpkt_type_e type)
 {
-  atomic_add(&dev->quota_ptr[type], 1);
   iob_free_chain(pkt);
 }
 

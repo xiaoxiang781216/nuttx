@@ -2868,9 +2868,7 @@ static int cdcncm_classobject(int minor,
 
   /* Network device initialization */
 
-  self->dev.ops              = &g_netops;
-  self->dev.quota[NETPKT_TX] = CONFIG_CDCNCM_QUOTA_TX;
-  self->dev.quota[NETPKT_RX] = CONFIG_CDCNCM_QUOTA_RX;
+  self->dev.ops = &g_netops;
 
   /* USB device initialization */
 
@@ -2945,9 +2943,7 @@ static int cdcmbim_classobject(int minor,
 
   /* Network device initialization */
 
-  ncm->dev.ops              = &g_netops;
-  ncm->dev.quota[NETPKT_TX] = CONFIG_CDCNCM_QUOTA_TX;
-  ncm->dev.quota[NETPKT_RX] = CONFIG_CDCNCM_QUOTA_RX;
+  ncm->dev.ops = &g_netops;
 
   /* USB device initialization */
 

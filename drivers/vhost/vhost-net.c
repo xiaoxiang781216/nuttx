@@ -393,10 +393,11 @@ static int vhost_net_send(FAR struct netdev_lowerhalf_s *dev,
 
   netpkt_free(dev, pkt, NETPKT_TX);
 
-  if (netdev_lower_quota_load(dev, NETPKT_TX) <= 0)
-    {
-      virtqueue_enable_cb_lock(vq, lock);
-    }
+  /* Backpressure is handled at the top of this function: when the TX vring
+   * has no available buffer, vhost_get_vq_buffers() fails, we arm the TX
+   * callback and return -EBUSY so the upper half pauses until the peer
+   * refills the ring.
+   */
 
   return OK;
 }
@@ -601,8 +602,6 @@ static int vhost_net_probe(FAR struct vhost_device *hdev)
       goto err_with_priv;
     }
 
-  priv->lower.quota[NETPKT_RX] = priv->bufnum;
-  priv->lower.quota[NETPKT_TX] = priv->bufnum;
   priv->lower.ops = &g_vhost_net_ops;
   ret = netdev_lower_register(&priv->lower, NET_LL_ETHERNET);
   if (ret < 0)

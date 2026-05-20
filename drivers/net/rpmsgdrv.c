@@ -529,12 +529,6 @@ static int net_rpmsg_drv_transfer_handler(FAR struct rpmsg_endpoint *ept,
 
   DEBUGASSERT(pkt != NULL);
 
-  if (atomic_sub(&dev->quota_ptr[NETPKT_RX], 1) <= 0)
-    {
-      nerr("ERROR: Rx quota is full!\n");
-      goto free;
-    }
-
 #else
 
   /* Normal copy mode: allocate new packet and copy data */
@@ -561,8 +555,10 @@ static int net_rpmsg_drv_transfer_handler(FAR struct rpmsg_endpoint *ept,
   netdev_lower_rxready(dev);
   return 0;
 
+#ifndef CONFIG_NET_PRMSG_DRV_ZERO_COPY_TRANSFER
 free:
   netpkt_free(dev, pkt, NETPKT_RX);
+#endif
 
 drop:
   NETDEV_RXDROPPED(&dev->netdev);
@@ -1051,22 +1047,6 @@ net_rpmsg_drv_alloc(FAR const char *devname, enum net_lltype_e lltype)
 
   netdev = &drv->dev;
 
-#ifdef CONFIG_NET_CAN
-  if (lltype == NET_LL_CAN)
-    {
-      int niobs = iob_navail_with_size(NET_CAN_BUFSIZE, false);
-      netdev->quota[NETPKT_RX] = niobs > 0 ? niobs / 4 : 1;
-    }
-  else
-#endif
-    {
-      netdev->quota[NETPKT_RX] = CONFIG_IOB_NBUFFERS /
-                                 NET_RPMSG_DRV_MAX_NIOB / 4;
-    }
-
-  netdev->quota[NETPKT_RX] = MAX(netdev->quota[NETPKT_RX], 1);
-
-  netdev->quota[NETPKT_TX] = 1;
   netdev->ops = &g_net_rpmsg_drv_ops;
 
   drv->ept.priv = drv;

@@ -83,11 +83,6 @@
 
 /* SocketCAN specific */
 
-#ifdef CONFIG_CAN_KVASER_SOCKET
-#  define KVASER_TX_QUOTA              CONFIG_CAN_KVASER_TX_QUOTA
-#  define KVASER_RX_QUOTA              CONFIG_CAN_KVASER_RX_QUOTA
-#endif /* CONFIG_CAN_KVASER_SOCKET */
-
 #ifndef CONFIG_NET_CAN_ERRORS
 #  define KVASER_SOCK_RXINT            (SJA1000_RX_INT_ST)
 #else
@@ -1722,8 +1717,6 @@ static int kvaser_probe(FAR struct pci_device_s *dev)
 
       /* Register the network device */
 
-      netdev->quota[NETPKT_TX] = KVASER_TX_QUOTA;
-      netdev->quota[NETPKT_RX] = KVASER_RX_QUOTA;
       netdev->ops = &g_kvaser_net_ops;
 
       /* Register the network interface. */

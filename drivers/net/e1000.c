@@ -66,16 +66,6 @@
 #define E1000_TX_DESC           CONFIG_NET_E1000_TXDESC
 #define E1000_RX_DESC           CONFIG_NET_E1000_RXDESC
 
-/* After RX packet is done, we provide free netpkt to the RX descriptor ring.
- * The upper-half network logic is responsible for freeing the RX packets
- * so we need some additional spare netpkt buffers to assure that it's
- * allways possible to allocate the new RX packet in the recevier logic.
- * It's hard to tell how many spare buffers is needed, for now it's set to 8.
- */
-
-#define E1000_TX_QUOTA        E1000_TX_DESC
-#define E1000_RX_QUOTA        (E1000_RX_DESC + CONFIG_NET_E1000_RXSPARE)
-
 /* NOTE: CONFIG_IOB_ALIGNMENT must match system D-CACHE line size */
 
 /* PCI BARs */
@@ -1608,8 +1598,6 @@ static int e1000_probe(FAR struct pci_device_s *dev)
 
   /* Register the network device */
 
-  netdev->quota[NETPKT_TX] = E1000_TX_QUOTA;
-  netdev->quota[NETPKT_RX] = E1000_RX_QUOTA;
   netdev->ops = &g_e1000_ops;
 
   return netdev_lower_register(netdev, NET_LL_ETHERNET);
