@@ -59,6 +59,7 @@
 
 #include <nuttx/queue.h>
 #include <nuttx/wdog.h>
+#include <nuttx/wqueue.h>
 
 #include <stdbool.h>
 #include <time.h>
@@ -383,7 +384,12 @@ struct pm_wakelock_s
   enum pm_state_e state;
   uint32_t count;
   struct dq_entry_s node;
-  struct wdog_s wdog;
+
+  union
+  {
+    struct wdog_s wdog;
+    struct work_s work;
+  };
 
 #ifdef CONFIG_PM_STAT
   struct dq_entry_s fsnode;

@@ -46,11 +46,6 @@ static struct pm_wakelock_s g_wakelock[CONFIG_PM_NDOMAINS][PM_COUNT];
  * Private Functions
  ****************************************************************************/
 
-static void pm_waklock_cb(wdparm_t arg)
-{
-  pm_wakelock_relax((FAR struct pm_wakelock_s *)arg);
-}
-
 #ifdef CONFIG_PM_STAT
 static void pm_wakelock_stats_rm(FAR struct pm_wakelock_s *wakelock)
 {
@@ -292,7 +287,6 @@ void pm_wakelock_uninit(FAR struct pm_wakelock_s *wakelock)
 {
   FAR struct pm_domain_s *pdom;
   FAR struct dq_queue_s *dq;
-  FAR struct wdog_s *wdog;
   irqstate_t flags;
   int domain;
 
@@ -303,7 +297,6 @@ void pm_wakelock_uninit(FAR struct pm_wakelock_s *wakelock)
   domain = wakelock->domain;
   pdom   = &g_pmdomains[domain];
   dq     = &pdom->wakelock[wakelock->state];
-  wdog   = &wakelock->wdog;
 
   flags = pm_domain_lock(domain);
 
@@ -313,7 +306,18 @@ void pm_wakelock_uninit(FAR struct pm_wakelock_s *wakelock)
     }
 
   wakelock->count = 0;
-  wd_cancel(wdog);
+
+#if CONFIG_PM_NDOMAINS > 1
+  if (domain != PM_IDLE_DOMAIN)
+    {
+      work_cancel(HPWORK, &wakelock->work);
+    }
+  else
+#endif
+    {
+      wd_cancel(&wakelock->wdog);
+    }
+
   pm_wakelock_stats_rm(wakelock);
 
   pm_domain_unlock(domain, flags);
@@ -439,7 +443,6 @@ void pm_wakelock_staytimeout(FAR struct pm_wakelock_s *wakelock, int ms)
 {
   FAR struct pm_domain_s *pdom;
   FAR struct dq_queue_s *dq;
-  FAR struct wdog_s *wdog;
   irqstate_t flags;
   int domain;
 
@@ -450,11 +453,11 @@ void pm_wakelock_staytimeout(FAR struct pm_wakelock_s *wakelock, int ms)
   domain = wakelock->domain;
   pdom   = &g_pmdomains[domain];
   dq     = &pdom->wakelock[wakelock->state];
-  wdog   = &wakelock->wdog;
 
   flags  = pm_domain_lock(domain);
 
-  if (!WDOG_ISACTIVE(wdog))
+  if ((domain != PM_IDLE_DOMAIN && work_available(&wakelock->work)) ||
+      (domain == PM_IDLE_DOMAIN && !WDOG_ISACTIVE(&wakelock->wdog)))
     {
       DEBUGASSERT(wakelock->count < UINT32_MAX);
       if (wakelock->count++ == 0)
@@ -464,9 +467,20 @@ void pm_wakelock_staytimeout(FAR struct pm_wakelock_s *wakelock, int ms)
         }
     }
 
-  if (TICK2MSEC(wd_gettime(wdog)) < ms)
+#if CONFIG_PM_NDOMAINS > 1
+  if (domain != PM_IDLE_DOMAIN)
     {
-      wd_start(wdog, MSEC2TICK(ms), pm_waklock_cb, (wdparm_t)wakelock);
+      work_queue(HPWORK, &wakelock->work, (worker_t)pm_wakelock_relax,
+                 wakelock, MSEC2TICK(ms));
+    }
+  else
+#endif
+    {
+      if (TICK2MSEC(wd_gettime(&wakelock->wdog)) < ms)
+        {
+          wd_start(&wakelock->wdog, MSEC2TICK(ms),
+                   (wdentry_t)pm_wakelock_relax, (wdparm_t)wakelock);
+        }
     }
 
   pm_domain_unlock(domain, flags);
