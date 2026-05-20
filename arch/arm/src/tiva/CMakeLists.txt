@@ -86,6 +86,12 @@ if(CONFIG_TIVA_PWM)
   list(APPEND SRCS tiva_pwm.c)
 endif()
 
+if(CONFIG_TIVA_PULSECOUNT)
+  if(CONFIG_PULSECOUNT)
+    list(APPEND SRCS tiva_pulsecount.c)
+  endif()
+endif()
+
 if(CONFIG_TIVA_QEI)
   list(APPEND SRCS tiva_qencoder.c)
 endif()
