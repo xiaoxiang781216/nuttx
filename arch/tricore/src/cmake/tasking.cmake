@@ -197,22 +197,39 @@ add_link_options(-lrt)
 
 # cmake-format: off
 # ctc W500: ["stdio/lib_libvsprintf.c" 884/29] expression without effect
+# ctc W501: ["bw_udp.c" 120/1] goto label not referenced (lmbench)
 # ctc W507: ["mm_heap/mm_malloc.c" 238/64] variable "nodesize" is possibly uninitialized
 # ctc W508: ["misc/lib_impure.c" 1/1] empty source file
+# ctc W516: ["memsize.c" 56/6] assignment as controlling expression (lmbench)
 # ctc W525: ["getopt.c" 678/3] discarded 'const' qualifier at assignment: conversion from char const * to char *
 # ctc W527: ["stdlib/lib_strtold.c" 565/23] constant of type "double" saturated
 # ctc W526: ["include/sys/epoll.h" 87/5] enumeration constant shall be representable as 'int'
 # ctc W529: ["wchar/lib_mbrtowc.c" 88/35] overflow in constant expression of type "unsigned long int"
+# ctc W535: ["lib_timing.c" 1682/2] no type specifiers - assumed 'int' (lmbench)
+# ctc W536: ["libuv/src/unix/internal.h" 382/1] unused static function (libuv/lmbench)
+# ctc W537: ["mbedtls/library/alignment.h" 389/23] unused variable (mbedtls/lmbench)
 # ctc W544: ["wqueue/kwork_thread.c" 210/32] unreachable code
 # ctc W549: ["unistd/lib_getopt_common.c" 544/15] condition is always true
 # ctc W553: ["vfs/fs_fcntl.c" 231/7] no 'break' or comment before case label
+# ctc W555: ["avb_sysdeps_posix.c" 67/1] noreturn function may return (avb)
 # ctc W557: ["common/tricore_main.c" 58/11] possible infinite loop
 # ctc W560: ["tmpfs/fs_tmpfs.c" 232/25] possible truncation at implicit conversion to type "unsigned short int"
 # ctc W562: ["mm_heap/mm_memalign.c" 70/20] unary minus applied to unsigned value
 # ctc W558: ["include/nuttx/power/regulator.h" 224/36] struct/union/enum definition in parameter declaration
+# ctc W564: ["lat_dram_page.c" 198/3] "/*" inside comment (lmbench)
 # ctc W587: ["stdlib/lib_strtold.c" 571/23] underflow on constant of type "double"
 # ctc W588: ["misc/lib_glob.c" 150/13] dead assignment to "i" eliminated
+# ctc W523: ["include/crypto/asn1.h" 120/30] conversion from pointer to smaller integer type (crypto/lmbench)
+# ctc W545: ["libuv/src/unix/stream.c" 1120/1] missing return value (libuv/lmbench/mbedtls)
+# ctc W547: ["micar" ...] rvalue has no effect (micar/avb/mbedtls/adb)
+# ctc W577: ["lat_mem_rd.c" 233/12] signed/unsigned conversion with cast (lmbench/letter-shell/crypto)
 # ctc W589: ["inode/fs_inodesearch.c" 72/8] pointer assumed to be nonzero - test removed
+# ctc W770: ["autocore" ...] conversion from wider to narrower type (autocore)
+# ctc W515: ["nx_start.c" 632/42] side effects of sizeof operand ignored (per-cpu macro false positive)
+# ctc W534: ["tricore_cxx_initialize.c" 38/53] array assumed to have one element (linker symbol)
+# ctc W548: ["mm_initialize.c" 198/3] uninitialized variable replaced by zero (function param false positive)
+# ctc W575: ["group_setupidlefiles.c" 116/2] #warning directive
+# ctc W597: ["rpmsgdev.c" 230/29] alignment of automatic object limited to 4 (alloca/rpmsg_pool)
 # cptc W0068: ["include/libcxx/string" 878] integer conversion resulted in a change of sign
 # cptc W0161: ["SmartCode/ctc/include/math.h" 390] unrecognized #pragma
 # cptc W0940: ["libcxx/src/include/to_chars_floating_point.h" 1073] missing return statement at end of non-void function "
@@ -228,7 +245,8 @@ add_link_options(-lrt)
 # cmake-format: on
 
 set(TASKING_WARNINGS
-    500,507,508,525,526,527,529,544,549,553,560,562,557,558,587,588,589)
+    500,501,507,508,515,516,523,525,526,527,529,534,535,536,537,544,545,547,548,549,553,555,557,558,560,562,564,575,577,587,588,589,597,770
+)
 set(TASKING_CXX_WARNINGS
     68,161,940,1097,1105,1315,1858,2213,2496,2529,2964,3085)
 

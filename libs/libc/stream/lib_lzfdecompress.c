@@ -88,14 +88,17 @@ static int lzf_header_foreach(FAR struct lib_lzfsistream_s *lzfstream,
           struct lzf_type0_header_s *hdr0 =
                            (struct lzf_type0_header_s *)&hdr;
           hdrsize = LZF_TYPE0_HDR_SIZE;
-          blklen = be16toh(*(uint16_t *)hdr0->lzf_len);
+          blklen = ((uint16_t)hdr0->lzf_len[0] << 8) |
+                   hdr0->lzf_len[1];
           blkclen = blklen;
         }
       else if (LZF_TYPE1_HDR == hdr.lzf_type)
         {
           hdrsize = LZF_TYPE1_HDR_SIZE;
-          blkclen = be16toh(*(uint16_t *)hdr.lzf_clen);
-          blklen = be16toh(*(uint16_t *)hdr.lzf_ulen);
+          blkclen = ((uint16_t)hdr.lzf_clen[0] << 8) |
+                    hdr.lzf_clen[1];
+          blklen = ((uint16_t)hdr.lzf_ulen[0] << 8) |
+                   hdr.lzf_ulen[1];
         }
       else
         {
