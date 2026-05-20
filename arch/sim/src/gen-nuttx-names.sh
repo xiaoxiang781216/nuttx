@@ -105,9 +105,20 @@ comm -12 "$TMPDIR_WORK/sim_defined.tmp" \
 
 # Step 5: Rename set = all_defined - cross_domain - {main}
 #         Output format: "symbol NXsymbol"
-#         Skip address sanitizer symbols.
+#         Skip address sanitizer and C++ ABI symbols.
+#         C++ ABI symbols (__cxxabiv1::*, __dynamic_cast) must keep their
+#         original names because the host UBSan runtime (libubsan.so) calls
+#         __dynamic_cast from host libstdc++, which then traverses NuttX
+#         typeinfo vtables. If these symbols are renamed, the host cannot
+#         resolve them and crashes during vptr sanitizer checks.
 
 comm -23 "$TMPDIR_WORK/all_defined.tmp" \
          "$TMPDIR_WORK/cross_domain.tmp" | \
   grep -v '^__asan_.*$' | \
+  grep -v '^__dynamic_cast$' | \
+  grep -v '^_ZNK10__cxxabiv1' | \
+  grep -v '^_ZN10__cxxabiv1' | \
+  grep -v '^_ZTIN10__cxxabiv1' | \
+  grep -v '^_ZTSN10__cxxabiv1' | \
+  grep -v '^_ZTVN10__cxxabiv1' | \
   sed 's/.*/& NX&/' > "$OUTPUT"
