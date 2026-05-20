@@ -1101,7 +1101,7 @@ static int kvaser_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
 #ifdef CONFIG_CAN_FD
   /* Drop CAN FD frames */
 
-  if (netpkt_getdatalen(dev, pkt) != sizeof(struct can_frame))
+  if (netpkt_getdatalen(dev, pkt) > sizeof(struct can_frame))
     {
       canerr("ERROR: CAN FD frames not supported\n");
       return -ENOTSUP;
