@@ -144,6 +144,10 @@ ifeq ($(CONFIG_AT32_PWM),y)
 CHIP_CSRCS += at32_pwm.c
 endif
 
+ifeq ($(CONFIG_AT32_PULSECOUNT),y)
+CHIP_CSRCS += at32_pulsecount.c
+endif
+
 ifeq ($(CONFIG_AT32_CAP),y)
 CHIP_CSRCS += at32_capture_lowerhalf.c
 endif
@@ -177,5 +181,4 @@ endif
 ifeq ($(CONFIG_AT32_FOC),y)
 CHIP_CSRCS += at32_foc.c
 endif
-
 
