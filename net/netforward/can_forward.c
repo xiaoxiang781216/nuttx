@@ -34,6 +34,9 @@
 #include <nuttx/hashtable.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/iob.h>
+#include <nuttx/mutex.h>
+#include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/net/can.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
@@ -64,9 +67,144 @@
  * Private Data
  ****************************************************************************/
 
+#ifdef CONFIG_NET_CANFORWARD_ASYNC
+/* Global async forwarding queue for low-priority CAN gateway rules.
+ * Protected by g_canfwd_lock (spinlock) since producers run in RX path
+ * under netdev_lock and the consumer runs in a dedicated workqueue
+ * (priority configurable via NET_CANFORWARD_WORK_PRIORITY).
+ */
+
+static DEFINE_PER_CPU_BSS_BMP(struct work_s, g_canfwd_work);
+#define g_canfwd_work this_cpu_var_bmp(g_canfwd_work)
+
+static DEFINE_PER_CPU_BSS_BMP(sq_queue_t, g_canfwd_pending);
+#define g_canfwd_pending this_cpu_var_bmp(g_canfwd_pending)
+
+static DEFINE_PER_CPU_BMP(spinlock_t, g_canfwd_lock) = SP_UNLOCKED;
+#define g_canfwd_lock this_cpu_var_bmp(g_canfwd_lock)
+
+static DEFINE_PER_CPU_BSS_BMP(FAR struct kwork_wqueue_s *, g_canfwd_wqueue);
+#define g_canfwd_wqueue this_cpu_var_bmp(g_canfwd_wqueue)
+
+static DEFINE_PER_CPU_BMP(mutex_t, g_canfwd_wqueue_lock) =
+  NXMUTEX_INITIALIZER;
+#define g_canfwd_wqueue_lock this_cpu_var_bmp(g_canfwd_wqueue_lock)
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_NET_CANFORWARD_ASYNC
+
+/****************************************************************************
+ * Name: can_async_worker
+ *
+ * Description:
+ *   Dedicated workqueue handler: drain all pending low-priority
+ *   CAN forwards.
+ *   Atomically moves the entire pending list to a local queue, then
+ *   processes each forward_s by calling netfwd_forward().
+ *
+ *   We pass fwd->f_dev (the destination device) as the first argument
+ *   to netfwd_forward(), which makes dev == fwddev and hits the
+ *   same-device fast path — no lock reordering needed since we are
+ *   not in any device's RX context.
+ *
+ ****************************************************************************/
+
+static void can_async_worker(FAR void *arg)
+{
+  sq_queue_t local;
+  irqstate_t irqflags;
+
+  /* Atomically grab the entire pending list */
+
+  irqflags = spin_lock_irqsave(&g_canfwd_lock);
+  sq_move(&g_canfwd_pending, &local);
+  spin_unlock_irqrestore(&g_canfwd_lock, irqflags);
+
+  /* Forward each one — only lock the target device */
+
+  while (!sq_empty(&local))
+    {
+      FAR struct forward_s *fwd = (FAR struct forward_s *)
+                                   sq_remfirst(&local);
+      int ret;
+
+      /* Lock the target device and forward.  Passing f_dev as the
+       * source device hits the same-device path in netfwd_forward(),
+       * which calls netfwd_forward_notify() directly without any
+       * lock save/restore dance.
+       */
+
+      netdev_lock(fwd->f_dev);
+      ret = IFF_IS_RUNNING(fwd->f_dev->d_flags)
+            ? netfwd_forward(fwd->f_dev, fwd) : -EHOSTUNREACH;
+      netdev_unlock(fwd->f_dev);
+
+      if (ret < 0)
+        {
+          nwarn("WARNING: Async CAN forward failed: %d\n", ret);
+          if (fwd->f_iob != NULL)
+            {
+              iob_free_chain(fwd->f_iob);
+            }
+
+          netfwd_free(fwd);
+#  ifdef CONFIG_NET_STATISTICS
+          g_netstats.cangw.drop++;
+#  endif
+        }
+#  ifdef CONFIG_NET_STATISTICS
+      else
+        {
+          g_netstats.cangw.forward++;
+        }
+#  endif
+    }
+}
+
+/****************************************************************************
+ * Name: canfwd_ensure_wqueue
+ *
+ * Description:
+ *   Lazy-create the dedicated CAN gateway workqueue on first use.
+ *   Returns the workqueue pointer, or NULL on failure.
+ *
+ ****************************************************************************/
+
+static FAR struct kwork_wqueue_s *canfwd_ensure_wqueue(void)
+{
+  /* Fast path: workqueue already created, no locking needed. */
+
+  if (g_canfwd_wqueue == NULL)
+    {
+      /* Slow path: use mutex for one-time creation.  A mutex is required
+       * here because work_queue_create() allocates memory and creates a
+       * kernel thread — operations that must not run with interrupts
+       * disabled (spinlock).  Double-check after acquiring the lock to
+       * guard against a higher-priority RX thread that may have preempted
+       * us and already completed the creation.
+       */
+
+      nxmutex_lock(&g_canfwd_wqueue_lock);
+      if (g_canfwd_wqueue == NULL)
+        {
+          g_canfwd_wqueue = work_queue_create("canfwd",
+                                CONFIG_NET_CANFORWARD_WORK_PRIORITY,
+                                NULL,
+                                CONFIG_NET_CANFORWARD_WORK_STACKSIZE,
+                                1);
+        }
+
+      nxmutex_unlock(&g_canfwd_wqueue_lock);
+    }
+
+  return g_canfwd_wqueue;
+}
+
+#endif /* CONFIG_NET_CANFORWARD_ASYNC */
 
 /****************************************************************************
  * Name: can_forward_is_exact_match
@@ -110,19 +248,27 @@ can_forward_is_exact_match(FAR const struct cangw_rule_s *rule)
  * Name: can_dev_forward
  *
  * Description:
- *   This function is called from can_forward when it is necessary to
- *   forward a packet from the current device to different device.  In this
- *   case, the forwarding operation must be performed asynchronously when
- *   the TX poll is received from the forwarding device.
+ *   Forward a CAN frame to the destination device specified by the rule.
+ *
+ *   When CONFIG_NET_CANFORWARD_ASYNC is enabled:
+ *     Rules without CGW_FLAGS_CAN_ASYNC: forwarded synchronously via
+ *     netfwd_forward() in the RX path — lowest latency.
+ *
+ *     Rules with CGW_FLAGS_CAN_ASYNC: IOB is cloned and the forward_s
+ *     is enqueued to a global async list, then scheduled on a dedicated
+ *     workqueue whose priority is below real-time periodic tasks.
+ *     This reduces the time spent in the RX path during fan-out.
+ *
+ *   When CONFIG_NET_CANFORWARD_ASYNC is not enabled:
+ *     All rules are forwarded synchronously in the RX path.
  *
  * Input Parameters:
- *   dev      - The device on which the packet was received and which
- *              contains the packet.
- *   fwdrule   - The forward target rule.
+ *   dev      - The device on which the packet was received.
+ *   fwdrule  - The forward target rule.
  *
  * Returned Value:
- *   Zero is returned if the packet was successfully forward;  A negated
- *   errno value is returned if the packet is not forwardable.
+ *   Zero is returned if the packet was successfully forwarded or enqueued;
+ *   A negated errno value is returned if the packet is not forwardable.
  *
  ****************************************************************************/
 
@@ -177,18 +323,71 @@ static int can_dev_forward(FAR struct net_driver_s *dev,
       goto errout_with_fwd;
     }
 
+  /* Split by forwarding mode:
+   *   Synchronous — forward in RX context (no ASYNC flag)
+   *   Async       — enqueue to async list (ASYNC flag set)
+   */
+
+#ifdef CONFIG_NET_CANFORWARD_ASYNC
+
+  if (!(fwdrule->flags & CGW_FLAGS_CAN_ASYNC))
+    {
+      ret = netfwd_forward(dev, fwd);
+      if (ret >= 0)
+        {
+#  ifdef CONFIG_NET_STATISTICS
+          g_netstats.cangw.forward++;
+#  endif
+          return OK;
+        }
+    }
+  else
+    {
+      irqstate_t irqflags;
+
+      if (canfwd_ensure_wqueue() == NULL)
+        {
+          nwarn("WARNING: Failed to create canfwd workqueue\n");
+          goto errout_with_iob;
+        }
+
+      irqflags = spin_lock_irqsave(&g_canfwd_lock);
+      sq_addlast((FAR sq_entry_t *)fwd, &g_canfwd_pending);
+      spin_unlock_irqrestore(&g_canfwd_lock, irqflags);
+
+      if (work_available(&g_canfwd_work))
+        {
+          work_queue_wq(g_canfwd_wqueue, &g_canfwd_work,
+                        can_async_worker, NULL, 0);
+        }
+
+#  ifdef CONFIG_NET_STATISTICS
+      g_netstats.cangw.async++;
+#  endif
+      return OK;
+    }
+#else
   /* Then set up to forward the packet according to the protocol. */
 
   ret = netfwd_forward(dev, fwd);
   if (ret >= 0)
     {
-#ifdef CONFIG_NET_STATISTICS
+#  ifdef CONFIG_NET_STATISTICS
       g_netstats.cangw.forward++;
-#endif
+#  endif
       return OK;
     }
+#endif
 
-  iob_free_chain(fwd->f_iob);
+  /* Only reached on netfwd_forward() failure */
+
+#ifdef CONFIG_NET_CANFORWARD_ASYNC
+errout_with_iob:
+#endif
+  if (fwd->f_iob != NULL)
+    {
+      iob_free_chain(fwd->f_iob);
+    }
 
 errout_with_fwd:
   netfwd_free(fwd);
@@ -489,12 +688,14 @@ int remove_cangw_rule(FAR struct net_driver_s *dev,
  * Description:
  *   Modify flags of CAN gateway rules on a device. If rule is provided,
  *   only matching rules are affected; otherwise all rules are affected.
- *   Only the CGW_FLAGS_CAN_DISABLED bit from flags is applied.
+ *   The CGW_FLAGS_CAN_DISABLED and CGW_FLAGS_CAN_ASYNC bits from
+ *   flags are applied.
  *
  * Input Parameters:
  *   dev   - Source device whose rule list to search
  *   rule  - Rule to match (NULL = affect all rules)
- *   flags - Flags to apply (only CGW_FLAGS_CAN_DISABLED bit is used)
+ *   flags - Flags to apply (CGW_FLAGS_CAN_DISABLED and
+ *           CGW_FLAGS_CAN_ASYNC bits are used)
  *
  * Returned Value:
  *   Number of rules affected, or -ENOENT if no matching rule found.
@@ -525,8 +726,12 @@ int modify_cangw_rule(FAR struct net_driver_s *dev,
     {
       if (rule == NULL || cangw_rule_match(rtrule, rule))
         {
-          rtrule->flags = (rtrule->flags & ~CGW_FLAGS_CAN_DISABLED) |
-                          (flags & CGW_FLAGS_CAN_DISABLED);
+          rtrule->flags = (rtrule->flags &
+                           ~(CGW_FLAGS_CAN_DISABLED |
+                             CGW_FLAGS_CAN_ASYNC)) |
+                          (flags &
+                           (CGW_FLAGS_CAN_DISABLED |
+                            CGW_FLAGS_CAN_ASYNC));
           count++;
         }
     }

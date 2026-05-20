@@ -106,6 +106,39 @@ config NET_CANFORWARD_HASH_BITS
 		  5 (33 buckets, 264B) - many rules (100~300)
 		  6 (65 buckets, 520B) - heavy routing (300+)
 
+config NET_CANFORWARD_ASYNC
+	bool "Enable async CAN gateway forwarding"
+	default n
+	---help---
+		Enable async forwarding for CAN gateway rules.
+		When enabled, rules with CGW_FLAGS_CAN_ASYNC flag set in
+		their flags field are forwarded asynchronously via a dedicated
+		workqueue instead of being forwarded synchronously in the RX
+		path. This reduces RX path latency for fan-out scenarios such
+		as 1722-to-CAN. When disabled, all rules are forwarded
+		synchronously (original behavior).
+
+if NET_CANFORWARD_ASYNC
+
+config NET_CANFORWARD_WORK_PRIORITY
+	int "CAN gateway async forwarding work priority"
+	default 200
+	---help---
+		Priority of the dedicated CAN gateway workqueue thread used
+		for async forwarding. Must be lower than any real-time
+		periodic task that must not be preempted (e.g. 1ms cyclic
+		task at priority 201). Default 200 ensures the forwarding
+		worker yields to such tasks while still running at a
+		reasonably high priority.
+
+config NET_CANFORWARD_WORK_STACKSIZE
+	int "CAN gateway async forwarding work stack size"
+	default DEFAULT_TASK_STACKSIZE
+	---help---
+		Stack size of the dedicated CAN gateway workqueue thread.
+
+endif # NET_CANFORWARD_ASYNC
+
 config NET_CANFORWARD_IEEE1722ACF
 	bool "Enable ieee1722 acf function support"
 	default n

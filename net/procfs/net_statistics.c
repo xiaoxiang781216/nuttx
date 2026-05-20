@@ -457,6 +457,10 @@ static int netprocfs_sent(FAR struct netprocfs_file_s *netfile)
 #ifdef CONFIG_NET_CANFORWARD
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
                   g_netstats.cangw.forward);
+#ifdef CONFIG_NET_CANFORWARD_ASYNC
+  len += snprintf(&netfile->line[len], NET_LINELEN - len, "/%04x(async)",
+                  g_netstats.cangw.async);
+#endif
 #ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
   len += snprintf(&netfile->line[len], NET_LINELEN - len, "  %04x",
                   g_netstats.cangw.acf_sent);
