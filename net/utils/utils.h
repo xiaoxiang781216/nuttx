@@ -631,6 +631,12 @@ void cmsg_store_timestamping(FAR struct msghdr *msg,
                              FAR const struct timespec *tstamp);
 #endif /* CONFIG_NET_TIMESTAMP */
 
+#ifdef CONFIG_NET_IPSEC
+int ipv6_fragin_ipsec(FAR struct net_driver_s *dev);
+int ipv6_fragout_ipsec(FAR struct net_driver_s *dev, FAR uint16_t *hdrtype,
+                       FAR uint16_t *mtu);
+#endif
+
 #undef EXTERN
 #ifdef __cplusplus
 }

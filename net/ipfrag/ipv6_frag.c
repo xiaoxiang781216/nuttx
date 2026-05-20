@@ -522,6 +522,10 @@ int32_t ipv6_fragin(FAR struct net_driver_s *dev)
 
       kmm_free(node);
 
+#ifdef CONFIG_NET_IPSEC
+      ipv6_fragin_ipsec(dev);
+#endif
+
       return ipv6_input(dev);
     }
 
@@ -585,6 +589,10 @@ int32_t ipv6_fragout(FAR struct net_driver_s *dev, uint16_t mtu)
    */
 
   unfraglen = ipv6_fragout_getunfraginfo(dev->d_iob, &hdroff, &hdrtype);
+
+#ifdef CONFIG_NET_IPSEC
+  ipv6_fragout_ipsec(dev, &hdrtype, &mtu);
+#endif
 
   /* Reconstruct I/O Buffer according to MTU, which will reserve
    * the space for the L3 header
