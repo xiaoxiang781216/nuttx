@@ -606,7 +606,6 @@ config STM32L5_TIM1_PWM
 	default n
 	depends on STM32L5_TIM1
 	select PWM
-	select ARCH_HAVE_PWM_PULSECOUNT
 	---help---
 		Reserve timer 1 for use by PWM
 
@@ -767,7 +766,6 @@ config STM32L5_TIM2_PWM
 	default n
 	depends on STM32L5_TIM2
 	select PWM
-	select ARCH_HAVE_PWM_PULSECOUNT
 	---help---
 		Reserve timer 2 for use by PWM
 
@@ -907,7 +905,6 @@ config STM32L5_TIM3_PWM
 	default n
 	depends on STM32L5_TIM3
 	select PWM
-	select ARCH_HAVE_PWM_PULSECOUNT
 	---help---
 		Reserve timer 3 for use by PWM
 
@@ -1047,7 +1044,6 @@ config STM32L5_TIM4_PWM
 	default n
 	depends on STM32L5_TIM4
 	select PWM
-	select ARCH_HAVE_PWM_PULSECOUNT
 	---help---
 		Reserve timer 4 for use by PWM
 
@@ -1187,7 +1183,6 @@ config STM32L5_TIM5_PWM
 	default n
 	depends on STM32L5_TIM5
 	select PWM
-	select ARCH_HAVE_PWM_PULSECOUNT
 	---help---
 		Reserve timer 5 for use by PWM
 
@@ -1327,7 +1322,6 @@ config STM32L5_TIM8_PWM
 	default n
 	depends on STM32L5_TIM8
 	select PWM
-	select ARCH_HAVE_PWM_PULSECOUNT
 	---help---
 		Reserve timer 8 for use by PWM
 
