@@ -872,8 +872,7 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
        */
 
       priv->rproc.rsc_table = NULL;
-      syslog(LOG_EMERG, "Stop by remote core: %s\n",
-             RPTUN_GET_CPUNAME(priv->dev));
+      _emerg("Stop by remote core: %s\n", RPTUN_GET_CPUNAME(priv->dev));
       work_queue(HPWORK, &priv->work, rptun_stop_work, priv, 0);
     }
   else if(status != 0u)
