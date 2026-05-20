@@ -33,6 +33,7 @@ endif()
 
 list(APPEND STDLIBS unwind)
 list(APPEND HOST_DEFINITIONS -D__SIM__)
+list(APPEND HOST_DEFINITIONS -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64)
 
 # common guest sources
 
