@@ -77,8 +77,26 @@ _vector_start:
 
 	sub		r8, lr, #4			/* r8_fiq = return PC (bl clobbers lr_fiq) */
 	stmdb		sp!, {r0-r3}			/* Save caller-saved only */
+#ifdef CONFIG_ARCH_FPU
+	vmrs		r0, fpscr			/* Save FPSCR */
+	stmdb		sp!, {r0}
+#ifdef CONFIG_ARM_DPFPU32
+	vstmdb.64	sp!, {d16-d31}			/* Save caller-saved d16-d31 */
+#endif
+	vstmdb.64	sp!, {d0-d7}			/* Save caller-saved d0-d7 (s0-s15) */
+#endif
+	mov		r9, sp				/* r9_fiq = save unaligned SP */
 	bic		sp, sp, #7			/* 8-byte align for C ABI */
 	bl		arm_decodefiq			/* Lightweight C handler */
+	mov		sp, r9				/* Restore unaligned SP */
+#ifdef CONFIG_ARCH_FPU
+	vldmia.64	sp!, {d0-d7}			/* Restore caller-saved d0-d7 (s0-s15) */
+#ifdef CONFIG_ARM_DPFPU32
+	vldmia.64	sp!, {d16-d31}			/* Restore caller-saved d16-d31 */
+#endif
+	ldmia		sp!, {r0}
+	vmsr		fpscr, r0			/* Restore FPSCR */
+#endif
 	ldmia		sp!, {r0-r3}			/* Restore r0-r3 */
 	movs		pc, r8				/* Return: CPSR = SPSR_fiq */
 #elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
