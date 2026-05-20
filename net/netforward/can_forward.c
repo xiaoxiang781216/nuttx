@@ -163,6 +163,14 @@ static void can_async_worker(FAR void *arg)
         }
 #  endif
     }
+
+#if CONFIG_NET_CANFORWARD_WORK_PERIOD_MS > 0
+  /* Periodic mode: re-schedule self for next drain cycle */
+
+  work_queue_next_wq(g_canfwd_wqueue, &g_canfwd_work,
+                     can_async_worker, NULL,
+                     MSEC2TICK(CONFIG_NET_CANFORWARD_WORK_PERIOD_MS));
+#endif
 }
 
 /****************************************************************************
@@ -196,6 +204,15 @@ static FAR struct kwork_wqueue_s *canfwd_ensure_wqueue(void)
                                 NULL,
                                 CONFIG_NET_CANFORWARD_WORK_STACKSIZE,
                                 1);
+
+#if CONFIG_NET_CANFORWARD_WORK_PERIOD_MS > 0
+          if (g_canfwd_wqueue != NULL)
+            {
+              work_queue_wq(g_canfwd_wqueue, &g_canfwd_work,
+                            can_async_worker, NULL,
+                            MSEC2TICK(CONFIG_NET_CANFORWARD_WORK_PERIOD_MS));
+            }
+#endif
         }
 
       nxmutex_unlock(&g_canfwd_wqueue_lock);
@@ -355,11 +372,13 @@ static int can_dev_forward(FAR struct net_driver_s *dev,
       sq_addlast((FAR sq_entry_t *)fwd, &g_canfwd_pending);
       spin_unlock_irqrestore(&g_canfwd_lock, irqflags);
 
+#if CONFIG_NET_CANFORWARD_WORK_PERIOD_MS == 0
       if (work_available(&g_canfwd_work))
         {
           work_queue_wq(g_canfwd_wqueue, &g_canfwd_work,
                         can_async_worker, NULL, 0);
         }
+#endif
 
 #  ifdef CONFIG_NET_STATISTICS
       g_netstats.cangw.async++;

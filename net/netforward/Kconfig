@@ -137,6 +137,18 @@ config NET_CANFORWARD_WORK_STACKSIZE
 	---help---
 		Stack size of the dedicated CAN gateway workqueue thread.
 
+config NET_CANFORWARD_WORK_PERIOD_MS
+	int "CAN gateway deferred drain interval (0 = event-triggered)"
+	default 0
+	range 0 100
+	---help---
+		Controls how the deferred CAN gateway worker is triggered:
+		  0 - Event mode: worker is scheduled immediately when a
+		      frame is enqueued (lowest latency, higher RX cost).
+		  >0 - Periodic mode: worker drains the queue every N ms.
+		      RX path only enqueues without scheduling the worker
+		      (lower per-frame RX cost, up to N ms extra latency).
+
 endif # NET_CANFORWARD_ASYNC
 
 config NET_CANFORWARD_IEEE1722ACF
