@@ -851,23 +851,29 @@ static int rpmsg_crypto_process(FAR struct cryptop *crp)
     }
 
   info.header.tid = session->tid;
+  session->result = 0;
   if (info.data.header.opcode == VIRTIO_CRYPTO_CIPHER_ENCRYPT ||
       info.data.header.opcode == VIRTIO_CRYPTO_CIPHER_DECRYPT)
     {
-      return rpmsg_crypto_process_endec(rdev, &info, session, crp);
+      ret = rpmsg_crypto_process_endec(rdev, &info, session, crp);
     }
   else if (info.data.header.opcode == VIRTIO_CRYPTO_HASH ||
            info.data.header.opcode == VIRTIO_CRYPTO_MAC)
     {
-      return rpmsg_crypto_process_hash_mac(rdev, &info, session, crp);
+      ret = rpmsg_crypto_process_hash_mac(rdev, &info, session, crp);
     }
   else if (info.data.header.opcode == VIRTIO_CRYPTO_AEAD_ENCRYPT ||
            info.data.header.opcode == VIRTIO_CRYPTO_AEAD_DECRYPT)
     {
-      return rpmsg_crypto_process_aead(rdev, &info, session, crp);
+      ret = rpmsg_crypto_process_aead(rdev, &info, session, crp);
+    }
+  else
+    {
+      return -ENOTSUP;
     }
 
-  return -ENOTSUP;
+  crp->crp_etype = session->result;
+  return ret == session->result ? 0 : ret;
 }
 
 static int rpmsg_crypto_freesession(uint64_t tid)
@@ -1012,6 +1018,8 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
 
   if (keylen < 0)
     {
+      rpmsg_release_tx_buffer(&rdev->ept, msg);
+      rpmsg_crypto_put_session(rdev, sid);
       return keylen;
     }
 
@@ -1218,6 +1226,8 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
                                               y->crp_nbits) / 8;
         break;
       default:
+        rpmsg_release_tx_buffer(&rdev->ept, msg);
+        rpmsg_crypto_put_session(rdev, sid);
         return -EINVAL;
     }
 

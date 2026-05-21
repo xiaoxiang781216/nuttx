@@ -915,6 +915,14 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   krp.krp_padding = msg->ctrl.op_flf.akcipher.algo_flf.rsa.padding_algo;
   krp.krp_hash = msg->ctrl.op_flf.akcipher.algo_flf.rsa.hash_algo;
 
+  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  if (rsp == NULL)
+    {
+      rpmsgerr("get tx payload failed or no enough space\n");
+      msg->header.result = -ENOMEM;
+      return rpmsg_send(ept, &msg->header, sizeof(msg->header));
+    }
+
   /* Import key */
 
   if (msg->ctrl.op_flf.akcipher.key_type ==
@@ -935,18 +943,12 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   if (ret < 0)
     {
       rpmsgerr("rpmsg crypto rsa parse key failed\n");
-      return ret;
+      goto err;
     }
 
   input = &krp.krp_param[0];
   input->crp_p = msg->buf + keylen;
   input->crp_nbits = msg->data.op_flf.akcipher.src_data_len * 8;
-  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
-  if (rsp == NULL)
-    {
-      rpmsgerr("get tx payload failed or no enough space\n");
-      return -ENOMEM;
-    }
 
   /* padding processing data */
 
@@ -1026,8 +1028,8 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
         output->crp_nbits = msg->data.op_flf.akcipher.dst_data_len * 8;
         break;
       default:
-        rpmsg_release_tx_buffer(ept, rsp);
-        return -EINVAL;
+        ret = -EINVAL;
+        goto err;
     }
 
   rsp->header.result = crypto_kinvoke(&krp);
@@ -1037,6 +1039,11 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
     }
 
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + data_len);
+
+err:
+  rsp->header = msg->header;
+  rsp->header.result = ret;
+  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp));
 }
 
 static int
@@ -1056,12 +1063,14 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
   uint32_t siglen;
   uint32_t keylen;
   uint32_t space;
+  int ret;
 
   rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
   if (rsp == NULL)
     {
       rpmsgerr("get tx payload failed or no enough space\n");
-      return -ENOMEM;
+      msg->header.result = -ENOMEM;
+      return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
 
   rsp->header = msg->header;
@@ -1154,7 +1163,8 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
         data_len += keylen / 2;
         break;
       default:
-        return -EINVAL;
+        ret = -EINVAL;
+        goto err;
     }
 
   rsp->header.result = crypto_kinvoke(&krp);
@@ -1164,6 +1174,10 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
     }
 
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + data_len);
+
+err:
+  rsp->header.result = ret;
+  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp));
 }
 
 /****************************************************************************
@@ -1233,10 +1247,9 @@ static int rpmsg_crypto_kprocess_handler(FAR struct rpmsg_endpoint *ept,
       case VIRTIO_CRYPTO_AKCIPHER_ECDSA:
         return rpmsg_crypto_kprocess_ecdsa(ept, msg, len, src, priv);
       default:
-        return -ENOTSUP;
+        msg->header.result = -ENOTSUP;
+        return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
-
-  return -EINVAL;
 }
 
 /****************************************************************************
@@ -1256,7 +1269,8 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
   if (rsp == NULL)
     {
       rpmsgerr("get tx payload failed or no enough space\n");
-      return -ENOMEM;
+      msg->header.result = -ENOMEM;
+      return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
 
   rsp->header = msg->header;

@@ -544,10 +544,7 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
       crde.crd_flags &= ~CRD_F_IV_EXPLICIT;
     }
 
-  if (!error && crp.crp_etype != 0)
-    {
-      error = crp.crp_etype;
-    }
+  cop->status = crp.crp_etype;
 
   if (error && scrp)
     {
@@ -574,7 +571,6 @@ static int cryptodev_getopstatus(FAR struct fcrypt *fcr,
                                  FAR struct crypt_op *cop)
 {
   FAR struct cryptop *crp = NULL;
-  int error;
 
   if (TAILQ_EMPTY(&fcr->crp_ret))
     {
@@ -606,9 +602,9 @@ static int cryptodev_getopstatus(FAR struct fcrypt *fcr,
       memcpy(cop->mac, crp->crp_mac, crp->crp_olen);
     }
 
-  error = crp->crp_etype;
+  cop->status = crp->crp_etype;
   kmm_free(crp);
-  return error;
+  return OK;
 }
 
 static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
@@ -857,7 +853,6 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
 
   if (krp->krp_status != 0)
     {
-      error = krp->krp_status;
       goto fail;
     }
 

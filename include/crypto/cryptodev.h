@@ -453,6 +453,7 @@ struct crypt_op
   caddr_t iv;
   caddr_t aad;
   uint32_t reqid;
+  int32_t status;     /* hardware result (0=success, negative=error) */
 };
 
 /* hamc buffer, software & hardware need it */
