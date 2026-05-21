@@ -1100,4 +1100,36 @@
 #define DIAG_MM_ALLOC_FAIL       0
 #define DIAG_MM_FREE_FAIL        1
 
+/* Network module diagnostic IDs */
+
+#define DIAG_NET_BASE                    961030000
+#define DIAG_NET_DHCP_FAIL               (DIAG_NET_BASE + 1)  /* 961030001 */
+#define DIAG_NET_DNS_FAIL                (DIAG_NET_BASE + 2)  /* 961030002 */
+#define DIAG_NET_NTP_FAIL                (DIAG_NET_BASE + 3)  /* 961030003 */
+#define DIAG_NET_CONN_STATE_ABNORM       (DIAG_NET_BASE + 4)  /* 961030004 */
+#define DIAG_NET_WIFI_SCAN_FAIL          (DIAG_NET_BASE + 5)  /* 961030005 */
+#define DIAG_NET_WIFI_CONNECT_FAIL       (DIAG_NET_BASE + 6)  /* 961030006 */
+#define DIAG_NET_CARRIER_OFF             (DIAG_NET_BASE + 7)  /* 961030007 */
+#define DIAG_NET_NIC_START_FAIL          (DIAG_NET_BASE + 10) /* 961030010 */
+#define DIAG_NET_DNS_LATENCY_HIGH        (DIAG_NET_BASE + 13) /* 961030013 */
+#define DIAG_NET_TCP_LATENCY_HIGH        (DIAG_NET_BASE + 14) /* 961030014 */
+
+/* DIAG_NET_DNS_FAIL (961030002) ErrorCode definitions */
+
+#define DIAG_NET_DNS_ERR_TIMEOUT          1  /* Query timeout (retries exhausted) */
+#define DIAG_NET_DNS_ERR_NO_SERVER        2  /* No DNS server configured */
+#define DIAG_NET_DNS_ERR_PARSE            3  /* Response parse error */
+
+/* DIAG_NET_CONN_STATE_ABNORM (961030004) ErrorCode definitions */
+
+#define DIAG_NET_ERR_ARP_UNREACHABLE      1  /* ARP no response (target unreachable) */
+#define DIAG_NET_ERR_GW_MAC_CHANGED       2  /* Gateway MAC address changed */
+#define DIAG_NET_ERR_IOB_STALL            3  /* IOB allocation stalled for too long */
+#define DIAG_NET_ERR_TCP_RETRANS          4  /* TCP retransmission limit exceeded */
+#define DIAG_NET_ERR_UDP_SEND_FAIL        5  /* UDP send failure */
+
+/* DIAG_NET_DNS_LATENCY_HIGH (961030013) threshold (ms) */
+
+#define DIAG_NET_DNS_LATENCY_THRESHOLD_MS 1000
+
 #endif /* __INCLUDE_NUTTX_TRACE_H */
