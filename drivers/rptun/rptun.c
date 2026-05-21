@@ -734,6 +734,18 @@ static int rptun_create_devices(FAR struct rptun_priv_s *priv)
   return ret;
 }
 
+static inline_function uint32_t
+rptun_get_peer_status(FAR struct rptun_priv_s *priv)
+{
+  FAR struct rptun_status_s *status =
+    RPTUN_RSC2STATUS(priv->rproc.rsc_table);
+
+  RPTUN_INVALIDATE(*status);
+
+  return RPTUN_IS_MASTER(priv->dev) ?
+         status->slave : status->master;
+}
+
 static void rptun_set_status(FAR struct rptun_priv_s *priv,
                              unsigned long reason)
 {
@@ -754,6 +766,8 @@ static void rptun_set_status(FAR struct rptun_priv_s *priv,
     {
       RPTUN_STATUS_SET(status->slave, reason);
     }
+
+  RPTUN_FLUSH(*status);
 
   rptun_notify(&priv->rproc, RPTUN_NOTIFY_ALL);
 }
@@ -781,7 +795,6 @@ static void rptun_stop_work(FAR void *arg)
 
 static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
 {
-  FAR struct rptun_status_s *rsc_status;
   uint32_t status;
 
   if (priv->rproc.rsc_table == NULL)
@@ -789,9 +802,7 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
       return;
     }
 
-  rsc_status = RPTUN_RSC2STATUS(priv->rproc.rsc_table);
-  status = RPTUN_IS_MASTER(priv->dev)? rsc_status->slave :
-           rsc_status->master;
+  status = rptun_get_peer_status(priv);
 
   if (RPTUN_STATUS_CHECK(status, RPTUN_STATUS_PAUSE))
     {
@@ -1039,7 +1050,6 @@ static int rptun_dev_stop(FAR struct remoteproc *rproc)
 static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
 {
   int timeout = CONFIG_RPTUN_STATUS_TIMEOUT_MS;
-  FAR struct rptun_status_s *status;
   int ret = -ENOTSUP;
 
   if (priv->rproc.rsc_table == NULL)
@@ -1047,7 +1057,6 @@ static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
       return -EINVAL;
     }
 
-  status = RPTUN_RSC2STATUS(priv->rproc.rsc_table);
   if (priv->dev->ops->reset)
     {
       _emerg("Rptun driver reset remote %s reason: %lu\n",
@@ -1069,8 +1078,7 @@ static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
       ret = -ETIMEDOUT;
       while (timeout-- > 0)
         {
-          if (RPTUN_STATUS_CHECK(RPTUN_IS_MASTER(priv->dev) ? status->slave :
-                                 status->master, val))
+          if (RPTUN_STATUS_CHECK(rptun_get_peer_status(priv), val))
             {
               ret = OK;
               break;

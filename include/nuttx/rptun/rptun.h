@@ -52,8 +52,10 @@
 
 #ifdef CONFIG_OPENAMP_CACHE
 #  define RPTUN_INVALIDATE(x) metal_cache_invalidate(&x, sizeof(x))
+#  define RPTUN_FLUSH(x)      metal_cache_flush(&x, sizeof(x))
 #else
 #  define RPTUN_INVALIDATE(x)
+#  define RPTUN_FLUSH(x)
 #endif
 
 /* Access macros ************************************************************/
