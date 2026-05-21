@@ -307,13 +307,11 @@ void pm_wakelock_uninit(FAR struct pm_wakelock_s *wakelock)
 
   wakelock->count = 0;
 
-#if CONFIG_PM_NDOMAINS > 1
   if (domain != PM_IDLE_DOMAIN)
     {
       work_cancel(HPWORK, &wakelock->work);
     }
   else
-#endif
     {
       wd_cancel(&wakelock->wdog);
     }
@@ -467,14 +465,15 @@ void pm_wakelock_staytimeout(FAR struct pm_wakelock_s *wakelock, int ms)
         }
     }
 
-#if CONFIG_PM_NDOMAINS > 1
   if (domain != PM_IDLE_DOMAIN)
     {
-      work_queue(HPWORK, &wakelock->work, (worker_t)pm_wakelock_relax,
-                 wakelock, MSEC2TICK(ms));
+      if (TICK2MSEC(work_timeleft(&wakelock->work)) < ms)
+        {
+          work_queue(HPWORK, &wakelock->work, (worker_t)pm_wakelock_relax,
+                     wakelock, MSEC2TICK(ms));
+        }
     }
   else
-#endif
     {
       if (TICK2MSEC(wd_gettime(&wakelock->wdog)) < ms)
         {
