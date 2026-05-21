@@ -67,7 +67,9 @@ FAR sigpendq_t *nxsig_remove_pendingsignal(FAR struct tcb_s *stcb, int signo)
   for (prevsig = NULL,
        currsig = (FAR sigpendq_t *)group->tg_sigpendingq.head;
        (currsig && currsig->info.si_signo != signo);
-       prevsig = currsig, currsig = currsig->flink);
+       prevsig = currsig, currsig = currsig->flink)
+    {
+    }
 
   if (currsig)
     {

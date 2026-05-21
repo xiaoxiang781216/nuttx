@@ -63,7 +63,9 @@ FAR sigactq_t *nxsig_find_action(FAR struct task_group_s *group, int signo)
 
       for (sigact = (FAR sigactq_t *)group->tg_sigactionq.head;
            ((sigact) && (sigact->signo != signo));
-           sigact = sigact->flink);
+           sigact = sigact->flink)
+        {
+        }
 
       spin_unlock_irqrestore(&group->tg_lock, flags);
     }

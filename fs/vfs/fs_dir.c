@@ -275,7 +275,9 @@ static off_t seek_pseudodir(FAR struct file *filep, off_t offset)
 
   inode_lock();
 
-  for (; curr != NULL && pos != offset; pos++, curr = curr->i_peer);
+  for (; curr != NULL && pos != offset; pos++, curr = curr->i_peer)
+    {
+    }
 
   /* Now get the inode to visit next time that readdir() is called */
 

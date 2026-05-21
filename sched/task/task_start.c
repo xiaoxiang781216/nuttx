@@ -89,7 +89,9 @@ void nxtask_start(void)
   /* Take args from stack, as group is shared for kthreads */
 
   argv = nxsched_get_stackargs(tcb);
-  for (argc = 0; argv && argv[argc]; argc++);
+  for (argc = 0; argv && argv[argc]; argc++)
+    {
+    }
 
   /* Call the 'main' entry point passing argc and argv.  In the kernel build
    * this has to be handled differently if we are starting a user-space task;

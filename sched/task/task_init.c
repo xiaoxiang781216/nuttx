@@ -236,7 +236,7 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
       /* Create a new task group */
 
       ret = group_allocate(tcb, atomic_read(&tcb->flags), heapsize);
-      if (ret >= 0)
+
       if (ret >= 0)
         {
 #ifndef CONFIG_DISABLE_PTHREAD

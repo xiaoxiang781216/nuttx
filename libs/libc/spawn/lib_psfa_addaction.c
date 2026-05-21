@@ -60,7 +60,9 @@ void add_file_action(FAR posix_spawn_file_actions_t *file_actions,
   for (prev = NULL,
        next = (FAR struct spawn_general_file_action_s *)*file_actions;
        next;
-       prev = next, next = next->flink);
+       prev = next, next = next->flink)
+    {
+    }
 
   /* Here next is NULL and prev points to the last entry in the list (or
    * is NULL if the list is empty).

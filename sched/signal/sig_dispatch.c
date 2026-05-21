@@ -316,7 +316,9 @@ nxsig_find_pendingsignal(FAR struct task_group_s *group, int signo)
 
   for (sigpend = (FAR sigpendq_t *)group->tg_sigpendingq.head;
        (sigpend && sigpend->info.si_signo != signo);
-       sigpend = sigpend->flink);
+       sigpend = sigpend->flink)
+    {
+    }
 
   spin_unlock_irqrestore(&group->tg_lock, flags);
   return sigpend;

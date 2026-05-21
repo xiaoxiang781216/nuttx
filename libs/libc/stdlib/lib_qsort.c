@@ -82,7 +82,15 @@
       swapfunc(a, b, width, swaptype); \
     }
 
-#define vecswap(a, b, n) if ((n) > 0) swapfunc(a, b, n, swaptype)
+#define vecswap(a, b, n) \
+  do \
+    { \
+      if ((n) > 0) \
+        { \
+          swapfunc(a, b, n, swaptype); \
+        } \
+    } \
+  while (0)
 
 /****************************************************************************
  * Private Function Prototypes

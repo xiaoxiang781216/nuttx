@@ -72,7 +72,9 @@ size_t strlcpy(FAR char *dst, FAR const char *src, size_t dsize)
           *dst = '\0';
         }
 
-      while (*src++ != '\0');
+      while (*src++ != '\0')
+        {
+        }
     }
 
   return src - osrc - 1;

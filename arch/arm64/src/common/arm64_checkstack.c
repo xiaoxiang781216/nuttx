@@ -101,7 +101,9 @@ size_t arm64_stack_check(void *stackbase, size_t nbytes)
 
   for (ptr = (uint32_t *)start, mark = (nbytes >> 2);
        mark > 0 && *ptr == STACK_COLOR;
-       ptr++, mark--);
+       ptr++, mark--)
+    {
+    }
 
   /* If the stack is completely used, then this might mean that the stack
    * overflowed from above (meaning that the stack is too small), or may
