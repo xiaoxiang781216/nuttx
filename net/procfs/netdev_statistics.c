@@ -301,6 +301,13 @@ static int netprocfs_inet4addresses(FAR struct netprocfs_file_s *netfile)
       len += snprintf(&netfile->line[len], NET_LINELEN - len,
                       "(conflict!) ");
     }
+  else if (dev->d_acd.state == ARP_ACD_STATE_ANNOUNCING ||
+           (dev->d_acd.state == ARP_ACD_STATE_INIT &&
+            dev->d_acd.need_announce))
+    {
+      len += snprintf(&netfile->line[len], NET_LINELEN - len,
+                      "(acd:ann) ");
+    }
 #endif
 
   /* Show the IPv4 default router address */
