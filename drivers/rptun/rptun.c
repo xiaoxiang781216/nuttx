@@ -842,8 +842,7 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
       while (timeout-- > 0 &&
              (!RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC)))
         {
-          status = RPTUN_IS_MASTER(priv->dev) ? rsc_status->slave :
-                   rsc_status->master;
+          status = rptun_get_peer_status(priv);
           up_udelay(1000);
         }
     }
