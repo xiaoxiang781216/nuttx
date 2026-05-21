@@ -158,6 +158,19 @@ endif
 
 BIN = nuttx$(EXEEXT)
 
+# BUILDINFO_NOTES collects file paths that get embedded into $(BIN) as
+# .note.nuttx.buildinfo entries; the file's basename becomes the note's owner
+# (KEY in 'readelf -n').  Board or vendor Make.defs fragments can append:
+#   BUILDINFO_NOTES += $(TOPDIR)/../.repo/manifest.xml
+# Mirrors nuttx_add_note() in cmake/nuttx_add_buildinfo.cmake.
+
+ifeq ($(CONFIG_BUILD_INFO),y)
+BUILDINFO_NOTES += $(TOPDIR)$(DELIM)sysinfo.h
+BUILDINFO_NOTES += $(TOPDIR)$(DELIM).config
+BUILDINFO_OBJ = $(TOPDIR)$(DELIM)buildinfo$(DELIM)nuttx_buildinfo$(OBJEXT)
+EXTRA_OBJS += $(BUILDINFO_OBJ)
+endif
+
 all: $(BIN)
 .PHONY: context clean_context config oldconfig menuconfig nconfig qconfig gconfig export subdir_clean clean subdir_distclean distclean apps_clean apps_distclean
 .PHONY: pass1 pass1dep
@@ -541,6 +554,28 @@ pass1: $(USERLIBS)
 
 pass2: $(NUTTXLIBS)
 
+ifeq ($(CONFIG_BUILD_INFO),y)
+# Refresh sysinfo on every build so the embedded note tracks the current
+# host/toolchain/git state, mirroring CMake's `add_custom_target(... ALL ...)`.
+.PHONY: $(TOPDIR)$(DELIM)sysinfo.h
+
+$(TOPDIR)$(DELIM)sysinfo.h:
+	$(Q) python3 $(TOPDIR)$(DELIM)tools$(DELIM)host_info_dump.py \
+		$(TOPDIR) -c -p -k -m > $@
+
+$(TOPDIR)$(DELIM)buildinfo$(DELIM)nuttx_buildinfo.S: $(BUILDINFO_NOTES) \
+		$(TOPDIR)$(DELIM)tools$(DELIM)mkbuildinfo.py
+	$(Q) mkdir -p $(@D)
+	$(Q) python3 $(TOPDIR)$(DELIM)tools$(DELIM)mkbuildinfo.py \
+	     --output $@ --entries \
+	     $(foreach p,$(BUILDINFO_NOTES),$(notdir $(p)) $(p))
+
+$(BUILDINFO_OBJ): $(TOPDIR)$(DELIM)buildinfo$(DELIM)nuttx_buildinfo.S
+	$(Q) $(CC) $(AFLAGS) -c -o $@ $<
+
+pass2: $(BUILDINFO_OBJ)
+endif
+
 # $(BIN)
 #
 # Create the final NuttX executable in a two pass build process.  In the
@@ -838,6 +873,8 @@ clean: subdir_clean
 	$(call DELFILE, nuttx-export*.zip)
 	$(call DELDIR, nuttx-export*)
 	$(call DELFILE, nuttx_user*)
+	$(call DELFILE, sysinfo.h)
+	$(call DELDIR, buildinfo)
 	$(call DELDIR, staging)
 	$(call DELFILE, uImage)
 	$(call CLEAN)

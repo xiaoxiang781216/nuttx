@@ -433,7 +433,7 @@ endef
 nuttx$(EXEEXT): libarch$(LIBEXT) board/libboard$(LIBEXT) $(HEADOBJ) $(REQUIREDOBJS) $(HOSTOBJS)
 	$(Q) echo "LD:  nuttx$(EXEEXT)"
 	$(Q) $(LD) -r $(LDLINKFLAGS) $(RELPATHS) $(EXTRA_LIBPATHS) $(EXTRALINKCMDS) \
-	     -o nuttx.rel $(REQUIREDOBJS) $(LDSTARTGROUP) $(RELLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
+	     -o nuttx.rel $(REQUIREDOBJS) $(EXTRA_OBJS) $(LDSTARTGROUP) $(RELLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 ifneq ($(CONFIG_HOST_MACOS),y)
 	$(Q) $(ARCH_SRCDIR)/gen-nuttx-names.sh \
 	     "$(NM)" nuttx.rel nuttx-names.dat \
