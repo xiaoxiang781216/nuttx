@@ -67,7 +67,7 @@
 
 #define stream_putc(c,stream)  (total_len++, lib_stream_putc(stream, c))
 #define stream_puts(buf, len, stream) \
-        (total_len += len, lib_stream_puts(stream, buf, len))
+        (total_len += (len), lib_stream_puts(stream, (buf), (len)))
 
 /* Order is relevant here and matches order in format string */
 

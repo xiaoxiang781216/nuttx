@@ -196,7 +196,7 @@
 
 /* Get a pointer to the process' memory map struct from the task_group */
 
-#define get_group_mm(group)          (group ? &group->tg_mm_map : NULL)
+#define get_group_mm(group)          ((group) ? &(group)->tg_mm_map : NULL)
 
 /* Get a pointer to current the process' memory map struct */
 

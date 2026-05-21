@@ -291,7 +291,7 @@ DECLARE_PER_CPU_BMP(struct perf_s, g_perf);
 #define clock_ticks2time(ts, tick) \
   do \
     { \
-      clock_t _tick = tick; \
+      clock_t _tick = (tick); \
       (ts)->tv_sec = (time_t)div_const(_tick, (uint32_t)TICK_PER_SEC); \
       _tick -= (clock_t)((ts)->tv_sec * TICK_PER_SEC); \
       (ts)->tv_nsec = (long)_tick * NSEC_PER_TICK; \

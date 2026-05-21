@@ -87,7 +87,7 @@
 
 #if CONFIG_FS_MQUEUE_NPOLLWAITERS > 0
 #  define nxmq_pollnotify(msgq, eventset) \
-   poll_notify(msgq->fds, CONFIG_FS_MQUEUE_NPOLLWAITERS, eventset)
+   poll_notify((msgq)->fds, CONFIG_FS_MQUEUE_NPOLLWAITERS, (eventset))
 #else
 #  define nxmq_pollnotify(msgq, eventset)
 #endif

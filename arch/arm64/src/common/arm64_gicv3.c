@@ -57,7 +57,7 @@
  * The macro translates to distributor base for GICv2 and GICv1
  */
 
-#define GET_DIST_BASE(intid)  ((intid < GIC_SPI_INT_BASE) ?          \
+#define GET_DIST_BASE(intid)  (((intid) < GIC_SPI_INT_BASE) ?        \
                                (gic_get_rdist() + GICR_SGI_BASE_OFF) \
                                : GIC_DIST_BASE)
 

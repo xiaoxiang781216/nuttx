@@ -35,9 +35,9 @@
  ****************************************************************************/
 
 #if defined(CONFIG_MM_KASAN_SW_TAGS) || defined(CONFIG_MM_KASAN_GENERIC)
-#  define KASAN_REGISTER(h, i, a, s)  h->mm_kasan[i] = kasan_register(a, s)
+#  define KASAN_REGISTER(h, i, a, s)  (h)->mm_kasan[(i)] = kasan_register((a), (s))
 #else
-#  define KASAN_REGISTER(h, i, a, s)  kasan_register(a, s)
+#  define KASAN_REGISTER(h, i, a, s)  kasan_register((a), (s))
 #endif
 
 #ifndef CONFIG_MM_KASAN

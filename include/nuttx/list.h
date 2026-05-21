@@ -53,7 +53,7 @@
 #define LIST_INITIAL_CLEARED_VALUE { NULL, NULL }
 
 #define list_in_list(item)     ((item)->prev != NULL)
-#define list_is_empty(list)    ((list)->next == list)
+#define list_is_empty(list)    ((list)->next == (list))
 #define list_is_clear(list)    ((list)->next == NULL)
 #define list_is_singular(list) ((list)->next == (list)->prev)
 
@@ -236,32 +236,32 @@
 /* iterates over the list, node should be struct list_node* */
 
 #define list_for_every(list, node) \
-  for(node = (list)->next; node != (list); node = node->next)
+  for((node) = (list)->next; (node) != (list); (node) = (node)->next)
 
 /* iterates over the list in a safe way for deletion of current node
  * node and temp_node should be struct list_node*
  */
 
 #define list_for_every_safe(list, node, temp) \
-  for(node = (list)->next, temp = node->next; \
-      node != (list); node = temp, temp = node->next)
+  for((node) = (list)->next, (temp) = (node)->next; \
+      (node) != (list); (node) = (temp), (temp) = (node)->next)
 
 /* iterates over the list, entry should be the container structure type */
 
 #define list_for_every_entry(list, entry, type, member) \
-  for(entry = list_container_of((list)->next, type, member); \
-      &entry->member != (list); \
-      entry = list_container_of(entry->member.next, type, member))
+  for((entry) = list_container_of((list)->next, type, member); \
+      &(entry)->member != (list); \
+      (entry) = list_container_of((entry)->member.next, type, member))
 
 /* iterates over the list in a safe way for deletion of current node
  * entry and temp_entry should be the container structure type *
  */
 
 #define list_for_every_entry_safe(list, entry, temp, type, member) \
-  for(entry = list_container_of((list)->next, type, member), \
-      temp = list_container_of(entry->member.next, type, member); \
-      &entry->member != (list); entry = temp, \
-      temp = list_container_of(temp->member.next, type, member))
+  for((entry) = list_container_of((list)->next, type, member), \
+      (temp) = list_container_of((entry)->member.next, type, member); \
+      &(entry)->member != (list); (entry) = (temp), \
+      (temp) = list_container_of((temp)->member.next, type, member))
 
 /* Iterate from a given entry node */
 
@@ -293,9 +293,9 @@
  */
 
 #define list_for_every_entry_reverse(list, entry, type, member) \
-  for(entry = list_container_of((list)->prev, type, member); \
-      &entry->member != (list); \
-      entry = list_container_of(entry->member.prev, type, member))
+  for((entry) = list_container_of((list)->prev, type, member); \
+      &(entry)->member != (list); \
+      (entry) = list_container_of((entry)->member.prev, type, member))
 
 /* The list_split macro divides a linked list at a given node and
  * inserts the portion of the list from its beginning up to node

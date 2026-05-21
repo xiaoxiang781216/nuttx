@@ -79,15 +79,15 @@
 
 /* GICD GICR common access macros */
 
-#define IGROUPR(base, n)        (base + GIC_DIST_IGROUPR + (n) * 4)
-#define ISENABLER(base, n)      (base + GIC_DIST_ISENABLER + (n) * 4)
-#define ICENABLER(base, n)      (base + GIC_DIST_ICENABLER + (n) * 4)
-#define ISPENDR(base, n)        (base + GIC_DIST_ISPENDR + (n) * 4)
-#define ICPENDR(base, n)        (base + GIC_DIST_ICPENDR + (n) * 4)
-#define IPRIORITYR(base, n)     (base + GIC_DIST_IPRIORITYR + n)
-#define ITARGETSR(base, n)      (base + GIC_DIST_ITARGETSR + (n) * 4)
-#define ICFGR(base, n)          (base + GIC_DIST_ICFGR + (n) * 4)
-#define IGROUPMODR(base, n)     (base + GIC_DIST_IGROUPMODR + (n) * 4)
+#define IGROUPR(base, n)        ((base) + GIC_DIST_IGROUPR + (n) * 4)
+#define ISENABLER(base, n)      ((base) + GIC_DIST_ISENABLER + (n) * 4)
+#define ICENABLER(base, n)      ((base) + GIC_DIST_ICENABLER + (n) * 4)
+#define ISPENDR(base, n)        ((base) + GIC_DIST_ISPENDR + (n) * 4)
+#define ICPENDR(base, n)        ((base) + GIC_DIST_ICPENDR + (n) * 4)
+#define IPRIORITYR(base, n)     ((base) + GIC_DIST_IPRIORITYR + (n))
+#define ITARGETSR(base, n)      ((base) + GIC_DIST_ITARGETSR + (n) * 4)
+#define ICFGR(base, n)          ((base) + GIC_DIST_ICFGR + (n) * 4)
+#define IGROUPMODR(base, n)     ((base) + GIC_DIST_IGROUPMODR + (n) * 4)
 
 /* GICD_PIDR2 : Peripheral ID2 Register
  * bit assignments
@@ -251,7 +251,7 @@
 
 /* GITCD_IROUTER */
 #define GIC_DIST_IROUTER            0x6000
-#define IROUTER(base, n)    (base + GIC_DIST_IROUTER + (n) * 8)
+#define IROUTER(base, n)    ((base) + GIC_DIST_IROUTER + (n) * 8)
 
 #define IRQ_DEFAULT_PRIORITY        0xa0
 

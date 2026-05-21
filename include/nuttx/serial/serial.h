@@ -78,21 +78,21 @@
 
 /* vtable access helpers */
 
-#define uart_setup(dev)          dev->ops->setup(dev)
-#define uart_shutdown(dev)       dev->ops->shutdown(dev)
-#define uart_attach(dev)         dev->ops->attach(dev)
-#define uart_detach(dev)         dev->ops->detach(dev)
-#define uart_enabletxint(dev)    dev->ops->txint(dev, true)
-#define uart_disabletxint(dev)   dev->ops->txint(dev, false)
-#define uart_enablerxint(dev)    dev->ops->rxint(dev, true)
-#define uart_disablerxint(dev)   dev->ops->rxint(dev, false)
-#define uart_rxavailable(dev)    dev->ops->rxavailable(dev)
-#define uart_txready(dev)        dev->ops->txready(dev)
-#define uart_txempty(dev)        dev->ops->txempty(dev)
-#define uart_send(dev,ch)        dev->ops->send(dev,ch)
-#define uart_receive(dev,s)      dev->ops->receive(dev,s)
-#define uart_recvbuf(dev,b,l)    dev->ops->recvbuf(dev,b,l)
-#define uart_sendbuf(dev,b,l)    dev->ops->sendbuf(dev,b,l)
+#define uart_setup(dev)          (dev)->ops->setup(dev)
+#define uart_shutdown(dev)       (dev)->ops->shutdown(dev)
+#define uart_attach(dev)         (dev)->ops->attach(dev)
+#define uart_detach(dev)         (dev)->ops->detach(dev)
+#define uart_enabletxint(dev)    (dev)->ops->txint(dev, true)
+#define uart_disabletxint(dev)   (dev)->ops->txint(dev, false)
+#define uart_enablerxint(dev)    (dev)->ops->rxint(dev, true)
+#define uart_disablerxint(dev)   (dev)->ops->rxint(dev, false)
+#define uart_rxavailable(dev)    (dev)->ops->rxavailable(dev)
+#define uart_txready(dev)        (dev)->ops->txready(dev)
+#define uart_txempty(dev)        (dev)->ops->txempty(dev)
+#define uart_send(dev,ch)        (dev)->ops->send(dev, ch)
+#define uart_receive(dev,s)      (dev)->ops->receive(dev, s)
+#define uart_recvbuf(dev,b,l)    (dev)->ops->recvbuf(dev, b, l)
+#define uart_sendbuf(dev,b,l)    (dev)->ops->sendbuf(dev, b, l)
 
 #define uart_release(dev)      \
   ((dev)->ops->release ? (dev)->ops->release(dev) : -ENOSYS)
@@ -115,7 +115,7 @@
 
 #ifdef CONFIG_SERIAL_IFLOWCONTROL
 #  define uart_rxflowcontrol(dev,n,u) \
-    (dev->ops->rxflowcontrol && dev->ops->rxflowcontrol(dev,n,u))
+    ((dev)->ops->rxflowcontrol && (dev)->ops->rxflowcontrol(dev, n, u))
 #endif
 
 /****************************************************************************
