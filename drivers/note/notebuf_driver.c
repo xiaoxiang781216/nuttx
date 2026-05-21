@@ -123,6 +123,17 @@ static int notebuf_add(FAR struct note_driver_s *drv,
     (FAR struct notebuf_driver_s *)drv;
   FAR struct note_driver_s *lower = buf->lower;
 
+#ifdef DRIVERS_NOTEBUF_SECTION
+  /* Custom linker sections may be NOLOAD (e.g. standbyram), where
+   * static initializers are ineffective. Lazy-init ensures the ring
+   * is usable regardless of section type. use ring_init for
+   * CAS-serialized cross-core init and warm-restart recovery on
+   * NOLOAD section if the ring is already initialized.
+   */
+
+  ring_init(buf->ring, CONFIG_DRIVERS_NOTEBUF_BUFSIZE);
+#endif
+
   if (notebuf_irqsafe(buf))
     {
       notebuf_flush(buf);
