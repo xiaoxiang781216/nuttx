@@ -82,6 +82,7 @@ struct rpmsg_virtio_priv_s
   struct pm_wakelock_s            wakelock;
   struct wdog_s                   wdog;
 #endif
+  bool                            init;
 };
 
 /****************************************************************************
@@ -641,7 +642,7 @@ static void rpmsg_virtio_rx_callback(FAR struct virtqueue *vq)
   FAR struct rpmsg_virtio_priv_s *priv =
     container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
 
-  if (priv->rvdev.rdev.ns_unbind_cb != NULL)
+  if (priv->init)
     {
       /* Start response interrupt when rpmsg virtio initialized */
 
@@ -836,6 +837,7 @@ static void rpmsg_virtio_start_worker(FAR void *arg)
 
           rpmsg_virtio_rx_update(priv, priv->rvdev.rvq);
           rpmsg_virtio_rx_dispatch(priv);
+          priv->init = true;
 
           /* Broadcast device_created to all registers */
 
