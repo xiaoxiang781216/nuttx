@@ -39,6 +39,7 @@
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/ip.h>
+#include <nuttx/trace.h>
 
 #include "netdev/netdev.h"
 #include "devif/devif.h"
@@ -464,6 +465,19 @@ timeout:
 
   nxsem_destroy(&state->snd_sem);
   arp_callback_free(dev, state->snd_cb);
+
+  if (ret == -ETIMEDOUT)
+    {
+      net_trace_diag(LOG_ERR, DIAG_NET_CONN_STATE_ABNORM,
+                     "ErrorCode:%d,ErrorDetail:target=%08x,"
+                     "InterfaceInfo:%s/%04x/%u/%08x,"
+                     "InterfaceList:,"
+                     "RouteList:",
+                     DIAG_NET_ERR_ARP_UNREACHABLE, ipaddr,
+                     dev->d_ifname, dev->d_flags,
+                     dev->d_lltype, dev->d_ipaddr);
+    }
+
   netdev_unlock(dev);
   mempool_release(&g_arp_send_infos, info);
   return ret;

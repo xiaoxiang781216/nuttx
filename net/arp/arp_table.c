@@ -61,6 +61,7 @@
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/ip.h>
+#include <nuttx/trace.h>
 
 #include "netdev/netdev.h"
 #include "netlink/netlink.h"
@@ -298,9 +299,7 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
   struct arpreq arp_notify;
   bool new_entry;
 #endif
-#if defined(CONFIG_NETLINK_ROUTE) || defined(CONFIG_NET_ARP_SEND_QUEUE)
   bool found = false;
-#endif
   int i;
 
   /* Walk through the ARP mapping table and try to find an entry to
@@ -321,9 +320,7 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
           /* An old entry found, break. */
 
           tabptr = &g_arptable[i];
-#if defined(CONFIG_NETLINK_ROUTE) || defined(CONFIG_NET_ARP_SEND_QUEUE)
           found = true;
-#endif
           break;
         }
       else
@@ -373,6 +370,34 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
   new_entry = !found || memcmp(tabptr->at_ethaddr.ether_addr_octet,
                                ethaddr, ETHER_ADDR_LEN) != 0;
 #endif
+
+  /* Report gateway MAC change via DFX */
+
+  if (found && memcmp(tabptr->at_ethaddr.ether_addr_octet,
+                      ethaddr, ETHER_ADDR_LEN) != 0 &&
+      memcmp(&tabptr->at_ethaddr, &g_zero_ethaddr,
+             sizeof(struct ether_addr)) != 0 &&
+      dev != NULL && ipaddr == dev->d_draddr)
+    {
+      net_trace_diag(LOG_ERR, DIAG_NET_CONN_STATE_ABNORM,
+                     "ErrorCode:%d,ErrorDetail:gw=%08x/"
+                     "old=%02x%02x%02x%02x%02x%02x/"
+                     "new=%02x%02x%02x%02x%02x%02x,"
+                     "InterfaceInfo:%s/%04x/%u/%08x,"
+                     "InterfaceList:,"
+                     "RouteList:",
+                     DIAG_NET_ERR_GW_MAC_CHANGED, ipaddr,
+                     tabptr->at_ethaddr.ether_addr_octet[0],
+                     tabptr->at_ethaddr.ether_addr_octet[1],
+                     tabptr->at_ethaddr.ether_addr_octet[2],
+                     tabptr->at_ethaddr.ether_addr_octet[3],
+                     tabptr->at_ethaddr.ether_addr_octet[4],
+                     tabptr->at_ethaddr.ether_addr_octet[5],
+                     ethaddr[0], ethaddr[1], ethaddr[2],
+                     ethaddr[3], ethaddr[4], ethaddr[5],
+                     dev->d_ifname, dev->d_flags,
+                     dev->d_lltype, dev->d_ipaddr);
+    }
 
   /* Now, tabptr is the ARP table entry which we will fill with the new
    * information.
