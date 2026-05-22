@@ -177,6 +177,10 @@
 
 /* Built-in functions */
 
+#  ifndef __has_builtin
+#    define __has_builtin(x) 0
+#  endif
+
 /* The <stddef.h> header shall define the following macros:
  *
  * offsetof(type, member-designator)
@@ -265,8 +269,12 @@
 
 /* Check if two types are compatible at compile time */
 
-#  define is_types_compatible(x, type) \
-     __builtin_types_compatible_p(typeof(x), type)
+#  if __has_builtin(__is_same)
+#    define is_types_compatible(x, type) __is_same(decltype(x), type)
+#  else
+#    define is_types_compatible(x, type) \
+       __builtin_types_compatible_p(typeof(x), type)
+#  endif
 
 /* Assume the condition is satisfied.
  * We can use this to perform more aggressive compiler optimizations.
