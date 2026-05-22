@@ -259,10 +259,23 @@ void up_systemreset(void)
   ret = psci_sys_reset();
   if (ret)
     {
-      sinfo("Failed to reset CPU, error code: %d\n", ret);
+      /* PSCI reset failed.  Log loudly and return so that the caller is not
+       * silently held in a busy loop forever.  Spinning here would make the
+       * system appear hung from the outside (no console output, no further
+       * scheduling on this thread) while leaving no observable trace of why
+       * reset did not happen.  Letting the caller observe the failure also
+       * allows boardctl(BOARDIOC_RESET) to return to user space, where a
+       * test harness or operator can react.
+       */
+
+      _alert("Failed to reset CPU, error code: %d\n", ret);
     }
 
-  /* Wait for the reset */
+  /* PSCI reset is asynchronous: wait here for the reset to take effect.
+   * If we ever fall through this loop, the hardware did not reset.
+   * Also reached when PSCI reset failed – spin so the noreturn contract
+   * is honoured.
+   */
 
   for (; ; );
 }
