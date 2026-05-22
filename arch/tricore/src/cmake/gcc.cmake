@@ -101,6 +101,12 @@ if(CONFIG_COVERAGE_ALL)
   endif()
 endif()
 
+# Instrumentation options
+
+if(CONFIG_ARCH_INSTRUMENT_ALL)
+  add_compile_options(-finstrument-functions)
+endif()
+
 # Optimization of unused sections
 
 if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
