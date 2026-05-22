@@ -319,7 +319,7 @@ arm_vectorirq:
 
 #if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 .Lirqstacktop:
-	.word	g_intstacktop
+	.word	g_intstackalloc + (CONFIG_ARCH_INTERRUPTSTACK & ~7)
 #endif
 	.cfi_endproc
 	.size	arm_vectorirq, . - arm_vectorirq
@@ -634,25 +634,7 @@ arm_vectoraddrexcptn:
 	b		arm_vectoraddrexcptn
 	.size	arm_vectoraddrexcptn, . - arm_vectoraddrexcptn
 
-/****************************************************************************
- *  Name: g_intstackalloc/g_intstacktop
- ****************************************************************************/
-
 #if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-	.bss
-	.balign	8
-
-	.globl	g_intstackalloc
-	.type	g_intstackalloc, object
-	.globl	g_intstacktop
-	.type	g_intstacktop, object
-
-g_intstackalloc:
-	.skip	((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
-g_intstacktop:
-	.size	g_intstacktop, 0
-	.size	g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~7)
-
 /****************************************************************************
  *  Name: g_fiqstackalloc/g_fiqstacktop
  ****************************************************************************/

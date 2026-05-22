@@ -97,3 +97,10 @@ if(CONFIG_ARCH_ADDRENV)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
+
+if(NOT "${CONFIG_ARCH_INTERRUPTSTACK_SECTION}" STREQUAL "")
+  target_compile_definitions(
+    arch
+    PRIVATE
+      ARCH_INTERRUPTSTACK_SECTION=\"${CONFIG_ARCH_INTERRUPTSTACK_SECTION}\")
+endif()

@@ -1556,6 +1556,17 @@ config ARCH_INTERRUPTSTACK
 		defined to be zero), the user task stacks will be used during interrupt
 		handling.
 
+config ARCH_INTERRUPTSTACK_SECTION
+	string "Interrupt stack section name"
+        default ""
+        depends on ARCH_INTERRUPTSTACK > 0
+	---help---
+		The section name where the interrupt stack will be placed.
+		If empty, the interrupt stack is placed in the default .bss
+		section. Set this to a specific section name (e.g. ".isr_stack")
+		when the board linker script needs to place the interrupt stack
+		in a specific memory region.
+
 config ARCH_HAVE_HIPRI_INTERRUPT
 	bool
 	default n

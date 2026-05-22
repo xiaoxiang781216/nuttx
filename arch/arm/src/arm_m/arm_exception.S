@@ -340,23 +340,4 @@ exception_common:
 	.cfi_endproc
 	.size	exception_common, .-exception_common
 
-/****************************************************************************
- *  Name: g_intstackalloc/g_intstacktop
- *
- * Description:
- *   Shouldn't happen
- *
- ****************************************************************************/
-
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-	.bss
-	.global	g_intstackalloc
-	.global	g_intstacktop
-	.balign	8
-g_intstackalloc:
-	.skip	((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
-g_intstacktop:
-	.size	g_intstackalloc, .-g_intstackalloc
-#endif
-
 	.end

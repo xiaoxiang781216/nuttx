@@ -145,3 +145,10 @@ endif()
 if(CONFIG_ARM_PMUV2)
   target_sources(arch PRIVATE arm_pmuv2.c)
 endif()
+
+if(NOT "${CONFIG_ARCH_INTERRUPTSTACK_SECTION}" STREQUAL "")
+  target_compile_definitions(
+    arch
+    PRIVATE
+      ARCH_INTERRUPTSTACK_SECTION=\"${CONFIG_ARCH_INTERRUPTSTACK_SECTION}\")
+endif()

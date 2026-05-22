@@ -96,9 +96,7 @@ SECTIONS
     } > sram1
 
     .irq_stack : {
-        g_intstackalloc = .;
-        . += CONFIG_ARCH_INTERRUPTSTACK;
-        g_intstacktop = .;
+        *(.irq_stack .irq_stack.*)
     } > sram1
 
     .data : ALIGN(4) {
