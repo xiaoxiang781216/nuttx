@@ -297,6 +297,7 @@ static FAR const char *g_utc = g_etc_utc + sizeof("Etc/") - 1;
 static char g_lcl_tzname[MY_TZNAME_MAX + 1];
 static volatile int g_lcl_isset;
 static volatile int g_gmt_isset;
+static volatile int_fast32_t g_lcl_utoff;
 static FAR struct state_s g_lcl_st;
 static FAR struct state_s g_gmt_st;
 static rmutex_t g_lcl_lock = NXRMUTEX_INITIALIZER;
@@ -1931,14 +1932,26 @@ static FAR struct tm *localsub(FAR const time_t *timep,
   const time_t t = *timep;
 
   sp = &g_lcl_st;
-  if (sp == NULL)
-    {
-      return gmtsub(timep, offset, tmp);
-    }
 
   if (nxrmutex_is_hold(&g_lcl_lock))
     {
-      return NULL;
+      /* Re-entry: this thread is already inside tzset()/tzload() with
+       * g_lcl_lock held (typically syslog -> localtime_r while loading
+       * the TZ file). g_lcl_st may be partially rewritten, so do not
+       * read it here. Use the offset cached from the previous
+       * successful localsub() to produce an approximate wallclock;
+       * passing sp == NULL skips the leap-second table walk that would
+       * otherwise touch g_lcl_st. On cold-start re-entry the cache is
+       * still 0, which degrades to UTC.
+       */
+
+      result = timesub(timep, g_lcl_utoff, NULL, tmp);
+      if (result != NULL)
+        {
+          result->tm_isdst = 0;
+        }
+
+      return result;
     }
 
   tz_lock(&g_lcl_lock, g_lcl_isset);
@@ -2047,6 +2060,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
   result = timesub(&t, ttisp->tt_utoff, sp, tmp);
   if (result != NULL)
     {
+      g_lcl_utoff = ttisp->tt_utoff;
       result->tm_isdst = ttisp->tt_isdst;
       tzname[result->tm_isdst] = &sp->chars[ttisp->tt_desigidx];
       result->tm_zone = tzname[result->tm_isdst];
