@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/reboot_notifier.h>
+#include <nuttx/sched.h>
 
 #include <stdint.h>
 #include <arch/irq.h>
@@ -51,9 +52,6 @@
  * Private Data
  ****************************************************************************/
 
-static uint32_t g_psp_ns;
-static uint32_t g_msp_ns;
-
 static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
                                      unsigned long action,
                                      FAR void *data);
@@ -72,7 +70,9 @@ static DEFINE_PER_CPU_BMP(struct notifier_block, g_switch_nse_panic_nb) =
  * Name: arm_secure_panic_notifier
  *
  * Description:
- *   Panic notifier callback to switch secure world to nonsecure world.
+ *   Panic notifier callback. Restore NS R4-R11 and EXC_RETURN from
+ *   the saved xcptcontext (exception_common already saved them),
+ *   then return to NS.
  *
  ****************************************************************************/
 
@@ -80,51 +80,89 @@ static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
                                      unsigned long action,
                                      FAR void *data)
 {
+  uint32_t *regs = (uint32_t *)g_running_task->xcp.regs;
+
   UNUSED(nb);
   UNUSED(data);
 
-  if (action == SYS_HALT)
+  if (action != SYS_HALT || regs == NULL)
     {
-      __asm__ volatile ("mrs %0, msp_ns" : "=r" (g_msp_ns));
+      return 0;
+    }
 
-      /* Reserve 32 bytes on MSP_NS for fake exception frame
-       * (8 registers × 4 bytes: R0, R1, R2, R3, R12, LR, PC, xPSR)
+  if (regs[REG_EXC_RETURN] & EXC_RETURN_SECURE_STACK)
+    {
+      /* TEE internal panic. Construct fake exception frame on
+       * MSP_NS with PC=0 to trigger NS fault for crash dump.
+       * (8 registers x 4 bytes: R0, R1, R2, R3, R12, LR, PC, xPSR)
        */
 
-      putreg32(0,          g_msp_ns - 32);
-      putreg32(0,          g_msp_ns - 28);
-      putreg32(0,          g_msp_ns - 24);
-      putreg32(0,          g_msp_ns - 20);
-      putreg32(0,          g_msp_ns - 16);
-      putreg32(0,          g_msp_ns - 12);
-      putreg32(0,          g_msp_ns - 8);
-      putreg32(0x01000000, g_msp_ns - 4);
+      uint32_t msp_ns;
 
-      /* Update MSP_NS */
+      __asm__ volatile ("mrs %0, msp_ns" : "=r" (msp_ns));
 
-      __asm__ volatile ("msr msp_ns, %0" : : "r" (g_msp_ns - 32) : "memory");
+      putreg32(0,          msp_ns - 32);
+      putreg32(0,          msp_ns - 28);
+      putreg32(0,          msp_ns - 24);
+      putreg32(0,          msp_ns - 20);
+      putreg32(0,          msp_ns - 16);
+      putreg32(0,          msp_ns - 12);
+      putreg32(0,          msp_ns - 8);
+      putreg32(0x01000000, msp_ns - 4);
 
-      /* Update MSP_NS and jump to NS via EXC_RETURN
-       *
-       * EXC_RETURN = 0xFFFFFFB1:
+      __asm__ volatile (
+        "msr msp_ns, %0" : : "r" (msp_ns - 32) : "memory"
+      );
+
+      /* EXC_RETURN = 0xFFFFFFB1:
        *   bit[6]  S     = 0  (NS stack frame)
        *   bit[5]  DCRS  = 1  (default callee regs)
        *   bit[4]  FType = 1  (no FP)
        *   bit[3]  Mode  = 0  (Handler Mode)
        *   bit[2]  SPSEL = 0  (MSP)
-       *   bit[0]  ES    = 1  (current fault recived by S)
+       *   bit[0]  ES    = 1  (Secure)
        */
 
       __asm__ volatile (
-        "mov lr, #0xFFFFFFB1\n"
+        "ldr lr, =0xFFFFFFB1\n"
         "bx  lr             \n"
         :
         :
         : "lr"
       );
     }
+  else
+    {
+      /* Secure interrupt preempted NS. With DCRS=1, hardware did not
+       * push R4-R11 to Secure stack on entry, so they must hold NS
+       * values when we BX EXC_RETURN. The panic path corrupts them,
+       * so restore from xcptcontext saved by exception_common.
+       * Then point MSP_NS to the HW exception frame (starting at
+       * REG_R0) so hardware unstacks R0-R3, R12, LR, PC, xPSR.
+       */
 
-  /* Should never reach here */
+      __asm__ volatile (
+        "ldr   r4, [%0, %1]    \n"
+        "ldr   r5, [%0, %2]    \n"
+        "ldr   r6, [%0, %3]    \n"
+        "ldr   r7, [%0, %4]    \n"
+        "ldr   r8, [%0, %5]    \n"
+        "ldr   r9, [%0, %6]    \n"
+        "ldr   r10, [%0, %7]   \n"
+        "ldr   r11, [%0, %8]   \n"
+        "mov   lr, %9          \n"
+        "bx    lr              \n"
+        :
+        : "r" (regs),
+          "i" (REG_R4 * 4), "i" (REG_R5 * 4),
+          "i" (REG_R6 * 4), "i" (REG_R7 * 4),
+          "i" (REG_R8 * 4), "i" (REG_R9 * 4),
+          "i" (REG_R10 * 4), "i" (REG_R11 * 4),
+          "r" (regs[REG_EXC_RETURN])
+        : "r4", "r5", "r6", "r7", "r8", "r9",
+          "r10", "r11", "lr", "memory"
+      );
+    }
 
   return 0;
 }
@@ -204,13 +242,11 @@ int arm_gen_nonsecurefault(int irq, uint32_t *regs)
 
   if (regs[REG_EXC_RETURN] & EXC_RETURN_THREAD_MODE)
     {
-      __asm__ __volatile__ ("mrs %0, psp_ns" : "=r" (g_psp_ns));
-      sp_ns = g_psp_ns;
+      __asm__ __volatile__ ("mrs %0, psp_ns" : "=r" (sp_ns));
     }
   else
     {
-      __asm__ __volatile__ ("mrs %0, msp_ns" : "=r" (g_msp_ns));
-      sp_ns = g_msp_ns;
+      __asm__ __volatile__ ("mrs %0, msp_ns" : "=r" (sp_ns));
     }
 
   _alert("Dump REE registers:\n");
