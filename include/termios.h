@@ -39,85 +39,85 @@
 
 /* Terminal input modes (c_iflag in the termios structure) */
 
-#define IGNBRK    (1 << 0)  /* Bit 0:  Ignore break condition */
-#define BRKINT    (1 << 1)  /* Bit 1:  Signal interrupt on break */
-#define IGNPAR    (1 << 2)  /* Bit 2:  Ignore characters with parity errors */
-#define PARMRK    (1 << 3)  /* Bit 3:  Mark parity errors */
-#define INPCK     (1 << 4)  /* Bit 4:  Enable input parity check */
-#define ISTRIP    (1 << 5)  /* Bit 5:  Strip character */
-#define INLCR     (1 << 6)  /* Bit 6:  Map NL to CR on input */
-#define IGNCR     (1 << 7)  /* Bit 7:  Ignore CR */
-#define ICRNL     (1 << 8)  /* Bit 8:  Map CR to NL on input */
-#define IUCLC     (1 << 9)  /* Bit 9:  Map upper-case to lower-case on input (LEGACY) */
-#define IXON      (1 << 10) /* Bit 10: Enable start/stop output control */
-#define IXANY     (1 << 11) /* Bit 11: Enable any character to restart output */
-#define IXOFF     (1 << 12) /* Bit 12: Enable start/stop input control */
-#define IMAXBEL   (1 << 13) /* Bit 13: Ring bell when input queue is full */
+#define IGNBRK    (1U << 0)  /* Bit 0:  Ignore break condition */
+#define BRKINT    (1U << 1)  /* Bit 1:  Signal interrupt on break */
+#define IGNPAR    (1U << 2)  /* Bit 2:  Ignore characters with parity errors */
+#define PARMRK    (1U << 3)  /* Bit 3:  Mark parity errors */
+#define INPCK     (1U << 4)  /* Bit 4:  Enable input parity check */
+#define ISTRIP    (1U << 5)  /* Bit 5:  Strip character */
+#define INLCR     (1U << 6)  /* Bit 6:  Map NL to CR on input */
+#define IGNCR     (1U << 7)  /* Bit 7:  Ignore CR */
+#define ICRNL     (1U << 8)  /* Bit 8:  Map CR to NL on input */
+#define IUCLC     (1U << 9)  /* Bit 9:  Map upper-case to lower-case on input (LEGACY) */
+#define IXON      (1U << 10) /* Bit 10: Enable start/stop output control */
+#define IXANY     (1U << 11) /* Bit 11: Enable any character to restart output */
+#define IXOFF     (1U << 12) /* Bit 12: Enable start/stop input control */
+#define IMAXBEL   (1U << 13) /* Bit 13: Ring bell when input queue is full */
 
 /* Terminal output modes (c_oflag in the termios structure) */
 
-#define OPOST     (1 << 0)  /* Bit 0:  Post-process output */
-#define OLCUC     (1 << 1)  /* Bit 1:  Map lower-case to upper-case on output (LEGACY) */
-#define ONLCR     (1 << 2)  /* Bit 2:  Map NL to CR-NL on output */
-#define OCRNL     (1 << 3)  /* Bit 3:  Map CR to NL on output */
-#define ONOCR     (1 << 4)  /* Bit 4:  No CR output at column 0 */
-#define ONLRET    (1 << 5)  /* Bit 5:  NL performs CR function */
-#define OFILL     (1 << 6)  /* Bit 6:  Use fill characters for delay */
-#define NLDLY     (1 << 8)  /* Bit 8:  Select newline delays: */
-#  define NL0     (0 << 8)  /*   Newline character type 0 */
-#  define NL1     (1 << 8)  /*   Newline character type 1 */
-#define CRDLY     (3 << 9)  /* Bits 9-10: Select carriage-return delays: */
-#  define CR0     (0 << 9)  /*   Carriage-return delay type 0 */
-#  define CR1     (1 << 9)  /*   Carriage-return delay type 1 */
-#  define CR2     (2 << 9)  /*   Carriage-return delay type 2 */
-#  define CR3     (3 << 9)  /*   Carriage-return delay type 3 */
-#define TABDLY    (3 << 11) /* Bits 11-12: Select horizontal-tab delays: */
-#  define TAB0    (0 << 11) /*   Horizontal-tab delay type 0 */
-#  define TAB1    (1 << 11) /*   Horizontal-tab delay type 1 */
-#  define TAB2    (2 << 11) /*   Horizontal-tab delay type 2 */
-#  define TAB3    (3 << 11) /*   Expand tabs to spaces */
-#define BSDLY     (1 << 13) /* Bit 13: Select backspace delays: */
-#  define BS0     (0 << 13) /*   Backspace-delay type 0 */
-#  define BS1     (1 << 13) /*   Backspace-delay type 1 */
-#define VTDLY     (1 << 14) /* Bit 14: Select vertical-tab delays: */
-#  define VT0     (0 << 14) /*   Vertical-tab delay type 0 */
-#  define VT1     (1 << 14) /*   Vertical-tab delay type 1 */
-#define FFDLY     (1 << 15) /* Bit 15: Select form-feed delays: */
-#  define FF0     (0 << 15) /*   Form-feed delay type 0 */
-#  define FF1     (1 << 15) /*   Form-feed delay type 1 */
+#define OPOST     (1U << 0)  /* Bit 0:  Post-process output */
+#define OLCUC     (1U << 1)  /* Bit 1:  Map lower-case to upper-case on output (LEGACY) */
+#define ONLCR     (1U << 2)  /* Bit 2:  Map NL to CR-NL on output */
+#define OCRNL     (1U << 3)  /* Bit 3:  Map CR to NL on output */
+#define ONOCR     (1U << 4)  /* Bit 4:  No CR output at column 0 */
+#define ONLRET    (1U << 5)  /* Bit 5:  NL performs CR function */
+#define OFILL     (1U << 6)  /* Bit 6:  Use fill characters for delay */
+#define NLDLY     (1U << 8)  /* Bit 8:  Select newline delays: */
+#  define NL0     (0U << 8)  /*   Newline character type 0 */
+#  define NL1     (1U << 8)  /*   Newline character type 1 */
+#define CRDLY     (3U << 9)  /* Bits 9-10: Select carriage-return delays: */
+#  define CR0     (0U << 9)  /*   Carriage-return delay type 0 */
+#  define CR1     (1U << 9)  /*   Carriage-return delay type 1 */
+#  define CR2     (2U << 9)  /*   Carriage-return delay type 2 */
+#  define CR3     (3U << 9)  /*   Carriage-return delay type 3 */
+#define TABDLY    (3U << 11) /* Bits 11-12: Select horizontal-tab delays: */
+#  define TAB0    (0U << 11) /*   Horizontal-tab delay type 0 */
+#  define TAB1    (1U << 11) /*   Horizontal-tab delay type 1 */
+#  define TAB2    (2U << 11) /*   Horizontal-tab delay type 2 */
+#  define TAB3    (3U << 11) /*   Expand tabs to spaces */
+#define BSDLY     (1U << 13) /* Bit 13: Select backspace delays: */
+#  define BS0     (0U << 13) /*   Backspace-delay type 0 */
+#  define BS1     (1U << 13) /*   Backspace-delay type 1 */
+#define VTDLY     (1U << 14) /* Bit 14: Select vertical-tab delays: */
+#  define VT0     (0U << 14) /*   Vertical-tab delay type 0 */
+#  define VT1     (1U << 14) /*   Vertical-tab delay type 1 */
+#define FFDLY     (1U << 15) /* Bit 15: Select form-feed delays: */
+#  define FF0     (0U << 15) /*   Form-feed delay type 0 */
+#  define FF1     (1U << 15) /*   Form-feed delay type 1 */
 
 /* Control Modes (c_cflag in the termios structure) */
 
-#define CSIZE     (3 << 4)    /* Bits 4-5: Character size: */
-#  define CS5     (0 << 4)    /*   5 bits */
-#  define CS6     (1 << 4)    /*   6 bits */
-#  define CS7     (2 << 4)    /*   7 bits */
-#  define CS8     (3 << 4)    /*   8 bits */
-#define CSTOPB    (1 << 6)    /* Bit 6:  Send two stop bits, else one */
-#define CREAD     (1 << 7)    /* Bit 7:  Enable receiver */
-#define PARENB    (1 << 8)    /* Bit 8: Parity enable */
-#define PARODD    (1 << 9)    /* Bit 9: Odd parity, else even */
-#define HUPCL     (1 << 10)   /* Bit 10: Hang up on last close */
-#define CLOCAL    (1 << 11)   /* Bit 11: Ignore modem status lines */
-#define CCTS_OFLOW (1 << 29)  /* Bit 29: CTS flow control of output */
-#define CRTS_IFLOW (1u << 31) /* Bit 31: RTS flow control of input */
+#define CSIZE     (3U << 4)    /* Bits 4-5: Character size: */
+#  define CS5     (0U << 4)    /*   5 bits */
+#  define CS6     (1U << 4)    /*   6 bits */
+#  define CS7     (2U << 4)    /*   7 bits */
+#  define CS8     (3U << 4)    /*   8 bits */
+#define CSTOPB    (1U << 6)    /* Bit 6:  Send two stop bits, else one */
+#define CREAD     (1U << 7)    /* Bit 7:  Enable receiver */
+#define PARENB    (1U << 8)    /* Bit 8: Parity enable */
+#define PARODD    (1U << 9)    /* Bit 9: Odd parity, else even */
+#define HUPCL     (1U << 10)   /* Bit 10: Hang up on last close */
+#define CLOCAL    (1U << 11)   /* Bit 11: Ignore modem status lines */
+#define CCTS_OFLOW (1U << 29)  /* Bit 29: CTS flow control of output */
+#define CRTS_IFLOW (1U << 31)  /* Bit 31: RTS flow control of input */
 #define CRTSCTS   (CCTS_OFLOW | CRTS_IFLOW)
 
 /* Local Modes (c_lflag in the termios structure) */
 
-#define ISIG      (1 << 0)  /* Bit 0:  Enable signals */
-#define ICANON    (1 << 1)  /* Bit 1:  Canonical input (erase and kill processing) */
-#define XCASE     (1 << 2)  /* Bit 2:  Canonical upper/lower presentation (LEGACY) */
-#define ECHO      (1 << 3)  /* Bit 3:  Enable echo */
-#define ECHOE     (1 << 4)  /* Bit 4:  Echo erase character as error correcting backspace */
-#define ECHOK     (1 << 5)  /* Bit 5:  Echo KILL */
-#define ECHONL    (1 << 6)  /* Bit 6:  Echo NL */
-#define NOFLSH    (1 << 7)  /* Bit 7:  Disable flush after interrupt or quit */
-#define TOSTOP    (1 << 8)  /* Bit 8:  Send SIGTTOU for background output */
-#define ECHOCTL   (1 << 9)  /* Bit 9:  Echo control characters as ^X */
-#define ECHOKE    (1 << 11) /* Bit 11: Visual erase for KILL */
-#define FLUSHO    (1 << 12) /* Bit 12: Flush output to terminal */
-#define IEXTEN    (1 << 15) /* Bit 15: Enable extended input character processing */
+#define ISIG      (1U << 0)  /* Bit 0:  Enable signals */
+#define ICANON    (1U << 1)  /* Bit 1:  Canonical input (erase and kill processing) */
+#define XCASE     (1U << 2)  /* Bit 2:  Canonical upper/lower presentation (LEGACY) */
+#define ECHO      (1U << 3)  /* Bit 3:  Enable echo */
+#define ECHOE     (1U << 4)  /* Bit 4:  Echo erase character as error correcting backspace */
+#define ECHOK     (1U << 5)  /* Bit 5:  Echo KILL */
+#define ECHONL    (1U << 6)  /* Bit 6:  Echo NL */
+#define NOFLSH    (1U << 7)  /* Bit 7:  Disable flush after interrupt or quit */
+#define TOSTOP    (1U << 8)  /* Bit 8:  Send SIGTTOU for background output */
+#define ECHOCTL   (1U << 9)  /* Bit 9:  Echo control characters as ^X */
+#define ECHOKE    (1U << 11) /* Bit 11: Visual erase for KILL */
+#define FLUSHO    (1U << 12) /* Bit 12: Flush output to terminal */
+#define IEXTEN    (1U << 15) /* Bit 15: Enable extended input character processing */
 
 /* The following are subscript names for the termios c_cc array.
  *

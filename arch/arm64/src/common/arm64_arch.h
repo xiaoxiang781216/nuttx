@@ -236,7 +236,7 @@
 #define CPTR_EL2_RES1               BIT(13) | BIT(12) | BIT(9) | (0xff)
 
 /* CPACR_EL1, Architectural Feature Access Control Register */
-#define CPACR_EL1_FPEN_NOTRAP       (0x3 << 20)
+#define CPACR_EL1_FPEN_NOTRAP       (0x3U << 20)
 
 /* SCR_EL3, Secure Configuration Register */
 #define SCR_NS_BIT                  BIT(0)

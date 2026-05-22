@@ -123,7 +123,7 @@
 
 #define ESR_ELX_EC_SHIFT        (26)
 #define ESR_ELX_EC_WIDTH        (6)
-#define ESR_ELX_EC_MASK         (0x3F << ESR_ELX_EC_SHIFT)
+#define ESR_ELX_EC_MASK         (0x3FU << ESR_ELX_EC_SHIFT)
 #define ESR_ELX_EC(esr)         (((esr) & ESR_ELX_EC_MASK) \
                                 >> ESR_ELX_EC_SHIFT)
 

@@ -49,41 +49,41 @@
  *   Bits 12-15: File type bits
  */
 
-#define S_IXOTH     (1 << 0)   /* Bits 0-2: Permissions for others: RWX */
-#define S_IWOTH     (1 << 1)
-#define S_IROTH     (1 << 2)
-#define S_IRWXO     (7 << 0)
+#define S_IXOTH     (1U << 0)   /* Bits 0-2: Permissions for others: RWX */
+#define S_IWOTH     (1U << 1)
+#define S_IROTH     (1U << 2)
+#define S_IRWXO     (7U << 0)
 
-#define S_IXGRP     (1 << 3)   /* Bits 3-5: Group permissions: RWX */
-#define S_IWGRP     (1 << 4)
-#define S_IRGRP     (1 << 5)
-#define S_IRWXG     (7 << 3)
+#define S_IXGRP     (1U << 3)   /* Bits 3-5: Group permissions: RWX */
+#define S_IWGRP     (1U << 4)
+#define S_IRGRP     (1U << 5)
+#define S_IRWXG     (7U << 3)
 
-#define S_IXUSR     (1 << 6)   /* Bits 6-8: Owner permissions: RWX */
-#define S_IWUSR     (1 << 7)
-#define S_IRUSR     (1 << 8)
-#define S_IRWXU     (7 << 6)
+#define S_IXUSR     (1U << 6)   /* Bits 6-8: Owner permissions: RWX */
+#define S_IWUSR     (1U << 7)
+#define S_IRUSR     (1U << 8)
+#define S_IRWXU     (7U << 6)
 
 #define S_IREAD     S_IRUSR    /* Obsolete synonym provided for BSD compatibility. */
 #define S_IWRITE    S_IWUSR    /* Obsolete synonym provided for BSD compatibility. */
 #define S_IEXEC     S_IXUSR    /* Obsolete synonym provided for BSD compatibility. */
 
-#define S_ISVTX     (1 << 9)   /* "Sticky" bit (not used) */
-#define S_ISGID     (1 << 10)  /* Set group ID bit (not used)*/
-#define S_ISUID     (1 << 11)  /* Set UID bit (not used) */
+#define S_ISVTX     (1U << 9)   /* "Sticky" bit (not used) */
+#define S_ISGID     (1U << 10)  /* Set group ID bit (not used)*/
+#define S_ISUID     (1U << 11)  /* Set UID bit (not used) */
 
-#define S_IFIFO     (1 << 12)  /* Bits 12-15: File type bits (not all used) */
-#define S_IFCHR     (2 << 12)
-#define S_IFSEM     (3 << 12)
-#define S_IFDIR     (4 << 12)
-#define S_IFMQ      (5 << 12)
-#define S_IFBLK     (6 << 12)
-#define S_IFSHM     (7 << 12)
-#define S_IFREG     (8 << 12)
-#define S_IFMTD     (9 << 12)
-#define S_IFLNK     (10 << 12)
-#define S_IFSOCK    (12 << 12)
-#define S_IFMT      (15 << 12)
+#define S_IFIFO     (1U << 12)  /* Bits 12-15: File type bits (not all used) */
+#define S_IFCHR     (2U << 12)
+#define S_IFSEM     (3U << 12)
+#define S_IFDIR     (4U << 12)
+#define S_IFMQ      (5U << 12)
+#define S_IFBLK     (6U << 12)
+#define S_IFSHM     (7U << 12)
+#define S_IFREG     (8U << 12)
+#define S_IFMTD     (9U << 12)
+#define S_IFLNK     (10U << 12)
+#define S_IFSOCK    (12U << 12)
+#define S_IFMT      (15U << 12)
 
 /* File type macros that operate on an instance of mode_t */
 

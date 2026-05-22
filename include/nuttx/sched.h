@@ -86,55 +86,55 @@
 
 /* Values for the struct tcb_s flags bits */
 
-#define TCB_FLAG_TTYPE_SHIFT       (0)                           /* Bits 0-1: thread type */
-#define TCB_FLAG_TTYPE_MASK        (3 << TCB_FLAG_TTYPE_SHIFT)
-#  define TCB_FLAG_TTYPE_TASK      (0 << TCB_FLAG_TTYPE_SHIFT)   /*   Normal user task */
-#  define TCB_FLAG_TTYPE_PTHREAD   (1 << TCB_FLAG_TTYPE_SHIFT)   /*   User pthread */
-#  define TCB_FLAG_TTYPE_KERNEL    (2 << TCB_FLAG_TTYPE_SHIFT)   /*   Kernel thread */
-#define TCB_FLAG_POLICY_SHIFT      (3)                           /* Bit 3-4: Scheduling policy */
-#define TCB_FLAG_POLICY_MASK       (3 << TCB_FLAG_POLICY_SHIFT)
-#  define TCB_FLAG_SCHED_FIFO      (0 << TCB_FLAG_POLICY_SHIFT)  /* FIFO scheding policy */
-#  define TCB_FLAG_SCHED_RR        (1 << TCB_FLAG_POLICY_SHIFT)  /* Round robin scheding policy */
-#  define TCB_FLAG_SCHED_SPORADIC  (2 << TCB_FLAG_POLICY_SHIFT)  /* Sporadic scheding policy */
-#  define TCB_FLAG_SCHED_OTHER     (3 << TCB_FLAG_POLICY_SHIFT)  /* Other scheduling policy */
-#define TCB_FLAG_CPU_LOCKED        (1 << 5)                      /* Bit 5: Locked to this CPU */
-#define TCB_FLAG_SIGNAL_ACTION     (1 << 6)                      /* Bit 6: In a signal handler */
+#define TCB_FLAG_TTYPE_SHIFT       (0)                            /* Bits 0-1: thread type */
+#define TCB_FLAG_TTYPE_MASK        (3U << TCB_FLAG_TTYPE_SHIFT)
+#  define TCB_FLAG_TTYPE_TASK      (0U << TCB_FLAG_TTYPE_SHIFT)   /*   Normal user task */
+#  define TCB_FLAG_TTYPE_PTHREAD   (1U << TCB_FLAG_TTYPE_SHIFT)   /*   User pthread */
+#  define TCB_FLAG_TTYPE_KERNEL    (2U << TCB_FLAG_TTYPE_SHIFT)   /*   Kernel thread */
+#define TCB_FLAG_POLICY_SHIFT      (3)                            /* Bit 3-4: Scheduling policy */
+#define TCB_FLAG_POLICY_MASK       (3U << TCB_FLAG_POLICY_SHIFT)
+#  define TCB_FLAG_SCHED_FIFO      (0U << TCB_FLAG_POLICY_SHIFT)  /* FIFO scheding policy */
+#  define TCB_FLAG_SCHED_RR        (1U << TCB_FLAG_POLICY_SHIFT)  /* Round robin scheding policy */
+#  define TCB_FLAG_SCHED_SPORADIC  (2U << TCB_FLAG_POLICY_SHIFT)  /* Sporadic scheding policy */
+#  define TCB_FLAG_SCHED_OTHER     (3U << TCB_FLAG_POLICY_SHIFT)  /* Other scheduling policy */
+#define TCB_FLAG_CPU_LOCKED        (1U << 5)                      /* Bit 5: Locked to this CPU */
+#define TCB_FLAG_SIGNAL_ACTION     (1U << 6)                      /* Bit 6: In a signal handler */
 
-#define TCB_FLAG_EXIT_PROCESSING   (1 << 8)                      /* Bit 8: Exiting */
-#define TCB_FLAG_FREE_STACK        (1 << 9)                      /* Bit 9: Free stack after exit */
-#define TCB_FLAG_DETACHED          (1 << 10)                     /* Bit 10: Pthread detached */
-#define TCB_FLAG_FORCED_CANCEL     (1 << 11)                     /* Bit 11: Pthread cancel is forced */
-#define TCB_FLAG_JOIN_COMPLETED    (1 << 12)                     /* Bit 12: Pthread join completed */
-#define TCB_FLAG_FREE_TCB          (1 << 13)                     /* Bit 13: Free tcb after exit */
-#define TCB_FLAG_PREEMPT_SCHED     (1 << 14)                     /* Bit 14: tcb is PREEMPT_SCHED */
-#define TCB_FLAG_KILL_PROCESSING   (1 << 15)                     /* Bit 15: tcb is killed */
-#define TCB_FLAG_FREE_GROUP        (1 << 16)                     /* Bit 16: Free group before tcb free */
+#define TCB_FLAG_EXIT_PROCESSING   (1U << 8)                      /* Bit 8: Exiting */
+#define TCB_FLAG_FREE_STACK        (1U << 9)                      /* Bit 9: Free stack after exit */
+#define TCB_FLAG_DETACHED          (1U << 10)                     /* Bit 10: Pthread detached */
+#define TCB_FLAG_FORCED_CANCEL     (1U << 11)                     /* Bit 11: Pthread cancel is forced */
+#define TCB_FLAG_JOIN_COMPLETED    (1U << 12)                     /* Bit 12: Pthread join completed */
+#define TCB_FLAG_FREE_TCB          (1U << 13)                     /* Bit 13: Free tcb after exit */
+#define TCB_FLAG_PREEMPT_SCHED     (1U << 14)                     /* Bit 14: tcb is PREEMPT_SCHED */
+#define TCB_FLAG_KILL_PROCESSING   (1U << 15)                     /* Bit 15: tcb is killed */
+#define TCB_FLAG_FREE_GROUP        (1U << 16)                     /* Bit 16: Free group before tcb free */
 
 /* Values for struct task_group tg_flags */
 
-#define GROUP_FLAG_NOCLDWAIT       (1 << 0)                      /* Bit 0: Do not retain child exit status */
-#define GROUP_FLAG_PRIVILEGED      (1 << 1)                      /* Bit 1: Group is privileged */
-#define GROUP_FLAG_DELETED         (1 << 2)                      /* Bit 2: Group has been deleted but not yet freed */
-#define GROUP_FLAG_EXITING         (1 << 3)                      /* Bit 3: Group exit is in progress */
-#define GROUP_FLAG_KERNEL          (1 << 4)                      /* Bit 4: Kernel task group (not user) */
-                                                                 /* Bits 5-7: Available */
+#define GROUP_FLAG_NOCLDWAIT       (1U << 0)                      /* Bit 0: Do not retain child exit status */
+#define GROUP_FLAG_PRIVILEGED      (1U << 1)                      /* Bit 1: Group is privileged */
+#define GROUP_FLAG_DELETED         (1U << 2)                      /* Bit 2: Group has been deleted but not yet freed */
+#define GROUP_FLAG_EXITING         (1U << 3)                      /* Bit 3: Group exit is in progress */
+#define GROUP_FLAG_KERNEL          (1U << 4)                      /* Bit 4: Kernel task group (not user) */
+                                                                  /* Bits 5-7: Available */
 
 /* Values for struct child_status_s ch_flags */
 
-#define CHILD_FLAG_TTYPE_SHIFT     (0)                           /* Bits 0-1: child thread type */
-#define CHILD_FLAG_TTYPE_MASK      (3 << CHILD_FLAG_TTYPE_SHIFT)
-#  define CHILD_FLAG_TTYPE_TASK    (0 << CHILD_FLAG_TTYPE_SHIFT) /* Normal user task */
-#  define CHILD_FLAG_TTYPE_PTHREAD (1 << CHILD_FLAG_TTYPE_SHIFT) /* User pthread */
-#  define CHILD_FLAG_TTYPE_KERNEL  (2 << CHILD_FLAG_TTYPE_SHIFT) /* Kernel thread */
-#define CHILD_FLAG_EXITED          (1 << 2)                      /* Bit 2: The child thread has exit'ed */
-                                                                 /* Bits 3-7: Available */
+#define CHILD_FLAG_TTYPE_SHIFT     (0)                            /* Bits 0-1: child thread type */
+#define CHILD_FLAG_TTYPE_MASK      (3U << CHILD_FLAG_TTYPE_SHIFT)
+#  define CHILD_FLAG_TTYPE_TASK    (0U << CHILD_FLAG_TTYPE_SHIFT) /* Normal user task */
+#  define CHILD_FLAG_TTYPE_PTHREAD (1U << CHILD_FLAG_TTYPE_SHIFT) /* User pthread */
+#  define CHILD_FLAG_TTYPE_KERNEL  (2U << CHILD_FLAG_TTYPE_SHIFT) /* Kernel thread */
+#define CHILD_FLAG_EXITED          (1U << 2)                      /* Bit 2: The child thread has exit'ed */
+                                                                  /* Bits 3-7: Available */
 
 /* Sporadic scheduler flags */
 
-#define SPORADIC_FLAG_ALLOCED      (1 << 0)                      /* Bit 0: Timer is allocated */
-#define SPORADIC_FLAG_MAIN         (1 << 1)                      /* Bit 1: The main timer */
-#define SPORADIC_FLAG_REPLENISH    (1 << 2)                      /* Bit 2: Replenishment cycle */
-                                                                 /* Bits 3-7: Available */
+#define SPORADIC_FLAG_ALLOCED      (1U << 0)                      /* Bit 0: Timer is allocated */
+#define SPORADIC_FLAG_MAIN         (1U << 1)                      /* Bit 1: The main timer */
+#define SPORADIC_FLAG_REPLENISH    (1U << 2)                      /* Bit 2: Replenishment cycle */
+                                                                  /* Bits 3-7: Available */
 
 /* Most internal nxsched_* interfaces are not available in the user space in
  * PROTECTED and KERNEL builds.  In that context, the application semaphore
