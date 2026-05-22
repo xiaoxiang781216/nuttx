@@ -54,6 +54,7 @@ struct rpmsg_crypto_session_s
   uint64_t  tid;     /* The session id */
   int       result;  /* The return value of the remote call */
   FAR void *data;    /* The return data buffer of the remote call */
+  uint32_t  offset;  /* CBIMM: accumulated output offset */
 };
 
 struct rpmsg_crypto_s
@@ -473,13 +474,14 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
 {
   FAR struct rpmsg_crypto_process_s *msg;
   FAR struct rpmsg_crypto_process_s *rsp;
-  uint32_t space = rpmsg_get_tx_buffer_size(&rdev->ept);
-  bool need_iv = !(crp->crp_desc->crd_flags & CRD_F_UPDATE);
-  int remaining = crp->crp_ilen;
-  uint32_t header_size;
-  uint32_t offset = 0;
-  uint32_t data_size;
   FAR char *buf;
+  uint32_t space = rpmsg_get_tx_buffer_size(&rdev->ept);
+  uint32_t header_size;
+  uint32_t data_size;
+  uint32_t offset = 0;
+  bool need_iv = !(crp->crp_desc->crd_flags & CRD_F_UPDATE);
+  bool async = crp->crp_flags & CRYPTO_F_CBIMM;
+  int remaining = crp->crp_ilen;
   int ret;
 
   if (crp->crp_dst == NULL)
@@ -515,14 +517,14 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
       memcpy(buf, crp->crp_buf + offset, data_size);
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                    RPMSG_CRYPTO_PROCESS,
-                                   header_size + data_size, true);
+                                   header_size + data_size, !async);
       if (ret < 0)
         {
           rpmsgerr("Rpmsg Crypto process failed, ret=%d\n", ret);
           return ret;
         }
 
-      if (session->data != NULL)
+      if (!async && session->data != NULL)
         {
           rsp = session->data;
           memcpy(crp->crp_dst + offset, rsp->buf, data_size);
@@ -534,7 +536,7 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
       offset += data_size;
     }
 
-  return session->result;
+  return async ? OK : session->result;
 }
 
 static int
@@ -545,12 +547,13 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
 {
   FAR struct rpmsg_crypto_process_s *msg;
   FAR struct rpmsg_crypto_process_s *rsp;
-  int service = virtio_crypto_get_service(crp->crp_desc->crd_alg);
   uint32_t space = rpmsg_get_tx_buffer_size(&rdev->ept);
-  uint32_t flags = crp->crp_desc->crd_flags;
   uint32_t data_size = space - sizeof(*msg);
-  int remaining = crp->crp_ilen;
+  uint32_t flags = crp->crp_desc->crd_flags;
   uint32_t offset = 0;
+  bool async = crp->crp_flags & CRYPTO_F_CBIMM;
+  int service = virtio_crypto_get_service(crp->crp_desc->crd_alg);
+  int remaining = crp->crp_ilen;
   int ret;
 
   do
@@ -581,14 +584,14 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
                                    RPMSG_CRYPTO_PROCESS,
                                    sizeof(*msg) + data_size,
                                    remaining == 0 &&
-                                   !(flags & CRD_F_UPDATE));
+                                   !(flags & CRD_F_UPDATE) && !async);
       if (ret < 0)
         {
           rpmsgerr("Rpmsg Crypto process failed, ret=%d\n", ret);
           return ret;
         }
 
-      if (session->data != NULL)
+      if (!async && session->data != NULL)
         {
           rsp = session->data;
           memcpy(crp->crp_mac, rsp->buf, crp->crp_olen);
@@ -598,7 +601,7 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
     }
   while (remaining > 0);
 
-  return session->result;
+  return async ? OK : session->result;
 }
 
 static int
@@ -682,13 +685,14 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
 {
   FAR struct rpmsg_crypto_process_s *msg;
   FAR struct rpmsg_crypto_process_s *rsp;
+  FAR char *buf;
   uint32_t space = rpmsg_get_tx_buffer_size(&rdev->ept);
-  uint32_t flags = crp->crp_desc->crd_flags;
   uint32_t remaining = crp->crp_ilen;
+  uint32_t flags = crp->crp_desc->crd_flags;
   uint32_t offset = 0;
   uint32_t datalen;
   uint32_t len;
-  FAR char *buf;
+  bool async = crp->crp_flags & CRYPTO_F_CBIMM;
   int ret;
 
   /* Process data in packets if needed */
@@ -721,18 +725,15 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
 
       msg->data.op_flf.aead.src_data_len = datalen;
 
-      /* Send packet and wait for response to receive output data */
-
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                                   RPMSG_CRYPTO_PROCESS,
-                                   len, true);
+                                   RPMSG_CRYPTO_PROCESS, len, !async);
       if (ret < 0)
         {
           rpmsgerr("Rpmsg Crypto AEAD update failed, ret=%d\n", ret);
           return ret;
         }
 
-      if (session->data != NULL)
+      if (!async && session->data != NULL)
         {
           rsp = session->data;
           memcpy(crp->crp_dst + offset - datalen, rsp->buf, datalen);
@@ -741,7 +742,7 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
         }
     }
 
-  return session->result;
+  return async ? OK : session->result;
 }
 
 static int
@@ -753,6 +754,7 @@ rpmsg_crypto_process_aead_final(FAR struct rpmsg_crypto_s *rdev,
   FAR struct rpmsg_crypto_process_s *msg;
   FAR struct rpmsg_crypto_process_s *rsp;
   uint32_t flags = crp->crp_desc->crd_flags;
+  bool async = crp->crp_flags & CRYPTO_F_CBIMM;
   int ret;
 
   msg = rpmsg_crypto_get_process_msg(rdev, info);
@@ -773,14 +775,14 @@ rpmsg_crypto_process_aead_final(FAR struct rpmsg_crypto_s *rdev,
 
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                RPMSG_CRYPTO_PROCESS,
-                               sizeof(*msg), true);
+                               sizeof(*msg), !async);
   if (ret < 0)
     {
       rpmsgerr("Rpmsg Crypto AEAD final failed, ret=%d\n", ret);
       return ret;
     }
 
-  if (session->data != NULL)
+  if (!async && session->data != NULL)
     {
       rsp = session->data;
       memcpy(crp->crp_mac, rsp->buf, crp->crp_olen);
@@ -788,7 +790,7 @@ rpmsg_crypto_process_aead_final(FAR struct rpmsg_crypto_s *rdev,
       session->data = NULL;
     }
 
-  return session->result;
+  return async ? OK : session->result;
 }
 
 static int
@@ -848,6 +850,7 @@ static int rpmsg_crypto_process(FAR struct cryptop *crp)
   if (crp->crp_flags & CRYPTO_F_CBIMM)
     {
       session->data = opaque;
+      session->offset = 0;
     }
   else
     {
@@ -1391,21 +1394,26 @@ static int rpmsg_crypto_process_handler(FAR struct rpmsg_endpoint *ept,
           len -= sizeof(*msg);
           if (crp->crp_dst && len > 0)
             {
-              memcpy(crp->crp_dst, msg->buf, len);
+              memcpy(crp->crp_dst + session->offset, msg->buf, len);
             }
           else if (crp->crp_mac && len > 0)
             {
               memcpy(crp->crp_mac, msg->buf, len);
             }
+
+          session->offset += len;
         }
 
-      if (crp->crp_callback)
+      if (session->result != 0 || session->offset >= crp->crp_olen)
         {
-          crp->crp_callback(crp);
+          session->data = NULL;
+          if (crp->crp_callback)
+            {
+              crp->crp_callback(crp);
+            }
         }
 
-      session->data = NULL;
-      return rpmsg_post(ept, &session->sem);
+      return OK;
     }
 
   if (session->result == 0)
