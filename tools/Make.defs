@@ -39,14 +39,3 @@ include $(TOPDIR)/Make.defs
 else
 include $(APPDIR)/Make.defs
 endif
-
-# CONFIG_BUILD_INFO emits an extra ELF SHT_NOTE section
-# (.note.nuttx.buildinfo) via tools/mkbuildinfo.py.  Tell the linker not to
-# warn about that orphan, unless the user opted into orphan diagnostics.
-# EXTRALINKCMDS is consumed by $(LD) directly (see arch/*/src/Makefile), so
-# the flag is passed without a -Wl, prefix.
-ifeq ($(CONFIG_BUILD_INFO),y)
-ifneq ($(CONFIG_DEBUG_LINK_ORPHAN_WARN),y)
-EXTRALINKCMDS += --orphan-handling=place
-endif
-endif

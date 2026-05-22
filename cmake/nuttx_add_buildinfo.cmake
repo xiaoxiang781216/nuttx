@@ -71,8 +71,8 @@ function(nuttx_generate_buildinfo target)
 
   target_sources(${target} PRIVATE ${gen_s})
   add_dependencies(${target} nuttx_buildinfo_gen)
-  # xt-ld (Xtensa) rejects orphan sections by default; ARM bfd/lld place them
-  # automatically. Force placement only when the user has not opted into
+  # Cadence xt-ld rejects orphan sections by default; ARM bfd/lld place them
+  # automatically.  Force placement only when the user has not opted into
   # --orphan-handling=warn via CONFIG_DEBUG_LINK_ORPHAN_WARN, so that the debug
   # knob continues to surface unexpected orphans.
   if(NOT CONFIG_DEBUG_LINK_ORPHAN_WARN)

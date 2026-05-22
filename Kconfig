@@ -288,7 +288,7 @@ config MODULES
 
 config BUILD_INFO
 	bool "Embed build metadata in ELF"
-	default n
+	default y if !DEBUG_LINK_ORPHAN_WARN
 	---help---
 		Embed build metadata (sysinfo, .config snapshot, and any
 		vendor-registered payloads) into the final nuttx ELF as
