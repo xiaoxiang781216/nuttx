@@ -1015,10 +1015,23 @@ static inline void notify_queue_filep_event(FAR struct file *filep,
       return;
     }
 
-  nxmutex_lock(&g_inotify.lock);
-  ret = notify_check_mask(mask);
-  nxmutex_unlock(&g_inotify.lock);
-  if (ret < 0)
+  /* Fast path: when no inotify watcher is registered for the relevant
+   * event class, skip the global lock entirely.  read_count and
+   * write_count are 32-bit aligned uint32_t fields, and a plain load
+   * is atomic on the architectures NuttX targets.  Concurrent
+   * watcher add/remove only races with events that happened just
+   * before/after the watcher's lifetime window — exactly the same
+   * race that already existed between the unlock after this check
+   * and the subsequent re-acquire below.
+   *
+   * Without this fast path every write()/read() on a notify-eligible
+   * file serializes on g_inotify.lock, which lets long-running
+   * path-event holders (notify_open's lib_realpath, etc.) starve
+   * unrelated writers.  This was observed to delay gcov dumps far
+   * past the test timeout in Vela_System_Tools_Gcov_Integration.
+   */
+
+  if (notify_check_mask(mask) < 0)
     {
       return;
     }
