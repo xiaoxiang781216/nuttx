@@ -377,9 +377,12 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
             {
               if (*pp == conn)
                 {
+                  FAR struct rpmsg_socket_conn_s **np;
+
                   *pp = conn->next;
-                  conn->next = server->next;
-                  server->next = conn;
+                  conn->next = NULL;
+                  for (np = &server->next; *np; np = &(*np)->next);
+                  *np = conn;
                   rpmsg_socket_post(&server->recvsem);
                   rpmsg_socket_poll_notify(server, POLLIN);
                   break;
