@@ -106,15 +106,15 @@ DECLARE_PER_CPU_BMP(rspinlock_t, g_schedlock);
  *
  ****************************************************************************/
 
-#define spin_lock_init(l) \
-  do \
-    { \
-      if (sizeof(*(l)) > 0u) \
-        { \
-          memset((FAR void *)(l), 0, sizeof(*(l))); \
-        } \
-    } \
-  while (0)
+#if defined(CONFIG_TICKET_SPINLOCK) || defined(CONFIG_SPINLOCK) || \
+    !defined(CONFIG_HAVE_ZERO_SIZE_ARRAY)
+#  define spin_lock_init(l) \
+     do { memset((FAR void *)(l), 0, sizeof(*(l))); } while (0)
+#else
+/* spinlock_t is a zero-size type, nothing to initialize */
+
+#  define spin_lock_init(l) do { } while (0)
+#endif
 
 /****************************************************************************
  * Name: rspin_lock_init
