@@ -27,6 +27,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/lib/lib.h>
 #include <nuttx/lib/math32.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/queue.h>
@@ -69,6 +70,13 @@
     } \
   while(0)
 
+/* Dynamic hashtable allocation and deallocation. */
+
+#define hashtable_alloc_n(size) \
+  ((FAR hash_head_t *)lib_zalloc(sizeof(hash_head_t) * (size)))
+
+#define hashtable_free(table) lib_free(table)
+
 #define hashtable_add(table, item, key) \
   dq_addfirst(item, &table[HASH(key, hashtable_bits(table))])
 
@@ -98,6 +106,24 @@
 #define hashtable_for_every_safe_n(table, item, temp, i, size) \
   for ((i) = 0; (i) < (size); (i)++)                           \
     dq_for_every_safe(&table[i], item, temp)
+
+/* Iterate over whole hashtable, returning container structure entries. */
+
+#define hashtable_for_every_entry(table, entry, i, type, member) \
+  for ((i) = 0; (i) < hashtable_size(table); (i)++)              \
+    dq_for_every_entry(&table[i], entry, type, member)
+
+#define hashtable_for_every_entry_safe(table, entry, temp, i, type, member) \
+  for ((i) = 0; (i) < hashtable_size(table); (i)++)                         \
+    dq_for_every_entry_safe(&table[i], entry, temp, type, member)
+
+#define hashtable_for_every_entry_n(table, entry, i, size, type, member) \
+  for ((i) = 0; (i) < (size); (i)++)                                     \
+    dq_for_every_entry(&table[i], entry, type, member)
+
+#define hashtable_for_every_entry_safe_n(table, entry, temp, i, size, type, member) \
+  for ((i) = 0; (i) < (size); (i)++)                                                \
+    dq_for_every_entry_safe(&table[i], entry, temp, type, member)
 
 /* Iterate over all possible objects hashing to the same bucket. */
 
