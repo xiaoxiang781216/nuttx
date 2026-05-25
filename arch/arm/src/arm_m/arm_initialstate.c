@@ -29,6 +29,8 @@
 #include <string.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/irq.h>
+#include <nuttx/tls.h>
 #include <arch/arm_m/nvicpri.h>
 
 #include "arm_internal.h"
