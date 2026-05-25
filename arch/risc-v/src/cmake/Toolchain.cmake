@@ -483,7 +483,7 @@ if(CONFIG_BUILTIN_TOOLCHAIN)
       get_filename_component(libgcc_name ${libgcc_path} NAME)
       execute_process(
         COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-                --print-file-name=${libgcc_name} {RTLIB}
+                --print-file-name=${libgcc_name} ${RTLIB}
         OUTPUT_STRIP_TRAILING_WHITESPACE
         OUTPUT_VARIABLE libgcc)
       nuttx_add_extra_library(${libgcc})
