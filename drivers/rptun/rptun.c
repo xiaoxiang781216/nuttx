@@ -1139,16 +1139,16 @@ static int rptun_dev_wait(FAR struct rptun_priv_s *priv, unsigned long phase)
   return ret;
 }
 
-#ifdef CONFIG_SYSLOG_RPMSG_SERVER
 static void rptun_dev_dump(FAR struct rptun_priv_s *priv)
 {
+#ifdef CONFIG_SYSLOG_RPMSG_SERVER
   if (priv->trace_va != NULL)
     {
       _emerg("Dump %s's trace\n", RPTUN_GET_CPUNAME(priv->dev));
       syslog_rpmsg_dump(priv->trace_va);
     }
-}
 #endif
+}
 
 static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
                           unsigned long arg)
@@ -1180,11 +1180,9 @@ static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
       case RPTUNIOC_WAIT:
         ret = rptun_dev_wait(priv, arg);
         break;
-#ifdef CONFIG_SYSLOG_RPMSG_SERVER
       case RPTUNIOC_DUMP:
         rptun_dev_dump(priv);
         break;
-#endif
       default:
         ret = -ENOTTY;
         break;
@@ -1407,12 +1405,10 @@ static int rptun_notifier(FAR struct notifier_block *block,
 
       rptun_ioctl_foreach(NULL, RPTUNIOC_RESET, val);
 
-#ifdef CONFIG_SYSLOG_RPMSG_SERVER
       if (action == SYS_HALT)
         {
           rptun_ioctl_foreach(NULL, RPTUNIOC_DUMP, 0);
         }
-#endif
     }
   else if (action == PANIC_KERNEL)
     {
