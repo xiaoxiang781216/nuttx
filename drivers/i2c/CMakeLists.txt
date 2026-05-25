@@ -40,6 +40,10 @@ if(CONFIG_I2C)
     list(APPEND SRCS i2c_slave_driver.c)
   endif()
 
+  if(CONFIG_I2C_DUMMY)
+    list(APPEND SRCS i2c_dummy.c)
+  endif()
+
   if(CONFIG_I2C_RPMSG)
     list(APPEND SRCS i2c_rpmsg.c)
   endif()
