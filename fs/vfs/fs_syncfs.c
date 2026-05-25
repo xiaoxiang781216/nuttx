@@ -25,10 +25,12 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+#include <unistd.h>
+#include <errno.h>
+
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
-
-#include <errno.h>
 
 /****************************************************************************
  * Public Functions
