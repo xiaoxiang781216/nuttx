@@ -200,7 +200,7 @@ int up_set_irq_type(int irq, int mode)
   return -EINVAL;
 }
 
-void arm64_gic_irq_enable(unsigned int intid)
+static void arm64_gic_irq_enable(unsigned int intid)
 {
   uint32_t mask = BIT(intid & (GIC_NUM_INTR_PER_REG - 1));
   uint32_t idx  = intid / GIC_NUM_INTR_PER_REG;
@@ -220,7 +220,7 @@ void arm64_gic_irq_enable(unsigned int intid)
   putreg32(mask, ISENABLER(GET_DIST_BASE(intid), idx));
 }
 
-void arm64_gic_irq_disable(unsigned int intid)
+static void arm64_gic_irq_disable(unsigned int intid)
 {
   uint32_t mask = BIT(intid & (GIC_NUM_INTR_PER_REG - 1));
   uint32_t idx  = intid / GIC_NUM_INTR_PER_REG;
@@ -243,7 +243,7 @@ bool arm64_gic_irq_is_enabled(unsigned int intid)
   return (val & mask) != 0;
 }
 
-unsigned int arm64_gic_get_active_irq(void)
+static unsigned int arm64_gic_get_active_irq(void)
 {
   int intid;
 
@@ -281,7 +281,7 @@ unsigned int arm64_gic_get_active_fiq(void)
 }
 #endif
 
-void aarm64_gic_eoi_irq(unsigned int intid)
+static void aarm64_gic_eoi_irq(unsigned int intid)
 {
   /* Interrupt request deassertion from peripheral to GIC happens
    * by clearing interrupt condition by a write to the peripheral
@@ -721,6 +721,7 @@ void up_secure_irq(int irq, bool secure)
  *
  ***************************************************************************/
 
+#ifdef CONFIG_ARCH_IRQPRIO
 int up_prioritize_irq(int irq, int priority)
 {
   unsigned long base = GET_DIST_BASE(irq);
@@ -740,6 +741,7 @@ int up_prioritize_irq(int irq, int priority)
 
   return -EINVAL;
 }
+#endif
 
 /***************************************************************************
  * Name: up_affinity_irq

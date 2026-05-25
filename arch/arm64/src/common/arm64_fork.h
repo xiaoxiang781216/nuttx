@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <sys/types.h>
 #include <arch/irq.h>
 
 /****************************************************************************
@@ -50,6 +51,16 @@ struct fork_s
   uint64_t fpu[FPU_CONTEXT_REGS];
 #endif
 };
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+pid_t arm64_fork(const struct fork_s *context);
+
+#ifdef CONFIG_ARCH_FPU
+void arm64_fork_fpureg_save(struct fork_s *context);
+#endif
 
 #endif /* __ASSEMBLY__ */
 
