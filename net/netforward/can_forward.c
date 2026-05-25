@@ -26,12 +26,12 @@
 
 #include <nuttx/config.h>
 
-#include <string.h>
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
 
 #include <nuttx/can.h>
+#include <nuttx/hashtable.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/can.h>
@@ -45,8 +45,66 @@
 #include "netforward/netforward.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* CAN gateway hash table configuration.
+ * Exact-match rules are hashed into 2^N buckets by CAN ID.
+ * Wildcard/partial-mask/INV rules go into a dedicated wildcard bucket.
+ */
+
+#define NET_CANFORWARD_HASH_SIZE ((1 << CONFIG_NET_CANFORWARD_HASH_BITS) + 1)
+#define NET_CANFORWARD_WILDCARD_BUCKET  (NET_CANFORWARD_HASH_SIZE - 1)
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: can_forward_is_exact_match
+ *
+ * Description:
+ *   Check if a rule is an exact-match rule suitable for hash indexing.
+ *   Criteria:
+ *     - Standard frame: mask covers all 11 bits (0x7FF), no INV flag
+ *     - Extended frame: mask covers all 29 bits (0x1FFFFFFF), no INV flag
+ *
+ ****************************************************************************/
+
+static inline_function bool
+can_forward_is_exact_match(FAR const struct cangw_rule_s *rule)
+{
+  canid_t id   = rule->gw.ccgw.filter.can_id;
+  canid_t mask = rule->gw.ccgw.filter.can_mask;
+
+  /* INV rules match all IDs except the specified one, will go into
+   * the wildcard bucket and are always traversed.
+   */
+
+  if (id & CAN_INV_FILTER)
+    {
+      return false;
+    }
+
+  /* Extended frame: mask must cover all 29 bits */
+
+  if (id & CAN_EFF_FLAG)
+    {
+      return (mask & CAN_EFF_MASK) == CAN_EFF_MASK;
+    }
+
+  /* Standard frame: mask must cover all 11 bits */
+
+  return (mask & CAN_SFF_MASK) == CAN_SFF_MASK;
+}
 
 /****************************************************************************
  * Name: can_dev_forward
@@ -130,12 +188,9 @@ static int can_dev_forward(FAR struct net_driver_s *dev,
       return OK;
     }
 
-errout_with_fwd:
-  if (fwd->f_iob != NULL)
-    {
-      iob_free_chain(fwd->f_iob);
-    }
+  iob_free_chain(fwd->f_iob);
 
+errout_with_fwd:
   netfwd_free(fwd);
 
 errout:
@@ -174,6 +229,59 @@ static inline_function int can_forward_filter(FAR struct can_filter *filter,
 }
 
 /****************************************************************************
+ * Name: can_forward_match_bucket
+ *
+ * Description:
+ *   Traverse all rules in a single hash bucket and forward matching frames.
+ *
+ ****************************************************************************/
+
+static inline_function void
+can_forward_match_bucket(FAR struct net_driver_s *dev,
+                         FAR hash_head_t *bucket, canid_t id)
+{
+  FAR struct cangw_rule_s *fwdrule;
+
+  sq_for_every_entry(bucket, fwdrule, struct cangw_rule_s, node)
+    {
+      if (fwdrule->flags & CGW_FLAGS_CAN_DISABLED)
+        {
+          continue;
+        }
+
+      if (!can_forward_filter(&fwdrule->gw.ccgw.filter, id))
+        {
+          continue;
+        }
+
+      /* Note: ccgw.filter and cegw.filter share the same offset in the
+       * union, so the filter check above is valid for all gateway types.
+       */
+
+      switch (fwdrule->gwtype)
+        {
+          case CGW_TYPE_CAN_CAN:
+            can_dev_forward(dev, fwdrule);
+#ifdef CONFIG_NET_STATISTICS
+            g_netstats.cangw.recv++;
+#endif
+            break;
+
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+          case CGW_TYPE_CAN_ETH1722:
+            ieee1722acf_send(dev, fwdrule, dev->d_iob);
+#ifdef CONFIG_NET_STATISTICS
+            g_netstats.cangw.recv++;
+#endif
+            break;
+#endif
+          default:
+            break;
+        }
+    }
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -188,6 +296,8 @@ static inline_function int can_forward_filter(FAR struct can_filter *filter,
 int add_cangw_rule(FAR struct net_driver_s *dev,
                    FAR struct cangw_rule_s *cgw_rules)
 {
+  unsigned int bucket;
+
   DEBUGASSERT(dev && cgw_rules);
 
 #ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
@@ -212,7 +322,35 @@ int add_cangw_rule(FAR struct net_driver_s *dev,
 #endif
 
   netdev_lock(dev);
-  sq_addlast(&cgw_rules->node, &dev->d_cangw_rules);
+
+  /* Allocate hash table on first rule addition */
+
+  if (dev->d_cangw_rules == NULL)
+    {
+      dev->d_cangw_rules =
+        hashtable_alloc_n(NET_CANFORWARD_HASH_SIZE);
+      if (dev->d_cangw_rules == NULL)
+        {
+          netdev_unlock(dev);
+          return -ENOMEM;
+        }
+    }
+
+  if (can_forward_is_exact_match(cgw_rules))
+    {
+      /* Exact-match rule: hash by CAN ID into normal bucket */
+
+      bucket = HASH(cgw_rules->gw.ccgw.filter.can_id,
+                    CONFIG_NET_CANFORWARD_HASH_BITS);
+    }
+  else
+    {
+      /* Wildcard/partial-mask/INV rule: place in wildcard bucket */
+
+      bucket = NET_CANFORWARD_WILDCARD_BUCKET;
+    }
+
+  dq_addfirst(&cgw_rules->node, &dev->d_cangw_rules[bucket]);
   netdev_unlock(dev);
 
   return OK;
@@ -290,42 +428,51 @@ cangw_rule_match(FAR const struct cangw_rule_s *rtrule,
 
 int remove_cangw_rule(FAR struct net_driver_s *dev,
                       FAR const struct cangw_rule_s *rule,
-                      FAR sq_queue_t *removed)
+                      FAR dq_queue_t *removed)
 {
-  FAR sq_entry_t *current;
-  FAR sq_entry_t *tmp;
+  FAR struct cangw_rule_s *rtrule;
+  FAR struct cangw_rule_s *tmp;
   int count = 0;
+  int i;
 
   DEBUGASSERT(dev);
 
   if (removed)
     {
-      sq_init(removed);
+      dq_init(removed);
     }
 
   netdev_lock(dev);
 
-  sq_for_every_safe(&dev->d_cangw_rules, current, tmp)
+  if (dev->d_cangw_rules == NULL)
     {
-      FAR struct cangw_rule_s *rtrule =
-                              (FAR struct cangw_rule_s *)current;
+      netdev_unlock(dev);
+      return 0;
+    }
 
+  hashtable_for_every_entry_safe_n(dev->d_cangw_rules, rtrule, tmp,
+                                   i, NET_CANFORWARD_HASH_SIZE,
+                                   struct cangw_rule_s, node)
+    {
       /* If rule is NULL, remove all; otherwise match by criteria */
 
       if (rule == NULL || cangw_rule_match(rtrule, rule))
         {
-          sq_rem(current, &dev->d_cangw_rules);
+          dq_rem(&rtrule->node, &dev->d_cangw_rules[i]);
+
           if (removed)
             {
               /* Caller takes ownership — collect for deferred free */
 
-              sq_addlast(current, removed);
+              dq_addlast(&rtrule->node, removed);
             }
-          else if (kmm_heapmember(current))
+          else if (kmm_heapmember(rtrule))
             {
-              /* Only free nodes that were individually heap-allocated */
+              /* Only free nodes that were individually
+               * heap-allocated
+               */
 
-              kmm_free(current);
+              kmm_free(rtrule);
             }
 
           count++;
@@ -358,18 +505,24 @@ int modify_cangw_rule(FAR struct net_driver_s *dev,
                       FAR const struct cangw_rule_s *rule,
                       uint16_t flags)
 {
-  FAR sq_entry_t *entry;
+  FAR struct cangw_rule_s *rtrule;
   int count = 0;
+  int i;
 
   DEBUGASSERT(dev);
 
   netdev_lock(dev);
 
-  sq_for_every(&dev->d_cangw_rules, entry)
+  if (dev->d_cangw_rules == NULL)
     {
-      FAR struct cangw_rule_s *rtrule =
-                              (FAR struct cangw_rule_s *)entry;
+      netdev_unlock(dev);
+      return -ENOENT;
+    }
 
+  hashtable_for_every_entry_n(dev->d_cangw_rules, rtrule,
+                              i, NET_CANFORWARD_HASH_SIZE,
+                              struct cangw_rule_s, node)
+    {
       if (rule == NULL || cangw_rule_match(rtrule, rule))
         {
           rtrule->flags = (rtrule->flags & ~CGW_FLAGS_CAN_DISABLED) |
@@ -399,7 +552,9 @@ int modify_cangw_rule(FAR struct net_driver_s *dev,
  *   - dev->d_len holds the length of the received packet.
  *
  * Returned Value:
- *   Always return Zero to let the packet be continue received by can_input;
+ *   Zero is returned if the packet was successfully forwarded or no rule
+ *   matched;  A negated errno value is returned if forwarding is disabled
+ *   on the source device.
  *
  ****************************************************************************/
 
@@ -411,8 +566,7 @@ int can_forward(FAR struct net_driver_s *dev)
 #else
   FAR struct can_frame *frame = (FAR struct can_frame *)IOB_DATA(dev->d_iob);
 #endif
-  FAR const sq_entry_t *entry;
-  FAR struct cangw_rule_s *fwdrule;
+  unsigned int bucket;
 
   /* Check if source device supports IP forwarding capability */
 
@@ -430,51 +584,26 @@ int can_forward(FAR struct net_driver_s *dev)
       return OK;
     }
 
-  /* Search for a valid fwdrule */
+  /* No rules configured, nothing to forward */
 
-  sq_for_every(&dev->d_cangw_rules, entry)
+  if (dev->d_cangw_rules == NULL)
     {
-      fwdrule = (FAR struct cangw_rule_s *)entry;
-
-      /* Skip disabled rules */
-
-      if (fwdrule->flags & CGW_FLAGS_CAN_DISABLED)
-        {
-          continue;
-        }
-
-      switch (fwdrule->gwtype)
-        {
-          case CGW_TYPE_CAN_CAN:
-            if (can_forward_filter(&fwdrule->gw.ccgw.filter, frame->can_id))
-              {
-                can_dev_forward(dev, fwdrule);
-#ifdef CONFIG_NET_STATISTICS
-                g_netstats.cangw.recv++;
-#endif
-              }
-            break;
-#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
-          case CGW_TYPE_CAN_ETH1722:
-            if (can_forward_filter(&fwdrule->gw.cegw.filter,
-                                   frame->can_id))
-              {
-                ieee1722acf_send(dev, fwdrule, dev->d_iob);
-#ifdef CONFIG_NET_STATISTICS
-                g_netstats.cangw.recv++;
-#endif
-              }
-            break;
-#endif
-          default:
-            break;
-        }
+      return OK;
     }
 
-  /* Return success. can_input will return to the network driver with
-   * dev->d_len set to the packet size and the network driver will perform
-   * the transfer.
+  /* Step 1: Look up the exact-match hash bucket for this frame's ID.
+   * Callers must ensure filter.can_id carries CAN_EFF_FLAG for extended
+   * frames so that the hash key matches between add_cangw_rule() and here.
    */
+
+  bucket = HASH(frame->can_id, CONFIG_NET_CANFORWARD_HASH_BITS);
+  can_forward_match_bucket(dev, &dev->d_cangw_rules[bucket], frame->can_id);
+
+  /* Step 2: Traverse the wildcard bucket (partial-mask/INV rules) */
+
+  can_forward_match_bucket(dev,
+    &dev->d_cangw_rules[NET_CANFORWARD_WILDCARD_BUCKET],
+    frame->can_id);
 
   return OK;
 }

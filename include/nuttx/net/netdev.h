@@ -60,6 +60,11 @@
 #include <nuttx/net/ip.h>
 #include <nuttx/nuttx.h>
 
+#ifdef CONFIG_NET_CANFORWARD
+#  include <nuttx/hashtable.h>
+#  include <nuttx/net/cangw.h>
+#endif
+
 #ifdef CONFIG_NET_IGMP
 #  include <nuttx/net/igmp.h>
 #endif
@@ -571,7 +576,7 @@ struct net_driver_s
   /* CAN gateway */
 
 #ifdef CONFIG_NET_CANFORWARD
-  sq_queue_t d_cangw_rules; /* CAN gateway rules */
+  FAR hash_head_t *d_cangw_rules; /* Allocated on first add_cangw_rule */
 #endif /* CONFIG_NET_CANFORWARD */
 
 #ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF

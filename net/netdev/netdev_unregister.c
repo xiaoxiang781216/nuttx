@@ -35,6 +35,7 @@
 
 #include <net/if.h>
 #include <net/ethernet.h>
+#include <nuttx/hashtable.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/mutex.h>
 
@@ -163,6 +164,14 @@ int netdev_unregister(FAR struct net_driver_s *dev)
       netdev_list_unlock();
 
       nxrmutex_destroy(&dev->d_lock);
+
+#ifdef CONFIG_NET_CANFORWARD
+      if (dev->d_cangw_rules != NULL)
+        {
+          hashtable_free(dev->d_cangw_rules);
+          dev->d_cangw_rules = NULL;
+        }
+#endif
 
 #if CONFIG_NETDEV_STATISTICS_LOG_PERIOD > 0
       work_cancel_sync(NETDEV_STATISTICS_WORK, &dev->d_statistics.logwork);

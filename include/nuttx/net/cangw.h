@@ -31,6 +31,7 @@
 
 #include <stdint.h>
 
+#include <nuttx/hashtable.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
 #include <nuttx/can.h>
@@ -79,9 +80,9 @@ struct can_eth_gw_s
 
 struct cangw_rule_s
 {
-  /* This node is used to maintain a single-linked list of gateway rules. */
+  /* This node is used to maintain a hash-chained list of gateway rules. */
 
-  sq_entry_t node;
+  hash_node_t node;
   FAR struct net_driver_s *dest_dev;    /* Destination Device */
   union
   {
@@ -132,7 +133,7 @@ int add_cangw_rule(FAR struct net_driver_s *dev,
 
 int remove_cangw_rule(FAR struct net_driver_s *dev,
                       FAR const struct cangw_rule_s *rule,
-                      FAR sq_queue_t *removed);
+                      FAR dq_queue_t *removed);
 
 int modify_cangw_rule(FAR struct net_driver_s *dev,
                       FAR const struct cangw_rule_s *rule,
