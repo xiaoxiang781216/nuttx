@@ -54,7 +54,9 @@
 
 #define HOST_LIBUSB_EP_NUM(addr)   ((addr) & USB_ENDPOINT_NUMBER_MASK)
 #define HOST_LIBUSB_EP_DIR(addr)   ((addr) & USB_ENDPOINT_DIR_MASK)
-#define HOST_LIBUSB_NINTERFACES(c) ((c)->bNumInterfaces)
+#define HOST_LIBUSB_NINTERFACES(c)  ((c)->bNumInterfaces)
+#define HOST_LIBUSB_IFACE_CLASS(i)  ((i)->bInterfaceClass)
+#define HOST_LIBUSB_IFACE_SUBCLASS(i) ((i)->bInterfaceSubClass)
 
 #define HOST_LIBUSB_FIFO_NUM    8
 
@@ -604,18 +606,54 @@ static bool host_libusb_connectdevice(void)
         }
 
 #ifdef CONFIG_SIM_USB_MATCHBYCLASS
-  /* Match USB devices with configurable class, subclass, and protocol.
-   * (CONFIG_SIM_USB_MATCHBYCLASS) instead of fixed VID/PID.
-   *
-   * Example matching values:
-   * - bDeviceClass:    CLASS_WIRELESS     (0xe0) for wireless devices
-   * - bDeviceSubClass: SUBCLASS_BLUETOOTH (0x01) for Bluetooth devices
-   * - bDeviceProtocol: PROTOCOL_BLUETOOTH (0x01) for Bluetooth protocol
+  /* Match USB devices by class. First check device-level class,
+   * then fall through to interface-level scan for composite
+   * devices (class 0xef/IAD) where target class only appears
+   * at the interface level.
    */
 
       if (dev_desc.bDeviceClass == CONFIG_SIM_USB_CLASS &&
-          dev_desc.bDeviceSubClass == CONFIG_SIM_USB_SUBCLASS &&
-          dev_desc.bDeviceProtocol == CONFIG_SIM_USB_PROTOCOL)
+          dev_desc.bDeviceSubClass == CONFIG_SIM_USB_SUBCLASS)
+        {
+          /* Device-level class match (e.g. Bluetooth 0xe0) */
+        }
+      else
+        {
+          struct libusb_config_descriptor *config = NULL;
+          int match = 0;
+          int r;
+
+          r = host_uninterruptible(
+                libusb_get_active_config_descriptor, dev, &config);
+          if (r == 0 && config != NULL)
+            {
+              int iface;
+              for (iface = 0;
+                   iface < HOST_LIBUSB_NINTERFACES(config);
+                   iface++)
+                {
+                  const struct libusb_interface *intf =
+                    &config->interface[iface];
+                  if (intf->num_altsetting > 0 &&
+                      HOST_LIBUSB_IFACE_CLASS(&intf->altsetting[0]) ==
+                        CONFIG_SIM_USB_CLASS &&
+                      HOST_LIBUSB_IFACE_SUBCLASS(&intf->altsetting[0]) ==
+                        CONFIG_SIM_USB_SUBCLASS)
+                    {
+                      match = 1;
+                      break;
+                    }
+                }
+
+              host_uninterruptible(
+                libusb_free_config_descriptor, config);
+            }
+
+          if (!match)
+            {
+              continue;
+            }
+        }
 #else
       if (dev_desc.idVendor == CONFIG_SIM_USB_VID ||
           dev_desc.idProduct == CONFIG_SIM_USB_PID)
@@ -842,13 +880,10 @@ int host_usbhost_init(void)
     }
 
 #ifdef CONFIG_SIM_USB_MATCHBYCLASS
-  /* Match USB devices with configurable class, subclass, and protocol.
-   * (CONFIG_SIM_USB_MATCHBYCLASS) instead of fixed VID/PID.
-   *
-   * Example matching values:
-   * - bDeviceClass:    CLASS_WIRELESS     (0xe0) for wireless devices
-   * - bDeviceSubClass: SUBCLASS_BLUETOOTH (0x01) for Bluetooth devices
-   * - bDeviceProtocol: PROTOCOL_BLUETOOTH (0x01) for Bluetooth protocol
+  /* For interface-level class matching (e.g. UVC), we cannot rely
+   * on libusb hotplug's device-class filter (it only checks device
+   * descriptor class). Register for all devices and filter in the
+   * connect path via host_libusb_connectdevice().
    */
 
   ret = host_uninterruptible(libusb_hotplug_register_callback,
@@ -858,7 +893,7 @@ int host_usbhost_init(void)
                              0,
                              LIBUSB_HOTPLUG_MATCH_ANY,
                              LIBUSB_HOTPLUG_MATCH_ANY,
-                             CONFIG_SIM_USB_CLASS,
+                             LIBUSB_HOTPLUG_MATCH_ANY,
                              host_libusb_hotplug_callback,
                              NULL, NULL);
 #else
