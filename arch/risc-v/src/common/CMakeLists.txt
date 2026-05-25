@@ -139,3 +139,12 @@ if(CONFIG_RISCV_PMU)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
+
+nuttx_add_aux_library(STARTUP_OBJS crt0.c)
+
+target_compile_options(
+  STARTUP_OBJS
+  PRIVATE
+    $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_COMPILE_OPTIONS>>)
+
+nuttx_elf_link_options(-nostartfiles -nostdlib)
