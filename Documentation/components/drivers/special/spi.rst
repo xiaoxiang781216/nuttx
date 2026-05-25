@@ -23,3 +23,24 @@ SPI Device Drivers
 
 -  **Examples**: ``drivers/loop.c``,
    ``drivers/mmcsd/mmcsd_spi.c``, ``drivers/ramdisk.c``, etc.
+
+RPMsg SPI
+=========
+
+NuttX can expose an SPI controller across a RPMsg link. Enable
+``CONFIG_SPI_RPMSG`` on the client side and ``CONFIG_SPI_RPMSG_SERVER`` on
+the side that owns the real SPI bus. ``CONFIG_SPI_EXCHANGE`` is also required.
+
+The client creates a normal ``struct spi_dev_s`` instance with
+``spi_rpmsg_initialize(cpuname, name)``. The server exports a local SPI
+controller with ``spi_rpmsg_server_initialize(name, spi)``. Board code may
+then pass the client instance to device drivers, or register it with
+``spi_register()`` so NSH tools can access it as ``/dev/spiN``.
+
+RPMsg is only the transport. SPI transfers use a private RPMsg payload
+format carrying the selected chip, mode, bits per word,
+frequency, delay, transmit data, receive data, and transfer result.
+
+Bus locking never crosses the link: every message executes atomically on
+the server, and an ``spi_transfer()`` sequence that fits into one RPMsg
+buffer is forwarded as a single message.

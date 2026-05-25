@@ -234,6 +234,21 @@ config SPI_DRIVER
 		this driver is to support SPI testing.  It is not suitable for use
 		in any real driver application.
 
+config SPI_RPMSG
+	bool "RPMSG SPI controller"
+	default n
+	depends on RPMSG && SPI_EXCHANGE
+	---help---
+		Enable an SPI lower-half that forwards SPI operations to a remote
+		NuttX instance over RPMSG.
+
+config SPI_RPMSG_SERVER
+	bool "RPMSG SPI server"
+	default n
+	depends on RPMSG && SPI_EXCHANGE
+	---help---
+		Export a local SPI lower-half to remote RPMSG SPI clients.
+
 config SPI_ICE40
 	bool "SPI iCE40 driver"
 	default n

@@ -39,6 +39,14 @@ ifeq ($(CONFIG_SPI_SLAVE_DRIVER),y)
   CSRCS += spi_slave_driver.c
 endif
 
+ifeq ($(CONFIG_SPI_RPMSG),y)
+  CSRCS += spi_rpmsg.c
+endif
+
+ifeq ($(CONFIG_SPI_RPMSG_SERVER),y)
+  CSRCS += spi_rpmsg_server.c
+endif
+
 # Include the selected SPI drivers
 
 ifeq ($(CONFIG_SPI_BITBANG),y)
