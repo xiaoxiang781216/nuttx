@@ -48,8 +48,15 @@
  * These definitions provide the aligned stack allocations.
  */
 
+#ifdef ARCH_INTERRUPTSTACK_SECTION
+static uint64_t g_irqstack_alloc[INTSTACK_ALLOC >> 3]
+  locate_data(ARCH_INTERRUPTSTACK_SECTION);
+static uint64_t g_fiqstack_alloc[INTSTACK_ALLOC >> 3]
+  locate_data(ARCH_INTERRUPTSTACK_SECTION);
+#else
 static uint64_t g_irqstack_alloc[INTSTACK_ALLOC >> 3];
 static uint64_t g_fiqstack_alloc[INTSTACK_ALLOC >> 3];
+#endif
 
 /* These are arrays that point to the top of each interrupt stack */
 

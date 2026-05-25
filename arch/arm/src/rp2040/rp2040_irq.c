@@ -63,7 +63,12 @@ extern void rp2040_send_irqreq(int irqreq);
  * These definitions provide the aligned stack allocations.
  */
 
+#ifdef ARCH_INTERRUPTSTACK_SECTION
+static uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3]
+  locate_data(ARCH_INTERRUPTSTACK_SECTION);
+#else
 static uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3];
+#endif
 
 /* These definitions provide the "top" of the push-down stacks. */
 
