@@ -29,3 +29,20 @@ I2C Device Drivers
 -  **Binding I2C Slave Drivers**. I2C slave drivers are normally directly
    accessed by user code, We can read and write to device nodes using posix
    interfaces.
+
+RPMsg I2C
+=========
+
+NuttX can expose an I2C controller across a RPMsg link. Enable
+``CONFIG_I2C_RPMSG`` on the client side and ``CONFIG_I2C_RPMSG_SERVER`` on
+the side that owns the real I2C bus.
+
+The client creates a normal ``struct i2c_master_s`` instance with
+``i2c_rpmsg_initialize(cpuname, name)``. The server exports a local I2C
+controller with ``i2c_rpmsg_server_initialize(name, i2c)``. Board code may
+then pass the client instance to device drivers, or register it with
+``i2c_register()`` so NSH tools can access it as ``/dev/i2cN``.
+
+RPMsg is only the transport. I2C transfers use a private RPMsg payload
+format carrying each NuttX ``struct i2c_msg_s`` with its address, flags, and
+frequency.
