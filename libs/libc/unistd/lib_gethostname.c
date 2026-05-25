@@ -45,37 +45,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <nuttx/irq.h>
-#include <nuttx/spinlock.h>
-
-/* Further, in the protected and kernel build modes where kernel and
- * application code are separated, the hostname is a common system property
- * and must reside only in the kernel.  In that case, this accessor
- * function only be called from user space is only via a kernel system call.
- */
-
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* The default host name is a system configuration setting.  This may be
- * changed via sethostname(), however.
- */
-
-#ifndef CONFIG_LIBC_HOSTNAME
-#  define CONFIG_LIBC_HOSTNAME ""
-#endif
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/* This is the system hostname */
-
-char g_hostname[HOST_NAME_MAX + 1] = CONFIG_LIBC_HOSTNAME;
-spinlock_t g_hostname_lock = SP_UNLOCKED;
+#include <nuttx/mutex.h>
+#include <nuttx/tls_task.h>
 
 /****************************************************************************
  * Public Functions
@@ -106,18 +77,16 @@ spinlock_t g_hostname_lock = SP_UNLOCKED;
 
 int gethostname(FAR char *name, size_t namelen)
 {
-  irqstate_t flags;
+  FAR struct task_info_s *info = task_get_info();
 
   /* Return the host name, truncating to fit into the user provided buffer.
-   * The hostname is global resource.  There is a microscopic possibility
-   * that it could change while we are copying it.
+   * The hostname is stored in task_info_s.  Use the task lock to protect
+   * against concurrent access.
    */
 
-  flags = spin_lock_irqsave(&g_hostname_lock);
-  strlcpy(name, g_hostname, namelen);
-  spin_unlock_irqrestore(&g_hostname_lock, flags);
+  nxrmutex_lock(&info->ta_lock);
+  strlcpy(name, info->ta_hostname, namelen);
+  nxrmutex_unlock(&info->ta_lock);
 
   return 0;
 }
-
-#endif /* CONFIG_BUILD_FLAT || __KERNEL__ */

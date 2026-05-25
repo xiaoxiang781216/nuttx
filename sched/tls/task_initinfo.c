@@ -26,6 +26,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
@@ -152,6 +153,11 @@ int task_init_info(FAR struct task_group_s *group)
 
 #ifdef CONFIG_SYSLOG
       info->ta_syslog_mask = g_syslog_mask[NXTAG_GLOBAL];
+#endif
+
+#ifdef CONFIG_LIBC_HOSTNAME
+      strlcpy(info->ta_hostname, CONFIG_LIBC_HOSTNAME,
+              sizeof(info->ta_hostname));
 #endif
       info->ta_seed48[0] = 0;
       info->ta_seed48[1] = 0;

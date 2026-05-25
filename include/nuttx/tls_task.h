@@ -143,6 +143,7 @@ struct task_info_s
   char                  ta_asctime[26];
   struct hsearch_data   ta_htab;
   char                  ta_ttyname[TTY_NAME_MAX];
+  char                  ta_hostname[HOST_NAME_MAX + 1];
   struct tm             ta_gmtime;
   int                   ta_passwd_index;
   struct passwd         ta_passwd;
