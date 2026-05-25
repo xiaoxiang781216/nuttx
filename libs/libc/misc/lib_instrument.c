@@ -26,6 +26,8 @@
 
 #include <nuttx/atomic.h>
 #include <nuttx/instrument.h>
+#include <nuttx/irq.h>
+#include <nuttx/percpu.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -41,8 +43,10 @@
 
 /* Use static to avoid instrument bootstrap */
 
-static atomic_t g_magic;
-static sq_queue_t g_instrument_queue;
+static DEFINE_PER_CPU_BSS_BMP(atomic_t, g_magic);
+#define g_magic this_cpu_var_bmp(g_magic)
+static DEFINE_PER_CPU_BSS_BMP(sq_queue_t, g_instrument_queue);
+#define g_instrument_queue this_cpu_var_bmp(g_instrument_queue)
 
 /****************************************************************************
  * Public Functions
