@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <errno.h>
 
+#include <nuttx/environ.h>
 #include <nuttx/mutex.h>
 #include <nuttx/tls_task.h>
 

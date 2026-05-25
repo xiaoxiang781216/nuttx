@@ -161,4 +161,8 @@ int pthread_mutex_restorelock(FAR struct pthread_mutex_s *mutex,
 #  define pthread_mutex_restorelock(m,v)    -mutex_restorelock(&(m)->mutex,v)
 #endif
 
+#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
+void pthread_mutex_inconsistent(FAR struct tls_info_s *tls);
+#endif
+
 #endif /* __INCLUDE_LIBS_LIBC_PTHREAD_H */
