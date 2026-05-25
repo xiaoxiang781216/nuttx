@@ -36,6 +36,7 @@
 
 #include "sched/sched.h"
 #include "group/group.h"
+#include "task/task.h"
 #include "pthread/pthread.h"
 
 #ifndef CONFIG_DISABLE_PTHREAD

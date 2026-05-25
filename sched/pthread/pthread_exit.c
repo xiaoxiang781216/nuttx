@@ -36,6 +36,7 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/pthread.h>
 #include <nuttx/sched.h>
 #include <nuttx/signal.h>
 

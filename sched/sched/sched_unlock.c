@@ -31,6 +31,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/arch.h>
+#include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 
 #include "irq/irq.h"

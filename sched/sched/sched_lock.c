@@ -34,6 +34,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
