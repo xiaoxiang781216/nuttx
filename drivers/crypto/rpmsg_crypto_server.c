@@ -48,9 +48,24 @@
 struct rpmsg_crypto_server_data_s
 {
   uint64_t tid;
-  struct cryptop crp;
-  struct cryptodesc crda;
-  struct cryptodesc crde;
+
+  /* Operation data - symmetric or asymmetric, never both */
+
+  union
+  {
+    struct
+    {
+      struct cryptop crp;
+      struct cryptodesc crda;
+      struct cryptodesc crde;
+    };
+
+    struct
+    {
+      struct cryptkop krp;
+      unsigned char keybuf[CONFIG_CRYPTO_RPMSG_RSA_KEYBUF_SIZE];
+    };
+  };
 
   /* Async callback context */
 
@@ -87,9 +102,10 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
                                            FAR void *data, size_t len,
                                            uint32_t src, FAR void *priv);
 
-/* Async completion callback */
+/* Async completion callbacks */
 
 static int rpmsg_crypto_done_cb(FAR struct cryptop *crp);
+static int rpmsg_crypto_kdone_cb(FAR struct cryptkop *krp);
 
 /****************************************************************************
  * Private Data
@@ -135,6 +151,32 @@ static int rpmsg_crypto_done_cb(FAR struct cryptop *crp)
 }
 
 /****************************************************************************
+ * Name: rpmsg_crypto_kdone_cb
+ *
+ * Description:
+ *   Completion callback for asymmetric crypto operations. Sends the pre-
+ *   filled response, releases the held rx buffer, and frees the per-call
+ *   heap context. DEBUGASSERT guards against backend double completion
+ *   which would otherwise free the context twice.
+ *
+ ****************************************************************************/
+
+static int rpmsg_crypto_kdone_cb(FAR struct cryptkop *krp)
+{
+  FAR struct rpmsg_crypto_server_data_s *rcsdata = krp->krp_opaque;
+  FAR struct rpmsg_crypto_kprocess_s *rsp = rcsdata->rsp;
+
+  DEBUGASSERT(rsp != NULL);
+
+  rsp->header.result = krp->krp_status;
+  rpmsg_send_nocopy(rcsdata->ept, rsp, rcsdata->rsplen);
+  rpmsg_release_rx_buffer(rcsdata->ept, rcsdata->rxbuf);
+  rcsdata->rsp = NULL;
+  kmm_free(rcsdata);
+  return OK;
+}
+
+/****************************************************************************
  * Name: rpmsg_crypto_dispatch
  *
  * Description:
@@ -171,6 +213,57 @@ static int rpmsg_crypto_dispatch(
       crypto_invoke(&rcsdata->crp);
       rsp->header.result = rcsdata->crp.crp_etype;
       rpmsg_send_nocopy(ept, rsp, rsplen);
+    }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: rpmsg_crypto_kdispatch
+ *
+ * Description:
+ *   Common dispatch helper for asymmetric crypto operations.
+ *
+ ****************************************************************************/
+
+static int rpmsg_crypto_kdispatch(
+    FAR struct rpmsg_crypto_server_data_s *rcsdata,
+    FAR struct rpmsg_endpoint *ept, FAR void *msg,
+    FAR void *rsp, uint32_t rsplen)
+{
+  rcsdata->ept = ept;
+  rcsdata->rxbuf = msg;
+  rcsdata->rsplen = rsplen;
+
+  if (rcsdata->krp.krp_flags & CRYPTO_F_CBIMM)
+    {
+      /* Async path: hold rx buffer, set callback, let ISR send response */
+
+      int ret;
+
+      rcsdata->rsp = rsp;
+      rcsdata->krp.krp_callback = rpmsg_crypto_kdone_cb;
+      rcsdata->krp.krp_opaque = rcsdata;
+      rpmsg_hold_rx_buffer(ept, msg);
+      ret = crypto_kinvoke(&rcsdata->krp);
+      if (ret != 0)
+        {
+          ((FAR struct rpmsg_crypto_kprocess_s *)rsp)->header.result
+              = ret;
+          rpmsg_send_nocopy(ept, rsp, rsplen);
+          rpmsg_release_rx_buffer(ept, msg);
+          kmm_free(rcsdata);
+        }
+    }
+  else
+    {
+      /* Sync path: invoke and send response directly */
+
+      crypto_kinvoke(&rcsdata->krp);
+      ((FAR struct rpmsg_crypto_kprocess_s *)rsp)->header.result =
+          rcsdata->krp.krp_status;
+      rpmsg_send_nocopy(ept, rsp, rsplen);
+      kmm_free(rcsdata);
     }
 
   return 0;
@@ -900,28 +993,51 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
                           size_t len, uint32_t src, FAR void *priv)
 {
   FAR struct rpmsg_crypto_kprocess_s *rsp = NULL;
+  FAR struct rpmsg_crypto_server_data_s *rcsdata;
   FAR struct crparam *output = NULL;
   FAR struct crparam *input = NULL;
   FAR struct crparam *dp = NULL;
-  struct cryptkop krp;
-  unsigned char keybuf[CONFIG_CRYPTO_RPMSG_RSA_KEYBUF_SIZE];
+  FAR struct cryptkop *krp;
   uint32_t data_len = 0;
   uint32_t space;
   uint32_t keylen;
   int ret = 0;
 
-  memset(&krp, 0, sizeof(krp));
-  keylen = msg->ctrl.op_flf.akcipher.key_len;
-  krp.krp_padding = msg->ctrl.op_flf.akcipher.algo_flf.rsa.padding_algo;
-  krp.krp_hash = msg->ctrl.op_flf.akcipher.algo_flf.rsa.hash_algo;
+  /* Allocate kprocess context on heap for async lifetime */
+
+  rcsdata = kmm_zalloc(sizeof(struct rpmsg_crypto_server_data_s));
+  if (rcsdata == NULL)
+    {
+      rpmsgerr("Failed to allocate kprocess context\n");
+      msg->header.result = -ENOMEM;
+      return rpmsg_send(ept, &msg->header, sizeof(msg->header));
+    }
 
   rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
   if (rsp == NULL)
     {
       rpmsgerr("get tx payload failed or no enough space\n");
+      kmm_free(rcsdata);
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
+
+  rsp->header = msg->header;
+  rsp->ctrl = msg->ctrl;
+  rsp->data = msg->data;
+
+  keylen = msg->ctrl.op_flf.akcipher.key_len;
+  if (keylen > sizeof(rcsdata->keybuf))
+    {
+      rpmsgerr("rsa key length %lu exceeds buffer size %zu\n",
+               keylen, sizeof(rcsdata->keybuf));
+      ret = -EOVERFLOW;
+      goto err;
+    }
+
+  krp = &rcsdata->krp;
+  krp->krp_padding = msg->ctrl.op_flf.akcipher.algo_flf.rsa.padding_algo;
+  krp->krp_hash = msg->ctrl.op_flf.akcipher.algo_flf.rsa.hash_algo;
 
   /* Import key */
 
@@ -929,15 +1045,15 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
                          VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PRIVATE)
     {
       ret = rpmsg_crypto_rsa_parse_private_key(msg->buf, keylen,
-                                               keybuf, &krp);
-      krp.krp_keytype = CRYPTO_KEY_TYPE_PRIVATE;
+                                               rcsdata->keybuf, krp);
+      krp->krp_keytype = CRYPTO_KEY_TYPE_PRIVATE;
     }
   else if (msg->ctrl.op_flf.akcipher.key_type ==
                          VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PUBLIC)
     {
       ret = rpmsg_crypto_rsa_parse_public_key(msg->buf, keylen,
-                                              keybuf, &krp);
-      krp.krp_keytype = CRYPTO_KEY_TYPE_PUBLIC;
+                                              rcsdata->keybuf, krp);
+      krp->krp_keytype = CRYPTO_KEY_TYPE_PUBLIC;
     }
 
   if (ret < 0)
@@ -946,84 +1062,86 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
       goto err;
     }
 
-  input = &krp.krp_param[0];
+  input = &krp->krp_param[0];
   input->crp_p = msg->buf + keylen;
   input->crp_nbits = msg->data.op_flf.akcipher.src_data_len * 8;
 
   /* padding processing data */
 
-  rsp->header = msg->header;
-  rsp->ctrl = msg->ctrl;
-  rsp->data = msg->data;
-  krp.krp_flags = msg->data.header.flag;
-  dp = &krp.krp_param[6];
+  krp->krp_flags = msg->data.header.flag;
+  dp = &krp->krp_param[6];
   switch (msg->data.header.opcode)
     {
       case VIRTIO_CRYPTO_AKCIPHER_DECRYPT:
         if (dp && dp->crp_nbits != 0)
           {
-            krp.krp_op = CRK_MOD_EXP_CRT;
-            krp.krp_iparams = 9;
-            krp.krp_oparams = 1;
+            krp->krp_op = CRK_MOD_EXP_CRT;
+            krp->krp_iparams = 9;
+            krp->krp_oparams = 1;
           }
         else
           {
-            krp.krp_op = CRK_MOD_EXP;
-            krp.krp_iparams = 3;
-            krp.krp_oparams = 1;
+            krp->krp_op = CRK_MOD_EXP;
+            krp->krp_iparams = 3;
+            krp->krp_oparams = 1;
           }
 
-        krp.krp_optype = CRYPTO_OP_DECRYPT;
-        output = &krp.krp_param[krp.krp_iparams + krp.krp_oparams - 1];
+        krp->krp_optype = CRYPTO_OP_DECRYPT;
+        output = &krp->krp_param[krp->krp_iparams +
+                                 krp->krp_oparams - 1];
         output->crp_p = rsp->buf;
         output->crp_nbits = msg->data.op_flf.akcipher.dst_data_len * 8;
         data_len += msg->data.op_flf.akcipher.dst_data_len;
         break;
       case VIRTIO_CRYPTO_AKCIPHER_ENCRYPT:
-        krp.krp_op = CRK_MOD_EXP;
-        krp.krp_iparams = 3;
-        krp.krp_oparams = 1;
-        krp.krp_optype = CRYPTO_OP_ENCRYPT;
-        output = &krp.krp_param[krp.krp_iparams + krp.krp_oparams - 1];
+        krp->krp_op = CRK_MOD_EXP;
+        krp->krp_iparams = 3;
+        krp->krp_oparams = 1;
+        krp->krp_optype = CRYPTO_OP_ENCRYPT;
+        output = &krp->krp_param[krp->krp_iparams +
+                                 krp->krp_oparams - 1];
         output->crp_p = rsp->buf;
         output->crp_nbits = msg->data.op_flf.akcipher.dst_data_len * 8;
         data_len += msg->data.op_flf.akcipher.dst_data_len;
         break;
       case VIRTIO_CRYPTO_AKCIPHER_SIGN:
-        if (krp.krp_padding == CRYPTO_RSA_PKCS1_PADDING)
+        if (krp->krp_padding == CRYPTO_RSA_PKCS1_PADDING)
           {
-            krp.krp_op = CRK_RSA_PKCS15_SIGN;
+            krp->krp_op = CRK_RSA_PKCS15_SIGN;
           }
-        else if (krp.krp_padding == CRYPTO_RSA_OAEP_PADDING)
+        else if (krp->krp_padding == CRYPTO_RSA_OAEP_PADDING)
           {
-            krp.krp_op = CRK_RSA_PSS_SIGN;
+            krp->krp_op = CRK_RSA_PSS_SIGN;
           }
 
-        krp.krp_iparams = 9;
-        krp.krp_oparams = 1;
-        krp.krp_optype = CRYPTO_OP_SIGN;
-        output = &krp.krp_param[krp.krp_iparams + krp.krp_oparams - 1];
+        krp->krp_iparams = 9;
+        krp->krp_oparams = 1;
+        krp->krp_optype = CRYPTO_OP_SIGN;
+        output = &krp->krp_param[krp->krp_iparams +
+                                 krp->krp_oparams - 1];
         output->crp_p = rsp->buf;
         output->crp_nbits = msg->data.op_flf.akcipher.dst_data_len * 8;
         data_len += msg->data.op_flf.akcipher.dst_data_len;
         break;
       case VIRTIO_CRYPTO_AKCIPHER_VERIFY:
-        if (krp.krp_padding == CRYPTO_RSA_PKCS1_PADDING)
+        if (krp->krp_padding == CRYPTO_RSA_PKCS1_PADDING)
           {
-            krp.krp_op = CRK_RSA_PKCS15_VERIFY;
-            krp.krp_iparams = 5;
-            krp.krp_oparams = 0;
-            output = &krp.krp_param[krp.krp_iparams + krp.krp_oparams - 1];
+            krp->krp_op = CRK_RSA_PKCS15_VERIFY;
+            krp->krp_iparams = 5;
+            krp->krp_oparams = 0;
+            output = &krp->krp_param[krp->krp_iparams +
+                                     krp->krp_oparams - 1];
           }
-        else if (krp.krp_padding == CRYPTO_RSA_OAEP_PADDING)
+        else if (krp->krp_padding == CRYPTO_RSA_OAEP_PADDING)
           {
-            krp.krp_op = CRK_RSA_PSS_VERIFY;
-            krp.krp_iparams = 4;
-            krp.krp_oparams = 0;
-            output = &krp.krp_param[krp.krp_iparams + krp.krp_oparams - 1];
+            krp->krp_op = CRK_RSA_PSS_VERIFY;
+            krp->krp_iparams = 4;
+            krp->krp_oparams = 0;
+            output = &krp->krp_param[krp->krp_iparams +
+                                     krp->krp_oparams - 1];
           }
 
-        krp.krp_optype = CRYPTO_OP_VERIFY;
+        krp->krp_optype = CRYPTO_OP_VERIFY;
         output->crp_p = msg->buf + keylen + input->crp_nbits / 8;
         output->crp_nbits = msg->data.op_flf.akcipher.dst_data_len * 8;
         break;
@@ -1032,17 +1150,13 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
         goto err;
     }
 
-  rsp->header.result = crypto_kinvoke(&krp);
-  if (rsp->header.result == 0)
-    {
-      rsp->header.result = krp.krp_status;
-    }
-
-  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + data_len);
+  return rpmsg_crypto_kdispatch(rcsdata, ept, msg, rsp,
+                                sizeof(*rsp) + data_len);
 
 err:
   rsp->header = msg->header;
   rsp->header.result = ret;
+  kmm_free(rcsdata);
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp));
 }
 
@@ -1051,6 +1165,7 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
                             FAR struct rpmsg_crypto_kprocess_s *msg,
                             size_t len, uint32_t src, FAR void *priv)
 {
+  FAR struct rpmsg_crypto_server_data_s *rcsdata;
   FAR struct rpmsg_crypto_kprocess_s *rsp;
   FAR struct crparam *dst;
   FAR struct crparam *d;
@@ -1058,17 +1173,28 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
   FAR struct crparam *y;
   FAR struct crparam *r;
   FAR struct crparam *s;
-  struct cryptkop krp;
+  FAR struct cryptkop *krp;
   uint32_t data_len = 0;
   uint32_t siglen;
   uint32_t keylen;
   uint32_t space;
   int ret;
 
+  /* Allocate kprocess context on heap for async lifetime */
+
+  rcsdata = kmm_zalloc(sizeof(struct rpmsg_crypto_server_data_s));
+  if (rcsdata == NULL)
+    {
+      rpmsgerr("Failed to allocate kprocess context\n");
+      msg->header.result = -ENOMEM;
+      return rpmsg_send(ept, &msg->header, sizeof(msg->header));
+    }
+
   rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
   if (rsp == NULL)
     {
       rpmsgerr("get tx payload failed or no enough space\n");
+      kmm_free(rcsdata);
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
@@ -1077,20 +1203,20 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
   rsp->ctrl = msg->ctrl;
   rsp->data = msg->data;
 
-  memset(&krp, 0, sizeof(krp));
-  krp.krp_flags = msg->data.header.flag;
+  krp = &rcsdata->krp;
+  krp->krp_flags = msg->data.header.flag;
   switch (msg->data.header.opcode)
     {
       case VIRTIO_CRYPTO_AKCIPHER_SIGN:
-        d = &krp.krp_param[0];
-        r = &krp.krp_param[2];
-        s = &krp.krp_param[3];
-        dst = &krp.krp_param[1];
-        krp.krp_op = CRK_ECDSA_SECP256R1_SIGN;
-        krp.krp_optype = CRYPTO_OP_SIGN;
-        krp.krp_keytype = CRYPTO_KEY_TYPE_PRIVATE;
-        krp.krp_iparams = 2;
-        krp.krp_oparams = 2;
+        d = &krp->krp_param[0];
+        r = &krp->krp_param[2];
+        s = &krp->krp_param[3];
+        dst = &krp->krp_param[1];
+        krp->krp_op = CRK_ECDSA_SECP256R1_SIGN;
+        krp->krp_optype = CRYPTO_OP_SIGN;
+        krp->krp_keytype = CRYPTO_KEY_TYPE_PRIVATE;
+        krp->krp_iparams = 2;
+        krp->krp_oparams = 2;
 
         /* import private key */
 
@@ -1111,16 +1237,16 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
         data_len += siglen;
         break;
       case VIRTIO_CRYPTO_AKCIPHER_VERIFY:
-        x = &krp.krp_param[0];
-        y = &krp.krp_param[1];
-        r = &krp.krp_param[3];
-        s = &krp.krp_param[4];
-        dst = &krp.krp_param[5];
-        krp.krp_op = CRK_ECDSA_SECP256R1_VERIFY;
-        krp.krp_optype = CRYPTO_OP_VERIFY;
-        krp.krp_keytype = CRYPTO_KEY_TYPE_PUBLIC;
-        krp.krp_iparams = 6;
-        krp.krp_oparams = 0;
+        x = &krp->krp_param[0];
+        y = &krp->krp_param[1];
+        r = &krp->krp_param[3];
+        s = &krp->krp_param[4];
+        dst = &krp->krp_param[5];
+        krp->krp_op = CRK_ECDSA_SECP256R1_VERIFY;
+        krp->krp_optype = CRYPTO_OP_VERIFY;
+        krp->krp_keytype = CRYPTO_KEY_TYPE_PUBLIC;
+        krp->krp_iparams = 6;
+        krp->krp_oparams = 0;
 
         /* import public key */
 
@@ -1144,11 +1270,11 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
         dst->crp_nbits = msg->data.op_flf.akcipher.dst_data_len * 8;
         break;
       case VIRTIO_CRYPTO_AKCIPHER_GENKEY:
-        d = &krp.krp_param[0];
-        x = &krp.krp_param[1];
-        y = &krp.krp_param[2];
+        d = &krp->krp_param[0];
+        x = &krp->krp_param[1];
+        y = &krp->krp_param[2];
 
-        krp.krp_op = CRK_ECDSA_SECP256R1_GENKEY;
+        krp->krp_op = CRK_ECDSA_SECP256R1_GENKEY;
         keylen = msg->data.op_flf.akcipher.src_data_len;
         d->crp_p = rsp->buf;
         d->crp_nbits = keylen * 8;
@@ -1167,16 +1293,12 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
         goto err;
     }
 
-  rsp->header.result = crypto_kinvoke(&krp);
-  if (rsp->header.result == 0)
-    {
-      rsp->header.result = krp.krp_status;
-    }
-
-  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + data_len);
+  return rpmsg_crypto_kdispatch(rcsdata, ept, msg, rsp,
+                                sizeof(*rsp) + data_len);
 
 err:
   rsp->header.result = ret;
+  kmm_free(rcsdata);
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp));
 }
 
