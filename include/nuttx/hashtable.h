@@ -85,49 +85,49 @@
 
 #define hashtable_for_every(table, item, i)         \
   for ((i) = 0; (i) < hashtable_size(table); (i)++) \
-    sq_for_every(&table[i], item)
+    dq_for_every(&table[i], item)
 
 #define hashtable_for_every_safe(table, item, temp, i) \
   for ((i) = 0; (i) < hashtable_size(table); (i)++)    \
-    sq_for_every_safe(&table[i], item, temp)
+    dq_for_every_safe(&table[i], item, temp)
 
 #define hashtable_for_every_n(table, item, i, size)  \
   for ((i) = 0; (i) < (size); (i)++)                 \
-    sq_for_every(&table[i], item)
+    dq_for_every(&table[i], item)
 
 #define hashtable_for_every_safe_n(table, item, temp, i, size) \
   for ((i) = 0; (i) < (size); (i)++)                           \
-    sq_for_every_safe(&table[i], item, temp)
+    dq_for_every_safe(&table[i], item, temp)
 
 /* Iterate over all possible objects hashing to the same bucket. */
 
 #define hashtable_for_every_possible(table, item, key) \
-  sq_for_every(&table[HASH(key, hashtable_bits(table))], item)
+  dq_for_every(&table[HASH(key, hashtable_bits(table))], item)
 
 #define hashtable_for_every_possible_safe(table, item, temp, key) \
-  sq_for_every_safe(&table[HASH(key, hashtable_bits(table))], item, temp)
+  dq_for_every_safe(&table[HASH(key, hashtable_bits(table))], item, temp)
 
 #define hashtable_for_every_possible_n(table, item, key, size) \
-  sq_for_every(&table[HASH(key, LOG2_FLOOR(size))], item)
+  dq_for_every(&table[HASH(key, LOG2_FLOOR(size))], item)
 
 #define hashtable_for_every_possible_safe_n(table, item, temp, key, size) \
-  sq_for_every_safe(&table[HASH(key, LOG2_FLOOR(size))], item, temp)
+  dq_for_every_safe(&table[HASH(key, LOG2_FLOOR(size))], item, temp)
 
 /* Iterate over all possible entries hashing to the same bucket.
  * entry should be the container structure type.
  */
 
 #define hashtable_for_every_entry_possible(table, entry, key, type, member) \
-  sq_for_every_entry(&table[HASH(key, hashtable_bits(table))], entry, type, member)
+  dq_for_every_entry(&table[HASH(key, hashtable_bits(table))], entry, type, member)
 
 #define hashtable_for_every_entry_possible_safe(table, entry, temp, key, type, member) \
-  sq_for_every_entry_safe(&table[HASH(key, hashtable_bits(table))], entry, temp, type, member)
+  dq_for_every_entry_safe(&table[HASH(key, hashtable_bits(table))], entry, temp, type, member)
 
 #define hashtable_for_every_entry_possible_n(table, entry, key, size, type, member) \
-  sq_for_every_entry(&table[HASH(key, LOG2_FLOOR(size))], entry, type, member)
+  dq_for_every_entry(&table[HASH(key, LOG2_FLOOR(size))], entry, type, member)
 
 #define hashtable_for_every_entry_possible_safe_n(table, entry, temp, key, size, type, member) \
-  sq_for_every_entry_safe(&table[HASH(key, LOG2_FLOOR(size))], entry, temp, type, member)
+  dq_for_every_entry_safe(&table[HASH(key, LOG2_FLOOR(size))], entry, temp, type, member)
 
 /****************************************************************************
  * Public Types
