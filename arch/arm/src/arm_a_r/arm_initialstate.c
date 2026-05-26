@@ -45,6 +45,15 @@ uint8_t aligned_data(STACKFRAME_ALIGN) g_intstackalloc[INTSTACK_SIZE]
 #  else
 uint8_t aligned_data(STACKFRAME_ALIGN) g_intstackalloc[INTSTACK_SIZE];
 #  endif
+#  if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || \
+      defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#    ifdef ARCH_INTERRUPTSTACK_SECTION
+uint8_t aligned_data(STACK_ALIGNMENT) g_fiqstackalloc[INTSTACK_SIZE]
+  locate_data(ARCH_INTERRUPTSTACK_SECTION);
+#    else
+uint8_t aligned_data(STACK_ALIGNMENT) g_fiqstackalloc[INTSTACK_SIZE];
+#    endif
+#  endif
 #endif
 
 /****************************************************************************

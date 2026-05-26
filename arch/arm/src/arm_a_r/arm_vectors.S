@@ -608,7 +608,7 @@ arm_vectorfiq:
 
 #if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 .Lfiqstacktop:
-	.word	g_fiqstacktop
+	.word	g_fiqstackalloc + (CONFIG_ARCH_INTERRUPTSTACK & ~7)
 #endif
 
 	.cfi_endproc
