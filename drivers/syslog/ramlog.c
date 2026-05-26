@@ -172,10 +172,10 @@ static const struct file_operations g_ramlogfops =
 
 #ifdef CONFIG_RAMLOG_SYSLOG
 #  ifdef RAMLOG_BUFFER_SECTION
-static uint32_t g_sysbuffer[CONFIG_RAMLOG_BUFSIZE / 4]
+static uint32_t g_ramlog_buffer[CONFIG_RAMLOG_BUFSIZE / 4]
                        locate_data(CONFIG_RAMLOG_BUFFER_SECTION);
 #  else
-static uint32_t g_sysbuffer[CONFIG_RAMLOG_BUFSIZE / 4];
+static uint32_t g_ramlog_buffer[CONFIG_RAMLOG_BUFSIZE / 4];
 #  endif
 
 /* This is the device structure for the console or syslogging function.  It
@@ -183,12 +183,12 @@ static uint32_t g_sysbuffer[CONFIG_RAMLOG_BUFSIZE / 4];
  * could be called before the driver initialization logic executes.
  */
 
-static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_sysdev) =
+static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_ramlog_dev) =
 {
-  (FAR struct ramlog_header_s *)g_sysbuffer,            /* rl_header */
-  sizeof(g_sysbuffer) - sizeof(struct ramlog_header_s), /* rl_bufsize */
+  (FAR struct ramlog_header_s *)g_ramlog_buffer,            /* rl_header */
+  sizeof(g_ramlog_buffer) - sizeof(struct ramlog_header_s), /* rl_bufsize */
 };
-#  define g_sysdev this_cpu_var_bmp(g_sysdev)
+#  define g_ramlog_dev this_cpu_var_bmp(g_ramlog_dev)
 #endif
 
 #ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
@@ -223,8 +223,8 @@ static atomic_t g_ramlog_lock_ready;
 
 static void ramlog_dump(void)
 {
-  FAR struct ramlog_header_s *header = g_sysdev.rl_header;
-  uint32_t bufsize = g_sysdev.rl_bufsize;
+  FAR struct ramlog_header_s *header = g_ramlog_dev.rl_header;
+  uint32_t bufsize = g_ramlog_dev.rl_bufsize;
   uint32_t head;
   uint32_t tail;
   uint32_t used;
@@ -574,7 +574,7 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
   /* Initialize the ramlog header if it has not been initialized yet. */
 
 #ifdef CONFIG_RAMLOG_SYSLOG
-  if (priv == &g_sysdev)
+  if (priv == &g_ramlog_dev)
     {
       ramlog_header_init(priv);
     }
@@ -1039,7 +1039,7 @@ void ramlog_syslog_register(void)
 {
   /* Register the syslog character driver */
 
-  register_driver(CONFIG_SYSLOG_DEVPATH, &g_ramlogfops, 0666, &g_sysdev);
+  register_driver(CONFIG_SYSLOG_DEVPATH, &g_ramlogfops, 0666, &g_ramlog_dev);
 }
 #endif
 
@@ -1060,7 +1060,7 @@ int ramlog_putc(FAR syslog_channel_t *channel, int ch)
 
   /* Add the character to the RAMLOG */
 
-  ramlog_addbuf(&g_sysdev, &cch, 1);
+  ramlog_addbuf(&g_ramlog_dev, &cch, 1);
 
   /* Return the character added on success */
 
@@ -1070,7 +1070,7 @@ int ramlog_putc(FAR syslog_channel_t *channel, int ch)
 ssize_t ramlog_write(FAR syslog_channel_t *channel,
                      FAR const char *buffer, size_t buflen)
 {
-  return ramlog_addbuf(&g_sysdev, buffer, buflen);
+  return ramlog_addbuf(&g_ramlog_dev, buffer, buflen);
 }
 #endif
 
