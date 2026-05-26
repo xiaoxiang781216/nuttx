@@ -28,6 +28,7 @@
 
 #include <errno.h>
 #include <assert.h>
+#include <strings.h>
 
 #include <nuttx/clock.h>
 #include <nuttx/irq.h>
@@ -160,18 +161,27 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
   if (g_cpuload_total > threshold)
     {
       clock_t total = 0;
+      int shift;
       int i;
 
-      /* Divide the tick count for every task by two and recalculate the
-       * total.
+      /* Calculate how many bits to shift so that total drops below
+       * threshold in one pass, avoiding multiple decay iterations.
        */
+
+      shift = flsll(g_cpuload_total) - flsll(threshold);
+      if (shift < 1)
+        {
+          shift = 1;
+        }
+
+      /* Shift the tick count for every task and recalculate the total. */
 
       flags = spin_lock_irqsave(&g_pidhashlock);
       for (i = 0; i < g_npidhash; i++)
         {
           if (g_pidhash[i])
             {
-              g_pidhash[i]->ticks >>= 1;
+              g_pidhash[i]->ticks >>= shift;
               total += g_pidhash[i]->ticks;
             }
         }
