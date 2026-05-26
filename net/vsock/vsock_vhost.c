@@ -74,6 +74,7 @@ struct vsock_vhost_priv_s
 
 static int vsock_vhost_probe(FAR struct vhost_device *hdev);
 static void vsock_vhost_remove(FAR struct vhost_device *hdev);
+static void vsock_vhost_dump(FAR struct vhost_device *hdev);
 
 static uint64_t vsock_vhost_get_localcid(FAR struct vsock_transport_s *t);
 static uint64_t vsock_vhost_get_remotecid(FAR struct vsock_transport_s *t);
@@ -92,6 +93,7 @@ static DEFINE_PER_CPU_BMP(struct vhost_driver, g_vsock_vhost_driver) =
   VIRTIO_ID_VSOCK,    /* Device id */
   vsock_vhost_probe,  /* Probe */
   vsock_vhost_remove, /* Remove */
+  vsock_vhost_dump,   /* Dump */
 };
 #define g_vsock_vhost_driver this_cpu_var_bmp(g_vsock_vhost_driver)
 
@@ -422,6 +424,20 @@ static void vsock_vhost_remove(FAR struct vhost_device *hdev)
   vhost_delete_virtqueues(hdev);
   nxsem_destroy(&priv->tx_sem);
   kmm_free(priv);
+}
+
+/****************************************************************************
+ * Name: vsock_vhost_dump
+ ****************************************************************************/
+
+static void vsock_vhost_dump(FAR struct vhost_device *hdev)
+{
+  FAR struct vsock_vhost_priv_s *priv = hdev->priv;
+
+  _emerg("    guest_cid=%" PRIu64 " host_cid=%" PRIu64 "\n",
+         priv->guest_cid, priv->host_cid);
+  _emerg("  Vsock Connections:\n");
+  vsock_conn_dump(&priv->t);
 }
 
 /****************************************************************************

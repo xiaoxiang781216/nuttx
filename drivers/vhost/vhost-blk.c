@@ -52,6 +52,7 @@ struct vhost_blk_priv_s
   sem_t                    semrx;
   pid_t                    pid;
   struct file              bdev;
+  char                     path[PATH_MAX];
 };
 
 /****************************************************************************
@@ -69,6 +70,7 @@ static ssize_t vhost_blk_rdwr_handler(FAR struct vhost_blk_priv_s *priv,
 
 static int  vhost_blk_probe(FAR struct vhost_device *vdev);
 static void vhost_blk_remove(FAR struct vhost_device *vdev);
+static void vhost_blk_dump(FAR struct vhost_device *vdev);
 
 /****************************************************************************
  * Private Data
@@ -79,6 +81,7 @@ static DEFINE_PER_CPU_BMP(struct vhost_driver, g_vhost_blk_driver) =
   VIRTIO_ID_BLOCK,  /* device id */
   vhost_blk_probe,  /* probe */
   vhost_blk_remove, /* remove */
+  vhost_blk_dump,   /* dump */
 };
 #define g_vhost_blk_driver this_cpu_var_bmp(g_vhost_blk_driver)
 
@@ -242,7 +245,6 @@ static int vhost_blk_probe(FAR struct vhost_device *hdev)
   FAR const char *vqname[1];
   vq_callback callback[1];
   FAR char *argv[2];
-  char path[PATH_MAX];
   char arg0[32];
   int ret;
 
@@ -264,8 +266,8 @@ static int vhost_blk_probe(FAR struct vhost_device *hdev)
   /* Read the block config path */
 
   vhost_read_config_member(priv->hdev, struct vhost_blk_config_s,
-                           path, &path);
-  ret = file_open(&priv->bdev, path, O_RDOK | O_WROK | O_CLOEXEC);
+                           path, &priv->path);
+  ret = file_open(&priv->bdev, priv->path, O_RDOK | O_WROK | O_CLOEXEC);
   if (ret < 0)
     {
       vhosterr("ERROR: Failed to open block driver\n");
@@ -323,6 +325,24 @@ static void vhost_blk_remove(FAR struct vhost_device *hdev)
   file_close(&priv->bdev);
   nxsem_destroy(&priv->semrx);
   kmm_free(priv);
+}
+
+/****************************************************************************
+ * Name: vhost_blk_dump
+ ****************************************************************************/
+
+static void vhost_blk_dump(FAR struct vhost_device *hdev)
+{
+  FAR struct vhost_blk_priv_s *priv = hdev->priv;
+  struct geometry geo;
+
+  _emerg("    path=%s pid=%d\n", priv->path, priv->pid);
+
+  if (file_ioctl(&priv->bdev, BIOC_GEOMETRY, (unsigned long)&geo) >= 0)
+    {
+      _emerg("    nsectors=%" PRIuOFF " sectorsize=%" PRIuOFF "\n",
+             geo.geo_nsectors, geo.geo_sectorsize);
+    }
 }
 
 /****************************************************************************
