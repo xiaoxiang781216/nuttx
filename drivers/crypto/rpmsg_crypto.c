@@ -1086,16 +1086,7 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
         break;
     }
 
-  /* handling asynchronous logic */
-
-  if (krp->krp_flags & CRYPTO_F_CBIMM)
-    {
-      session->data = krp->krp_opaque;
-    }
-  else
-    {
-      session->data = krp;
-    }
+  session->data = krp;
 
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                RPMSG_CRYPTO_KPROCESS,
@@ -1240,16 +1231,7 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
         return -EINVAL;
     }
 
-  /* handling asynchronous logic */
-
-  if (krp->krp_flags & CRYPTO_F_CBIMM)
-    {
-      session->data = krp->krp_opaque;
-    }
-  else
-    {
-      session->data = krp;
-    }
+  session->data = krp;
 
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                RPMSG_CRYPTO_KPROCESS,
@@ -1348,14 +1330,7 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
       data_len += msg->data.src_data_len;
     }
 
-  if (krp->krp_flags & CRYPTO_F_CBIMM)
-    {
-      session->data = krp->krp_opaque;
-    }
-  else
-    {
-      session->data = krp;
-    }
+  session->data = krp;
 
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                RPMSG_CRYPTO_KEYPROCESS,
