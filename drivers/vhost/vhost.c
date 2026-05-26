@@ -26,7 +26,6 @@
 
 #include <debug.h>
 #include <strings.h>
-#include <syslog.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
@@ -122,7 +121,7 @@ static int vhost_dump_device(FAR struct vhost_device_item_s *item,
       return 0;
     }
 
-  syslog(LOG_EMERG, "  [%s] id=%" PRIu32 " hdev=%p driver=%p priv=%p\n",
+  _emerg("  [%s] id=%" PRIu32 " hdev=%p driver=%p priv=%p\n",
          dev_name, hdev->id.device, hdev, item->driver, hdev->priv);
 
   /* Call driver-specific dump if available */
@@ -152,13 +151,13 @@ static void vhost_dump(FAR const char *name)
   int count = 0;
   int ret;
 
-  syslog(LOG_EMERG, "VHost devices:\n");
+  _emerg("VHost devices:\n");
 
   name = name == NULL ? "all" : name;
   ret = nxmutex_lock(&g_vhost_bus.lock);
   if (ret < 0)
     {
-      syslog(LOG_EMERG, "  Failed to acquire lock\n");
+      _emerg("  Failed to acquire lock\n");
       return;
     }
 
@@ -176,7 +175,7 @@ static void vhost_dump(FAR const char *name)
 
   if (count == 0)
     {
-      syslog(LOG_EMERG, "  No devices of type '%s' found\n", name);
+      _emerg("  No devices of type '%s' found\n", name);
     }
 
   nxmutex_unlock(&g_vhost_bus.lock);

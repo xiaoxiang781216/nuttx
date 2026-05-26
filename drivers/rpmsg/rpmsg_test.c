@@ -24,8 +24,8 @@
 
 #include <nuttx/config.h>
 
+#include <debug.h>
 #include <string.h>
-#include <syslog.h>
 #include <time.h>
 #include <sys/param.h>
 #include <sys/random.h>
@@ -129,7 +129,7 @@ static void rpmsg_test_hold_rx_work(FAR void *arg)
    * all the held rx buffers.
    */
 
-  syslog(LOG_EMERG, "Rpmsg Test: release rx buffers start\n");
+  _emerg("Rpmsg Test: release rx buffers start\n");
 
   while (!list_is_empty(&priv->rxhead))
     {
@@ -139,7 +139,7 @@ static void rpmsg_test_hold_rx_work(FAR void *arg)
       rpmsg_release_rx_buffer(priv->ept, msg);
     }
 
-  syslog(LOG_EMERG, "Rpmsg Test: release rx buffers end\n");
+  _emerg("Rpmsg Test: release rx buffers end\n");
 }
 
 /****************************************************************************
@@ -166,7 +166,7 @@ static void rpmsg_test_hold_rx_cb(FAR struct rpmsg_endpoint *ept,
 
   if (value == RPMSG_TEST_VAL_HOLD_RX_END)
     {
-      syslog(LOG_EMERG, "Rpmsg Test: hold rx buffer finish\n");
+      _emerg("Rpmsg Test: hold rx buffer finish\n");
 
       /* Delay 10ms to release all the rx buffers, to make sure
        * the hold rx buffer api is valid.
@@ -195,7 +195,7 @@ static int rpmsg_test_send_nocopy_cb(FAR struct rpmsg_endpoint *ept,
     {
       ret = rpmsg_test_memcmp(msg->data, RPMSG_TEST_MAGIC1, msg->len);
       DEBUGASSERT(ret);
-      syslog(LOG_EMERG, "Rpmsg Test: Test rpmsg send nocopy success!\n");
+      _emerg("Rpmsg Test: Test rpmsg send nocopy success!\n");
       nxsem_post(sem);
       return ret;
     }
@@ -231,7 +231,7 @@ static int rpmsg_test_send_cb(FAR struct rpmsg_endpoint *ept,
     {
       ret = rpmsg_test_memcmp(msg->data, RPMSG_TEST_MAGIC1, msg->len);
       DEBUGASSERT(ret);
-      syslog(LOG_EMERG, "Rpmsg Test: Test rpmsg send success!\n");
+      _emerg("Rpmsg Test: Test rpmsg send success!\n");
       nxsem_post(sem);
       return ret;
     }
@@ -282,7 +282,7 @@ static int rpmsg_test_hold_rx(FAR struct rpmsg_test_priv_s *priv)
   int num = 0;
   int ret;
 
-  syslog(LOG_EMERG, "Rpmsg Test: start send\n");
+  _emerg("Rpmsg Test: start send\n");
 
   /* Send all the tx buffer to remote core, remote core will hold this
    * buffer.
@@ -313,10 +313,9 @@ static int rpmsg_test_hold_rx(FAR struct rpmsg_test_priv_s *priv)
       space = nspace;
     }
 
-  syslog(LOG_EMERG, "Rpmsg Test: tx buffer num=%d space=%" PRIu32 "\n",
-         num, space);
+  _emerg("Rpmsg Test: tx buffer num=%d space=%" PRIu32 "\n", num, space);
 
-  syslog(LOG_EMERG, "Rpmsg Test: send finish\n");
+  _emerg("Rpmsg Test: send finish\n");
   return 0;
 }
 
@@ -407,7 +406,7 @@ static void rpmsg_test_release_tx(FAR struct rpmsg_test_priv_s *priv)
       list_add_tail(&txhead, node);
     }
 
-  syslog(LOG_EMERG, "Rpmsg Test: tx buffer num=%d\n", num);
+  _emerg("Rpmsg Test: tx buffer num=%d\n", num);
 
   bufs = kmm_malloc(num * sizeof(FAR void *));
   DEBUGASSERT(bufs != NULL);
@@ -433,12 +432,12 @@ static void rpmsg_test_release_tx(FAR struct rpmsg_test_priv_s *priv)
 
       if (i >= num)
         {
-          syslog(LOG_EMERG, "Rpmsg Test: release buffer fail!");
+          _emerg("Rpmsg Test: release buffer fail!");
           goto out;
         }
     }
 
-  syslog(LOG_EMERG, "Rpmsg Test: release buffer success!");
+  _emerg("Rpmsg Test: release buffer success!");
 
   /* Final release tx buffer */
 

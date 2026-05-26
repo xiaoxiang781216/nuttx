@@ -29,6 +29,7 @@
 #include <nuttx/lib/lib.h>
 #include <nuttx/signal.h>
 
+#include <debug.h>
 #include <inttypes.h>
 #include <string.h>
 #include <sys/param.h>
@@ -192,9 +193,9 @@ static void rpmsg_ping_logout(FAR const char *s, clock_t value)
   perf_convert(value, &ts);
 
 #ifdef CONFIG_SYSTEM_TIME64
-  syslog(LOG_EMERG, "%s: %" PRIu64 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
+  _emerg("%s: %" PRIu64 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
 #else
-  syslog(LOG_EMERG, "%s: %" PRIu32 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
+  _emerg("%s: %" PRIu32 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
 #endif
 }
 
@@ -211,7 +212,7 @@ static void rpmsg_ping_logout_rate(uint64_t len, clock_t avg)
   rateint = ratebits / 1000000;
   ratedec = ratebits - rateint * 1000000;
 
-  syslog(LOG_EMERG, "rate: %zu.%06zu Mbits/sec\n", rateint, ratedec);
+  _emerg("rate: %zu.%06zu Mbits/sec\n", rateint, ratedec);
 }
 
 /****************************************************************************
@@ -264,11 +265,10 @@ int rpmsg_ping(FAR struct rpmsg_ping_dev_s *dev,
         }
     }
 
-  syslog(LOG_EMERG, "core info: %s <-> %s\n",
-         rpmsg_get_local_cpuname(ept->rdev), rpmsg_get_cpuname(ept->rdev));
-  syslog(LOG_EMERG, "ping times: %d\n", ping->times);
-  syslog(LOG_EMERG, "buffer_len: %" PRIu32 ", send_len: %d\n",
-                    buf_len, send_len);
+  _emerg("core info: %s <-> %s\n", rpmsg_get_local_cpuname(ept->rdev),
+         rpmsg_get_cpuname(ept->rdev));
+  _emerg("ping times: %d\n", ping->times);
+  _emerg("buffer_len: %" PRIu32 ", send_len: %d\n", buf_len, send_len);
 
   rpmsg_ping_logout("avg", total / ping->times);
   rpmsg_ping_logout("min", min);

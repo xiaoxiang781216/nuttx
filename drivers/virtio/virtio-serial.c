@@ -687,9 +687,9 @@ static void virtio_serial_dump(FAR struct virtio_device *vdev)
                udev->recv.size) % udev->recv.size;
   uart_spinunlock(udev, false, flags);
 
-  syslog(LOG_EMERG, "    name=%s, console=%d, open_count=%u\n",
+  _emerg("    name=%s, console=%d, open_count=%u\n",
          priv->name, udev->isconsole, udev->open_count);
-  syslog(LOG_EMERG, "    xmit=%u/%u B, recv=%u/%u B\n",
+  _emerg("    xmit=%u/%u B, recv=%u/%u B\n",
          xmit_used, udev->xmit.size, recv_used, udev->recv.size);
 }
 

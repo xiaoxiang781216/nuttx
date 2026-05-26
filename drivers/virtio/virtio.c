@@ -27,7 +27,6 @@
 #include <debug.h>
 #include <string.h>
 #include <strings.h>
-#include <syslog.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/nuttx.h>
@@ -108,13 +107,13 @@ static void virtio_dump(FAR const char *name)
   int count = 0;
   int ret;
 
-  syslog(LOG_EMERG, "VirtIO devices:\n");
+  _emerg("VirtIO devices:\n");
 
   name = name == NULL ? "all" : name;
   ret = nxmutex_lock(&g_virtio_bus.lock);
   if (ret < 0)
     {
-      syslog(LOG_EMERG, "  Failed to acquire lock\n");
+      _emerg("  Failed to acquire lock\n");
       return;
     }
 
@@ -138,7 +137,7 @@ static void virtio_dump(FAR const char *name)
 
       count++;
 
-      syslog(LOG_EMERG, "  [%s] id=%" PRIu32 " vdev=%p driver=%p priv=%p\n",
+      _emerg("  [%s] id=%" PRIu32 " vdev=%p driver=%p priv=%p\n",
              dev_name, vdev->id.device, vdev, item->driver, vdev->priv);
 
       /* Call driver-specific dump if available */
@@ -160,7 +159,7 @@ static void virtio_dump(FAR const char *name)
 
   if (count == 0)
     {
-      syslog(LOG_EMERG, "  No devices of type '%s' found\n", name);
+      _emerg("  No devices of type '%s' found\n", name);
     }
 
   nxmutex_unlock(&g_virtio_bus.lock);

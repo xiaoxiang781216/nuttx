@@ -788,12 +788,9 @@ static void virtio_net_dump(FAR struct virtio_device *vdev)
   FAR struct net_driver_s *dev = &netdev->netdev;
   FAR uint8_t *mac = dev->d_mac.ether.ether_addr_octet;
 
-  syslog(LOG_EMERG, "    name=%s, "
-         "mac=%02x:%02x:%02x:%02x:%02x:%02x\n",
-         dev->d_ifname,
-         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  syslog(LOG_EMERG, "    bufnum=%d, iob_free=%d, "
-         "quota: rx=%d tx=%d"
+  _emerg("    name=%s, mac=%02x:%02x:%02x:%02x:%02x:%02x\n",
+         dev->d_ifname, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  _emerg("    bufnum=%d, iob_free=%d, quota: rx=%d tx=%d"
 #ifdef CONFIG_NET_IPv4
          ", ipv4=%u.%u.%u.%u"
 #endif

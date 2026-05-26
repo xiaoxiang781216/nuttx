@@ -27,7 +27,6 @@
 #include <debug.h>
 #include <execinfo.h>
 #include <stdio.h>
-#include <syslog.h>
 
 #include <time.h>
 
@@ -1048,11 +1047,9 @@ static void rpmsg_port_dump_buffer(FAR struct rpmsg_device *rdev,
   FAR struct rpmsg_port_node_s *node;
   irqstate_t flags = spin_lock_irqsave(&queue->ready.lock);
 
-  syslog(LOG_EMERG, "rpmsg_port queue %s: {used: %u, avail: %u}\n",
-                    rx ? "RX" : "TX",
-                    rpmsg_port_queue_nused(queue),
-                    rpmsg_port_queue_navail(queue));
-  syslog(LOG_EMERG, "rpmsg buffer list:\n");
+  _emerg("rpmsg_port queue %s: {used: %u, avail: %u}\n", rx ? "RX" : "TX",
+         rpmsg_port_queue_nused(queue), rpmsg_port_queue_navail(queue));
+  _emerg("rpmsg buffer list:\n");
 
   list_for_every_entry(&queue->ready.head, node,
                        struct rpmsg_port_node_s, node)
@@ -1065,8 +1062,8 @@ static void rpmsg_port_dump_buffer(FAR struct rpmsg_device *rdev,
       ept = rpmsg_get_ept_from_addr(rdev, rx ? rphdr->dst : rphdr->src);
       if (ept)
         {
-          syslog(LOG_EMERG, " %s buffer %p hold by %s\n",
-                            rx ? "RX" : "TX", rphdr, ept->name);
+          _emerg(" %s buffer %p hold by %s\n", rx ? "RX" : "TX",
+                 rphdr, ept->name);
         }
     }
 
@@ -1120,8 +1117,8 @@ static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
       needunlock = true;
     }
 
-  syslog(LOG_EMERG, "Remote: %s state: %d\n",
-                    port->rpmsg.cpuname, rpmsg_is_running(rdev));
+  _emerg("Remote: %s state: %d\n",
+         port->rpmsg.cpuname, rpmsg_is_running(rdev));
   if (verbose)
     {
       rpmsg_dump_epts(rdev);

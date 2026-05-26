@@ -786,12 +786,10 @@ static void virtio_gpu_dump(FAR struct virtio_device *vdev)
 {
   FAR struct virtio_gpu_priv_s *priv = vdev->priv;
 
-  syslog(LOG_EMERG, "    display=%d, resolution=%dx%d, "
-         "stride=%d B, fblen=%zu B\n",
+  _emerg("    display=%d, resolution=%dx%d, stride=%d B, fblen=%zu B\n",
          priv->display, priv->xres, priv->yres,
          priv->stride, priv->fblen);
-  syslog(LOG_EMERG, "    fb_count=%d, bpp=%d, format=%s, "
-         "vsync=%d ms\n",
+  _emerg("    fb_count=%d, bpp=%d, format=%s, vsync=%d ms\n",
          VIRTIO_GPU_FB_NUMS, VIRTIO_GPU_BPP,
          VIRTIO_GPU_BPP == 16 ? "RGB565" : "RGB32",
          VIRTIO_GPU_PERIOD_MS);

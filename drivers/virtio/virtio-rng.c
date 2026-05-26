@@ -273,7 +273,7 @@ static void virtio_rng_dump(FAR struct virtio_device *vdev)
 {
   FAR struct virtio_rng_priv_s *priv = vdev->priv;
 
-  syslog(LOG_EMERG, "    name=%s\n", priv->name);
+  _emerg("    name=%s\n", priv->name);
 }
 
 /****************************************************************************

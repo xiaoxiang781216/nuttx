@@ -610,15 +610,15 @@ static void vsock_virtio_dump(FAR struct virtio_device *vdev)
   int rx_buf_total = MIN(rxvq->vq_nentries, CONFIG_NET_VSOCK_VQ_BUFCOUNT);
   size_t buf_size = VIRTIO_VSOCK_HDR_LEN + CONFIG_NET_VSOCK_PKT_BUFSIZE;
 
-  syslog(LOG_EMERG, "    guest_cid=%" PRIu64 ", host_cid=%" PRIu64
+  _emerg("    guest_cid=%" PRIu64 ", host_cid=%" PRIu64
          ", pkt_bufsize=%zu B (hdr=%zu + data=%d)\n",
          priv->guest_cid, priv->host_cid,
          buf_size, VIRTIO_VSOCK_HDR_LEN, CONFIG_NET_VSOCK_PKT_BUFSIZE);
-  syslog(LOG_EMERG, "    rx: entries=%d, bufs=%d (total %zu B)"
+  _emerg("    rx: entries=%d, bufs=%d (total %zu B)"
          ", tx: entries=%d, buf_free=%d/%d\n",
          rxvq->vq_nentries, rx_buf_total, rx_buf_total * buf_size,
          txvq->vq_nentries, priv->tx_buf_num, priv->tx_buf_total);
-  syslog(LOG_EMERG, "  Vsock Connections:\n");
+  _emerg("  Vsock Connections:\n");
   vsock_conn_dump(&priv->t);
 }
 

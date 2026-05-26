@@ -564,12 +564,12 @@ static void virtio_blk_dump(FAR struct virtio_device *vdev)
   FAR struct virtio_blk_priv_s *priv = vdev->priv;
   uint64_t capacity_mb = (priv->nsectors * priv->block_size) >> 20;
 
-  syslog(LOG_EMERG, "  BLK Info:\n");
-  syslog(LOG_EMERG, "    device   : %s\n", priv->name);
-  syslog(LOG_EMERG, "    sectors  : %" PRIu64 "\n", priv->nsectors);
-  syslog(LOG_EMERG, "    blksize  : %" PRIu32 " B\n", priv->block_size);
-  syslog(LOG_EMERG, "    capacity : %" PRIu64 " MB\n", capacity_mb);
-  syslog(LOG_EMERG, "    features : ro=%d flush=%d\n",
+  _emerg("  BLK Info:\n");
+  _emerg("    device   : %s\n", priv->name);
+  _emerg("    sectors  : %" PRIu64 "\n", priv->nsectors);
+  _emerg("    blksize  : %" PRIu32 " B\n", priv->block_size);
+  _emerg("    capacity : %" PRIu64 " MB\n", capacity_mb);
+  _emerg("    features : ro=%d flush=%d\n",
          virtio_has_feature(vdev, VIRTIO_BLK_F_RO),
          virtio_has_feature(vdev, VIRTIO_BLK_F_FLUSH));
 }

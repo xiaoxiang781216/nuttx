@@ -550,7 +550,7 @@ static void virtio_input_dump(FAR struct virtio_device *vdev)
       type = "tablet";
     }
 
-  syslog(LOG_EMERG, "    name=%s, type=%s, evtnum=%zu\n",
+  _emerg("    name=%s, type=%s, evtnum=%zu\n",
          priv->name, type, priv->evtnum);
 }
 

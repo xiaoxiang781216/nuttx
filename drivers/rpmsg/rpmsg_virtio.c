@@ -27,7 +27,6 @@
 #include <debug.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <syslog.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
@@ -352,15 +351,14 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
 
   if (rx)
     {
-      syslog(LOG_EMERG, "  RX buffer total %u unretrieved %u "
-             "retrieved %u pending %u:\n", vq->vq_nentries, unretrieved,
-             vq->vq_queued_cnt, num);
+      _emerg("  RX buffer total %u unretrieved %u "
+             "retrieved %u pending %u:\n",
+             vq->vq_nentries, unretrieved, vq->vq_queued_cnt, num);
     }
   else
     {
-      syslog(LOG_EMERG, "  TX buffer total %u unretrieved %u "
-             "retrieved %u sent %u:\n", vq->vq_nentries, unretrieved,
-            vq->vq_free_cnt, num);
+      _emerg("  TX buffer total %u unretrieved %u retrieved %u sent %u:\n",
+             vq->vq_nentries, unretrieved, vq->vq_free_cnt, num);
     }
 
   for (i = 0u; i < num && i < vq->vq_nentries; i++)
@@ -392,7 +390,7 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
 
       if (desc_idx >= vq->vq_nentries)
         {
-          syslog(LOG_EMERG, "    %s buffer[%u] invalid desc_idx %u >= %u\n",
+          _emerg("    %s buffer[%u] invalid desc_idx %u >= %u\n",
                  rx ? "RX" : "TX", i, desc_idx, vq->vq_nentries);
           continue;
         }
@@ -408,8 +406,8 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
                                         rx ? hdr->dst : hdr->src);
           if (ept)
             {
-              syslog(LOG_EMERG, "    %s buffer %p hold by %s\n",
-                                rx ? "RX" : "TX", hdr, ept->name);
+              _emerg("    %s buffer %p hold by %s\n", rx ? "RX" : "TX",
+                     hdr, ept->name);
             }
         }
     }
@@ -426,31 +424,29 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
   FAR struct rpmsg_virtio_device *rvdev = &priv->rvdev;
   FAR struct rpmsg_device *rdev = &rvdev->rdev;
 
-  syslog(LOG_EMERG, "Local: %s Remote: %s Headrx %u Headtx %u\n",
-                    priv->rpmsg.local_cpuname, priv->rpmsg.cpuname,
-                    priv->headrx, priv->headtx);
+  _emerg("Local: %s Remote: %s Headrx %u Headtx %u\n",
+         priv->rpmsg.local_cpuname, priv->rpmsg.cpuname,
+         priv->headrx, priv->headtx);
 
   if (rvdev->vdev && rdev->ns_unbind_cb)
     {
       metal_mutex_acquire(&rdev->lock);
       if (verbose)
         {
-          syslog(LOG_EMERG,
-                "Dump rpmsg info between cpu (master: %s)%s <==> %s:\n",
-                VIRTIO_ROLE_IS_DRIVER(rvdev->vdev) ?
-                "yes" : "no", priv->rpmsg.local_cpuname,
-                priv->rpmsg.cpuname);
+          _emerg("Dump rpmsg info between cpu (master: %s)%s <==> %s:\n",
+                 VIRTIO_ROLE_IS_DRIVER(rvdev->vdev) ? "yes" : "no",
+                 priv->rpmsg.local_cpuname, priv->rpmsg.cpuname);
 
           rpmsg_dump_epts(rdev);
         }
 
-      syslog(LOG_EMERG, "rpmsg virtqueues:\n");
+      _emerg("rpmsg virtqueues:\n");
       virtqueue_dump(rvdev->rvq);
       virtqueue_dump(rvdev->svq);
 
       if (verbose)
         {
-          syslog(LOG_EMERG, "rpmsg buffer list:\n");
+          _emerg("rpmsg buffer list:\n");
           rpmsg_virtio_dump_buffer(rvdev, true);
           rpmsg_virtio_dump_buffer(rvdev, false);
         }
