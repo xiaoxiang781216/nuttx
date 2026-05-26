@@ -412,7 +412,7 @@ int syslog_flush(void);
  ****************************************************************************/
 
 #ifdef CONFIG_SYSLOG
-int nx_vsyslog(int priority, FAR const IPTR char *src, FAR va_list *ap);
+int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap);
 #endif
 
 /****************************************************************************

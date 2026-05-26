@@ -282,9 +282,9 @@ int nxthread_create(FAR const char *name, int ttype, int priority,
 
 /* Task list manipulation functions */
 
-bool nxsched_add_readytorun(FAR struct tcb_s *rtrtcb);
-bool nxsched_remove_readytorun(FAR struct tcb_s *rtrtcb);
-void nxsched_remove_self(FAR struct tcb_s *rtrtcb);
+bool nxsched_add_readytorun(FAR struct tcb_s *btcb);
+bool nxsched_remove_readytorun(FAR struct tcb_s *rtcb);
+void nxsched_remove_self(FAR struct tcb_s *tcb);
 void nxsched_add_blocked(FAR struct tcb_s *btcb, tstate_t task_state);
 void nxsched_remove_blocked(FAR struct tcb_s *btcb);
 int  nxsched_set_priority(FAR struct tcb_s *tcb, int sched_priority);

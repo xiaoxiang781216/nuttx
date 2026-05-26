@@ -692,7 +692,7 @@ FAR struct mempool_multiple_s *
 mempool_multiple_init(FAR const char *name,
                       FAR const struct mm_pool_config_s *config,
                       mempool_multiple_alloc_t alloc,
-                      mempool_multiple_alloc_size_t alloc_size,
+                      mempool_multiple_alloc_size_t allocsize,
                       mempool_multiple_free_t free, FAR void *arg);
 
 /****************************************************************************

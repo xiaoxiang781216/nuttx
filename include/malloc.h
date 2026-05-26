@@ -104,7 +104,7 @@ extern "C"
 
 int mallopt(int param, int value);
 struct mallinfo mallinfo(void);
-size_t malloc_size(FAR void *ptr);
+size_t malloc_size(FAR void *mem);
 struct mallinfo_task mallinfo_task(FAR const struct malltask *task);
 
 #if defined(__cplusplus)

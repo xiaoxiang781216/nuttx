@@ -171,26 +171,26 @@ void nxsched_remove_self(FAR struct tcb_s *tcb)
   nxsched_remove_running(tcb);
 }
 
-bool nxsched_remove_readytorun(FAR struct tcb_s *tcb)
+bool nxsched_remove_readytorun(FAR struct tcb_s *rtcb)
 {
-  if (tcb->task_state == TSTATE_TASK_RUNNING)
+  if (rtcb->task_state == TSTATE_TASK_RUNNING)
     {
-      nxsched_remove_running(tcb);
+      nxsched_remove_running(rtcb);
       return true;
     }
   else
     {
       FAR dq_queue_t *tasklist;
 
-      tasklist = TLIST_HEAD(tcb, tcb->cpu);
+      tasklist = TLIST_HEAD(rtcb, rtcb->cpu);
 
       /* The task is not running.  Just remove its TCB from the task list */
 
-      dq_rem((FAR dq_entry_t *)tcb, tasklist);
+      dq_rem((FAR dq_entry_t *)rtcb, tasklist);
 
       /* Since the TCB is no longer in any list, it is now invalid */
 
-      tcb->task_state = TSTATE_TASK_INVALID;
+      rtcb->task_state = TSTATE_TASK_INVALID;
     }
 
   return false;

@@ -68,7 +68,7 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value);
 void pthread_destroyjoin(FAR struct task_group_s *group,
                          FAR struct task_join_s *pjoin);
 int pthread_findjoininfo(FAR struct task_group_s *group, pid_t pid,
-                         FAR struct task_join_s **join, bool create);
+                         FAR struct task_join_s **pjoin, bool create);
 void pthread_release(FAR struct task_group_s *group);
 
 #ifndef CONFIG_PTHREAD_MUTEX_UNSAFE

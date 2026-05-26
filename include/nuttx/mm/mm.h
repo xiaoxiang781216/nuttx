@@ -329,12 +329,12 @@ void kmm_initialize(FAR void *heap_start, size_t heap_size);
 
 /* Functions contained in umm_addregion.c ***********************************/
 
-void umm_addregion(FAR void *heapstart, size_t heapsize);
+void umm_addregion(FAR void *heap_start, size_t heap_size);
 
 /* Functions contained in kmm_addregion.c ***********************************/
 
 #ifdef CONFIG_MM_KERNEL_HEAP
-void kmm_addregion(FAR void *heapstart, size_t heapsize);
+void kmm_addregion(FAR void *heap_start, size_t heap_size);
 #endif
 
 /* Functions contained in mm_malloc.c ***************************************/

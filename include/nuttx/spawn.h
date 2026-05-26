@@ -99,7 +99,7 @@ extern "C"
 {
 #endif
 
-void add_file_action(FAR posix_spawn_file_actions_t *file_action,
+void add_file_action(FAR posix_spawn_file_actions_t *file_actions,
                      FAR struct spawn_general_file_action_s *entry);
 
 struct tcb_s;

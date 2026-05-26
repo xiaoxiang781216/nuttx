@@ -178,7 +178,7 @@ typedef int (*fatal_handle_func_t)(uint64_t *regs, uint64_t far,
  *
  ****************************************************************************/
 
-uint64_t *arm64_fatal_handler(uint64_t *reg);
+uint64_t *arm64_fatal_handler(uint64_t *regs);
 
 /****************************************************************************
  * Name: arm64_register_debug_hook

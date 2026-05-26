@@ -72,13 +72,13 @@ int backtrace_format(FAR char *buffer, int size,
 
 #if CONFIG_LIBC_BACKTRACE_DEPTH > 0
 FAR void *backtrace_record(int skip);
-void backtrace_remove(FAR void *entry);
-FAR void **backtrace_get(FAR void *entry, FAR int *size);
+void backtrace_remove(FAR void *index);
+FAR void **backtrace_get(FAR void *index, FAR int *size);
 void backtrace_dump(void);
 #else
 #  define backtrace_record(skip) (NULL)
-#  define backtrace_remove(entry)
-#  define backtrace_get(entry, size) (*(size) = 0, NULL)
+#  define backtrace_remove(index)
+#  define backtrace_get(index, size) (*(size) = 0, NULL)
 #  define backtrace_dump()
 #endif
 

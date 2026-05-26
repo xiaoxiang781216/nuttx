@@ -527,7 +527,7 @@ void up_exit(int status) noreturn_function;
  *
  ****************************************************************************/
 
-void up_dump_register(FAR void *regs);
+void up_dump_register(FAR void *dumpregs);
 
 #ifdef CONFIG_ARCH_HAVE_BACKTRACE
 

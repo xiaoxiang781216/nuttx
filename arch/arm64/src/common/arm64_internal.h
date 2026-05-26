@@ -249,7 +249,7 @@ EXTERN uint8_t _percpu_size[];     /* percpu size */
  * Public Function Prototypes
  ****************************************************************************/
 
-void arm64_new_task(struct tcb_s *tak_new);
+void arm64_new_task(struct tcb_s *tcb);
 
 #ifdef CONFIG_BUILD_KERNEL
 void arm64_jump_to_user(uint64_t entry, uint64_t x0, uint64_t x1,
