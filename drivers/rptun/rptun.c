@@ -847,7 +847,6 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
         }
     }
 
-  priv->rstatus |= status;
   if (RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC))
     {
       char msg[32];
@@ -1089,11 +1088,6 @@ static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
 {
   int timeout = CONFIG_RPTUN_STATUS_TIMEOUT_MS;
   int ret = -ENOTSUP;
-
-  if (RPTUN_STATUS_CHECK(priv->rstatus, val))
-    {
-      return OK;
-    }
 
   if (priv->rproc.rsc_table == NULL)
     {
