@@ -1075,6 +1075,51 @@ out:
 }
 
 /****************************************************************************
+ * Name: coredump_remove_memory_region
+ *
+ * Description:
+ *   Remove a previously registered memory region from the coredump list.
+ *
+ ****************************************************************************/
+
+int coredump_remove_memory_region(FAR const void *ptr, size_t size)
+{
+  FAR struct memory_region_s *region;
+  size_t i;
+
+  nxmutex_lock(&g_regions_lock);
+
+  if (g_regions == NULL)
+    {
+      nxmutex_unlock(&g_regions_lock);
+      return -ENOENT;
+    }
+
+  region = (FAR struct memory_region_s *)g_regions;
+
+  for (i = 0; region[i].start < region[i].end; i++)
+    {
+      if (region[i].start == (uintptr_t)ptr &&
+          region[i].end == (uintptr_t)ptr + size)
+        {
+          /* Copy each subsequent entry forward, including terminator */
+
+          do
+            {
+              region[i] = region[i + 1];
+            }
+          while (region[i++].start != 0);
+
+          nxmutex_unlock(&g_regions_lock);
+          return 0;
+        }
+    }
+
+  nxmutex_unlock(&g_regions_lock);
+  return -ENOENT;
+}
+
+/****************************************************************************
  * Name: coredump_initialize
  *
  * Description:
