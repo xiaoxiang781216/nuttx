@@ -133,7 +133,7 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
        * affinity mask?
        */
 
-      if ((tcb->affinity & (1 << tcb->cpu)) == 0)
+      if ((tcb->affinity & (1U << tcb->cpu)) == 0)
         {
           /* No.. then we will need to move the task from the assigned
            * task list to some other ready to run list.

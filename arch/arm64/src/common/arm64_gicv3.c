@@ -404,7 +404,7 @@ void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
           arm64_gic_send_sgi(sgi_id, pre_cluster_id, tlist);
         }
 
-      tlist |= 1 << (curr_mpidr & MPIDR_AFFLVL_MASK);
+      tlist |= 1U << (curr_mpidr & MPIDR_AFFLVL_MASK);
 
       cpu += i;
       pre_cluster_id = curr_cluster_id;

@@ -121,7 +121,7 @@ static inline uint32_t mpu_subregion_ms(size_t size, uint8_t l2size)
 
   if (l2size < 32)
     {
-      mask  = ((1 << l2size) - 1) >> 3; /* Shifted mask */
+      mask  = ((1U << l2size) - 1U) >> 3; /* Shifted mask */
     }
 
   /* The 4Gb region size is a special case */
@@ -179,7 +179,7 @@ static inline uint32_t mpu_subregion_ls(size_t offset, uint8_t l2size)
 
   if (l2size < 32)
     {
-      mask  = ((1 << l2size)-1) >> 3; /* Shifted mask */
+      mask  = ((1U << l2size) - 1U) >> 3; /* Shifted mask */
     }
 
   /* The 4Gb region size is a special case */
@@ -259,8 +259,8 @@ unsigned int mpu_allocregions(unsigned int nregions)
   /* There are not enough regions to apply */
 
   DEBUGASSERT((i + nregions - 1) < CONFIG_ARM_MPU_NREGIONS);
-  DEBUGASSERT(((g_mpu_region >> i) & ((1 << nregions) - 1)) == 0);
-  g_mpu_region |= ((1 << nregions) - 1) << i;
+  DEBUGASSERT(((g_mpu_region >> i) & ((1U << nregions) - 1U)) == 0);
+  g_mpu_region |= ((1U << nregions) - 1U) << i;
   return i;
 }
 
@@ -287,7 +287,7 @@ void mpu_freeregion(unsigned int region)
   putreg32(region, MPU_RNR);
   putreg32(0, MPU_ATTR);
   putreg32(0, MPU_RBAR);
-  g_mpu_region &= ~(1 << region);
+  g_mpu_region &= ~(1U << region);
   UP_MB();
 }
 
@@ -353,7 +353,7 @@ uint8_t mpu_log2regionceil(size_t size)
 
   /* The minimum permitted region size is 32 bytes (log2(32) = 5. */
 
-  for (l2size = 5; l2size < 32 && size > (1 << l2size); l2size++);
+  for (l2size = 5; l2size < 32 && size > (1U << l2size); l2size++);
   return l2size;
 }
 
@@ -378,7 +378,7 @@ uint8_t mpu_log2regionfloor(size_t size)
 {
   uint8_t l2size = mpu_log2regionceil(size);
 
-  if (l2size > 4 && size < (1 << l2size))
+  if (l2size > 4 && size < (1U << l2size))
     {
       l2size--;
     }
@@ -422,7 +422,7 @@ uint32_t mpu_subregion(uintptr_t base, size_t size, uint8_t l2size)
    * l2size: Log2 of the actual region size is <= (1 << l2size);
    */
 
-  DEBUGASSERT(l2size > 4 && size <= (1 << l2size));
+  DEBUGASSERT(l2size > 4 && size <= (1U << l2size));
 
   /* For region sizes of 32, 64, and 128 bytes, the effect of setting
    * one or more bits of the SRD field to 1 is UNPREDICTABLE.
@@ -435,7 +435,7 @@ uint32_t mpu_subregion(uintptr_t base, size_t size, uint8_t l2size)
 
   /* Calculate the offset of the base address into the aligned region. */
 
-  mask   = (1 << l2size) - 1;
+  mask   = (1U << l2size) - 1U;
   offset = base & mask;
 
   /* Calculate the mask need to handle disabled subregions at the end of the
@@ -539,7 +539,7 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
 
   /* Check that the region is valid */
 
-  DEBUGASSERT(g_mpu_region & (1 << region));
+  DEBUGASSERT(g_mpu_region & (1U << region));
 
   /* Ensure the base address alignment
    *
@@ -568,7 +568,7 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
 
   /* Check that the region is valid */
 
-  DEBUGASSERT(g_mpu_region & (1 << region));
+  DEBUGASSERT(g_mpu_region & (1U << region));
 
   /* Ensure the base address alignment
    *
@@ -580,14 +580,14 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
 
   alignedbase  = base & MPU_RBAR_ADDR_MASK;
   l2size       = mpu_log2regionceil(size + base - alignedbase);
-  alignedbase &= ~((1 << l2size) - 1);
+  alignedbase &= ~((1U << l2size) - 1U);
   l2size       = mpu_log2regionceil(size + base - alignedbase);
 
-  DEBUGASSERT(alignedbase + (1 << l2size) >= base + size);
+  DEBUGASSERT(alignedbase + (1U << l2size) >= base + size);
   DEBUGASSERT(l2size == 5 ||
-              alignedbase + (1 << (l2size - 1)) < base + size);
+              alignedbase + (1U << (l2size - 1)) < base + size);
   DEBUGASSERT((alignedbase & MPU_RBAR_ADDR_MASK) == alignedbase);
-  DEBUGASSERT((alignedbase & ((1 << l2size) - 1)) == 0);
+  DEBUGASSERT((alignedbase & ((1U << l2size) - 1U)) == 0);
 
   /* Select the region */
 
@@ -642,13 +642,13 @@ void mpu_modify_regions(unsigned int region, uintptr_t base, size_t size,
 
   alignedbase  = base & MPU_RBAR_ADDR_MASK;
   l2size       = mpu_log2regionceil(size + base - alignedbase);
-  alignedbase &= ~((1 << l2size) - 1);
+  alignedbase &= ~((1U << l2size) - 1U);
   l2size       = mpu_log2regionceil(size + base - alignedbase);
-  alignedbase &= ~((1 << l2size) - 1);
+  alignedbase &= ~((1U << l2size) - 1U);
 
-  if (alignedbase + (1 << l2size) < base + size)
+  if (alignedbase + (1U << l2size) < base + size)
     {
-      region1_size = alignedbase + (1 << l2size) - base;
+      region1_size = alignedbase + (1U << l2size) - base;
       region2_size = size - region1_size;
     }
   else

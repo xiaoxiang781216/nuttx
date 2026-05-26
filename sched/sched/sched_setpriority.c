@@ -91,7 +91,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
    */
 
   if ((nxttcb && sched_priority <= nxttcb->sched_priority) ||
-      (tcb->affinity & (1 << tcb->cpu)) == 0)
+      (tcb->affinity & (1U << tcb->cpu)) == 0)
 #else
   if (nxttcb && sched_priority <= nxttcb->sched_priority)
 #endif
@@ -105,7 +105,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
        * we need to perform the context switch unconditionally.
        */
 
-      if ((tcb == this_task()) && (tcb->affinity & (1 << tcb->cpu)) == 0)
+      if ((tcb == this_task()) && (tcb->affinity & (1U << tcb->cpu)) == 0)
         {
           bool switch_needed;
 

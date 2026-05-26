@@ -157,7 +157,7 @@ unsigned int mpu_allocregion(void)
   /* There are not enough regions to apply */
 
   DEBUGASSERT(i < num_regions);
-  g_mpu_region |= 1 << i;
+  g_mpu_region |= 1U << i;
   return i;
 }
 
@@ -222,7 +222,7 @@ void mpu_freeregion(unsigned int region)
   write_sysreg(0, prlar_el1);
   write_sysreg(0, prbar_el1);
 
-  g_mpu_region &= ~(1 << region);
+  g_mpu_region &= ~(1U << region);
   UP_MB();
 }
 
@@ -308,7 +308,7 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
 
   /* Check that the region is valid */
 
-  DEBUGASSERT(g_mpu_region & (1 << region));
+  DEBUGASSERT(g_mpu_region & (1U << region));
 
   rbar |= flags1 &
           (MPU_RBAR_XN_MSK | MPU_RBAR_AP_MSK | MPU_RBAR_SH_MSK);

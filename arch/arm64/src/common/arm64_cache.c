@@ -123,7 +123,7 @@ static inline uint32_t arm64_cache_get_info(uint32_t *sets, uint32_t *ways,
 
   write_sysreg(csselr, csselr_el1);
 
-  return (1 << ((ccsidr & CCSIDR_EL1_LN_SZ_MASK) + 2)) * 4;
+  return (1U << ((ccsidr & CCSIDR_EL1_LN_SZ_MASK) + 2)) * 4;
 }
 
 static inline size_t arm64_get_cache_size(bool icache)
