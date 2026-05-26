@@ -252,6 +252,15 @@ static int null_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
 
               break;
 
+            case AUDIO_FMT_PCM:
+
+              /* Report supported PCM sub-formats */
+
+              caps->ac_controls.b[0] = AUDIO_SUBFMT_PCM_S16_LE;
+              caps->ac_controls.b[1] = AUDIO_SUBFMT_PCM_S32_LE;
+              caps->ac_controls.b[2] = AUDIO_SUBFMT_END;
+              break;
+
             case AUDIO_FMT_MIDI:
 
               /* We only support Format 0 */
