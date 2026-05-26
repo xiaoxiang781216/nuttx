@@ -640,6 +640,8 @@ arm_vectoraddrexcptn:
  ****************************************************************************/
 
 #ifdef CONFIG_ARM_DECODEFIQ
+	.bss
+	.balign	8
 	.globl	g_fiqstackalloc
 	.type	g_fiqstackalloc, object
 	.globl	g_fiqstacktop
