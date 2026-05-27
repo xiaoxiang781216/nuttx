@@ -34,6 +34,7 @@
 
 #include <nuttx/coredump.h>
 #include <nuttx/elf.h>
+#include <nuttx/mutex.h>
 #include <nuttx/sched.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/percpu.h>
@@ -130,6 +131,8 @@ static const struct memory_region_s g_memory_region[] =
 #endif
 static DEFINE_PER_CPU_BSS_BMP(const struct memory_region_s *, g_regions);
 #define g_regions this_cpu_var_bmp(g_regions)
+static DEFINE_PER_CPU_BMP(mutex_t, g_regions_lock) = NXMUTEX_INITIALIZER;
+#define g_regions_lock this_cpu_var_bmp(g_regions_lock)
 static DEFINE_PER_CPU_BSS_BMP(bool, g_stream_initialized);
 #define g_stream_initialized this_cpu_var_bmp(g_stream_initialized)
 
@@ -988,6 +991,8 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
       return ret;
     }
 
+  nxmutex_lock(&g_regions_lock);
+
   if (g_regions != NULL)
     {
       region = (FAR struct memory_region_s *)g_regions;
@@ -999,7 +1004,7 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
             {
               /* Already watched */
 
-              return 0;
+              goto out;
             }
           else if ((uintptr_t)ptr < region->start &&
                    (uintptr_t)ptr + size >= region->end)
@@ -1008,7 +1013,7 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
 
               region->start = (uintptr_t)ptr;
               region->end = (uintptr_t)ptr + size;
-              return 0;
+              goto out;
             }
           else if ((uintptr_t)ptr < region->start &&
                    (uintptr_t)ptr + size >= region->start)
@@ -1016,7 +1021,7 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
               /* start out of region, end in region */
 
               region->start = (uintptr_t)ptr;
-              return 0;
+              goto out;
             }
           else if ((uintptr_t)ptr < region->end &&
                    (uintptr_t)ptr + size >= region->end)
@@ -1024,7 +1029,7 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
               /* start in region, end out of region */
 
               region->end = (uintptr_t)ptr + size;
-              return 0;
+              goto out;
             }
 
           count++;
@@ -1037,7 +1042,8 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
   region = lib_malloc(sizeof(struct memory_region_s) * (count + 1));
   if (region == NULL)
     {
-      return -ENOMEM;
+      ret = -ENOMEM;
+      goto out;
     }
 
   if (g_regions != NULL)
@@ -1062,7 +1068,10 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
   region[count].flags = 0;
 
   g_regions = region;
-  return 0;
+
+out:
+  nxmutex_unlock(&g_regions_lock);
+  return ret;
 }
 
 /****************************************************************************
