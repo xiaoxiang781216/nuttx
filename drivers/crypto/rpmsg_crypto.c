@@ -970,6 +970,14 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   keybufsize = VIRTIO_CRYPTO_RSA_DER_MAX_BYTES(
                 keybits, krp->krp_keytype == CRYPTO_KEY_TYPE_PRIVATE);
   keybufsize = ALIGN_UP(keybufsize, 4);
+  if (keybufsize > CONFIG_CRYPTO_RPMSG_RSA_KEYBUF_SIZE)
+    {
+      rpmsgerr("keybufsize %lu exceeds buffer %d\n",
+               keybufsize, CONFIG_CRYPTO_RPMSG_RSA_KEYBUF_SIZE);
+      rpmsg_release_tx_buffer(&rdev->ept, msg);
+      return -ENOSPC;
+    }
+
   memset(keybuf, 0, keybufsize);
   sid = rpmsg_crypto_get_session(rdev);
   session = &rdev->sessions[sid];

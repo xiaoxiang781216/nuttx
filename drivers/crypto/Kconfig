@@ -88,11 +88,11 @@ config CRYPTO_RPMSG_SERVER
 
 config CRYPTO_RPMSG_RSA_KEYBUF_SIZE
 	int "RSA key buffer size for rpmsg crypto"
-	default 64
+	default 80
 	---help---
-		Size of the RSA private key buffer used for ASN1 key parsing.
-		This buffer holds byte-swapped key parameters. Recommended values:
-		  64   - KeyID mode (4B per parameter + ASN1 overhead)
+		Size of the RSA key DER buffer used for ASN1 key encoding.
+		This buffer holds DER-encoded key parameters. Recommended values:
+		  80   - KeyID mode (4B per parameter + ASN1 overhead, 16-byte aligned)
 		  1536 - Raw RSA-2048 CRT key (n+e+d+p+q+dp+dq+qp in plaintext)
 
 menuconfig DEV_SE05X
