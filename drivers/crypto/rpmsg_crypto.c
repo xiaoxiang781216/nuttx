@@ -206,6 +206,8 @@ static int rpmsg_crypto_alloc_session(FAR struct rpmsg_crypto_s *rdev)
       return -ENOMEM;
     }
 
+  memset(session + rdev->sesnum, 0,
+         rdev->sesnum * sizeof(struct rpmsg_crypto_session_s));
   rdev->sessions = session;
   rdev->sesnum *= 2;
   return OK;
@@ -241,7 +243,7 @@ static int rpmsg_crypto_get_session(FAR struct rpmsg_crypto_s *rdev)
 static int rpmsg_crypto_put_session(FAR struct rpmsg_crypto_s *rdev,
                                     uint32_t sid)
 {
-  if (sid > rdev->sesnum)
+  if (sid >= rdev->sesnum)
     {
       return -EINVAL;
     }
@@ -354,7 +356,8 @@ static int rpmsg_crypto_newsession(FAR uint32_t *sid,
   if (msg == NULL)
     {
       rpmsgerr("No space for payload\n");
-      return -ENOMEM;
+      ret = -ENOMEM;
+      goto fail;
     }
 
   /* create newsession msg */
@@ -916,7 +919,6 @@ static int rpmsg_crypto_freesession(uint64_t tid)
   if (ret < 0)
     {
       rpmsgerr("Send msg failed\n");
-      return ret;
     }
 
   rpmsg_crypto_put_session(rdev, sid);
@@ -1095,6 +1097,7 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   if (ret < 0)
     {
       rpmsgerr("Send msg failed\n");
+      rpmsg_crypto_put_session(rdev, sid);
       return ret;
     }
 
@@ -1240,6 +1243,7 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
   if (ret < 0)
     {
       rpmsgerr("Send msg failed\n");
+      rpmsg_crypto_put_session(rdev, sid);
       return ret;
     }
 
@@ -1339,6 +1343,7 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
   if (ret < 0)
     {
       rpmsgerr("Send msg failed\n");
+      rpmsg_crypto_put_session(rdev, sid);
       return ret;
     }
 
