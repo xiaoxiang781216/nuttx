@@ -40,6 +40,7 @@ endif
 
 # Software crypto algorithm
 
+ifeq ($(CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_CRYPTO),y)
 ifeq ($(CONFIG_CRYPTO_SW_AES),y)
   CRYPTO_CSRCS += aes.c
 endif
@@ -68,6 +69,7 @@ CRYPTO_CSRCS += key_wrap.c
 CRYPTO_CSRCS += siphash.c
 CRYPTO_CSRCS += hmac_buff.c
 CRYPTO_CSRCS += bn.c
+endif
 
 # Entropy pool random number generator
 
