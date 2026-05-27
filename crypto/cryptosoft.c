@@ -2753,6 +2753,8 @@ static int swcr_ecc256_sign(struct cryptkop *krp)
         {
           return length;
         }
+#else
+      return -ENOSYS;
 #endif
     }
   else
@@ -2794,6 +2796,8 @@ static int swcr_ecc256_verify(struct cryptkop *krp)
         {
           return length;
         }
+#else
+      return -ENOSYS;
 #endif
     }
   else
