@@ -143,12 +143,20 @@ static int notebuf_add(FAR struct note_driver_s *drv,
   ring_mpsc_enqueue(buf->ring, note, len);
 
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
-  if ((ring_space(buf->ring) * 100 <=
+  if (ring_space(buf->ring) * 100 <=
       ring_capacity(buf->ring) * CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK)
-      && work_available(&buf->work))
     {
       work_queue(NOTEBUF_HPWORK, &buf->work,
                  notebuf_flush, buf, 0);
+    }
+#endif
+
+#if CONFIG_DRIVERS_NOTEBUF_FLUSH_TIMEOUT > 0
+  if (work_available(&buf->work))
+    {
+      work_queue(NOTEBUF_HPWORK, &buf->work,
+                 notebuf_flush, buf,
+                 MSEC2TICK(CONFIG_DRIVERS_NOTEBUF_FLUSH_TIMEOUT));
     }
 #endif
 

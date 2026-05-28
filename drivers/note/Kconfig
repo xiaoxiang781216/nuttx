@@ -260,6 +260,16 @@ config DRIVERS_NOTEBUF_NOOVERWRITE
 		Disables overwriting old notes when the buffer is full.
 		When enabled, new notes are dropped if the buffer is full.
 
+config DRIVERS_NOTEBUF_FLUSH_TIMEOUT
+	int "Note buffer flush timeout (msec)"
+	default 0
+	depends on SCHED_WORKQUEUE
+	---help---
+		Maximum time in milliseconds that data may remain in the
+		ring buffer before being flushed. Ensures low-rate notes
+		are persisted even when the watermark is not reached.
+		Set 0 to disable timeout flush.
+
 config DRIVERS_NOTEBUF_FLUSH_WATERMARK
 	int "Note buffer flush watermark (%)"
 	default 50
@@ -275,7 +285,7 @@ config DRIVERS_NOTEBUF_HPWORK
 	bool "Use high priority work queue for flush"
 	default n
 	depends on SCHED_HPWORK
-	depends on DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
+	depends on DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0 || DRIVERS_NOTEBUF_FLUSH_TIMEOUT > 0
 	---help---
 		Use HPWORK for note buffer flush.
 		If not set, LPWORK is used.

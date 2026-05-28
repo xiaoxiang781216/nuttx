@@ -47,6 +47,9 @@ struct notebuf_driver_s
   FAR struct ring_s *ring;
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
   bool irqsafe;
+#endif
+#if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0 || \
+    CONFIG_DRIVERS_NOTEBUF_FLUSH_TIMEOUT > 0
   struct work_s work;
 #endif
 };
