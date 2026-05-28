@@ -29,7 +29,7 @@ config NET_RPMSG_NPOLLWAITERS
 
 config NET_RPMSG_EPT_PRIORITY
 	int "RPMSG socket endpoint priority"
-	default 127
+	default 255
 	---help---
 		Used for unified priority of all rpmsg socket
 
