@@ -45,7 +45,7 @@ struct notebuf_driver_s
   FAR struct note_driver_s *lower;
   spinlock_t lock;
   FAR struct ring_s *ring;
-#if CONFIG_DRIVERS_NOTEBUF_FLUSH_DELAY > 0
+#if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
   bool irqsafe;
   struct work_s work;
 #endif

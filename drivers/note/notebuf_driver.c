@@ -40,11 +40,7 @@
 #  define NOTEBUF_HPWORK LPWORK
 #endif
 
-#ifndef CONFIG_DRIVERS_NOTEBUF_FLUSH_DELAY
-#  define CONFIG_DRIVERS_NOTEBUF_FLUSH_DELAY 0
-#endif
-
-#if CONFIG_DRIVERS_NOTEBUF_FLUSH_DELAY > 0
+#if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
 #  define notebuf_irqsafe(buf) ((buf)->irqsafe)
 #else
 #  define notebuf_irqsafe(buf) true
@@ -146,13 +142,13 @@ static int notebuf_add(FAR struct note_driver_s *drv,
   notebuf_skip(buf, len);
   ring_mpsc_enqueue(buf->ring, note, len);
 
-#if CONFIG_DRIVERS_NOTEBUF_FLUSH_DELAY > 0
-  if (ring_space(buf->ring) <= ring_capacity(buf->ring) / 2
+#if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
+  if ((ring_space(buf->ring) * 100 <=
+      ring_capacity(buf->ring) * CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK)
       && work_available(&buf->work))
     {
       work_queue(NOTEBUF_HPWORK, &buf->work,
-                 notebuf_flush, buf,
-                 USEC2TICK(CONFIG_DRIVERS_NOTEBUF_FLUSH_DELAY));
+                 notebuf_flush, buf, 0);
     }
 #endif
 

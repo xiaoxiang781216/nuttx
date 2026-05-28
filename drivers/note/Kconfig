@@ -224,7 +224,7 @@ config DRIVERS_NOTESTREAM_PATH
 config DRIVERS_NOTESTREAM_IRQSAFE
 	bool "Enable irqsafe mode for notestream notebuf"
 	default n
-	depends on DRIVERS_NOTEBUF_FLUSH_DELAY > 0
+	depends on DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
 
 endif # DRIVERS_NOTESTREAM
 
@@ -260,20 +260,22 @@ config DRIVERS_NOTEBUF_NOOVERWRITE
 		Disables overwriting old notes when the buffer is full.
 		When enabled, new notes are dropped if the buffer is full.
 
-config DRIVERS_NOTEBUF_FLUSH_DELAY
-	int "Note buffer flush delay (usec)"
-	default 0
+config DRIVERS_NOTEBUF_FLUSH_WATERMARK
+	int "Note buffer flush watermark (%)"
+	default 50
+	range 0 99
 	depends on SCHED_WORKQUEUE
 	---help---
-		Delay in microseconds before flushing buffered notes to
-		lower driver. Set 0 to disable work queue based flush.
-		Larger values reduce CPU load but increase latency.
+		Watermark percentage (0-99) of buffer fullness that triggers
+		async flush to lower driver via work queue. Higher values
+		reduce flush frequency but increase latency.
+		Set 0 to disable work queue based flush (pure sync mode).
 
 config DRIVERS_NOTEBUF_HPWORK
 	bool "Use high priority work queue for flush"
 	default n
 	depends on SCHED_HPWORK
-	depends on DRIVERS_NOTEBUF_FLUSH_DELAY > 0
+	depends on DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
 	---help---
 		Use HPWORK for note buffer flush.
 		If not set, LPWORK is used.
