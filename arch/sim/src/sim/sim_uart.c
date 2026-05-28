@@ -797,3 +797,19 @@ void up_putc(int ch)
   up_nputs(&c, 1);
 #endif
 }
+
+/****************************************************************************
+ * Name: up_lowputc
+ *
+ * Description:
+ *   Low-level character output. SIM has no separate low-level UART; route
+ *   through up_putc so any code paths that depend on lowputc (e.g.
+ *   lib_lowoutstream, notelowout) stay functional under SIM.
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_LOWPUTC
+void up_lowputc(int ch)
+{
+  up_putc(ch);
+}
+#endif
