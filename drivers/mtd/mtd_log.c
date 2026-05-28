@@ -147,7 +147,10 @@ struct mtdlog_s
 
 struct mtdlog_user_s
 {
-  struct mtdlog_pos_s  rpos;   /* read position */
+  struct mtdlog_pos_s rpos;             /* Read position */
+  uint32_t            partial_off;      /* Bytes offset in current entry */
+  uint32_t            partial_len;      /* Total length of current entry */
+  uint32_t            partial_data_off; /* Absolute flash offset of entry */
 };
 
 /****************************************************************************
@@ -864,7 +867,40 @@ static int mtdlog_read_log_entry(FAR struct mtdlog_s *mtdlog,
 {
   int ret;
   uint32_t offset;
+  size_t toread;
+  size_t remaining;
   struct mtdlog_entry_s entry_info;
+
+  /* Continue reading a partially read entry */
+
+  if (upriv->partial_len > 0)
+    {
+      remaining = upriv->partial_len - upriv->partial_off;
+      toread = remaining > len ? len : remaining;
+
+      ret = mtdlog_read_data(mtdlog,
+              upriv->partial_data_off + upriv->partial_off,
+              toread, buffer);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      upriv->partial_off += toread;
+      if (upriv->partial_off >= upriv->partial_len)
+        {
+          upriv->rpos.entryoff -=
+            MTDLOG_ALIGN(mtdlog, sizeof(struct mtdlog_entry_s));
+          upriv->rpos.dataoff +=
+            MTDLOG_ALIGN(mtdlog, upriv->partial_len);
+          upriv->partial_len = 0;
+          upriv->partial_off = 0;
+        }
+
+      return toread;
+    }
+
+  /* Locate the next valid entry */
 
   while (1)
     {
@@ -917,28 +953,40 @@ static int mtdlog_read_log_entry(FAR struct mtdlog_s *mtdlog,
           upriv->rpos.dataoff = entry_info.offset;
         }
 
-      if (entry_info.length > len)
-        {
-          return -ENOSPC;
-        }
-
       offset = upriv->rpos.blkidx * mtdlog->blocksize;
       offset += upriv->rpos.dataoff;
-      ret = mtdlog_read_data(mtdlog, offset, entry_info.length, buffer);
-      if (ret < 0)
+
+      if (entry_info.length <= len)
         {
-          return -EIO;
+          ret = mtdlog_read_data(mtdlog, offset,
+                  entry_info.length, buffer);
+          if (ret < 0)
+            {
+              return ret;
+            }
+
+          upriv->rpos.entryoff -=
+            MTDLOG_ALIGN(mtdlog, sizeof(struct mtdlog_entry_s));
+          upriv->rpos.dataoff +=
+            MTDLOG_ALIGN(mtdlog, entry_info.length);
+
+          return entry_info.length;
         }
 
-      break;
+      /* Buffer smaller than entry: start partial read */
+
+      ret = mtdlog_read_data(mtdlog, offset, len, buffer);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      upriv->partial_data_off = offset;
+      upriv->partial_off = len;
+      upriv->partial_len = entry_info.length;
+
+      return len;
     }
-
-  upriv->rpos.entryoff -=
-    MTDLOG_ALIGN(mtdlog, sizeof(struct mtdlog_entry_s));
-  upriv->rpos.dataoff +=
-    MTDLOG_ALIGN(mtdlog, entry_info.length);
-
-  return entry_info.length;
 }
 
 /****************************************************************************
@@ -1485,7 +1533,7 @@ static int mtdlog_open(FAR struct file *filep)
   FAR struct inode *inode = filep->f_inode;
   FAR struct mtdlog_s *mtdlog = inode->i_private;
 
-  upriv = kmm_malloc(sizeof(struct mtdlog_user_s));
+  upriv = kmm_zalloc(sizeof(struct mtdlog_user_s));
   if (upriv == NULL)
     {
       return -ENOMEM;
