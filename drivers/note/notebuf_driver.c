@@ -50,39 +50,13 @@
  * Private Functions
  ****************************************************************************/
 
-static void notebuf_skip(FAR struct notebuf_driver_s *buf, size_t len)
-{
-#ifdef CONFIG_DRIVERS_NOTEBUF_NOOVERWRITE
-  DEBUGASSERT(ring_space(buf->ring) >= len);
-#else
-  irqstate_t flags;
-  uint8_t skip;
-
-  flags = spin_lock_irqsave_notrace(&buf->lock);
-  while (ring_space(buf->ring) < len)
-    {
-      if (ring_mpsc_dequeue(buf->ring, &skip, 1) == 0)
-        {
-          break;
-        }
-
-      if (skip > 1)
-        {
-          ring_mpsc_dequeue_skip(buf->ring, skip - 1);
-        }
-    }
-
-  spin_unlock_irqrestore_notrace(&buf->lock, flags);
-#endif
-}
-
 static void notebuf_flush(FAR void *arg)
 {
   FAR struct notebuf_driver_s *buf = (FAR struct notebuf_driver_s *)arg;
   FAR struct note_driver_s *lower = buf->lower;
   struct ring_buf_s rb;
 
-  ring_mpsc_dequeue_start(buf->ring,
+  ring_mpmc_dequeue_start(buf->ring,
                           ring_count(buf->ring), 1, &rb);
   if (rb.len1 > 0)
     {
@@ -94,7 +68,7 @@ static void notebuf_flush(FAR void *arg)
       lower->ops->add(lower, rb.ptr2, rb.len2, false);
     }
 
-  ring_mpsc_dequeue_finish(buf->ring, &rb);
+  ring_mpmc_dequeue_finish(buf->ring, &rb);
 }
 
 static void notebuf_flush_all(FAR struct note_driver_s *drv)
@@ -139,8 +113,11 @@ static int notebuf_add(FAR struct note_driver_s *drv,
         }
     }
 
-  notebuf_skip(buf, len);
-  ring_mpsc_enqueue(buf->ring, note, len);
+#ifdef CONFIG_DRIVERS_NOTEBUF_NOOVERWRITE
+  ring_mpmc_enqueue(buf->ring, note, len);
+#else
+  ring_mpmc_enqueue_overwrite(buf->ring, note, len);
+#endif
 
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
   if (ring_space(buf->ring) * 100 <=

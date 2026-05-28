@@ -31,7 +31,6 @@
 
 #include <nuttx/note/note_driver.h>
 #include <nuttx/ring.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 
 /****************************************************************************
@@ -43,7 +42,6 @@ struct notebuf_driver_s
 {
   struct note_driver_s driver;
   FAR struct note_driver_s *lower;
-  spinlock_t lock;
   FAR struct ring_s *ring;
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
   bool irqsafe;

@@ -232,7 +232,6 @@ static DEFINE_PER_CPU_BMP(struct notebuf_driver_s, g_notebufstream) =
     &g_notebuf_ops,
   },
   (FAR struct note_driver_s *)&g_notestream,
-  SP_UNLOCKED,
   (FAR struct ring_s *)&g_notebuf_buffer,
 #  ifdef CONFIG_DRIVERS_NOTESTREAM_IRQSAFE
   true,
