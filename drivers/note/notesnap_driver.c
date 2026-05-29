@@ -25,12 +25,13 @@
  ****************************************************************************/
 
 #include <assert.h>
+#include <errno.h>
 #include <nuttx/atomic.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/panic_notifier.h>
+#include <nuttx/ring.h>
 #include <nuttx/sched_note.h>
-#include <sched/sched.h>
-#include <sys/param.h>
+#include <nuttx/spinlock.h>
 
 #include "note_driver.h"
 
@@ -38,183 +39,34 @@
  * Private Types
  ****************************************************************************/
 
-struct notesnap_chunk_s
-{
-  uint8_t type;
-#ifdef CONFIG_SMP
-  uint8_t cpu;
-#endif
-  pid_t pid;
-  clock_t count;
-  uintptr_t args;
-};
-
 struct notesnap_s
 {
-  struct note_driver_s driver;
+  struct note_driver_s  driver;
+  FAR struct ring_s   * ring;
+  spinlock_t            lock;
   struct notifier_block nb;
-  atomic_t index;
-  atomic_t dumping;
-  struct notesnap_chunk_s buffer[CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
+  atomic_t              dumping;
 };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-static void notesnap_start(FAR struct note_driver_s *drv,
-                           FAR struct tcb_s *tcb);
-static void notesnap_stop(FAR struct note_driver_s *drv,
-                          FAR struct tcb_s *tcb);
-static void notesnap_taskname(FAR struct note_driver_s *drv,
-                              FAR struct tcb_s *tcb);
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
-static void notesnap_suspend(FAR struct note_driver_s *drv,
-                             FAR struct tcb_s *tcb);
-static void notesnap_resume(FAR struct note_driver_s *drv,
-                            FAR struct tcb_s *tcb);
-static void notesnap_ready(FAR struct note_driver_s *drv,
-                           FAR struct tcb_s *tcb, uint8_t state);
-#endif
-#ifdef CONFIG_SMP
-static void notesnap_cpu_start(FAR struct note_driver_s *drv,
-                               FAR struct tcb_s *tcb, int cpu);
-static void notesnap_cpu_started(FAR struct note_driver_s *drv,
-                                 FAR struct tcb_s *tcb);
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
-static void notesnap_preemption(FAR struct note_driver_s *drv,
-                                FAR struct tcb_s *tcb, bool locked);
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-static void notesnap_csection(FAR struct note_driver_s *drv,
-                              FAR struct tcb_s *tcb, bool enter);
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-static void notesnap_spinlock(FAR struct note_driver_s *drv,
-                              FAR struct tcb_s *tcb,
-                              FAR volatile void *spinlock, int type);
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-static void notesnap_syscall_enter(FAR struct note_driver_s *drv, int nr,
-                                   int argc, FAR va_list *ap);
-static void notesnap_syscall_leave(FAR struct note_driver_s *drv, int nr,
-                                   uintptr_t result);
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-static void notesnap_irqhandler(FAR struct note_driver_s *drv, int irq,
-                                FAR void *handler, bool enter);
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
-static void notesnap_wdog(FAR struct note_driver_s *drv, uint8_t event,
-                          FAR void *handler, FAR const void *arg);
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
-static void notesnap_wqueue(FAR struct note_driver_s *drv, uint8_t event,
-                            FAR void *worker, FAR const void *arg);
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
-static void notesnap_heap(FAR struct note_driver_s *drv, uint8_t event,
-                          FAR void *heap, FAR void *mem, size_t size,
-                          size_t curused);
-#endif
+static ssize_t notesnap_add(FAR struct note_driver_s *drv,
+                            FAR const void *note, size_t notelen,
+                            bool noswitches);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
+static RING_DEFINE_BMP(g_notesnap_buffer, CONFIG_DRIVERS_NOTESNAP_BUFSIZE);
+#define g_notesnap_buffer this_cpu_var_bmp(g_notesnap_buffer)
+
 static const struct note_driver_ops_s g_notesnap_ops =
 {
-  NULL,
-  notesnap_start,
-  notesnap_stop,
-  notesnap_taskname,
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
-  notesnap_suspend,
-  notesnap_resume,
-  notesnap_ready,
-#endif
-#ifdef CONFIG_SMP
-  notesnap_cpu_start,
-  notesnap_cpu_started,
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
-  notesnap_preemption,
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-  notesnap_csection,
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  notesnap_spinlock,
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-  notesnap_syscall_enter,
-  notesnap_syscall_leave,
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-  notesnap_irqhandler,
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
-  notesnap_wdog,
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
-  notesnap_wqueue,
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
-  notesnap_heap,
-#endif
+  .add = notesnap_add,
 };
-
-static FAR const char *g_notesnap_type[] =
-{
-  "NOTE_ALL",
-  "NOTE_START",
-  "NOTE_STOP",
-  "NOTE_SUSPEND",
-  "NOTE_RESUME",
-  "NOTE_READY",
-  "NOTE_TASKNAME",
-  "NOTE_CPU_START",
-  "NOTE_CPU_STARTED",
-  "NOTE_PREEMPT_LOCK",
-  "NOTE_PREEMPT_UNLOCK",
-  "NOTE_CSECTION_ENTER",
-  "NOTE_CSECTION_LEAVE",
-  "NOTE_SPINLOCK_LOCK",
-  "NOTE_SPINLOCK_LOCKED",
-  "NOTE_SPINLOCK_UNLOCK",
-  "NOTE_SPINLOCK_ABORT",
-  "NOTE_SYSCALL_ENTER",
-  "NOTE_SYSCALL_LEAVE",
-  "NOTE_IRQ_ENTER",
-  "NOTE_IRQ_LEAVE",
-  "NOTE_WDOG_START",
-  "NOTE_WDOG_CANCEL",
-  "NOTE_WDOG_ENTER",
-  "NOTE_WDOG_LEAVE",
-  "NOTE_WQUEUE_START",
-  "NOTE_WQUEUE_CANCEL",
-  "NOTE_WQUEUE_ENTER",
-  "NOTE_WQUEUE_LEAVE",
-  "NOTE_HEAP_ADD",
-  "NOTE_HEAP_REMOVE",
-  "NOTE_HEAP_ALLOC",
-  "NOTE_HEAP_FREE",
-  "NOTE_DUMP_PRINTF",
-  "NOTE_DUMP_BEGIN",
-  "NOTE_DUMP_END",
-  "NOTE_DUMP_MARK",
-  "NOTE_DUMP_BINARY",
-  "NOTE_DUMP_COUNTER",
-  "NOTE_DUMP_THREADTIME",
-  "NOTE_DUMP_ASYNC_BEGIN",
-  "NOTE_DUMP_ASYNC_END",
-};
-
-static_assert(
-  nitems(g_notesnap_type) == NOTE_TYPE_LAST,
-  "g_notesnap_type size mismatch"
-);
 
 /****************************************************************************
  * Public Data
@@ -241,171 +93,66 @@ DEFINE_PER_CPU_BMP(struct notesnap_s, g_notesnap) =
     },
 #endif
     &g_notesnap_ops
-  }
+  },
+  RING_BASE(&g_notesnap_buffer),
+  SP_UNLOCKED,
 };
 #define g_notesnap this_cpu_var_bmp(g_notesnap)
 
 /****************************************************************************
- * Name: notesnap_common
+ * Private Functions
  ****************************************************************************/
 
-static inline void notesnap_common(FAR struct note_driver_s *drv,
-                                   FAR struct tcb_s *tcb, uint8_t type,
-                                   uintptr_t args)
+/****************************************************************************
+ * Name: notesnap_add
+ *
+ * Description:
+ *   Store a raw binary note into the per-CPU ring buffer.  When the ring
+ *   is full, the oldest whole note is dropped to make room (notebuf model),
+ *   so the ring always holds the most recent notes.
+ *
+ ****************************************************************************/
+
+static ssize_t notesnap_add(FAR struct note_driver_s *drv,
+                            FAR const void *note, size_t notelen,
+                            bool noswitches)
 {
   FAR struct notesnap_s *snap = (FAR struct notesnap_s *)drv;
-  FAR struct notesnap_chunk_s *note;
-  size_t index;
+  irqstate_t flags;
+  uint8_t skip;
 
   if (atomic_read(&snap->dumping))
     {
-      return;
+      return -EBUSY;
     }
 
-  /* Atomic operation, equivalent to snap.index++; */
+  flags = spin_lock_irqsave_notrace(&snap->lock);
 
-  index = atomic_add(&snap->index, 1);
-  note = &snap->buffer[index % CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
+  /* Drop oldest whole notes until there is room for the new one. The first
+   * byte of each note is its total length, so dequeue that byte and skip
+   * the rest of the record to stay record-aligned.
+   */
 
-  note->type = type;
-#ifdef CONFIG_SMP
-  note->cpu = tcb->cpu;
-#endif
-  note->count = NOTE_PERF_GETTIME();
-  note->pid = tcb->pid;
-  note->args = args;
+  while (ring_space(snap->ring) < notelen)
+    {
+      if (ring_spsc_dequeue(snap->ring, &skip, 1) == 0)
+        {
+          break;
+        }
+
+      if (skip > 1)
+        {
+          ring_spsc_skip(snap->ring, skip - 1);
+        }
+    }
+
+  /* Cast to uint8_t * so the ring macro derives an element size of 1. */
+
+  ring_spsc_enqueue(snap->ring, (FAR uint8_t *)note, notelen);
+
+  spin_unlock_irqrestore_notrace(&snap->lock, flags);
+  return notelen;
 }
-
-/****************************************************************************
- * Name: notesnap_*
- ****************************************************************************/
-
-static void notesnap_start(FAR struct note_driver_s *drv,
-                           FAR struct tcb_s *tcb)
-{
-  notesnap_common(drv, tcb, NOTE_START, 0);
-}
-
-static void notesnap_stop(FAR struct note_driver_s *drv,
-                          FAR struct tcb_s *tcb)
-{
-  notesnap_common(drv, tcb, NOTE_STOP, 0);
-}
-
-static void notesnap_taskname(FAR struct note_driver_s *drv,
-                              FAR struct tcb_s *tcb)
-{
-  notesnap_common(drv, tcb, NOTE_TASKNAME, 0);
-}
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
-static void notesnap_suspend(FAR struct note_driver_s *drv,
-                             FAR struct tcb_s *tcb)
-{
-  notesnap_common(drv, tcb, NOTE_SUSPEND, 0);
-}
-
-static void notesnap_resume(FAR struct note_driver_s *drv,
-                            FAR struct tcb_s *tcb)
-{
-  notesnap_common(drv, tcb, NOTE_RESUME, 0);
-}
-
-static void notesnap_ready(FAR struct note_driver_s *drv,
-                           FAR struct tcb_s *tcb, uint8_t state)
-{
-  notesnap_common(drv, tcb, NOTE_READY, state);
-}
-#endif
-
-#ifdef CONFIG_SMP
-static void notesnap_cpu_start(FAR struct note_driver_s *drv,
-                               FAR struct tcb_s *tcb, int cpu)
-{
-  notesnap_common(drv, tcb, NOTE_CPU_START, cpu);
-}
-
-static void notesnap_cpu_started(FAR struct note_driver_s *drv,
-                                 FAR struct tcb_s *tcb)
-{
-  notesnap_common(drv, tcb, NOTE_CPU_STARTED, 0);
-}
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
-static void notesnap_preemption(FAR struct note_driver_s *drv,
-                                FAR struct tcb_s *tcb, bool locked)
-{
-  notesnap_common(drv, tcb, locked ? NOTE_PREEMPT_LOCK :
-                  NOTE_PREEMPT_UNLOCK, 0);
-}
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-static void notesnap_csection(FAR struct note_driver_s *drv,
-                              FAR struct tcb_s *tcb, bool enter)
-{
-  notesnap_common(drv, tcb, enter ? NOTE_CSECTION_ENTER :
-                  NOTE_CSECTION_LEAVE, 0);
-}
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-static void notesnap_spinlock(FAR struct note_driver_s *drv,
-                              FAR struct tcb_s *tcb,
-                              FAR volatile void *spinlock, int type)
-{
-  notesnap_common(drv, tcb, type, (uintptr_t)spinlock);
-}
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-static void notesnap_irqhandler(FAR struct note_driver_s *drv, int irq,
-                                FAR void *handler, bool enter)
-{
-  notesnap_common(drv, this_task(), enter ? NOTE_IRQ_ENTER :
-                  NOTE_IRQ_LEAVE, irq);
-}
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-static void notesnap_syscall_enter(FAR struct note_driver_s *drv, int nr,
-                                   int argc, FAR va_list *ap)
-{
-  notesnap_common(drv, this_task(), NOTE_SYSCALL_ENTER, nr);
-}
-
-static void notesnap_syscall_leave(FAR struct note_driver_s *drv, int nr,
-                                   uintptr_t result)
-{
-  notesnap_common(drv, this_task(), NOTE_SYSCALL_LEAVE, nr);
-}
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
-static void notesnap_wdog(FAR struct note_driver_s *drv, uint8_t event,
-                          FAR void *handler, FAR const void *arg)
-{
-  notesnap_common(drv, this_task(), event, (uintptr_t)handler);
-}
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
-static void notesnap_wqueue(FAR struct note_driver_s *drv, uint8_t event,
-                            FAR void *worker, FAR const void *arg)
-{
-  notesnap_common(drv, this_task(), event, (uintptr_t)worker);
-}
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
-static void notesnap_heap(FAR struct note_driver_s *drv, uint8_t event,
-                          FAR void *heap, FAR void *mem, size_t size,
-                          size_t curused)
-{
-  notesnap_common(drv, this_task(), event, (uintptr_t)mem);
-}
-#endif
 
 #ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
 static void notesnap_dump(void)
@@ -450,36 +197,36 @@ void notesnap_notify_register(void)
 
 void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
 {
-  size_t index = atomic_read(&g_notesnap.index) %
-                 CONFIG_DRIVERS_NOTESNAP_NBUFFERS;
-  size_t i;
+  FAR struct notesnap_s *snap = &g_notesnap;
+  struct note_dump_context_s ctx;
+  struct note_max_s note;
+  uint32_t index = 0;
+  uint8_t len;
 
   /* Stop recording while dumping */
 
-  atomic_set(&g_notesnap.dumping, true);
+  atomic_set(&snap->dumping, true);
 
-  for (i = 0; i < CONFIG_DRIVERS_NOTESNAP_NBUFFERS; i++)
+  note_dump_context_init(&ctx);
+
+  /* Walk every note from the oldest (cons_tail) to the newest without
+   * advancing the ring, so the snapshot survives the dump.
+   */
+
+  while (ring_spsc_peek(snap->ring, &len, 1, &index) != 0)
     {
-      FAR struct notesnap_chunk_s *note = &g_notesnap.buffer
-          [(index + i) % CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
-      struct timespec time;
-      char name[CONFIG_TASK_NAME_SIZE + 1];
+      /* Peek the length byte that prefixes the next note. */
 
-      NOTE_PERF_CONVERT(note->count, &time);
-      nxtask_namepool_get(note->pid, name, sizeof(name));
-      lib_sprintf(stream,
-                  "snapshoot: %8s-%-3d [%d] %3" PRIu64 ".%09u: "
-                  "%-16s %#" PRIxPTR "\n",
-                  name, note->pid,
-#ifdef CONFIG_SMP
-                  note->cpu,
-#else
-                  0,
-#endif
-                  (uint64_t)time.tv_sec,
-                  (unsigned)time.tv_nsec,
-                  g_notesnap_type[note->type], note->args);
+      DEBUGASSERT(len > 0);
+
+      /* Peek the whole note (the peek copies across any wrap-around). */
+
+      index -= 1;
+      DEBUGVERIFY(ring_spsc_peek(snap->ring, (FAR uint8_t *)&note,
+                                 len, &index) == len);
+
+      note_dump_one(&note, stream, &ctx);
     }
 
-  atomic_set(&g_notesnap.dumping, false);
+  atomic_set(&snap->dumping, false);
 }

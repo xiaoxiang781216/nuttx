@@ -332,6 +332,7 @@ config DRIVERS_NOTELOG_CPUSET
 config DRIVERS_NOTESNAP
 	bool "Last scheduling information"
 	select DRIVERS_NOTE
+	select DRIVERS_NOTE_TEXT_DUMP
 	default n
 	---help---
 		Record the last scheduling information.
@@ -352,11 +353,14 @@ config DRIVERS_NOTESNAP_CPUSET
 	---help---
 		CPU set for notesnap
 
-config DRIVERS_NOTESNAP_NBUFFERS
-	int "Number of last scheduling information buffers"
-	default 128
+config DRIVERS_NOTESNAP_BUFSIZE
+	int "Note snap ring buffer size (bytes)"
+	default 4096
 	---help---
-		Number of last scheduling information buffers.
+		Size in bytes of the per-CPU notesnap ring buffer that stores the
+		most recent raw binary notes.  Need not be a power of two (a power
+		of two is faster).  Must be larger than the biggest single note
+		(256 bytes) so at least one record always fits.
 
 config DRIVERS_NOTESNAP_CRASH_DUMP
 	bool "Dump notesnap buffer on panic"
