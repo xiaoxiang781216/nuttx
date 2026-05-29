@@ -1320,16 +1320,19 @@ ring_mc_dequeue_skip(FAR struct ring_s *r, uint32_t count)
  *   if needed, then initialize ring_buf_s for zero-copy write.
  *   Caller writes data into buf, then calls ring_sp_finish.
  *
+ *   Returns the number of elements evicted from the ring to make room
+ *   for the request; zero if the ring had enough free space.
+ *
  ****************************************************************************/
 
-static inline_function void
+static inline_function uint32_t
 ring_sp_enqueue_overwrite_start(FAR struct ring_s *r, uint32_t count,
                                 size_t elem_size, FAR struct ring_buf_s *buf)
 {
   uint32_t prod_idx;
   uint32_t cons_idx;
   uint32_t free_space;
-  uint32_t discard;
+  uint32_t discard = 0;
   uint32_t old_cons;
   uint32_t new_cons;
 
@@ -1363,13 +1366,18 @@ ring_sp_enqueue_overwrite_start(FAR struct ring_s *r, uint32_t count,
     }
 
   ring_buf_init(buf, r, prod_idx, count, elem_size);
+  return discard;
 }
 
 /****************************************************************************
  * Name: ring_sp_enqueue_overwrite
  *
  * Description:
- *   Single-producer overwrite enqueue (copy variant).
+ *   Single-producer overwrite enqueue (copy variant).  Returns the net
+ *   number of elements added to the ring (count - discarded);
+ *   when the ring was full, the count of evicted elements is subtracted
+ *   from the inserted count so the caller sees the true delta in
+ *   ring occupancy.
  *
  ****************************************************************************/
 
@@ -1378,14 +1386,15 @@ ring_sp_enqueue_overwrite(FAR struct ring_s *r, FAR const void *items,
                           uint32_t count, size_t elem_size)
 {
   struct ring_buf_s buf;
+  uint32_t discard;
 
-  ring_sp_enqueue_overwrite_start(r, count, elem_size, &buf);
+  discard = ring_sp_enqueue_overwrite_start(r, count, elem_size, &buf);
   ring_copy_from(&buf,
                  (FAR const char *)items + (count - buf.cnt) * elem_size,
                  elem_size);
   ring_sp_finish(r, &buf);
 
-  return buf.cnt;
+  return buf.cnt - discard;
 }
 
 /****************************************************************************
@@ -1397,9 +1406,12 @@ ring_sp_enqueue_overwrite(FAR struct ring_s *r, FAR const void *items,
  *   ring_buf_s for zero-copy write. Caller writes data into buf,
  *   then calls ring_mp_finish.
  *
+ *   Returns the total number of elements evicted from the ring across
+ *   all retry rounds; zero if the ring had enough free space.
+ *
  ****************************************************************************/
 
-static inline_function void
+static inline_function uint32_t
 ring_mp_enqueue_overwrite_start(FAR struct ring_s *r, uint32_t count,
                                 size_t elem_size, FAR struct ring_buf_s *buf)
 {
@@ -1409,6 +1421,7 @@ ring_mp_enqueue_overwrite_start(FAR struct ring_s *r, uint32_t count,
   uint32_t cons_idx;
   uint32_t free_space;
   uint32_t discard;
+  uint32_t all_discard = 0;
   uint32_t old_cons;
   uint32_t new_cons;
 
@@ -1451,6 +1464,7 @@ ring_mp_enqueue_overwrite_start(FAR struct ring_s *r, uint32_t count,
 
           ring_buf_init(buf, r, cons_idx, discard, elem_size);
           ring_mc_finish(r, buf);
+          all_discard += discard;
 
           old_prod = atomic_read(&r->prod_head);
           prod_idx = RTS_IDX(old_prod);
@@ -1464,13 +1478,18 @@ ring_mp_enqueue_overwrite_start(FAR struct ring_s *r, uint32_t count,
     }
 
   ring_buf_init(buf, r, prod_idx, count, elem_size);
+  return all_discard;
 }
 
 /****************************************************************************
  * Name: ring_mp_enqueue_overwrite
  *
  * Description:
- *   Multi-producer overwrite enqueue (copy variant).
+ *   Multi-producer overwrite enqueue (copy variant).  Returns the net
+ *   number of elements added to the ring (count - discarded);
+ *   when the ring was full, the count of evicted elements is subtracted
+ *   from the inserted count so the caller sees the true delta in
+ *   ring occupancy.
  *
  ****************************************************************************/
 
@@ -1479,14 +1498,15 @@ ring_mp_enqueue_overwrite(FAR struct ring_s *r, FAR const void *items,
                           uint32_t count, size_t elem_size)
 {
   struct ring_buf_s buf;
+  uint32_t discard;
 
-  ring_mp_enqueue_overwrite_start(r, count, elem_size, &buf);
+  discard = ring_mp_enqueue_overwrite_start(r, count, elem_size, &buf);
   ring_copy_from(&buf,
                  (FAR const char *)items + (count - buf.cnt) * elem_size,
                  elem_size);
   ring_mp_finish(r, &buf);
 
-  return buf.cnt;
+  return buf.cnt - discard;
 }
 
 #endif /* __INCLUDE_NUTTX_RING_H */
