@@ -93,6 +93,10 @@ if(NOT CONFIG_UP AND CONFIG_ARCH_HAVE_IRQTRIGGER)
   list(APPEND SRCS tricore_cpucall.c)
 endif()
 
+if(CONFIG_ARCH_JUMP_LABEL)
+  list(APPEND SRCS tricore_jump_label.c)
+endif()
+
 set(IFXFLAGS -DIFX_CFG_EXTEND_TRAP_HOOKS -DIFX_USE_SW_MANAGED_INT)
 
 target_sources(arch PRIVATE ${SRCS})

@@ -112,5 +112,9 @@ ifeq ($(CONFIG_ARCH_HAVE_IRQTRIGGER),y)
 endif
 endif
 
+ifeq ($(CONFIG_ARCH_JUMP_LABEL),y)
+  CMN_CSRCS += tricore_jump_label.c
+endif
+
 CFLAGS += -DIFX_CFG_EXTEND_TRAP_HOOKS
 CFLAGS += -DIFX_USE_SW_MANAGED_INT

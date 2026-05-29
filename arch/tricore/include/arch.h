@@ -37,6 +37,9 @@
 #endif
 
 #include <arch/barriers.h>
+#ifdef CONFIG_ARCH_JUMP_LABEL
+#  include <arch/jump_label.h>
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions

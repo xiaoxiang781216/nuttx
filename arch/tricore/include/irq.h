@@ -35,12 +35,16 @@
 #  include <syscall.h>
 #endif
 
+/* arch/arch.h must precede percpu.h so that up_this_cpu_var is defined
+ * before this_cpu_var() references it (needed for asm goto constraints).
+ */
+
+#include <arch/arch.h>
 #include <nuttx/percpu.h>
 
 /* Include chip-specific IRQ definitions (including IRQ numbers) */
 
 #include <arch/chip/irq.h>
-#include <arch/arch.h>
 
 #include <IfxCpu.h>
 
