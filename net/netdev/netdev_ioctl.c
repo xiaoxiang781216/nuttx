@@ -643,7 +643,7 @@ static int netdev_wifr_ioctl(FAR struct socket *psock, int cmd,
             }
         }
 
-      if (dev != NULL && ret == -ENOTTY)
+      if (dev != NULL && dev->d_ioctl && ret == -ENOTTY)
         {
           /* Just forward the IOCTL to the wireless driver */
 
