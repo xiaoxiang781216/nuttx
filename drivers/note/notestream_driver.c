@@ -60,9 +60,9 @@ struct notestream_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int notestream_add(FAR struct note_driver_s *drv,
-                          FAR const void *note, size_t len,
-                          bool noswitches);
+static ssize_t notestream_add(FAR struct note_driver_s *drv,
+                              FAR const void *note, size_t len,
+                              bool noswitches);
 static void notestream_flush(FAR struct note_driver_s *drv);
 
 /****************************************************************************
@@ -117,9 +117,9 @@ static void notestream_flush(FAR struct note_driver_s *drv)
     }
 }
 
-static int notestream_add(FAR struct note_driver_s *drv,
-                          FAR const void *note, size_t len,
-                          bool noswitches)
+static ssize_t notestream_add(FAR struct note_driver_s *drv,
+                              FAR const void *note, size_t len,
+                              bool noswitches)
 {
   FAR struct notestream_s *stream = (FAR struct notestream_s *)drv;
   int32_t expected = NOTESTREAM_IDLE;
@@ -166,7 +166,6 @@ static int notestream_add(FAR struct note_driver_s *drv,
       atomic_set(&stream->state, NOTESTREAM_READY);
     }
 
-  ret = lib_stream_puts(&stream->filestream, note, len);
-  return ret < 0 ? ret : 0;
+  return lib_stream_puts(&stream->filestream, note, len);
 }
 

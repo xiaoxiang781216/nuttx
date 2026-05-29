@@ -394,8 +394,9 @@ struct note_driver_s;
 
 struct note_driver_ops_s
 {
-  CODE int (*add)(FAR struct note_driver_s *drv,
-                  FAR const void *note, size_t notelen, bool noswitches);
+  CODE ssize_t (*add)(FAR struct note_driver_s *drv,
+                      FAR const void *note, size_t notelen,
+                      bool noswitches);
   CODE void (*start)(FAR struct note_driver_s *drv, FAR struct tcb_s *tcb);
   CODE void (*stop)(FAR struct note_driver_s *drv, FAR struct tcb_s *tcb);
   CODE void (*taskname)(FAR struct note_driver_s *drv,

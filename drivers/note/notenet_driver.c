@@ -51,9 +51,9 @@ struct notenet_driver_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int note_netdev_add(FAR struct note_driver_s *driver,
-                           FAR const void *note, size_t notelen,
-                           bool noswitches);
+static ssize_t note_netdev_add(FAR struct note_driver_s *driver,
+                               FAR const void *note, size_t notelen,
+                               bool noswitches);
 static void note_netdev_flush(FAR struct note_driver_s *driver);
 
 /****************************************************************************
@@ -119,9 +119,9 @@ DEFINE_PER_CPU_BMP(struct notenet_driver_s, g_notenet) =
  *
  ****************************************************************************/
 
-static int note_netdev_add(FAR struct note_driver_s *driver,
-                           FAR const void *note, size_t notelen,
-                           bool noswitches)
+static ssize_t note_netdev_add(FAR struct note_driver_s *driver,
+                               FAR const void *note, size_t notelen,
+                               bool noswitches)
 {
   FAR struct notenet_driver_s *drv =
     (FAR struct notenet_driver_s *)driver;
@@ -170,7 +170,7 @@ static int note_netdev_add(FAR struct note_driver_s *driver,
 
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
 
-  return 0;
+  return notelen;
 }
 
 static void note_netdev_flush(FAR struct note_driver_s *driver)

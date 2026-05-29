@@ -154,9 +154,9 @@ static ssize_t noteram_read(FAR struct file *filep,
 static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup);
-static int noteram_add(FAR struct note_driver_s *drv,
-                       FAR const void *note, size_t len,
-                       bool noswitches);
+static ssize_t noteram_add(FAR struct note_driver_s *drv,
+                           FAR const void *note, size_t len,
+                           bool noswitches);
 #if defined(CONFIG_DRIVERS_NOTERAM_TEXT_DUMP) || \
     defined(CONFIG_DRIVERS_NOTERAM_CRASH_DUMP)
 static void
@@ -1159,9 +1159,9 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
  *
  ****************************************************************************/
 
-static int noteram_add(FAR struct note_driver_s *driver,
-                       FAR const void *note, size_t notelen,
-                       bool noswitches)
+static ssize_t noteram_add(FAR struct note_driver_s *driver,
+                           FAR const void *note, size_t notelen,
+                           bool noswitches)
 {
   FAR const char *buf = note;
   FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)driver;
@@ -1241,6 +1241,9 @@ static int noteram_add(FAR struct note_driver_s *driver,
 
       atomic_sub(&drv->poll_ref, 1);
     }
+
+  rspin_unlock_irqrestore_notrace(&drv->lock, flags);
+  return notelen;
 
 out:
   rspin_unlock_irqrestore_notrace(&drv->lock, flags);

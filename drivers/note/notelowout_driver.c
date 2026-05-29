@@ -34,9 +34,9 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-static int notelowout_add(FAR struct note_driver_s *drv,
-                          FAR const void *note, size_t len,
-                          bool noswitches);
+static ssize_t notelowout_add(FAR struct note_driver_s *drv,
+                              FAR const void *note, size_t len,
+                              bool noswitches);
 
 /****************************************************************************
  * Private Data
@@ -77,9 +77,9 @@ DEFINE_PER_CPU_BMP(struct note_driver_s, g_notelowout) =
  * Private Functions
  ****************************************************************************/
 
-static int notelowout_add(FAR struct note_driver_s *drv,
-                          FAR const void *note, size_t len,
-                          bool noswitches)
+static ssize_t notelowout_add(FAR struct note_driver_s *drv,
+                              FAR const void *note, size_t len,
+                              bool noswitches)
 {
   FAR const unsigned char *p = (FAR const unsigned char *)note;
   size_t i;
@@ -89,5 +89,5 @@ static int notelowout_add(FAR struct note_driver_s *drv,
       up_lowputc(p[i]);
     }
 
-  return 0;
+  return len;
 }

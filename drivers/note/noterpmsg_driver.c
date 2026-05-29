@@ -57,9 +57,9 @@ struct noterpmsg_driver_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int noterpmsg_add(FAR struct note_driver_s *driver,
-                         FAR const void *note, size_t notelen,
-                         bool noswitches);
+static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
+                             FAR const void *note, size_t notelen,
+                             bool noswitches);
 static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
                               uint8_t level, uintptr_t ip, uintptr_t type,
                               FAR const char *fmt, va_list va);
@@ -230,9 +230,9 @@ static void noterpmsg_work(FAR void *priv)
     }
 }
 
-static int noterpmsg_add(FAR struct note_driver_s *driver,
-                         FAR const void *note, size_t notelen,
-                         bool noswitches)
+static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
+                             FAR const void *note, size_t notelen,
+                             bool noswitches)
 {
   FAR struct noterpmsg_driver_s *drv =
     (FAR struct noterpmsg_driver_s *)driver;
@@ -283,7 +283,7 @@ static int noterpmsg_add(FAR struct note_driver_s *driver,
                  NOTE_RPMSG_WORK_DELAY);
     }
 
-  return 0;
+  return notelen;
 }
 
 static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,

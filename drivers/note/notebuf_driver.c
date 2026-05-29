@@ -85,13 +85,14 @@ static void notebuf_flush_all(FAR struct note_driver_s *drv)
     }
 }
 
-static int notebuf_add(FAR struct note_driver_s *drv,
-                       FAR const void *note, size_t len,
-                       bool noswitches)
+static ssize_t notebuf_add(FAR struct note_driver_s *drv,
+                           FAR const void *note, size_t len,
+                           bool noswitches)
 {
   FAR struct notebuf_driver_s *buf =
     (FAR struct notebuf_driver_s *)drv;
   FAR struct note_driver_s *lower = buf->lower;
+  ssize_t written = 0;
 
 #ifdef DRIVERS_NOTEBUF_SECTION
   /* Custom linker sections may be NOLOAD (e.g. standbyram), where
@@ -107,16 +108,26 @@ static int notebuf_add(FAR struct note_driver_s *drv,
   if (notebuf_irqsafe(buf))
     {
       notebuf_flush(buf);
-      if (lower->ops->add(lower, note, len, noswitches) >= 0)
+
+      written = lower->ops->add(lower, note, len, noswitches);
+      if (written == len)
         {
-          return 0;
+          return written;
         }
+
+      if (written < 0)
+        {
+          written = 0;
+        }
+
+      note = (FAR const char *)note + written;
+      len -= written;
     }
 
 #ifdef CONFIG_DRIVERS_NOTEBUF_NOOVERWRITE
-  ring_mpmc_enqueue(buf->ring, note, len);
+  written += ring_mpmc_enqueue(buf->ring, note, len);
 #else
-  ring_mpmc_enqueue_overwrite(buf->ring, note, len);
+  written += ring_mpmc_enqueue_overwrite(buf->ring, note, len);
 #endif
 
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
@@ -137,7 +148,7 @@ static int notebuf_add(FAR struct note_driver_s *drv,
     }
 #endif
 
-  return 0;
+  return written;
 }
 
 static int notebuf_ioctl(FAR struct file *filep, int cmd,
