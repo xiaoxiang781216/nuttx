@@ -594,7 +594,12 @@ int work_cancel_sync_wq(FAR struct kwork_wqueue_s *wqueue,
  *
  ****************************************************************************/
 
-#define work_timeleft(work) ((sclock_t)((work)->qtime - clock_systime_ticks()))
+static inline_function sclock_t work_timeleft(FAR struct work_s *work)
+{
+  clock_t expired = work->qtime;
+  clock_t now     = clock_systime_ticks();
+  return clock_compare(now, expired) ? expired - now : 0;
+}
 
 /****************************************************************************
  * Name: lpwork_boostpriority
