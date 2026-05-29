@@ -736,10 +736,18 @@ static int backtrace_unwind(struct unwind_frame_s *frame,
         {
           frame->pc = (frame->pc & ~1) - 2;
 
-          if (cnt == 0 || (void *)frame->pc != buffer[cnt - 1])
+          if (cnt > 0 && (void *)frame->pc == buffer[cnt - 1])
             {
-              buffer[cnt++] = (void *)frame->pc;
+              /* No progress: same PC as previous frame.  Bail out to
+               * avoid an infinite loop when the unwind info repeatedly
+               * resolves to the same address (e.g. corrupted stack
+               * during a nested fault).
+               */
+
+              break;
             }
+
+          buffer[cnt++] = (void *)frame->pc;
         }
     }
 
