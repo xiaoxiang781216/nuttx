@@ -45,7 +45,7 @@
 #ifdef __ghs__
 #  if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R)
 #    define __ARM_ARCH 7
-#  elif defined(CONFIG_ARCH_ARMV8R)
+#  elif defined(CONFIG_ARCH_ARMV8R) || defined(CONFIG_ARCH_ARMV8A)
 #    define __ARM_ARCH 8
 #  endif
 #endif

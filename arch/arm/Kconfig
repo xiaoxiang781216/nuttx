@@ -1113,9 +1113,43 @@ config ARCH_ARMV8R
 	select ALARM_ARCH
 	select ARM_HAVE_EL2
 
+config ARCH_ARMV8A
+	bool
+	default n
+	select ARCH_HAVE_CPUINFO
+	select ARCH_HAVE_DEBUG
+	select ARCH_HAVE_PERF_EVENTS_USER_ACCESS if !SMP
+	select ARM_HAVE_WFE_SEV
+	select ARM_PMUV2 if PERF_EVENTS
+	---help---
+		ARMv8-A architecture running in AArch32 state. This is a superset
+		of ARMv7-A with additional features such as cryptography extensions
+		and EL3 (Monitor mode / Secure world) support. CPUs like Cortex-A53
+		and Cortex-A57 can operate in this mode.
+
+config ARCH_CORTEXA53_AARCH32
+	bool
+	default n
+	select ARCH_ARMV8A
+	select ARCH_DCACHE
+	select ARCH_ICACHE
+	select ARCH_HAVE_MMU
+	select ARCH_USE_MMU
+	select ARCH_HAVE_FPU
+	select ARCH_HAVE_IRQTRIGGER
+	select ARCH_HAVE_IRQPRIO
+	select ARCH_HAVE_HIPRI_INTERRUPT
+	select ARM_HAVE_MPCORE
+	---help---
+		Cortex-A53 processor running in AArch32 mode. The Cortex-A53 is
+		an ARMv8-A processor that supports both AArch64 and AArch32
+		execution states. When running in AArch32, it is compatible with
+		ARMv7-A software but has access to ARMv8-A features like
+		cryptography extensions.
+
 config ARM_GIC_VERSION
 	int "GIC version"
-	default 3 if ARCH_ARMV8R
+	default 3 if ARCH_ARMV8R || ARCH_ARMV8A
 	default 1 if ARCH_CORTEXA5 || ARCH_CORTEXA8
 	default 2
 	range 1 4
@@ -1125,7 +1159,7 @@ config ARM_GIC_VERSION
 
 config ARCH_ARM_A_R
 	bool
-	default ARCH_ARM7TDMI || ARCH_ARM920T || ARCH_ARM926EJS || ARCH_ARM1136J || ARCH_ARM1156T2 || ARCH_ARM1176JZ || ARCH_ARMV7A || ARCH_ARMV7R || ARCH_ARMV8R
+	default ARCH_ARM7TDMI || ARCH_ARM920T || ARCH_ARM926EJS || ARCH_ARM1136J || ARCH_ARM1156T2 || ARCH_ARM1176JZ || ARCH_ARMV7A || ARCH_ARMV7R || ARCH_ARMV8R || ARCH_ARMV8A
 	---help---
 		General ARM Cortex A/R
 

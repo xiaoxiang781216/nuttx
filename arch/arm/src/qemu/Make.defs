@@ -30,10 +30,14 @@ ifeq ($(CONFIG_ARCH_ARMV8R),y)
 include arm_a_r/Make.defs
 endif
 
+ifeq ($(CONFIG_ARCH_ARMV8A),y)
+include arm_a_r/Make.defs
+endif
+
 # qemu-specific C source files
 CHIP_CSRCS  = qemu_boot.c qemu_serial.c qemu_irq.c qemu_timer.c
 
-ifeq ($(CONFIG_ARCH_ARMV7A),y)
+ifneq ($(filter y,$(CONFIG_ARCH_ARMV7A) $(CONFIG_ARCH_ARMV8A)),)
 CHIP_CSRCS += qemu_pgalloc.c qemu_memorymap.c
 endif
 

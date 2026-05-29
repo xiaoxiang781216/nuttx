@@ -46,10 +46,18 @@
 #undef CONFIG_RAM_END
 #define CONFIG_RAM_END        PGTABLE_BASE_PADDR
 
+#ifdef CONFIG_FLASH_VSTART
 #define NUTTX_TEXT_VADDR      (CONFIG_FLASH_VSTART & 0xfff00000)
 #define NUTTX_TEXT_PADDR      (CONFIG_FLASH_VSTART & 0xfff00000)
 #define NUTTX_TEXT_PEND       ((CONFIG_FLASH_END + 0x000fffff) & 0xfff00000)
 #define NUTTX_TEXT_SIZE       (NUTTX_TEXT_PEND - NUTTX_TEXT_PADDR)
+#else
+/* Boot from RAM: text and data share the same memory region */
+#define NUTTX_TEXT_VADDR      (CONFIG_RAM_VSTART & 0xfff00000)
+#define NUTTX_TEXT_PADDR      (CONFIG_RAM_START & 0xfff00000)
+#define NUTTX_TEXT_PEND       ((CONFIG_RAM_END + 0x000fffff) & 0xfff00000)
+#define NUTTX_TEXT_SIZE       (NUTTX_TEXT_PEND - NUTTX_TEXT_PADDR)
+#endif
 
 #define NUTTX_RAM_VADDR       (CONFIG_RAM_VSTART & 0xfff00000)
 #define NUTTX_RAM_PADDR       (CONFIG_RAM_START & 0xfff00000)

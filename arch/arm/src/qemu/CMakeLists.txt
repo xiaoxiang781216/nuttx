@@ -20,7 +20,7 @@
 
 set(SRCS qemu_boot.c qemu_serial.c qemu_irq.c qemu_timer.c)
 
-if(CONFIG_ARCH_ARMV7A)
+if(CONFIG_ARCH_ARMV7A OR CONFIG_ARCH_ARMV8A)
   list(APPEND SRCS qemu_pgalloc.c qemu_memorymap.c)
 endif()
 

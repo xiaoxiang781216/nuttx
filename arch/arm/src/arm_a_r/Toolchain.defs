@@ -210,6 +210,60 @@ else
 endif
 
 ############################################################################
+# ARMv8-A AArch32 Toolchain
+############################################################################
+
+else ifeq ($(CONFIG_ARCH_ARMV8A),y)
+
+ifeq ($(CONFIG_ARCH_CORTEXA53_AARCH32),y)
+  ARCHCPUFLAGS += -mcpu=cortex-a53
+  LLVM_CPUTYPE := cortex-a53
+endif
+
+ifeq ($(CONFIG_ARM_THUMB),y)
+  LLVM_ARCHTYPE := thumbv8a
+else
+  LLVM_ARCHTYPE := armv8a
+endif
+
+ifneq ($(CONFIG_ARM_DPFPU32),y)
+  ARCHFPUD16 = -d16
+endif
+
+ifeq ($(CONFIG_ARCH_FPU),y)
+  LLVM_ABITYPE := eabihf
+  ifeq ($(CONFIG_ARM_FPU_ABI_SOFT),y)
+    ARCHCPUFLAGS += -mfloat-abi=softfp
+  else
+    ARCHCPUFLAGS += -mfloat-abi=hard
+  endif
+
+  ifeq ($(CONFIG_ARM_NEON),y)
+    ARCHCPUFLAGS += -mfpu=neon-fp-armv8
+  else
+    ARCHCPUFLAGS += -mfpu=fp-armv8$(ARCHFPUD16)
+  endif
+
+else
+  LLVM_ABITYPE := eabi
+  ARCHCPUFLAGS += -mfloat-abi=soft
+endif
+
+ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
+  ifeq ($(CONFIG_ARCH_CORTEXA53_AARCH32),y)
+    LDCPUFLAGS = Cortex-A53
+  endif
+
+  ifeq ($(CONFIG_ARCH_FPU),)
+    LDFLAGS += --cpu=$(LDCPUFLAGS).no_neon.no_vfp
+  else ifeq ($(CONFIG_ARM_NEON),)
+    LDFLAGS += --cpu=$(LDCPUFLAGS).no_neon
+  else
+    LDFLAGS += --cpu=$(LDCPUFLAGS)
+  endif
+endif
+
+############################################################################
 # Legacy ARM (ARM7TDMI, ARM9, ARM11, etc.)
 ############################################################################
 
@@ -239,6 +293,6 @@ LLVM_ARCHTYPE := arm
 LLVM_ABITYPE := eabi
 ARCHCPUFLAGS += -mfloat-abi=soft
 
-endif # CONFIG_ARCH_ARMV7A / CONFIG_ARCH_ARMV7R / CONFIG_ARCH_ARMV8R
+endif # CONFIG_ARCH_ARMV7A / CONFIG_ARCH_ARMV7R / CONFIG_ARCH_ARMV8R / CONFIG_ARCH_ARMV8A
 
 include $(TOPDIR)/arch/arm/src/common/Toolchain.defs

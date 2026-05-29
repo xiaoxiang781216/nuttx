@@ -75,7 +75,7 @@
 
 void arm_boot(void)
 {
-#ifdef CONFIG_ARCH_ARMV7A
+#if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV8A)
   /* Set the page table for section */
 
   qemu_setupmappings();

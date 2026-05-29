@@ -178,6 +178,45 @@ elseif(CONFIG_ARCH_ARMV8R)
   endif()
 
   # ############################################################################
+  # ARMv8-A AArch32
+  # ############################################################################
+
+elseif(CONFIG_ARCH_ARMV8A)
+
+  if(CONFIG_ARCH_CORTEXA53_AARCH32)
+    list(APPEND PLATFORM_FLAGS -mcpu=cortex-a53)
+    set(LLVM_CPUTYPE cortex-a53)
+  endif()
+
+  if(CONFIG_ARM_THUMB)
+    set(LLVM_ARCHTYPE thumbv8a)
+  else()
+    set(LLVM_ARCHTYPE armv8a)
+  endif()
+
+  if(NOT CONFIG_ARM_DPFPU32)
+    set(ARCHFPUD16 -d16)
+  endif()
+
+  if(CONFIG_ARCH_FPU)
+    set(LLVM_ABITYPE eabihf)
+    if(CONFIG_ARM_FPU_ABI_SOFT)
+      list(APPEND PLATFORM_FLAGS -mfloat-abi=softfp)
+    else()
+      list(APPEND PLATFORM_FLAGS -mfloat-abi=hard)
+    endif()
+
+    if(CONFIG_ARM_NEON)
+      list(APPEND PLATFORM_FLAGS -mfpu=neon-fp-armv8)
+    else()
+      list(APPEND PLATFORM_FLAGS -mfpu=fp-armv8${ARCHFPUD16})
+    endif()
+  else()
+    set(LLVM_ABITYPE eabi)
+    list(APPEND PLATFORM_FLAGS -mfloat-abi=soft)
+  endif()
+
+  # ############################################################################
   # Legacy ARM (ARM7TDMI, ARM9, ARM11, etc.)
   # ############################################################################
 
