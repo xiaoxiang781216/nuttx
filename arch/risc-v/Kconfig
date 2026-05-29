@@ -673,6 +673,14 @@ config RISCV_CACHE_LINE_SIZE
 		Common values are 32 or 64 bytes. This should match the
 		actual cache line size of the target processor.
 
+config RISCV_CACHE_ZICBOZ
+	bool "Zicboz cache-block zero extension"
+	default n
+	select ARCH_DCACHE_ZERO
+	---help---
+		Enable RISC-V Zicboz extension support.
+		Provides cbo.zero instruction for efficient cache-block zeroing.
+
 endif # RISCV_CACHE_ZICBOM
 
 # Option to run NuttX in supervisor mode. This is obviously not usable in

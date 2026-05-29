@@ -32,6 +32,7 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 
 /****************************************************************************
@@ -537,6 +538,29 @@ void up_unlock_dcache_all(void);
 void up_coherent_dcache(uintptr_t addr, size_t len);
 #else
 #  define up_coherent_dcache(addr, len)
+#endif
+
+/****************************************************************************
+ * Name: up_zero_dcache
+ *
+ * Description:
+ *   Zero memory at [start, start+len) using cache-block zero operations.
+ *   More efficient than memset(0) as it avoids read-for-ownership.
+ *
+ * Input Parameters:
+ *   start - virtual start address of region
+ *   len   - size of region in bytes
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_DCACHE_ZERO
+void up_zero_dcache(uintptr_t start, size_t len);
+#else
+#  define up_zero_dcache(start, len) \
+     memset((void *)(start), 0, (len))
 #endif
 
 #undef EXTERN

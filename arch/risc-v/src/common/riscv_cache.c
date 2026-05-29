@@ -114,6 +114,24 @@ static inline void cbo_flush(uintptr_t addr)
   __asm__ volatile ("cbo.flush 0(%0)" :: "r"(addr) : "memory");
 }
 
+#ifdef CONFIG_RISCV_CACHE_ZICBOZ
+
+/****************************************************************************
+ * Name: cbo_zero
+ *
+ * Description:
+ *   Zero the cache block containing addr without read-for-ownership.
+ *   Zicboz extension instruction.
+ *
+ ****************************************************************************/
+
+static inline void cbo_zero(uintptr_t addr)
+{
+  __asm__ volatile ("cbo.zero 0(%0)" :: "r"(addr) : "memory");
+}
+
+#endif /* CONFIG_RISCV_CACHE_ZICBOZ */
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -192,6 +210,26 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
 void up_flush_dcache_all(void)
 {
 }
+
+#ifdef CONFIG_RISCV_CACHE_ZICBOZ
+
+/****************************************************************************
+ * Name: up_zero_dcache
+ *
+ * Description:
+ *   Zero memory at [start, start+len) using cbo.zero. More efficient than
+ *   memset(0) because it avoids read-for-ownership cache misses.
+ *
+ ****************************************************************************/
+
+void up_zero_dcache(uintptr_t start, size_t len)
+{
+  uintptr_t end = start + len;
+
+  DCACHE_OP_RANGE(start, end, cbo_zero);
+}
+
+#endif /* CONFIG_RISCV_CACHE_ZICBOZ */
 
 #endif /* CONFIG_ARCH_DCACHE */
 

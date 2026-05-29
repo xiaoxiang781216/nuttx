@@ -407,6 +407,10 @@ config ARCH_DCACHE_LOCK
 	depends on ARCH_DCACHE
 	default n
 
+config ARCH_DCACHE_ZERO
+	bool
+	default n
+
 config ARCH_HAVE_ITCM
 	bool
 	default n
