@@ -55,27 +55,27 @@
  ****************************************************************************/
 
 #define DEFINE_ASAN_LOAD_STORE(size) \
-  void __asan_report_load##size##_noabort(FAR void *addr) \
+  void __asan_report_load##size##_noabort(uintptr_t addr) \
   { \
     kasan_report(addr, size, false, return_address(0)); \
   } \
-  void __asan_report_store##size##_noabort(FAR void *addr) \
+  void __asan_report_store##size##_noabort(uintptr_t addr) \
   { \
     kasan_report(addr, size, true, return_address(0)); \
   } \
-  void __asan_load##size##_noabort(FAR void *addr) \
+  void __asan_load##size##_noabort(uintptr_t addr) \
   { \
     kasan_check_report(addr, size, false, return_address(0)); \
   } \
-  void __asan_store##size##_noabort(FAR void *addr) \
+  void __asan_store##size##_noabort(uintptr_t addr) \
   { \
     kasan_check_report(addr, size, true, return_address(0)); \
   } \
-  void __asan_load##size(FAR void *addr) \
+  void __asan_load##size(uintptr_t addr) \
   { \
     kasan_check_report(addr, size, false, return_address(0)); \
   } \
-  void __asan_store##size(FAR void *addr) \
+  void __asan_store##size(uintptr_t addr) \
   { \
     kasan_check_report(addr, size, true, return_address(0)); \
   }
@@ -135,7 +135,7 @@ static spinlock_t g_kasan_lock = SP_UNLOCKED;
  * Private Functions
  ****************************************************************************/
 
-static void kasan_report(FAR const void *addr, size_t size,
+static void kasan_report(uintptr_t addr, size_t size,
                          bool is_write, FAR void *return_address)
 {
   irqstate_t flags = spin_lock_irqsave_nopreempt(&g_kasan_lock);
@@ -149,7 +149,7 @@ static void kasan_report(FAR const void *addr, size_t size,
     }
 
 #endif
-  _alert("kasan detected a %s access error, address at %p,"
+  _alert("kasan detected a %s access error, address at 0x%" PRIxPTR ","
          "size is %zu, return address: %p\n",
          is_write ? "write" : "read",
          addr, size, return_address);
@@ -169,7 +169,7 @@ static void kasan_report(FAR const void *addr, size_t size,
 }
 
 #if MM_KASAN_WATCHPOINT > 0
-static void kasan_check_watchpoint(FAR const void *addr, size_t size,
+static void kasan_check_watchpoint(uintptr_t addr, size_t size,
                                    bool is_write,
                                    FAR void *return_address)
 {
@@ -184,8 +184,8 @@ static void kasan_check_watchpoint(FAR const void *addr, size_t size,
           break;
         }
 
-      if (addr + size <= watchpoint->addr ||
-          addr >= watchpoint->addr + watchpoint->size)
+      if (addr + size <= (uintptr_t)watchpoint->addr ||
+          addr >= (uintptr_t)watchpoint->addr + watchpoint->size)
         {
           continue;
         }
@@ -199,7 +199,7 @@ static void kasan_check_watchpoint(FAR const void *addr, size_t size,
 }
 #endif
 
-static inline void kasan_check_report(FAR const void *addr, size_t size,
+static inline void kasan_check_report(uintptr_t addr, size_t size,
                                       bool is_write,
                                       FAR void *return_address)
 {
@@ -210,7 +210,7 @@ static inline void kasan_check_report(FAR const void *addr, size_t size,
     }
 
 #  ifndef CONFIG_MM_KASAN_DISABLE_NULL_POINTER_CHECK
-  if (predict_false(addr == NULL))
+  if (predict_false(addr == 0))
     {
       kasan_report(addr, size, is_write, return_address);
     }
@@ -326,12 +326,12 @@ void __asan_handle_no_return(void)
   /* Shut up compiler complaints */
 }
 
-void __asan_register_globals(void *ptr, size_t size)
+void __asan_register_globals(uintptr_t ptr, size_t size)
 {
   /* Shut up compiler complaints */
 }
 
-void __asan_unregister_globals(void *ptr, size_t size)
+void __asan_unregister_globals(uintptr_t ptr, size_t size)
 {
   /* Shut up compiler complaints */
 }
@@ -352,32 +352,32 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   /* Shut up compiler complaints */
 }
 
-void __asan_report_load_n_noabort(FAR void *addr, size_t size)
+void __asan_report_load_n_noabort(uintptr_t addr, size_t size)
 {
   kasan_report(addr, size, false, return_address(0));
 }
 
-void __asan_report_store_n_noabort(FAR void *addr, size_t size)
+void __asan_report_store_n_noabort(uintptr_t addr, size_t size)
 {
   kasan_report(addr, size, true, return_address(0));
 }
 
-void __asan_loadN_noabort(FAR void *addr, size_t size)
+void __asan_loadN_noabort(uintptr_t addr, size_t size)
 {
   kasan_check_report(addr, size, false, return_address(0));
 }
 
-void __asan_storeN_noabort(FAR void * addr, size_t size)
+void __asan_storeN_noabort(uintptr_t addr, size_t size)
 {
   kasan_check_report(addr, size, true, return_address(0));
 }
 
-void __asan_loadN(FAR void *addr, size_t size)
+void __asan_loadN(uintptr_t addr, size_t size)
 {
   kasan_check_report(addr, size, false, return_address(0));
 }
 
-void __asan_storeN(FAR void *addr, size_t size)
+void __asan_storeN(uintptr_t addr, size_t size)
 {
   kasan_check_report(addr, size, true, return_address(0));
 }

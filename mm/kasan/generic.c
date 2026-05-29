@@ -67,10 +67,9 @@ static spinlock_t g_lock;
 
 static inline_function FAR uintptr_t *
 kasan_mem_to_shadow(FAR struct kasan_region_s *region[], size_t count,
-                    FAR const void *ptr, size_t size,
+                    uintptr_t addr, size_t size,
                     FAR unsigned int *bit)
 {
-  uintptr_t addr = (uintptr_t)ptr;
   size_t i;
 
   for (i = 0; i < count; i++)
@@ -90,7 +89,7 @@ kasan_mem_to_shadow(FAR struct kasan_region_s *region[], size_t count,
 }
 
 static inline_function bool
-kasan_is_poisoned(FAR const void *addr, size_t size)
+kasan_is_poisoned(uintptr_t addr, size_t size)
 {
   FAR uintptr_t *p;
   unsigned int bit;
@@ -183,7 +182,7 @@ static void kasan_do_poison(FAR uintptr_t *p, size_t size,
   spin_unlock_irqrestore_notrace(&g_lock, flags);
 }
 
-static void kasan_set_poison(FAR const void *addr, size_t size,
+static void kasan_set_poison(uintptr_t addr, size_t size,
                              bool poisoned)
 {
   FAR uintptr_t *p;
@@ -197,7 +196,7 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
 }
 
 static void kasan_set_poison2(FAR struct kasan_region_s *region[],
-                              FAR const void *addr, size_t size,
+                              uintptr_t addr, size_t size,
                               bool poisoned)
 {
   FAR uintptr_t *p;
@@ -210,7 +209,7 @@ static void kasan_set_poison2(FAR struct kasan_region_s *region[],
     }
 }
 
-static void kasan_show_shadow_memory(FAR const void *addr, size_t size,
+static void kasan_show_shadow_memory(uintptr_t addr, size_t size,
                                      size_t dumpsize)
 {
   FAR const uint8_t *start;
@@ -222,10 +221,10 @@ static void kasan_show_shadow_memory(FAR const void *addr, size_t size,
 
   /* Clamp start to avoid underflow */
 
-  if ((uintptr_t)addr > dumpsize * KASAN_SHADOW_SCALE)
+  if (addr > dumpsize * KASAN_SHADOW_SCALE)
     {
       start = (FAR const uint8_t *)
-        (((uintptr_t)addr & ~(KASAN_SHADOW_SCALE - 1)) -
+        ((addr & ~(KASAN_SHADOW_SCALE - 1)) -
          dumpsize * KASAN_SHADOW_SCALE);
     }
   else
@@ -234,7 +233,7 @@ static void kasan_show_shadow_memory(FAR const void *addr, size_t size,
     }
 
   end = (FAR const uint8_t *)
-    (((uintptr_t)addr & ~(KASAN_SHADOW_SCALE - 1)) +
+    ((addr & ~(KASAN_SHADOW_SCALE - 1)) +
      dumpsize * KASAN_SHADOW_SCALE);
 
   _alert("Shadow bytes around the buggy address:\n");
@@ -246,17 +245,17 @@ static void kasan_show_shadow_memory(FAR const void *addr, size_t size,
       for (i = 0; i < 16; i++)
         {
           FAR const uint8_t *cur = p + i * KASAN_SHADOW_SCALE;
-          bool poisoned = kasan_is_poisoned(cur, 1);
+          bool poisoned = kasan_is_poisoned((uintptr_t)cur, 1);
 
           if (cur == (FAR const uint8_t *)
-              ((uintptr_t)addr & ~(KASAN_SHADOW_SCALE - 1)))
+              (addr & ~(KASAN_SHADOW_SCALE - 1)))
             {
               ret += sprintf(buffer + ret,
                              "\b[\033[31m%02x\033[0m ",
                              poisoned ? 0xff : 0x00);
             }
           else if (cur == (FAR const uint8_t *)
-                   ((uintptr_t)addr & ~(KASAN_SHADOW_SCALE - 1))
+                   (addr & ~(KASAN_SHADOW_SCALE - 1))
                    + ALIGN_UP(size, KASAN_SHADOW_SCALE) -
                    KASAN_SHADOW_SCALE)
             {
@@ -297,24 +296,24 @@ FAR void *kasan_clear_tag(FAR const void *addr)
 void kasan_poison2(FAR struct kasan_region_s *region[],
                    FAR const void *addr, size_t size)
 {
-  kasan_set_poison2(region, addr, size, true);
+  kasan_set_poison2(region, (uintptr_t)addr, size, true);
 }
 
 FAR void *kasan_unpoison2(FAR struct kasan_region_s *region[],
                           FAR const void *addr, size_t size)
 {
-  kasan_set_poison2(region, addr, size, false);
+  kasan_set_poison2(region, (uintptr_t)addr, size, false);
   return (FAR void *)addr;
 }
 
 void kasan_poison(FAR const void *addr, size_t size)
 {
-  kasan_set_poison(addr, size, true);
+  kasan_set_poison((uintptr_t)addr, size, true);
 }
 
 FAR void *kasan_unpoison(FAR const void *addr, size_t size)
 {
-  kasan_set_poison(addr, size, false);
+  kasan_set_poison((uintptr_t)addr, size, false);
   return (FAR void *)addr;
 }
 

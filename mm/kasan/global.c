@@ -66,10 +66,9 @@ extern const struct kasan_global_region_s *g_global_region[];
  ****************************************************************************/
 
 static inline_function FAR uintptr_t *
-kasan_global_mem_to_shadow(FAR const void *ptr, size_t size,
+kasan_global_mem_to_shadow(uintptr_t addr, size_t size,
                            FAR unsigned int *bit)
 {
-  uintptr_t addr = (uintptr_t)ptr;
   size_t i;
 
   for (i = 0; g_global_region[i]; i++)
@@ -90,7 +89,7 @@ kasan_global_mem_to_shadow(FAR const void *ptr, size_t size,
 }
 
 static inline_function bool
-kasan_global_is_poisoned(FAR const void *addr, size_t size)
+kasan_global_is_poisoned(uintptr_t addr, size_t size)
 {
   FAR uintptr_t *p;
   unsigned int bit;

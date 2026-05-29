@@ -26,6 +26,7 @@ endif
 
 ifeq ($(CONFIG_MM_KASAN),y)
   CSRCS += arch_libc.c
+  CFLAGS += -fno-builtin-__asan_loadN -fno-builtin-__asan_storeN
 endif
 
 ifeq ($(CONFIG_ARCH_ARM),y)

@@ -28,4 +28,6 @@ endif()
 
 if(CONFIG_MM_KASAN)
   target_sources(c PRIVATE arch_libc.c)
+  target_compile_options(c PRIVATE -fno-builtin-__asan_loadN
+                                   -fno-builtin-__asan_storeN)
 endif()
