@@ -563,6 +563,47 @@ void up_zero_dcache(uintptr_t start, size_t len);
      memset((void *)(start), 0, (len))
 #endif
 
+/****************************************************************************
+ * Name: up_dcache_prefetch_read / up_dcache_prefetch_write
+ *
+ * Description:
+ *   Prefetch data into D-Cache for reading or writing in [start, end).
+ *   These are hint instructions with no architectural side effects.
+ *
+ * Input Parameters:
+ *   start - virtual start address of region
+ *   end   - virtual end address of region + 1
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: up_icache_prefetch
+ *
+ * Description:
+ *   Prefetch instructions into I-Cache in [start, end).
+ *
+ * Input Parameters:
+ *   start - virtual start address of region
+ *   end   - virtual end address of region + 1
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_CACHE_PREFETCH
+void up_dcache_prefetch_read(uintptr_t start, uintptr_t end);
+void up_dcache_prefetch_write(uintptr_t start, uintptr_t end);
+void up_icache_prefetch(uintptr_t start, uintptr_t end);
+#else
+#  define up_dcache_prefetch_read(start, end)
+#  define up_dcache_prefetch_write(start, end)
+#  define up_icache_prefetch(start, end)
+#endif
+
 #undef EXTERN
 #ifdef __cplusplus
 }

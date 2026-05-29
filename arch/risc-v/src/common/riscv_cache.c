@@ -47,7 +47,7 @@
 #ifdef CONFIG_ARCH_DCACHE
 
 /****************************************************************************
- * Name: DCACHE_OP_RANGE
+ * Name: CACHE_OP_RANGE
  *
  * Description:
  *   Apply a CBO operation to every cache line in [start, end).
@@ -57,7 +57,7 @@
  *
  ****************************************************************************/
 
-#  define DCACHE_OP_RANGE(start, end, op)                            \
+#  define CACHE_OP_RANGE(start, end, op)                             \
      do                                                              \
        {                                                             \
          for (start = CACHE_LINE_ALIGN(start); start < (end);        \
@@ -132,6 +132,49 @@ static inline void cbo_zero(uintptr_t addr)
 
 #endif /* CONFIG_RISCV_CACHE_ZICBOZ */
 
+#ifdef CONFIG_RISCV_CACHE_ZICBOP
+
+/****************************************************************************
+ * Name: cbo_prefetch_r
+ *
+ * Description:
+ *   Prefetch data for reading. Zicbop extension instruction.
+ *
+ ****************************************************************************/
+
+static inline void cbo_prefetch_r(uintptr_t addr)
+{
+  __asm__ volatile ("prefetch.r 0(%0)" :: "r"(addr));
+}
+
+/****************************************************************************
+ * Name: cbo_prefetch_w
+ *
+ * Description:
+ *   Prefetch data for writing. Zicbop extension instruction.
+ *
+ ****************************************************************************/
+
+static inline void cbo_prefetch_w(uintptr_t addr)
+{
+  __asm__ volatile ("prefetch.w 0(%0)" :: "r"(addr));
+}
+
+/****************************************************************************
+ * Name: cbo_prefetch_i
+ *
+ * Description:
+ *   Prefetch instructions. Zicbop extension instruction.
+ *
+ ****************************************************************************/
+
+static inline void cbo_prefetch_i(uintptr_t addr)
+{
+  __asm__ volatile ("prefetch.i 0(%0)" :: "r"(addr));
+}
+
+#endif /* CONFIG_RISCV_CACHE_ZICBOP */
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -162,7 +205,7 @@ size_t up_get_dcache_linesize(void)
 
 void up_invalidate_dcache(uintptr_t start, uintptr_t end)
 {
-  DCACHE_OP_RANGE(start, end, cbo_inval);
+  CACHE_OP_RANGE(start, end, cbo_inval);
 }
 
 /****************************************************************************
@@ -178,7 +221,7 @@ void up_invalidate_dcache(uintptr_t start, uintptr_t end)
 
 void up_clean_dcache(uintptr_t start, uintptr_t end)
 {
-  DCACHE_OP_RANGE(start, end, cbo_clean);
+  CACHE_OP_RANGE(start, end, cbo_clean);
 }
 
 /****************************************************************************
@@ -194,7 +237,7 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
 
 void up_flush_dcache(uintptr_t start, uintptr_t end)
 {
-  DCACHE_OP_RANGE(start, end, cbo_flush);
+  CACHE_OP_RANGE(start, end, cbo_flush);
 }
 
 /****************************************************************************
@@ -226,7 +269,7 @@ void up_zero_dcache(uintptr_t start, size_t len)
 {
   uintptr_t end = start + len;
 
-  DCACHE_OP_RANGE(start, end, cbo_zero);
+  CACHE_OP_RANGE(start, end, cbo_zero);
 }
 
 #endif /* CONFIG_RISCV_CACHE_ZICBOZ */
@@ -303,3 +346,50 @@ void up_coherent_dcache(uintptr_t addr, size_t len)
 }
 
 #endif /* CONFIG_ARCH_ICACHE */
+
+/****************************************************************************
+ * Prefetch Operations (Zicbop)
+ ****************************************************************************/
+
+#ifdef CONFIG_RISCV_CACHE_ZICBOP
+
+/****************************************************************************
+ * Name: up_dcache_prefetch_read
+ *
+ * Description:
+ *   Prefetch data for reading in [start, end).
+ *
+ ****************************************************************************/
+
+void up_dcache_prefetch_read(uintptr_t start, uintptr_t end)
+{
+  CACHE_OP_RANGE(start, end, cbo_prefetch_r);
+}
+
+/****************************************************************************
+ * Name: up_dcache_prefetch_write
+ *
+ * Description:
+ *   Prefetch data for writing in [start, end).
+ *
+ ****************************************************************************/
+
+void up_dcache_prefetch_write(uintptr_t start, uintptr_t end)
+{
+  CACHE_OP_RANGE(start, end, cbo_prefetch_w);
+}
+
+/****************************************************************************
+ * Name: up_icache_prefetch
+ *
+ * Description:
+ *   Prefetch instructions in [start, end).
+ *
+ ****************************************************************************/
+
+void up_icache_prefetch(uintptr_t start, uintptr_t end)
+{
+  CACHE_OP_RANGE(start, end, cbo_prefetch_i);
+}
+
+#endif /* CONFIG_RISCV_CACHE_ZICBOP */

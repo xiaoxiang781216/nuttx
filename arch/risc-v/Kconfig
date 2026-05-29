@@ -681,6 +681,15 @@ config RISCV_CACHE_ZICBOZ
 		Enable RISC-V Zicboz extension support.
 		Provides cbo.zero instruction for efficient cache-block zeroing.
 
+config RISCV_CACHE_ZICBOP
+	bool "Zicbop cache-block prefetch extension"
+	default n
+	select ARCH_CACHE_PREFETCH
+	---help---
+		Enable RISC-V Zicbop extension support.
+		Provides prefetch.i, prefetch.r, prefetch.w hint instructions
+		for software prefetching.
+
 endif # RISCV_CACHE_ZICBOM
 
 # Option to run NuttX in supervisor mode. This is obviously not usable in
