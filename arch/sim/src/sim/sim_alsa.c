@@ -498,18 +498,21 @@ static int sim_audio_start(struct audio_lowerhalf_s *dev)
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
   struct audio_buf_desc_s buf_desc;
+  struct ap_buffer_s *aux;
   int ret;
 
   /* reserved aux buffer. */
 
   buf_desc.numbytes  = priv->buffer_size * 2;
-  buf_desc.u.pbuffer = &priv->aux;
+  buf_desc.u.pbuffer = &aux;
 
   ret = apb_alloc(&buf_desc);
   if (ret != sizeof(buf_desc))
     {
       return -ENOMEM;
     }
+
+  priv->aux = aux;
 
   if (!priv->playback)
     {
@@ -531,6 +534,7 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev)
 #endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
+  struct ap_buffer_s *aux = priv->aux;
   int ret;
 
   sim_audio_close(priv);
@@ -563,8 +567,8 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev)
 
   if (priv->aux)
     {
-      apb_free(priv->aux);
       priv->aux = NULL;
+      apb_free(aux);
     }
 
   if (priv->ops)
