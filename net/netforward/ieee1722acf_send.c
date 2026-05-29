@@ -758,6 +758,12 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
               fwdrule->dest_dev->d_llhdrlen > CONFIG_NET_IEEE1722_PKTSIZE)
             {
               ieee1722acf_stream_flush(dev, stream, fwdrule->dest_dev);
+              if (stream->iob != NULL)
+                {
+                  nerr("ERROR: Stream packet flush failed!\n");
+                  iob_free_chain(stream->iob);
+                  stream->iob = NULL;
+                }
             }
 
           /* Prepare Stream packet */
