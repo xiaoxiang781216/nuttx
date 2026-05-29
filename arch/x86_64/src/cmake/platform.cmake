@@ -39,9 +39,13 @@ set_property(GLOBAL PROPERTY NUTTX_EXTRA_FLAGS ${NUTTX_EXTRA_FLAGS})
 
 separate_arguments(CMAKE_C_FLAG_ARGS NATIVE_COMMAND ${CMAKE_C_FLAGS})
 
+if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+  set(RTLIB -rtlib=compiler-rt)
+endif()
+
 execute_process(
   COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-          --print-libgcc-file-name
+          --print-libgcc-file-name ${RTLIB}
   OUTPUT_STRIP_TRAILING_WHITESPACE
   OUTPUT_VARIABLE extra_library)
 
