@@ -47,26 +47,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: tcp_close_work
- ****************************************************************************/
-
-static void tcp_close_work(FAR void *param)
-{
-  FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)param;
-
-  conn->flags |= TCP_CLOSE_DIRECT;
-  if (conn->crefs == 0 && conn->tcpstateflags == TCP_CLOSED)
-    {
-      /* Stop the network monitor for all sockets */
-
-      conn_dev_lock(&conn->sconn, conn->dev);
-      tcp_stop_monitor(conn, TCP_TXCLOSE);
-      conn_dev_unlock(&conn->sconn, conn->dev);
-      tcp_free(conn);
-    }
-}
-
-/****************************************************************************
  * Name: tcp_close_eventhandler
  ****************************************************************************/
 
@@ -352,6 +332,32 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: tcp_close_work
+ *
+ * Description:
+ *   Deferred free for a TCP connection. Queued via work_queue(LPWORK) to
+ *   avoid freeing a connection while the TCP connection list is being
+ *   traversed (which would cause use-after-free).
+ *
+ ****************************************************************************/
+
+void tcp_close_work(FAR void *param)
+{
+  FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)param;
+
+  conn->flags |= TCP_CLOSE_DIRECT;
+  if (conn->crefs == 0 && conn->tcpstateflags == TCP_CLOSED)
+    {
+      /* Stop the network monitor for all sockets */
+
+      conn_dev_lock(&conn->sconn, conn->dev);
+      tcp_stop_monitor(conn, TCP_TXCLOSE);
+      conn_dev_unlock(&conn->sconn, conn->dev);
+      tcp_free(conn);
+    }
+}
 
 /****************************************************************************
  * Name: tcp_close

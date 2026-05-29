@@ -572,11 +572,19 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 
                   tcp_send(dev, conn, TCP_RST | TCP_ACK, hdrlen);
 
-                  /* Finally, we must free this TCP connection structure */
+                  /* Defer the free to avoid use-after-free when
+                   * this connection is being freed while the TCP
+                   * connection list is being traversed (e.g.,
+                   * devif_poll_tcp_connections holds
+                   * tcp_conn_list_lock and iterates via
+                   * tcp_nextconn).
+                   */
 
                   conn->crefs = 0;
+                  conn->flags |= TCP_CLOSE_ARRANGED;
                   conn_unlock(&conn->sconn);
-                  tcp_free(conn);
+                  work_queue(LPWORK, &conn->clswork,
+                             tcp_close_work, conn, 0);
                   return;
                 }
 

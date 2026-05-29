@@ -525,6 +525,18 @@ void tcp_free_rx_buffers(FAR struct tcp_conn_s *conn);
 void tcp_free(FAR struct tcp_conn_s *conn);
 
 /****************************************************************************
+ * Name: tcp_close_work
+ *
+ * Description:
+ *   Deferred free for a TCP connection. Queued via work_queue(LPWORK) to
+ *   avoid freeing a connection while the TCP connection list is being
+ *   traversed (which would cause use-after-free).
+ *
+ ****************************************************************************/
+
+void tcp_close_work(FAR void *param);
+
+/****************************************************************************
  * Name: tcp_conn_cmp
  *
  * Description:
