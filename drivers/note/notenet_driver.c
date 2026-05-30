@@ -44,7 +44,7 @@ struct notenet_driver_s
 
   /* Send netpoll packet */
 
-  CODE int (*send)(FAR struct netpoll_s *np, FAR netpkt_queue_t *pktq);
+  CODE ssize_t (*send)(FAR struct netpoll_s *np, FAR netpkt_queue_t *pktq);
 };
 
 /****************************************************************************

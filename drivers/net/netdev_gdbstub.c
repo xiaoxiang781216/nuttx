@@ -45,8 +45,8 @@ struct netdev_gdbstub_s
 
   /* Send data via netpoll */
 
-  CODE int (*send)(FAR struct netpoll_s *np,
-                   FAR const void *buf, size_t len);
+  CODE ssize_t (*send)(FAR struct netpoll_s *np,
+                       FAR const void *buf, size_t len);
 
   /* Receive data via netpoll */
 

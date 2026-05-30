@@ -141,7 +141,7 @@ int netpoll_udp_init(FAR struct netpoll_s *np,
                      uint16_t destport, FAR const char *destmac);
 
 /****************************************************************************
- * Name: netpoll_upd_send
+ * Name: netpoll_udp_send
  *
  * Description:
  *   Send UDP packet with netpoll.
@@ -152,12 +152,17 @@ int netpoll_udp_init(FAR struct netpoll_s *np,
  *   len - length of data to send
  *
  * Returned Value:
- *   OK on success; Negated errno on failure.
+ *   On success or partial transmit, returns the cumulative payload byte
+ *   count actually handed to the lower-half transmit() (i.e. the number
+ *   of bytes from 'buf' that were successfully queued for TX).  On a
+ *   transmit() failure midway through the queue, the already-transmitted
+ *   prefix is reported.  A negative errno is only returned when no
+ *   payload was transmitted at all.
  *
  ****************************************************************************/
 
-int netpoll_udp_send(FAR struct netpoll_s *np,
-                     FAR const void *buf, size_t len);
+ssize_t netpoll_udp_send(FAR struct netpoll_s *np,
+                         FAR const void *buf, size_t len);
 
 /****************************************************************************
  * Name: netpoll_udp_recv
@@ -189,7 +194,14 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf,
  *   pktq - packet queue to send
  *
  * Returned Value:
- *   OK on success; negative errno on failure
+ *   On success or partial transmit, returns the cumulative payload byte
+ *   count (per packet: io_pktlen - np->hdrlen) of packets actually handed
+ *   to the lower-half transmit().  On a transmit() failure midway
+ *   through the queue, the already-transmitted prefix is reported and
+ *   the remaining tail is freed.  A negative errno is only returned
+ *   when no packet was transmitted at all (e.g. -ENODEV when the device
+ *   is not running).  The caller never has to free pktq; ownership is
+ *   consumed on every path.
  *
  * Assumption:
  *   Packets in queue are ready to send. All packet headers are complete,
@@ -197,8 +209,8 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf,
  *
  ****************************************************************************/
 
-int netpoll_udp_queue_send(FAR struct netpoll_s *np,
-                           FAR netpkt_queue_t *pktq);
+ssize_t netpoll_udp_queue_send(FAR struct netpoll_s *np,
+                               FAR netpkt_queue_t *pktq);
 
 /****************************************************************************
  * Name: netpoll_can_init
@@ -238,12 +250,19 @@ int netpoll_can_init(FAR struct netpoll_s *np,
  *   pktq - packet queue to send
  *
  * Returned Value:
- *   OK on success; negative errno on failure.
+ *   On success or partial transmit, returns the cumulative payload byte
+ *   count (per packet: io_pktlen - np->hdrlen) of packets actually handed
+ *   to the lower-half transmit().  On a transmit() failure midway
+ *   through the queue, the already-transmitted prefix is reported and
+ *   the remaining tail is freed.  A negative errno is only returned
+ *   when no packet was transmitted at all (e.g. -ENODEV when the device
+ *   is not running).  The caller never has to free pktq; ownership is
+ *   consumed on every path.
  *
  ****************************************************************************/
 
-int netpoll_can_queue_send(FAR struct netpoll_s *np,
-                           FAR netpkt_queue_t *pktq);
+ssize_t netpoll_can_queue_send(FAR struct netpoll_s *np,
+                               FAR netpkt_queue_t *pktq);
 
 /****************************************************************************
  * Name: netpoll_can_send
@@ -257,12 +276,16 @@ int netpoll_can_queue_send(FAR struct netpoll_s *np,
  *   len - length of data to send
  *
  * Returned Value:
- *   OK on success; Negated errno on failure.
+ *   On success or partial transmit, returns the cumulative payload byte
+ *   count actually handed to the lower-half transmit().  On a transmit()
+ *   failure midway through the queue, the already-transmitted prefix is
+ *   reported.  A negative errno is only returned when no payload was
+ *   transmitted at all.
  *
  ****************************************************************************/
 
-int netpoll_can_send(FAR struct netpoll_s *np, FAR const void *buf,
-                     size_t len);
+ssize_t netpoll_can_send(FAR struct netpoll_s *np, FAR const void *buf,
+                         size_t len);
 
 /****************************************************************************
  * Name: netpoll_isotp_init
@@ -300,12 +323,15 @@ int netpoll_isotp_init(FAR struct netpoll_s *np,
  *   len - length of data to send
  *
  * Returned Value:
- *   OK on success; Negated errno on failure.
+ *   On success, returns 'len' (number of bytes accepted).  On failure
+ *   before any frame is transmitted, a negative errno is returned.  No
+ *   partial-success reporting is provided: ISO-TP sequences either
+ *   complete or are abandoned.
  *
  ****************************************************************************/
 
-int netpoll_isotp_send(FAR struct netpoll_s *np, FAR const void *buf,
-                       size_t len);
+ssize_t netpoll_isotp_send(FAR struct netpoll_s *np, FAR const void *buf,
+                           size_t len);
 
 /****************************************************************************
  * Name: netpoll_isotp_recv

@@ -42,7 +42,7 @@ struct syslog_netdev_s
 
   /* Send netpoll packet */
 
-  CODE int (*send)(struct netpoll_s *np, FAR netpkt_queue_t *pktq);
+  CODE ssize_t (*send)(struct netpoll_s *np, FAR netpkt_queue_t *pktq);
 };
 
 /****************************************************************************

@@ -175,7 +175,14 @@ int netpoll_udp_init(FAR struct netpoll_s *np,
  *   pktq - packet queue to send
  *
  * Returned Value:
- *   OK on success; negative errno on failure
+ *   On success or partial transmit, returns the cumulative wire-byte count
+ *   (sum of pkt->io_pktlen) of packets actually handed to the lower-half
+ *   transmit().  On a transmit() failure midway through the queue, the
+ *   already-transmitted prefix is reported and the remaining tail is
+ *   freed.  A negative errno is only returned when no packet was
+ *   transmitted at all (e.g. -ENODEV when the device is not running, or
+ *   the first transmit() call failed).  The caller never has to free
+ *   pktq; ownership is consumed on every path.
  *
  * Assumption:
  *   Packets in queue are ready to send. All packet headers are complete,
@@ -183,12 +190,12 @@ int netpoll_udp_init(FAR struct netpoll_s *np,
  *
  ****************************************************************************/
 
-int netpoll_udp_queue_send(FAR struct netpoll_s *np,
-                           FAR netpkt_queue_t *pktq)
+ssize_t netpoll_udp_queue_send(FAR struct netpoll_s *np,
+                               FAR netpkt_queue_t *pktq)
 {
   FAR struct netdev_lowerhalf_s *lower = np->lower;
   FAR netpkt_t                  *pkt;
-  int                            ret;
+  ssize_t                        ret = 0;
 
   /* Don't send data if device is not ready */
 
@@ -200,6 +207,8 @@ int netpoll_udp_queue_send(FAR struct netpoll_s *np,
 
   while ((pkt = iob_remove_queue(pktq)) != NULL)
     {
+      size_t pktlen = pkt->io_pktlen;
+
       NETDEV_TXPACKETS(&lower->netdev);
 
       /* Fill header */
@@ -208,19 +217,26 @@ int netpoll_udp_queue_send(FAR struct netpoll_s *np,
 
       /* Transmit packet */
 
-      ret = lower->ops->transmit(lower, pkt);
-      if (ret < 0)
+      int err = lower->ops->transmit(lower, pkt);
+      if (err < 0)
         {
           NETDEV_TXERRORS(&lower->netdev);
           netpkt_free(lower, pkt, NETPKT_TX);
           iob_free_queue(pktq);
-          return ret;
+
+          /* Preserve the original errno when nothing has been sent yet
+           * so the caller can distinguish device errors; otherwise
+           * report the already-transmitted prefix as a partial accept.
+           */
+
+          return ret > 0 ? ret : err;
         }
 
       NETDEV_TXDONE(&lower->netdev);
+      ret += pktlen - np->hdrlen;
     }
 
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -235,12 +251,14 @@ int netpoll_udp_queue_send(FAR struct netpoll_s *np,
  *   len - length of data to send
  *
  * Returned Value:
- *   OK on success; Negated errno on failure.
+ *   On success or partial transmit, returns the cumulative payload byte
+ *   count actually handed to the lower-half transmit().  A negative errno
+ *   is only returned when no payload was transmitted at all.
  *
  ****************************************************************************/
 
-int netpoll_udp_send(FAR struct netpoll_s *np, FAR const void *buf,
-                     size_t len)
+ssize_t netpoll_udp_send(FAR struct netpoll_s *np, FAR const void *buf,
+                         size_t len)
 {
   netpkt_queue_t pktq;
   int            ret;
@@ -256,13 +274,7 @@ int netpoll_udp_send(FAR struct netpoll_s *np, FAR const void *buf,
 
   /* Send packet */
 
-  ret = netpoll_udp_queue_send(np, &pktq);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  return ret;
+  return netpoll_udp_queue_send(np, &pktq);
 }
 
 /****************************************************************************

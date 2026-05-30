@@ -174,12 +174,13 @@ int netpoll_isotp_init(FAR struct netpoll_s *np,
  *   len - length of data to send
  *
  * Returned Value:
- *   OK on success; Negated errno on failure.
+ *   On success, returns 'len' (number of bytes accepted).  On failure
+ *   before any frame is transmitted, a negative errno is returned.
  *
  ****************************************************************************/
 
-int netpoll_isotp_send(FAR struct netpoll_s *np, FAR const void *buf,
-                       size_t len)
+ssize_t netpoll_isotp_send(FAR struct netpoll_s *np, FAR const void *buf,
+                           size_t len)
 {
   FAR struct netdev_lowerhalf_s *lower = np->lower;
   struct isotp_encode_s          enc;
@@ -262,7 +263,7 @@ int netpoll_isotp_send(FAR struct netpoll_s *np, FAR const void *buf,
         }
     }
 
-  return OK;
+  return len;
 }
 
 /****************************************************************************
