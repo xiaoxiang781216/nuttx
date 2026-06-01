@@ -285,7 +285,10 @@ void uart_recvchars(FAR uart_dev_t *dev)
 
 #if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP) || \
     defined(CONFIG_TTY_FORCE_PANIC) || defined(CONFIG_TTY_LAUNCH)
-      signo = uart_check_special(dev, pbuf, nbytes);
+      if (signo == 0)
+        {
+          signo = uart_check_special(dev, pbuf, nbytes);
+        }
 #endif
     }
 
