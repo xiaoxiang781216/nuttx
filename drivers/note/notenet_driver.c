@@ -28,6 +28,7 @@
 
 #include <sys/ioctl.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/percpu.h>
 #include <nuttx/net/netpoll.h>
@@ -132,6 +133,8 @@ static ssize_t note_netdev_add(FAR struct note_driver_s *driver,
   FAR struct notenet_driver_s *drv =
     (FAR struct notenet_driver_s *)driver;
   size_t       maxlen = netpoll_get_maxlen(&drv->np);
+  size_t       dropped;
+  ssize_t      sent;
   irqstate_t   flags;
   int          ret;
 
@@ -153,43 +156,73 @@ static ssize_t note_netdev_add(FAR struct note_driver_s *driver,
   ret = netpoll_queue_copyin(&drv->np, &drv->pktq, note, notelen);
   if (ret < 0)
     {
-      /* On copy failure (e.g. IOB exhaustion), discard the batch so the
-       * next note starts from a clean queue state.
+      /* On copy failure (e.g. IOB exhaustion), netpoll_queue_copyin()
+       * has already stamped the partial tail and left the queue in a
+       * walkable state.  Keep previously-queued bytes for the next
+       * flush; the current note's bytes are accounted for by the
+       * dispatcher via the negative return code.
        */
 
-      iob_free_queue(&drv->pktq);
       spin_unlock_irqrestore_notrace(&drv->lock, flags);
       return ret;
     }
 
-  /* Flush on any queue overflow or >75% packet fill. netpoll is safe
-   * from noswitches contexts (it bypasses the net stack), so we don't
-   * need to defer when !noswitches.
+  dropped = iob_get_queue_size(&drv->pktq);
+  if (dropped <= 3 * maxlen / 4)
+    {
+      spin_unlock_irqrestore_notrace(&drv->lock, flags);
+      return notelen;
+    }
+
+  /* Drain pktq.  Bytes that older (already-accounted) notes left behind
+   * but that fail to reach the wire are charged to drop_bytes here so
+   * they don't pollute this call's ssize-style return.
    */
 
-  UNUSED(noswitches);
-
-  if (iob_get_queue_size(&drv->pktq) > 3 * maxlen / 4)
+  sent = drv->send(&drv->np, &drv->pktq);
+  if (sent < 0)
     {
-      drv->send(&drv->np, &drv->pktq);
+      sent = 0;
+    }
+
+  dropped -= sent;
+  if (dropped > notelen)
+    {
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+      atomic_add_relaxed(&drv->driver.stats.drop_bytes, dropped - notelen);
+#endif
+      dropped = notelen;
     }
 
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
 
-  return notelen;
+  return notelen - dropped;
 }
 
 static void note_netdev_flush(FAR struct note_driver_s *driver)
 {
   FAR struct notenet_driver_s *drv =
     (FAR struct notenet_driver_s *)driver;
-  irqstate_t flags;
+  size_t       qsize;
+  ssize_t      sent;
+  irqstate_t   flags;
 
   flags = spin_lock_irqsave_notrace(&drv->lock);
 
-  if (!IOB_QEMPTY(&drv->pktq))
+  qsize = iob_get_queue_size(&drv->pktq);
+  if (qsize > 0)
     {
-      drv->send(&drv->np, &drv->pktq);
+      sent = drv->send(&drv->np, &drv->pktq);
+      if (sent < 0)
+        {
+          sent = 0;
+        }
+
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+      atomic_add_relaxed(&drv->driver.stats.drop_bytes, qsize - sent);
+#else
+      UNUSED(sent);
+#endif
     }
 
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
@@ -224,6 +257,10 @@ static int note_netdev_ioctl(FAR struct file *filep, int cmd,
     {
       case NOTE_CLEAR:
         flags = spin_lock_irqsave_notrace(&drv->lock);
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+        atomic_add_relaxed(&drv->driver.stats.drop_bytes,
+                           iob_get_queue_size(&drv->pktq));
+#endif
         iob_free_queue(&drv->pktq);
         spin_unlock_irqrestore_notrace(&drv->lock, flags);
         return OK;

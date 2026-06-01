@@ -66,8 +66,6 @@
 #  error "Maximum channel number exceeds. "
 #endif
 
-#define note_do_add(drv, note, notelen, noswitches)                             \
-  ((drv)->ops->add(drv, note, notelen, noswitches))
 #define note_do_start(drv, tcb)                                                 \
   ((drv)->ops->start && ((drv)->ops->start(drv, tcb), true))
 #define note_do_stop(drv, tcb)                                                  \
@@ -730,6 +728,23 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
   irqstate_t irq_mask;
   FAR struct note_driver_s *driver = filep->f_inode->i_private;
 
+  /* Backends get first chance: this lets a stacked backend (e.g. notebuf)
+   * handle commands that need to consult its lower layer (NOTE_CLEAR,
+   * NOTE_GETSTATS combined view, NOTE_CLEARSTATS).  Anything the backend
+   * does not recognize falls through to the common handler below.
+   */
+
+  if (driver->ops != NULL && driver->ops->ioctl != NULL)
+    {
+      ret = driver->ops->ioctl(filep, cmd, arg);
+      if (ret != -ENOTTY)
+        {
+          return ret;
+        }
+
+      ret = OK;
+    }
+
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   if (cmd == NOTE_SYNCTASKNAME)
     {
@@ -863,19 +878,36 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
         *(FAR unsigned long *)arg = perf_getfreq();
         break;
 
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+      /* NOTE_GETSTATS / NOTE_CLEARSTATS
+       *   Read or clear the cumulative producer counters maintained by
+       *   note_do_add().  Available on every backend uniformly; stacked
+       *   backends (notebuf) override these in their ops->ioctl to merge
+       *   the upper- and lower-layer counters before this fallthrough.
+       */
+
+      case NOTE_GETSTATS:
+        {
+          FAR struct note_stats_s *out = (FAR struct note_stats_s *)arg;
+          out->notes      = atomic_read(&driver->stats.notes);
+          out->bytes      = atomic_read(&driver->stats.bytes);
+          out->drop_bytes = atomic_read(&driver->stats.drop_bytes);
+        }
+        break;
+
+      case NOTE_CLEARSTATS:
+        atomic_set(&driver->stats.notes, 0);
+        atomic_set(&driver->stats.bytes, 0);
+        atomic_set(&driver->stats.drop_bytes, 0);
+        break;
+#endif
+
       default:
         ret = -ENOTTY;
         break;
     }
 
   spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
-
-  if (ret == -ENOTTY && driver->ops != NULL && driver->ops->ioctl != NULL)
-    {
-      /* Let the driver handle special ioctls */
-
-      ret = driver->ops->ioctl(filep, cmd, arg);
-    }
 
   return ret;
 }

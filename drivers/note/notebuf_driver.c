@@ -28,6 +28,7 @@
 
 #include <assert.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/notebuf_driver.h>
@@ -55,20 +56,41 @@ static void notebuf_flush(FAR void *arg)
   FAR struct notebuf_driver_s *buf = (FAR struct notebuf_driver_s *)arg;
   FAR struct note_driver_s *lower = buf->lower;
   struct ring_buf_s rb;
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+  ssize_t written;
+  size_t dropped = 0;
+#endif
 
   ring_mpmc_dequeue_start(buf->ring,
                           ring_count(buf->ring), 1, &rb);
   if (rb.len1 > 0)
     {
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+      written = lower->ops->add(lower, rb.ptr1, rb.len1, false);
+      dropped += written <= 0 ? rb.len1 : rb.len1 - written;
+#else
       lower->ops->add(lower, rb.ptr1, rb.len1, false);
+#endif
     }
 
   if (rb.len2 > 0)
     {
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+      written = lower->ops->add(lower, rb.ptr2, rb.len2, false);
+      dropped += written <= 0 ? rb.len2 : rb.len2 - written;
+#else
       lower->ops->add(lower, rb.ptr2, rb.len2, false);
+#endif
     }
 
   ring_mpmc_dequeue_finish(buf->ring, &rb);
+
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+  if (dropped > 0)
+    {
+      atomic_add_relaxed(&buf->driver.stats.drop_bytes, dropped);
+    }
+#endif
 }
 
 static void notebuf_flush_all(FAR struct note_driver_s *drv)
@@ -161,7 +183,11 @@ static int notebuf_ioctl(FAR struct file *filep, int cmd,
   switch (cmd)
     {
       case NOTE_CLEAR:
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+        atomic_add(&driver->stats.drop_bytes, ring_reset(buf->ring));
+#else
         ring_reset(buf->ring);
+#endif
         return OK;
 
       default:

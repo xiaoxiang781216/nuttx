@@ -567,7 +567,7 @@ static uint32_t noteram_unread_length(FAR struct noteram_driver_s *drv,
  *   None
  *
  * Returned Value:
- *   None
+ *   The length in bytes of the note that was removed.
  *
  * Assumptions:
  *   We are within a critical section.
@@ -575,10 +575,10 @@ static uint32_t noteram_unread_length(FAR struct noteram_driver_s *drv,
  *
  ****************************************************************************/
 
-static void noteram_remove(FAR struct noteram_driver_s *drv)
+static uint8_t noteram_remove(FAR struct noteram_driver_s *drv)
 {
   uint32_t tail;
-  uint32_t length;
+  uint8_t length;
 
   /* Get the tail index of the circular buffer */
 
@@ -594,6 +594,7 @@ static void noteram_remove(FAR struct noteram_driver_s *drv)
    */
 
   drv->header->tail = noteram_next(drv, tail, length);
+  return length;
 }
 
 /****************************************************************************
@@ -874,6 +875,10 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case NOTE_CLEAR:
         flags = rspin_lock_irqsave_notrace(&drv->lock);
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+        atomic_add_relaxed(&drv->driver.stats.drop_bytes,
+                           noteram_length(drv));
+#endif
         drv->header->tail = drv->header->head;
         if (drv->overwrite == NOTE_MODE_OVERWRITE_OVERFLOW)
           {
@@ -1169,6 +1174,9 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
   uint32_t remain;
   uint32_t space;
   irqstate_t flags;
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+  size_t dropped = 0;
+#endif
 
   noteram_driver_initialize();
 
@@ -1201,12 +1209,20 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
           goto out;
         }
 
-      /* Remove the note at the tail index, make sure there is enough space
+      /* Remove the note at the tail index, make sure there is enough space.
+       * Each evicted note's bytes were previously counted as accepted by
+       * note_do_add(); accumulate them and reclassify to drop_bytes after
+       * the loop.  The current note still fully succeeds (return notelen)
+       * so the dispatcher will count it as accepted.
        */
 
       do
         {
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+          dropped += noteram_remove(drv);
+#else
           noteram_remove(drv);
+#endif
           remain = drv->bufsize - noteram_length(drv);
         }
       while (remain <= notelen);
@@ -1243,6 +1259,14 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
     }
 
   rspin_unlock_irqrestore_notrace(&drv->lock, flags);
+
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+  if (dropped > 0)
+    {
+      atomic_add_relaxed(&drv->driver.stats.drop_bytes, dropped);
+    }
+#endif
+
   return notelen;
 
 out:

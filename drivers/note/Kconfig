@@ -68,6 +68,20 @@ config DRIVERS_NOTE_STRIP_FORMAT
 	---help---
 		Strip sched_note_printf format string.
 
+config DRIVERS_NOTE_STATS
+	bool "Note driver cumulative statistics"
+	default n
+	---help---
+		Enable cumulative production/drop counters and the
+		NOTE_GETSTATS / NOTE_CLEARSTATS ioctls on every note backend.
+		Counters track total notes and bytes produced, plus dropped
+		bytes when a backend rejects or partially accepts a note.
+		Accounting is centralized in the common dispatcher
+		note_do_add() based on the backend add() return value.
+
+		Used together with host-side decoders to verify lossless
+		transport (e.g. nxtrace --check-loss).  Default off.
+
 config DRIVERS_NOTERAM
 	bool "Note RAM driver"
 	select DRIVERS_NOTE

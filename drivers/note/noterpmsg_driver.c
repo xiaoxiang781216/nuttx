@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/atomic.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/rpmsg/rpmsg.h>
@@ -152,13 +153,14 @@ static inline size_t noterpmsg_length(FAR struct noterpmsg_driver_s *drv)
   return head - tail;
 }
 
-static inline void noterpmsg_remove(FAR struct noterpmsg_driver_s *drv)
+static inline uint8_t noterpmsg_remove(FAR struct noterpmsg_driver_s *drv)
 {
   size_t tail = drv->tail;
   uint8_t notelen = drv->buffer[tail];
 
   DEBUGASSERT(notelen <= noterpmsg_length(drv));
   drv->tail = noterpmsg_next(drv, tail, notelen);
+  return notelen;
 }
 
 static bool noterpmsg_transfer(FAR struct noterpmsg_driver_s *drv,
@@ -243,6 +245,9 @@ static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
   bool sent = false;
   irqstate_t flags;
   size_t space;
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+  size_t dropped = 0;
+#endif
 
   noterpmsg_driver_initialize();
 
@@ -260,11 +265,19 @@ static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
 
       if (!sent)
         {
-          /* Overwrite */
+          /* Overwrite: each evicted note's bytes were previously counted
+           * as accepted by note_do_add(); reclassify them to drop_bytes.
+           * The current note still fully succeeds (return notelen) so
+           * the dispatcher will count it as accepted.
+           */
 
           do
             {
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+              dropped += noterpmsg_remove(drv);
+#else
               noterpmsg_remove(drv);
+#endif
               space = CONFIG_DRIVERS_NOTERPMSG_BUFSIZE -
                       noterpmsg_length(drv);
             }
@@ -280,6 +293,13 @@ static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
 
   drv->head = noterpmsg_next(drv, drv->head, notelen);
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
+
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+  if (dropped > 0)
+    {
+      atomic_add_relaxed(&drv->driver.stats.drop_bytes, dropped);
+    }
+#endif
 
   if (!noswitches && OSINIT_OS_READY() && work_available(&drv->work))
     {
@@ -303,6 +323,10 @@ static int noterpmsg_ioctl(FAR struct file *filep, int cmd,
     {
       case NOTE_CLEAR:
         flags = spin_lock_irqsave_notrace(&drv->lock);
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+        atomic_add_relaxed(&drv->driver.stats.drop_bytes,
+                           noterpmsg_length(drv));
+#endif
         drv->head = 0;
         drv->tail = 0;
         spin_unlock_irqrestore_notrace(&drv->lock, flags);

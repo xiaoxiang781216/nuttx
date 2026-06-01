@@ -34,6 +34,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/jump_label.h>
 #include <nuttx/percpu.h>
@@ -322,6 +323,17 @@
 #define NOTE_DESTROY                     _NOTEIOC(0x14)
 #define NOTE_FLUSH                       _NOTEIOC(0x15)
 
+/* NOTE_GETSTATS
+ *              - Get cumulative note statistics (notes, bytes, drop_bytes)
+ *                Argument: A writable pointer to struct note_stats_s
+ * NOTE_CLEARSTATS
+ *              - Clear cumulative note statistics counters
+ *                Argument: Ignored (0)
+ */
+
+#define NOTE_GETSTATS                    _NOTEIOC(0x17)
+#define NOTE_CLEARSTATS                  _NOTEIOC(0x18)
+
 /* Overwrite mode definitions */
 
 #define NOTE_MODE_OVERWRITE_DISABLE      0
@@ -334,6 +346,26 @@
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
+/* Cumulative note statistics returned by NOTE_GETSTATS ioctl.
+ *
+ * This is the user-visible ABI: plain uint32_t fields so the layout is
+ * stable and the _Atomic qualifier never crosses the kernel/user
+ * boundary.  Counters wrap at 4 GiB; consumers are expected to query
+ * frequently enough that wrap is unambiguous.  drop_notes is
+ * intentionally not tracked here -- the host pipeline already counts
+ * emitted vs received notes from the trace stream itself, and the
+ * producer only sees a single drop boundary in bytes (e.g. an
+ * overwrite ring may discard mid note), so byte-level drop accounting
+ * is the authoritative metric.
+ */
+
+struct note_stats_s
+{
+  uint32_t notes;          /* Total note events accepted */
+  uint32_t bytes;          /* Total bytes accepted */
+  uint32_t drop_bytes;     /* Total bytes lost (full or partial drop) */
+};
 
 /* This type identifies a note structure */
 
@@ -544,6 +576,24 @@ struct note_driver_s
   struct note_filter_s filter;
 #endif
   FAR const struct note_driver_ops_s *ops;
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+  /* Kernel-internal counters mirroring struct note_stats_s.
+   *
+   * Producers (note_do_add) bump these lock-free with __ATOMIC_RELAXED;
+   * the NOTE_GETSTATS / NOTE_CLEARSTATS handlers in note_driver_ioctl
+   * snapshot or zero them and project the result into the public
+   * struct note_stats_s before crossing the syscall boundary.  Keeping
+   * atomic_t confined to kernel storage prevents it from leaking into
+   * the user-visible ABI.
+   */
+
+  struct
+  {
+    atomic_t notes;        /* Total note events accepted */
+    atomic_t bytes;        /* Total bytes accepted */
+    atomic_t drop_bytes;   /* Total bytes lost (full or partial drop) */
+  } stats;
+#endif
 };
 
 struct note_common_s
