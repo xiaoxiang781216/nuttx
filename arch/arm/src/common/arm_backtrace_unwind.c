@@ -28,12 +28,14 @@
 #include <nuttx/elf.h>
 
 #include <debug.h>
+#include <stdbool.h>
 
 #include "sched/sched.h"
 #include "arm_internal.h"
 
 #ifdef CONFIG_ARCH_ARM_M
 #  include "exc_return.h"
+#  include "psr.h"
 #endif
 
 /****************************************************************************
@@ -707,6 +709,92 @@ int unwind_frame(struct unwind_frame_s *frame)
   return 0;
 }
 
+#ifdef CONFIG_ARCH_ARM_M
+/****************************************************************************
+ * Name: unwind_step_exc_frame
+ *
+ * Description:
+ *  Detect and step across a Cortex-M hardware exception frame.
+ *
+ *  When an unwind step lands on an exception handler boundary, the LR
+ *  is an EXC_RETURN magic value (high 28 bits all 1) rather than a real
+ *  return address.  The bytes immediately above the current SP are not
+ *  a function frame but the hardware-stacked exception frame
+ *  (R0,R1,R2,R3,R12,LR,PC,xPSR [+ FP context]).  Continuing to
+ *  interpret it with .ARM.exidx unwind bytecode produces garbage and,
+ *  in the worst case, infinite loops when the garbage happens to land
+ *  on a valid function address.
+ *
+ *  This helper recognises that situation, manually pulls PC/LR from
+ *  the exception frame, advances SP past it (including FP context and
+ *  the optional 4-byte alignment padding signalled by xPSR bit 9), and
+ *  hands the frame back to the regular unwinder so it can continue
+ *  with the interrupted function.
+ *
+ *  Returns true if an exception frame was consumed.
+ *
+ ****************************************************************************/
+
+static bool unwind_step_exc_frame(struct unwind_frame_s *frame)
+{
+  /* Word offsets within the hardware-stacked exception frame.  REG_R0
+   * is the first stacked register, so subtracting REG_R0 from any
+   * other REG_xxx (defined in arch/irq.h via the per-arch irq.h)
+   * yields its offset in the exception frame.
+   */
+
+  unsigned long lr_off   = (REG_R14  - REG_R0) * 4;
+  unsigned long pc_off   = (REG_R15  - REG_R0) * 4;
+  unsigned long xpsr_off = (REG_XPSR - REG_R0) * 4;
+
+  /* Basic frame: R0-R3, R12, LR, PC, xPSR (HW_INT_REGS words).
+   * Extended frame: + S0-S15, FPSCR, reserved (HW_FPU_REGS more words).
+   */
+
+  unsigned long basic_size    = 4 * HW_INT_REGS;
+  unsigned long extended_size = 4 * HW_XCPT_REGS;
+
+  unsigned long sp = frame->sp;
+  unsigned long xpsr;
+  unsigned long size;
+
+  if ((frame->lr & EXC_RETURN_HIGH_BITS) != EXC_RETURN_HIGH_BITS)
+    {
+      return false;
+    }
+
+  /* Make sure the basic exception frame fits inside the current stack. */
+
+  if (sp < frame->stack_base ||
+      sp + basic_size > frame->stack_top)
+    {
+      return false;
+    }
+
+  xpsr = *(unsigned long *)(sp + xpsr_off);
+
+  /* STD_CONTEXT bit: 1 = basic frame, 0 = extended frame. */
+
+  size = (frame->lr & EXC_RETURN_STD_CONTEXT) ? basic_size : extended_size;
+
+  if (xpsr & ARM_XPSR_SPREALIGN)
+    {
+      size += 4;
+    }
+
+  if (sp + size > frame->stack_top)
+    {
+      return false;
+    }
+
+  frame->pc = *(unsigned long *)(sp + pc_off);
+  frame->lr = *(unsigned long *)(sp + lr_off);
+  frame->sp = sp + size;
+
+  return true;
+}
+#endif
+
 nosanitize_address
 static int backtrace_unwind(struct unwind_frame_s *frame,
                             void **buffer, int size, int *skip)
@@ -721,6 +809,40 @@ static int backtrace_unwind(struct unwind_frame_s *frame,
 
   while (cnt < size)
     {
+#ifdef CONFIG_ARCH_ARM_M
+      /* If the previous step left us with an EXC_RETURN magic value in
+       * LR, the next bytes on the stack are a hardware exception frame
+       * rather than a function frame.  Step across it so the unwinder
+       * resumes inside the interrupted function.
+       */
+
+      if (unwind_step_exc_frame(frame))
+        {
+          if (frame->pc < 0x10)
+            {
+              break;
+            }
+
+          if ((*skip)-- <= 0)
+            {
+              unsigned long pc = (frame->pc & ~1) - 2;
+
+              if (cnt > 0 && (void *)pc == buffer[cnt - 1])
+                {
+                  break;
+                }
+
+              buffer[cnt++] = (void *)pc;
+              if (cnt >= size)
+                {
+                  break;
+                }
+            }
+
+          /* Fall through to keep unwinding the interrupted function. */
+        }
+#endif
+
       if (unwind_frame(frame) < 0 || frame->pc < 0x10)
         {
           break;

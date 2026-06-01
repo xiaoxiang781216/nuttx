@@ -90,12 +90,20 @@
 
 #define EXC_RETURN_SECURE_STACK  (1 << 6)
 
+/* EXC_RETURN_HIGH_BITS: ARMv6-M / ARMv7-M / ARMv8-M architecturally fix
+ * bits[31:7] of every EXC_RETURN value to 1.  This invariant holds across
+ * all TrustZone configurations (DISABLED / SECURE / NONSECURE / HYBRID)
+ * and is the safest mask for "is this LR an EXC_RETURN?" detection.
+ */
+
+#define EXC_RETURN_HIGH_BITS     (0xffffff80)
+
 /* EXC_RETURN_BASE: Bits that are always set in an EXC_RETURN value. */
 
 #ifdef CONFIG_ARCH_TRUSTZONE_NONSECURE
-#  define EXC_RETURN_BASE        (0xffffff80)
+#  define EXC_RETURN_BASE        (EXC_RETURN_HIGH_BITS)
 #else
-#  define EXC_RETURN_BASE        (0xffffff80 | EXC_RETURN_EXC_SECURE | \
+#  define EXC_RETURN_BASE        (EXC_RETURN_HIGH_BITS | EXC_RETURN_EXC_SECURE | \
                                   EXC_RETURN_SECURE_STACK)
 #endif
 
