@@ -26,6 +26,9 @@
 
 #include <nuttx/config.h>
 
+#include <sys/ioctl.h>
+
+#include <nuttx/mm/iob.h>
 #include <nuttx/percpu.h>
 #include <nuttx/net/netpoll.h>
 #include <nuttx/note/note_driver.h>
@@ -55,6 +58,8 @@ static ssize_t note_netdev_add(FAR struct note_driver_s *driver,
                                FAR const void *note, size_t notelen,
                                bool noswitches);
 static void note_netdev_flush(FAR struct note_driver_s *driver);
+static int  note_netdev_ioctl(FAR struct file *filep, int cmd,
+                              unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -64,6 +69,7 @@ static const struct note_driver_ops_s g_notenetdev_ops =
 {
   .add = note_netdev_add,
   .flush = note_netdev_flush,
+  .ioctl = note_netdev_ioctl,
 };
 
 /****************************************************************************
@@ -187,6 +193,44 @@ static void note_netdev_flush(FAR struct note_driver_s *driver)
     }
 
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
+}
+
+/****************************************************************************
+ * Name: note_netdev_ioctl
+ *
+ * Description:
+ *   Backend-side ioctl handler.  Today the only command we honour is
+ *   NOTE_CLEAR, which is semantically opposite to NOTE_FLUSH:
+ *
+ *     NOTE_FLUSH -> push the queued batch out via drv->send().
+ *     NOTE_CLEAR -> drop the queued batch without transmitting it.
+ *
+ *   Treating CLEAR like FLUSH (the previous dispatcher fallback) would
+ *   transmit exactly the data the caller asked to discard, so notenet
+ *   has to implement CLEAR locally.  Anything else is reported back as
+ *   -ENOTTY so the common dispatcher in note_driver.c can handle it.
+ *
+ ****************************************************************************/
+
+static int note_netdev_ioctl(FAR struct file *filep, int cmd,
+                             unsigned long arg)
+{
+  FAR struct notenet_driver_s *drv = filep->f_inode->i_private;
+  irqstate_t flags;
+
+  UNUSED(arg);
+
+  switch (cmd)
+    {
+      case NOTE_CLEAR:
+        flags = spin_lock_irqsave_notrace(&drv->lock);
+        iob_free_queue(&drv->pktq);
+        spin_unlock_irqrestore_notrace(&drv->lock, flags);
+        return OK;
+
+      default:
+        return -ENOTTY;
+    }
 }
 
 /****************************************************************************

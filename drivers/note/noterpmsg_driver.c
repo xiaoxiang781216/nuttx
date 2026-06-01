@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/sched_note.h>
@@ -63,6 +64,8 @@ static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
 static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
                               uint8_t level, uintptr_t ip, uintptr_t type,
                               FAR const char *fmt, va_list va);
+static int noterpmsg_ioctl(FAR struct file *filep, int cmd,
+                           unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -77,6 +80,7 @@ static const struct note_driver_ops_s g_noterpmsg_ops =
 {
   .add = noterpmsg_add,
   .vprintf = noterpmsg_vprintf,
+  .ioctl = noterpmsg_ioctl,
 };
 
 DEFINE_PER_CPU_BMP(struct noterpmsg_driver_s, g_noterpmsg_driver) =
@@ -284,6 +288,32 @@ static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
     }
 
   return notelen;
+}
+
+static int noterpmsg_ioctl(FAR struct file *filep, int cmd,
+                           unsigned long arg)
+{
+  FAR struct noterpmsg_driver_s *drv = filep->f_inode->i_private;
+  irqstate_t flags;
+  int ret = OK;
+
+  UNUSED(arg);
+
+  switch (cmd)
+    {
+      case NOTE_CLEAR:
+        flags = spin_lock_irqsave_notrace(&drv->lock);
+        drv->head = 0;
+        drv->tail = 0;
+        spin_unlock_irqrestore_notrace(&drv->lock, flags);
+        break;
+
+      default:
+        ret = -ENOTTY;
+        break;
+    }
+
+  return ret;
 }
 
 static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
