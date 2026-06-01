@@ -345,6 +345,7 @@ static inline_function void x86_64_tp_init(struct tcb_s *tcb)
 
 /* Boot time thread pointer init with fsbase */
 
+nostackprotect_function
 static inline_function void x86_64_tp_boot(int cpu)
 {
   uintptr_t fsbase  = g_idle_topstack[cpu] - CONFIG_IDLETHREAD_STACKSIZE;
