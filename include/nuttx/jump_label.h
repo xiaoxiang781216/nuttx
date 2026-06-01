@@ -40,6 +40,10 @@
 #  include <nuttx/arch.h>
 #endif
 
+#ifdef CONFIG_ARCH_JUMP_LABEL_PER_CPU
+#  include <nuttx/percpu.h>
+#endif
+
 /* Jump label / static key model:
  *
  * Two key types: static_key_true (initially enabled)
@@ -103,6 +107,28 @@ struct static_key_false
     .key = {.enabled = 0}     \
   }
 
+#ifdef CONFIG_ARCH_JUMP_LABEL_PER_CPU
+
+#define DEFINE_STATIC_KEY_TRUE(name) \
+  DEFINE_PER_CPU_BMP(struct static_key_true, name) = STATIC_KEY_TRUE_INIT
+
+#define DEFINE_STATIC_KEY_FALSE(name) \
+  DEFINE_PER_CPU_BMP(struct static_key_false, name) = STATIC_KEY_FALSE_INIT
+
+#define DECLARE_STATIC_KEY_TRUE(name) \
+  DECLARE_PER_CPU_BMP(struct static_key_true, name)
+
+#define DECLARE_STATIC_KEY_FALSE(name) \
+  DECLARE_PER_CPU_BMP(struct static_key_false, name)
+
+/* Resolve a static key lvalue for access: select the current core's
+ * per-CPU instance.
+ */
+
+#define REFERENCE_STATIC_KEY(name) this_cpu_var_bmp(name)
+
+#else /* !CONFIG_ARCH_JUMP_LABEL_PER_CPU */
+
 #define DEFINE_STATIC_KEY_TRUE(name) \
   struct static_key_true name = STATIC_KEY_TRUE_INIT
 
@@ -112,6 +138,32 @@ struct static_key_false
 #define DECLARE_STATIC_KEY_TRUE(name) extern struct static_key_true name
 
 #define DECLARE_STATIC_KEY_FALSE(name) extern struct static_key_false name
+
+/* Resolve a static key lvalue for access: plain variable, accessed by
+ * name directly (no per-CPU offset).
+ */
+
+#define REFERENCE_STATIC_KEY(name) name
+
+#endif /* CONFIG_ARCH_JUMP_LABEL_PER_CPU */
+
+/* REFERENCE_STATIC_KEY(name) - resolve a static key lvalue for access.
+ *
+ * DEFINE_STATIC_KEY_TRUE/FALSE/MAYBE define the storage differently per
+ * CONFIG_ARCH_JUMP_LABEL_PER_CPU:
+ *   PER_CPU=y -> per-CPU instance, REFERENCE_STATIC_KEY = this_cpu_var_bmp()
+ *                selects the current core's copy.
+ *   PER_CPU=n -> plain variable, REFERENCE_STATIC_KEY = name directly.
+ *
+ * Callers must access keys through this macro so the access path always
+ * matches the storage layout. Using this_cpu_var_bmp() unconditionally
+ * would, when PER_CPU=n but CONFIG_BMP=y, apply a per-CPU offset to a
+ * plain variable and read the wrong address.
+ *
+ * Typical usage:
+ *   static DEFINE_STATIC_KEY_TRUE(g_my_key);
+ *   #define g_my_key REFERENCE_STATIC_KEY(g_my_key)
+ */
 
 /* Check if a static key is currently enabled */
 

@@ -722,7 +722,7 @@ config ARCH_HAVE_JUMP_LABEL
 config ARCH_JUMP_LABEL
 	bool "Use static keys (jump label) optimization"
 	default n
-	depends on ARCH_HAVE_JUMP_LABEL && UP
+	depends on ARCH_HAVE_JUMP_LABEL
 	---help---
 		Enable runtime code patching for static keys.
 		When enabled, static_branch_unlikely/likely() compiles
@@ -730,7 +730,19 @@ config ARCH_JUMP_LABEL
 		eliminating branch overhead for dormant features.
 		When disabled, static keys fall back to volatile bool
 		with branch prediction hints.
-		Currently only supports single-core (UP) configurations.
+		Single atomic instruction replacement is safe for both
+		UP and multi-core configurations.
+
+config ARCH_JUMP_LABEL_PER_CPU
+	bool "Per-CPU static key support"
+	default n
+	depends on ARCH_JUMP_LABEL && BMP
+	---help---
+		Allow each CPU to independently enable/disable static keys.
+		Branch sites must reside in per-CPU memory (e.g. PSPR).
+		When enabled, DEFINE_STATIC_KEY_* uses DEFINE_PER_CPU_BMP
+		storage. Users should define a per-CPU accessor macro:
+		  #define mykey this_cpu_var_bmp(mykey)
 
 config ARCH_HAVE_BOOTLOADER
 	bool
