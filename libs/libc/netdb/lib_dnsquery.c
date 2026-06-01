@@ -40,6 +40,7 @@
 
 #include <nuttx/config.h>
 
+#include <inttypes.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
@@ -49,10 +50,12 @@
 
 #include <arpa/inet.h>
 
+#include <nuttx/clock.h>
 #include <nuttx/lib/lib.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/dns.h>
+#include <nuttx/trace.h>
 
 #include "netdb/lib_dns.h"
 
@@ -70,6 +73,8 @@
  * sizeof(DNS Name) = Encoded length (1 byte) + Maximum length of name +
  *                    NUL-terminator (1 byte)
  */
+
+#define LATENCY_THRESHOLD_TICKS  MSEC2TICK(DIAG_NET_DNS_LATENCY_THRESHOLD_MS)
 
 #define SEND_BUFFER_SIZE  (16 + CONFIG_NETDB_DNSCLIENT_NAMESIZE + 2)
 #define RECV_BUFFER_SIZE  CONFIG_NETDB_DNSCLIENT_MAXRESPONSE
@@ -823,6 +828,43 @@ static void dns_query_error(FAR const char *prompt, int ret,
   nerr("%s: %d, server address: %s\n", prompt, ret, addrstr);
 }
 
+#ifdef CONFIG_TRACE_NET
+static int dns_collect_servers(FAR void *arg, FAR struct sockaddr *addr,
+                               FAR socklen_t addrlen)
+{
+  FAR char *buf = (FAR char *)arg;
+  char addrstr[INET6_ADDRSTRLEN];
+
+#ifdef CONFIG_NET_IPv4
+  if (addr->sa_family == AF_INET)
+    {
+      inet_ntop(AF_INET, &((FAR struct sockaddr_in *)addr)->sin_addr,
+                addrstr, sizeof(addrstr));
+    }
+  else
+#endif
+#ifdef CONFIG_NET_IPv6
+  if (addr->sa_family == AF_INET6)
+    {
+      inet_ntop(AF_INET6, &((FAR struct sockaddr_in6 *)addr)->sin6_addr,
+                addrstr, sizeof(addrstr));
+    }
+  else
+#endif
+    {
+      return 0;
+    }
+
+  if (buf[0] != '\0')
+    {
+      strlcat(buf, "|", 128);
+    }
+
+  strlcat(buf, addrstr, 128);
+  return 0;
+}
+#endif
+
 /****************************************************************************
  * Name: dns_query_callback
  *
@@ -1026,6 +1068,9 @@ int dns_query(FAR const char *hostname, FAR union dns_addr_u *addr,
               FAR int *naddr)
 {
   FAR struct dns_query_data_s *qdata = lib_malloc(sizeof(*qdata));
+#ifdef CONFIG_TRACE_NET
+  clock_t start = clock_systime_ticks();
+#endif
   int ret;
 
   if (qdata == NULL)
@@ -1051,6 +1096,23 @@ int dns_query(FAR const char *hostname, FAR union dns_addr_u *addr,
   if (ret > 0)
     {
       /* The lookup was successful */
+
+#ifdef CONFIG_TRACE_NET
+      clock_t elapsed = clock_systime_ticks() - start;
+      if (elapsed >= LATENCY_THRESHOLD_TICKS)
+        {
+          char servers[128];
+
+          servers[0] = '\0';
+          dns_foreach_nameserver(dns_collect_servers, servers);
+          net_trace_diag(LOG_ERR, DIAG_NET_DNS_LATENCY_HIGH,
+                         "Latency:%" PRId64 ",DomainName:%s,"
+                         "InterfaceInfo:,"
+                         "DNSServer:%s",
+                         TICK2MSEC(elapsed),
+                         hostname, servers);
+        }
+#endif
 
       ret = OK;
     }
