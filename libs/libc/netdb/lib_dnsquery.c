@@ -55,6 +55,7 @@
 #include <nuttx/net/net.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/dns.h>
+#include <nuttx/ratelimit.h>
 #include <nuttx/trace.h>
 
 #include "netdb/lib_dns.h"
@@ -863,6 +864,71 @@ static int dns_collect_servers(FAR void *arg, FAR struct sockaddr *addr,
   strlcat(buf, addrstr, 128);
   return 0;
 }
+
+/****************************************************************************
+ * Name: dns_report_failure
+ *
+ * Description:
+ *   Report DNS resolution failure via DFX diagnostic event.
+ *
+ * Input Parameters:
+ *   hostname - The hostname that failed to resolve.
+ *   result   - The error code from dns_query_callback.
+ *
+ ****************************************************************************/
+
+static void dns_report_failure(FAR const char *hostname, int result)
+{
+  static DEFINE_RATELIMIT_STATE(dns_fail_rl, 600, 5);
+
+  int errcode;
+  char servers[128];
+
+  /* Determine ErrorCode based on failure reason.
+   *
+   * Not reported:
+   *   NXDOMAIN/SERVFAIL (-EPROTO) - server responded normally.
+   *   No A/AAAA record (-EADDRNOTAVAIL with servers) - not network issue.
+   *   Server unreachable - covered by ARP DFX.
+   */
+
+  servers[0] = '\0';
+  dns_foreach_nameserver(dns_collect_servers, servers);
+
+  if (servers[0] == '\0')
+    {
+      errcode = DIAG_NET_DNS_ERR_NO_SERVER;
+    }
+  else if (result == -EAGAIN || result == -ETIMEDOUT)
+    {
+      errcode = DIAG_NET_DNS_ERR_TIMEOUT;
+    }
+  else if (result == -EILSEQ || result == -EBADMSG || result == -EMSGSIZE)
+    {
+      errcode = DIAG_NET_DNS_ERR_PARSE;
+    }
+  else
+    {
+      /* EPROTO (NXDOMAIN/SERVFAIL), EADDRNOTAVAIL (no record) etc.
+       * Server responded - not a network problem, skip report.
+       */
+
+      return;
+    }
+
+  if (errcode != DIAG_NET_DNS_ERR_PARSE &&
+      ratelimit_islimited(&dns_fail_rl))
+    {
+      return;
+    }
+
+  net_trace_diag(LOG_ERR, DIAG_NET_DNS_FAIL,
+                 "ErrorCode:%d,DomainName:%s,"
+                 "DNSServer:%s,Suppressed:%u",
+                 errcode, hostname, servers,
+                 errcode == DIAG_NET_DNS_ERR_PARSE ?
+                 0 : ratelimit_missed(&dns_fail_rl));
+}
 #endif
 
 /****************************************************************************
@@ -1119,6 +1185,10 @@ int dns_query(FAR const char *hostname, FAR union dns_addr_u *addr,
   else if (ret == 0)
     {
       ret = qdata->query.result;
+
+#ifdef CONFIG_TRACE_NET
+      dns_report_failure(hostname, ret);
+#endif
     }
 
   /* Free the query data */
