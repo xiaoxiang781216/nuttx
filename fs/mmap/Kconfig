@@ -5,7 +5,7 @@
 
 config FS_FILEMAP
 	bool "File mmap support"
-	default !DEFAULT_SMALL
+	default y
 	---help---
 		Include support for mmap() and munmap()
 
