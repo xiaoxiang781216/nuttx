@@ -138,11 +138,17 @@
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
 #  define NOTE_FILTER_SYSCALLMASK_SET(nr, s) \
-          ((s)->syscall_mask[(nr) / NOTE_BPL] |= (1ul << ((nr) % NOTE_BPL)))
+          ((nr) < SYS_nsyscalls ? \
+           ((s)->syscall_mask[(nr) / NOTE_BPL] |= \
+            (1ul << ((nr) % NOTE_BPL))) : 0)
 #  define NOTE_FILTER_SYSCALLMASK_CLR(nr, s) \
-          ((s)->syscall_mask[(nr) / NOTE_BPL] &= ~(1ul << ((nr) % NOTE_BPL)))
+          ((nr) < SYS_nsyscalls ? \
+           ((s)->syscall_mask[(nr) / NOTE_BPL] &= \
+            ~(1ul << ((nr) % NOTE_BPL))) : 0)
 #  define NOTE_FILTER_SYSCALLMASK_ISSET(nr, s) \
-          ((s)->syscall_mask[(nr) / NOTE_BPL] & (1ul << ((nr) % NOTE_BPL)))
+          ((nr) < SYS_nsyscalls ? \
+           ((s)->syscall_mask[(nr) / NOTE_BPL] & \
+            (1ul << ((nr) % NOTE_BPL))) : 0)
 #  define NOTE_FILTER_SYSCALLMASK_ZERO(s) \
           memset((s), 0, sizeof(struct note_filter_syscall_s))
 #  define NOTE_FILTER_SYSCALLMASK_FILL(s) \
@@ -159,11 +165,16 @@
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
 #  define NOTE_FILTER_IRQMASK_SET(nr, s) \
-          ((s)->irq_mask[(nr) / NOTE_BPL] |= (1ul << ((nr) % NOTE_BPL)))
+          ((nr) < NR_IRQS ? \
+           ((s)->irq_mask[(nr) / NOTE_BPL] |= \
+            (1ul << ((nr) % NOTE_BPL))) : 0)
 #  define NOTE_FILTER_IRQMASK_CLR(nr, s) \
-          ((s)->irq_mask[(nr) / NOTE_BPL] &= ~(1ul << ((nr) % NOTE_BPL)))
+          ((nr) < NR_IRQS ? \
+           ((s)->irq_mask[(nr) / NOTE_BPL] &= \
+            ~(1ul << ((nr) % NOTE_BPL))) : 0)
 #  define NOTE_FILTER_IRQMASK_ISSET(nr, s) \
-          ((s)->irq_mask[(nr) / NOTE_BPL] & (1ul << ((nr) % NOTE_BPL)))
+          ((nr) < NR_IRQS ? \
+           ((s)->irq_mask[(nr) / NOTE_BPL] & (1ul << ((nr) % NOTE_BPL))) : 0)
 #  define NOTE_FILTER_IRQMASK_ZERO(s) \
           memset((s), 0, sizeof(struct note_filter_irq_s))
 #  define NOTE_FILTER_IRQMASK_FILL(s) \
