@@ -68,7 +68,7 @@ static ssize_t bufferedoutstream_puts(FAR struct lib_outstream_s *self,
 {
   FAR struct lib_bufferedoutstream_s *stream =
     (FAR struct lib_bufferedoutstream_s *)self;
-  size_t ret = len;
+  ssize_t ret = len;
 
   if (stream->pending + len <= CONFIG_STREAM_OUT_BUFFER_SIZE)
     {
