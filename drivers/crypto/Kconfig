@@ -95,6 +95,16 @@ config CRYPTO_RPMSG_RSA_KEYBUF_SIZE
 		  80   - KeyID mode (4B per parameter + ASN1 overhead, 16-byte aligned)
 		  1536 - Raw RSA-2048 CRT key (n+e+d+p+q+dp+dq+qp in plaintext)
 
+config CRYPTO_RPMSG_DATA_POOL_COUNT
+	int "Number of pre-allocated server data blocks"
+	default 0
+	depends on CRYPTO_RPMSG_SERVER
+	---help---
+		Number of rpmsg_crypto_server_data_s blocks pre-allocated in the
+		static mempool. This pool eliminates runtime dynamic memory
+		allocation on the crypto hot path. Set to the maximum number of
+		concurrent crypto sessions plus in-flight async operations.
+
 menuconfig DEV_SE05X
 	bool "Enable secure element (SE05X)"
 	depends on I2C

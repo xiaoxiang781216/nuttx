@@ -26,6 +26,7 @@
 
 #include <debug.h>
 #include <errno.h>
+#include <string.h>
 #include <sys/endian.h>
 #include <sys/param.h>
 
@@ -33,6 +34,7 @@
 #include <crypto/virtio_crypto.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/rpmsg/rpmsg.h>
 
 #include "rpmsg_crypto.h"
@@ -40,6 +42,28 @@
 /****************************************************************************
  * Pre-processor definitions
  ****************************************************************************/
+
+#if CONFIG_CRYPTO_RPMSG_DATA_POOL_COUNT > 0
+#  define rpmsg_crypto_data_alloc()                                        \
+     mempool_zallocate(&g_rpmsg_crypto_data_pool, 0)
+#  define rpmsg_crypto_data_free(p)                                        \
+     do                                                                    \
+       {                                                                   \
+         explicit_bzero(p, sizeof(struct rpmsg_crypto_server_data_s));     \
+         mempool_release(&g_rpmsg_crypto_data_pool, p);                    \
+       }                                                                   \
+     while (0)
+#else
+#  define rpmsg_crypto_data_alloc()                                        \
+     kmm_zalloc(sizeof(struct rpmsg_crypto_server_data_s))
+#  define rpmsg_crypto_data_free(p)                                        \
+     do                                                                    \
+       {                                                                   \
+         explicit_bzero(p, sizeof(struct rpmsg_crypto_server_data_s));     \
+         kmm_free(p);                                                      \
+       }                                                                   \
+     while (0)
+#endif
 
 /****************************************************************************
  * Private Types
@@ -111,6 +135,13 @@ static int rpmsg_crypto_kdone_cb(FAR struct cryptkop *krp);
  * Private Data
  ****************************************************************************/
 
+#if CONFIG_CRYPTO_RPMSG_DATA_POOL_COUNT > 0
+MEMPOOL_DEFINE(g_rpmsg_crypto_data_pool,
+               sizeof(struct rpmsg_crypto_server_data_s),
+               CONFIG_CRYPTO_RPMSG_DATA_POOL_COUNT,
+               CONFIG_CRYPTO_RPMSG_DATA_POOL_COUNT, 0);
+#endif
+
 static const rpmsg_ept_cb g_rpmsg_crypto_handler[] =
 {
   [RPMSG_CRYPTO_NEWSESSION]  = rpmsg_crypto_newsession_handler,
@@ -172,7 +203,7 @@ static int rpmsg_crypto_kdone_cb(FAR struct cryptkop *krp)
   rpmsg_send_nocopy(rcsdata->ept, rsp, rcsdata->rsplen);
   rpmsg_release_rx_buffer(rcsdata->ept, rcsdata->rxbuf);
   rcsdata->rsp = NULL;
-  kmm_free(rcsdata);
+  rpmsg_crypto_data_free(rcsdata);
   return OK;
 }
 
@@ -252,7 +283,7 @@ static int rpmsg_crypto_kdispatch(
               = ret;
           rpmsg_send_nocopy(ept, rsp, rsplen);
           rpmsg_release_rx_buffer(ept, msg);
-          kmm_free(rcsdata);
+          rpmsg_crypto_data_free(rcsdata);
         }
     }
   else
@@ -263,7 +294,7 @@ static int rpmsg_crypto_kdispatch(
       ((FAR struct rpmsg_crypto_kprocess_s *)rsp)->header.result =
           rcsdata->krp.krp_status;
       rpmsg_send_nocopy(ept, rsp, rsplen);
-      kmm_free(rcsdata);
+      rpmsg_crypto_data_free(rcsdata);
     }
 
   return 0;
@@ -285,7 +316,7 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
   int txform = 0;
   int thash = 0;
 
-  rcsdata = kmm_zalloc(sizeof(struct rpmsg_crypto_server_data_s));
+  rcsdata = rpmsg_crypto_data_alloc();
   if (rcsdata == NULL)
     {
       rpmsgerr("Failed to get new session data\n");
@@ -302,7 +333,7 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
       if (txform < 0)
         {
           msg->header.result = txform;
-          kmm_free(rcsdata);
+          rpmsg_crypto_data_free(rcsdata);
           goto out;
         }
       else if (txform == CRYPTO_AES_CBC)
@@ -325,7 +356,7 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
       if (thash < 0)
         {
           msg->header.result = thash;
-          kmm_free(rcsdata);
+          rpmsg_crypto_data_free(rcsdata);
           goto out;
         }
     }
@@ -335,7 +366,7 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
       if (thash < 0)
         {
           msg->header.result = thash;
-          kmm_free(rcsdata);
+          rpmsg_crypto_data_free(rcsdata);
           goto out;
         }
       else if (thash == CRYPTO_AES_128_CMAC)
@@ -351,7 +382,7 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
       if (txform < 0)
         {
           msg->header.result = txform;
-          kmm_free(rcsdata);
+          rpmsg_crypto_data_free(rcsdata);
           goto out;
         }
       else if (txform == CRYPTO_AES_GCM_16)
@@ -406,7 +437,7 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
                                          &crie : &cria, 1);
   if (msg->header.result != 0)
     {
-      kmm_free(rcsdata);
+      rpmsg_crypto_data_free(rcsdata);
       goto out;
     }
 
@@ -1003,9 +1034,9 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   uint32_t keylen;
   int ret = 0;
 
-  /* Allocate kprocess context on heap for async lifetime */
+  /* Allocate kprocess context from pool for async lifetime */
 
-  rcsdata = kmm_zalloc(sizeof(struct rpmsg_crypto_server_data_s));
+  rcsdata = rpmsg_crypto_data_alloc();
   if (rcsdata == NULL)
     {
       rpmsgerr("Failed to allocate kprocess context\n");
@@ -1017,7 +1048,7 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   if (rsp == NULL)
     {
       rpmsgerr("get tx payload failed or no enough space\n");
-      kmm_free(rcsdata);
+      rpmsg_crypto_data_free(rcsdata);
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
@@ -1156,7 +1187,7 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
 err:
   rsp->header = msg->header;
   rsp->header.result = ret;
-  kmm_free(rcsdata);
+  rpmsg_crypto_data_free(rcsdata);
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp));
 }
 
@@ -1180,9 +1211,9 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
   uint32_t space;
   int ret;
 
-  /* Allocate kprocess context on heap for async lifetime */
+  /* Allocate kprocess context from pool for async lifetime */
 
-  rcsdata = kmm_zalloc(sizeof(struct rpmsg_crypto_server_data_s));
+  rcsdata = rpmsg_crypto_data_alloc();
   if (rcsdata == NULL)
     {
       rpmsgerr("Failed to allocate kprocess context\n");
@@ -1194,7 +1225,7 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
   if (rsp == NULL)
     {
       rpmsgerr("get tx payload failed or no enough space\n");
-      kmm_free(rcsdata);
+      rpmsg_crypto_data_free(rcsdata);
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
@@ -1298,7 +1329,7 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
 
 err:
   rsp->header.result = ret;
-  kmm_free(rcsdata);
+  rpmsg_crypto_data_free(rcsdata);
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp));
 }
 
@@ -1348,7 +1379,7 @@ static int rpmsg_crypto_freesession_handler(FAR struct rpmsg_endpoint *ept,
     (FAR struct rpmsg_crypto_server_data_s *)(uintptr_t)msg->header.tid;
 
   msg->header.result = crypto_freesession(rcsdata->tid);
-  kmm_free(rcsdata);
+  rpmsg_crypto_data_free(rcsdata);
   return rpmsg_send(ept, msg, sizeof(*msg));
 }
 
