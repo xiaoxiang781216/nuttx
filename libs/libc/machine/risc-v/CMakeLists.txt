@@ -40,4 +40,8 @@ if(CONFIG_LIBC_ARCH_ELF)
   list(APPEND SRCS arch_elf.c)
 endif()
 
+if(CONFIG_RISCV_CRC32)
+  list(APPEND SRCS arch_crc32.c)
+endif()
+
 target_sources(c PRIVATE ${SRCS})

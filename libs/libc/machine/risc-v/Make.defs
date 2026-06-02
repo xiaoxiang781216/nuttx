@@ -40,5 +40,9 @@ ifeq ($(CONFIG_LIBC_ARCH_ELF),y)
 CSRCS += arch_elf.c
 endif
 
+ifeq ($(CONFIG_RISCV_CRC32),y)
+CSRCS += arch_crc32.c
+endif
+
 DEPPATH += --dep-path machine/risc-v
 VPATH += :machine/risc-v

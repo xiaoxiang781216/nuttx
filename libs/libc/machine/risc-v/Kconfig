@@ -34,3 +34,12 @@ config RISCV_STRCMP
 	---help---
 		Enable optimized RISC-V specific strcmp() library function
 
+
+config RISCV_CRC32
+	bool "Enable optimized CRC32 for RISC-V"
+	default n
+	depends on ARCH_RV_ISA_ZBC
+	select LIBC_ARCH_CRC32
+	---help---
+		Enable optimized RISC-V specific CRC32 using Zbc carry-less
+		multiplication (clmul/clmulr) instructions.
