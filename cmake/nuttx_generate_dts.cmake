@@ -20,7 +20,7 @@
 #
 # ##############################################################################
 
-# KCONFIG_CONFIG, NUTTX_DIR, and CMAKE_BINARY_DIR are set by -D flags
+# KCONFIG_CONFIG, NUTTX_DIR, and DTS_OUTPUT_DIR are set by -D flags
 
 include(cmake/nuttx_kconfig.cmake)
 nuttx_export_kconfig(${KCONFIG_CONFIG})
@@ -35,18 +35,18 @@ set(GEN_EDT_SCRIPT ${DT_SCRIPTS_DIR}/gen_edt.py)
 set(GEN_DEFINES_SCRIPT ${DT_SCRIPTS_DIR}/gen_defines.py)
 set(GEN_MULTIPLE_DEFINED_SCRIPT ${DT_SCRIPTS_DIR}/gen_dynamic_api.py)
 # The generated file containing the final DTS, for debugging.
-set(DTS_FILE ${CMAKE_BINARY_DIR}/dt/nuttx.dts)
+set(DTS_FILE ${DTS_OUTPUT_DIR}/dt/nuttx.dts)
 # The edtlib.EDT object in pickle format.
-set(EDT_PICKLE_FILE ${CMAKE_BINARY_DIR}/dt/edt.pickle)
+set(EDT_PICKLE_FILE ${DTS_OUTPUT_DIR}/dt/edt.pickle)
 # The generated C header needed by <nuttx/devicetree.h>
-set(GEN_DEFINES ${CMAKE_BINARY_DIR}/include/nuttx/devicetree_generated.h)
+set(GEN_DEFINES ${DTS_OUTPUT_DIR}/include/nuttx/devicetree_generated.h)
 # Generated build system internals.
-set(DTS_PRE_FILE ${CMAKE_BINARY_DIR}/dt/nuttx.dts.pre)
-set(DTS_DEPS_FILE ${CMAKE_BINARY_DIR}/dt/nuttx.dts.pre.d)
+set(DTS_PRE_FILE ${DTS_OUTPUT_DIR}/dt/nuttx.dts.pre)
+set(DTS_DEPS_FILE ${DTS_OUTPUT_DIR}/dt/nuttx.dts.pre.d)
 
 # Create a directory for the devicetree output files.
-if(NOT EXISTS ${CMAKE_BINARY_DIR}/dt)
-  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/dt)
+if(NOT EXISTS ${DTS_OUTPUT_DIR}/dt)
+  file(MAKE_DIRECTORY ${DTS_OUTPUT_DIR}/dt)
 endif()
 
 set(BOARD_NUM)
@@ -187,7 +187,10 @@ function(dts_preprocess)
       ${DTS_PRE_FILE}
       ${NUTTX_DIR}/devicetree/common/empty_file.c)
 
-  execute_process(COMMAND ${CMD_PREPROCESS} RESULT_VARIABLE PREPROCESS_RESULT)
+  execute_process(
+    COMMAND ${CMD_PREPROCESS}
+    WORKING_DIRECTORY ${DTS_OUTPUT_DIR}
+    RESULT_VARIABLE PREPROCESS_RESULT)
   if(NOT "${PREPROCESS_RESULT}" STREQUAL "0")
     message(FATAL_ERROR "failed to preprocess devicetree files
                 (error code ${ret}): ${DT_PREPROCESS_SOURCE_FILES}")
@@ -223,7 +226,7 @@ function(gen_edt)
       ${EDT_PICKLE_FILE}.new)
   execute_process(
     COMMAND ${CMD_GEN_EDT}
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    WORKING_DIRECTORY ${DTS_OUTPUT_DIR}
     RESULT_VARIABLE GEN_EDT_RESULT)
   if(NOT "${GEN_EDT_RESULT}" STREQUAL "0")
     message(FATAL_ERROR "failed to generate edt pickle file
@@ -251,7 +254,7 @@ function(gen_devicetree_header)
   if(BOARD_NUM EQUAL 1)
     execute_process(
       COMMAND ${CMD_GEN_DEFINES}
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      WORKING_DIRECTORY ${DTS_OUTPUT_DIR}
       RESULT_VARIABLE GEN_DEFINES_RESULT)
     file(COPY_FILE ${GEN_DEFINES}.new ${GEN_DEFINES} ONLY_IF_DIFFERENT)
     file(REMOVE ${GEN_DEFINES}.new)
@@ -260,7 +263,7 @@ function(gen_devicetree_header)
   if(CURRENT_BOARD_ID EQUAL 1)
     execute_process(
       COMMAND ${CMD_GEN_DEFINES}
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      WORKING_DIRECTORY ${DTS_OUTPUT_DIR}
       RESULT_VARIABLE GEN_DEFINES_RESULT)
     string(REGEX REPLACE "devicetree_generated.h" "devicetree_generated_base.h"
                          gen_defines_base "${GEN_DEFINES}")
@@ -286,7 +289,7 @@ function(gen_devicetree_header)
 
   execute_process(
     COMMAND ${CMD_GEN_DEFINES}
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    WORKING_DIRECTORY ${DTS_OUTPUT_DIR}
     RESULT_VARIABLE GEN_DEFINES_RESULT)
   message(STATUS "CMD_GEN_DEFINES: ${CMD_GEN_DEFINES}")
   file(COPY_FILE ${GEN_DEFINES}.new ${current_gen_defines} ONLY_IF_DIFFERENT)
@@ -301,7 +304,7 @@ function(gen_multi_devicetree_header)
   message(STATUS "CMD_GEN_MULTIPLE_DEFINES: ${CMD_GEN_MULTIPLE_DEFINES}")
   execute_process(
     COMMAND ${CMD_GEN_MULTIPLE_DEFINES}
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    WORKING_DIRECTORY ${DTS_OUTPUT_DIR}
     RESULT_VARIABLE GEN_DEFINES_RESULT)
 endfunction()
 

@@ -486,7 +486,7 @@ add_custom_target(
   dts_generator
   COMMAND
     ${CMAKE_COMMAND} -DKCONFIG_CONFIG=${NUTTX_DEFCONFIG}
-    -DNUTTX_DIR=${NUTTX_DIR} -DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} -P
+    -DNUTTX_DIR=${NUTTX_DIR} -DDTS_OUTPUT_DIR=${CMAKE_BINARY_DIR} -P
     ${NUTTX_DIR}/cmake/nuttx_generate_dts.cmake
   WORKING_DIRECTORY ${NUTTX_DIR})
 add_dependencies(nuttx_context dts_generator)
