@@ -174,7 +174,8 @@ struct module_s
   uint16_t nsect;                      /* Number of entries in sectalloc array */
 #endif
   int dynamic;                         /* Module is a dynamic shared object */
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MODULE)
+#if defined(CONFIG_LIBC_ELF_UNWIND_SECTNAME) || \
+    defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MODULE)
   size_t textsize;                     /* Size of the kernel .text memory allocation */
   size_t datasize;                     /* Size of the kernel .bss/.data memory allocation */
 #endif
@@ -187,6 +188,10 @@ struct module_s
    */
 
   FAR struct module_s *dependencies[CONFIG_LIBC_ELF_MAXDEPEND];
+#endif
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+  uintptr_t unwind;                      /* Unwind section address (.ARM.exidx or .eh_frame) */
+  size_t    unwindsize;                  /* Size of unwind section in bytes */
 #endif
   uintptr_t initarr;                     /* .init_array */
   uint16_t  ninit;                       /* Number of entries in .init_array */
@@ -228,6 +233,8 @@ struct mod_loadinfo_s
   FAR uint8_t  *iobuffer;    /* File I/O buffer */
   uintptr_t     datasec;     /* ET_DYN - data area start from Phdr */
   uintptr_t     segpad;      /* Padding between text and data */
+  uintptr_t     unwind;      /* Unwind section address (.ARM.exidx or .eh_frame) */
+  size_t        unwindsize;  /* Size of unwind section in bytes */
   uintptr_t     initarr;     /* .init_array */
   uintptr_t     finiarr;     /* .fini_array */
   uintptr_t     preiarr;     /* .preinit_array */
@@ -823,5 +830,45 @@ FAR void *libelf_gethandle(FAR const char *name);
 
 int libelf_findsymbol(FAR struct mod_loadinfo_s *loadinfo,
                       FAR const char *name, FAR Elf_Sym *sym);
+
+/****************************************************************************
+ * Name: libelf_find_unwind
+ *
+ * Description:
+ *   Search all loaded modules to find the unwind section that covers
+ *   a given return address.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+int libelf_find_unwind(uintptr_t address, FAR uintptr_t *unwind,
+                       FAR size_t *unwindsize);
+
+#  ifdef CONFIG_ARCH_ARM
+
+/****************************************************************************
+ * Name: libelf_merge_exidx
+ *
+ * Description:
+ *   Merge all SHT_ARM_EXIDX sections into a single sorted table.
+ *   Must be called after libelf_bind (relocation).
+ *
+ ****************************************************************************/
+
+int libelf_merge_exidx(FAR struct mod_loadinfo_s *loadinfo);
+
+/****************************************************************************
+ * Name: libelf_free_exidx
+ *
+ * Description:
+ *   Free heap-allocated merged exidx table (if any).
+ *
+ ****************************************************************************/
+
+void libelf_free_exidx(FAR uintptr_t *unwind, uintptr_t textalloc,
+                       size_t textsize);
+
+#  endif
+#endif /* CONFIG_LIBC_ELF_UNWIND_SECTNAME */
 
 #endif /* __INCLUDE_NUTTX_LIB_LIBC_ELF_H */

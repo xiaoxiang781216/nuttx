@@ -75,6 +75,8 @@ SECTIONS
       _erodata = . ;
     }
 
+#ifdef CONFIG_ARCH_ARM
+#  ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
   .ARM.extab : SUBALIGN(SECTIONS_ALIGN)
     {
       *(.ARM.extab*)
@@ -86,6 +88,29 @@ SECTIONS
       *(.ARM.exidx*)
       __exidx_end = ABSOLUTE(.);
     }
+#  else
+  /DISCARD/ :
+    {
+      *(.ARM.exidx*)
+      *(.ARM.extab*)
+    }
+#  endif
+#elif defined(CONFIG_LIBC_ELF_UNWIND_SECTNAME)
+  .eh_frame : SUBALIGN(SECTIONS_ALIGN)
+    {
+      __eh_frame_start = ABSOLUTE(.);
+      KEEP(*(.eh_frame))
+      LONG(0)
+      __eh_frame_end = ABSOLUTE(.);
+    }
+
+  .eh_frame_hdr : SUBALIGN(SECTIONS_ALIGN)
+    {
+      __eh_frame_hdr_start = ABSOLUTE(.);
+      KEEP(*(.eh_frame_hdr))
+      __eh_frame_hdr_end = ABSOLUTE(.);
+    }
+#endif
 
   _eronly = ABSOLUTE(.);
 

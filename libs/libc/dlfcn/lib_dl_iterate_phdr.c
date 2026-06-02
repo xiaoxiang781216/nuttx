@@ -26,6 +26,7 @@
 
 #include <nuttx/config.h>
 #include <link.h>
+#include <nuttx/lib/elf.h>
 
 /****************************************************************************
  * External References
@@ -39,6 +40,20 @@ extern char __eh_frame_hdr_start[] __attribute__((weak));
 extern char __eh_frame_hdr_end[] __attribute__((weak));
 extern char __eh_frame_start[] __attribute__((weak));
 extern char __eh_frame_end[] __attribute__((weak));
+#endif
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+struct phdr_iterate_s
+{
+  CODE int (*callback)(FAR struct dl_phdr_info *info,
+                       size_t size, FAR void *data);
+  FAR void *data;
+  int       ret;
+};
 #endif
 
 /****************************************************************************
@@ -119,6 +134,46 @@ static int dl_report_object(CODE int (*cb)(FAR struct dl_phdr_info *info,
 }
 
 /****************************************************************************
+ * Name: dl_iterate_module_cb
+ *
+ * Description:
+ *   libelf_registry_foreach callback. Reports a dynamically loaded ELF
+ *   module to the user callback via dl_report_object.
+ *
+ * Input Parameters:
+ *   modp - The registered module to report
+ *   arg  - Pointer to struct phdr_iterate_s containing the user callback
+ *
+ * Returned Value:
+ *   0 to continue iteration, non-zero to stop (propagates callback result)
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+static int dl_iterate_module_cb(FAR struct module_s *modp, FAR void *arg)
+{
+  FAR struct phdr_iterate_s *ctx = (FAR struct phdr_iterate_s *)arg;
+
+  if (modp->textalloc == NULL || modp->unwind == 0 || modp->unwindsize == 0)
+    {
+      return 0;
+    }
+
+#  ifdef CONFIG_ARCH_ARM
+  ctx->ret = dl_report_object(ctx->callback, ctx->data,
+                              (uintptr_t)modp->textalloc, modp->textsize,
+                              modp->unwind, modp->unwindsize, PT_ARM_EXIDX);
+#  else
+  ctx->ret = dl_report_object(ctx->callback, ctx->data,
+                              (uintptr_t)modp->textalloc, modp->textsize,
+                              modp->unwind, modp->unwindsize, 0);
+#  endif
+
+  return ctx->ret;
+}
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -152,9 +207,15 @@ int dl_iterate_phdr(CODE int (*callback)(FAR struct dl_phdr_info *info,
                                          size_t size, FAR void *data),
                     FAR void *data)
 {
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+  struct phdr_iterate_s ctx;
+#endif
   uintptr_t unwind_addr = 0;
   size_t unwind_size = 0;
   uint32_t unwind_type = 0;
+  int ret;
+
+  /* Search nuttx image */
 
 #ifdef CONFIG_ARCH_ARM
   if ((uintptr_t)__exidx_start != (uintptr_t)__exidx_end)
@@ -179,7 +240,26 @@ int dl_iterate_phdr(CODE int (*callback)(FAR struct dl_phdr_info *info,
     }
 #endif
 
-  return dl_report_object(callback, data, (uintptr_t)_stext,
-                          (uintptr_t)_etext - (uintptr_t)_stext,
-                          unwind_addr, unwind_size, unwind_type);
+  ret = dl_report_object(callback, data, (uintptr_t)_stext,
+                         (uintptr_t)_etext - (uintptr_t)_stext,
+                         unwind_addr, unwind_size, unwind_type);
+  if (ret != 0)
+    {
+      return ret;
+    }
+
+  /* Search dynamically loaded ELFs */
+
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+  ctx.callback = callback;
+  ctx.data     = data;
+  ctx.ret      = 0;
+  libelf_registry_foreach(dl_iterate_module_cb, &ctx);
+  if (ctx.ret != 0)
+    {
+      return ctx.ret;
+    }
+#endif
+
+  return 0;
 }

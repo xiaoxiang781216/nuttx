@@ -386,6 +386,12 @@ FAR void *libelf_insert(FAR const char *filename, FAR const char *modname)
   modp->datasize  = loadinfo.datasize;
 #endif
 
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+  modp->unwind     = loadinfo.unwind;
+  modp->unwindsize = loadinfo.unwindsize;
+  modp->textsize   = loadinfo.textsize;
+#endif
+
   /* Call the module initializer */
 
   switch (loadinfo.ehdr.e_type)

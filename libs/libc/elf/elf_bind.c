@@ -1101,5 +1101,14 @@ int libelf_bind(FAR struct module_s *modp,
     }
 #endif
 
+#if defined(CONFIG_ARCH_ARM) && defined(CONFIG_LIBC_ELF_UNWIND_SECTNAME)
+  ret = libelf_merge_exidx(loadinfo);
+  if (ret < 0)
+    {
+      berr("ERROR: libelf_merge_exidx failed: %d", ret);
+      return ret;
+    }
+#endif
+
   return ret;
 }

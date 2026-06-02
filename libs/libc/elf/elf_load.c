@@ -685,13 +685,13 @@ int libelf_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
   ret = libelf_findsection(loadinfo, CONFIG_LIBC_ELF_UNWIND_SECTNAME);
   if (ret < 0)
     {
-      binfo("libelf_findsection: Exception Index section not found: %d\n",
-            ret);
+      binfo("libelf_findsection: %s section not found: %d\n",
+            CONFIG_LIBC_ELF_UNWIND_SECTNAME, ret);
     }
   else
     {
-      up_init_exidx(loadinfo->shdr[ret].sh_addr,
-                    loadinfo->shdr[ret].sh_size);
+      loadinfo->unwind     = loadinfo->shdr[ret].sh_addr;
+      loadinfo->unwindsize = loadinfo->shdr[ret].sh_size;
     }
 #endif
 

@@ -260,6 +260,21 @@ static int elf_loadbinary(FAR struct binary_s *binp,
   binp->mod.nfini   = loadinfo.nfini;
 #endif
 
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+  binp->mod.unwind     = loadinfo.unwind;
+  binp->mod.unwindsize = loadinfo.unwindsize;
+  binp->mod.textsize   = loadinfo.textsize;
+
+  if (binp->mod.unwind != 0 && binp->mod.unwindsize != 0)
+    {
+      /* TODO: implement per-task_group linked list of modules
+       * instead of using g_mod_registry
+       */
+
+      libelf_registry_add(&binp->mod);
+    }
+#endif /* CONFIG_LIBC_ELF_UNWIND_SECTNAME */
+
 #ifdef CONFIG_SCHED_USER_IDENTITY
   /* Save IDs and mode from file system */
 
@@ -298,6 +313,13 @@ static int elf_loadbinary(FAR struct binary_s *binp,
   return OK;
 
 errout_with_load:
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+  if (binp->mod.unwind != 0 && binp->mod.unwindsize != 0)
+    {
+      libelf_registry_del(&binp->mod);
+    }
+#endif
+
   libelf_unload(&loadinfo);
 errout_with_init:
   libelf_uninitialize(&loadinfo);
@@ -315,6 +337,14 @@ errout_with_init:
 static int elf_unloadbinary(FAR struct binary_s *binp)
 {
   binfo("Unloading %p\n", binp);
+
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+  if (binp->mod.unwind != 0 && binp->mod.unwindsize != 0)
+    {
+      libelf_registry_del(&binp->mod);
+    }
+#endif
+
   libelf_uninit(&binp->mod);
 
   return OK;

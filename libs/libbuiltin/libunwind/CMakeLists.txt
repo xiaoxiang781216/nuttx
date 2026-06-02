@@ -42,8 +42,33 @@ if(CONFIG_LIB_LIBUNWIND)
   set(UNWIND_OPTS -Wno-undef -fno-sanitize=all)
   set(UNWIND_CXX_FLAGS "-fno-exceptions -fno-rtti")
 
+  if(CONFIG_ELF AND CONFIG_CXX_EXCEPTION_UNWINDER_LIBUNWIND)
+    # for implicit runtime calls (abort, __stack_chk_fail)
+    if(CONFIG_ARCH_ARM)
+      list(APPEND UNWIND_OPTS -mlong-calls)
+    endif()
+
+    # Forces elf to link unwind symbols from libunwind instead of libgcc
+    get_property(
+      ELF_EXTRA_LIB
+      TARGET nuttx_global
+      PROPERTY NUTTX_ELF_LINK_EXTRA_LIBRARIES)
+    set_property(
+      TARGET nuttx_global PROPERTY NUTTX_ELF_LINK_EXTRA_LIBRARIES
+                                   $<TARGET_FILE:unwind> ${ELF_EXTRA_LIB})
+  endif()
+
   set_source_files_properties(${UNWIND_CXX_SOURCES}
                               PROPERTIES COMPILE_FLAGS ${UNWIND_CXX_FLAGS})
+
+  # Prevent GCC from inferring noreturn on _Unwind_Resume (GCC builtin
+  # ECF_NORETURN) which causes it to skip saving callee-saved registers,
+  # breaking ARM EHABI unwinding through the _Unwind_Resume frame.
+  if(CONFIG_ARCH_ARM AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set_source_files_properties(
+      ${UNWIND_SRCDIR}/Unwind-EHABI.cpp
+      PROPERTIES COMPILE_FLAGS "${UNWIND_CXX_FLAGS} -fno-ipa-pure-const")
+  endif()
 
   # Link libunwind via --whole-archive in LINK_FLAGS (outside the library group)
   # to guarantee it overrides libgcc's unwind symbols on all boards.

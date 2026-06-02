@@ -95,6 +95,11 @@ int libelf_uninit(FAR struct module_s *modp)
 
   /* Release resources held by the module */
 
+#if defined(CONFIG_ARCH_ARM) && defined(CONFIG_LIBC_ELF_UNWIND_SECTNAME)
+  libelf_free_exidx(&modp->unwind, (uintptr_t)modp->textalloc,
+                    modp->textsize);
+#endif
+
   if (modp->textalloc != NULL || modp->dataalloc != NULL)
     {
       /* Free the module memory and nullify so that the memory cannot

@@ -66,6 +66,14 @@ int libelf_unload(FAR struct mod_loadinfo_s *loadinfo)
     }
   else
 #endif
+
+  /* Free heap-allocated merged exidx table if present */
+
+#if defined(CONFIG_ARCH_ARM) && defined(CONFIG_LIBC_ELF_UNWIND_SECTNAME)
+  libelf_free_exidx(&loadinfo->unwind, loadinfo->textalloc,
+                    loadinfo->textsize);
+#endif
+
   /* Release memory holding the relocated ELF image */
 
   /* ET_DYN has a single allocation so we only free textalloc */

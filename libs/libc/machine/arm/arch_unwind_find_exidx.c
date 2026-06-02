@@ -24,68 +24,42 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/elf.h>
+#include <nuttx/config.h>
+#include <nuttx/lib/elf.h>
 #include <unwind.h>
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static __EIT_entry *__exidx_start_elf;
-static __EIT_entry *__exidx_end_elf;
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name:  __gnu_Unwind_Find_exidx
+ * Name: __gnu_Unwind_Find_exidx
  *
  * Description:
- *    This function is called (if exists) by the gcc generated unwind
- *    run-time in order to retrieve an alternative .ARM.exidx Exception
- *    index section.
- *    This is the case for an ELF module loaded by the elf binary loader.
- *    It is needed to support exception handling for loadable ELF modules.
+ *   Called by the ARM EHABI unwind runtime (libgcc) to retrieve the
+ *   .ARM.exidx exception index section for a given PC address.
  *
- *    NOTES:
- *
- *     1. The section to be searched is chosen by the address of the calling
- *        site: if we are in a runtime loaded ELF, the code will be executed
- *        in ram ( > 0x20000000 ) otherwise we will  be executing code  from
- *        flash (0x08000000) (running nuttx from ram will break this logic)
- *
- *     2. __exidx_start  and  __exidx_end refers to main nuttx elf image and
- *        are defined in its linker script.
- *
- *     2. __exidx_start_elf  and  __exidx_end_elf refers  to the elf module
- *        loaded by the elf binary loader, and are initialized at run-time.
- *
- *     3. TODO: if nuttx itself is running from ram, this logic will not work
- *
- *     4. TODO: in order to support multiple elf modules running at the same
- *        time, this error logic needs to be extended to store multiple
- *        start/end ranges that refers to the loaded binaries.
+ *   First checks dynamically loaded modules via libelf_find_unwind.
+ *   Falls back to the main firmware's exidx from linker script symbols.
  *
  ****************************************************************************/
 
-int up_init_exidx(Elf_Addr start, Elf_Word size)
-{
-  __exidx_start_elf = (__EIT_entry *)start;
-  __exidx_end_elf   = (__EIT_entry *)(start + size);
-  return 0;
-}
-
 _Unwind_Ptr __gnu_Unwind_Find_exidx(_Unwind_Ptr return_address, int *nrecp)
 {
-  if (return_address < 0x20000000)
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+  uintptr_t unwind;
+  size_t unwindsize;
+
+  if (libelf_find_unwind((uintptr_t)return_address,
+                         &unwind, &unwindsize) == 0)
     {
-      *nrecp = __exidx_end - __exidx_start;
-      return (_Unwind_Ptr)__exidx_start;
+      *nrecp = unwindsize / 8;
+      return (_Unwind_Ptr)unwind;
     }
-  else
-    {
-      *nrecp = __exidx_end_elf - __exidx_start_elf;
-      return (_Unwind_Ptr)__exidx_start_elf;
-    }
+#endif
+
+  /* Fallback: main firmware's .ARM.exidx from linker script */
+
+  *nrecp = __exidx_end - __exidx_start;
+  return (_Unwind_Ptr)__exidx_start;
 }

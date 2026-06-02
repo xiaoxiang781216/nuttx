@@ -45,6 +45,13 @@ if(CONFIG_LIBC_ELF)
     elf_insert.c
     elf_remove.c)
 
+  if(CONFIG_LIBC_ELF_UNWIND_SECTNAME)
+    list(APPEND SRCS elf_find_unwind.c)
+    if(CONFIG_ARCH_ARM)
+      list(APPEND SRCS elf_merge_exidx.c)
+    endif()
+  endif()
+
   if(NOT CONFIG_TRICORE_TOOLCHAIN_TASKING)
     list(APPEND SRCS elf_globals.S)
     set(ELF_LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/gnu-elf.ld")

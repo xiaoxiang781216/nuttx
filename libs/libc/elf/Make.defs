@@ -31,6 +31,13 @@ CSRCS += elf_symbols.c elf_symtab.c elf_uninit.c elf_unload.c
 CSRCS += elf_gethandle.c elf_getsymbol.c elf_insert.c
 CSRCS += elf_remove.c
 
+ifneq ($(CONFIG_LIBC_ELF_UNWIND_SECTNAME),)
+CSRCS += elf_find_unwind.c
+ifeq ($(CONFIG_ARCH_ARM),y)
+CSRCS += elf_merge_exidx.c
+endif
+endif
+
 # Add the elf directory to the build
 
 ASRCS += elf_globals.S
