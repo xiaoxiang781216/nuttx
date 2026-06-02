@@ -240,6 +240,18 @@
             MAX(CONFIG_IOB_BUFSIZE1_CPU2, CONFIG_IOB_BUFSIZE1_CPU3)), \
             MAX(CONFIG_IOB_BUFSIZE1_CPU4, CONFIG_IOB_BUFSIZE1_CPU5))
 
+/* Maximum extra-head count across all CPUs.
+ * Used as a compile-time guard for struct iob_s layout choices and any
+ * #if-style decision that depends on whether the head pool feature is in
+ * use.  Per-CPU runtime sizing should use the CONFIG_IOB_EXTRA_HEADS
+ * macro (BMP-redirected to iob_get_extra_heads()).
+ */
+
+#  define CONFIG_IOB_EXTRA_HEADS \
+    MAX(MAX(MAX(CONFIG_IOB_EXTRA_HEADS_CPU0, CONFIG_IOB_EXTRA_HEADS_CPU1), \
+            MAX(CONFIG_IOB_EXTRA_HEADS_CPU2, CONFIG_IOB_EXTRA_HEADS_CPU3)), \
+            MAX(CONFIG_IOB_EXTRA_HEADS_CPU4, CONFIG_IOB_EXTRA_HEADS_CPU5))
+
 /* Total nbuffers per CPU (sum across all pool levels) and the maximum
  * total across all CPUs. Used to size single-instance mempools (e.g.
  * net forward pool) that must cover the worst-case CPU's IOB budget.
@@ -400,7 +412,7 @@ static inline_function int iob_get_bufsize(int level)
    } while (0)
 #define IOB_FLAG_TEST(iob, flag) (IOB_FLAG_GET(iob) & (flag))
 
-#ifdef CONFIG_IOB_ALLOC
+#if CONFIG_IOB_EXTRA_HEADS > 0
 #  define IOB_BUFSIZE(p) ((p)->io_bufsize)
 #elif CONFIG_IOB_NPOOLS > 1
 #  define IOB_BUFSIZE(p) ((size_t)(uintptr_t)(p)->io_pool->priv)
@@ -427,14 +439,14 @@ struct iob_s
 
   /* Payload */
 
-#if CONFIG_IOB_BUFSIZE_MAX < 256 && !defined(CONFIG_IOB_ALLOC)
+#if CONFIG_IOB_BUFSIZE_MAX < 256 && CONFIG_IOB_EXTRA_HEADS == 0
   uint8_t  io_len;      /* Length of the data in the entry */
   uint8_t  io_offset;   /* Data begins at this offset */
 #else
   uint16_t io_len;      /* Length of the data in the entry */
   uint16_t io_offset;   /* Data begins at this offset */
 #endif
-#ifdef CONFIG_IOB_ALLOC
+#if CONFIG_IOB_EXTRA_HEADS > 0
   uint16_t io_bufsize;  /* Total length of the data buffer */
 #endif
   unsigned int io_pktlen; /* Total length of the packet */
@@ -462,7 +474,7 @@ struct iob_s
   char io_owner[IOB_OWNER_SIZE]; /* Owner string for tracking */
 #endif
 
-#ifdef CONFIG_IOB_ALLOC
+#if CONFIG_IOB_EXTRA_HEADS > 0
   iob_free_cb_t io_free;  /* Custom free callback */
   FAR uint8_t  *io_data;
   uint8_t io_data_[] aligned_data(IOB_ALIGNMENT);
@@ -599,7 +611,7 @@ FAR struct iob_s *iob_alloc_with_size(uint16_t size, bool throttled)
   return iob_timedalloc_with_size(size, throttled, UINT_MAX);
 }
 
-#ifdef CONFIG_IOB_ALLOC
+#if CONFIG_IOB_EXTRA_HEADS > 0
 /****************************************************************************
  * Name: iob_alloc_with_data
  *

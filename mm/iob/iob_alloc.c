@@ -88,7 +88,7 @@ static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
       iob->io_offset  = 0;    /* Offset to the beginning of data */
       iob->io_pktlen  = 0;    /* Total length of the packet */
       iob->io_conn    = NULL;
-#ifdef CONFIG_IOB_ALLOC
+#if CONFIG_IOB_EXTRA_HEADS > 0
       iob->io_free    = NULL;
       iob->io_data    = iob->io_data_;
       iob->io_bufsize = (uint16_t)(uintptr_t)mempool->priv;
@@ -152,13 +152,14 @@ FAR struct iob_s *iob_timedalloc_with_size(uint16_t size, bool throttled,
     }
 }
 
-#ifdef CONFIG_IOB_ALLOC
+#if CONFIG_IOB_EXTRA_HEADS > 0
 
 /****************************************************************************
  * Name: iob_alloc_with_data
  *
  * Description:
- *   Allocate an I/O buffer from heap and attach the external payload
+ *   Allocate a fixed-size struct iob_s header from g_iob_head_pool and
+ *   attach the caller-provided external payload.
  *
  * Input Parameters:
  *   data    - Make io_data point to a specific address, the caller is
@@ -178,7 +179,7 @@ FAR struct iob_s *iob_alloc_with_data(FAR void *data, uint16_t size,
 
   DEBUGASSERT(free_cb != NULL);
 
-  iob = kmm_zalloc(sizeof(struct iob_s));
+  iob = mempool_zallocate(g_iob_head_pool, 0);
   if (iob)
     {
       iob->io_bufsize = size;

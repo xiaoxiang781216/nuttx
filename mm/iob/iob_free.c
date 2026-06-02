@@ -120,7 +120,7 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
   iob->io_owner[0] = '\0';
 #endif
 
-#ifdef CONFIG_IOB_ALLOC
+#if CONFIG_IOB_EXTRA_HEADS > 0
   if (iob->io_free != NULL)
     {
       if (iob->io_data == iob->io_data_)
@@ -130,7 +130,10 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
       else
         {
           iob->io_free(iob->io_data);
-          kmm_free(iob);
+#ifdef CONFIG_DEBUG_IOB
+          iob->io_owner[0] = '\0';
+#endif
+          mempool_release(g_iob_head_pool, iob);
         }
 
       return next;

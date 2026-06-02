@@ -75,6 +75,20 @@ config IOB_SECTION3_CPU0
 	default IOB_SECTION2_CPU0
 	depends on IOB_NPOOLS_CPU0 > 2
 
+config IOB_EXTRA_HEADS_CPU0
+	int "Number of pre-allocated extra IOB heads for CPU0"
+	default 0
+	range 0 65535
+	---help---
+		Per-CPU equivalent of IOB_EXTRA_HEADS for BMP builds.  Number of
+		standalone struct iob_s headers pre-allocated in CPU0's head pool
+		g_iob_head_pool_cpu0, used by zero-copy paths such as
+		iob_alloc_with_data() / iob_init_with_data() running on CPU0.
+
+		Set to 0 if no zero-copy / external-payload allocations originate
+		on this CPU; in that case the head pool is still defined but its
+		preallocation count is 0 and allocations will fail fast.
+
 # --- CPU1 ---
 
 if NCPUS > 1
@@ -127,6 +141,11 @@ config IOB_SECTION3_CPU1
 	string "Section name of IOB buffer (Level 3) for CPU1"
 	default IOB_SECTION2_CPU1
 	depends on IOB_NPOOLS_CPU1 > 2
+
+config IOB_EXTRA_HEADS_CPU1
+	int "Number of pre-allocated extra IOB heads for CPU1"
+	default IOB_EXTRA_HEADS_CPU0
+	range 0 65535
 
 endif # NCPUS > 1
 
@@ -183,6 +202,11 @@ config IOB_SECTION3_CPU2
 	default IOB_SECTION2_CPU2
 	depends on IOB_NPOOLS_CPU2 > 2
 
+config IOB_EXTRA_HEADS_CPU2
+	int "Number of pre-allocated extra IOB heads for CPU2"
+	default IOB_EXTRA_HEADS_CPU1
+	range 0 65535
+
 endif # NCPUS > 2
 
 # --- CPU3 ---
@@ -237,6 +261,11 @@ config IOB_SECTION3_CPU3
 	string "Section name of IOB buffer (Level 3) for CPU3"
 	default IOB_SECTION2_CPU3
 	depends on IOB_NPOOLS_CPU3 > 2
+
+config IOB_EXTRA_HEADS_CPU3
+	int "Number of pre-allocated extra IOB heads for CPU3"
+	default IOB_EXTRA_HEADS_CPU2
+	range 0 65535
 
 endif # NCPUS > 3
 
@@ -293,6 +322,11 @@ config IOB_SECTION3_CPU4
 	default IOB_SECTION2_CPU4
 	depends on IOB_NPOOLS_CPU4 > 2
 
+config IOB_EXTRA_HEADS_CPU4
+	int "Number of pre-allocated extra IOB heads for CPU4"
+	default IOB_EXTRA_HEADS_CPU3
+	range 0 65535
+
 endif # NCPUS > 4
 
 # --- CPU5 ---
@@ -347,6 +381,11 @@ config IOB_SECTION3_CPU5
 	string "Section name of IOB buffer (Level 3) for CPU5"
 	default IOB_SECTION2_CPU5
 	depends on IOB_NPOOLS_CPU5 > 2
+
+config IOB_EXTRA_HEADS_CPU5
+	int "Number of pre-allocated extra IOB heads for CPU5"
+	default IOB_EXTRA_HEADS_CPU4
+	range 0 65535
 
 endif # NCPUS > 5
 
@@ -507,11 +546,23 @@ config IOB_NOTIFIER_DIV
 		a notification will be sent only when there are a multiple of 4 IOBs
 		available.
 
-config IOB_ALLOC
-	bool "Dynamic I/O buffer allocation"
-	default n
+config IOB_EXTRA_HEADS
+	int "Number of pre-allocated extra IOB heads"
+	default 0
+	range 0 65535
 	---help---
-		This option will enable dynamic I/O buffer allocation
+		Number of standalone struct iob_s headers to pre-allocate in the
+		dedicated head pool g_iob_head_pool.  These heads are used by
+		zero-copy paths such as iob_alloc_with_data() and
+		iob_init_with_data() to wrap externally-owned payloads without
+		calling kmm_zalloc().
+
+		The head pool block size is sizeof(struct iob_s) (no payload),
+		so each head consumes far less memory than a regular IOB block.
+
+		Set to 0 to disable iob_alloc_with_data() / iob_init_with_data()
+		entirely (the head pool is not built and these helpers are not
+		compiled in).
 
 endif # MM_IOB
 endmenu # Common I/O buffer support

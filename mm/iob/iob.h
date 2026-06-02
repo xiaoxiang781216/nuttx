@@ -58,8 +58,28 @@ extern FAR struct mempool_s *g_iob_cpu_pool[CONFIG_NCPUS][CONFIG_IOB_NPOOLS];
 extern FAR struct mempool_s *g_iob_pool[CONFIG_IOB_NPOOLS];
 #endif
 
+#if CONFIG_IOB_EXTRA_HEADS > 0
+/* Dedicated pool for fixed-size struct iob_s headers used by the
+ * external-payload paths (iob_alloc_with_data / iob_init_with_data).
+ *
+ * Non-BMP: a single global head pool.
+ * BMP    : one head pool per CPU, sized/sectioned per CPU; the
+ *          g_iob_head_pool macro resolves to the current CPU's slot.
+ *          CPUs whose IOB_NPOOLS_CPUn == 0 have a NULL slot, in which
+ *          case external-payload allocations fail gracefully on that
+ *          CPU (mempool_zallocate() returns NULL for a NULL pool).
+ */
+
+#  ifdef CONFIG_BMP
+extern FAR struct mempool_s *g_iob_head_cpu_pool[CONFIG_NCPUS];
+#    define g_iob_head_pool g_iob_head_cpu_pool[this_cpu()]
+#  else
+extern FAR struct mempool_s *g_iob_head_pool;
+#  endif
+#endif
+
 /****************************************************************************
- * Public Function Prototypes
+ * Inline Functions
  ****************************************************************************/
 
 /****************************************************************************
