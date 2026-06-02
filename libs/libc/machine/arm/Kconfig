@@ -78,9 +78,9 @@ config ARM_STRLEN
 	---help---
 		Enable optimized ARM specific strlen() library function
 
-config LIBC_ARCH_CRC32
+config ARM_CRC32
 	bool "Enable optimized crc32 for ARM"
 	default n
-	depends on ARCH_HAVE_CRC32
+	select LIBC_ARCH_CRC32
 	---help---
 		Enable optimized arm neon specific crc32 library function

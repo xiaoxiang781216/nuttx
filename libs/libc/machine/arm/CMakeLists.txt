@@ -91,7 +91,7 @@ if(CONFIG_PROFILE_MINI)
   list(APPEND SRCS arch_mcount.S)
 endif()
 
-if(CONFIG_LIBC_ARCH_CRC32)
+if(CONFIG_ARM_CRC32)
   list(APPEND SRCS arch_crc32.c)
 endif()
 

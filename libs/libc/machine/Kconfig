@@ -163,6 +163,10 @@ config LIBC_ARCH_ELF
 	bool
 	default n
 
+config LIBC_ARCH_CRC32
+	bool
+	default n
+
 config LIBC_PREVENT_STRING
 	bool
 	default n

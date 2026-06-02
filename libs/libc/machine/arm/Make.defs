@@ -91,7 +91,7 @@ ifeq ($(CONFIG_PROFILE_MINI),y)
 ASRCS += arch_mcount.S
 endif
 
-ifeq ($(CONFIG_LIBC_ARCH_CRC32),y)
+ifeq ($(CONFIG_ARM_CRC32),y)
 CSRCS += arch_crc32.c
 endif
 
