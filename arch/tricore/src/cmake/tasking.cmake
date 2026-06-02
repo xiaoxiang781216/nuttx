@@ -163,7 +163,7 @@ endif()
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(--debug-info=default)
   add_compile_options(--keep-temporary-files)
-  add_compile_options(-g)
+  add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
 endif()
 
 # merge source code with assembly output
