@@ -2179,6 +2179,11 @@ void note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip, uint8_t event,
 {
   FAR struct note_driver_s **driver;
 
+  if (note_filter_dump(tag))
+    {
+      return;
+    }
+
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -2195,6 +2200,11 @@ void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
                      FAR const char *fmt, uint64_t type, FAR va_list *va)
 {
   FAR struct note_driver_s **driver;
+
+  if (note_filter_dump(tag))
+    {
+      return;
+    }
 
   note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
@@ -2219,49 +2229,6 @@ void note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
   note_vprintf_ip(tag, level, ip, fmt, type, &va);
   va_end(va);
 }
-
-#ifdef CONFIG_LIB_SYSCALL
-
-/****************************************************************************
- * Name: sched_note_event_ip/vprintf_ip/printf_ip
- *
- * Description:
- *   Syscall-compatible wrappers with built-in filter check.
- *   When CONFIG_LIB_SYSCALL is enabled, these must be real functions
- *   (not macros) so the syscall proxy generator can create stubs.
- *
- ****************************************************************************/
-
-void sched_note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                         uint8_t event, FAR const void *buf, size_t len)
-{
-  if (!note_filter_dump(tag))
-    {
-      note_event_ip(tag, level, ip, event, buf, len);
-    }
-}
-
-void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                           FAR const char *fmt, uint64_t type, va_list *va)
-{
-  if (!note_filter_dump(tag))
-    {
-      note_vprintf_ip(tag, level, ip, fmt, type, va);
-    }
-}
-
-void sched_note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                          FAR const char *fmt, uint64_t type, ...)
-{
-  if (!note_filter_dump(tag))
-    {
-      va_list va;
-      va_start(va, type);
-      note_vprintf_ip(tag, level, ip, fmt, type, &va);
-      va_end(va);
-    }
-}
-#endif /* CONFIG_LIB_SYSCALL */
 
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
 

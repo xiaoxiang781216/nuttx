@@ -24,18 +24,16 @@
 
 #include <nuttx/config.h>
 
-#include <stdarg.h>
-#include <syslog.h>
-
 #include <nuttx/ratelimit.h>
 #include <nuttx/sched_note.h>
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+
 /****************************************************************************
- * Private Data
+ * Public Data
  ****************************************************************************/
 
-static DEFINE_RATELIMIT_STATE(g_ratelimit,
+DEFINE_RATELIMIT_STATE(g_note_ratelimit,
   CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,
   CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);
 
@@ -43,39 +41,4 @@ static DEFINE_RATELIMIT_STATE(g_ratelimit,
  * Public Functions
  ****************************************************************************/
 
-void sched_note_event_ip_ratelimit(uint8_t tag, uint8_t level,
-                                   uintptr_t ip, uint8_t event,
-                                   FAR const void *buf,
-                                   size_t len)
-{
-  if (!ratelimit_islimited(&g_ratelimit))
-    {
-      sched_note_event_ip(tag, level, ip, event, buf, len);
-    }
-}
-
-void sched_note_vprintf_ip_ratelimit(uint8_t tag, uint8_t level,
-                                     uintptr_t ip, FAR const char *fmt,
-                                     uint64_t type, va_list *va)
-{
-  if (!ratelimit_islimited(&g_ratelimit))
-    {
-      sched_note_vprintf_ip(tag, level, ip, fmt, type, va);
-    }
-}
-
-void sched_note_printf_ip_ratelimit(uint8_t tag, uint8_t level,
-                                    uintptr_t ip, FAR const char *fmt,
-                                    uint64_t type, ...)
-{
-  if (!ratelimit_islimited(&g_ratelimit))
-    {
-      va_list va;
-      va_start(va, type);
-      sched_note_vprintf_ip(tag, level, ip, fmt, type, &va);
-      va_end(va);
-    }
-}
-
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
-

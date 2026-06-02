@@ -42,9 +42,9 @@
 #  define trace_printf(tag, fmt, ...) \
     sched_note_printf(tag, LOG_DEBUG, fmt, ##__VA_ARGS__)
 #  define trace_diag(tag, level, id, fmt, ...) \
-    sched_note_printf_ip(tag, level, id, fmt, 0, ##__VA_ARGS__)
+    sched_note_printf_ip(tag, level, id, fmt, ##__VA_ARGS__)
 #  define trace_diagv(tag, level, id, fmt, va) \
-    sched_note_vprintf_ip(tag, level, id, fmt, 0, &(va))
+    sched_note_vprintf_ip(tag, level, id, fmt, va)
 #else
 #  define trace_begin(tag)
 #  define trace_end(tag)
