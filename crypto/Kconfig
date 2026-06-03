@@ -85,6 +85,18 @@ config CRYPTO_SESSION_POOL_COUNT
 		heap allocation. 0 falls back to kmm_malloc. Each
 		session is approximately 280 bytes.
 
+config CRYPTO_CRYPTOP_POOL_COUNT
+	int "Static cryptop pool size (0=use heap)"
+	default 0
+	depends on CRYPTO_CRYPTODEV
+	---help---
+		Number of pre-allocated cryptop objects for async
+		(COP_FLAG_CBIMM | COP_FLAG_REL) operations. When > 0,
+		async requests that use caller-provided output buffers
+		are served from a fixed-size pool with no heap
+		allocation. 0 falls back to kmm_zalloc. Each cryptop
+		is approximately 120 bytes.
+
 config CRYPTO_SW_AES
 	bool "Software AES library"
 	depends on ALLOW_BSD_COMPONENTS

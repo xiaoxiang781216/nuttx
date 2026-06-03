@@ -442,6 +442,9 @@ struct crypt_op
  */
 
 #define COP_FLAG_CBIMM  (1 << 2) /* Request asynchronous processing. */
+#define COP_FLAG_REL    (1 << 3) /* Output written in-place to user buffer;
+                                  * no kernel copy on completion.
+                                  */
 
   uint16_t flags;
   unsigned len;

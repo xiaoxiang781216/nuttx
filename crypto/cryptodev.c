@@ -202,6 +202,34 @@ MEMPOOL_DEFINE(g_csession_pool, sizeof(struct csession),
     while (0)
 #endif
 
+#if CONFIG_CRYPTO_CRYPTOP_POOL_COUNT > 0
+MEMPOOL_DEFINE(g_cryptop_pool, sizeof(struct cryptop),
+               CONFIG_CRYPTO_CRYPTOP_POOL_COUNT,
+               CONFIG_CRYPTO_CRYPTOP_POOL_COUNT, 0);
+#  define cryptop_pool_alloc()                                      \
+    ((FAR struct cryptop *)mempool_zallocate(&g_cryptop_pool, 0))
+#  define cryptop_pool_free(p)                                      \
+    mempool_release(&g_cryptop_pool, (p))
+#else
+#  define cryptop_pool_alloc()                                      \
+    ((FAR struct cryptop *)kmm_zalloc(sizeof(struct cryptop)))
+#  define cryptop_pool_free(p)  kmm_free((p))
+#endif
+
+#define cryptop_free(p)                                             \
+    do                                                              \
+      {                                                             \
+        if ((p)->crp_flags & CRYPTO_F_REL)                          \
+          {                                                         \
+            cryptop_pool_free((p));                                 \
+          }                                                         \
+        else                                                        \
+          {                                                         \
+            kmm_free((p));                                          \
+          }                                                         \
+      }                                                             \
+    while (0)
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -410,24 +438,40 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
 
   if (cop->flags & COP_FLAG_CBIMM)
     {
-      scrp = kmm_zalloc(sizeof(*scrp) + cop->olen);
-      if (scrp == NULL)
+      if (cop->flags & COP_FLAG_REL)
         {
-          return -ENOMEM;
-        }
+          scrp = cryptop_pool_alloc();
+          if (scrp == NULL)
+            {
+              return -ENOMEM;
+            }
 
-      if (cop->dst && cop->olen > 0)
-        {
-          scrp->crp_dst = (caddr_t)(scrp + 1);
+          scrp->crp_dst   = cop->dst;
+          scrp->crp_mac   = cop->mac;
+          scrp->crp_flags = CRYPTO_F_CBIMM | CRYPTO_F_REL;
         }
-      else if (cop->mac && cop->olen > 0)
+      else
         {
-          scrp->crp_mac = (caddr_t)(scrp + 1);
+          scrp = kmm_zalloc(sizeof(*scrp) + cop->olen);
+          if (scrp == NULL)
+            {
+              return -ENOMEM;
+            }
+
+          if (cop->dst && cop->olen > 0)
+            {
+              scrp->crp_dst = (caddr_t)(scrp + 1);
+            }
+          else if (cop->mac && cop->olen > 0)
+            {
+              scrp->crp_mac = (caddr_t)(scrp + 1);
+            }
+
+          scrp->crp_flags = CRYPTO_F_CBIMM;
         }
 
       scrp->crp_reqid    = cop->reqid;
       scrp->crp_olen     = cop->olen;
-      scrp->crp_flags    = CRYPTO_F_CBIMM;
       scrp->crp_opaque   = fcr;
       scrp->crp_callback = cryptodevop_cb;
       crp.crp_opaque     = scrp;
@@ -543,7 +587,7 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
 
   if (error && scrp)
     {
-      kmm_free(scrp);
+      cryptop_free(scrp);
     }
 
   return error;
@@ -587,18 +631,22 @@ static int cryptodev_getopstatus(FAR struct fcrypt *fcr,
 
   TAILQ_REMOVE(&fcr->crp_ret, crp, crp_next);
 
-  if (cop->dst && crp->crp_dst)
+  if (!(crp->crp_flags & CRYPTO_F_REL))
     {
-      memcpy(cop->dst, crp->crp_dst, crp->crp_olen);
-    }
+      if (cop->dst && crp->crp_dst)
+        {
+          memcpy(cop->dst, crp->crp_dst, crp->crp_olen);
+        }
 
-  if (cop->mac && crp->crp_mac)
-    {
-      memcpy(cop->mac, crp->crp_mac, crp->crp_olen);
+      if (cop->mac && crp->crp_mac)
+        {
+          memcpy(cop->mac, crp->crp_mac, crp->crp_olen);
+        }
     }
 
   cop->status = crp->crp_etype;
-  kmm_free(crp);
+  cryptop_free(crp);
+
   return OK;
 }
 
@@ -1005,7 +1053,7 @@ static int cryptof_close(FAR struct file *filep)
   while ((crp = TAILQ_FIRST(&fcr->crp_ret)))
     {
       TAILQ_REMOVE(&fcr->crp_ret, crp, crp_next);
-      kmm_free(crp);
+      cryptop_free(crp);
     }
 
   while ((krp = TAILQ_FIRST(&fcr->crpk_ret)))
