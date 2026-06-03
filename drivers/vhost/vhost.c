@@ -42,6 +42,7 @@
 #include "vhost-rpmsg.h"
 #include "vhost-serial.h"
 #include "vhost-net.h"
+#include "vhost-spi.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -618,6 +619,14 @@ void vhost_register_drivers(void)
   if (ret < 0)
     {
       vhosterr("vhost_register_i2c_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_VHOST_SPI
+  ret = vhost_register_spi_driver();
+  if (ret < 0)
+    {
+      vhosterr("vhost_register_spi_driver failed, ret=%d\n", ret);
     }
 #endif
 
