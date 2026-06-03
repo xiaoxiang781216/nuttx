@@ -228,7 +228,7 @@ Noteram Device (``/dev/note/ram``)
 
   :return: Always returns 0.
 
-.. c:macro:: NOTE_GETMODE
+.. c:macro:: NOTE_GETOVERWRITE
 
   Get overwrite mode
 
@@ -250,7 +250,7 @@ Noteram Device (``/dev/note/ram``)
   :return: If success, 0 (``OK``) is returned and current overwrite mode is stored into the given pointer.
            If failed, a negated ``errno`` is returned.
 
-.. c:macro:: NOTE_SETMODE
+.. c:macro:: NOTE_SETOVERWRITE
 
   Set overwrite mode
 

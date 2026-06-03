@@ -253,10 +253,10 @@
 /* NOTE_CLEAR
  *              - Clear all contents of the circular buffer
  *                Argument: Ignored
- * NOTE_GETMODE
+ * NOTE_GETOVERWRITE
  *              - Get overwrite mode
  *                Argument: A writable pointer to unsigned int
- * NOTE_SETMODE
+ * NOTE_SETOVERWRITE
  *              - Set overwrite mode
  *                Argument: A read-only pointer to unsigned int
  * NOTE_GETREADMODE
@@ -290,8 +290,8 @@
  */
 
 #define NOTE_CLEAR                       _NOTEIOC(0x01)
-#define NOTE_GETMODE                     _NOTEIOC(0x02)
-#define NOTE_SETMODE                     _NOTEIOC(0x03)
+#define NOTE_GETOVERWRITE                _NOTEIOC(0x02)
+#define NOTE_SETOVERWRITE                _NOTEIOC(0x03)
 #define NOTE_GETREADMODE                 _NOTEIOC(0x04)
 #define NOTE_SETREADMODE                 _NOTEIOC(0x05)
 #define NOTE_GETFILTER                   _NOTEIOC(0x06)

@@ -889,12 +889,12 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         ret = OK;
         break;
 
-      /* NOTE_GETMODE
+      /* NOTE_GETOVERWRITE
        *      - Get overwrite mode
        *        Argument: A writable pointer to unsigned int
        */
 
-      case NOTE_GETMODE:
+      case NOTE_GETOVERWRITE:
         if (arg == 0)
           {
             ret = -EINVAL;
@@ -908,12 +908,12 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         break;
 
-      /* NOTE_SETMODE
+      /* NOTE_SETOVERWRITE
        *      - Set overwrite mode
        *        Argument: A read-only pointer to unsigned int
        */
 
-      case NOTE_SETMODE:
+      case NOTE_SETOVERWRITE:
         if (arg == 0)
           {
             ret = -EINVAL;
