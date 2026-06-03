@@ -935,6 +935,15 @@ typedef CODE void (*nxsched_foreach_t)(FAR struct tcb_s *tcb, FAR void *arg);
 
 typedef CODE int (*nxsched_cpu_call_t)(FAR void *arg);
 
+/* Flag bits for nxsched_cpu_call_flags() and
+ * nxsched_cpu_call_single_flags().  By default a synchronous CPU call
+ * busy-waits for completion only when issued from interrupt context and
+ * blocks on a semaphore otherwise.  NXSCHED_CPU_CALL_BUSYWAIT forces the
+ * busy-wait behaviour even when called from thread context.
+ */
+
+#define NXSCHED_CPU_CALL_BUSYWAIT (1 << 0)
+
 #ifndef CONFIG_UP
 struct cpu_call_cookie_s;
 struct cpu_call_data_s
@@ -1928,6 +1937,31 @@ void nxsched_cpu_call_delay_init(FAR struct cpu_call_delay_data_s *data,
 }
 
 /****************************************************************************
+ * Name: nxsched_cpu_call_flags
+ *
+ * Description:
+ *   Call function on multi processors, wait function callback.  Same as
+ *   nxsched_cpu_call() but allows the caller to control the waiting
+ *   behaviour via flags.
+ *
+ * Input Parameters:
+ *   cpuset - Target cpuset
+ *   func   - Function
+ *   arg    - Function args
+ *   flags  - Bitwise OR of NXSCHED_CPU_CALL_* flags.  When
+ *            NXSCHED_CPU_CALL_BUSYWAIT is set the call busy-waits for
+ *            completion even from thread context instead of blocking on a
+ *            semaphore.
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+int nxsched_cpu_call_flags(cpu_set_t cpuset, nxsched_cpu_call_t func,
+                           FAR void *arg, int flags);
+
+/****************************************************************************
  * Name: nxsched_cpu_call
  *
  * Description:
@@ -1943,8 +1977,12 @@ void nxsched_cpu_call_delay_init(FAR struct cpu_call_delay_data_s *data,
  *
  ****************************************************************************/
 
+static inline_function
 int nxsched_cpu_call(cpu_set_t cpuset, nxsched_cpu_call_t func,
-                     FAR void *arg);
+                     FAR void *arg)
+{
+  return nxsched_cpu_call_flags(cpuset, func, arg, 0);
+}
 
 /****************************************************************************
  * Name: nxsched_cpu_call_async
@@ -2008,6 +2046,36 @@ int nxsched_cpu_call_single(int cpuid, nxsched_cpu_call_t func,
   CPU_ZERO(&cpuset);
   CPU_SET(cpuid, &cpuset);
   return nxsched_cpu_call(cpuset, func, arg);
+}
+
+/****************************************************************************
+ * Name: nxsched_cpu_call_single_flags
+ *
+ * Description:
+ *   Call function on single processor, wait function callback.  Same as
+ *   nxsched_cpu_call_single() but allows the caller to control the waiting
+ *   behaviour via flags.
+ *
+ * Input Parameters:
+ *   cpuid - Target cpu id
+ *   func  - Function
+ *   arg   - Function args
+ *   flags - Bitwise OR of NXSCHED_CPU_CALL_* flags
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+static inline_function
+int nxsched_cpu_call_single_flags(int cpuid, nxsched_cpu_call_t func,
+                                  FAR void *arg, int flags)
+{
+  cpu_set_t cpuset;
+
+  CPU_ZERO(&cpuset);
+  CPU_SET(cpuid, &cpuset);
+  return nxsched_cpu_call_flags(cpuset, func, arg, flags);
 }
 
 /****************************************************************************

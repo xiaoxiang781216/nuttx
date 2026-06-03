@@ -246,23 +246,26 @@ int nxsched_cpu_call_handler(int irq, FAR void *context,
 }
 
 /****************************************************************************
- * Name: nxsched_cpu_call
+ * Name: nxsched_cpu_call_flags
  *
  * Description:
- *   Call function on multi processors, wait function callback
+ *   Call function on multi processors, wait function callback.  Same as
+ *   nxsched_cpu_call() but allows the caller to control the waiting
+ *   behaviour via flags.
  *
  * Input Parameters:
  *   cpuset - Target cpuset
  *   func   - Function
  *   arg    - Function args
+ *   flags  - Bitwise OR of NXSCHED_CPU_CALL_* flags
  *
  * Returned Value:
  *   Result
  *
  ****************************************************************************/
 
-int nxsched_cpu_call(cpu_set_t cpuset, nxsched_cpu_call_t func,
-                     FAR void *arg)
+int nxsched_cpu_call_flags(cpu_set_t cpuset, nxsched_cpu_call_t func,
+                           FAR void *arg, int flags)
 {
   FAR struct cpu_call_cookie_s *c;
   int semcount;
@@ -289,7 +292,7 @@ int nxsched_cpu_call(cpu_set_t cpuset, nxsched_cpu_call_t func,
     }
 
   cpucnt = CPU_COUNT(&cpuset);
-  if (up_interrupt_context())
+  if (up_interrupt_context() || (flags & NXSCHED_CPU_CALL_BUSYWAIT))
     {
       /* Wait until completion. */
 
