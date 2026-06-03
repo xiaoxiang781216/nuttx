@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/board.h>
 #include <nuttx/mutex.h>
 #include <nuttx/sched.h>
 #include <nuttx/fs/procfs.h>
@@ -41,6 +42,7 @@
 #include <execinfo.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -302,8 +304,8 @@ struct mm_heap_s
   FAR struct procfs_meminfo_entry_s *mm_procfs;
 #endif
 
-#ifdef CONFIG_MM_HEAP_FREE_FORBID
-  atomic_t mm_freeforbid;
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+  atomic_t mm_heapforbid;
 #endif
 
   /* Kasan is disable or enable for this heap */
@@ -341,6 +343,28 @@ void mm_free_delaylist(FAR struct mm_heap_s *heap);
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
+
+static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap)
+{
+#ifdef CONFIG_MM_HEAP_FORBID_NONE
+  UNUSED(heap);
+  return false;
+#else
+  if (atomic_read(&heap->mm_heapforbid) == 0)
+    {
+      return false;
+    }
+
+#  if defined(CONFIG_MM_HEAP_FORBID_PANIC)
+  PANIC();
+  return true;
+#  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
+  return board_heap_forbid_hook(heap);
+#  else
+#    error "Invalid MM_HEAP_FORBID config"
+#  endif
+#endif
+}
 
 static inline_function int mm_size2ndx(size_t size)
 {

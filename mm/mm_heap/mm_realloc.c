@@ -80,6 +80,11 @@ __jumpfunc__ FAR void *mm_realloc(FAR struct mm_heap_s *heap,
   FAR void *newmem;
   bool bypass;
 
+  if (mm_skip_operation(heap))
+    {
+      return NULL;
+    }
+
   /* If oldmem is NULL, then realloc is equivalent to malloc */
 
   if (oldmem == NULL)

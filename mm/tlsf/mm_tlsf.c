@@ -32,17 +32,21 @@
 #include <debug.h>
 #include <execinfo.h>
 #include <sched.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
+#include <syslog.h>
 #include <sys/param.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/board.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/lib/lib.h>
 #include <nuttx/mutex.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/mm/mempool.h>
+#include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/trace.h>
 #include <nuttx/tls.h>
@@ -133,8 +137,8 @@ struct mm_heap_s
   FAR struct procfs_meminfo_entry_s *mm_procfs;
 #endif
 
-#ifdef CONFIG_MM_HEAP_FREE_FORBID
-  atomic_t mm_freeforbid;
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+  atomic_t mm_heapforbid;
 #endif
 
   /* Kasan is disable or enable for this heap */
@@ -185,17 +189,25 @@ struct mm_memdump_priv_s
  * Private Functions
  ****************************************************************************/
 
-static inline bool mm_skip_free(FAR struct mm_heap_s *heap)
+static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap)
 {
-#if defined(CONFIG_MM_HEAP_FREE_PANIC)
+#ifdef CONFIG_MM_HEAP_FORBID_NONE
+  UNUSED(heap);
+  return false;
+#else
+  if (atomic_read(&heap->mm_heapforbid) == 0)
+    {
+      return false;
+    }
+
+#  if defined(CONFIG_MM_HEAP_FORBID_PANIC)
   PANIC();
   return true;
-#elif defined(CONFIG_MM_HEAP_FREE_IGNORE)
-  return true;
-#elif defined(CONFIG_MM_HEAP_FREE_FORBID)
-  return atomic_read(&heap->mm_freeforbid) != 0;
-#else /* CONFIG_MM_HEAP_FREE_NORMAL */
-  return false;
+#  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
+  return board_heap_forbid_hook(heap);
+#  else
+#    error "Invalid MM_HEAP_FORBID config"
+#  endif
 #endif
 }
 
@@ -941,7 +953,7 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
       return;
     }
 
-  if (mm_skip_free(heap))
+  if (mm_skip_operation(heap))
     {
       return;
     }
@@ -977,7 +989,7 @@ void mm_delayfreecb(FAR struct mm_heap_s *heap, FAR void *mem,
       return;
     }
 
-  if (mm_skip_free(heap))
+  if (mm_skip_operation(heap))
     {
       return;
     }
@@ -987,27 +999,26 @@ void mm_delayfreecb(FAR struct mm_heap_s *heap, FAR void *mem,
 }
 
 /****************************************************************************
- * Name: mm_free_forbid
+ * Name: mm_heap_forbid
  *
  * Description:
- *   Forbid free mem, forbid == true means forbid free mem, forbid == false
- *   means allow free mem.
+ *   Forbid or allow dynamic memory allocation and free.
  *
  * Parameters:
- *   heap - The heap to be queried.
- *   forbid - true means forbid free mem, false means allow free mem.
+ *   heap   - The heap to control.
+ *   forbid - true to forbid malloc/free, false to allow.
  *
  * Return:
  *   The previous forbid status.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_HEAP_FREE_FORBID
-bool mm_free_forbid(FAR struct mm_heap_s *heap, bool forbid)
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_xchg(&heap->mm_freeforbid, forbid) != 0;
+  return atomic_xchg(&heap->mm_heapforbid, forbid) != 0;
 }
 #endif
 
@@ -1493,6 +1504,11 @@ __jumpfunc__ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   size_t nodesize;
   FAR void *ret;
 
+  if (mm_skip_operation(heap))
+    {
+      return NULL;
+    }
+
   /* In case of zero-length allocations allocate the minimum size object */
 
   if (size < 1)
@@ -1585,6 +1601,11 @@ __jumpfunc__ FAR void *mm_memalign(FAR struct mm_heap_s *heap,
 {
   size_t nodesize;
   FAR void *ret;
+
+  if (mm_skip_operation(heap))
+    {
+      return NULL;
+    }
 
 #ifdef CONFIG_MM_HEAP_MEMPOOL
   if (heap->mm_mpool)
@@ -1679,6 +1700,11 @@ __jumpfunc__ FAR void *mm_realloc(FAR struct mm_heap_s *heap,
   size_t oldsize;
   size_t newsize;
 #endif
+
+  if (mm_skip_operation(heap))
+    {
+      return NULL;
+    }
 
   /* If oldmem is NULL, then realloc is equivalent to malloc */
 

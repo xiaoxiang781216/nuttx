@@ -33,6 +33,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/atomic.h>
+#include <nuttx/board.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/list.h>
 #include <nuttx/mm/mm.h>
@@ -146,6 +147,10 @@ struct mm_heap_s
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   struct procfs_meminfo_entry_s *procfs;
+#endif
+
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+  atomic_t mm_heapforbid;
 #endif
 
   atomic_t aordblks;
@@ -386,6 +391,28 @@ static bool free_delaylist(struct mm_heap_s *heap, bool force)
   return ret;
 }
 
+static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap)
+{
+#ifdef CONFIG_MM_HEAP_FORBID_NONE
+  UNUSED(heap);
+  return false;
+#else
+  if (atomic_read(&heap->mm_heapforbid) == 0)
+    {
+      return false;
+    }
+
+#  if defined(CONFIG_MM_HEAP_FORBID_PANIC)
+  PANIC();
+  return true;
+#  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
+  return board_heap_forbid_hook(heap);
+#  else
+#    error "Invalid MM_HEAP_FORBID config"
+#  endif
+#endif
+}
+
 static void *reallocate(void *oldmem, size_t alignment, size_t size)
 {
   size_t aligned_size;
@@ -523,6 +550,11 @@ void umm_addregion(void *heapstart, size_t heapsize)
 
 void *malloc(size_t size)
 {
+  if (mm_skip_operation(g_mmheap))
+    {
+      return NULL;
+    }
+
   return reallocate(NULL, 1, size);
 }
 
@@ -540,6 +572,11 @@ void free(void *mem)
   /* Protect against attempts to free a NULL reference */
 
   if (mem == NULL)
+    {
+      return;
+    }
+
+  if (mm_skip_operation(g_mmheap))
     {
       return;
     }
@@ -566,6 +603,11 @@ void umm_delayfreecb(void *mem, mm_delaycb_t cb)
   /* Protect against attempts to free a NULL reference */
 
   if (mem == NULL)
+    {
+      return;
+    }
+
+  if (mm_skip_operation(g_mmheap))
     {
       return;
     }
@@ -598,6 +640,11 @@ void umm_delayfreecb(void *mem, mm_delaycb_t cb)
 
 void *realloc(void *oldmem, size_t size)
 {
+  if (mm_skip_operation(g_mmheap))
+    {
+      return NULL;
+    }
+
   return reallocate(oldmem, 1, size);
 }
 
@@ -657,6 +704,11 @@ void *zalloc(size_t size)
 
 void *memalign(size_t alignment, size_t size)
 {
+  if (mm_skip_operation(g_mmheap))
+    {
+      return NULL;
+    }
+
   return reallocate(NULL, alignment, size);
 }
 
@@ -863,6 +915,23 @@ void umm_initialize(void *heap_start, size_t heap_size)
                                              memdump_callback);
 #endif
 }
+
+/****************************************************************************
+ * Name: mm_heap_forbid
+ *
+ * Description:
+ *   Forbid or allow dynamic memory allocation and free.
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
+{
+  DEBUGASSERT(heap != NULL);
+
+  return atomic_xchg(&heap->mm_heapforbid, forbid) != 0;
+}
+#endif
 
 #else /* CONFIG_MM_UMM_CUSTOMIZE_MANAGER */
 

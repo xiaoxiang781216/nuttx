@@ -180,6 +180,11 @@ __jumpfunc__ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   bool bypass;
   int ndx;
 
+  if (mm_skip_operation(heap))
+    {
+      return NULL;
+    }
+
   /* Free the delay list first */
 
   free_delaylist(heap, false);

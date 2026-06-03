@@ -893,6 +893,22 @@ int board_reset_cause(FAR struct boardioc_reset_cause_s *cause);
 int board_start_cpu(int cpuid);
 #endif
 
+/****************************************************************************
+ * Name: board_heap_forbid_hook
+ *
+ * Description:
+ *   Called when heap malloc/free is attempted while the heap is in forbid
+ *   state. The board can decide whether to skip the operation or not.
+ *   Support for this function is required by board-level logic if
+ *   CONFIG_MM_HEAP_FORBID_HOOK is selected.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_MM_HEAP_FORBID_HOOK
+struct mm_heap_s; /* Forward reference */
+bool board_heap_forbid_hook(FAR struct mm_heap_s *heap);
+#endif
+
 #undef EXTERN
 #ifdef __cplusplus
 }

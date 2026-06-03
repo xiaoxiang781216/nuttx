@@ -221,29 +221,28 @@ config MM_HEAP_BIGGEST_COUNT
 		Define 0 to disable largest allocated element dump feature.
 
 choice
-	prompt "Heap free action"
-	default MM_HEAP_FREE_NORMAL
+	prompt "Heap alloc/free forbid action"
+	default MM_HEAP_FORBID_NONE
 
-config MM_HEAP_FREE_NORMAL
-	bool "Do free() operation"
+config MM_HEAP_FORBID_NONE
+	bool "Allow malloc/free normally"
 	---help---
-		The free operation is still executed.
+		Dynamic memory allocation and free are always allowed.
+		mm_heap_forbid() API is not available.
 
-config MM_HEAP_FREE_IGNORE
-	bool "Ignore free() operation"
+config MM_HEAP_FORBID_PANIC
+	bool "Panic when forbidden malloc/free is called"
 	---help---
-		The free operation is not executed.
+		After mm_heap_forbid(heap, true), any malloc() or free()
+		call will trigger PANIC().
 
-config MM_HEAP_FREE_PANIC
-	bool "Panic when free() is called"
+config MM_HEAP_FORBID_HOOK
+	bool "Board hook decides whether to allow malloc/free"
 	---help---
-		Trigger an panic when free() is called.
-
-config MM_HEAP_FREE_FORBID
-	bool "Enable or disable free() by mm_free_forbid()"
-	---help---
-		The user can dynamically control whether
-		the free operation is forbidden or not.
+		After mm_heap_forbid(heap, true), any malloc() or free()
+		call invokes board_heap_forbid_hook(). The hook return
+		value decides whether to proceed (true = skip, false = allow).
+		Board layer implements this weak function.
 
 endchoice
 

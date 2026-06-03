@@ -64,6 +64,11 @@ __jumpfunc__ FAR void *mm_memalign(FAR struct mm_heap_s *heap,
   size_t newsize;
   bool bypass;
 
+  if (mm_skip_operation(heap))
+    {
+      return NULL;
+    }
+
   /* Make sure that alignment is less than half max size_t */
 
   if (alignment >= (SIZE_MAX / 2))

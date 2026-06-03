@@ -44,20 +44,6 @@
  * Private Functions
  ****************************************************************************/
 
-static inline bool mm_skip_free(FAR struct mm_heap_s *heap)
-{
-#if defined(CONFIG_MM_HEAP_FREE_PANIC)
-  PANIC();
-  return true;
-#elif defined(CONFIG_MM_HEAP_FREE_IGNORE)
-  return true;
-#elif defined(CONFIG_MM_HEAP_FREE_FORBID)
-  return atomic_read(&heap->mm_freeforbid) != 0;
-#else /* CONFIG_MM_HEAP_FREE_NORMAL */
-  return false;
-#endif
-}
-
 static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
                           mm_delaycb_t cb, bool asan_check)
 {
@@ -274,7 +260,7 @@ void mm_delayfreecb(FAR struct mm_heap_s *heap, FAR void *mem,
       return;
     }
 
-  if (mm_skip_free(heap))
+  if (mm_skip_operation(heap))
     {
       return;
     }
@@ -303,7 +289,7 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
       return;
     }
 
-  if (mm_skip_free(heap))
+  if (mm_skip_operation(heap))
     {
       return;
     }
@@ -319,26 +305,26 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
 }
 
 /****************************************************************************
- * Name: mm_free_forbid
+ * Name: mm_heap_forbid
  *
  * Description:
- *   Forbid free mem, forbid == true means forbid free mem, forbid == false
- *   means allow free mem.
+ *   Forbid or allow dynamic memory allocation and free.
  *
  * Parameters:
- *   heap - The heap to be queried.
- *   forbid - true means forbid free mem, false means allow free mem.
+ *   heap   - The heap to control.
+ *   forbid - true to forbid malloc/free, false to allow.
  *
  * Return:
  *   The previous forbid status.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_HEAP_FREE_FORBID
-bool mm_free_forbid(FAR struct mm_heap_s *heap, bool forbid)
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_xchg(&heap->mm_freeforbid, forbid) != 0;
+  return atomic_xchg(&heap->mm_heapforbid, forbid) != 0;
 }
 #endif
+
