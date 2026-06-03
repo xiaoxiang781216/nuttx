@@ -48,6 +48,7 @@
     .burst    = burst_init,                                    \
     .begin    = 0,                                             \
     .count    = 0,                                             \
+    .missed   = 0,                                             \
   }
 #else
 #define RATELIMIT_STATE_INITIALIZER(interval_init, burst_init) \
@@ -57,6 +58,7 @@
     .burst    = burst_init,                                    \
     .begin    = 0,                                             \
     .count    = 0,                                             \
+    .missed   = 0,                                             \
   }
 #endif
 
@@ -83,10 +85,11 @@ struct ratelimit_state_s
       pthread_mutex_t mutex;
     } lock;
 
-  unsigned int interval; /* The size of the time window (in seconds). */
-  unsigned int burst;    /* The burst traffic allowed within the window. */
-  unsigned int count;    /* The number of events that have occurred. */
-  clock_t begin;         /* The timestamp of the beginning of the window. */
+  unsigned int interval;    /* The size of the time window (in seconds). */
+  unsigned int burst;       /* The burst traffic allowed within the window. */
+  unsigned int count;       /* The number of events that have occurred. */
+  unsigned int missed;      /* The number of missed (suppressed) events. */
+  clock_t begin;            /* The timestamp of the beginning of the window. */
 };
 
 /****************************************************************************
@@ -110,6 +113,22 @@ extern "C"
  ****************************************************************************/
 
 bool ratelimit_islimited(FAR struct ratelimit_state_s *state);
+
+/****************************************************************************
+ * Name: ratelimit_missed
+ *
+ * Description:
+ *   Return the number of missed (suppressed) events and reset the counter.
+ *
+ ****************************************************************************/
+
+static inline unsigned int ratelimit_missed(
+    FAR struct ratelimit_state_s *state)
+{
+  unsigned int missed = state->missed;
+  state->missed = 0;
+  return missed;
+}
 
 #undef EXTERN
 #ifdef __cplusplus

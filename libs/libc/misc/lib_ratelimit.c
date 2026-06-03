@@ -103,6 +103,10 @@ bool ratelimit_islimited(FAR struct ratelimit_state_s *state)
       state->count++;
       result = false;
     }
+  else
+    {
+      state->missed++;
+    }
 
 #if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
   spin_unlock_irqrestore_notrace(&state->lock.spin, flags);
