@@ -46,3 +46,21 @@ then pass the client instance to device drivers, or register it with
 RPMsg is only the transport. I2C transfers use a private RPMsg payload
 format carrying each NuttX ``struct i2c_msg_s`` with its address, flags, and
 frequency.
+
+Native VirtIO I2C
+=================
+
+The same I2C lower-half can be exposed over a native VirtIO transport instead
+of RPMsg. ``CONFIG_DRIVERS_VIRTIO_I2C`` enables the frontend (client), which
+probes a VirtIO I2C adapter device (device id 34) and exposes a
+``struct i2c_master_s`` retrievable with ``virtio_i2c_get_master(index)``.
+As for the RPMsg client, board code may then pass it to device drivers or
+register it with ``i2c_register()`` as ``/dev/i2cN``.
+``CONFIG_DRIVERS_VHOST_I2C`` enables
+the device-side backend (server), which serves the request virtqueue and
+forwards transfers to a local I2C bus registered with ``vhost_i2c_register()``.
+
+The frontend and backend share the OASIS VirtIO I2C wire-format definitions in
+``include/nuttx/virtio/virtio-i2c.h``. The frontend can be validated against a
+host vhost-user backend, or against a second NuttX instance running the vhost
+backend over rptun/IVSHMEM.
