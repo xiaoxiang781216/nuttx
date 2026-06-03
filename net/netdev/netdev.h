@@ -162,6 +162,29 @@ FAR struct net_driver_s *netdev_findby_lipv4addr(in_addr_t lipaddr);
 #endif
 
 /****************************************************************************
+ * Name: netdev_findby_ipv4addr
+ *
+ * Description:
+ *   Find a previously registered "up" network device whose assigned IPv4
+ *   address exactly matches the given address.  Unlike
+ *   netdev_findby_lipv4addr() this performs an exact (host) match -- not
+ *   a subnet match -- and is intended for "is this address assigned to
+ *   one of our local interfaces?" checks.  This is the IPv4 counterpart
+ *   of the NETDEV_IS_MY_V6ADDR()-driven check used by ipv6_input.
+ *
+ * Input Parameters:
+ *   ipaddr - The IPv4 address to match exactly.
+ *
+ * Returned Value:
+ *   Pointer to driver on success; NULL on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_IPv4
+FAR struct net_driver_s *netdev_findby_ipv4addr(in_addr_t ipaddr);
+#endif
+
+/****************************************************************************
  * Name: netdev_findby_lipv6addr
  *
  * Description:

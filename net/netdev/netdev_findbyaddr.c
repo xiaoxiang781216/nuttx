@@ -280,6 +280,50 @@ FAR struct net_driver_s *netdev_findby_lipv4addr(in_addr_t lipaddr)
 #endif /* CONFIG_NET_IPv4 */
 
 /****************************************************************************
+ * Name: netdev_findby_ipv4addr
+ *
+ * Description:
+ *   Exact-match search: return the "up" network device whose d_ipaddr is
+ *   exactly equal to ipaddr.  Used by ipv4_input() to decide whether an
+ *   incoming packet whose destination is not the receiving device's own
+ *   IP should still be delivered locally because it belongs to another
+ *   local interface.  This is the IPv4 analog of the
+ *   NETDEV_IS_MY_V6ADDR()-driven check_destipaddr() used by ipv6_input.
+ *
+ * Input Parameters:
+ *   ipaddr - The IPv4 address to match exactly.
+ *
+ * Returned Value:
+ *   Pointer to driver on success; NULL on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_IPv4
+FAR struct net_driver_s *netdev_findby_ipv4addr(in_addr_t ipaddr)
+{
+  FAR struct net_driver_s *dev;
+
+  if (net_ipv4addr_cmp(ipaddr, INADDR_ANY))
+    {
+      return NULL;
+    }
+
+  netdev_list_lock();
+  for (dev = g_netdevices; dev != NULL; dev = dev->flink)
+    {
+      if (IFF_IS_UP(dev->d_flags) &&
+          net_ipv4addr_cmp(dev->d_ipaddr, ipaddr))
+        {
+          break;
+        }
+    }
+
+  netdev_list_unlock();
+  return dev;
+}
+#endif /* CONFIG_NET_IPv4 */
+
+/****************************************************************************
  * Name: netdev_findby_lipv6addr
  *
  * Description:

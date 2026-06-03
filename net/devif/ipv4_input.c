@@ -105,6 +105,7 @@
 #include "igmp/igmp.h"
 
 #include "netforward/netforward.h"
+#include "netdev/netdev.h"
 #include "devif/devif.h"
 #include "nat/nat.h"
 #include "ipfilter/ipfilter.h"
@@ -446,6 +447,19 @@ static int ipv4_in(FAR struct net_driver_s *dev)
       /* No.. The packet is not destined for us. */
 
 #ifdef CONFIG_NET_IPFORWARD
+      /* Before forwarding, check if the destination IP belongs to any
+       * other local interface. In a multi-interface configuration the
+       * packet may arrive on one interface but be destined for an IP
+       * assigned to another local interface. Forwarding such a packet
+       * via ipv4_dev_forward() is incorrect and can cause a recursive
+       * assert on some platforms.
+       */
+
+      if (netdev_findby_ipv4addr(destipaddr) != NULL)
+        {
+          goto local_deliver;
+        }
+
       /* Try to forward the packet if device has a configured IP */
 
       if (!net_ipv4addr_cmp(dev->d_ipaddr, INADDR_ANY) &&
@@ -495,7 +509,8 @@ static int ipv4_in(FAR struct net_driver_s *dev)
     }
 #endif
 
-#if defined(CONFIG_NET_IGMP) || defined(CONFIG_NET_BROADCAST)
+#if defined(CONFIG_NET_IGMP) || defined(CONFIG_NET_BROADCAST) || \
+    defined(CONFIG_NET_IPFORWARD)
 local_deliver:
 #endif
 #ifdef CONFIG_NET_IPV4_CHECKSUMS
