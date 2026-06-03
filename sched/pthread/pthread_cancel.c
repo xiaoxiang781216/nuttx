@@ -45,6 +45,7 @@
 int pthread_cancel(pthread_t thread)
 {
   FAR struct tcb_s *tcb;
+  int ret;
 
   /* First, make sure that the handle references a valid thread */
 
@@ -108,7 +109,11 @@ int pthread_cancel(pthread_t thread)
 
   /* Complete pending join operations */
 
-  pthread_completejoin(thread, PTHREAD_CANCELED);
+  ret = pthread_completejoin(thread, PTHREAD_CANCELED);
+  if (ret != OK)
+    {
+      return ret;
+    }
 
   /* Then let nxtask_terminate do the real work */
 
