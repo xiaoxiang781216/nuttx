@@ -201,6 +201,11 @@ pid_t x86_64_fork(const struct fork_s *context)
   *x86_64_unsafe_addr(child) = newsp;
 #endif
 
+#ifdef CONFIG_STACK_CANARIES
+  *(uintptr_t *)(x86_64_tp_addr(child) + 0x28) =
+                *(uintptr_t *)(__builtin_thread_pointer() + 0x28);
+#endif
+
   /* And, finally, start the child task.  On a failure, nxtask_start_fork()
    * will discard the TCB by calling nxtask_abort_fork().
    */
