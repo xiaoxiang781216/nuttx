@@ -97,6 +97,18 @@ config CRYPTO_CRYPTOP_POOL_COUNT
 		allocation. 0 falls back to kmm_zalloc. Each cryptop
 		is approximately 120 bytes.
 
+config CRYPTO_CRYPTKOP_POOL_COUNT
+	int "Static cryptkop pool size (0=use heap)"
+	default 0
+	depends on CRYPTO_CRYPTODEV
+	---help---
+		Number of pre-allocated cryptkop objects for asymmetric
+		(CRYPTO_F_REL) operations. When > 0, key operations
+		that use caller-provided param buffers are served from
+		a fixed-size pool with no heap allocation. 0 falls
+		back to kmm_zalloc. Each cryptkop is approximately
+		200 bytes.
+
 config CRYPTO_SW_AES
 	bool "Software AES library"
 	depends on ALLOW_BSD_COMPONENTS

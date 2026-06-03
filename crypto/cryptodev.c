@@ -230,6 +230,34 @@ MEMPOOL_DEFINE(g_cryptop_pool, sizeof(struct cryptop),
       }                                                             \
     while (0)
 
+#if CONFIG_CRYPTO_CRYPTKOP_POOL_COUNT > 0
+MEMPOOL_DEFINE(g_cryptkop_pool, sizeof(struct cryptkop),
+               CONFIG_CRYPTO_CRYPTKOP_POOL_COUNT,
+               CONFIG_CRYPTO_CRYPTKOP_POOL_COUNT, 0);
+#  define cryptkop_pool_alloc()                                     \
+    ((FAR struct cryptkop *)mempool_zallocate(&g_cryptkop_pool, 0))
+#  define cryptkop_pool_release(p)                                  \
+    mempool_release(&g_cryptkop_pool, (p))
+#else
+#  define cryptkop_pool_alloc()                                     \
+    ((FAR struct cryptkop *)kmm_zalloc(sizeof(struct cryptkop)))
+#  define cryptkop_pool_release(p)  kmm_free((p))
+#endif
+
+#define cryptkop_free(p)                                            \
+    do                                                              \
+      {                                                             \
+        if ((p)->krp_flags & CRYPTO_F_REL)                          \
+          {                                                         \
+            cryptkop_pool_release((p));                             \
+          }                                                         \
+        else                                                        \
+          {                                                         \
+            kmm_free((p));                                          \
+          }                                                         \
+      }                                                             \
+    while (0)
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -828,7 +856,15 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
         return -EINVAL;
     }
 
-  krp = kmm_zalloc(sizeof *krp);
+  if (kop->crk_flags & CRYPTO_F_REL)
+    {
+      krp = cryptkop_pool_alloc();
+    }
+  else
+    {
+      krp = kmm_zalloc(sizeof *krp);
+    }
+
   if (krp == NULL)
     {
       return -ENOMEM;
@@ -864,19 +900,26 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
 
   for (i = 0; i < krp->krp_iparams + krp->krp_oparams; i++)
     {
-      size = (krp->krp_param[i].crp_nbits + 7) / 8;
-      if (size == 0)
+      if (krp->krp_flags & CRYPTO_F_REL)
         {
-          continue;
+          krp->krp_param[i].crp_p = kop->crk_param[i].crp_p;
         }
-
-      krp->krp_param[i].crp_p = kmm_zalloc(size);
-      if (i >= krp->krp_iparams)
+      else
         {
-          continue;
-        }
+          size = (krp->krp_param[i].crp_nbits + 7) / 8;
+          if (size == 0)
+            {
+              continue;
+            }
 
-      memcpy(krp->krp_param[i].crp_p, kop->crk_param[i].crp_p, size);
+          krp->krp_param[i].crp_p = kmm_zalloc(size);
+          if (i >= krp->krp_iparams)
+            {
+              continue;
+            }
+
+          memcpy(krp->krp_param[i].crp_p, kop->crk_param[i].crp_p, size);
+        }
     }
 
   error = crypto_kinvoke(krp);
@@ -892,34 +935,40 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
       return OK;
     }
 
-  for (i = krp->krp_iparams; i < krp->krp_iparams + krp->krp_oparams; i++)
+  if (!(krp->krp_flags & CRYPTO_F_REL))
     {
-      size = (krp->krp_param[i].crp_nbits + 7) / 8;
-      if (size == 0)
+      for (i = krp->krp_iparams;
+           i < krp->krp_iparams + krp->krp_oparams; i++)
         {
-          continue;
-        }
+          size = (krp->krp_param[i].crp_nbits + 7) / 8;
+          if (size == 0)
+            {
+              continue;
+            }
 
-      kop->crk_param[i].crp_nbits = krp->krp_param[i].crp_nbits;
-      memcpy(kop->crk_param[i].crp_p,
-             krp->krp_param[i].crp_p, size);
+          kop->crk_param[i].crp_nbits = krp->krp_param[i].crp_nbits;
+          memcpy(kop->crk_param[i].crp_p, krp->krp_param[i].crp_p, size);
+        }
     }
 
 fail:
   if (krp)
     {
       kop->crk_status = krp->krp_status;
-      for (i = 0; i < CRK_MAXPARAM; i++)
+      if (!(krp->krp_flags & CRYPTO_F_REL))
         {
-          if (krp->krp_param[i].crp_p)
+          for (i = 0; i < CRK_MAXPARAM; i++)
             {
-              explicit_bzero(krp->krp_param[i].crp_p,
-                  (krp->krp_param[i].crp_nbits + 7) / 8);
-              kmm_free(krp->krp_param[i].crp_p);
+              if (krp->krp_param[i].crp_p)
+                {
+                  explicit_bzero(krp->krp_param[i].crp_p,
+                      (krp->krp_param[i].crp_nbits + 7) / 8);
+                  kmm_free(krp->krp_param[i].crp_p);
+                }
             }
         }
 
-      kmm_free(krp);
+      cryptkop_free(krp);
     }
 
   return error;
@@ -967,34 +1016,34 @@ static int cryptodev_getkeystatus(struct fcrypt *fcr, struct crypt_kop *ret)
   ret->crk_status = krp->krp_status;
   ret->crk_iparams = krp->krp_iparams;
   ret->crk_oparams = krp->krp_oparams;
-  for (i = 0; i < krp->krp_iparams + krp->krp_oparams; i++)
+
+  if (!(krp->krp_flags & CRYPTO_F_REL))
     {
-      size = (krp->krp_param[i].crp_nbits + 7) / 8;
-
-      /* copy result into oparams */
-
-      if (i < ret->crk_iparams || size == 0)
+      for (i = 0; i < krp->krp_iparams + krp->krp_oparams; i++)
         {
-          continue;
+          size = (krp->krp_param[i].crp_nbits + 7) / 8;
+
+          if (i < ret->crk_iparams || size == 0)
+            {
+              continue;
+            }
+
+          ret->crk_param[i].crp_nbits = krp->krp_param[i].crp_nbits;
+          memcpy(ret->crk_param[i].crp_p, krp->krp_param[i].crp_p, size);
         }
 
-      ret->crk_param[i].crp_nbits = krp->krp_param[i].crp_nbits;
-      memcpy(ret->crk_param[i].crp_p, krp->krp_param[i].crp_p, size);
-    }
-
-  /* Free krp and all param buffers */
-
-  for (i = 0; i < CRK_MAXPARAM; i++)
-    {
-      if (krp->krp_param[i].crp_p)
+      for (i = 0; i < CRK_MAXPARAM; i++)
         {
-          explicit_bzero(krp->krp_param[i].crp_p,
-              (krp->krp_param[i].crp_nbits + 7) / 8);
-          kmm_free(krp->krp_param[i].crp_p);
+          if (krp->krp_param[i].crp_p)
+            {
+              explicit_bzero(krp->krp_param[i].crp_p,
+                  (krp->krp_param[i].crp_nbits + 7) / 8);
+              kmm_free(krp->krp_param[i].crp_p);
+            }
         }
     }
 
-  kmm_free(krp);
+  cryptkop_free(krp);
   return OK;
 }
 
@@ -1059,15 +1108,18 @@ static int cryptof_close(FAR struct file *filep)
   while ((krp = TAILQ_FIRST(&fcr->crpk_ret)))
     {
       TAILQ_REMOVE(&fcr->crpk_ret, krp, krp_next);
-      for (i = 0; i < CRK_MAXPARAM; i++)
+      if (!(krp->krp_flags & CRYPTO_F_REL))
         {
-          if (krp->krp_param[i].crp_p)
+          for (i = 0; i < CRK_MAXPARAM; i++)
             {
-              kmm_free(krp->krp_param[i].crp_p);
+              if (krp->krp_param[i].crp_p)
+                {
+                  kmm_free(krp->krp_param[i].crp_p);
+                }
             }
         }
 
-      kmm_free(krp);
+      cryptkop_free(krp);
     }
 
   kmm_free(fcr);
