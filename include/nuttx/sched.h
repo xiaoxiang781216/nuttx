@@ -43,6 +43,7 @@
 #include <nuttx/semaphore_type.h>
 #include <nuttx/queue.h>
 #include <nuttx/wdog.h>
+#include <nuttx/hrtimer.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/mm/map.h>
 #include <nuttx/mutex_type.h>

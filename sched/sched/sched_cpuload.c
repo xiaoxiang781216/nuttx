@@ -32,7 +32,7 @@
 
 #include <nuttx/clock.h>
 #include <nuttx/irq.h>
-#include <nuttx/wdog.h>
+#include <nuttx/hrtimer.h>
 
 #include "sched/sched.h"
 
@@ -113,11 +113,11 @@ DEFINE_PER_CPU_BSS_BMP(volatile clock_t, g_cpuload_total);
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_CPULOAD_SYSCLK
-static void cpuload_callback(wdparm_t arg)
+static uint64_t cpuload_callback(FAR const hrtimer_t *timer,
+                                 uint64_t expired)
 {
-  FAR struct wdog_s *wdog = (FAR struct wdog_s *)arg;
   nxsched_process_cpuload_ticks(CPULOAD_SAMPLING_PERIOD);
-  wd_start_next(wdog, CPULOAD_SAMPLING_PERIOD, cpuload_callback, arg);
+  return TICK2NSEC((uint64_t)CPULOAD_SAMPLING_PERIOD);
 }
 #endif
 
@@ -323,9 +323,9 @@ int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
 #ifdef CONFIG_SCHED_CPULOAD_SYSCLK
 void cpuload_init(void)
 {
-  static struct wdog_s g_cpuload_wdog;
-
-  wd_start(&g_cpuload_wdog, CPULOAD_SAMPLING_PERIOD, cpuload_callback,
-           (wdparm_t)&g_cpuload_wdog);
+  static hrtimer_t g_cpuload_timer;
+  hrtimer_start(&g_cpuload_timer, cpuload_callback,
+                TICK2NSEC((uint64_t)CPULOAD_SAMPLING_PERIOD),
+                HRTIMER_MODE_REL);
 }
 #endif
