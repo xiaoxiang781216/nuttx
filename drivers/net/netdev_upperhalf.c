@@ -497,6 +497,32 @@ netdev_upper_vlan_dev(FAR struct netdev_upperhalf_s *upper, uint16_t vid)
 }
 
 /****************************************************************************
+ * Name: netdev_upper_has_vlan
+ *
+ * Description:
+ *   Return true if the device has at least one VLAN child attached.  The
+ *   vlan[] table may be sparse (delete leaves holes without compaction), so
+ *   the whole table must be scanned rather than only checking vlan[0].
+ *
+ ****************************************************************************/
+
+static inline_function
+bool netdev_upper_has_vlan(FAR struct netdev_upperhalf_s *upper)
+{
+  int i;
+
+  for (i = 0; i < CONFIG_NET_VLAN_COUNT; i++)
+    {
+      if (upper->vlan[i].dev != NULL)
+        {
+          return true;
+        }
+    }
+
+  return false;
+}
+
+/****************************************************************************
  * Name: netdev_upper_vlan_foreach
  *
  * Description:
@@ -1835,14 +1861,34 @@ void netdev_lower_rxready(FAR struct netdev_lowerhalf_s *dev)
 void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
 {
   FAR struct netdev_upperhalf_s *upper = dev->netdev.d_private;
+
+#ifdef CONFIG_NET_VLAN
+  /* VLAN children share TX quota with the real device (vlan->dev.quota_ptr
+   * == real->quota_ptr).  A TX completion on the physical releases quota
+   * for everybody, so we must always notify VLAN children even when the
+   * physical itself has no pending TX (txdone == false && txq empty);
+   * otherwise per-VLAN upper->txq packets and per-VLAN txdone flags
+   * accumulate and never drain.
+   *
+   * The recursion is bounded: VLAN devices do not have grand-children,
+   * so the inner call only walks an empty vlan[] table.
+   *
+   * For NETDEV_RX_DIRECT we drive the children synchronously here.
+   * For the worker-thread variants the propagation is done inside
+   * netdev_upper_work (scheduled below).
+   */
+
+  if (dev->rxtype == NETDEV_RX_DIRECT)
+    {
+      netdev_upper_vlan_foreach(upper, netdev_lower_txdone);
+    }
+#endif
+
   if (dev->txdone || !IOB_QEMPTY(&upper->txq))
     {
       dev->txdone = false;
       if (dev->rxtype == NETDEV_RX_DIRECT)
         {
-#ifdef CONFIG_NET_VLAN
-          netdev_upper_vlan_foreach(upper, netdev_lower_txdone);
-#endif
           netdev_upper_txavail_work(dev->netdev.d_private);
         }
       else
@@ -1850,6 +1896,18 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
           netdev_upper_queue_work(&dev->netdev);
         }
     }
+#ifdef CONFIG_NET_VLAN
+  else if (dev->rxtype != NETDEV_RX_DIRECT && netdev_upper_has_vlan(upper))
+    {
+      /* The physical has nothing of its own to send, but VLAN children
+       * might.  Schedule the worker so netdev_upper_work can run the
+       * VLAN foreach (work_queue() dedups duplicate enqueues, so this
+       * is safe to call unconditionally).
+       */
+
+      netdev_upper_queue_work(&dev->netdev);
+    }
+#endif
 
   NETDEV_TXDONE(&dev->netdev);
 }
