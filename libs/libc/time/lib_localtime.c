@@ -285,6 +285,30 @@ struct rule_s
   int_fast32_t r_time;        /* transition time of rule */
 };
 
+/* Lifecycle of the cached timezone state (g_lcl_st / g_gmt_st).
+ *
+ *   TZ_UNSET   : never loaded; readers fall back to UTC.
+ *   TZ_LOADING : a thread is parsing the zone file from the filesystem.
+ *                The VFS access runs OUTSIDE g_lcl_lock/g_gmt_lock, so a
+ *                nested localtime_r()/gmtime() (e.g. syslog -> localtime_r
+ *                while loading) must not start a second load. Concurrent
+ *                readers take the real lock and see the previous, fully
+ *                valid state (or UTC on cold start).
+ *   TZ_READY   : state is published and immutable for fast lockless reads.
+ *
+ * Only the TZ_READY -> lockless-read shortcut keeps the common path (every
+ * syslog timestamp) free of locking; loads are rare, so paying the lock
+ * during TZ_LOADING is acceptable and lets one variable replace the old
+ * isset+loading pair.
+ */
+
+enum tz_state_e
+{
+  TZ_UNSET = 0,
+  TZ_LOADING,
+  TZ_READY
+};
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -295,8 +319,8 @@ static const char g_etc_utc[] = "Etc/UTC";
 static FAR const char *g_utc = g_etc_utc + sizeof("Etc/") - 1;
 
 static char g_lcl_tzname[MY_TZNAME_MAX + 1];
-static volatile int g_lcl_isset;
-static volatile int g_gmt_isset;
+static volatile enum tz_state_e g_lcl_state;
+static volatile enum tz_state_e g_gmt_state;
 static volatile int_fast32_t g_lcl_utoff;
 static FAR struct state_s g_lcl_st;
 static FAR struct state_s g_gmt_st;
@@ -1928,6 +1952,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
   FAR struct state_s *sp;
   FAR const struct ttinfo_s *ttisp;
   int i;
+  int isset;
   FAR struct tm *result;
   const time_t t = *timep;
 
@@ -1954,7 +1979,14 @@ static FAR struct tm *localsub(FAR const time_t *timep,
       return result;
     }
 
-  tz_lock(&g_lcl_lock, g_lcl_isset);
+  /* Sample isset once: a lock-free read when TZ_READY (state is
+   * immutable after publish), a real lock otherwise. Reusing the same
+   * value for every unlock below keeps the lock balanced even if
+   * g_lcl_state becomes TZ_READY while we hold it.
+   */
+
+  isset = (g_lcl_state == TZ_READY);
+  tz_lock(&g_lcl_lock, isset);
   if ((sp->goback && t < sp->ats[0]) ||
       (sp->goahead && t > sp->ats[sp->timecnt - 1]))
     {
@@ -1991,7 +2023,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
 
       if (newt < sp->ats[0] || newt > sp->ats[sp->timecnt - 1])
         {
-          tz_unlock(&g_lcl_lock, g_lcl_isset);
+          tz_unlock(&g_lcl_lock, isset);
           return NULL; /* "cannot happen" */
         }
 
@@ -2012,14 +2044,14 @@ static FAR struct tm *localsub(FAR const time_t *timep,
 
           if (newy < INT_MIN || newy > INT_MAX)
             {
-              tz_unlock(&g_lcl_lock, g_lcl_isset);
+              tz_unlock(&g_lcl_lock, isset);
               return NULL;
             }
 
           result->tm_year = newy;
         }
 
-      tz_unlock(&g_lcl_lock, g_lcl_isset);
+      tz_unlock(&g_lcl_lock, isset);
       return result;
     }
 
@@ -2066,7 +2098,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
       result->tm_zone = tzname[result->tm_isdst];
     }
 
-  tz_unlock(&g_lcl_lock, g_lcl_isset);
+  tz_unlock(&g_lcl_lock, isset);
   return result;
 }
 
@@ -2075,22 +2107,66 @@ static FAR struct tm *localsub(FAR const time_t *timep,
 static FAR struct tm *gmtsub(FAR const time_t *timep,
                              int_fast32_t offset, FAR struct tm *tmp)
 {
-  if (!g_gmt_isset)
+  FAR struct tm *result;
+  int isset;
+
+  if (nxrmutex_is_hold(&g_gmt_lock))
     {
-      tz_lock(&g_gmt_lock, 0);
+      /* Re-entry while this thread loads the UTC zone with g_gmt_lock
+       * held (e.g. a syslog timestamp emitted from inside gmtload()).
+       * g_gmt_st may be half-rewritten, so do not read it: pass
+       * sp == NULL to skip the leap-second table and degrade to a
+       * plain UTC offset using the static abbreviation.
+       */
 
-      if (!g_gmt_isset)
-        {
-          g_gmt_isset = 1;
-          gmtload(&g_gmt_st);
-        }
-
-      tz_unlock(&g_gmt_lock, 0);
+      tmp->tm_zone = (FAR char *)(offset ? g_wildabbr : g_utc);
+      return timesub(timep, offset, NULL, tmp);
     }
 
-  tmp->tm_zone = ((FAR char *)(offset ? g_wildabbr :
-                               g_gmt_st.chars));
-  return timesub(timep, offset, &g_gmt_st, tmp);
+  if (g_gmt_state == TZ_UNSET)
+    {
+      FAR struct state_s *sp = lib_malloc(sizeof(*sp));
+
+      if (sp != NULL)
+        {
+          /* Load the UTC zone file WITHOUT holding g_gmt_lock (same
+           * rationale as tzset(): never hold the timezone lock across a
+           * VFS call). Publish the parsed state under the lock
+           * afterwards, which is pure memory work. TZ_LOADING makes a
+           * concurrent gmtsub() take the lock below and wait for the
+           * commit instead of reading a half-initialized g_gmt_st.
+           */
+
+          g_gmt_state = TZ_LOADING;
+          gmtload(sp);
+
+          tz_lock(&g_gmt_lock, 0);
+          if (g_gmt_state != TZ_READY)
+            {
+              memcpy(&g_gmt_st, sp, sizeof(g_gmt_st));
+              g_gmt_state = TZ_READY;
+            }
+
+          tz_unlock(&g_gmt_lock, 0);
+
+          lib_free(sp);
+        }
+    }
+
+  /* Read g_gmt_st under the same lock discipline as localsub(): a
+   * lock-free read once TZ_READY (state is immutable after publish),
+   * but a real lock while another thread is still TZ_LOADING so the
+   * reader blocks until the commit instead of seeing partial data.
+   * isset is sampled once and reused for unlock so the lock stays
+   * balanced even if g_gmt_state flips to TZ_READY while we hold it.
+   */
+
+  isset = (g_gmt_state == TZ_READY);
+  tz_lock(&g_gmt_lock, isset);
+  tmp->tm_zone = (FAR char *)(offset ? g_wildabbr : g_gmt_st.chars);
+  result = timesub(timep, offset, &g_gmt_st, tmp);
+  tz_unlock(&g_gmt_lock, isset);
+  return result;
 }
 
 /* Return the number of leap years through the end of the given year
@@ -2766,10 +2842,8 @@ static time_t time1(FAR struct tm *tmp,
  * Return 0 on success, an errno value on failure.
  */
 
-static int zoneinit(FAR const char *name)
+static int zoneinit(FAR struct state_s *lcl_ptr, FAR const char *name)
 {
-  FAR struct state_s *lcl_ptr = &g_lcl_st;
-
   if (name != NULL && name[0] == '\0')
     {
       /* User wants it fast rather than right */
@@ -2811,6 +2885,7 @@ static int zoneinit(FAR const char *name)
 
 void tzset(void)
 {
+  FAR struct state_s *sp;
   FAR const char *name;
   char buf[MY_TZNAME_MAX + 1];
 
@@ -2829,29 +2904,61 @@ void tzset(void)
   strlcpy(buf, name, sizeof(buf));
   name = buf;
 
-  if (g_lcl_isset > 0 && strcmp(g_lcl_tzname, name) == 0)
+  if (g_lcl_state == TZ_READY && strcmp(g_lcl_tzname, name) == 0)
     {
       return;
     }
 
-  if (nxrmutex_is_hold(&g_lcl_lock))
+  /* Bail out on re-entry. A nested tzset() can be reached while we are
+   * loading the zone file below (e.g. the VFS layer emits a log message ->
+   * vsyslog -> localtime_r -> tzset). Starting a second load here, or
+   * touching the lock that the outer call may hold, must be avoided.
+   */
+
+  if (g_lcl_state == TZ_LOADING || nxrmutex_is_hold(&g_lcl_lock))
     {
       return;
     }
 
-  g_lcl_isset = 0;
+  /* Phase 1: parse the new timezone state from the filesystem WITHOUT
+   * holding g_lcl_lock. g_lcl_lock only protects the in-memory context;
+   * keeping every open()/read() outside it guarantees g_lcl_lock and the
+   * VFS inode lock are never held at the same time, which removes the
+   * AB-BA deadlock against any task that logs while holding the inode lock.
+   * The parsed result lands in a scratch state, so the live g_lcl_st stays
+   * fully valid for concurrent readers throughout the load.
+   */
+
+  sp = lib_malloc(sizeof(*sp));
+  if (sp == NULL)
+    {
+      return;
+    }
+
+  g_lcl_state = TZ_LOADING;
+  if (zoneinit(sp, name) != 0)
+    {
+      zoneinit(sp, "");
+    }
+
+  /* Phase 2: publish the parsed state under the lock. This is pure memory
+   * work (no VFS, no syslog), so the lock is held only briefly and can
+   * never nest into a file operation. The state is TZ_LOADING here, so
+   * concurrent localsub() readers take the same lock and the memcpy() is
+   * naturally serialised against them; no lockless half-written state is
+   * ever observed.
+   */
+
   tz_lock(&g_lcl_lock, 0);
 
-  if (zoneinit(name) != 0)
-    {
-      zoneinit("");
-    }
-
+  memcpy(&g_lcl_st, sp, sizeof(g_lcl_st));
   strlcpy(g_lcl_tzname, name, sizeof(g_lcl_tzname));
-
   settzname();
-  g_lcl_isset = 1;
+  g_lcl_state = TZ_READY;
+
   tz_unlock(&g_lcl_lock, 0);
+
+  lib_free(sp);
 }
 
 FAR struct tm *localtime(FAR const time_t *timep)
