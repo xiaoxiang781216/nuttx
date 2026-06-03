@@ -37,6 +37,7 @@
 #include <nuttx/vhost/vhost.h>
 
 #include "vhost-blk.h"
+#include "vhost-i2c.h"
 #include "vhost-rng.h"
 #include "vhost-rpmsg.h"
 #include "vhost-serial.h"
@@ -609,6 +610,14 @@ void vhost_register_drivers(void)
   if (ret < 0)
     {
       vhosterr("vhost_register_blk_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_VHOST_I2C
+  ret = vhost_register_i2c_driver();
+  if (ret < 0)
+    {
+      vhosterr("vhost_register_i2c_driver failed, ret=%d\n", ret);
     }
 #endif
 

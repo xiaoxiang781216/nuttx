@@ -34,6 +34,20 @@ config DRIVERS_VHOST_NET
 	select NETDEV_LATEINIT
 	select DRIVERS_VHOST
 
+config DRIVERS_VHOST_I2C
+	bool "Virtual Host I2C Device Support"
+	default n
+	select I2C
+	select DRIVERS_VHOST
+	---help---
+		Enable the vhost (device-side) I2C backend.  When an rptun resource
+		table exposes a VirtIO I2C adapter device (device ID 34) in the
+		device role, this driver serves the request virtqueue, decodes each
+		request with the OASIS VirtIO I2C wire format, and forwards it to a
+		local I2C lower-half registered with vhost_i2c_register().  This lets
+		one NuttX instance export an I2C bus to a remote VirtIO I2C frontend,
+		the native-VirtIO counterpart of the RPMSG I2C server.
+
 config DRIVERS_VHOST_RNG
 	bool "Virtual Host Rng Device Support"
 	default n
