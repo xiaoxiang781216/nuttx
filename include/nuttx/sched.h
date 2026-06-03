@@ -948,7 +948,7 @@ struct cpu_call_data_s
 struct cpu_call_delay_data_s
 {
   struct cpu_call_data_s call;
-  struct wdog_s          delay;
+  struct hrtimer_s       delay;
   cpu_set_t              cpuset;
 };
 #endif
@@ -1923,7 +1923,7 @@ void nxsched_cpu_call_delay_init(FAR struct cpu_call_delay_data_s *data,
                                  nxsched_cpu_call_t func, FAR void *arg)
 {
   nxsched_cpu_call_init(&data->call, func, arg);
-  wd_init(&data->delay);
+  hrtimer_init(&data->delay);
   CPU_ZERO(&data->cpuset);
 }
 

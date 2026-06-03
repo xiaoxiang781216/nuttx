@@ -34,6 +34,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/mm/mempool.h>
+#include <nuttx/hrtimer.h>
 
 #include "sched/sched.h"
 
@@ -122,11 +123,13 @@ static void nxsched_cpu_call_add(int cpu,
  *
  ****************************************************************************/
 
-static void nxsched_cpu_call_delay_cb(wdparm_t arg)
+static uint64_t nxsched_cpu_call_delay_cb(FAR const hrtimer_t *timer,
+                                          uint64_t expired)
 {
   FAR struct cpu_call_delay_data_s *data;
-  data = (FAR struct cpu_call_delay_data_s *)arg;
+  data = container_of(timer, struct cpu_call_delay_data_s, delay);
   nxsched_cpu_call_async(data->cpuset, &data->call);
+  return 0;
 }
 
 #if CONFIG_CPU_CALL_POOL_COUNT > 0
@@ -410,6 +413,6 @@ int nxsched_cpu_call_delay(cpu_set_t cpuset, sclock_t delay,
                            FAR struct cpu_call_delay_data_s *data)
 {
   data->cpuset = cpuset;
-  return wd_start(&data->delay, delay, nxsched_cpu_call_delay_cb,
-                  (wdparm_t)data);
+  return hrtimer_start(&data->delay, nxsched_cpu_call_delay_cb,
+                       TICK2NSEC((uint64_t)delay), HRTIMER_MODE_REL);
 }
