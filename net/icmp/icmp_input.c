@@ -354,6 +354,7 @@ void icmp_input(FAR struct net_driver_s *dev)
   if (icmp->type == ICMP_ECHO_REQUEST)
     {
       in_addr_t src_ipaddr;
+      in_addr_t org_dest;
 #ifndef CONFIG_NET_ICMP_ECHO_BROADCASTS
       in_addr_t dst_ipaddr;
 #endif
@@ -393,10 +394,32 @@ void icmp_input(FAR struct net_driver_s *dev)
 
       icmp->type = ICMP_ECHO_REPLY;
 
-      /* Swap IP addresses. */
+      /* Swap IP addresses per RFC 792 / RFC 1122 Section 3.2.1.3:
+       *   - Unicast destination: reply source MUST be the request's
+       *     destination IP (the "specific-destination" of the request).
+       *     Required for multi-interface deployments where the request
+       *     was destined for an IP assigned to an interface other than
+       *     the receiving one.
+       *   - Broadcast/multicast destination: reply source MUST be a
+       *     unicast address; fall back to the receiving device's
+       *     unicast IP since broadcast/multicast addresses are
+       *     forbidden as IP source per RFC 1122 Section 3.2.1.3.
+       */
+
+      org_dest = net_ip4addr_conv32(ipv4->destipaddr);
 
       net_ipv4addr_hdrcopy(ipv4->destipaddr, ipv4->srcipaddr);
-      net_ipv4addr_hdrcopy(ipv4->srcipaddr, &dev->d_ipaddr);
+
+      if (net_ipv4addr_cmp(org_dest, INADDR_BROADCAST) ||
+          net_ipv4addr_broadcast(org_dest, dev->d_netmask) ||
+          IN_MULTICAST(NTOHL(org_dest)))
+        {
+          net_ipv4addr_hdrcopy(ipv4->srcipaddr, &dev->d_ipaddr);
+        }
+      else
+        {
+          net_ipv4addr_hdrcopy(ipv4->srcipaddr, &org_dest);
+        }
 
       /* Recalculate the ICMP checksum */
 
