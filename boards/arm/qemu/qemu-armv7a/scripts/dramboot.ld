@@ -93,12 +93,51 @@ SECTIONS
       _erodata = .;
   } > ROM
 
+#ifdef CONFIG_COVERAGE_ALL
+  /* LLVM coverage function-name table (read-only).
+   *
+   * Emitted as its own dedicated section so that llvm-cov, run later
+   * against the final ELF, can locate the name table by the section
+   * name "__llvm_prf_names".  The on-device LLVM profile runtime also
+   * walks this blob (via __start/__end__llvm_prf_names) to write the
+   * names into the .profraw, so it must remain allocatable; it is
+   * read-only, hence placed directly in ROM.
+   */
+  __llvm_prf_names : {
+      . = ALIGN(8);
+      __start__llvm_prf_names = .;
+      KEEP(*(__llvm_prf_names))
+      . = ALIGN(8);
+      __end__llvm_prf_names = .;
+  } > ROM
+#endif
+
   _eronly = LOADADDR(.data);
 
   .data : {                    /* Data */
       _sdata = .;
       *(.data*)
       . = ALIGN(8);
+#ifdef CONFIG_COVERAGE_ALL
+        /* LLVM profile counters and data (writable, must live in RAM).
+         *
+         * __llvm_prf_names is intentionally NOT placed here: it is the
+         * read-only function-name table that llvm-cov locates by the
+         * section name "__llvm_prf_names".  Folding it into .data drops
+         * that name, so it is emitted as its own dedicated ROM section
+         * below instead (see the __llvm_prf_names output section).
+         */
+        . = ALIGN(8);
+        __start__llvm_prf_cnts = .;
+        *(__llvm_prf_cnts)
+        . = ALIGN(8);
+        __end__llvm_prf_cnts = .;
+        . = ALIGN(8);
+        __start__llvm_prf_data = .;
+        *(__llvm_prf_data)
+        . = ALIGN(8);
+        __end__llvm_prf_data = .;
+#endif
       __start_impls = .;
       *(.impls)
       KEEP(*(.impls))
@@ -153,5 +192,20 @@ SECTIONS
   .stab.index 0 : { *(.stab.index) }
   .stab.indexstr 0 : { *(.stab.indexstr) }
   .comment 0 : { *(.comment) }
+
+#ifdef CONFIG_COVERAGE_ALL
+  /* LLVM coverage mapping metadata (host-side only).
+   *
+   * These hold the static region/expression mapping (__llvm_covmap) and
+   * per-function records (__llvm_covfun) that llvm-cov needs together with
+   * __llvm_prf_names to render a report from a .profraw.  They are pure
+   * host-side metadata: given an explicit address of 0 and NO output
+   * memory region, so they are NOT loaded into the runtime image, while
+   * KEEP() guards them against --gc-sections.  Naming them explicitly lets
+   * llvm-cov consume the final ELF directly, with no relocatable relink.
+   */
+  __llvm_covfun 0 : { KEEP(*(__llvm_covfun)) }
+  __llvm_covmap 0 : { KEEP(*(__llvm_covmap)) }
+#endif
 }
 
