@@ -38,6 +38,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/param.h>
 #include <stdbool.h>
 #include <string.h>
 #include <poll.h>
@@ -45,6 +46,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/crypto/crypto.h>
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/percpu.h>
@@ -78,11 +80,11 @@ struct csession
   bool txform;
   bool thash;
 
-  caddr_t key;
+  uint8_t key[AALG_MAX_RESULT_LEN];
   int keylen;
   u_char tmp_iv[EALG_MAX_BLOCK_LEN];
 
-  caddr_t mackey;
+  uint8_t mackey[AALG_MAX_RESULT_LEN];
   int mackeylen;
   int error;
 };
@@ -174,6 +176,31 @@ static struct inode g_cryptoinode =
   .i_crefs = 1,
   .u.i_ops = &g_cryptofops
 };
+
+#if CONFIG_CRYPTO_SESSION_POOL_COUNT > 0
+MEMPOOL_DEFINE(g_csession_pool, sizeof(struct csession),
+               CONFIG_CRYPTO_SESSION_POOL_COUNT,
+               CONFIG_CRYPTO_SESSION_POOL_COUNT, 0);
+#  define csession_alloc()                                          \
+    ((FAR struct csession *)mempool_zallocate(&g_csession_pool, 0))
+#  define csession_free(p)                                          \
+    do                                                              \
+      {                                                             \
+        explicit_bzero((p), sizeof(struct csession));               \
+        mempool_release(&g_csession_pool, (p));                     \
+      }                                                             \
+    while (0)
+#else
+#  define csession_alloc()                                          \
+    ((FAR struct csession *)kmm_zalloc(sizeof(struct csession)))
+#  define csession_free(p)                                          \
+    do                                                              \
+      {                                                             \
+        explicit_bzero((p), sizeof(struct csession));               \
+        kmm_free((p));                                              \
+      }                                                             \
+    while (0)
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -284,14 +311,7 @@ static int cryptof_ioctl(FAR struct file *filep,
                 crie.cri_flags |= CRD_F_KEYID;
               }
 
-            crie.cri_key = kmm_malloc(crie.cri_klen / 8);
-            if (crie.cri_key == NULL)
-              {
-                error = -ENOMEM;
-                goto bail;
-              }
-
-            memcpy(crie.cri_key, sop->key, crie.cri_klen / 8);
+            crie.cri_key = sop->key;
             if (thash)
               {
                 crie.cri_next = &cria;
@@ -308,53 +328,28 @@ static int cryptof_ioctl(FAR struct file *filep,
                 cria.cri_flags |= CRD_F_KEYID;
               }
 
-            if (cria.cri_klen)
-              {
-                cria.cri_key = kmm_malloc(cria.cri_klen / 8);
-                if (cria.cri_key == NULL)
-                  {
-                    error = -ENOMEM;
-                    goto bail;
-                  }
-
-                memcpy(cria.cri_key, sop->mackey, cria.cri_klen / 8);
-              }
+            cria.cri_key = sop->mackey;
           }
 
         error = crypto_newsession(&sid, txform ? &crie : &cria, 1);
         if (error)
           {
-            goto bail;
+            break;
           }
 
-        cse = csecreate(fcr, sid, crie.cri_key, crie.cri_klen,
-              cria.cri_key, cria.cri_klen, sop->cipher, sop->mac, txform,
-              thash);
+        cse = csecreate(fcr, sid,
+              sop->key, sop->keylen,
+              sop->mackey, sop->mackeylen,
+              sop->cipher, sop->mac, txform, thash);
 
         if (cse == NULL)
           {
             crypto_freesession(sid);
             error = -EINVAL;
-            goto bail;
+            break;
           }
 
         sop->ses = cse->ses;
-
-bail:
-        if (error)
-          {
-            if (crie.cri_key)
-              {
-                explicit_bzero(crie.cri_key, crie.cri_klen / 8);
-                kmm_free(crie.cri_key);
-              }
-
-            if (cria.cri_key)
-              {
-                explicit_bzero(cria.cri_key, cria.cri_klen / 8);
-                kmm_free(cria.cri_key);
-              }
-          }
 
         break;
       case CIOCFSESSION:
@@ -447,7 +442,7 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
       crda.crd_inject = 0;
 
       crda.crd_alg = cse->mac;
-      crda.crd_key = cse->mackey;
+      crda.crd_key = (caddr_t)cse->mackey;
       crda.crd_klen = cse->mackeylen * 8;
       if (cop->flags & COP_FLAG_UPDATE)
         {
@@ -492,7 +487,7 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
       crde.crd_len = cop->len;
       crde.crd_inject = 0;
       crde.crd_alg = cse->cipher;
-      crde.crd_key = cse->key;
+      crde.crd_key = (caddr_t)cse->key;
       crde.crd_klen = cse->keylen * 8;
     }
 
@@ -1074,15 +1069,7 @@ static int cryptof_open(FAR struct file *filep)
         {
           crie.cri_alg = cse->cipher;
           crie.cri_klen = cse->keylen * 8;
-
-          crie.cri_key = kmm_malloc(cse->keylen);
-          if (crie.cri_key == NULL)
-            {
-              ret = -ENOMEM;
-              goto bail;
-            }
-
-          memcpy(crie.cri_key, cse->key, cse->keylen);
+          crie.cri_key = (caddr_t)cse->key;
           if (cse->thash)
             {
               crie.cri_next = &cria;
@@ -1094,18 +1081,7 @@ static int cryptof_open(FAR struct file *filep)
           cria.cri_alg = cse->mac;
           cria.cri_sid = cse->sid;
           cria.cri_klen = cse->mackeylen * 8;
-
-          if (cria.cri_klen)
-            {
-              cria.cri_key = kmm_malloc(cse->mackeylen);
-              if (cria.cri_key == NULL)
-                {
-                  ret = -ENOMEM;
-                  goto bail;
-                }
-
-              memcpy(cria.cri_key, cse->mackey, cse->mackeylen);
-            }
+          cria.cri_key = (caddr_t)cse->mackey;
         }
 
       ret = crypto_newsession(&sid, cse->txform ? &crie : &cria, 1);
@@ -1114,8 +1090,9 @@ static int cryptof_open(FAR struct file *filep)
           goto bail;
         }
 
-      csed = csecreate(fcrd, sid, crie.cri_key, crie.cri_klen,
-                        cria.cri_key, cria.cri_klen,
+      csed = csecreate(fcrd, sid,
+                        (caddr_t)cse->key, cse->keylen,
+                        (caddr_t)cse->mackey, cse->mackeylen,
                         cse->cipher, cse->mac, cse->txform,
                         cse->thash);
       if (csed == NULL)
@@ -1132,19 +1109,13 @@ static int cryptof_open(FAR struct file *filep)
   return 0;
 
 bail:
-  if (crie.cri_key)
+  while ((csed = TAILQ_FIRST(&fcrd->csessions)))
     {
-      explicit_bzero(crie.cri_key, crie.cri_klen / 8);
-      kmm_free(crie.cri_key);
+      TAILQ_REMOVE(&fcrd->csessions, csed, next);
+      csefree(csed);
     }
 
-  if (cria.cri_key)
-    {
-      explicit_bzero(cria.cri_key, cria.cri_klen / 8);
-      kmm_free(cria.cri_key);
-    }
-
-  free(fcrd);
+  kmm_free(fcrd);
   return ret;
 }
 
@@ -1252,22 +1223,33 @@ static FAR struct csession *csecreate(FAR struct fcrypt *fcr, uint64_t sid,
 {
   FAR struct csession *cse;
 
-  cse = kmm_malloc(sizeof(struct csession));
-  if (cse != NULL)
+  cse = csession_alloc();
+  if (cse == NULL)
     {
-      cse->key = key;
-      cse->keylen = keylen / 8;
-      cse->mackey = mackey;
-      cse->mackeylen = mackeylen / 8;
-      cse->sid = sid;
-      cse->cipher = cipher;
-      cse->mac = mac;
-      cse->txform = txform;
-      cse->thash = thash;
-      cse->error = 0;
-      cseadd(fcr, cse);
+      return NULL;
     }
 
+  cse->sid = sid;
+  cse->cipher = cipher;
+  cse->mac = mac;
+  cse->txform = txform;
+  cse->thash = thash;
+  cse->keylen = keylen;
+  cse->mackeylen = mackeylen;
+
+  if (key != NULL && keylen > 0)
+    {
+      memcpy(cse->key, key,
+             MIN(keylen, AALG_MAX_RESULT_LEN));
+    }
+
+  if (mackey != NULL && mackeylen > 0)
+    {
+      memcpy(cse->mackey, mackey,
+             MIN(mackeylen, AALG_MAX_RESULT_LEN));
+    }
+
+  cseadd(fcr, cse);
   return cse;
 }
 
@@ -1276,17 +1258,7 @@ static int csefree(FAR struct csession *cse)
   int error;
 
   error = crypto_freesession(cse->sid);
-  if (cse->key)
-    {
-      kmm_free(cse->key);
-    }
-
-  if (cse->mackey)
-    {
-      kmm_free(cse->mackey);
-    }
-
-  kmm_free(cse);
+  csession_free(cse);
   return error;
 }
 

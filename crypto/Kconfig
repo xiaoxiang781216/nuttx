@@ -75,6 +75,16 @@ config CRYPTO_CRYPTODEV_HARDWARE
 	depends on CRYPTO_CRYPTODEV
 	default n
 
+config CRYPTO_SESSION_POOL_COUNT
+	int "Static session pool size (0=use heap)"
+	default 0
+	depends on CRYPTO_CRYPTODEV
+	---help---
+		Number of pre-allocated csession objects. When > 0,
+		sessions are drawn from a static mempool with no runtime
+		heap allocation. 0 falls back to kmm_malloc. Each
+		session is approximately 280 bytes.
+
 config CRYPTO_SW_AES
 	bool "Software AES library"
 	depends on ALLOW_BSD_COMPONENTS
