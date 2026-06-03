@@ -46,6 +46,7 @@
 #include "virtio-rpmsg.h"
 #include "virtio-serial.h"
 #include "virtio-snd.h"
+#include "virtio-spi.h"
 
 /****************************************************************************
  * Private Types
@@ -379,6 +380,14 @@ void virtio_register_drivers(void)
   if (ret < 0)
     {
       vrterr("virtio_register_crypto_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_VIRTIO_SPI
+  ret = virtio_register_spi_driver();
+  if (ret < 0)
+    {
+      vrterr("virtio_register_spi_driver failed, ret=%d\n", ret);
     }
 #endif
 

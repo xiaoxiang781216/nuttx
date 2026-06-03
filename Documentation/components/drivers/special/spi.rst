@@ -44,3 +44,23 @@ frequency, delay, transmit data, receive data, and transfer result.
 Bus locking never crosses the link: every message executes atomically on
 the server, and an ``spi_transfer()`` sequence that fits into one RPMsg
 buffer is forwarded as a single message.
+
+Native VirtIO SPI
+=================
+
+The same SPI lower-half can be exposed over a native VirtIO transport instead
+of RPMsg. ``CONFIG_DRIVERS_VIRTIO_SPI`` enables the frontend (client), which
+probes a VirtIO SPI device (device id 45), reads its configuration space and
+exposes a ``struct spi_dev_s`` retrievable with ``virtio_spi_get_master(index)``.
+As for the RPMsg client, board code may then pass it to device drivers or
+register it with ``spi_register()`` as ``/dev/spiN``.
+``CONFIG_DRIVERS_VHOST_SPI``
+enables the device-side backend (server), which serves the request virtqueue
+and drives a local SPI controller registered with ``vhost_spi_register()``.
+
+The frontend and backend share the Linux-compatible VirtIO SPI wire-format
+definitions in ``include/nuttx/virtio/virtio-spi.h``. An ``spi_transfer()``
+sequence executes as one bus-locked run of requests, with CS held between
+transfers that do not de-select. The frontend can be
+validated against a host vhost-user backend, or against a second NuttX
+instance running the vhost backend over rptun/IVSHMEM.
