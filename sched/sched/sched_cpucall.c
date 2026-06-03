@@ -297,6 +297,10 @@ int nxsched_cpu_call(cpu_set_t cpuset, nxsched_cpu_call_t func,
           nxsem_get_value(&c->sem, &semcount);
         }
       while (semcount != cpucnt);
+
+      /* RMB to ensure c->error is read correctly. */
+
+      SMP_RMB();
     }
   else
     {
