@@ -474,6 +474,28 @@ config ARCH_RV_MACHINE_ISA_1_13
 		This version defined hardware error and software check exception codes,
 		which extend the range of exception codes from 0 ~ 15 to 0 ~ 19.
 
+config ARCH_RV_ISA_ZACAS
+	bool "Enable Zacas (atomic compare-and-swap) extension"
+	default n
+	depends on ARCH_RV_ISA_A
+	---help---
+		Enable the RISC-V Zacas extension, which provides native hardware
+		compare-and-swap instructions (amocas.w/.d/.q) to replace LR/SC
+		retry loops for cmpxchg / atomic_compare_exchange. This benefits
+		spinlocks, the scheduler, memory management and lock-free data
+		structures.
+
+		Appends "_zacas" to the -march string. Toolchain code generation
+		differs:
+		  - clang >= 19 (e.g. the bundled clang-21): lowers __atomic
+		    compare-exchange directly to amocas. RECOMMENDED.
+		  - clang 18: needs ARCH_RV_EXPERIMENTAL_EXTENSIONS=zacas instead.
+		  - GCC <= 13: accepts the -march but still emits LR/SC (no amocas);
+		    the extension has no codegen effect until GCC 14+.
+
+		So selecting this only yields hardware CAS when building with a
+		toolchain whose code generator actually emits amocas (clang 19+).
+
 config ARCH_RV_ISA_ZICSR_ZIFENCEI
 	bool "Enable Zicsr and Zifencei extensions (GCC >= 12.1.0.)"
 	default y
