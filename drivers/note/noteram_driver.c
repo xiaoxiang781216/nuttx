@@ -48,7 +48,6 @@
 #include <nuttx/note/noteram_driver.h>
 #include <nuttx/lib/math32.h>
 #include <nuttx/nuttx.h>
-#include <nuttx/panic_notifier.h>
 #include <nuttx/ratelimit.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/streams.h>
@@ -110,7 +109,6 @@ struct noteram_driver_s
   uint32_t max_index;
   atomic_t count_ref;       /* Reference count, init 1 at creation */
   bool dynamic;             /* true if dynamically allocated */
-  struct notifier_block nb;
   struct ratelimit_state_s ratelimit;
   dq_queue_t poll_list;     /* Registered poll users list */
   rspinlock_t lock;
@@ -157,8 +155,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
 static ssize_t noteram_add(FAR struct note_driver_s *drv,
                            FAR const void *note, size_t len,
                            bool noswitches);
-#if defined(CONFIG_DRIVERS_NOTERAM_TEXT_DUMP) || \
-    defined(CONFIG_DRIVERS_NOTERAM_CRASH_DUMP)
+#ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
 static void
 noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx);
 static int noteram_dump_one(FAR const struct note_max_s *p,
@@ -750,8 +747,7 @@ static int noteram_open(FAR struct file *filep)
   ctx->threshold = sizeof(struct note_common_s);
 
   filep->f_priv = ctx;
-#if defined(CONFIG_DRIVERS_NOTERAM_TEXT_DUMP) || \
-    defined(CONFIG_DRIVERS_NOTERAM_CRASH_DUMP)
+#ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
   noteram_dump_init_context(ctx);
 #endif
   return OK;
@@ -1044,7 +1040,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               new_drv = noteram_initialize(config->devname,
                                            config->bufsize,
                                            config->overwrite,
-                                           false, true);
+                                           true);
               ret = new_drv != NULL ? OK : -ENOMEM;
             }
         }
@@ -1275,8 +1271,7 @@ out:
   return 0;
 }
 
-#if defined(CONFIG_DRIVERS_NOTERAM_TEXT_DUMP) || \
-    defined(CONFIG_DRIVERS_NOTERAM_CRASH_DUMP)
+#ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
 
 /****************************************************************************
  * Name: noteram_dump_init_context
@@ -1932,92 +1927,11 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
   return ret;
 }
 
-#endif /* CONFIG_DRIVERS_NOTERAM_TEXT_DUMP || CONFIG_DRIVERS_NOTERAM_CRASH_DUMP */
-
-#ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
-
-/****************************************************************************
- * Name: noteram_dump
- ****************************************************************************/
-
-static void noteram_dump(FAR struct noteram_driver_s *drv)
-{
-  struct noteram_dump_context_s ctx;
-  struct lib_syslograwstream_s stream;
-  struct note_max_s note;
-  uint32_t read;
-
-  memset(&ctx, 0, sizeof(ctx));
-  read = drv->header->tail;
-  lib_syslograwstream_open(&stream);
-  lib_sprintf(&stream.common, "# tracer:nop\n#\n");
-
-  while (1)
-    {
-      ssize_t ret;
-
-      ret = noteram_get(drv, (FAR uint8_t *)&note, sizeof(note), &read);
-      if (ret <= 0)
-        {
-          break;
-        }
-
-      noteram_dump_one(&note, &stream.common, &ctx);
-    }
-
-  lib_syslograwstream_close(&stream);
-}
-
-/****************************************************************************
- * Name: noteram_crash_dump
- ****************************************************************************/
-
-static int noteram_crash_dump(FAR struct notifier_block *nb,
-                              unsigned long action, FAR void *data)
-{
-  FAR struct noteram_driver_s *drv =
-      container_of(nb, struct noteram_driver_s, nb);
-  if (action == PANIC_KERNEL)
-    {
-      noteram_dump(drv);
-    }
-
-  return 0;
-}
-
-static void noteram_crash_dump_register(FAR struct noteram_driver_s *drv)
-{
-  drv->nb.notifier_call = noteram_crash_dump;
-  panic_notifier_chain_register(&drv->nb);
-}
-#endif
+#endif /* CONFIG_DRIVERS_NOTERAM_TEXT_DUMP */
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: noteram_register
- *
- * Description:
- *   Register a serial driver at /dev/note/ram that can be used by an
- *   application to read data from the circular note buffer.
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   Zero on succress. A negated errno value is returned on a failure.
- *
- ****************************************************************************/
-
-int noteram_register(void)
-{
-#ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
-  noteram_crash_dump_register(&g_noteram_driver);
-#endif
-  return 0;
-}
 
 /****************************************************************************
  * Name: noteram_initialize
@@ -2030,7 +1944,6 @@ int noteram_register(void)
  *  devname: The name of the Noteram device
  *  bufsize: The size of the circular buffer
  *  overwrite: The overwrite mode
- *  crashdump: If used by the crash dump
  *  regnote: If register the note driver
  *
  * Returned Value:
@@ -2040,7 +1953,7 @@ int noteram_register(void)
 
 FAR struct note_driver_s *
 noteram_initialize(FAR const char *devname, size_t bufsize,
-                   bool overwrite, bool crashdump, bool regnote)
+                   bool overwrite, bool regnote)
 {
   FAR struct note_driver_s *drv;
   FAR void *buffer;
@@ -2053,7 +1966,7 @@ noteram_initialize(FAR const char *devname, size_t bufsize,
     }
 
   drv = noteram_initialize_with_buffer(devname, buffer, bufsize,
-                                       overwrite, crashdump, regnote);
+                                       overwrite, regnote);
   if (drv == NULL)
     {
       kmm_free(buffer);
@@ -2081,7 +1994,6 @@ noteram_initialize(FAR const char *devname, size_t bufsize,
  *  buffer: The buffer to use by the noteram driver
  *  bufsize: The size of the circular buffer
  *  overwrite: The overwrite mode
- *  crashdump: If used by the crash dump
  *  regnote: If register the note driver
  *
  * Returned Value:
@@ -2092,7 +2004,7 @@ noteram_initialize(FAR const char *devname, size_t bufsize,
 FAR struct note_driver_s *
 noteram_initialize_with_buffer(FAR const char *devname,
                                FAR void *buffer, size_t bufsize,
-                               bool overwrite, bool crashdump, bool regnote)
+                               bool overwrite, bool regnote)
 {
   FAR struct noteram_driver_s *drv;
   size_t len = 0;
@@ -2134,13 +2046,6 @@ noteram_initialize_with_buffer(FAR const char *devname,
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
   drv->driver.filter.level.level = CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL;
 #  endif
-#endif
-
-#ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
-  if (crashdump)
-    {
-      noteram_crash_dump_register(drv);
-    }
 #endif
 
   drv->driver.ops = &g_noteram_ops;
@@ -2200,10 +2105,6 @@ void noteram_deinitialize(struct note_driver_s *drv)
   noteram_drv = container_of(drv, struct noteram_driver_s, driver);
 
   noteram_drv->header->magic = ~NOTERAM_MAGIC;
-
-#ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
-  panic_notifier_chain_unregister(&noteram_drv->nb);
-#endif
 
   note_driver_unregister(drv);
 

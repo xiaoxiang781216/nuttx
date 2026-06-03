@@ -160,25 +160,6 @@ void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
                  uint8_t length, uint8_t type);
 
 /****************************************************************************
- * Name: noteram_register
- *
- * Description:
- *   Register RAM note driver at /dev/note/ram that can be used by an
- *   application to read note data from the circular note buffer.
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   Zero on succress. A negated errno value is returned on a failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_DRIVERS_NOTERAM
-int noteram_register(void);
-#endif
-
-/****************************************************************************
  * Name: notesnap_notify_register
  ****************************************************************************/
 

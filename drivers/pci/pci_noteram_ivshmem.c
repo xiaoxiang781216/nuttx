@@ -61,7 +61,7 @@ static int noteram_ivshmem_probe(FAR struct ivshmem_device_s *ivdev)
 
   noteram->note_drv = noteram_initialize_with_buffer(NOTERAM_IVSHMEM_NAME,
                                                      base, size, true,
-                                                     true, true);
+                                                     true);
   if (!noteram->note_drv)
     {
       pcierr("failed initialize noteram\n");

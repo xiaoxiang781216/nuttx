@@ -58,12 +58,12 @@ struct noteram_config_s
 
 FAR struct note_driver_s *
 noteram_initialize(FAR const char *devname, size_t bufsize,
-                   bool overwrite, bool crashdump, bool regnote);
+                   bool overwrite, bool regnote);
 
 FAR struct note_driver_s *
 noteram_initialize_with_buffer(FAR const char *devname,
                                FAR void *buffer, size_t bufsize,
-                               bool overwrite, bool crashdump, bool regnote);
+                               bool overwrite, bool regnote);
 
 void noteram_deinitialize(struct note_driver_s *drv);
 #endif

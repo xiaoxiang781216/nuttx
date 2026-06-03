@@ -121,7 +121,7 @@ int rpmsg_trace_initialize(void)
 {
   g_rpmsg_trace_drv = noteram_initialize("/dev/note/rpmsg",
                                         CONFIG_RPMSG_TRACE_BUFSIZE,
-                                        true, true, true);
+                                        true, true);
   if (g_rpmsg_trace_drv == NULL)
     {
       rpmsgerr("failed to initialize note driver.\n");

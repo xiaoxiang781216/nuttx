@@ -149,15 +149,6 @@ int note_initialize(void)
       return ret;
     }
 
-#ifdef CONFIG_DRIVERS_NOTERAM
-  ret = noteram_register();
-  if (ret < 0)
-    {
-      serr("noteram_register failed %d\n", ret);
-      return ret;
-    }
-#endif
-
 #ifdef CONFIG_DRIVERS_NOTEITM
   ret = noteitm_register();
   if (ret < 0)

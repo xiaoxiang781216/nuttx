@@ -143,13 +143,6 @@ config DRIVERS_NOTERAM_DEFAULT_NOOVERWRITE
 		is full by default. This is useful to keep instrumentation data of the
 		beginning of a system boot.
 
-config DRIVERS_NOTERAM_CRASH_DUMP
-	bool "Dump noteram buffer on panic"
-	depends on SYSLOG
-	default n
-	---help---
-		If this option is enabled, dump all contents when a crash occurs.
-
 config DRIVERS_NOTERAM_TEXT_DUMP
 	bool "Enable text format read mode"
 	default y
