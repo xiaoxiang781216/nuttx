@@ -62,9 +62,47 @@ void UP_REALSYM(perf_convert)(clock_t elapsed, FAR struct timespec *ts);
 #  define NOTE_PERF_CONVERT(e, t) UP_REALSYM(perf_convert)(e, t)
 #endif
 
+#ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
+
+/* Renumber idle task PIDs
+ *  In NuttX, PID number less than CONFIG_SMP_NCPUS are idle tasks.
+ *  In Linux, there is only one idle task of PID 0.
+ */
+
+#define get_pid(pid) ((pid) < CONFIG_SMP_NCPUS ? 0 : (pid))
+
+#define get_task_state(s)                                                    \
+  ((s) == 0 ? 'X' : ((s) <= LAST_READY_TO_RUN_STATE ? 'R' : 'S'))
+
+#if CONFIG_TASK_NAME_SIZE > 0
+#  define TASK_NAME_SIZE (CONFIG_TASK_NAME_SIZE + 1)
+#else
+#  define TASK_NAME_SIZE 16
+#endif
+
+#endif /* CONFIG_DRIVERS_NOTE_TEXT_DUMP */
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
+/* The structure to hold the per-CPU context data of trace dump */
+
+struct note_dump_cpu_context_s
+{
+  int intr_nest;            /* Interrupt nest level */
+  bool pendingswitch;       /* sched_switch pending flag */
+  int current_state;        /* Task state of the current line */
+  pid_t current_pid;        /* Task PID of the current line */
+  pid_t next_pid;           /* Task PID of the next line */
+  uint8_t current_priority; /* Task Priority of the current line */
+  uint8_t next_priority;    /* Task Priority of the next line */
+};
+
+struct note_dump_context_s
+{
+  struct note_dump_cpu_context_s cpu[CONFIG_SMP_NCPUS];
+};
 
 /****************************************************************************
  * Public Data
@@ -158,6 +196,41 @@ static inline bool note_is_safe(FAR const void *note, size_t len,
 
 void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
                  uint8_t length, uint8_t type);
+
+#ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
+
+/****************************************************************************
+ * Name: note_dump_context_init
+ *
+ * Description:
+ *   Initialize the per-CPU trace dump context used by note_dump_one().
+ *
+ ****************************************************************************/
+
+void note_dump_context_init(FAR struct note_dump_context_s *ctx);
+
+/****************************************************************************
+ * Name: note_dump_one
+ *
+ * Description:
+ *   Parse a single binary note into human-readable ftrace text and write
+ *   it to the output stream.
+ *
+ * Input Parameters:
+ *   p   - The binary note to parse
+ *   s   - The output stream
+ *   ctx - The trace dump context (tracks sched_switch state per CPU)
+ *
+ * Returned Value:
+ *   The number of bytes written to the stream.
+ *
+ ****************************************************************************/
+
+int note_dump_one(FAR const struct note_max_s *p,
+                  FAR struct lib_outstream_s *s,
+                  FAR struct note_dump_context_s *ctx);
+
+#endif /* CONFIG_DRIVERS_NOTE_TEXT_DUMP */
 
 /****************************************************************************
  * Name: notesnap_notify_register
