@@ -444,6 +444,14 @@ config ARCH_RV_ISA_ZBC
 		Enable RISC-V Zbc extension. Provides clmul, clmulh, clmulr
 		instructions for CRC and cryptographic acceleration.
 
+config ARCH_RV_ISA_ZIHINTPAUSE
+	bool "Zihintpause pause hint extension"
+	default n
+	---help---
+		Enable RISC-V Zihintpause extension. Provides the pause
+		instruction as a hint in spin-wait loops to reduce power
+		consumption and release hardware resources.
+
 config ARCH_RV_ISA_V
 	bool
 	default n

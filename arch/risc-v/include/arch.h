@@ -81,6 +81,11 @@ extern struct riscv_percpu_s g_percpu;
 #define ARCH_TP_OFFSET        (0)
 #define ARCH_TP_PADDING       (0)
 
+#ifdef CONFIG_ARCH_RV_ISA_ZIHINTPAUSE
+#  define UP_WFE() __asm__ __volatile__ ("pause" ::: "memory")
+#  define UP_SEV() __asm__ __volatile__ ("fence rw, rw" ::: "memory")
+#endif
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
