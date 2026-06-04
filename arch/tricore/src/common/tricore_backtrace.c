@@ -120,7 +120,7 @@ int up_backtrace(struct tcb_s *tcb,
 
   if (tcb == NULL || tcb == rtcb)
     {
-      regs = tricore_csa2addr(__mfcr(CPU_PCXI));
+      regs = tricore_csa2addr(tricore_mfcr(CPU_PCXI));
       ret = backtrace(regs, buffer, size, &skip);
     }
   else

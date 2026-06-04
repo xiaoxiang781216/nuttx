@@ -131,10 +131,10 @@
   #define PSW_PRS_USER                           (0)
   #define tricore_change_pprs(tcb, val)          (tcb)->xcp.pprs = (val)
   #define tricore_load_pprs(tcb)                 (tcb)->xcp.pprs
-  #define tricore_restore_pprs(tcb)              __mtcr(CPU_PPRS, (tcb)->xcp.pprs)
-  #define tricore_store_pprs(tcb)                (tcb)->xcp.pprs = __mfcr(CPU_PPRS)
+  #define tricore_restore_pprs(tcb)              tricore_mtcr(CPU_PPRS, (tcb)->xcp.pprs)
+  #define tricore_store_pprs(tcb)                (tcb)->xcp.pprs = tricore_mfcr(CPU_PPRS)
   #define tricore_syscall_load_pprs(tcb ,index)  (tcb)->xcp.syscall_pprs[index]
-  #define tricore_syscall_store_pprs(tcb ,index) (tcb)->xcp.syscall_pprs[index] = __mfcr(CPU_PPRS)
+  #define tricore_syscall_store_pprs(tcb ,index) (tcb)->xcp.syscall_pprs[index] = tricore_mfcr(CPU_PPRS)
   #define tricore_sig_change_pprs(tcb ,val)      (tcb)->xcp.saved_pprs = (val)
   #define tricore_sig_load_pprs(tcb)             (tcb)->xcp.saved_pprs
   #define tricore_pprs_to_prs(pprs)              (((pprs & 3) << 12) | ((pprs & 4) << 13))
@@ -317,7 +317,7 @@ void up_irq_enable(void);
 noinstrument_function static inline_function uintptr_t up_getpc(void)
 {
 #ifdef CONFIG_TRICORE_TOOLCHAIN_TASKING
-  return (uintptr_t)__mfcr(CPU_PC);
+  return tricore_mfcr(CPU_PC);
 #else
   uintptr_t pc;
   __asm__ volatile ("mfcr %0,%1": "=d" (pc) :"i"(CPU_PC): "memory");
@@ -357,13 +357,13 @@ noinstrument_function static inline_function irqstate_t up_irq_save(void)
   Ifx_CPU_ICR icr;
   irqstate_t ccpn;
 
-  icr.U = __mfcr(CPU_ICR);
+  icr.U = tricore_mfcr(CPU_ICR);
   ccpn   = icr.B.CCPN;
 
   if (TRICORE_IRQ_DISABLE_PRIORITY > ccpn)
     {
       icr.B.CCPN = TRICORE_IRQ_DISABLE_PRIORITY;
-      __mtcr(CPU_ICR, icr.U);
+      tricore_mtcr(CPU_ICR, icr.U);
       UP_ISB();
     }
 
@@ -390,11 +390,11 @@ void up_irq_restore(irqstate_t flags)
 #ifdef CONFIG_ARCH_HIPRI_INTERRUPT
   Ifx_CPU_ICR icr;
 
-  icr.U = __mfcr(CPU_ICR);
+  icr.U = tricore_mfcr(CPU_ICR);
   if (flags < icr.B.CCPN)
     {
       icr.B.CCPN = flags;
-      __mtcr(CPU_ICR, icr.U);
+      tricore_mtcr(CPU_ICR, icr.U);
       UP_ISB();
     }
 #else
@@ -419,7 +419,7 @@ void up_irq_restore(irqstate_t flags)
 noinstrument_function
 static inline_function bool up_interrupt_context(void)
 {
-  return (__mfcr(CPU_PSW) & PSW_IS) != 0;
+  return (tricore_mfcr(CPU_PSW) & PSW_IS) != 0;
 }
 
 /****************************************************************************

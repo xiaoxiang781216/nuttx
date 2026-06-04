@@ -179,14 +179,14 @@ void tricore_svcall(volatile void *trap)
 
   UP_DSB();
 
-  plregs = tricore_csa2addr(__mfcr(CPU_PCXI));
+  plregs = tricore_csa2addr(tricore_mfcr(CPU_PCXI));
   puregs = tricore_csa2addr(plregs[REG_LPCXI]);
 
   /* set registers related to csa */
 
-  __mtcr(CPU_FCX, tricore_addr2csa(istackbase));
-  __mtcr(CPU_LCX, tricore_addr2csa(istackbase + CONFIG_ARCH_INTERRUPTSTACK
-                                              - 2 * TC_CONTEXT_SIZE));
+  tricore_mtcr(CPU_FCX, tricore_addr2csa(istackbase));
+  tricore_mtcr(CPU_LCX, tricore_addr2csa(istackbase - XCPTCONTEXT_SIZE +
+                                         CONFIG_ARCH_INTERRUPTSTACK));
   UP_ISB();
 
   cmd = puregs[REG_D8];
@@ -513,9 +513,9 @@ void tricore_svcall(volatile void *trap)
   cpu_lcx =
     (uintptr_t *)((uint8_t *)tcb->stack_base_ptr + tcb->adj_stack_size) -
     XCPTCONTEXT_REGS;
-  __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs + TC_CONTEXT_REGS));
-  __mtcr(CPU_FCX, tricore_addr2csa(tcb->xcp.regs + XCPTCONTEXT_REGS));
-  __mtcr(CPU_LCX, tricore_addr2csa(cpu_lcx));
+  tricore_mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs + TC_CONTEXT_REGS));
+  tricore_mtcr(CPU_FCX, tricore_addr2csa(tcb->xcp.regs + XCPTCONTEXT_REGS));
+  tricore_mtcr(CPU_LCX, tricore_addr2csa(cpu_lcx));
 
   /* Updata PPRS register */
 

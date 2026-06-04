@@ -49,7 +49,7 @@
   static inline_function void isr##_internal(void);                      \
   void isr(void)                                                         \
   {                                                                      \
-    uintptr_t *regs = tricore_csa2addr(__mfcr(CPU_PCXI));                \
+    uintptr_t *regs = tricore_csa2addr(tricore_mfcr(CPU_PCXI));          \
     uintptr_t saved_pcx;                                                 \
     uintptr_t saved_fcx;                                                 \
     uintptr_t saved_lcx;                                                 \
@@ -60,13 +60,13 @@
       {                                                                  \
         uintptr_t istackbase = up_get_intstackbase(up_cpu_index());      \
                                                                          \
-        saved_pcx = __mfcr(CPU_PCXI);                                    \
-        saved_fcx = __mfcr(CPU_FCX);                                     \
-        saved_lcx = __mfcr(CPU_LCX);                                     \
-        __mtcr(CPU_FCX, tricore_addr2csa(istackbase));                   \
-        __mtcr(CPU_LCX, tricore_addr2csa(istackbase +                    \
-                                         CONFIG_ARCH_INTERRUPTSTACK -    \
-                                         XCPTCONTEXT_SIZE));             \
+        saved_pcx = tricore_mfcr(CPU_PCXI);                              \
+        saved_fcx = tricore_mfcr(CPU_FCX);                               \
+        saved_lcx = tricore_mfcr(CPU_LCX);                               \
+        tricore_mtcr(CPU_FCX, tricore_addr2csa(istackbase));             \
+        tricore_mtcr(CPU_LCX, tricore_addr2csa(istackbase +              \
+                                CONFIG_ARCH_INTERRUPTSTACK -             \
+                                XCPTCONTEXT_SIZE));                      \
         UP_ISB();                                                        \
       }                                                                  \
                                                                          \
@@ -81,9 +81,9 @@
             saved_lcx = g_switchcsa.lcx;                                 \
             g_switchcsa.pcx = 0;                                         \
           }                                                              \
-        __mtcr(CPU_PCXI, saved_pcx);                                     \
-        __mtcr(CPU_FCX, saved_fcx);                                      \
-        __mtcr(CPU_LCX, saved_lcx);                                      \
+        tricore_mtcr(CPU_PCXI, saved_pcx);                               \
+        tricore_mtcr(CPU_FCX, saved_fcx);                                \
+        tricore_mtcr(CPU_LCX, saved_lcx);                                \
         UP_ISB();                                                        \
       }                                                                  \
     __jumpBackToLink();                                                  \
@@ -131,7 +131,7 @@ TRICORE_INTERRUPT_DEFINE(tricore_irq_direct)
   up_irq_enable();
 #endif
 
-  icr.U = __mfcr(CPU_ICR);
+  icr.U = tricore_mfcr(CPU_ICR);
   irq = tricore_srpn_to_irq(icr.B.CCPN);
   tricore_ack_irq(irq);
   irq_dispatch(irq, NULL);
@@ -170,7 +170,7 @@ TRICORE_INTERRUPT_DEFINE(tricore_irq_sched)
   up_irq_enable();
 #endif
 
-  regs = tricore_csa2addr(__mfcr(CPU_PCXI));
+  regs = tricore_csa2addr(tricore_mfcr(CPU_PCXI));
   if (*running_task != NULL)
     {
       (*running_task)->xcp.regs = regs - TC_CONTEXT_REGS;

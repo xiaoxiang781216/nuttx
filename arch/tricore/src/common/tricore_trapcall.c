@@ -252,9 +252,9 @@ int tricore_insterrorstrap(uint32_t tid, void *context, void *arg)
       _alert("\tCoprocessor Trap Synchronous Error\n");
 #  ifdef CONFIG_ARCH_HAVE_FPU
       _alert("\tFPU_SYNC_TRAP:%" PRIX32 "\n\n",
-             (uint32_t)__mfcr(FPU_SYNC_TRAP_REG));
-      __mtcr(FPU_SYNC_TRAP_REG,
-             __mfcr(FPU_SYNC_TRAP_REG) | (1U << FPU_TRAP_TCL_SHIFT));
+             tricore_mfcr(FPU_SYNC_TRAP_REG));
+      tricore_mtcr(FPU_SYNC_TRAP_REG, tricore_mfcr(FPU_SYNC_TRAP_REG) |
+                                      (1U << FPU_TRAP_TCL_SHIFT));
 #  endif
     }
 #endif
@@ -355,9 +355,10 @@ int tricore_bustrap(uint32_t tid, void *context, void *arg)
       _alert("\tCoprocessor Trap Asynchronous Error\n");
 #ifdef CONFIG_ARCH_HAVE_FPU
       _alert("\tFPU_ASYNC_TRAP:%" PRIX32 "\n\n",
-             (uint32_t)__mfcr(FPU_ASYNC_TRAP_REG));
-      __mtcr(FPU_ASYNC_TRAP_REG,
-             __mfcr(FPU_ASYNC_TRAP_REG) | (1U << FPU_TRAP_TCL_SHIFT));
+             tricore_mfcr(FPU_ASYNC_TRAP_REG));
+      tricore_mtcr(FPU_ASYNC_TRAP_REG, tricore_mfcr(FPU_ASYNC_TRAP_REG) |
+                                       (1U << FPU_TRAP_TCL_SHIFT));
+      UP_ISB();
 #endif
     }
 
@@ -425,7 +426,7 @@ void tricore_trapcall(volatile void *trap)
 
   /* enter this funtion means that the regs is upcsa */
 
-  regs = tricore_csa2addr(__mfcr(CPU_PCXI));
+  regs = tricore_csa2addr(tricore_mfcr(CPU_PCXI));
 
   switch_csa = !(tricore_csa2addr(regs[REG_LPCXI])[REG_PSW] & PSW_IS);
   if (switch_csa)
@@ -443,12 +444,12 @@ void tricore_trapcall(volatile void *trap)
        * which needs the original CSA chain to restore context correctly.
        */
 
-      saved_fcx = __mfcr(CPU_FCX);
-      saved_lcx = __mfcr(CPU_LCX);
+      saved_fcx = tricore_mfcr(CPU_FCX);
+      saved_lcx = tricore_mfcr(CPU_LCX);
 
-      __mtcr(CPU_FCX, tricore_addr2csa(istackbase));
-      __mtcr(CPU_LCX, tricore_addr2csa(istackbase
-                      + CONFIG_ARCH_INTERRUPTSTACK - 2 * TC_CONTEXT_SIZE));
+      tricore_mtcr(CPU_FCX, tricore_addr2csa(istackbase));
+      tricore_mtcr(CPU_LCX, tricore_addr2csa(istackbase - XCPTCONTEXT_SIZE
+                                             + CONFIG_ARCH_INTERRUPTSTACK));
       UP_ISB();
     }
 
@@ -503,8 +504,8 @@ void tricore_trapcall(volatile void *trap)
                * and causing a panic on the next interrupt.
                */
 
-              __mtcr(CPU_FCX, saved_fcx);
-              __mtcr(CPU_LCX, saved_lcx);
+              tricore_mtcr(CPU_FCX, saved_fcx);
+              tricore_mtcr(CPU_LCX, saved_lcx);
               UP_ISB();
 
               /* g_running_task->xcp.regs is about to become invalid

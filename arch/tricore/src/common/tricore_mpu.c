@@ -69,29 +69,29 @@ static inline_function Ifx_CPU_DPRE get_dpre_value(unsigned int set)
   switch (set)
     {
       case 0:
-        dpre_value.U = __mfcr(CPU_DPRE_0);
+        dpre_value.U = tricore_mfcr(CPU_DPRE_0);
         break;
       case 1:
-        dpre_value.U = __mfcr(CPU_DPRE_1);
+        dpre_value.U = tricore_mfcr(CPU_DPRE_1);
         break;
       case 2:
-        dpre_value.U = __mfcr(CPU_DPRE_2);
+        dpre_value.U = tricore_mfcr(CPU_DPRE_2);
         break;
       case 3:
-        dpre_value.U = __mfcr(CPU_DPRE_3);
+        dpre_value.U = tricore_mfcr(CPU_DPRE_3);
         break;
       case 4:
-        dpre_value.U = __mfcr(CPU_DPRE_4);
+        dpre_value.U = tricore_mfcr(CPU_DPRE_4);
         break;
       case 5:
-        dpre_value.U = __mfcr(CPU_DPRE_5);
+        dpre_value.U = tricore_mfcr(CPU_DPRE_5);
         break;
 #ifndef CONFIG_ARCH_CHIP_TC3XX
       case 6:
-        dpre_value.U = __mfcr(CPU_DPRE_6);
+        dpre_value.U = tricore_mfcr(CPU_DPRE_6);
         break;
       case 7:
-        dpre_value.U = __mfcr(CPU_DPRE_7);
+        dpre_value.U = tricore_mfcr(CPU_DPRE_7);
         break;
 #endif
       default:
@@ -108,29 +108,29 @@ static inline_function void set_dpre_value(unsigned int set,
   switch (set)
     {
       case 0:
-        __mtcr(CPU_DPRE_0, dpre_value.U);
+        tricore_mtcr(CPU_DPRE_0, dpre_value.U);
         break;
       case 1:
-        __mtcr(CPU_DPRE_1, dpre_value.U);
+        tricore_mtcr(CPU_DPRE_1, dpre_value.U);
         break;
       case 2:
-        __mtcr(CPU_DPRE_2, dpre_value.U);
+        tricore_mtcr(CPU_DPRE_2, dpre_value.U);
         break;
       case 3:
-        __mtcr(CPU_DPRE_3, dpre_value.U);
+        tricore_mtcr(CPU_DPRE_3, dpre_value.U);
         break;
       case 4:
-        __mtcr(CPU_DPRE_4, dpre_value.U);
+        tricore_mtcr(CPU_DPRE_4, dpre_value.U);
         break;
       case 5:
-        __mtcr(CPU_DPRE_5, dpre_value.U);
+        tricore_mtcr(CPU_DPRE_5, dpre_value.U);
         break;
 #ifndef CONFIG_ARCH_CHIP_TC3XX
       case 6:
-        __mtcr(CPU_DPRE_6, dpre_value.U);
+        tricore_mtcr(CPU_DPRE_6, dpre_value.U);
         break;
       case 7:
-        __mtcr(CPU_DPRE_7, dpre_value.U);
+        tricore_mtcr(CPU_DPRE_7, dpre_value.U);
         break;
 #endif
       default:
@@ -147,29 +147,29 @@ static inline_function Ifx_CPU_DPWE get_dpwe_value(unsigned int set)
   switch (set)
     {
       case 0:
-        dpwe_value.U = __mfcr(CPU_DPWE_0);
+        dpwe_value.U = tricore_mfcr(CPU_DPWE_0);
         break;
       case 1:
-        dpwe_value.U = __mfcr(CPU_DPWE_1);
+        dpwe_value.U = tricore_mfcr(CPU_DPWE_1);
         break;
       case 2:
-        dpwe_value.U = __mfcr(CPU_DPWE_2);
+        dpwe_value.U = tricore_mfcr(CPU_DPWE_2);
         break;
       case 3:
-        dpwe_value.U = __mfcr(CPU_DPWE_3);
+        dpwe_value.U = tricore_mfcr(CPU_DPWE_3);
         break;
       case 4:
-        dpwe_value.U = __mfcr(CPU_DPWE_4);
+        dpwe_value.U = tricore_mfcr(CPU_DPWE_4);
         break;
       case 5:
-        dpwe_value.U = __mfcr(CPU_DPWE_5);
+        dpwe_value.U = tricore_mfcr(CPU_DPWE_5);
         break;
 #ifndef CONFIG_ARCH_CHIP_TC3XX
       case 6:
-        dpwe_value.U = __mfcr(CPU_DPWE_6);
+        dpwe_value.U = tricore_mfcr(CPU_DPWE_6);
         break;
       case 7:
-        dpwe_value.U = __mfcr(CPU_DPWE_7);
+        dpwe_value.U = tricore_mfcr(CPU_DPWE_7);
         break;
 #endif
       default:
@@ -186,29 +186,29 @@ static inline_function void set_dpwe_value(unsigned int set,
   switch (set)
     {
       case 0:
-        __mtcr(CPU_DPWE_0, dpwe_value.U);
+        tricore_mtcr(CPU_DPWE_0, dpwe_value.U);
         break;
       case 1:
-        __mtcr(CPU_DPWE_1, dpwe_value.U);
+        tricore_mtcr(CPU_DPWE_1, dpwe_value.U);
         break;
       case 2:
-        __mtcr(CPU_DPWE_2, dpwe_value.U);
+        tricore_mtcr(CPU_DPWE_2, dpwe_value.U);
         break;
       case 3:
-        __mtcr(CPU_DPWE_3, dpwe_value.U);
+        tricore_mtcr(CPU_DPWE_3, dpwe_value.U);
         break;
       case 4:
-        __mtcr(CPU_DPWE_4, dpwe_value.U);
+        tricore_mtcr(CPU_DPWE_4, dpwe_value.U);
         break;
       case 5:
-        __mtcr(CPU_DPWE_5, dpwe_value.U);
+        tricore_mtcr(CPU_DPWE_5, dpwe_value.U);
         break;
       case 6:
 #ifndef CONFIG_ARCH_CHIP_TC3XX
-        __mtcr(CPU_DPWE_6, dpwe_value.U);
+        tricore_mtcr(CPU_DPWE_6, dpwe_value.U);
         break;
       case 7:
-        __mtcr(CPU_DPWE_7, dpwe_value.U);
+        tricore_mtcr(CPU_DPWE_7, dpwe_value.U);
         break;
 #endif
       default:
@@ -225,29 +225,29 @@ static inline_function Ifx_CPU_CPXE get_cpxe_value(unsigned int set)
     switch (set)
     {
       case 0:
-        cpxe_value.U = __mfcr(CPU_CPXE_0);
+        cpxe_value.U = tricore_mfcr(CPU_CPXE_0);
         break;
       case 1:
-        cpxe_value.U = __mfcr(CPU_CPXE_1);
+        cpxe_value.U = tricore_mfcr(CPU_CPXE_1);
         break;
       case 2:
-        cpxe_value.U = __mfcr(CPU_CPXE_2);
+        cpxe_value.U = tricore_mfcr(CPU_CPXE_2);
         break;
       case 3:
-        cpxe_value.U = __mfcr(CPU_CPXE_3);
+        cpxe_value.U = tricore_mfcr(CPU_CPXE_3);
         break;
       case 4:
-        cpxe_value.U = __mfcr(CPU_CPXE_4);
+        cpxe_value.U = tricore_mfcr(CPU_CPXE_4);
         break;
       case 5:
-        cpxe_value.U = __mfcr(CPU_CPXE_5);
+        cpxe_value.U = tricore_mfcr(CPU_CPXE_5);
         break;
 #ifndef CONFIG_ARCH_CHIP_TC3XX
       case 6:
-        cpxe_value.U = __mfcr(CPU_CPXE_6);
+        cpxe_value.U = tricore_mfcr(CPU_CPXE_6);
         break;
       case 7:
-        cpxe_value.U = __mfcr(CPU_CPXE_7);
+        cpxe_value.U = tricore_mfcr(CPU_CPXE_7);
         break;
 #endif
       default:
@@ -264,29 +264,29 @@ static inline_function void set_cpxe_value(unsigned int set,
   switch (set)
     {
       case 0:
-        __mtcr(CPU_CPXE_0, cpxe_value.U);
+        tricore_mtcr(CPU_CPXE_0, cpxe_value.U);
         break;
       case 1:
-        __mtcr(CPU_CPXE_1, cpxe_value.U);
+        tricore_mtcr(CPU_CPXE_1, cpxe_value.U);
         break;
       case 2:
-        __mtcr(CPU_CPXE_2, cpxe_value.U);
+        tricore_mtcr(CPU_CPXE_2, cpxe_value.U);
         break;
       case 3:
-        __mtcr(CPU_CPXE_3, cpxe_value.U);
+        tricore_mtcr(CPU_CPXE_3, cpxe_value.U);
         break;
       case 4:
-        __mtcr(CPU_CPXE_4, cpxe_value.U);
+        tricore_mtcr(CPU_CPXE_4, cpxe_value.U);
         break;
       case 5:
-        __mtcr(CPU_CPXE_5, cpxe_value.U);
+        tricore_mtcr(CPU_CPXE_5, cpxe_value.U);
         break;
 #ifndef CONFIG_ARCH_CHIP_TC3XX
       case 6:
-        __mtcr(CPU_CPXE_6, cpxe_value.U);
+        tricore_mtcr(CPU_CPXE_6, cpxe_value.U);
         break;
       case 7:
-        __mtcr(CPU_CPXE_7, cpxe_value.U);
+        tricore_mtcr(CPU_CPXE_7, cpxe_value.U);
         break;
 #endif
       default:
@@ -303,101 +303,101 @@ static inline_function int get_dpr_addrass_value(unsigned int region,
   switch (region)
     {
       case 0:
-        dpr_l->U = __mfcr(CPU_DPR0_L);
-        dpr_u->U = __mfcr(CPU_DPR0_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR0_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR0_U);
         break;
       case 1:
-        dpr_l->U = __mfcr(CPU_DPR1_L);
-        dpr_u->U = __mfcr(CPU_DPR1_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR1_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR1_U);
         break;
       case 2:
-        dpr_l->U = __mfcr(CPU_DPR2_L);
-        dpr_u->U = __mfcr(CPU_DPR2_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR2_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR2_U);
         break;
       case 3:
-        dpr_l->U = __mfcr(CPU_DPR3_L);
-        dpr_u->U = __mfcr(CPU_DPR3_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR3_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR3_U);
         break;
       case 4:
-        dpr_l->U = __mfcr(CPU_DPR4_L);
-        dpr_u->U = __mfcr(CPU_DPR4_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR4_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR4_U);
         break;
       case 5:
-        dpr_l->U = __mfcr(CPU_DPR5_L);
-        dpr_u->U = __mfcr(CPU_DPR5_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR5_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR5_U);
         break;
       case 6:
-        dpr_l->U = __mfcr(CPU_DPR6_L);
-        dpr_u->U = __mfcr(CPU_DPR6_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR6_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR6_U);
         break;
       case 7:
-        dpr_l->U = __mfcr(CPU_DPR7_L);
-        dpr_u->U = __mfcr(CPU_DPR7_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR7_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR7_U);
         break;
       case 8:
-        dpr_l->U = __mfcr(CPU_DPR8_L);
-        dpr_u->U = __mfcr(CPU_DPR8_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR8_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR8_U);
         break;
       case 9:
-        dpr_l->U = __mfcr(CPU_DPR9_L);
-        dpr_u->U = __mfcr(CPU_DPR9_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR9_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR9_U);
         break;
       case 10:
-        dpr_l->U = __mfcr(CPU_DPR10_L);
-        dpr_u->U = __mfcr(CPU_DPR10_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR10_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR10_U);
         break;
       case 11:
-        dpr_l->U = __mfcr(CPU_DPR11_L);
-        dpr_u->U = __mfcr(CPU_DPR11_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR11_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR11_U);
         break;
       case 12:
-        dpr_l->U = __mfcr(CPU_DPR12_L);
-        dpr_u->U = __mfcr(CPU_DPR12_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR12_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR12_U);
         break;
       case 13:
-        dpr_l->U = __mfcr(CPU_DPR13_L);
-        dpr_u->U = __mfcr(CPU_DPR13_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR13_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR13_U);
         break;
       case 14:
-        dpr_l->U = __mfcr(CPU_DPR14_L);
-        dpr_u->U = __mfcr(CPU_DPR14_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR14_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR14_U);
         break;
       case 15:
-        dpr_l->U = __mfcr(CPU_DPR15_L);
-        dpr_u->U = __mfcr(CPU_DPR15_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR15_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR15_U);
         break;
       case 16:
-        dpr_l->U = __mfcr(CPU_DPR16_L);
-        dpr_u->U = __mfcr(CPU_DPR16_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR16_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR16_U);
         break;
       case 17:
-        dpr_l->U = __mfcr(CPU_DPR17_L);
-        dpr_u->U = __mfcr(CPU_DPR17_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR17_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR17_U);
         break;
 #ifndef CONFIG_ARCH_CHIP_TC3XX
       case 18:
-        dpr_l->U = __mfcr(CPU_DPR18_L);
-        dpr_u->U = __mfcr(CPU_DPR18_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR18_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR18_U);
         break;
       case 19:
-        dpr_l->U = __mfcr(CPU_DPR19_L);
-        dpr_u->U = __mfcr(CPU_DPR19_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR19_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR19_U);
         break;
       case 20:
-        dpr_l->U = __mfcr(CPU_DPR20_L);
-        dpr_u->U = __mfcr(CPU_DPR20_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR20_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR20_U);
         break;
       case 21:
-        dpr_l->U = __mfcr(CPU_DPR21_L);
-        dpr_u->U = __mfcr(CPU_DPR21_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR21_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR21_U);
         break;
       case 22:
-        dpr_l->U = __mfcr(CPU_DPR22_L);
-        dpr_u->U = __mfcr(CPU_DPR22_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR22_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR22_U);
         break;
       case 23:
-        dpr_l->U = __mfcr(CPU_DPR23_L);
-        dpr_u->U = __mfcr(CPU_DPR23_U);
+        dpr_l->U = tricore_mfcr(CPU_DPR23_L);
+        dpr_u->U = tricore_mfcr(CPU_DPR23_U);
         break;
 #endif
       default:
@@ -414,101 +414,101 @@ static inline_function void set_dpr_address_value(unsigned int region,
   switch (region)
     {
       case 0:
-        __mtcr(CPU_DPR0_L, dpr_l.U);
-        __mtcr(CPU_DPR0_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR0_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR0_U, dpr_u.U);
         break;
       case 1:
-        __mtcr(CPU_DPR1_L, dpr_l.U);
-        __mtcr(CPU_DPR1_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR1_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR1_U, dpr_u.U);
         break;
       case 2:
-        __mtcr(CPU_DPR2_L, dpr_l.U);
-        __mtcr(CPU_DPR2_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR2_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR2_U, dpr_u.U);
         break;
       case 3:
-        __mtcr(CPU_DPR3_L, dpr_l.U);
-        __mtcr(CPU_DPR3_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR3_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR3_U, dpr_u.U);
         break;
       case 4:
-        __mtcr(CPU_DPR4_L, dpr_l.U);
-        __mtcr(CPU_DPR4_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR4_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR4_U, dpr_u.U);
         break;
       case 5:
-        __mtcr(CPU_DPR5_L, dpr_l.U);
-        __mtcr(CPU_DPR5_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR5_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR5_U, dpr_u.U);
         break;
       case 6:
-        __mtcr(CPU_DPR6_L, dpr_l.U);
-        __mtcr(CPU_DPR6_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR6_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR6_U, dpr_u.U);
         break;
       case 7:
-        __mtcr(CPU_DPR7_L, dpr_l.U);
-        __mtcr(CPU_DPR7_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR7_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR7_U, dpr_u.U);
         break;
       case 8:
-        __mtcr(CPU_DPR8_L, dpr_l.U);
-        __mtcr(CPU_DPR8_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR8_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR8_U, dpr_u.U);
         break;
       case 9:
-        __mtcr(CPU_DPR9_L, dpr_l.U);
-        __mtcr(CPU_DPR9_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR9_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR9_U, dpr_u.U);
         break;
       case 10:
-        __mtcr(CPU_DPR10_L, dpr_l.U);
-        __mtcr(CPU_DPR10_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR10_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR10_U, dpr_u.U);
         break;
       case 11:
-        __mtcr(CPU_DPR11_L, dpr_l.U);
-        __mtcr(CPU_DPR11_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR11_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR11_U, dpr_u.U);
         break;
       case 12:
-        __mtcr(CPU_DPR12_L, dpr_l.U);
-        __mtcr(CPU_DPR12_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR12_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR12_U, dpr_u.U);
         break;
       case 13:
-        __mtcr(CPU_DPR13_L, dpr_l.U);
-        __mtcr(CPU_DPR13_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR13_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR13_U, dpr_u.U);
         break;
       case 14:
-        __mtcr(CPU_DPR14_L, dpr_l.U);
-        __mtcr(CPU_DPR14_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR14_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR14_U, dpr_u.U);
         break;
       case 15:
-        __mtcr(CPU_DPR15_L, dpr_l.U);
-        __mtcr(CPU_DPR15_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR15_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR15_U, dpr_u.U);
         break;
       case 16:
-        __mtcr(CPU_DPR16_L, dpr_l.U);
-        __mtcr(CPU_DPR16_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR16_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR16_U, dpr_u.U);
         break;
       case 17:
-        __mtcr(CPU_DPR17_L, dpr_l.U);
-        __mtcr(CPU_DPR17_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR17_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR17_U, dpr_u.U);
         break;
 #ifndef CONFIG_ARCH_CHIP_TC3XX
       case 18:
-        __mtcr(CPU_DPR18_L, dpr_l.U);
-        __mtcr(CPU_DPR18_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR18_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR18_U, dpr_u.U);
         break;
       case 19:
-        __mtcr(CPU_DPR19_L, dpr_l.U);
-        __mtcr(CPU_DPR19_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR19_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR19_U, dpr_u.U);
         break;
       case 20:
-        __mtcr(CPU_DPR20_L, dpr_l.U);
-        __mtcr(CPU_DPR20_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR20_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR20_U, dpr_u.U);
         break;
       case 21:
-        __mtcr(CPU_DPR21_L, dpr_l.U);
-        __mtcr(CPU_DPR21_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR21_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR21_U, dpr_u.U);
         break;
       case 22:
-        __mtcr(CPU_DPR22_L, dpr_l.U);
-        __mtcr(CPU_DPR22_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR22_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR22_U, dpr_u.U);
         break;
       case 23:
-        __mtcr(CPU_DPR23_L, dpr_l.U);
-        __mtcr(CPU_DPR23_U, dpr_u.U);
+        tricore_mtcr(CPU_DPR23_L, dpr_l.U);
+        tricore_mtcr(CPU_DPR23_U, dpr_u.U);
         break;
 #endif
       default:
@@ -525,69 +525,69 @@ static inline_function int get_cpr_address_region(unsigned int region,
   switch (region)
     {
       case 0:
-        cpr_l->U = __mfcr(CPU_CPR0_L);
-        cpr_u->U = __mfcr(CPU_CPR0_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR0_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR0_U);
         break;
       case 1:
-        cpr_l->U = __mfcr(CPU_CPR1_L);
-        cpr_u->U = __mfcr(CPU_CPR1_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR1_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR1_U);
         break;
       case 2:
-        cpr_l->U = __mfcr(CPU_CPR2_L);
-        cpr_u->U = __mfcr(CPU_CPR2_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR2_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR2_U);
         break;
       case 3:
-        cpr_l->U = __mfcr(CPU_CPR3_L);
-        cpr_u->U = __mfcr(CPU_CPR3_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR3_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR3_U);
         break;
       case 4:
-        cpr_l->U = __mfcr(CPU_CPR4_L);
-        cpr_u->U = __mfcr(CPU_CPR4_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR4_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR4_U);
         break;
       case 5:
-        cpr_l->U = __mfcr(CPU_CPR5_L);
-        cpr_u->U = __mfcr(CPU_CPR5_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR5_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR5_U);
         break;
       case 6:
-        cpr_l->U = __mfcr(CPU_CPR6_L);
-        cpr_u->U = __mfcr(CPU_CPR6_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR6_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR6_U);
         break;
       case 7:
-        cpr_l->U = __mfcr(CPU_CPR7_L);
-        cpr_u->U = __mfcr(CPU_CPR7_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR7_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR7_U);
         break;
       case 8:
-        cpr_l->U = __mfcr(CPU_CPR8_L);
-        cpr_u->U = __mfcr(CPU_CPR8_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR8_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR8_U);
         break;
       case 9:
-        cpr_l->U = __mfcr(CPU_CPR9_L);
-        cpr_u->U = __mfcr(CPU_CPR9_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR9_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR9_U);
         break;
 #ifndef CONFIG_ARCH_CHIP_TC3XX
       case 10:
-        cpr_l->U = __mfcr(CPU_CPR10_L);
-        cpr_u->U = __mfcr(CPU_CPR10_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR10_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR10_U);
         break;
       case 11:
-        cpr_l->U = __mfcr(CPU_CPR11_L);
-        cpr_u->U = __mfcr(CPU_CPR11_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR11_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR11_U);
         break;
       case 12:
-        cpr_l->U = __mfcr(CPU_CPR12_L);
-        cpr_u->U = __mfcr(CPU_CPR12_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR12_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR12_U);
         break;
       case 13:
-        cpr_l->U = __mfcr(CPU_CPR13_L);
-        cpr_u->U = __mfcr(CPU_CPR13_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR13_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR13_U);
         break;
       case 14:
-        cpr_l->U = __mfcr(CPU_CPR14_L);
-        cpr_u->U = __mfcr(CPU_CPR14_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR14_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR14_U);
         break;
       case 15:
-        cpr_l->U = __mfcr(CPU_CPR15_L);
-        cpr_u->U = __mfcr(CPU_CPR15_U);
+        cpr_l->U = tricore_mfcr(CPU_CPR15_L);
+        cpr_u->U = tricore_mfcr(CPU_CPR15_U);
         break;
 #endif
       default:
@@ -604,69 +604,69 @@ static inline_function void set_cpr_address_value(unsigned int region,
   switch (region)
     {
       case 0:
-        __mtcr(CPU_CPR0_L, cpr_l.U);
-        __mtcr(CPU_CPR0_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR0_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR0_U, cpr_u.U);
         break;
       case 1:
-        __mtcr(CPU_CPR1_L, cpr_l.U);
-        __mtcr(CPU_CPR1_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR1_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR1_U, cpr_u.U);
         break;
       case 2:
-        __mtcr(CPU_CPR2_L, cpr_l.U);
-        __mtcr(CPU_CPR2_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR2_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR2_U, cpr_u.U);
         break;
       case 3:
-        __mtcr(CPU_CPR3_L, cpr_l.U);
-        __mtcr(CPU_CPR3_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR3_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR3_U, cpr_u.U);
         break;
       case 4:
-        __mtcr(CPU_CPR4_L, cpr_l.U);
-        __mtcr(CPU_CPR4_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR4_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR4_U, cpr_u.U);
         break;
       case 5:
-        __mtcr(CPU_CPR5_L, cpr_l.U);
-        __mtcr(CPU_CPR5_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR5_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR5_U, cpr_u.U);
         break;
       case 6:
-        __mtcr(CPU_CPR6_L, cpr_l.U);
-        __mtcr(CPU_CPR6_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR6_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR6_U, cpr_u.U);
         break;
       case 7:
-        __mtcr(CPU_CPR7_L, cpr_l.U);
-        __mtcr(CPU_CPR7_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR7_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR7_U, cpr_u.U);
         break;
       case 8:
-        __mtcr(CPU_CPR8_L, cpr_l.U);
-        __mtcr(CPU_CPR8_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR8_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR8_U, cpr_u.U);
         break;
       case 9:
-        __mtcr(CPU_CPR9_L, cpr_l.U);
-        __mtcr(CPU_CPR9_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR9_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR9_U, cpr_u.U);
         break;
 #ifndef CONFIG_ARCH_CHIP_TC3XX
       case 10:
-        __mtcr(CPU_CPR10_L, cpr_l.U);
-        __mtcr(CPU_CPR10_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR10_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR10_U, cpr_u.U);
         break;
       case 11:
-        __mtcr(CPU_CPR11_L, cpr_l.U);
-        __mtcr(CPU_CPR11_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR11_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR11_U, cpr_u.U);
         break;
       case 12:
-        __mtcr(CPU_CPR12_L, cpr_l.U);
-        __mtcr(CPU_CPR12_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR12_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR12_U, cpr_u.U);
         break;
       case 13:
-        __mtcr(CPU_CPR13_L, cpr_l.U);
-        __mtcr(CPU_CPR13_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR13_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR13_U, cpr_u.U);
         break;
       case 14:
-        __mtcr(CPU_CPR14_L, cpr_l.U);
-        __mtcr(CPU_CPR14_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR14_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR14_U, cpr_u.U);
         break;
       case 15:
-        __mtcr(CPU_CPR15_L, cpr_l.U);
-        __mtcr(CPU_CPR15_U, cpr_u.U);
+        tricore_mtcr(CPU_CPR15_L, cpr_l.U);
+        tricore_mtcr(CPU_CPR15_U, cpr_u.U);
         break;
 #endif
     }
@@ -980,9 +980,9 @@ void mpu_control(bool enable)
 {
   Ifx_CPU_SYSCON corecon_value;
 
-  corecon_value.U = __mfcr(CPU_SYSCON);
+  corecon_value.U = tricore_mfcr(CPU_SYSCON);
   corecon_value.B.PROTEN = enable;
-  __mtcr(CPU_SYSCON, corecon_value.U);
+  tricore_mtcr(CPU_SYSCON, corecon_value.U);
 
   UP_ISB();
 }
@@ -1183,7 +1183,7 @@ unsigned int mpu_get_active_set(void)
 {
   Ifx_CPU_PSW psw_value;
 
-  psw_value.U = __mfcr(CPU_PSW);
+  psw_value.U = tricore_mfcr(CPU_PSW);
   return (psw_value.B.PRS2 << 2) | psw_value.B.PRS;
 }
 

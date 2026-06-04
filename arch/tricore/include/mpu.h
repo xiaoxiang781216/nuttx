@@ -377,10 +377,10 @@ unsigned int mpu_get_active_set(void);
 static inline void mpu_set_active_set(unsigned int set)
 {
   Ifx_CPU_PSW psw_value;
-  psw_value.U = __mfcr(CPU_PSW);
+  psw_value.U = tricore_mfcr(CPU_PSW);
   psw_value.B.PRS2 = set >> 2;  /* bit[2] */
   psw_value.B.PRS = set & 0x03; /* bit[1:0] */
-  __mtcr(CPU_PSW, psw_value.U);
+  tricore_mtcr(CPU_PSW, psw_value.U);
 
   UP_ISB();
 }

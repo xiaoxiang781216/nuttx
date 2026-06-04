@@ -217,7 +217,7 @@ void tricore_stack_color(void *stackbase, size_t nbytes)
 
       UP_DSB();
 
-      stackbase = tricore_csa2addr(__mfcr(CPU_FCX));
+      stackbase = tricore_csa2addr(tricore_mfcr(CPU_FCX));
 
       stkend = up_getsp();
       if (stkend > (uintptr_t)&sp)

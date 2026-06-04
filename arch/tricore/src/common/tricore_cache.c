@@ -89,7 +89,7 @@ size_t up_get_icache_size(void)
 {
   Ifx_CPU_PCON2 pcon2;
 
-  pcon2.U = __mfcr(CPU_PCON2);
+  pcon2.U = tricore_mfcr(CPU_PCON2);
   return pcon2.B.PCACHE_SZE * 1000;
 }
 
@@ -115,7 +115,7 @@ void up_enable_icache(void)
   Ifx_CPU_PCON0 pcon0;
 
   pcon0.B.PCBYP = 0;
-  __mtcr(CPU_PCON0, pcon0.U);
+  tricore_mtcr(CPU_PCON0, pcon0.U);
 
   UP_ISB();
 }
@@ -140,7 +140,7 @@ void up_disable_icache(void)
 
   pcon0.U       = 0;
   pcon0.B.PCBYP = 1;
-  __mtcr(CPU_PCON0, pcon0.U);
+  tricore_mtcr(CPU_PCON0, pcon0.U);
 
   UP_ISB();
 }
@@ -185,7 +185,7 @@ void up_invalidate_icache_all(void)
 
   pcon1.U       = 0;
   pcon1.B.PCINV = 1;
-  __mtcr(CPU_PCON1, pcon1.U);
+  tricore_mtcr(CPU_PCON1, pcon1.U);
 
   UP_ISB();
 }
@@ -229,7 +229,7 @@ size_t up_get_dcache_size(void)
 {
   Ifx_CPU_DCON2 dcon2;
 
-  dcon2.U = __mfcr(CPU_DCON2);
+  dcon2.U = tricore_mfcr(CPU_DCON2);
   return dcon2.B.DCACHE_SZE * 1000;
 }
 
@@ -256,7 +256,7 @@ void up_enable_dcache(void)
 
   /* Check if the D-Cache is enabled */
 
-  dcon0.U = __mfcr(CPU_DCON0);
+  dcon0.U = tricore_mfcr(CPU_DCON0);
   if (dcon0.B.DCBYP == 0)
     {
       return;
@@ -266,7 +266,7 @@ void up_enable_dcache(void)
 
   dcon0.U       = 0;
   dcon0.B.DCBYP = 0;
-  __mtcr(CPU_DCON0, dcon0.U);
+  tricore_mtcr(CPU_DCON0, dcon0.U);
 
   UP_DSB();
   UP_ISB();
@@ -291,7 +291,7 @@ void up_disable_dcache(void)
   Ifx_CPU_DCON0 dcon0;
 
   dcon0.B.DCBYP = 1;
-  __mtcr(CPU_DCON0, dcon0.U);
+  tricore_mtcr(CPU_DCON0, dcon0.U);
 
   UP_DSB();
   UP_ISB();
@@ -363,7 +363,7 @@ void up_invalidate_dcache_all(void)
 
   dcon1.U       = 0;
   dcon1.B.DCINV = 1;
-  __mtcr(CPU_DCON1, dcon1.U);
+  tricore_mtcr(CPU_DCON1, dcon1.U);
 
   UP_DSB();
   UP_ISB();

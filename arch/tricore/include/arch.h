@@ -37,7 +37,6 @@
 #endif
 
 #include <arch/barriers.h>
-#include <arch/irq.h>
 #ifdef CONFIG_ARCH_JUMP_LABEL
 #  include <arch/jump_label.h>
 #endif
@@ -52,6 +51,20 @@
                                              | (((csa) & 0x0000FFFF) << 6)))
 #define tricore_addr2csa(addr) ((uintptr_t)(((((uintptr_t)(addr)) & 0xF0000000) >> 12) \
                                             | (((uintptr_t)(addr) & 0x003FFFC0) >> 6)))
+
+/* MTCR and MFCR */
+
+#define tricore_mtcr(reg, val)                                         \
+  ({                                                                   \
+    __asm__ volatile ("mtcr %0,%1\n\t"::"i"(reg),"d"(val):"memory");   \
+  })
+
+#define tricore_mfcr(reg)                                              \
+  ({                                                                   \
+    uint32_t __val;                                                    \
+    __asm__ volatile ("mfcr %0,%1": "=d" (__val) :"i"(reg): "memory"); \
+    __val;                                                             \
+  })
 
 /* write/read */
 

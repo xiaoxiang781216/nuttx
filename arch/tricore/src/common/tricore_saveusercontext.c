@@ -56,7 +56,7 @@ int up_saveusercontext(void *saveregs_)
 
   __asm("svlcx");
 
-  pcxi = __mfcr(CPU_PCXI);
+  pcxi = tricore_mfcr(CPU_PCXI);
   regs = tricore_csa2addr(pcxi);
   memcpy(saveregs + TC_CONTEXT_REGS, regs, TC_CONTEXT_SIZE);
   (saveregs + TC_CONTEXT_REGS)[REG_LPCXI] = tricore_addr2csa(saveregs)

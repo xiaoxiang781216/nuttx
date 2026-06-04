@@ -116,12 +116,14 @@
 
 /* Update tls_info when task switchs */
 
-#define tricore_set_tls_info(val)                   \
-  do                                                \
-    {                                               \
-      __mtcr(CPU_PSW, __mfcr(CPU_PSW) | PSW_GW);    \
-      write_sysreg(val, a8);                        \
-      __mtcr(CPU_PSW, __mfcr(CPU_PSW) & (~PSW_GW)); \
+#define tricore_set_tls_info(val)                               \
+  do                                                            \
+    {                                                           \
+      tricore_mtcr(CPU_PSW, tricore_mfcr(CPU_PSW) | PSW_GW);    \
+      UP_ISB();                                                 \
+      write_sysreg(val, a8);                                    \
+      tricore_mtcr(CPU_PSW, tricore_mfcr(CPU_PSW) & (~PSW_GW)); \
+      UP_ISB();                                                 \
     } while (0)
 
 /****************************************************************************

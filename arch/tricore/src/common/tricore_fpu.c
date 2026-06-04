@@ -52,8 +52,9 @@ void tricore_fpuinit(void)
 {
   /* FPU zero-divide trap enable */
 
-  __mtcr(FPU_SYNC_TRAP_REG,
-         __mfcr(FPU_SYNC_TRAP_REG) | (1U << FPU_TRAP_FZE_SHIFT));
+  tricore_mtcr(FPU_SYNC_TRAP_REG, tricore_mfcr(FPU_SYNC_TRAP_REG) |
+                                  (1U << FPU_TRAP_FZE_SHIFT));
+  UP_ISB();
 }
 
 /****************************************************************************

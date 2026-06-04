@@ -62,9 +62,9 @@
 #endif
 
 #define TREVT_SET_CASE(reg, n, val) \
-  case n: __mtcr(CPU_TR##n##_##reg, val); break;
+  case n: tricore_mtcr(CPU_TR##n##_##reg, val); break;
 #define TREVT_GET_CASE(reg, n, val) \
-  case n: val = __mfcr(CPU_TR##n##_##reg); break;
+  case n: val = tricore_mfcr(CPU_TR##n##_##reg); break;
 
 #define TREVT_GET_CFG_REG(n)          TREVT_GET(EVT, n)
 #define TREVT_SET_CFG_REG(n, val)     TREVT_SET(EVT, n, val)
@@ -257,7 +257,7 @@ void tricore_trevt_match(void)
 
   dp = g_trevt_debug.dp;
 
-  evtsrc = ((__mfcr(CPU_DBGSR) >> IFX_CPU_DBGSR_EVTSRC_OFF) &
+  evtsrc = ((tricore_mfcr(CPU_DBGSR) >> IFX_CPU_DBGSR_EVTSRC_OFF) &
             IFX_CPU_DBGSR_EVTSRC_MSK) - TREVT_DEBUG_EVTSRC_BASE;
 
   dp[evtsrc].callback(dp[evtsrc].type, dp[evtsrc].addr,
@@ -278,7 +278,7 @@ int tricore_init_dbgmonitor(void)
 
   dbgtcr.B.DTA = 0;
 
-  if (!(__mfcr(CPU_DBGSR) & 0x1))
+  if (!(tricore_mfcr(CPU_DBGSR) & 0x1))
     {
       CBS_OEC.U = 0xa1;
       CBS_OEC.U = 0x5e;
@@ -297,24 +297,26 @@ int tricore_init_dbgmonitor(void)
 
   /* Set debug configuration register */
 
-  __mtcr(CPU_DBGCFG, dbgcfg.U);
+  tricore_mtcr(CPU_DBGCFG, dbgcfg.U);
 
   /* Set debug action configuration register */
 
-  __mtcr(CPU_DBGACT, dbgact.U);
+  tricore_mtcr(CPU_DBGACT, dbgact.U);
 #endif
 
   /* Set debug trap control register */
 
-  __mtcr(CPU_DBGTCR, dbgtcr.U);
+  tricore_mtcr(CPU_DBGTCR, dbgtcr.U);
 
   /* Set trevt trap handler */
 
-  __mtcr(CPU_DMS, (uintptr_t)tricore_dbgmonitor);
+  tricore_mtcr(CPU_DMS, tricore_dbgmonitor);
 
   /* Set dcx register */
 
-  __mtcr(CPU_DCX, (uintptr_t)g_trevt_debug.dcx);
+  tricore_mtcr(CPU_DCX, g_trevt_debug.dcx);
+
+  UP_ISB();
 
   return OK;
 }

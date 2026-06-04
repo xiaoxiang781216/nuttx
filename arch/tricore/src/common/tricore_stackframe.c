@@ -112,14 +112,14 @@ void *up_stack_frame(struct tcb_s *tcb, size_t frame_size)
       /* Size of csa list to be copyed in idle task */
 
       UP_DSB();
-      csaptr = tricore_csa2addr(__mfcr(CPU_FCX));
+      csaptr = tricore_csa2addr(tricore_mfcr(CPU_FCX));
       nwords = csaptr - src;
 
       /* Reset CPU_FCX and CPU_PCXI */
 
-      __mtcr(CPU_FCX, tricore_addr2csa(dest + nwords));
-      __mtcr(CPU_PCXI,
-             PCXI_UL | tricore_addr2csa(dest + nwords - TC_CONTEXT_REGS));
+      tricore_mtcr(CPU_FCX, tricore_addr2csa(dest + nwords));
+      tricore_mtcr(CPU_PCXI,
+        PCXI_UL | tricore_addr2csa(dest + nwords - TC_CONTEXT_REGS));
       UP_ISB();
     }
   else if (tcb->xcp.regs)

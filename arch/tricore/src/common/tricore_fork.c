@@ -195,7 +195,7 @@ pid_t up_fork(void)
   uintptr_t *csa_addr;
 
   __asm__ volatile ("svlcx" ::: "memory");
-  csa_addr = tricore_csa2addr(__mfcr(CPU_PCXI));
+  csa_addr = tricore_csa2addr(tricore_mfcr(CPU_PCXI));
   memcpy((void *)context.lcsa, csa_addr, TC_CONTEXT_SIZE);
 
   context.pucsa = tricore_csa2addr(csa_addr[TRICORE_CSA_NEXT]);
