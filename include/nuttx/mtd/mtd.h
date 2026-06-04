@@ -82,6 +82,16 @@
                                              *      1=A bad block */
 #define MTDIOC_WRITECOUNT   _MTDIOC(0X000e) /* IN:  Pointer to uint32_t
                                              * OUT: Write count of the block */
+#define MTDIOC_ECCTRAPEN    _MTDIOC(0x000f) /* IN:  Pointer to struct
+                                             *      mtd_ecc_traparea_s describing
+                                             *      the block range on which to
+                                             *      enable or disable ECC traps.
+                                             * OUT: None */
+#define MTDIOC_ECCTRAPDIS   _MTDIOC(0x0010) /* IN:  Pointer to struct
+                                             *      mtd_ecc_traparea_s describing
+                                             *      the block range on which to
+                                             *      enable or disable ECC traps.
+                                             * OUT: None */
 
 /* Macros to hide implementation */
 
@@ -170,6 +180,17 @@ struct mtd_erase_s
 {
   uint32_t startblock;  /* First block to be erased */
   uint32_t nblocks;     /* Number of blocks to be erased */
+};
+
+/* This structure describes a contiguous block range used by
+ * MTDIOC_ECCTRAPEN and MTDIOC_ECCTRAPDIS to enable or disable
+ * hardware ECC traps for the specified region.
+ */
+
+struct mtd_ecc_traparea_s
+{
+  off_t  startblock;      /* First block in the range */
+  size_t nblocks;         /* Number of blocks in the range */
 };
 
 /* This structure store the bad block information of a block */

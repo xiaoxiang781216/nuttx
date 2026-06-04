@@ -461,6 +461,22 @@ static int part_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
         }
         break;
 
+      case MTDIOC_ECCTRAPDIS:
+      case MTDIOC_ECCTRAPEN:
+        {
+          /* Adjust the block range as defined in mtd_ecc_traparea_s
+           * structure to the parent partition offset.
+           */
+
+          FAR struct mtd_ecc_traparea_s *trap =
+            (FAR struct mtd_ecc_traparea_s *)arg;
+
+          trap->startblock = priv->firstblock + trap->startblock;
+
+          ret = priv->parent->ioctl(priv->parent, cmd, arg);
+        }
+        break;
+
       default:
         {
           /* Pass any unhandled ioctl() calls to the underlying driver */
