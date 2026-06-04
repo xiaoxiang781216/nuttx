@@ -210,7 +210,7 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
     {
       ninfo("do IPv4 IP header build!\n");
       ipv4_build_header(IPv4BUF, dev->d_len, IP_PROTO_TCP,
-                        &dev->d_ipaddr, &conn->u.ipv4.raddr,
+                        &conn->u.ipv4.laddr, &conn->u.ipv4.raddr,
                         conn->sconn.s_ttl, conn->sconn.s_tos, NULL);
 
       /* Calculate TCP checksum. */
