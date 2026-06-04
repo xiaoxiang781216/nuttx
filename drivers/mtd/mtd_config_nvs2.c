@@ -1885,6 +1885,23 @@ static int nvs_add_empty_ate(FAR struct nvs_fs *fs, uint64_t addr)
 }
 
 /****************************************************************************
+ * Name: nvs_flash_block_reset
+ ****************************************************************************/
+
+static int nvs_flash_block_reset(FAR struct nvs_fs *fs, uint64_t addr)
+{
+  int rc;
+
+  rc = nvs_flash_block_erase(fs, addr);
+  if (rc)
+    {
+      return rc;
+    }
+
+  return nvs_add_empty_ate(fs, addr);
+}
+
+/****************************************************************************
  * Name: nvs_rebuild_cache
  ****************************************************************************/
 
@@ -2081,15 +2098,9 @@ static int nvs_gc(FAR struct nvs_fs *fs)
   rc = nvs_get_block_cycle(fs, fs->ate_wra, &fs->cycle_cnt);
   if (rc == -ENOENT)
     {
-      rc = nvs_flash_block_erase(fs, fs->ate_wra);
-      if (rc)
-        {
-          return rc;
-        }
-
       /* Block never used */
 
-      rc = nvs_add_empty_ate(fs, fs->ate_wra);
+      rc = nvs_flash_block_reset(fs, fs->ate_wra);
       if (rc)
         {
           return rc;
@@ -2209,13 +2220,7 @@ gc_done:
 
   /* Erase the gc'ed block */
 
-  rc = nvs_flash_block_erase(fs, sec_addr);
-  if (rc)
-    {
-      return rc;
-    }
-
-  return nvs_add_empty_ate(fs, sec_addr);
+  return nvs_flash_block_reset(fs, sec_addr);
 }
 
 /****************************************************************************
@@ -2411,13 +2416,7 @@ static int nvs_init(FAR struct nvs_fs *fs)
 
       if (!nvs_empty_ate_valid(fs, empty_ate))
         {
-          rc = nvs_flash_block_erase(fs, addr);
-          if (rc)
-            {
-              return rc;
-            }
-
-          rc = nvs_add_empty_ate(fs, addr);
+          rc = nvs_flash_block_reset(fs, addr);
           if (rc)
             {
               return rc;
@@ -2511,13 +2510,7 @@ static int nvs_init(FAR struct nvs_fs *fs)
           fwarn("GC Done marker found\n");
           addr = fs->ate_wra & NVS_ADDR_BLOCK_MASK;
           nvs_block_advance(fs, &addr);
-          rc = nvs_flash_block_erase(fs, addr);
-          if (rc)
-            {
-              return rc;
-            }
-
-          rc = nvs_add_empty_ate(fs, addr);
+          rc = nvs_flash_block_reset(fs, addr);
           if (rc)
             {
               return rc;
@@ -2526,13 +2519,7 @@ static int nvs_init(FAR struct nvs_fs *fs)
       else
         {
           fwarn("No GC Done marker found: restarting gc\n");
-          rc = nvs_flash_block_erase(fs, fs->ate_wra);
-          if (rc)
-            {
-              return rc;
-            }
-
-          rc = nvs_add_empty_ate(fs, fs->ate_wra);
+          rc = nvs_flash_block_reset(fs, fs->ate_wra);
           if (rc)
             {
               return rc;
