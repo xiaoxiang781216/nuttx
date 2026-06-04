@@ -77,7 +77,10 @@ void nx_idle_trampoline(void)
 
   /* wait until cpu0 in idle() */
 
-  while (!OSINIT_IDLELOOP());
+  while (!OSINIT_IDLELOOP())
+    {
+      UP_WFE();
+    }
 
   sched_unlock();
 

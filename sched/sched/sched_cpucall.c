@@ -236,6 +236,7 @@ int nxsched_cpu_call_handler(int irq, FAR void *context,
           up_send_cpu_call(1 << cookie->cpu);
 #else
           nxsem_post(&cookie->sem);
+          UP_SEV();
 #endif
         }
     }
@@ -292,11 +293,16 @@ int nxsched_cpu_call(cpu_set_t cpuset, nxsched_cpu_call_t func,
     {
       /* Wait until completion. */
 
-      do
+      for (; ; )
         {
           nxsem_get_value(&c->sem, &semcount);
+          if (semcount == cpucnt)
+            {
+              break;
+            }
+
+          UP_WFE();
         }
-      while (semcount != cpucnt);
 
       /* RMB to ensure c->error is read correctly. */
 

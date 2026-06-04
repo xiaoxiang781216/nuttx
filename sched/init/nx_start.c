@@ -235,6 +235,12 @@ DEFINE_PER_CPU_BSS_BMP(volatile enum nx_initstate_e, g_nx_initstate);
  * Private Functions
  ****************************************************************************/
 
+static inline void set_initstate(uint8_t state)
+{
+  g_nx_initstate = state;
+  UP_SEV();
+}
+
 /****************************************************************************
  * Name: tasklist_table_initialize
  *
@@ -555,7 +561,7 @@ static void tasklist_initialize(void)
 
   /* Task lists are initialized */
 
-  g_nx_initstate = OSINIT_TASKLISTS;
+  set_initstate(OSINIT_TASKLISTS);
   sched_trace_mark("TASKLISTS");
 }
 
@@ -646,7 +652,7 @@ static void memory_initialize(void)
 
   /* The memory manager is available */
 
-  g_nx_initstate = OSINIT_MEMORY;
+  set_initstate(OSINIT_MEMORY);
   sched_trace_mark("MEMORY");
 }
 
@@ -733,7 +739,7 @@ static void hardware_initialize(void)
 
   /* Hardware resources are now available */
 
-  g_nx_initstate = OSINIT_HARDWARE;
+  set_initstate(OSINIT_HARDWARE);
   sched_trace_mark("HARDWARE");
 }
 
@@ -765,7 +771,7 @@ void nx_start(void)
 
   /* Boot up is complete */
 
-  g_nx_initstate = OSINIT_BOOT;
+  set_initstate(OSINIT_BOOT);
   sched_trace_begin();
   sinfo("Entry\n");
 
@@ -821,7 +827,7 @@ void nx_start(void)
 
   /* The OS is fully initialized and we are beginning multi-tasking */
 
-  g_nx_initstate = OSINIT_OSREADY;
+  set_initstate(OSINIT_OSREADY);
   sched_trace_mark("OSREADY");
 
   /* Create initial tasks and bring-up the system */
@@ -830,7 +836,7 @@ void nx_start(void)
 
   /* Enter to idleloop */
 
-  g_nx_initstate = OSINIT_IDLELOOP;
+  set_initstate(OSINIT_IDLELOOP);
   sched_trace_mark("IDLELOOP");
 
   /* Let other threads have access to the memory manager */

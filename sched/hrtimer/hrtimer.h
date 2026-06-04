@@ -606,8 +606,10 @@ static inline_function void hrtimer_wait(FAR hrtimer_t *timer)
             {
               usleep(HRTIMER_CANCEL_SYNC_DELAY_US);
             }
-
-          /* Otherwise, spin-wait is enough. */
+          else
+            {
+              UP_WFE();
+            }
         }
     }
 
@@ -680,6 +682,8 @@ static inline_function void hrtimer_process(uint64_t now)
 
       DEBUGASSERT(HRTIMER_TIME_BEFORE_EQ(expired + delay,
                                          now + HRTIMER_MAX_DELAY));
+
+      UP_SEV();
 
       /* Re-enter critical section to update timer state */
 
