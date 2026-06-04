@@ -1114,6 +1114,20 @@
 #define DIAG_NET_DNS_LATENCY_HIGH        (DIAG_NET_BASE + 13) /* 961030013 */
 #define DIAG_NET_TCP_LATENCY_HIGH        (DIAG_NET_BASE + 14) /* 961030014 */
 
+/* DIAG_NET_DHCP_FAIL (961030001) ErrorCode definitions */
+
+#define DIAG_NET_DHCP_ERR_DISCOVER_SEND   1  /* DISCOVER send failed */
+#define DIAG_NET_DHCP_ERR_DISCOVER_RECV   2  /* DISCOVER recv socket error */
+#define DIAG_NET_DHCP_ERR_NO_OFFER        3  /* No OFFER response (timeout) */
+#define DIAG_NET_DHCP_ERR_REQUEST_SEND    4  /* REQUEST send failed */
+#define DIAG_NET_DHCP_ERR_NAK             5  /* Received NAK (server rejected) */
+#define DIAG_NET_DHCP_ERR_REQUEST_RECV    6  /* REQUEST recv socket error */
+#define DIAG_NET_DHCP_ERR_NO_ACK          7  /* No ACK response (timeout) */
+#define DIAG_NET_DHCP_ERR_IP_CONFLICT     8  /* IP conflict (ACD detected) */
+#define DIAG_NET_DHCP_ERR_INIT_FAIL       9  /* DHCP client init failed */
+#define DIAG_NET_DHCP_ERR_LEASE_LOST      10 /* Lease lost (renew failed) */
+#define DIAG_NET_DHCP_ERR_IPV4LL_FALLBACK 11 /* Fallback to IPv4LL */
+
 /* DIAG_NET_DNS_FAIL (961030002) ErrorCode definitions */
 
 #define DIAG_NET_DNS_ERR_TIMEOUT          1  /* Query timeout (retries exhausted) */
