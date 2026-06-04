@@ -149,7 +149,7 @@ static ssize_t notebuf_add(FAR struct note_driver_s *drv,
 #ifdef CONFIG_DRIVERS_NOTEBUF_NOOVERWRITE
   written += ring_mpmc_enqueue(buf->ring, note, len);
 #else
-  written += ring_mpmc_enqueue_overwrite(buf->ring, note, len);
+  written += ring_mpmc_overwrite(buf->ring, note, len);
 #endif
 
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
