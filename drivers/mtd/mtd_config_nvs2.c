@@ -889,49 +889,6 @@ static int nvs_rd_data(FAR struct nvs_fs *fs,
 }
 
 /****************************************************************************
- * Name: nvs_cmp_key_direct
- *
- * Description:
- *   Compares the keys of two ate entries.
- *   Returns 0 if equal, 1 if not equal, errcode if error.
- *
- ****************************************************************************/
-
-static int nvs_cmp_key_direct(FAR struct nvs_fs *fs,
-                              FAR const struct nvs_ate *ate1, uint64_t addr1,
-                              FAR const struct nvs_ate *ate2, uint64_t addr2)
-{
-  uint8_t key1[NVS_MAX_KEY_LEN];
-  uint8_t key2[NVS_MAX_KEY_LEN];
-  int rc;
-
-  if (ate1->ate_key_len != ate2->ate_key_len)
-    {
-      return 1;
-    }
-
-  rc = nvs_rd_key(fs, ate1, addr1, key1, ate1->ate_key_len);
-  if (rc)
-    {
-      return rc;
-    }
-
-  rc = nvs_rd_key(fs, ate2, addr2, key2, ate2->ate_key_len);
-  if (rc)
-    {
-      return rc;
-    }
-
-  rc = memcmp(key1, key2, ate1->ate_key_len);
-  if (rc)
-    {
-      return 1;
-    }
-
-  return 0;
-}
-
-/****************************************************************************
  * Name: nvs_cmp_key
  * Description:
  *   Compares the key in flash to key.
@@ -2009,69 +1966,6 @@ static int nvs_rebuild_cache(FAR struct nvs_fs *fs)
 #endif /* CONFIG_MTD_CONFIG_CACHE_SIZE */
 
 /****************************************************************************
- * Name: nvs_find_ate
- ****************************************************************************/
-
-static int nvs_find_ate(FAR struct nvs_fs *fs,
-                        FAR const struct nvs_ate *entry, uint64_t entry_addr,
-                        uint64_t start_addr, uint64_t end_addr,
-                        FAR struct nvs_ate *ate, FAR uint64_t *ate_addr)
-{
-  uint32_t prev_block = NVS_INVALID_BLOCK;
-  uint32_t block_count = 1;
-  bool prev_found = false;
-  uint8_t cycle_cnt = 0;
-  uint64_t prev_addr;
-  int rc;
-
-  do
-    {
-      prev_addr = start_addr;
-      rc = nvs_prev_ate(fs, &start_addr, ate);
-      if (rc)
-        {
-          ferr("Walk to previous ate failed, rc=%d\n", rc);
-          return rc;
-        }
-
-      if (nvs_is_different_block(start_addr, prev_addr))
-        {
-          if (++block_count > fs->nblocks)
-            {
-              return -ERANGE;
-            }
-        }
-
-      if (ate->id == entry->id && ate->ate_key_len == entry->ate_key_len)
-        {
-          /* Read the ate cycle only when we change the block or if it is
-           * the first read (prev_block == NVS_INVALID_BLOCK).
-           */
-
-          rc = nvs_get_cycle_on_block_change(fs, prev_addr, prev_block,
-                                             &cycle_cnt);
-          if (rc)
-            {
-              return rc;
-            }
-
-          if (nvs_ate_valid_different_block(fs, ate, cycle_cnt) &&
-              !nvs_cmp_key_direct(fs, ate, prev_addr, entry, entry_addr))
-            {
-              prev_found = true;
-              break;
-            }
-
-          prev_block = prev_addr >> NVS_ADDR_BLOCK_SHIFT;
-        }
-    }
-  while (start_addr != end_addr && start_addr != fs->ate_wra);
-
-  *ate_addr = prev_addr;
-  return prev_found;
-}
-
-/****************************************************************************
  * Name: nvs_find_ate_with_key
  ****************************************************************************/
 
@@ -2134,6 +2028,28 @@ static int nvs_find_ate_with_key(FAR struct nvs_fs *fs,
 
   *ate_addr = prev_addr;
   return prev_found;
+}
+
+/****************************************************************************
+ * Name: nvs_find_ate
+ ****************************************************************************/
+
+static int nvs_find_ate(FAR struct nvs_fs *fs,
+                        FAR const struct nvs_ate *entry, uint64_t entry_addr,
+                        uint64_t start_addr, uint64_t end_addr,
+                        FAR struct nvs_ate *ate, FAR uint64_t *ate_addr)
+{
+  uint8_t key[NVS_MAX_KEY_LEN];
+  int rc;
+
+  rc = nvs_rd_key(fs, entry, entry_addr, key, entry->ate_key_len);
+  if (rc)
+    {
+      return rc;
+    }
+
+  return nvs_find_ate_with_key(fs, key, entry->ate_key_len,
+                               start_addr, end_addr, ate, ate_addr);
 }
 
 /****************************************************************************
