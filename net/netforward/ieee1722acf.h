@@ -139,8 +139,7 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-int ieee1722acf_send(FAR struct net_driver_s *dev,
-                     FAR struct cangw_rule_s *fwdrule,
+int ieee1722acf_send(FAR struct cangw_rule_s *fwdrule,
                      FAR struct iob_s *can_iob);
 
 FAR struct ieee1722acf_stream_s *

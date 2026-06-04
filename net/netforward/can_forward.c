@@ -487,7 +487,26 @@ can_forward_match_bucket(FAR struct net_driver_s *dev,
 
 #ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
           case CGW_TYPE_CAN_ETH1722:
-            ieee1722acf_send(dev, fwdrule, dev->d_iob);
+            {
+              FAR struct iob_s *saved_iob = dev->d_iob;
+              FAR uint8_t *saved_buf = dev->d_buf;
+              int saved_len = dev->d_len;
+              unsigned int blcount;
+
+              dev->d_iob = NULL;
+              dev->d_buf = NULL;
+              dev->d_len = 0;
+
+              netdev_breaklock(dev, &blcount);
+              ieee1722acf_send(fwdrule, saved_iob);
+              netdev_restorelock(dev, blcount);
+
+              netdev_iob_release(dev);
+              dev->d_iob = saved_iob;
+              dev->d_buf = saved_buf;
+              dev->d_len = saved_len;
+            }
+
 #ifdef CONFIG_NET_STATISTICS
             g_netstats.cangw.recv++;
 #endif

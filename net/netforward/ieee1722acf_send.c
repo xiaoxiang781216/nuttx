@@ -102,25 +102,23 @@ ieee1722acf_stream_gettime(FAR struct ieee1722acf_stream_s *acf_stream,
  * Name: ieee1722acf_dev_send
  *
  * Description:
- *   This function is called from ieee1722acf_send when it is
- *   necessary to send the acf packet to the target device.  In this case,
- *   the forwarding operation must be performed asynchronously when the TX
- *   poll is received from the forwarding device.
+ *   Send the current ACF stream packet to the destination device via
+ *   netfwd_forward().  Called from ieee1722acf_stream_flush() and
+ *   ieee1722acf_stream_cycle_work() when the stream packet is ready.
  *
  * Input Parameters:
- *   dev        - The device on which the packet was received.
- *   stream     - The acf stream which contains the packet
- *                and the target forwarding dev.
+ *   stream - The ACF stream which contains the packet to send.
+ *   fwddev - The destination network device.  Caller must hold
+ *            netdev_lock(fwddev).
  *
  * Returned Value:
- *   Zero is returned if the packet was successfully forward;  A negated
+ *   Zero is returned if the packet was successfully forwarded;  A negated
  *   errno value is returned if the packet is not forwardable. In that
  *   latter case, the caller should drop the packet.
  *
  ****************************************************************************/
 
-static int ieee1722acf_dev_send(FAR struct net_driver_s *dev,
-                                FAR struct ieee1722acf_stream_s *stream,
+static int ieee1722acf_dev_send(FAR struct ieee1722acf_stream_s *stream,
                                 FAR struct net_driver_s *fwddev)
 {
   FAR struct forward_s *fwd;
@@ -167,9 +165,11 @@ static int ieee1722acf_dev_send(FAR struct net_driver_s *dev,
   stream->iob = NULL;        /* Free acf stream buffer */
   stream->stream_seq++;      /* Increase sequence number */
 
-  /* Then set up to forward the packet according to the protocol. */
+  /* Pass fwddev as both dev and fwd->f_dev so netfwd_forward() takes
+   * the same-device fast path — caller already holds fwddev lock.
+   */
 
-  ret = netfwd_forward(dev, fwd);
+  ret = netfwd_forward(fwddev, fwd);
   if (ret >= 0)
     {
 #ifdef CONFIG_NET_STATISTICS
@@ -461,7 +461,7 @@ static void ieee1722acf_stream_cycle_work(FAR void *arg)
 
       if (ieee1722acf_update_packet_length(stream) > 0)
         {
-          ret = ieee1722acf_dev_send(dev, stream, dev);
+          ret = ieee1722acf_dev_send(stream, dev);
           if (ret < 0)
             {
               nwarn("WARNING: stream send failed: %d\n", ret);
@@ -486,8 +486,7 @@ static void ieee1722acf_stream_cycle_work(FAR void *arg)
  ****************************************************************************/
 
 static inline_function void
-ieee1722acf_stream_flush(FAR struct net_driver_s *dev,
-                         FAR struct ieee1722acf_stream_s *stream,
+ieee1722acf_stream_flush(FAR struct ieee1722acf_stream_s *stream,
                          FAR struct net_driver_s *fwddev)
 {
   unsigned int blcount;
@@ -495,7 +494,7 @@ ieee1722acf_stream_flush(FAR struct net_driver_s *dev,
 
   ieee1722acf_update_packet_length(stream);
 
-  ret = ieee1722acf_dev_send(dev, stream, fwddev);
+  ret = ieee1722acf_dev_send(stream, fwddev);
   if (ret < 0)
     {
       nwarn("WARNING: stream send failed: %d\n", ret);
@@ -706,25 +705,22 @@ int add_1722acf_stream(FAR struct net_driver_s *dev,
  * Name: ieee1722acf_send
  *
  * Description:
- *   This function is called from can_forward when it is necessary to
- *   forward a packet from the current device to different device.  In this
- *   case, the forwarding operation must be performed asynchronously when
- *   the TX poll is received from the forwarding device.
+ *   This function is called from can_forward and can_sendmsg when it is
+ *   necessary to forward a CAN frame to an IEEE 1722 ACF stream on a
+ *   different device.
  *
  * Input Parameters:
- *   dev      - The device on which the packet was received.
- *   fwdrule  - The forward target rule.
- *   can_iob  - The packet need to be forward.
+ *   fwdrule - The forward target rule.
+ *   can_iob - The IOB containing the CAN frame to forward.
  *
  * Returned Value:
- *   Zero is returned if the packet was successfully forward;  A negated
+ *   Zero is returned if the packet was successfully forwarded;  A negated
  *   errno value is returned if the packet is not forwardable.  In that
- *   latter case, the caller (can_input()) should drop the packet.
+ *   latter case, the caller should drop the packet.
  *
  ****************************************************************************/
 
-int ieee1722acf_send(FAR struct net_driver_s *dev,
-                     FAR struct cangw_rule_s *fwdrule,
+int ieee1722acf_send(FAR struct cangw_rule_s *fwdrule,
                      FAR struct iob_s *can_iob)
 {
 #ifdef CONFIG_NET_CAN_CANFD
@@ -757,7 +753,7 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
               sizeof(struct ieee1722acf_can_hdr_s) +
               fwdrule->dest_dev->d_llhdrlen > CONFIG_NET_IEEE1722_PKTSIZE)
             {
-              ieee1722acf_stream_flush(dev, stream, fwdrule->dest_dev);
+              ieee1722acf_stream_flush(stream, fwdrule->dest_dev);
               if (stream->iob != NULL)
                 {
                   nerr("ERROR: Stream packet flush failed!\n");
@@ -938,7 +934,7 @@ int ieee1722acf_send(FAR struct net_driver_s *dev,
 
           if (stream->msg_cnt <= 0)
             {
-              ieee1722acf_stream_flush(dev, stream, fwdrule->dest_dev);
+              ieee1722acf_stream_flush(stream, fwdrule->dest_dev);
             }
 
           break;

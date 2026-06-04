@@ -348,7 +348,7 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
           canaddr->can_addr.eth1722acf.acf_msg_type;
       fwdrule.gw.cegw.can_bus_id = canaddr->can_addr.eth1722acf.can_bus_id;
 
-      ret = ieee1722acf_send(dev, &fwdrule, wb_iob);
+      ret = ieee1722acf_send(&fwdrule, wb_iob);
       iob_free_chain(wb_iob);
       if (ret < 0)
         {
