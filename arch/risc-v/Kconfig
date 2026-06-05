@@ -760,6 +760,21 @@ config ARCH_RISCV_MPU_NREGIONS
 		Most existing RISC-V targets implement 16 entries. Some vendor
 		cores, such as X100T, implement 64 entries shared with PMA.
 
+config ARCH_HAVE_RISCV_PMA
+	bool
+	default n
+	depends on ARCH_USE_MPU
+	---help---
+		Enable vendor-custom PMA (Physical Memory Attributes) configuration.
+		PMA is NOT part of the standard RISC-V ISA; it is a vendor extension
+		(e.g. X100T / MI_CPUX_V100T) that, alongside PMP permissions, controls
+		memory attributes such as cacheable / device / coherent for each
+		physical region. On X100T, PMP and PMA share the same address-range
+		regions.
+
+		PMA uses ARCH_RISCV_MPU_NREGIONS because PMP and PMA share the same
+		region pool on supported backends.
+
 # Option to run NuttX in supervisor mode. This is obviously not usable in
 # flat mode, is questionable in protected mode, but is mandatory in kernel
 # mode.

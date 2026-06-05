@@ -287,6 +287,10 @@ void riscv_initial_extctx_state(struct tcb_s *tcb);
 
 /* RISC-V MPU Config ********************************************************/
 
+#ifdef CONFIG_ARCH_HAVE_RISCV_PMA
+int riscv_config_pma_region(uintptr_t region, uintptr_t pma_attr);
+#endif
+
 unsigned int riscv_mpu_allocregion(void);
 void riscv_mpu_freeregion(unsigned int region);
 unsigned int riscv_mpu_usedregion(void);

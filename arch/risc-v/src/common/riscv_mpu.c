@@ -1143,8 +1143,12 @@ int riscv_mpu_modify_region(uintptr_t region, uintptr_t base, uintptr_t size,
   __asm volatile("sfence.vma x0, x0" : : : "memory");
 #endif
 
+#ifdef CONFIG_ARCH_HAVE_RISCV_PMA
+  return riscv_config_pma_region(region, pma_attr);
+#else
   UNUSED(pma_attr);
   return OK;
+#endif
 }
 
 /****************************************************************************
