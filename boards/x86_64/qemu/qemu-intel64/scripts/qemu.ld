@@ -20,6 +20,8 @@
  *
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 OUTPUT_ARCH(i386:x86-64)
 ENTRY(__pmode_entry)
 SECTIONS
@@ -115,6 +117,18 @@ SECTIONS
         *(.gcc_except_table)
         *(.gnu.linkonce.r.*)
         *(.note.gnu.*)
+#ifdef CONFIG_COVERAGE_MINI
+        . = ALIGN(8);
+        __start__llvm_prf_names = .;
+        KEEP (*(__llvm_prf_names));
+        . = ALIGN(8);
+        __end__llvm_prf_names = .;
+        . = ALIGN(8);
+        __start__llvm_prf_data = .;
+        KEEP(*(__llvm_prf_data));
+        . = ALIGN(8);
+        __end__llvm_prf_data = .;
+#endif
         _erodata = ABSOLUTE(.);
     }
 
@@ -142,6 +156,13 @@ SECTIONS
         *(.ldata .ldata.*)
         *(.gnu.linkonce.d.*)
         CONSTRUCTORS
+#ifdef CONFIG_COVERAGE_MINI
+        . = ALIGN(8);
+        __start__llvm_prf_cnts = .;
+        KEEP(*(__llvm_prf_cnts));
+        . = ALIGN(8);
+        __end__llvm_prf_cnts = .;
+#endif
         . = ALIGN(4);
         _edata = ABSOLUTE(.);
     }
@@ -174,4 +195,8 @@ SECTIONS
     .debug_line 0 : { *(.debug_line) }
     .debug_pubnames 0 : { *(.debug_pubnames) }
     .debug_aranges 0 : { *(.debug_aranges) }
+#ifdef CONFIG_COVERAGE_MINI
+    __llvm_covfun 0 : { KEEP(*(__llvm_covfun)) }
+    __llvm_covmap 0 : { KEEP(*(__llvm_covmap)) }
+#endif
 }
