@@ -1200,8 +1200,14 @@
 #  define is_constexpr(x)  (0)
 #  define compiler_assume(x) __assume(x)
 #  define aligned_data(n)
-#  define locate_code(n)
-#  define locate_data(n)
+
+/* MSVC requires a section to be declared with its attributes before
+ * _declspec(allocate) can be place an object into it
+ */
+
+#  define locate_code(n)    __declspec(code_seg(n))
+#  define locate_data(n)    __pragma(section(n, read, write)) \
+                            __declspec(allocate(n))
 #  define begin_packed_struct __pragma(pack(push, 1))
 #  define end_packed_struct __pragma(pack(pop))
 #  define reentrant_function
