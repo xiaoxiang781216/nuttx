@@ -93,11 +93,11 @@
 #  endif
 #endif
 
-/* Return values from riscv_check_pmp_access */
+/* Return values from riscv_check_mpu_access */
 
-#define PMP_ACCESS_OFF      (0)     /* Access for area not set */
-#define PMP_ACCESS_DENIED   (-1)    /* Access set and denied */
-#define PMP_ACCESS_FULL     (1)     /* Access set and allowed */
+#define MPU_ACCESS_OFF      (0)     /* Access for area not set */
+#define MPU_ACCESS_DENIED   (-1)    /* Access set and denied */
+#define MPU_ACCESS_FULL     (1)     /* Access set and allowed */
 
 #ifndef __ASSEMBLY__
 
@@ -151,8 +151,8 @@ static inline void putreg64(uint64_t v, const volatile uintreg_t a)
   __asm__ __volatile__("sd %0, 0(%1)" : : "r" (v), "r" (a));
 }
 
-#define riscv_append_pmp_region(a, b, s) \
-  riscv_config_pmp_region(riscv_next_free_pmp_region(), a, b, s)
+#define riscv_append_mpu_region(a, b, s) \
+  riscv_config_mpu_region(riscv_next_free_mpu_region(), a, b, s)
 
 #endif
 
@@ -288,14 +288,14 @@ static inline void riscv_restorecontext(struct tcb_s *tcb)
 void riscv_initial_extctx_state(struct tcb_s *tcb);
 #endif
 
-/* RISC-V PMP Config ********************************************************/
+/* RISC-V MPU Config ********************************************************/
 
-int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
+int riscv_config_mpu_region(uintptr_t region, uintptr_t attr,
                             uintptr_t base, uintptr_t size);
 
-int riscv_check_pmp_access(uintptr_t attr, uintptr_t base, uintptr_t size);
-int riscv_configured_pmp_regions(void);
-int riscv_next_free_pmp_region(void);
+int riscv_check_mpu_access(uintptr_t attr, uintptr_t base, uintptr_t size);
+int riscv_configured_mpu_regions(void);
+int riscv_next_free_mpu_region(void);
 
 /* Power management *********************************************************/
 

@@ -288,27 +288,27 @@ static void configure_mpu(void)
 
   /* Ensure PMP had not been previously configured by the bootloader */
 
-  DEBUGASSERT(riscv_configured_pmp_regions() == 0);
+  DEBUGASSERT(riscv_configured_mpu_regions() == 0);
 
   /* Region for the userspace read-only data in SPI Flash */
 
-  riscv_config_pmp_region(0, PMPCFG_A_TOR, UDROM_START, 0);
-  riscv_config_pmp_region(1, PMPCFG_A_TOR | R, UDROM_END, 0);
+  riscv_config_mpu_region(0, PMPCFG_A_TOR, UDROM_START, 0);
+  riscv_config_mpu_region(1, PMPCFG_A_TOR | R, UDROM_END, 0);
 
   /* Region for the userspace data.
    * NOTE: User-space heap may extend further than UDRAM_END.
    */
 
-  riscv_config_pmp_region(2, PMPCFG_A_TOR, UDRAM_START, 0);
-  riscv_config_pmp_region(3, PMPCFG_A_TOR | RW, SOC_DRAM_HIGH, 0);
+  riscv_config_mpu_region(2, PMPCFG_A_TOR, UDRAM_START, 0);
+  riscv_config_mpu_region(3, PMPCFG_A_TOR | RW, SOC_DRAM_HIGH, 0);
 
   /* Region for the memory-mapped functions located in internal ROM */
 
-  riscv_config_pmp_region(4, PMPCFG_L | PMPCFG_A_NAPOT | R,
+  riscv_config_mpu_region(4, PMPCFG_L | PMPCFG_A_NAPOT | R,
                           SOC_DROM_MASK_LOW,
                           SOC_DROM_MASK_HIGH - SOC_DROM_MASK_LOW);
 
-  riscv_config_pmp_region(5, PMPCFG_L | PMPCFG_A_TOR | RX,
+  riscv_config_mpu_region(5, PMPCFG_L | PMPCFG_A_TOR | RX,
                           SOC_IROM_MASK_HIGH,
                           0);
 
@@ -316,28 +316,28 @@ static void configure_mpu(void)
    * for the kernel space.
    */
 
-  riscv_config_pmp_region(6, PMPCFG_A_NAPOT | RX,
+  riscv_config_mpu_region(6, PMPCFG_A_NAPOT | RX,
                           VECTORS_START,
                           VECTORS_END - VECTORS_START);
 
   /* Region for the userspace code located in internal SRAM */
 
-  riscv_config_pmp_region(7, PMPCFG_A_TOR, UIRAM_START, 0);
-  riscv_config_pmp_region(8, PMPCFG_A_TOR | RWX, UIRAM_END, 0);
+  riscv_config_mpu_region(7, PMPCFG_A_TOR, UIRAM_START, 0);
+  riscv_config_mpu_region(8, PMPCFG_A_TOR | RWX, UIRAM_END, 0);
 
   /* Region for the userspace code in SPI Flash */
 
-  riscv_config_pmp_region(9, PMPCFG_A_TOR, UIROM_START, 0);
-  riscv_config_pmp_region(10, PMPCFG_A_TOR | RX, UIROM_END, 0);
+  riscv_config_mpu_region(9, PMPCFG_A_TOR, UIROM_START, 0);
+  riscv_config_mpu_region(10, PMPCFG_A_TOR | RX, UIROM_END, 0);
 
   /* Region for peripheral addresses */
 
-  riscv_config_pmp_region(11, PMPCFG_A_TOR, SOC_PERIPHERAL_HIGH, 0);
+  riscv_config_mpu_region(11, PMPCFG_A_TOR, SOC_PERIPHERAL_HIGH, 0);
 
   /* Region for the remainder of the address space */
 
-  riscv_config_pmp_region(12, PMPCFG_L | PMPCFG_A_TOR, UINT32_MAX, 0);
-  riscv_config_pmp_region(13, PMPCFG_L | PMPCFG_A_NA4, UINT32_MAX, 0);
+  riscv_config_mpu_region(12, PMPCFG_L | PMPCFG_A_TOR, UINT32_MAX, 0);
+  riscv_config_mpu_region(13, PMPCFG_L | PMPCFG_A_NA4, UINT32_MAX, 0);
 }
 
 /****************************************************************************

@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/common/riscv_pmp.c
+ * arch/risc-v/src/common/riscv_mpu.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -76,7 +76,7 @@
 
 /* Helper structure for handling a PMP entry */
 
-struct pmp_entry_s
+struct mpu_entry_s
 {
   uintptr_t base;   /* Base address of region */
   uintptr_t end;    /* End address of region */
@@ -85,14 +85,14 @@ struct pmp_entry_s
   uint8_t   rwx;    /* Access rights */
 };
 
-typedef struct pmp_entry_s pmp_entry_t;
+typedef struct mpu_entry_s mpu_entry_t;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pmp_check_region_attrs
+ * Name: mpu_check_region_attrs
  *
  * Description:
  *   Test if the base address and size of region meet alignment requirements.
@@ -107,7 +107,7 @@ typedef struct pmp_entry_s pmp_entry_t;
  *
  ****************************************************************************/
 
-static bool pmp_check_region_attrs(uintptr_t base, uintptr_t size,
+static bool mpu_check_region_attrs(uintptr_t base, uintptr_t size,
                                    uintptr_t type)
 {
   switch (type)
@@ -170,7 +170,7 @@ static bool pmp_check_region_attrs(uintptr_t base, uintptr_t size,
 }
 
 /****************************************************************************
- * Name: pmp_read_region_cfg
+ * Name: mpu_read_region_cfg
  *
  * Description:
  *   Read PMP configuration for region
@@ -179,11 +179,11 @@ static bool pmp_check_region_attrs(uintptr_t base, uintptr_t size,
  *   region - Region number.
  *
  * Returned Value:
- *   Configuration value from pmpcfg+region
+ *   Configuration value from mpucfg+region
  *
  ****************************************************************************/
 
-static uintptr_t pmp_read_region_cfg(uintptr_t region)
+static uintptr_t mpu_read_region_cfg(uintptr_t region)
 {
 #if (PMP_XLEN == 32)
   switch (region)
@@ -277,7 +277,7 @@ static uintptr_t pmp_read_region_cfg(uintptr_t region)
 }
 
 /****************************************************************************
- * Name: pmp_read_addr
+ * Name: mpu_read_addr
  *
  * Description:
  *   Read address for region
@@ -286,11 +286,11 @@ static uintptr_t pmp_read_region_cfg(uintptr_t region)
  *   region - Region number.
  *
  * Returned Value:
- *   Address value from pmpcfg+region
+ *   Address value from mpucfg+region
  *
  ****************************************************************************/
 
-static uintptr_t pmp_read_addr(uintptr_t region)
+static uintptr_t mpu_read_addr(uintptr_t region)
 {
   switch (region)
     {
@@ -496,7 +496,7 @@ static uintptr_t pmp_read_addr(uintptr_t region)
 }
 
 /****************************************************************************
- * Name: pmp_napot_decode
+ * Name: mpu_napot_decode
  *
  * Description:
  *   Decode base and size from NAPOT value
@@ -510,7 +510,7 @@ static uintptr_t pmp_read_addr(uintptr_t region)
  *
  ****************************************************************************/
 
-static uintptr_t pmp_napot_decode(uintptr_t val, uintptr_t * size)
+static uintptr_t mpu_napot_decode(uintptr_t val, uintptr_t * size)
 {
   uintptr_t mask = (uintptr_t)(-1) >> 1;
   uintptr_t pot  = PMP_XLEN + 2;
@@ -532,7 +532,7 @@ static uintptr_t pmp_napot_decode(uintptr_t val, uintptr_t * size)
 }
 
 /****************************************************************************
- * Name: pmp_read
+ * Name: mpu_read
  *
  * Description:
  *   Read PMP region into PMP entry
@@ -546,7 +546,7 @@ static uintptr_t pmp_napot_decode(uintptr_t val, uintptr_t * size)
  *
  ****************************************************************************/
 
-static void pmp_read(uintptr_t region, pmp_entry_t * entry)
+static void mpu_read(uintptr_t region, mpu_entry_t * entry)
 {
   uintptr_t addr = 0;
   uintptr_t size = 0;
@@ -554,8 +554,8 @@ static void pmp_read(uintptr_t region, pmp_entry_t * entry)
   uintptr_t rwx  = 0;
   uintptr_t cfg  = 0;
 
-  addr = pmp_read_addr(region);
-  cfg  = pmp_read_region_cfg(region);
+  addr = mpu_read_addr(region);
+  cfg  = mpu_read_region_cfg(region);
   mode = cfg & PMPCFG_A_MASK;
   rwx  = cfg & PMPCFG_RWX_MASK;
 
@@ -572,7 +572,7 @@ static void pmp_read(uintptr_t region, pmp_entry_t * entry)
         }
       else
         {
-          size = addr - pmp_read_addr(region - 1);
+          size = addr - mpu_read_addr(region - 1);
         }
 
       break;
@@ -583,7 +583,7 @@ static void pmp_read(uintptr_t region, pmp_entry_t * entry)
       break;
 
     case PMPCFG_A_NAPOT:
-      addr = pmp_napot_decode(addr, &size);
+      addr = mpu_napot_decode(addr, &size);
       break;
 
     default:
@@ -602,7 +602,7 @@ static void pmp_read(uintptr_t region, pmp_entry_t * entry)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: riscv_config_pmp_region
+ * Name: riscv_config_mpu_region
  *
  * Description:
  *   This function will set the specific PMP region with the desired cfg.
@@ -620,7 +620,7 @@ static void pmp_read(uintptr_t region, pmp_entry_t * entry)
  *
  ****************************************************************************/
 
-int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
+int riscv_config_mpu_region(uintptr_t region, uintptr_t attr,
                             uintptr_t base, uintptr_t size)
 {
   uintptr_t addr    = 0;
@@ -634,7 +634,7 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
 
   /* Check the region attributes */
 
-  if (pmp_check_region_attrs(base, size, type) == false)
+  if (mpu_check_region_attrs(base, size, type) == false)
     {
       return -EINVAL;
     }
@@ -1085,7 +1085,7 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
 }
 
 /****************************************************************************
- * Name: riscv_check_pmp_access
+ * Name: riscv_check_mpu_access
  *
  * Description:
  *   This function will set the specific PMP region with the desired cfg.
@@ -1104,9 +1104,9 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
  *
  ****************************************************************************/
 
-int riscv_check_pmp_access(uintptr_t attr, uintptr_t base, uintptr_t size)
+int riscv_check_mpu_access(uintptr_t attr, uintptr_t base, uintptr_t size)
 {
-  pmp_entry_t   entry;
+  mpu_entry_t   entry;
   uintptr_t     end;
   uintptr_t     orgsize;
   unsigned int  region;
@@ -1121,7 +1121,7 @@ int riscv_check_pmp_access(uintptr_t attr, uintptr_t base, uintptr_t size)
     {
       /* Find matching configuration first */
 
-      pmp_read(region, &entry);
+      mpu_read(region, &entry);
 
       /* Check if any configuration at all */
 
@@ -1158,7 +1158,7 @@ int riscv_check_pmp_access(uintptr_t attr, uintptr_t base, uintptr_t size)
             {
               /* Found matching region that does not allow access */
 
-              return PMP_ACCESS_DENIED;
+              return MPU_ACCESS_DENIED;
             }
         }
     }
@@ -1167,23 +1167,23 @@ int riscv_check_pmp_access(uintptr_t attr, uintptr_t base, uintptr_t size)
 
   if (size == orgsize)
     {
-      return PMP_ACCESS_OFF;
+      return MPU_ACCESS_OFF;
     }
 
   /* If size is non-positive, the requested range is accessible */
 
   if (size <= 0)
     {
-      return PMP_ACCESS_FULL;
+      return MPU_ACCESS_FULL;
     }
 
   /* The requested range is either fully or partially inaccessible */
 
-  return PMP_ACCESS_DENIED;
+  return MPU_ACCESS_DENIED;
 }
 
 /****************************************************************************
- * Name: riscv_configured_pmp_regions
+ * Name: riscv_configured_mpu_regions
  *
  * Description:
  *   Count amount of configured PMP regions, note: is not atomic
@@ -1195,15 +1195,15 @@ int riscv_check_pmp_access(uintptr_t attr, uintptr_t base, uintptr_t size)
  *
  ****************************************************************************/
 
-int riscv_configured_pmp_regions(void)
+int riscv_configured_mpu_regions(void)
 {
-  pmp_entry_t   entry;
+  mpu_entry_t   entry;
   unsigned int  region;
   int           ret = 0;
 
   for (region = 0; region < PMP_NREGIONS; region++)
     {
-      pmp_read(region, &entry);
+      mpu_read(region, &entry);
 
       if (entry.mode != PMPCFG_A_OFF)
         {
@@ -1215,7 +1215,7 @@ int riscv_configured_pmp_regions(void)
 }
 
 /****************************************************************************
- * Name: riscv_next_free_pmp_region
+ * Name: riscv_next_free_mpu_region
  *
  * Description:
  *   Returns next free PMP region, note: is not atomic
@@ -1227,14 +1227,14 @@ int riscv_configured_pmp_regions(void)
  *
  ****************************************************************************/
 
-int riscv_next_free_pmp_region(void)
+int riscv_next_free_mpu_region(void)
 {
-  pmp_entry_t   entry;
+  mpu_entry_t   entry;
   unsigned int  region;
 
   for (region = 0; region < PMP_NREGIONS; region++)
     {
-      pmp_read(region, &entry);
+      mpu_read(region, &entry);
 
       if (entry.mode == PMPCFG_A_OFF)
         {

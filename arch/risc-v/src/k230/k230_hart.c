@@ -226,6 +226,6 @@ void sbi_late_initialize(void)
 
   /* Open everything for PMP */
 
-  DEBUGASSERT(riscv_append_pmp_region(PMP_NAPOT_RWX, 0, 0) == 0);
+  DEBUGASSERT(riscv_append_mpu_region(PMP_NAPOT_RWX, 0, 0) == 0);
 }
 #endif

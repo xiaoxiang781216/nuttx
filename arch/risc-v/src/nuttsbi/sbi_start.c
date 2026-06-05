@@ -124,7 +124,7 @@ void sbi_start(void)
 #else
   /* Open everything for PMP, may fail if no empty entry left */
 
-  DEBUGASSERT(riscv_append_pmp_region(NAPOT_RWX, 0, 0) == 0);
+  DEBUGASSERT(riscv_append_mpu_region(NAPOT_RWX, 0, 0) == 0);
 #endif
 
   /* Then jump to the S-mode start function */

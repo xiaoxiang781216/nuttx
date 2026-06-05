@@ -105,7 +105,7 @@ CMN_CSRCS += riscv_hostfs.c
 endif
 
 ifeq ($(CONFIG_ARCH_USE_MPU),y)
-CMN_CSRCS += riscv_pmp.c
+CMN_CSRCS += riscv_mpu.c
 endif
 
 ifeq ($(CONFIG_ARCH_USE_MMU),y)

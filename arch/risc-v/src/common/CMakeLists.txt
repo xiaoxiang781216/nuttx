@@ -106,7 +106,7 @@ if(CONFIG_RISCV_SEMIHOSTING_HOSTFS)
 endif()
 
 if(CONFIG_ARCH_USE_MPU)
-  list(APPEND SRCS riscv_pmp.c)
+  list(APPEND SRCS riscv_mpu.c)
 endif()
 
 if(CONFIG_ARCH_USE_MMU)
