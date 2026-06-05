@@ -48,6 +48,8 @@
 #define PMP_XLEN                (64)
 #endif
 
+#define PMP_NREGIONS            CONFIG_ARCH_RISCV_MPU_NREGIONS
+
 #define PMP_CFG_BITS_CNT        (8)
 #define PMP_CFG_FLAG_MASK       ((uintptr_t)0xFF)
 
@@ -198,6 +200,42 @@ static uintptr_t pmp_read_region_cfg(uintptr_t region)
       case 12 ... 15:
         return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG3);
 
+      case 16 ... 19:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG4);
+
+      case 20 ... 23:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG5);
+
+      case 24 ... 27:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG6);
+
+      case 28 ... 31:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG7);
+
+      case 32 ... 35:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG8);
+
+      case 36 ... 39:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG9);
+
+      case 40 ... 43:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG10);
+
+      case 44 ... 47:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG11);
+
+      case 48 ... 51:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG12);
+
+      case 52 ... 55:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG13);
+
+      case 56 ... 59:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG14);
+
+      case 60 ... 63:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG15);
+
       default:
         break;
     }
@@ -209,6 +247,24 @@ static uintptr_t pmp_read_region_cfg(uintptr_t region)
 
       case 8 ... 15:
         return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG2);
+
+      case 16 ... 23:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG4);
+
+      case 24 ... 31:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG6);
+
+      case 32 ... 39:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG8);
+
+      case 40 ... 47:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG10);
+
+      case 48 ... 55:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG12);
+
+      case 56 ... 63:
+        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG14);
 
       default:
         break;
@@ -237,58 +293,202 @@ static uintptr_t pmp_read_region_cfg(uintptr_t region)
 static uintptr_t pmp_read_addr(uintptr_t region)
 {
   switch (region)
-      {
-        case 0:
-          return READ_CSR(CSR_PMPADDR0);
+    {
+      case 0:
+        return READ_CSR(CSR_PMPADDR0);
 
-        case 1:
-          return READ_CSR(CSR_PMPADDR1);
+      case 1:
+        return READ_CSR(CSR_PMPADDR1);
 
-        case 2:
-          return READ_CSR(CSR_PMPADDR2);
+      case 2:
+        return READ_CSR(CSR_PMPADDR2);
 
-        case 3:
-          return READ_CSR(CSR_PMPADDR3);
+      case 3:
+        return READ_CSR(CSR_PMPADDR3);
 
-        case 4:
-          return READ_CSR(CSR_PMPADDR4);
+      case 4:
+        return READ_CSR(CSR_PMPADDR4);
 
-        case 5:
-          return READ_CSR(CSR_PMPADDR5);
+      case 5:
+        return READ_CSR(CSR_PMPADDR5);
 
-        case 6:
-          return READ_CSR(CSR_PMPADDR6);
+      case 6:
+        return READ_CSR(CSR_PMPADDR6);
 
-        case 7:
-          return READ_CSR(CSR_PMPADDR7);
+      case 7:
+        return READ_CSR(CSR_PMPADDR7);
 
-        case 8:
-          return READ_CSR(CSR_PMPADDR8);
+      case 8:
+        return READ_CSR(CSR_PMPADDR8);
 
-        case 9:
-          return READ_CSR(CSR_PMPADDR9);
+      case 9:
+        return READ_CSR(CSR_PMPADDR9);
 
-        case 10:
-          return READ_CSR(CSR_PMPADDR10);
+      case 10:
+        return READ_CSR(CSR_PMPADDR10);
 
-        case 11:
-          return READ_CSR(CSR_PMPADDR11);
+      case 11:
+        return READ_CSR(CSR_PMPADDR11);
 
-        case 12:
-          return READ_CSR(CSR_PMPADDR12);
+      case 12:
+        return READ_CSR(CSR_PMPADDR12);
 
-        case 13:
-          return READ_CSR(CSR_PMPADDR13);
+      case 13:
+        return READ_CSR(CSR_PMPADDR13);
 
-        case 14:
-          return READ_CSR(CSR_PMPADDR14);
+      case 14:
+        return READ_CSR(CSR_PMPADDR14);
 
-        case 15:
-          return READ_CSR(CSR_PMPADDR15);
+      case 15:
+        return READ_CSR(CSR_PMPADDR15);
 
-        default:
-          break;
-      }
+      case 16:
+        return READ_CSR(CSR_PMPADDR16);
+
+      case 17:
+        return READ_CSR(CSR_PMPADDR17);
+
+      case 18:
+        return READ_CSR(CSR_PMPADDR18);
+
+      case 19:
+        return READ_CSR(CSR_PMPADDR19);
+
+      case 20:
+        return READ_CSR(CSR_PMPADDR20);
+
+      case 21:
+        return READ_CSR(CSR_PMPADDR21);
+
+      case 22:
+        return READ_CSR(CSR_PMPADDR22);
+
+      case 23:
+        return READ_CSR(CSR_PMPADDR23);
+
+      case 24:
+        return READ_CSR(CSR_PMPADDR24);
+
+      case 25:
+        return READ_CSR(CSR_PMPADDR25);
+
+      case 26:
+        return READ_CSR(CSR_PMPADDR26);
+
+      case 27:
+        return READ_CSR(CSR_PMPADDR27);
+
+      case 28:
+        return READ_CSR(CSR_PMPADDR28);
+
+      case 29:
+        return READ_CSR(CSR_PMPADDR29);
+
+      case 30:
+        return READ_CSR(CSR_PMPADDR30);
+
+      case 31:
+        return READ_CSR(CSR_PMPADDR31);
+
+      case 32:
+        return READ_CSR(CSR_PMPADDR32);
+
+      case 33:
+        return READ_CSR(CSR_PMPADDR33);
+
+      case 34:
+        return READ_CSR(CSR_PMPADDR34);
+
+      case 35:
+        return READ_CSR(CSR_PMPADDR35);
+
+      case 36:
+        return READ_CSR(CSR_PMPADDR36);
+
+      case 37:
+        return READ_CSR(CSR_PMPADDR37);
+
+      case 38:
+        return READ_CSR(CSR_PMPADDR38);
+
+      case 39:
+        return READ_CSR(CSR_PMPADDR39);
+
+      case 40:
+        return READ_CSR(CSR_PMPADDR40);
+
+      case 41:
+        return READ_CSR(CSR_PMPADDR41);
+
+      case 42:
+        return READ_CSR(CSR_PMPADDR42);
+
+      case 43:
+        return READ_CSR(CSR_PMPADDR43);
+
+      case 44:
+        return READ_CSR(CSR_PMPADDR44);
+
+      case 45:
+        return READ_CSR(CSR_PMPADDR45);
+
+      case 46:
+        return READ_CSR(CSR_PMPADDR46);
+
+      case 47:
+        return READ_CSR(CSR_PMPADDR47);
+
+      case 48:
+        return READ_CSR(CSR_PMPADDR48);
+
+      case 49:
+        return READ_CSR(CSR_PMPADDR49);
+
+      case 50:
+        return READ_CSR(CSR_PMPADDR50);
+
+      case 51:
+        return READ_CSR(CSR_PMPADDR51);
+
+      case 52:
+        return READ_CSR(CSR_PMPADDR52);
+
+      case 53:
+        return READ_CSR(CSR_PMPADDR53);
+
+      case 54:
+        return READ_CSR(CSR_PMPADDR54);
+
+      case 55:
+        return READ_CSR(CSR_PMPADDR55);
+
+      case 56:
+        return READ_CSR(CSR_PMPADDR56);
+
+      case 57:
+        return READ_CSR(CSR_PMPADDR57);
+
+      case 58:
+        return READ_CSR(CSR_PMPADDR58);
+
+      case 59:
+        return READ_CSR(CSR_PMPADDR59);
+
+      case 60:
+        return READ_CSR(CSR_PMPADDR60);
+
+      case 61:
+        return READ_CSR(CSR_PMPADDR61);
+
+      case 62:
+        return READ_CSR(CSR_PMPADDR62);
+
+      case 63:
+        return READ_CSR(CSR_PMPADDR63);
+
+      default:
+        break;
+    }
 
   /* Never executed */
 
@@ -427,6 +627,11 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
   uintptr_t cfg     = 0;
   uintptr_t type    = (attr & PMPCFG_A_MASK);
 
+  if (region >= PMP_NREGIONS)
+    {
+      return -EINVAL;
+    }
+
   /* Check the region attributes */
 
   if (pmp_check_region_attrs(base, size, type) == false)
@@ -510,8 +715,200 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
         WRITE_CSR(CSR_PMPADDR15, addr);
         break;
 
-      default:
+      case 16:
+        WRITE_CSR(CSR_PMPADDR16, addr);
         break;
+
+      case 17:
+        WRITE_CSR(CSR_PMPADDR17, addr);
+        break;
+
+      case 18:
+        WRITE_CSR(CSR_PMPADDR18, addr);
+        break;
+
+      case 19:
+        WRITE_CSR(CSR_PMPADDR19, addr);
+        break;
+
+      case 20:
+        WRITE_CSR(CSR_PMPADDR20, addr);
+        break;
+
+      case 21:
+        WRITE_CSR(CSR_PMPADDR21, addr);
+        break;
+
+      case 22:
+        WRITE_CSR(CSR_PMPADDR22, addr);
+        break;
+
+      case 23:
+        WRITE_CSR(CSR_PMPADDR23, addr);
+        break;
+
+      case 24:
+        WRITE_CSR(CSR_PMPADDR24, addr);
+        break;
+
+      case 25:
+        WRITE_CSR(CSR_PMPADDR25, addr);
+        break;
+
+      case 26:
+        WRITE_CSR(CSR_PMPADDR26, addr);
+        break;
+
+      case 27:
+        WRITE_CSR(CSR_PMPADDR27, addr);
+        break;
+
+      case 28:
+        WRITE_CSR(CSR_PMPADDR28, addr);
+        break;
+
+      case 29:
+        WRITE_CSR(CSR_PMPADDR29, addr);
+        break;
+
+      case 30:
+        WRITE_CSR(CSR_PMPADDR30, addr);
+        break;
+
+      case 31:
+        WRITE_CSR(CSR_PMPADDR31, addr);
+        break;
+
+      case 32:
+        WRITE_CSR(CSR_PMPADDR32, addr);
+        break;
+
+      case 33:
+        WRITE_CSR(CSR_PMPADDR33, addr);
+        break;
+
+      case 34:
+        WRITE_CSR(CSR_PMPADDR34, addr);
+        break;
+
+      case 35:
+        WRITE_CSR(CSR_PMPADDR35, addr);
+        break;
+
+      case 36:
+        WRITE_CSR(CSR_PMPADDR36, addr);
+        break;
+
+      case 37:
+        WRITE_CSR(CSR_PMPADDR37, addr);
+        break;
+
+      case 38:
+        WRITE_CSR(CSR_PMPADDR38, addr);
+        break;
+
+      case 39:
+        WRITE_CSR(CSR_PMPADDR39, addr);
+        break;
+
+      case 40:
+        WRITE_CSR(CSR_PMPADDR40, addr);
+        break;
+
+      case 41:
+        WRITE_CSR(CSR_PMPADDR41, addr);
+        break;
+
+      case 42:
+        WRITE_CSR(CSR_PMPADDR42, addr);
+        break;
+
+      case 43:
+        WRITE_CSR(CSR_PMPADDR43, addr);
+        break;
+
+      case 44:
+        WRITE_CSR(CSR_PMPADDR44, addr);
+        break;
+
+      case 45:
+        WRITE_CSR(CSR_PMPADDR45, addr);
+        break;
+
+      case 46:
+        WRITE_CSR(CSR_PMPADDR46, addr);
+        break;
+
+      case 47:
+        WRITE_CSR(CSR_PMPADDR47, addr);
+        break;
+
+      case 48:
+        WRITE_CSR(CSR_PMPADDR48, addr);
+        break;
+
+      case 49:
+        WRITE_CSR(CSR_PMPADDR49, addr);
+        break;
+
+      case 50:
+        WRITE_CSR(CSR_PMPADDR50, addr);
+        break;
+
+      case 51:
+        WRITE_CSR(CSR_PMPADDR51, addr);
+        break;
+
+      case 52:
+        WRITE_CSR(CSR_PMPADDR52, addr);
+        break;
+
+      case 53:
+        WRITE_CSR(CSR_PMPADDR53, addr);
+        break;
+
+      case 54:
+        WRITE_CSR(CSR_PMPADDR54, addr);
+        break;
+
+      case 55:
+        WRITE_CSR(CSR_PMPADDR55, addr);
+        break;
+
+      case 56:
+        WRITE_CSR(CSR_PMPADDR56, addr);
+        break;
+
+      case 57:
+        WRITE_CSR(CSR_PMPADDR57, addr);
+        break;
+
+      case 58:
+        WRITE_CSR(CSR_PMPADDR58, addr);
+        break;
+
+      case 59:
+        WRITE_CSR(CSR_PMPADDR59, addr);
+        break;
+
+      case 60:
+        WRITE_CSR(CSR_PMPADDR60, addr);
+        break;
+
+      case 61:
+        WRITE_CSR(CSR_PMPADDR61, addr);
+        break;
+
+      case 62:
+        WRITE_CSR(CSR_PMPADDR62, addr);
+        break;
+
+      case 63:
+        WRITE_CSR(CSR_PMPADDR63, addr);
+        break;
+
+      default:
+        return -EINVAL;
     }
 
   /* Set the configuration register value */
@@ -543,8 +940,80 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
         WRITE_CSR(CSR_PMPCFG3, cfg);
         break;
 
-      default:
+      case 16 ... 19:
+        cfg = READ_CSR(CSR_PMPCFG4);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG4, cfg);
         break;
+
+      case 20 ... 23:
+        cfg = READ_CSR(CSR_PMPCFG5);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG5, cfg);
+        break;
+
+      case 24 ... 27:
+        cfg = READ_CSR(CSR_PMPCFG6);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG6, cfg);
+        break;
+
+      case 28 ... 31:
+        cfg = READ_CSR(CSR_PMPCFG7);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG7, cfg);
+        break;
+
+      case 32 ... 35:
+        cfg = READ_CSR(CSR_PMPCFG8);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG8, cfg);
+        break;
+
+      case 36 ... 39:
+        cfg = READ_CSR(CSR_PMPCFG9);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG9, cfg);
+        break;
+
+      case 40 ... 43:
+        cfg = READ_CSR(CSR_PMPCFG10);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG10, cfg);
+        break;
+
+      case 44 ... 47:
+        cfg = READ_CSR(CSR_PMPCFG11);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG11, cfg);
+        break;
+
+      case 48 ... 51:
+        cfg = READ_CSR(CSR_PMPCFG12);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG12, cfg);
+        break;
+
+      case 52 ... 55:
+        cfg = READ_CSR(CSR_PMPCFG13);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG13, cfg);
+        break;
+
+      case 56 ... 59:
+        cfg = READ_CSR(CSR_PMPCFG14);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG14, cfg);
+        break;
+
+      case 60 ... 63:
+        cfg = READ_CSR(CSR_PMPCFG15);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG15, cfg);
+        break;
+
+      default:
+        return -EINVAL;
     }
 #elif (PMP_XLEN == 64)
   switch (region)
@@ -561,13 +1030,48 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
         WRITE_CSR(CSR_PMPCFG2, cfg);
         break;
 
-      default:
+      case 16 ... 23:
+        cfg = READ_CSR(CSR_PMPCFG4);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG4, cfg);
         break;
+
+      case 24 ... 31:
+        cfg = READ_CSR(CSR_PMPCFG6);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG6, cfg);
+        break;
+
+      case 32 ... 39:
+        cfg = READ_CSR(CSR_PMPCFG8);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG8, cfg);
+        break;
+
+      case 40 ... 47:
+        cfg = READ_CSR(CSR_PMPCFG10);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG10, cfg);
+        break;
+
+      case 48 ... 55:
+        cfg = READ_CSR(CSR_PMPCFG12);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG12, cfg);
+        break;
+
+      case 56 ... 63:
+        cfg = READ_CSR(CSR_PMPCFG14);
+        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        WRITE_CSR(CSR_PMPCFG14, cfg);
+        break;
+
+      default:
+        return -EINVAL;
     }
 #else
 #  error "XLEN of risc-v not supported"
 #endif
-
 #ifdef CONFIG_ARCH_USE_S_MODE
   /* Fence is needed when page-based virtual memory is implemented.
    * If page-based virtual memory is not implemented, memory accesses check
@@ -613,7 +1117,7 @@ int riscv_check_pmp_access(uintptr_t attr, uintptr_t base, uintptr_t size)
   end     = base + size;
   orgsize = size;
 
-  for (region = 0; region < 16 && size > 0; region++)
+  for (region = 0; region < PMP_NREGIONS && size > 0; region++)
     {
       /* Find matching configuration first */
 
@@ -697,7 +1201,7 @@ int riscv_configured_pmp_regions(void)
   unsigned int  region;
   int           ret = 0;
 
-  for (region = 0; region < 16; region++)
+  for (region = 0; region < PMP_NREGIONS; region++)
     {
       pmp_read(region, &entry);
 
@@ -728,7 +1232,7 @@ int riscv_next_free_pmp_region(void)
   pmp_entry_t   entry;
   unsigned int  region;
 
-  for (region = 0; region < 16; region++)
+  for (region = 0; region < PMP_NREGIONS; region++)
     {
       pmp_read(region, &entry);
 

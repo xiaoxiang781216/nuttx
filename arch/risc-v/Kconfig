@@ -750,6 +750,16 @@ config RISCV_CACHE_ZICBOP
 
 endif # RISCV_CACHE_ZICBOM
 
+config ARCH_RISCV_MPU_NREGIONS
+	int "Number of MPU regions"
+	depends on ARCH_USE_MPU
+	default 16
+	range 0 64
+	---help---
+		Number of MPU address/protection regions supported by the core.
+		Most existing RISC-V targets implement 16 entries. Some vendor
+		cores, such as X100T, implement 64 entries shared with PMA.
+
 # Option to run NuttX in supervisor mode. This is obviously not usable in
 # flat mode, is questionable in protected mode, but is mandatory in kernel
 # mode.
