@@ -278,7 +278,7 @@ void tricore_svcall(volatile void *trap)
        *   REG_D11 = argv
        */
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifdef CONFIG_LIB_SYSCALL
       case SYS_task_start:
         {
           /* Set up to return to the user-space _start function in
@@ -293,7 +293,13 @@ void tricore_svcall(volatile void *trap)
 
           /* Updata PC */
 
+#  ifdef CONFIG_BUILD_PROTECTED
           plregs[REG_LPC] = (uintptr_t)USERSPACE->task_startup;
+#  else
+          /* In FLAT mode, use nxtask_startup directly */
+
+          plregs[REG_LPC] = (uintptr_t)nxtask_startup;
+#  endif
 
           /* Updata function args */
 
@@ -325,7 +331,7 @@ void tricore_svcall(volatile void *trap)
        *   REG_D11 = arg
        */
 
-#if !defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_DISABLE_PTHREAD)
+#if defined(CONFIG_LIB_SYSCALL) && !defined(CONFIG_DISABLE_PTHREAD)
       case SYS_pthread_start:
         {
           /* Set up to return to the user-space pthread start-up function in

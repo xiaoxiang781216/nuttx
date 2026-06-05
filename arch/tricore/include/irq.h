@@ -120,6 +120,12 @@
 
 #define PSW_PRS_KERNEL_SET  (0)
 #define PSW_PRS_USER_SET    (1)
+
+#ifdef CONFIG_LIB_SYSCALL
+#  define up_addrenv_is_kernel() \
+     ((__mfcr(CPU_PSW) & PSW_MODE_MASK) == PSW_IO_SUPERVISOR)
+#endif
+
 #ifdef CONFIG_ARCH_HAVE_PPRS
   #define PSW_PRS_MASK                           (0)
   #define PSW_PRS_USER                           (0)

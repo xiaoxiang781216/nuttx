@@ -55,8 +55,12 @@ if(CONFIG_LIB_PPCCALL)
   endif()
 endif()
 
-if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
-  list(APPEND SRCS tricore_task_start.c tricore_pthread_start.c)
+if(CONFIG_LIB_SYSCALL)
+  list(APPEND SRCS tricore_task_start.c)
+
+  if(NOT CONFIG_DISABLE_PTHREAD)
+    list(APPEND SRCS tricore_pthread_start.c)
+  endif()
 
   if(NOT CONFIG_DISABLE_SIGNALS)
     list(APPEND SRCS tricore_signal_dispatch.c)
