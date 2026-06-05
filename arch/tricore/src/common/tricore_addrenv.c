@@ -118,6 +118,8 @@ static int addrenv_select_region(unsigned int *heap_region,
     {
       /* Heap include data or just have heap region */
 
+      unsigned int mpu_set = addrenv->mpu_set ?
+                             addrenv->mpu_set : g_app_set;
       conf.base = (uintptr_t)addrenv->data;
       conf.size = addrenv->datasize;
       conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
@@ -128,7 +130,7 @@ static int addrenv_select_region(unsigned int *heap_region,
 
       /* Read and write for data */
 
-      mpu_modify_region(g_app_set, *heap_region,
+      mpu_modify_region(mpu_set, *heap_region,
                         conf.base, conf.size, conf.kflags);
       conf.base = (uintptr_t)addrenv->text;
       conf.size = addrenv->textsize;
@@ -136,7 +138,7 @@ static int addrenv_select_region(unsigned int *heap_region,
 
       /* Read only for text  */
 
-      mpu_modify_region(g_app_set, *text_region,
+      mpu_modify_region(mpu_set, *text_region,
                         conf.base, conf.size, conf.kflags);
       mpu_control(true);
     }
@@ -373,6 +375,9 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
                             &g_addrenv_callee_text_region,
                             &tcb->addrenv_callee->addrenv) < 0)
     {
+      unsigned int mpu_set = addrenv->mpu_set ?
+                             addrenv->mpu_set : g_app_set;
+
       mpu_control(false);
       mpu_modify_region(g_mpu_kset, g_addrenv_callee_heap_region,
                         0, 0, REGION_TYPE_DATA);
@@ -380,9 +385,9 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
       mpu_modify_region(g_mpu_uset, g_addrenv_callee_heap_region,
                         0, 0, REGION_TYPE_DATA);
 #endif
-      mpu_modify_region(g_app_set, g_addrenv_callee_heap_region,
+      mpu_modify_region(mpu_set, g_addrenv_callee_heap_region,
                         0, 0, REGION_TYPE_DATA);
-      mpu_modify_region(g_app_set, g_addrenv_callee_text_region,
+      mpu_modify_region(mpu_set, g_addrenv_callee_text_region,
                         0, 0, REGION_TYPE_DATA);
       mpu_control(true);
     }

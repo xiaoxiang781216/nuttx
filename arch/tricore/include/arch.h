@@ -118,6 +118,12 @@ struct arch_addrenv_s
   size_t    datasize;
   uintptr_t heap;
   size_t    heapsize;
+
+  /* MPU Set bound to this address environment, 0 means inherit
+   * g_app_set (Set 0 is reserved for g_mpu_kset).
+   */
+
+  uint8_t   mpu_set;
 };
 #endif
 
@@ -169,8 +175,10 @@ do \
     if (tcb_ && tcb_->group && tcb_->group->tg_addrenv_own != NULL && \
         tcb_->group->tg_addrenv_own->addrenv.data) \
       { \
+        unsigned int set_ = \
+          tcb_->group->tg_addrenv_own->addrenv.mpu_set; \
         mpu_control(false); \
-        mpu_set_active_set(g_app_set); \
+        mpu_set_active_set(set_ ? set_ : g_app_set); \
         mpu_control(true); \
       } \
     up_irq_restore(_flags); \
