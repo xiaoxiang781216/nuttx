@@ -128,10 +128,10 @@ void k230_userspace(void)
 static void configure_mpu(void)
 {
   int ret;
-  ret = riscv_append_mpu_region(UFLASH_F, UFLASH_START, UFLASH_SIZE);
-  DEBUGASSERT(ret == 0);
-  ret = riscv_append_mpu_region(USRAM_F, USRAM_START, USRAM_SIZE);
-  DEBUGASSERT(ret == 0);
+  ret = riscv_mpu_configure_region(UFLASH_START, UFLASH_SIZE, UFLASH_F, 0);
+  DEBUGASSERT(ret >= 0);
+  ret = riscv_mpu_configure_region(USRAM_START, USRAM_SIZE, USRAM_F, 0);
+  DEBUGASSERT(ret >= 0);
 }
 
 #endif /* CONFIG_BUILD_PROTECTED */

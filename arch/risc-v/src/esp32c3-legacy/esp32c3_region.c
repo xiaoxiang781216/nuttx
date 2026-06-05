@@ -84,16 +84,16 @@ void esp32c3_region_protection(void)
 
   /* 1. Gap at bottom of address space */
 
-  riscv_config_mpu_region(0, PMPCFG_A_TOR, SOC_DEBUG_LOW, 0);
+  riscv_mpu_modify_region(0, SOC_DEBUG_LOW, 0, PMPCFG_A_TOR, 0);
 
   /* 2. Debug region */
 
-  riscv_config_mpu_region(1, PMPCFG_A_TOR | RWX, SOC_DEBUG_HIGH, 0);
+  riscv_mpu_modify_region(1, SOC_DEBUG_HIGH, 0, PMPCFG_A_TOR | RWX, 0);
   static_assert(SOC_DEBUG_LOW < SOC_DEBUG_HIGH, "Invalid CPU debug region");
 
   /* 3. Gap between debug region & DROM (flash cache) */
 
-  riscv_config_mpu_region(2, PMPCFG_A_TOR, SOC_DROM_LOW, 0);
+  riscv_mpu_modify_region(2, SOC_DROM_LOW, 0, PMPCFG_A_TOR, 0);
   static_assert(SOC_DEBUG_HIGH < SOC_DROM_LOW, "Invalid PMP entry order");
 
   /* 4. DROM (flash cache)
@@ -101,13 +101,13 @@ void esp32c3_region_protection(void)
    * Note: To save PMP entries these two are merged into one read-only region
    */
 
-  riscv_config_mpu_region(3, PMPCFG_A_TOR | R, SOC_DRAM_LOW, 0);
+  riscv_mpu_modify_region(3, SOC_DRAM_LOW, 0, PMPCFG_A_TOR | R, 0);
   static_assert(SOC_DROM_LOW < SOC_DROM_HIGH, "Invalid DROM region");
   static_assert(SOC_DROM_HIGH < SOC_DRAM_LOW, "Invalid PMP entry order");
 
   /* 6. DRAM */
 
-  riscv_config_mpu_region(4, PMPCFG_A_TOR | RW, SOC_DRAM_HIGH, 0);
+  riscv_mpu_modify_region(4, SOC_DRAM_HIGH, 0, PMPCFG_A_TOR | RW, 0);
   static_assert(SOC_DRAM_LOW < SOC_DRAM_HIGH, "Invalid DRAM region");
 
   /* 7. Gap between DRAM and Mask DROM
@@ -115,7 +115,7 @@ void esp32c3_region_protection(void)
    * Note: to save PMP entries these two are merged into one read-only region
    */
 
-  riscv_config_mpu_region(5, PMPCFG_A_TOR | R, SOC_DROM_MASK_HIGH, 0);
+  riscv_mpu_modify_region(5, SOC_DROM_MASK_HIGH, 0, PMPCFG_A_TOR | R, 0);
   static_assert(SOC_DRAM_HIGH < SOC_DROM_MASK_LOW,
                 "Invalid PMP entry order");
   static_assert(SOC_DROM_MASK_LOW < SOC_DROM_MASK_HIGH,
@@ -126,7 +126,7 @@ void esp32c3_region_protection(void)
    * Note: to save PMP entries these two are merged into one RX region
    */
 
-  riscv_config_mpu_region(6, PMPCFG_A_TOR | RX, SOC_IROM_MASK_HIGH, 0);
+  riscv_mpu_modify_region(6, SOC_IROM_MASK_HIGH, 0, PMPCFG_A_TOR | RX, 0);
   static_assert(SOC_DROM_MASK_HIGH < SOC_IROM_MASK_LOW,
                 "Invalid PMP entry order");
   static_assert(SOC_IROM_MASK_LOW < SOC_IROM_MASK_HIGH,
@@ -134,13 +134,13 @@ void esp32c3_region_protection(void)
 
   /* 11. Gap between mask IROM & IRAM */
 
-  riscv_config_mpu_region(7, PMPCFG_A_TOR, SOC_IRAM_LOW, 0);
+  riscv_mpu_modify_region(7, SOC_IRAM_LOW, 0, PMPCFG_A_TOR, 0);
   static_assert(SOC_IROM_MASK_HIGH < SOC_IRAM_LOW,
                 "Invalid PMP entry order");
 
   /* 12. IRAM */
 
-  riscv_config_mpu_region(8, PMPCFG_A_TOR | RWX, SOC_IRAM_HIGH, 0);
+  riscv_mpu_modify_region(8, SOC_IRAM_HIGH, 0, PMPCFG_A_TOR | RWX, 0);
   static_assert(SOC_IRAM_LOW < SOC_IRAM_HIGH, "Invalid IRAM region");
 
   /* 13. Gap between IRAM and IROM
@@ -148,36 +148,36 @@ void esp32c3_region_protection(void)
    * Note: to save PMP entries these two are merged into one RX region
    */
 
-  riscv_config_mpu_region(9, PMPCFG_A_TOR | RX, SOC_IROM_HIGH, 0);
+  riscv_mpu_modify_region(9, SOC_IROM_HIGH, 0, PMPCFG_A_TOR | RX, 0);
   static_assert(SOC_IRAM_HIGH < SOC_IROM_LOW, "Invalid PMP entry order");
   static_assert(SOC_IROM_LOW < SOC_IROM_HIGH, "Invalid IROM region");
 
   /* 15. Gap between IROM & RTC slow memory */
 
-  riscv_config_mpu_region(10, PMPCFG_A_TOR, SOC_RTC_RAM_LOW, 0);
+  riscv_mpu_modify_region(10, SOC_RTC_RAM_LOW, 0, PMPCFG_A_TOR, 0);
   static_assert(SOC_IROM_HIGH < SOC_RTC_RAM_LOW, "Invalid PMP entry order");
 
   /* 16. RTC fast memory */
 
-  riscv_config_mpu_region(11, PMPCFG_A_TOR | RWX, SOC_RTC_RAM_HIGH, 0);
+  riscv_mpu_modify_region(11, SOC_RTC_RAM_HIGH, 0, PMPCFG_A_TOR | RWX, 0);
   static_assert(SOC_RTC_RAM_LOW < SOC_RTC_RAM_HIGH,
                 "Invalid RTC IRAM region");
 
   /* 17. Gap between RTC fast memory & peripheral addresses */
 
-  riscv_config_mpu_region(12, PMPCFG_A_TOR, SOC_PERIPHERAL_LOW, 0);
+  riscv_mpu_modify_region(12, SOC_PERIPHERAL_LOW, 0, PMPCFG_A_TOR, 0);
   static_assert(SOC_RTC_RAM_HIGH < SOC_PERIPHERAL_LOW,
                 "Invalid PMP entry order");
 
   /* 18. Peripheral addresses */
 
-  riscv_config_mpu_region(13, PMPCFG_A_TOR | RW, SOC_PERIPHERAL_HIGH, 0);
+  riscv_mpu_modify_region(13, SOC_PERIPHERAL_HIGH, 0, PMPCFG_A_TOR | RW, 0);
   static_assert(SOC_PERIPHERAL_LOW < SOC_PERIPHERAL_HIGH,
                 "Invalid peripheral region");
 
   /* 19. End of address space */
 
-  riscv_config_mpu_region(14, PMPCFG_A_TOR, UINT32_MAX, 0);
-  riscv_config_mpu_region(15, PMPCFG_A_NA4, UINT32_MAX, 0);
+  riscv_mpu_modify_region(14, UINT32_MAX, 0, PMPCFG_A_TOR, 0);
+  riscv_mpu_modify_region(15, UINT32_MAX, 0, PMPCFG_A_NA4, 0);
 }
 #endif

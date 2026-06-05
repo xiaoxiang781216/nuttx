@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include <sys/param.h>
 
@@ -602,16 +603,77 @@ static void mpu_read(uintptr_t region, mpu_entry_t * entry)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: riscv_config_mpu_region
+ * Name: riscv_mpu_allocregion
  *
  * Description:
- *   This function will set the specific PMP region with the desired cfg.
+ *   Allocate the next available PMP/MPU region.
  *
  * Input Parameters:
- *   region - The region index number.
- *   attr - The region configurations.
- *   base - The base address of the region.
- *   size - The memory length of the region.
+ *   None
+ *
+ * Returned Value:
+ *   The index of the allocated region.
+ *
+ ****************************************************************************/
+
+unsigned int riscv_mpu_allocregion(void)
+{
+  unsigned int region;
+
+  for (region = 0; region < PMP_NREGIONS; region++)
+    {
+      if ((mpu_read_region_cfg(region) & PMPCFG_A_MASK) == PMPCFG_A_OFF)
+        {
+          return region;
+        }
+    }
+
+  DEBUGASSERT(false);
+  return 0;
+}
+
+/****************************************************************************
+ * Name: riscv_mpu_usedregion
+ *
+ * Description:
+ *   Get the number of MPU/PMP regions allocated through the MPU API.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   Number of allocated regions.
+ *
+ ****************************************************************************/
+
+unsigned int riscv_mpu_usedregion(void)
+{
+  unsigned int region;
+  unsigned int count = 0;
+
+  for (region = 0; region < PMP_NREGIONS; region++)
+    {
+      if ((mpu_read_region_cfg(region) & PMPCFG_A_MASK) != PMPCFG_A_OFF)
+        {
+          count++;
+        }
+    }
+
+  return count;
+}
+
+/****************************************************************************
+ * Name: riscv_mpu_modify_region
+ *
+ * Description:
+ *   Configure one RISC-V MPU/PMP region.
+ *
+ * Input Parameters:
+ *   region   - The region index number.
+ *   base     - The base address of the region.
+ *   size     - The memory length of the region.
+ *   pmp_attr - PMP permission and address-mode flags (pmpcfg).
+ *   pma_attr - PMA memory attribute byte (ignored without PMA).
  *   For the NAPOT mode, the base address must aligned to the size boundary,
  *   and the size must be power-of-two according to the the PMP spec.
  *
@@ -620,12 +682,12 @@ static void mpu_read(uintptr_t region, mpu_entry_t * entry)
  *
  ****************************************************************************/
 
-int riscv_config_mpu_region(uintptr_t region, uintptr_t attr,
-                            uintptr_t base, uintptr_t size)
+int riscv_mpu_modify_region(uintptr_t region, uintptr_t base, uintptr_t size,
+                            uintptr_t pmp_attr, uintptr_t pma_attr)
 {
   uintptr_t addr    = 0;
   uintptr_t cfg     = 0;
-  uintptr_t type    = (attr & PMPCFG_A_MASK);
+  uintptr_t type    = (pmp_attr & PMPCFG_A_MASK);
 
   if (region >= PMP_NREGIONS)
     {
@@ -918,97 +980,97 @@ int riscv_config_mpu_region(uintptr_t region, uintptr_t attr,
     {
       case 0 ... 3:
         cfg = READ_CSR(CSR_PMPCFG0);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG0, cfg);
         break;
 
       case 4 ... 7:
         cfg = READ_CSR(CSR_PMPCFG1);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG1, cfg);
         break;
 
       case 8 ... 11:
         cfg = READ_CSR(CSR_PMPCFG2);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG2, cfg);
         break;
 
       case 12 ... 15:
         cfg = READ_CSR(CSR_PMPCFG3);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG3, cfg);
         break;
 
       case 16 ... 19:
         cfg = READ_CSR(CSR_PMPCFG4);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG4, cfg);
         break;
 
       case 20 ... 23:
         cfg = READ_CSR(CSR_PMPCFG5);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG5, cfg);
         break;
 
       case 24 ... 27:
         cfg = READ_CSR(CSR_PMPCFG6);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG6, cfg);
         break;
 
       case 28 ... 31:
         cfg = READ_CSR(CSR_PMPCFG7);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG7, cfg);
         break;
 
       case 32 ... 35:
         cfg = READ_CSR(CSR_PMPCFG8);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG8, cfg);
         break;
 
       case 36 ... 39:
         cfg = READ_CSR(CSR_PMPCFG9);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG9, cfg);
         break;
 
       case 40 ... 43:
         cfg = READ_CSR(CSR_PMPCFG10);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG10, cfg);
         break;
 
       case 44 ... 47:
         cfg = READ_CSR(CSR_PMPCFG11);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG11, cfg);
         break;
 
       case 48 ... 51:
         cfg = READ_CSR(CSR_PMPCFG12);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG12, cfg);
         break;
 
       case 52 ... 55:
         cfg = READ_CSR(CSR_PMPCFG13);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG13, cfg);
         break;
 
       case 56 ... 59:
         cfg = READ_CSR(CSR_PMPCFG14);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG14, cfg);
         break;
 
       case 60 ... 63:
         cfg = READ_CSR(CSR_PMPCFG15);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG15, cfg);
         break;
 
@@ -1020,49 +1082,49 @@ int riscv_config_mpu_region(uintptr_t region, uintptr_t attr,
     {
       case 0 ... 7:
         cfg = READ_CSR(CSR_PMPCFG0);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG0, cfg);
         break;
 
       case 8 ... 15:
         cfg = READ_CSR(CSR_PMPCFG2);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG2, cfg);
         break;
 
       case 16 ... 23:
         cfg = READ_CSR(CSR_PMPCFG4);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG4, cfg);
         break;
 
       case 24 ... 31:
         cfg = READ_CSR(CSR_PMPCFG6);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG6, cfg);
         break;
 
       case 32 ... 39:
         cfg = READ_CSR(CSR_PMPCFG8);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG8, cfg);
         break;
 
       case 40 ... 47:
         cfg = READ_CSR(CSR_PMPCFG10);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG10, cfg);
         break;
 
       case 48 ... 55:
         cfg = READ_CSR(CSR_PMPCFG12);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG12, cfg);
         break;
 
       case 56 ... 63:
         cfg = READ_CSR(CSR_PMPCFG14);
-        PMP_MASK_SET_ONE_REGION(region, attr, cfg);
+        PMP_MASK_SET_ONE_REGION(region, pmp_attr, cfg);
         WRITE_CSR(CSR_PMPCFG14, cfg);
         break;
 
@@ -1081,7 +1143,63 @@ int riscv_config_mpu_region(uintptr_t region, uintptr_t attr,
   __asm volatile("sfence.vma x0, x0" : : : "memory");
 #endif
 
+  UNUSED(pma_attr);
   return OK;
+}
+
+/****************************************************************************
+ * Name: riscv_mpu_configure_region
+ *
+ * Description:
+ *   Allocate and configure one RISC-V MPU/PMP region.
+ *
+ * Input Parameters:
+ *   base     - The base address of the shared region.
+ *   size     - The memory length of the shared region.
+ *   pmp_attr - PMP permission and address-mode flags (pmpcfg).
+ *   pma_attr - PMA memory attribute byte (ignored without PMA).
+ *
+ * Returned Value:
+ *   Region index on success; negated errno on failure.
+ *
+ ****************************************************************************/
+
+int riscv_mpu_configure_region(uintptr_t base, uintptr_t size,
+                               uintptr_t pmp_attr, uintptr_t pma_attr)
+{
+  int region;
+  int ret;
+
+  region = riscv_mpu_allocregion();
+
+  ret = riscv_mpu_modify_region(region, base, size, pmp_attr, pma_attr);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  return region;
+}
+
+/****************************************************************************
+ * Name: riscv_mpu_freeregion
+ *
+ * Description:
+ *   Free and disable one PMP/MPU region.
+ *
+ * Input Parameters:
+ *   region - The index of the region to free.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void riscv_mpu_freeregion(unsigned int region)
+{
+  DEBUGASSERT(region < PMP_NREGIONS);
+
+  riscv_mpu_modify_region(region, 0, 0, PMPCFG_A_OFF, 0);
 }
 
 /****************************************************************************

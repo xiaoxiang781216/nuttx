@@ -253,7 +253,7 @@ void sbi_late_initialize(void)
 {
   /* QEMU 6.2 doesn't support 0 size, so we do it explicitly here */
 
-  riscv_append_mpu_region(NAPOT_RW, 0, SIZE_HALF);
-  riscv_append_mpu_region(NAPOT_RWX, SIZE_HALF, SIZE_HALF);
+  riscv_mpu_configure_region(0, SIZE_HALF, NAPOT_RW, 0);
+  riscv_mpu_configure_region(SIZE_HALF, SIZE_HALF, NAPOT_RWX, 0);
 }
 #endif

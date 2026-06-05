@@ -292,52 +292,50 @@ static void configure_mpu(void)
 
   /* Region for the userspace read-only data in SPI Flash */
 
-  riscv_config_mpu_region(0, PMPCFG_A_TOR, UDROM_START, 0);
-  riscv_config_mpu_region(1, PMPCFG_A_TOR | R, UDROM_END, 0);
+  riscv_mpu_modify_region(0, UDROM_START, 0, PMPCFG_A_TOR, 0);
+  riscv_mpu_modify_region(1, UDROM_END, 0, PMPCFG_A_TOR | R, 0);
 
   /* Region for the userspace data.
    * NOTE: User-space heap may extend further than UDRAM_END.
    */
 
-  riscv_config_mpu_region(2, PMPCFG_A_TOR, UDRAM_START, 0);
-  riscv_config_mpu_region(3, PMPCFG_A_TOR | RW, SOC_DRAM_HIGH, 0);
+  riscv_mpu_modify_region(2, UDRAM_START, 0, PMPCFG_A_TOR, 0);
+  riscv_mpu_modify_region(3, SOC_DRAM_HIGH, 0, PMPCFG_A_TOR | RW, 0);
 
   /* Region for the memory-mapped functions located in internal ROM */
 
-  riscv_config_mpu_region(4, PMPCFG_L | PMPCFG_A_NAPOT | R,
-                          SOC_DROM_MASK_LOW,
-                          SOC_DROM_MASK_HIGH - SOC_DROM_MASK_LOW);
+  riscv_mpu_modify_region(4, SOC_DROM_MASK_LOW,
+                          SOC_DROM_MASK_HIGH - SOC_DROM_MASK_LOW,
+                          PMPCFG_L | PMPCFG_A_NAPOT | R, 0);
 
-  riscv_config_mpu_region(5, PMPCFG_L | PMPCFG_A_TOR | RX,
-                          SOC_IROM_MASK_HIGH,
-                          0);
+  riscv_mpu_modify_region(5, SOC_IROM_MASK_HIGH, 0,
+                          PMPCFG_L | PMPCFG_A_TOR | RX, 0);
 
   /* Region for the exception vectors located in internal SRAM area reserved
    * for the kernel space.
    */
 
-  riscv_config_mpu_region(6, PMPCFG_A_NAPOT | RX,
-                          VECTORS_START,
-                          VECTORS_END - VECTORS_START);
+  riscv_mpu_modify_region(6, VECTORS_START, VECTORS_END - VECTORS_START,
+                          PMPCFG_A_NAPOT | RX, 0);
 
   /* Region for the userspace code located in internal SRAM */
 
-  riscv_config_mpu_region(7, PMPCFG_A_TOR, UIRAM_START, 0);
-  riscv_config_mpu_region(8, PMPCFG_A_TOR | RWX, UIRAM_END, 0);
+  riscv_mpu_modify_region(7, UIRAM_START, 0, PMPCFG_A_TOR, 0);
+  riscv_mpu_modify_region(8, UIRAM_END, 0, PMPCFG_A_TOR | RWX, 0);
 
   /* Region for the userspace code in SPI Flash */
 
-  riscv_config_mpu_region(9, PMPCFG_A_TOR, UIROM_START, 0);
-  riscv_config_mpu_region(10, PMPCFG_A_TOR | RX, UIROM_END, 0);
+  riscv_mpu_modify_region(9, UIROM_START, 0, PMPCFG_A_TOR, 0);
+  riscv_mpu_modify_region(10, UIROM_END, 0, PMPCFG_A_TOR | RX, 0);
 
   /* Region for peripheral addresses */
 
-  riscv_config_mpu_region(11, PMPCFG_A_TOR, SOC_PERIPHERAL_HIGH, 0);
+  riscv_mpu_modify_region(11, SOC_PERIPHERAL_HIGH, 0, PMPCFG_A_TOR, 0);
 
   /* Region for the remainder of the address space */
 
-  riscv_config_mpu_region(12, PMPCFG_L | PMPCFG_A_TOR, UINT32_MAX, 0);
-  riscv_config_mpu_region(13, PMPCFG_L | PMPCFG_A_NA4, UINT32_MAX, 0);
+  riscv_mpu_modify_region(12, UINT32_MAX, 0, PMPCFG_L | PMPCFG_A_TOR, 0);
+  riscv_mpu_modify_region(13, UINT32_MAX, 0, PMPCFG_L | PMPCFG_A_NA4, 0);
 }
 
 /****************************************************************************

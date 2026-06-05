@@ -111,17 +111,14 @@ void c906_userspace(void)
    * TODO: more accurate memory size control.
    */
 
-  riscv_config_mpu_region(0, PMPCFG_A_NAPOT,
-                          0,
-                          0x1000);
+  riscv_mpu_modify_region(0, 0, 0x1000, PMPCFG_A_NAPOT, 0);
 
-  riscv_config_mpu_region(1, PMPCFG_A_TOR | PMPCFG_X | PMPCFG_R,
-                          0 + CONFIG_NUTTX_USERSPACE_SIZE,
-                          0);
+  riscv_mpu_modify_region(1, 0 + CONFIG_NUTTX_USERSPACE_SIZE, 0,
+                          PMPCFG_A_TOR | PMPCFG_X | PMPCFG_R, 0);
 
-  riscv_config_mpu_region(2, PMPCFG_A_NAPOT | PMPCFG_W | PMPCFG_R,
-                          CONFIG_NUTTX_USERSPACE_RAM_START,
-                          CONFIG_NUTTX_USERSPACE_RAM_SIZE);
+  riscv_mpu_modify_region(2, CONFIG_NUTTX_USERSPACE_RAM_START,
+                          CONFIG_NUTTX_USERSPACE_RAM_SIZE,
+                          PMPCFG_A_NAPOT | PMPCFG_W | PMPCFG_R, 0);
 }
 
 #endif /* CONFIG_BUILD_PROTECTED */

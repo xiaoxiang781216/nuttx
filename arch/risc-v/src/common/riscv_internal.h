@@ -151,9 +151,6 @@ static inline void putreg64(uint64_t v, const volatile uintreg_t a)
   __asm__ __volatile__("sd %0, 0(%1)" : : "r" (v), "r" (a));
 }
 
-#define riscv_append_mpu_region(a, b, s) \
-  riscv_config_mpu_region(riscv_next_free_mpu_region(), a, b, s)
-
 #endif
 
 /****************************************************************************
@@ -290,9 +287,13 @@ void riscv_initial_extctx_state(struct tcb_s *tcb);
 
 /* RISC-V MPU Config ********************************************************/
 
-int riscv_config_mpu_region(uintptr_t region, uintptr_t attr,
-                            uintptr_t base, uintptr_t size);
-
+unsigned int riscv_mpu_allocregion(void);
+void riscv_mpu_freeregion(unsigned int region);
+unsigned int riscv_mpu_usedregion(void);
+int riscv_mpu_modify_region(uintptr_t region, uintptr_t base, uintptr_t size,
+                            uintptr_t pmp_attr, uintptr_t pma_attr);
+int riscv_mpu_configure_region(uintptr_t base, uintptr_t size,
+                               uintptr_t pmp_attr, uintptr_t pma_attr);
 int riscv_check_mpu_access(uintptr_t attr, uintptr_t base, uintptr_t size);
 int riscv_configured_mpu_regions(void);
 int riscv_next_free_mpu_region(void);
