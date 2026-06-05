@@ -11,6 +11,9 @@ config LIB_BUILTIN
 config LIB_COMPILER_RT
 	bool
 
+config LIB_LIBUNWIND
+	bool
+
 choice
 	prompt "Builtin toolchain support"
 	default BUILTIN_TOOLCHAIN

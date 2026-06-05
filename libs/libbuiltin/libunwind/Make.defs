@@ -1,0 +1,67 @@
+############################################################################
+# libs/libbuiltin/libunwind/Make.defs
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+############################################################################
+
+ifeq ($(CONFIG_LIB_LIBUNWIND),y)
+
+UNWIND_SRCDIR = libunwind/libunwind/src
+UNWIND_INCDIR = libunwind/libunwind/include
+
+CFLAGS += -D_LIBUNWIND_IS_NATIVE_ONLY -DNDEBUG
+CXXFLAGS += -D_LIBUNWIND_IS_NATIVE_ONLY -DNDEBUG
+AFLAGS += -D_LIBUNWIND_IS_NATIVE_ONLY -DNDEBUG
+
+CFLAGS += -Wno-undef -fno-sanitize=all
+CXXFLAGS += -Wno-undef -fno-sanitize=all -fno-exceptions -fno-rtti
+
+# Core engine: unw_* API (unw_init_local, unw_step, unw_get_reg)
+
+CPPSRCS += $(UNWIND_SRCDIR)/libunwind.cpp
+ASRCS += $(UNWIND_SRCDIR)/UnwindRegistersSave.S
+ASRCS += $(UNWIND_SRCDIR)/UnwindRegistersRestore.S
+
+# ARM32 EHABI for both backtrace and exception unwinding
+
+ifeq ($(CONFIG_ARCH_ARM),y)
+CPPSRCS += $(UNWIND_SRCDIR)/Unwind-EHABI.cpp
+endif
+
+# Exclude coverage instrumentation
+
+ifneq ($(CONFIG_COVERAGE_NONE),y)
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+CFLAGS += -fno-profile-instr-generate -fno-coverage-mapping
+CXXFLAGS += -fno-profile-instr-generate -fno-coverage-mapping
+else
+CFLAGS += -fno-profile-arcs -fno-test-coverage
+CXXFLAGS += -fno-profile-arcs -fno-test-coverage
+endif
+endif
+
+DEPPATH += --dep-path libunwind/$(UNWIND_SRCDIR)
+DEPPATH += --dep-path libunwind
+VPATH += :libunwind/$(UNWIND_SRCDIR)
+VPATH += :libunwind
+
+CFLAGS += ${INCDIR_PREFIX}$(CURDIR)/libunwind/libunwind/include
+CFLAGS += ${INCDIR_PREFIX}$(CURDIR)/libunwind/libunwind/src
+CXXFLAGS += ${INCDIR_PREFIX}$(CURDIR)/libunwind/libunwind/include
+CXXFLAGS += ${INCDIR_PREFIX}$(CURDIR)/libunwind/libunwind/src
+
+endif

@@ -52,7 +52,7 @@ NUTTXLIBS += staging$(DELIM)libarch$(LIBEXT)
 
 # Add toolchain library support
 
-ifeq ($(CONFIG_LIB_BUILTIN),y)
+ifneq ($(CONFIG_LIB_BUILTIN)$(CONFIG_LIB_LIBUNWIND),)
 NUTTXLIBS += staging$(DELIM)libbuiltin$(LIBEXT)
 endif
 

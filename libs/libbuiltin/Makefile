@@ -28,6 +28,7 @@ KBINDIR = kbin
 
 include compiler-rt/Make.defs
 include libgcc/Make.defs
+include libunwind/Make.defs
 
 AOBJS = $(addprefix $(BINDIR)$(DELIM), $(ASRCS:.S=$(OBJEXT)))
 COBJS = $(addprefix $(BINDIR)$(DELIM), $(CSRCS:.c=$(OBJEXT)))
@@ -41,15 +42,19 @@ all: $(BIN)
 .PHONY: depend clean distclean context
 
 $(AOBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.S
+	$(Q) mkdir -p $(dir $@)
 	$(call ASSEMBLE, $<, $@)
 
 $(COBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.c
+	$(Q) mkdir -p $(dir $@)
 	$(call COMPILE, $<, $@)
 
 $(CXXOBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.cxx
+	$(Q) mkdir -p $(dir $@)
 	$(call COMPILEXX, $<, $@)
 
 $(CPPOBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.cpp
+	$(Q) mkdir -p $(dir $@)
 	$(call COMPILEXX, $<, $@)
 
 bin:
