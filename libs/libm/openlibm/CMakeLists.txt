@@ -224,9 +224,19 @@ if(CONFIG_LIBM_OPENLIBM)
     list(APPEND CSRCS ${src})
   endforeach()
 
-  file(GLOB_RECURSE ARCH_CSRCS ${OPENLIBM_DIR}/${ARCH}/*.c)
   file(GLOB_RECURSE ARCH_ASRCS ${OPENLIBM_DIR}/${ARCH}/*.S)
+  file(GLOB_RECURSE ARCH_CSRCS ${OPENLIBM_DIR}/${ARCH}/*.c)
   file(GLOB_RECURSE BD_CSRCS ${OPENLIBM_DIR}/bsdsrc/*.c)
+
+  list(APPEND CSRCS ${ARCH_CSRCS})
+
+  set(ASM_NAMES ${ARCH_ASRCS})
+  list(TRANSFORM provided REPLACE "^.*/" "")
+  list(TRANSFORM provided REPLACE "\\..*$" "")
+  list(JOIN ASM_NAMES "|" ASM_NAMES)
+  if(ASM_NAMES)
+    list(FILTER CSRCS EXCLUDE REGEX "/(${ASM_NAMES})\\.c$")
+  endif()
 
   add_compile_options(-Wno-attribute-alias -Wno-shadow -Wno-maybe-uninitialized)
 
