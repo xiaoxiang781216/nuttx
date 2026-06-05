@@ -32,6 +32,7 @@
 
 #include <nuttx/nuttx.h>
 #include <nuttx/drivers/addrenv.h>
+#include <nuttx/virtio/virtio-crypto.h>
 #include <nuttx/virtio/virtio-i2c.h>
 #include <nuttx/pci/pci_ivshmem.h>
 #include <nuttx/rptun/rptun.h>
@@ -110,6 +111,12 @@
 #  define RPTUN_IVSHMEM_PING      0
 #endif
 
+#ifdef CONFIG_DRIVERS_VHOST_CRYPTO
+#  define RPTUN_IVSHMEM_CRYPTO    1
+#else
+#  define RPTUN_IVSHMEM_CRYPTO    0
+#endif
+
 #define RPTUN_IVSHMEM_VIRTIO_NUM  (RPTUN_IVSHMEM_RNG + \
                                    RPTUN_IVSHMEM_RPMSG + \
                                    RPTUN_IVSHMEM_VSOCK + \
@@ -118,6 +125,7 @@
                                    RPTUN_IVSHMEM_SPI + \
                                    RPTUN_IVSHMEM_RPMB + \
                                    RPTUN_IVSHMEM_CAN + \
+                                   RPTUN_IVSHMEM_CRYPTO + \
                                    RPTUN_IVSHMEM_PING)
 
 #define RPTUN_IVSHMEM_RSC_NUM     (RPTUN_IVSHMEM_VIRTIO_NUM + \
@@ -178,6 +186,12 @@ struct aligned_data(8) rptun_ivshmem_rsc_s
   struct fw_rsc_vdev_vring     can_vring1;
   struct fw_rsc_vdev_vring     can_vring2;
   struct vhost_can_config_s    can_config;
+#endif
+#if RPTUN_IVSHMEM_CRYPTO
+  struct fw_rsc_vdev           crypto;
+  struct fw_rsc_vdev_vring     crypto_vring0;
+  struct fw_rsc_vdev_vring     crypto_vring1;
+  struct virtio_crypto_config_s crypto_config;
 #endif
 #if RPTUN_IVSHMEM_PING
 
@@ -296,6 +310,9 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
 #endif
 #if RPTUN_IVSHMEM_CAN
       offsetof(struct rptun_ivshmem_rsc_s, can),
+#endif
+#if RPTUN_IVSHMEM_CRYPTO
+      offsetof(struct rptun_ivshmem_rsc_s, crypto),
 #endif
 #if RPTUN_IVSHMEM_PING
       offsetof(struct rptun_ivshmem_rsc_s, ping),
@@ -566,6 +583,42 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
   .can_config =
     {
       .ifname = "vcan0",
+    },
+#endif
+#if RPTUN_IVSHMEM_CRYPTO
+  .crypto =
+    {
+      .type       = RSC_VDEV,
+      .id         = VIRTIO_ID_CRYPTO,
+      .notifyid   = RSC_NOTIFY_ID_ANY,
+      .dfeatures  = 0,
+      .config_len = sizeof(struct virtio_crypto_config_s),
+      .num_of_vrings = 2,
+      .reserved   =
+        {
+          VIRTIO_DEV_DRIVER, 0
+        },
+    },
+  .crypto_vring0 =
+    {
+      .align     = 8,
+      .num       = 8,
+      .notifyid  = RSC_NOTIFY_ID_ANY,
+      .da        = FW_RSC_U32_ADDR_ANY,
+    },
+  .crypto_vring1 =
+    {
+      .align     = 8,
+      .num       = 8,
+      .notifyid  = RSC_NOTIFY_ID_ANY,
+      .da        = FW_RSC_U32_ADDR_ANY,
+    },
+
+  .crypto_config =
+    {
+      .max_dataqueues     = 1,
+      .max_cipher_key_len = 256,
+      .max_auth_key_len   = 256,
     },
 #endif
 #if RPTUN_IVSHMEM_PING

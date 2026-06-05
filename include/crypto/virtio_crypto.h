@@ -27,8 +27,12 @@
  * Included Files
  ****************************************************************************/
 
+#include <string.h>
+#include <sys/endian.h>
+
 #include <crypto/asn1.h>
 #include <crypto/cryptodev.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/virtio/virtio-crypto.h>
 
 /****************************************************************************
@@ -92,6 +96,65 @@
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
+
+static inline_function void
+virtio_crypto_read_binary(FAR unsigned char **p, FAR unsigned char *mpi,
+                          size_t len)
+{
+  FAR uint32_t *left;
+  FAR uint32_t *right;
+  uint32_t tmp;
+
+  memset(mpi, 0, len);
+  if (len != 0)
+    {
+      memcpy(mpi, *p, len);
+    }
+
+  for (left = (FAR uint32_t *)mpi,
+       right = (FAR uint32_t *)(mpi + len - sizeof(*right));
+       left <= right; left++, right--)
+    {
+      tmp    = betoh32(*left);
+      *left  = betoh32(*right);
+      *right = tmp;
+    }
+
+  *p += len;
+}
+
+static inline_function int
+virtio_crypto_read_mpi(FAR unsigned char **pos, FAR unsigned char *end,
+                       FAR unsigned char *buf, FAR struct crparam *mpi)
+{
+  size_t len;
+  int ret;
+
+  ret = asn1_get_tag(pos, end, &len, ASN1_INTEGER);
+  if (ret != 0)
+    {
+      return ret;
+    }
+
+  /* Strip DER sign-extension: a leading 0x00 is only padding when the
+   * next byte has MSB set.
+   */
+
+  if (len > 1 && **pos == 0 && ((*pos)[1] & 0x80) != 0)
+    {
+      (*pos)++;
+      len--;
+    }
+
+  virtio_crypto_read_binary(pos, buf, len);
+  if (len != 1 || *buf != 0)
+    {
+      mpi->crp_p = (caddr_t)buf;
+      mpi->crp_nbits = len * 8;
+    }
+
+  return ALIGN_UP(len, 4); /* round up to aligned size */
+}
 
 /* RSAPublicKey ::= SEQUENCE {
  *     modulus           INTEGER,  -- n
