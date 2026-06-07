@@ -35,7 +35,7 @@ if(CONFIG_CAN_KVASER)
 endif()
 
 if(CONFIG_CAN_CTUCANFD)
-  list(APPEND SRCS ctucanfd_pci.c)
+  list(APPEND SRCS ctucanfd.c)
 
   # PCI_MAP enables BMP multi-core device-to-CPU assignment
 

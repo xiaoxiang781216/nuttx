@@ -39,7 +39,7 @@ CSRCS += kvaser_pci.c
 endif
 
 ifeq ($(CONFIG_CAN_CTUCANFD),y)
-CSRCS += ctucanfd_pci.c
+CSRCS += ctucanfd.c
 
 # PCI_MAP enables BMP multi-core device-to-CPU assignment
 

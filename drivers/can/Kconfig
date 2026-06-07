@@ -350,11 +350,11 @@ endchoice # "Kvaser PCI CAN device type"
 endif # CAN_KVASER
 
 config CAN_CTUCANFD
-	bool "CTUCANFD PCI CAN card"
+	bool "CTUCANFD CAN FD controller"
 	default n
-	depends on PCI
 	---help---
-		Enable driver support for CTU CAN FD PCI card.
+		Enable driver support for CTU CAN FD controller.
+		Supports both PCI (requires CONFIG_PCI) and SysBus MMIO modes.
 		NOTE: for now works only with QEMU
 
 if CAN_CTUCANFD
@@ -396,7 +396,7 @@ endchoice # "CTU CAN FD PCI CAN device type"
 config CAN_CTUCANFD_PCI_MAP
 	string "PCI device to CPU assignment map"
 	default "{0,0,0,0,0,1,1,1,1}"
-	depends on BMP
+	depends on BMP && PCI
 	---help---
 		Array indexed by PCI device number, value is CPU core index.
 		map[x]=y means PCI device x is owned by cpuY.
