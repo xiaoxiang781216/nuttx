@@ -70,6 +70,14 @@ static void register_devices_from_fdt(void)
 #ifdef CONFIG_PCI
   fdt_pci_ecam_register(fdt);
 #endif
+
+#ifdef CONFIG_IOEXPANDER_PL061
+  fdt_pl061_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+#endif
+
+#ifdef CONFIG_CAN_CTUCANFD
+  fdt_ctucanfd_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+#endif
 }
 
 #endif
@@ -127,7 +135,7 @@ static int rpmsg_port_uart_init(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: imx_bringup
+ * Name: qemu_bringup
  *
  * Description:
  *   Bring up board features
