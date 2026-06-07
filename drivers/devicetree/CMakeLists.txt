@@ -34,6 +34,14 @@ if(CONFIG_DEVICE_TREE)
     list(APPEND SRCS fdt_cfi.c)
   endif()
 
+  if(CONFIG_IOEXPANDER_PL061)
+    list(APPEND SRCS fdt_pl061.c)
+  endif()
+
+  if(CONFIG_CAN_CTUCANFD)
+    list(APPEND SRCS fdt_ctucanfd.c)
+  endif()
+
   target_include_directories(drivers
                              PRIVATE ${NUTTX_DIR}/libs/libc/fdt/dtc/libfdt)
   target_sources(drivers PRIVATE ${SRCS})

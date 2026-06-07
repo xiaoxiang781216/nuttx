@@ -29,6 +29,8 @@
 
 #include <nuttx/config.h>
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
