@@ -56,15 +56,26 @@ config RPMSG_RECURSIVE_LIMIT
 config RPMSG_TRACE
 	bool "rpmsg trace"
 	default n
-	depends on DRIVERS_NOTERAM
+	depends on DRIVERS_NOTE
 	---help---
 		This is for trace and record all message passed through
 		rpmsg channel, including the type,src,dst and recored the ept.
 
+config RPMSG_TRACE_SNAPSHOT
+	bool "Snapshot rpmsg trace into a private note"
+	depends on RPMSG_TRACE && NOTE_SNAPSHOT
+	default n
+	---help---
+		By default rpmsg trace records are emitted through the global
+		sched_note_* path and captured by every registered note driver
+		(e.g. /dev/note/ram).  When enabled, records are instead kept in
+		a dedicated per-CPU notesnap instance at /dev/note/rpmsg sized by
+		RPMSG_TRACE_BUFSIZE.
+
 config RPMSG_TRACE_BUFSIZE
 	int "rpmsg trace buffer size"
 	default 16384
-	depends on RPMSG_TRACE
+	depends on RPMSG_TRACE_SNAPSHOT
 	---help---
 		This macro sets the trace buffer size corresponding to rpmsg.
 		It can be customized and the dafault value is 16384.

@@ -42,8 +42,29 @@
  * Private data
  ****************************************************************************/
 
+/* The two trace sinks share one emit path through the rpmsg_trace_* macros
+ * below.  The system-note sink uses the global sched_note_* path (lockless,
+ * one binary event per call); the private sink uses a per-CPU notesnap
+ * instance guarded by a spinlock and drains binary data in a loop.
+ */
+
+#ifdef CONFIG_RPMSG_TRACE_SNAPSHOT
 static DEFINE_PER_CPU_BSS_BMP(struct note_driver_s *, g_rpmsg_trace_drv);
-#define g_rpmsg_trace_drv this_cpu_var_bmp(g_rpmsg_trace_drv)
+#  define g_rpmsg_trace_drv this_cpu_var_bmp(g_rpmsg_trace_drv)
+#  define rpmsg_trace_printf(...) \
+          note_driver_printf(g_rpmsg_trace_drv, NXTAG_RPMSG, __VA_ARGS__)
+#  define rpmsg_trace_vprintf(fmt, ap) \
+          note_driver_vprintf(g_rpmsg_trace_drv, NXTAG_RPMSG, fmt, &(ap))
+#  define rpmsg_trace_binary(buf, len) \
+          note_driver_binary(g_rpmsg_trace_drv, NXTAG_RPMSG, buf, len)
+#else
+#  define rpmsg_trace_printf(...) \
+          sched_note_printf(NXTAG_RPMSG, 0, __VA_ARGS__)
+#  define rpmsg_trace_vprintf(fmt, ap) \
+          sched_note_vprintf(NXTAG_RPMSG, 0, fmt, ap)
+#  define rpmsg_trace_binary(buf, len) \
+          sched_note_binary(NXTAG_RPMSG, 0, buf, len)
+#endif
 
 static DEFINE_PER_CPU_BMP(spinlock_t, g_rpmsg_trace_lock) = SP_UNLOCKED;
 #define g_rpmsg_trace_lock this_cpu_var_bmp(g_rpmsg_trace_lock)
@@ -83,26 +104,24 @@ void rpmsg_vtrace(FAR const char *name, bool bt, FAR const void *buf,
           FAR void *buffer[CONFIG_RPMSG_TRACE_BACKTRACE];
           char buf[BACKTRACE_BUFFER_SIZE(CONFIG_RPMSG_TRACE_BACKTRACE)];
           struct va_format vaf;
+
           vaf.fmt = format;
           vaf.va = &ap;
 
           backtrace(buffer, CONFIG_RPMSG_TRACE_BACKTRACE);
           backtrace_format(buf, sizeof(buf), buffer,
-                          CONFIG_RPMSG_TRACE_BACKTRACE);
+                           CONFIG_RPMSG_TRACE_BACKTRACE);
           flags = spin_lock_irqsave(&g_rpmsg_trace_lock);
-          note_driver_printf(g_rpmsg_trace_drv, NXTAG_RPMSG,
-                            "%pV, %s", &vaf, buf);
+          rpmsg_trace_printf("%pV, %s", &vaf, buf);
         }
       else
 #endif
         {
           flags = spin_lock_irqsave(&g_rpmsg_trace_lock);
-          note_driver_vprintf(g_rpmsg_trace_drv, NXTAG_RPMSG,
-                              format, &ap);
+          rpmsg_trace_vprintf(format, ap);
         }
 
-      note_driver_binary(g_rpmsg_trace_drv, NXTAG_RPMSG, buf, len);
-
+      rpmsg_trace_binary(buf, len);
       spin_unlock_irqrestore(&g_rpmsg_trace_lock, flags);
     }
 }
@@ -113,6 +132,7 @@ void rpmsg_vtrace(FAR const char *name, bool bt, FAR const void *buf,
 
 int rpmsg_trace_initialize(void)
 {
+#ifdef CONFIG_RPMSG_TRACE_SNAPSHOT
   g_rpmsg_trace_drv = notesnap_initialize("/dev/note/rpmsg",
                                           CONFIG_RPMSG_TRACE_BUFSIZE);
   if (g_rpmsg_trace_drv == NULL)
@@ -120,6 +140,7 @@ int rpmsg_trace_initialize(void)
       rpmsgerr("failed to initialize note driver.\n");
       return -ENOMEM;
     }
+#endif
 
   return 0;
 }
