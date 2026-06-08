@@ -82,7 +82,7 @@ ifeq ($(CONFIG_BUILD_PROTECTED)$(CONFIG_BUILD_KERNEL),y)
     CMN_UASRCS += tricore_signal_handler.c
   endif
 
-  ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
+  ifeq ($(CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS),y)
     CMN_UASRCS += tricore_perf.c
   endif
 endif

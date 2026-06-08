@@ -285,7 +285,8 @@ config PREALLOC_TIMERS
 
 config PERF_OVERFLOW_CORRECTION
 	bool "Compensate perf count overflow"
-	depends on !ARCH_64BIT && SYSTEM_TIME64 && (ALARM_ARCH || TIMER_ARCH || ARCH_PERF_EVENTS)
+	depends on !ARCH_64BIT && SYSTEM_TIME64 && ARCH_PERF_EVENTS
+	depends on BUILD_FLAT || ARCH_HAVE_PERF_EVENTS_USER_ACCESS
 	default y
 	---help---
 		If this option is enabled, then the perf event will be enabled

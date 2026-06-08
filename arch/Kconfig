@@ -682,13 +682,6 @@ config ARCH_HAVE_PERF_EVENTS_USER_ACCESS
 	---help---
 		Select if hardware allows userspace perf counter access.
 
-config ARCH_PERF_EVENTS_USER_ACCESS
-	bool "Enable userspace perf counter access"
-	default !BUILD_FLAT
-	depends on ARCH_HAVE_PERF_EVENTS_USER_ACCESS
-	---help---
-		Enable userspace perf counter access.
-
 config ARCH_SCHED_GETCPU_USER_ACCESS
 	bool "Enable userspace sched_getcpu access"
 	default n

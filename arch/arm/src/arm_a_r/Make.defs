@@ -146,7 +146,7 @@ ifeq ($(CONFIG_MM_PGALLOC),y)
   endif
 endif
 
-ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
+ifeq ($(CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS),y)
   CMN_UCSRCS += arm_perf.c
 endif
 
