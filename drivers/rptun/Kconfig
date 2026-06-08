@@ -96,4 +96,8 @@ config RPTUN_LOADER
 	bool "rptun loader support"
 	default n
 
+config RPTUN_TRACE_DUMP
+	bool "rptun dump remote core's syslog"
+	default n
+
 endif # RPTUN

@@ -1141,7 +1141,7 @@ static int rptun_dev_wait(FAR struct rptun_priv_s *priv, unsigned long phase)
 
 static void rptun_dev_dump(FAR struct rptun_priv_s *priv)
 {
-#ifdef CONFIG_SYSLOG_RPMSG_SERVER
+#if defined(CONFIG_SYSLOG_RPMSG_SERVER) && defined(CONFIG_RPTUN_TRACE_DUMP)
   if (priv->trace_va != NULL)
     {
       _emerg("Dump %s's trace\n", RPTUN_GET_CPUNAME(priv->dev));
