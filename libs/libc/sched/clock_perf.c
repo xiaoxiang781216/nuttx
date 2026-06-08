@@ -81,9 +81,7 @@ clock_t perf_gettime(void)
   return result;
 }
 
-#elif defined(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS) || \
-      defined(CONFIG_ALARM_ARCH) || defined(CONFIG_TIMER_ARCH) || \
-      defined(CONFIG_ARCH_PERF_EVENTS)
+#elif defined(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
 
 /****************************************************************************
  * perf_gettime

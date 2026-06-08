@@ -102,9 +102,20 @@ void perf_setup(void)
 
   wd_start(&g_wdog, g_timeout, perf_update, (wdparm_t)perf);
 }
-#elif !defined(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS) && \
-      !defined(CONFIG_ALARM_ARCH) && !defined(CONFIG_TIMER_ARCH) && \
-      !defined(CONFIG_ARCH_PERF_EVENTS)
+#elif !defined(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
+#  if defined(CONFIG_ALARM_ARCH) || defined (CONFIG_TIMER_ARCH) || \
+      defined(CONFIG_ARCH_PERF_EVENTS)
+
+/****************************************************************************
+ * perf_gettime
+ ****************************************************************************/
+
+clock_t perf_gettime(void)
+{
+  return up_perf_gettime();
+}
+
+#  else
 
 /****************************************************************************
  * perf_gettime
@@ -114,6 +125,7 @@ clock_t noinstrument_function perf_gettime(void)
 {
   return clock_systime_ticks();
 }
+#  endif
 #endif /* CONFIG_ARCH_PERF_EVENTS_USER_ACCESS */
 
 #if defined(CONFIG_ALARM_ARCH) || defined (CONFIG_TIMER_ARCH) || \
