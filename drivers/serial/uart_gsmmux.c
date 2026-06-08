@@ -609,6 +609,10 @@ static ssize_t gsmmux_uart_write(FAR struct gsmmux_s *gsmmux,
           memcpy(txbuf->buffer + txbuf->head, iov[i].iov_base,
                  iov[i].iov_len);
           txbuf->head += iov[i].iov_len;
+          if (txbuf->head >= txbuf->size)
+            {
+              txbuf->head = 0;
+            }
         }
     }
 
