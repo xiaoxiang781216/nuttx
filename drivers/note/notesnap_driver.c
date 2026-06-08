@@ -26,8 +26,12 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <string.h>
 #include <nuttx/atomic.h>
+#include <nuttx/kmalloc.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/note/note_driver.h>
+#include <nuttx/note/notesnap_driver.h>
 #include <nuttx/panic_notifier.h>
 #include <nuttx/ring.h>
 #include <nuttx/sched_note.h>
@@ -155,9 +159,10 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
 }
 
 #ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
-static void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
+static void notesnap_dump_with_stream(FAR struct note_driver_s *drv,
+                                      FAR struct lib_outstream_s *stream)
 {
-  FAR struct notesnap_s *snap = &g_notesnap;
+  FAR struct notesnap_s *snap = (FAR struct notesnap_s *)drv;
   struct note_dump_context_s ctx;
   struct note_max_s note;
   uint32_t index = 0;
@@ -194,12 +199,14 @@ static void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
 static int notesnap_notifier(FAR struct notifier_block *nb,
                              unsigned long action, FAR void *data)
 {
+  FAR struct notesnap_s *snap = container_of(nb, struct notesnap_s, nb);
+
   if (action == PANIC_KERNEL)
     {
       struct lib_syslograwstream_s stream;
 
       lib_syslograwstream_open(&stream);
-      notesnap_dump_with_stream(&stream.common);
+      notesnap_dump_with_stream(&snap->driver, &stream.common);
       lib_syslograwstream_close(&stream);
     }
 
@@ -222,3 +229,107 @@ void notesnap_notify_register(void)
   panic_notifier_chain_register(&g_notesnap.nb);
 }
 #endif
+
+/****************************************************************************
+ * Name: notesnap_initialize
+ *
+ * Description:
+ *   Dynamically create a notesnap instance over a ring buffer allocated
+ *   from the kernel heap.  The instance keeps the most recent raw binary
+ *   notes (dump-only, like the static per-CPU snapshot).
+ *
+ *   The instance is intentionally NOT registered into the global note
+ *   dispatch array: it is a private sink fed directly by its owner via the
+ *   note_driver_*() helpers and dumped from its own ring, so registering it
+ *   would only leak unrelated global trace traffic into this buffer.
+ *
+ * Input Parameters:
+ *   devname: The name of the notesnap device (must not be NULL)
+ *   bufsize: The size in bytes of the circular note buffer
+ *
+ * Returned Value:
+ *   The note driver handle on success; NULL on failure.
+ *
+ ****************************************************************************/
+
+FAR struct note_driver_s *
+notesnap_initialize(FAR const char *devname, size_t bufsize)
+{
+  FAR struct notesnap_s *snap;
+  size_t len;
+
+  if (devname == NULL || bufsize == 0)
+    {
+      return NULL;
+    }
+
+  len = strlen(devname) + 1;
+  snap = kmm_zalloc(sizeof(*snap) + len);
+  if (snap == NULL)
+    {
+      return NULL;
+    }
+
+  spin_lock_init(&snap->lock);
+  memcpy(snap + 1, devname, len);
+  snap->ring = ring_alloc(bufsize, 1);
+  if (snap->ring == NULL)
+    {
+      kmm_free(snap);
+      return NULL;
+    }
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+  snap->driver.name = (FAR const char *)(snap + 1);
+  snap->driver.filter.mode.type_mask =
+    CONFIG_DRIVERS_NOTESNAP_FILTER_DEFAULT_MODE;
+#  ifndef CONFIG_UP
+  snap->driver.filter.mode.cpuset = CONFIG_DRIVERS_NOTESNAP_CPUSET;
+#  endif
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+  snap->driver.filter.level.level = CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL;
+#  endif
+#endif
+
+  snap->driver.ops = &g_notesnap_ops;
+
+#ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
+  snap->nb.notifier_call = notesnap_notifier;
+  panic_notifier_chain_register(&snap->nb);
+#endif
+
+  return &snap->driver;
+}
+
+/****************************************************************************
+ * Name: notesnap_deinitialize
+ *
+ * Description:
+ *   Free a notesnap instance created by notesnap_initialize().
+ *
+ * Input Parameters:
+ *   drv: The note driver handle returned by notesnap_initialize()
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void notesnap_deinitialize(FAR struct note_driver_s *drv)
+{
+  FAR struct notesnap_s *snap;
+
+  if (drv == NULL)
+    {
+      return;
+    }
+
+  snap = container_of(drv, struct notesnap_s, driver);
+
+#ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
+  panic_notifier_chain_unregister(&snap->nb);
+#endif
+
+  ring_free(snap->ring);
+  kmm_free(snap);
+}
