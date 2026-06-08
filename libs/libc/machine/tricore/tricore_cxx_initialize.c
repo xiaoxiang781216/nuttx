@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/tricore/src/common/tricore_cxx_initialize.c
+ * libs/libc/machine/tricore/tricore_cxx_initialize.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

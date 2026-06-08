@@ -99,10 +99,6 @@ ifeq ($(CONFIG_ARCH_ADDRENV),y)
   CMN_CSRCS += tricore_addrenv.c
 endif
 
-ifeq ($(CONFIG_TRICORE_TOOLCHAIN_TASKING),y)
-  CMN_CSRCS += tricore_cxx_initialize.c
-endif
-
 ifeq ($(CONFIG_ARCH_HAVE_DEBUG),y)
   CMN_CSRCS += tricore_hwdebug.c
 endif

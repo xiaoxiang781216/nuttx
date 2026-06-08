@@ -28,4 +28,8 @@ if(CONFIG_ARCH_SETJMP_H)
   list(APPEND SRCS arch_setjmp.c)
 endif()
 
+if(CONFIG_ARCH_TOOLCHAIN_TASKING)
+  list(APPEND SRCS tricore_cxx_initialize.c)
+endif()
+
 target_sources(c PRIVATE ${SRCS})
