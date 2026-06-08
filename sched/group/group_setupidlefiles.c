@@ -63,7 +63,7 @@ int group_setupidlefiles(void)
 {
   int ret = OK;
 #if defined(CONFIG_DEV_CONSOLE) || defined(CONFIG_DEV_NULL)
-  int fd;
+  int fd = -1;
 #endif
 
   sched_trace_begin();
@@ -76,9 +76,14 @@ int group_setupidlefiles(void)
 #if defined(CONFIG_DEV_CONSOLE) || defined(CONFIG_DEV_NULL)
 #  ifdef CONFIG_DEV_CONSOLE
   fd = nx_open("/dev/console", O_RDWR);
-#  else
-  fd = nx_open("/dev/null", O_RDWR);
 #  endif
+#  ifdef CONFIG_DEV_NULL
+  if (fd < 0)
+    {
+      fd = nx_open("/dev/null", O_RDWR);
+    }
+#  endif
+
   if (fd == 0)
     {
       /* Successfully opened stdin (fd == 0) */
