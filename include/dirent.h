@@ -102,16 +102,38 @@
  * Public Type Definitions
  ****************************************************************************/
 
-/* The POSIX specification requires that the caller of readdir_r provide
- * storage "large enough for a dirent with the d_name member and an array
- * of char containing at least {NAME_MAX} plus one elements.
+/**
+ * @struct dirent
+ * @brief Directory entry returned by readdir() and readdir_r().
  *
- * POSIX also requires the field d_ino (type ino_t) that provides the file
- * serial number.  This functionality is not implemented in NuttX.
+ * The POSIX specification requires that the caller of readdir_r provide
+ * storage "large enough for a dirent with the d_name member and an array
+ * of char containing at least {NAME_MAX} plus one elements."
+ *
+ * @note The d_ino member (POSIX file serial number, type ino_t) is now
+ *       provided.  It is placed at the head of the structure so that the
+ *       layout matches the glibc/Linux struct dirent, where d_ino is the
+ *       first member.  Filesystems that do not supply an inode number
+ *       leave d_ino as 0.
+ *
+ * @warning ABI/layout change.  Prepending d_ino shifts the offsets of
+ *          d_type and d_name and grows both struct dirent and the DIR
+ *          object that embeds it, breaking binary compatibility with any
+ *          object built against the previous layout.  Every consumer of
+ *          struct dirent (readdir, readdir_r, scandir, and friends) must
+ *          be fully rebuilt against this header.  Mixing old and new
+ *          objects, including prebuilt libraries and cross-core rpmsgfs
+ *          peers running different builds, produces corrupted d_type and
+ *          d_name reads.
+ *
+ * @var dirent::d_ino  File serial number, 0 if not provided.
+ * @var dirent::d_type Type of file (see DT_* / DTYPE_*).
+ * @var dirent::d_name Null-terminated file name.
  */
 
 struct dirent
 {
+  ino_t    d_ino;                 /* File serial number */
   uint8_t  d_type;                /* Type of file */
   char     d_name[NAME_MAX + 1];  /* File name */
 };

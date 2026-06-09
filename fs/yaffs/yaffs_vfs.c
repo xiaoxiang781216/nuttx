@@ -857,6 +857,7 @@ static int yaffs_vfs_readdir(FAR struct inode *mountpt,
       goto out;
     }
 
+  entry->d_ino = dirent->d_ino;
   entry->d_type = dirent->d_type;
   strlcpy(entry->d_name, dirent->d_name, sizeof(entry->d_name));
 
