@@ -556,8 +556,8 @@ static void note_drivers_initialize(void)
 #  ifdef CONFIG_DRIVERS_NOTESTREAM
 #    ifdef CONFIG_DRIVERS_NOTEBUF
       g_notebufstream.lower = (FAR struct note_driver_s *)&g_notestream;
-      g_notebufstream.ring = (FAR struct ring_s *)&g_notebuf_buffer;
-      ring_init(g_notebufstream.ring, CONFIG_DRIVERS_NOTEBUF_BUFSIZE);
+      g_notebufstream.ring =
+          ring_init(&g_notebuf_buffer, CONFIG_DRIVERS_NOTEBUF_BUFSIZE);
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notebufstream;
 #    else
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notestream;
