@@ -37,7 +37,7 @@
  * Preprocessors
  ****************************************************************************/
 
-#if defined(CONFIG_PERF_OVERFLOW_CORRECTION)
+#ifdef CONFIG_PERF_OVERFLOW_CORRECTION
 
 /****************************************************************************
  * Private Types
@@ -102,60 +102,24 @@ void perf_setup(void)
 
   wd_start(&g_wdog, g_timeout, perf_update, (wdparm_t)perf);
 }
-#elif !defined(CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS)
-#  if defined(CONFIG_ALARM_ARCH) || defined (CONFIG_TIMER_ARCH) || \
-      defined(CONFIG_ARCH_PERF_EVENTS)
+#endif
 
+#if !defined(CONFIG_ALARM_ARCH) && !defined(CONFIG_TIMER_ARCH) && \
+    !defined(CONFIG_ARCH_PERF_EVENTS)
 /****************************************************************************
  * perf_gettime
  ****************************************************************************/
 
-clock_t perf_gettime(void)
-{
-  return up_perf_gettime();
-}
-
-#  else
-
-/****************************************************************************
- * perf_gettime
- ****************************************************************************/
-
-clock_t noinstrument_function perf_gettime(void)
+clock_t up_perf_gettime(void)
 {
   return clock_systime_ticks();
 }
-#  endif
-#endif /* CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS */
-
-#if defined(CONFIG_ALARM_ARCH) || defined (CONFIG_TIMER_ARCH) || \
-    defined(CONFIG_ARCH_PERF_EVENTS)
 
 /****************************************************************************
  * perf_convert
  ****************************************************************************/
 
-void perf_convert(clock_t elapsed, FAR struct timespec *ts)
-{
-  up_perf_convert(elapsed, ts);
-}
-
-/****************************************************************************
- * perf_getfreq
- ****************************************************************************/
-
-unsigned long perf_getfreq(void)
-{
-  return up_perf_getfreq();
-}
-
-#else
-
-/****************************************************************************
- * perf_convert
- ****************************************************************************/
-
-void perf_convert(clock_t elapsed, FAR struct timespec *ts)
+void up_perf_convert(clock_t elapsed, FAR struct timespec *ts)
 {
   clock_ticks2time(ts, elapsed);
 }
@@ -164,7 +128,7 @@ void perf_convert(clock_t elapsed, FAR struct timespec *ts)
  * perf_getfreq
  ****************************************************************************/
 
-unsigned long perf_getfreq(void)
+unsigned long up_perf_getfreq(void)
 {
   return TICK_PER_SEC;
 }

@@ -29,7 +29,7 @@
 #include <nuttx/seqlock.h>
 #include <nuttx/userspace.h>
 
-#if defined(CONFIG_PERF_OVERFLOW_CORRECTION)
+#ifdef CONFIG_PERF_OVERFLOW_CORRECTION
 
 /****************************************************************************
  * Public Data
@@ -81,7 +81,7 @@ clock_t perf_gettime(void)
   return result;
 }
 
-#elif defined(CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS)
+#else
 
 /****************************************************************************
  * perf_gettime
@@ -93,3 +93,21 @@ clock_t perf_gettime(void)
 }
 
 #endif
+
+/****************************************************************************
+ * perf_convert
+ ****************************************************************************/
+
+void perf_convert(clock_t elapsed, FAR struct timespec *ts)
+{
+  up_perf_convert(elapsed, ts);
+}
+
+/****************************************************************************
+ * perf_getfreq
+ ****************************************************************************/
+
+unsigned long perf_getfreq(void)
+{
+  return up_perf_getfreq();
+}
