@@ -33,7 +33,7 @@
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/note/note_driver.h>
-#include <nuttx/note/noteram_driver.h>
+#include <nuttx/note/notesnap_driver.h>
 #include <nuttx/rpmsg/rpmsg.h>
 
 #include "rpmsg_procfs.h"
@@ -119,9 +119,8 @@ void rpmsg_vtrace(FAR const char *name, bool bt, FAR const void *buf,
 
 int rpmsg_trace_initialize(void)
 {
-  g_rpmsg_trace_drv = noteram_initialize("/dev/note/rpmsg",
-                                        CONFIG_RPMSG_TRACE_BUFSIZE,
-                                        true, true);
+  g_rpmsg_trace_drv = notesnap_initialize("/dev/note/rpmsg",
+                                          CONFIG_RPMSG_TRACE_BUFSIZE);
   if (g_rpmsg_trace_drv == NULL)
     {
       rpmsgerr("failed to initialize note driver.\n");
