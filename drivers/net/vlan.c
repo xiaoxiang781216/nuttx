@@ -79,6 +79,11 @@ static int vlan_ioctl(FAR struct netdev_lowerhalf_s *dev, int cmd,
 #ifdef CONFIG_NET_NETPOLL
 static void vlan_txpoll(FAR struct netdev_lowerhalf_s *dev);
 #endif
+#if CONFIG_IOB_EXTRA_HEADS > 0
+static netpkt_t *vlan_alloc(struct netdev_lowerhalf_s *dev, int priority,
+                            uint16_t size, bool throttled,
+                            unsigned int timeout);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -99,6 +104,9 @@ static const struct netdev_ops_s g_vlan_ops =
 #endif
 #ifdef CONFIG_NET_NETPOLL
   vlan_txpoll,   /* txpoll */
+#endif
+#if CONFIG_IOB_EXTRA_HEADS > 0
+  vlan_alloc,    /* alloc */
 #endif
 };
 
@@ -278,6 +286,31 @@ static void vlan_txpoll(FAR struct netdev_lowerhalf_s *dev)
   if (real->ops->txpoll)
     {
       real->ops->txpoll(real);
+    }
+}
+#endif
+
+/****************************************************************************
+ * Name: vlan_alloc
+ ****************************************************************************/
+
+#if CONFIG_IOB_EXTRA_HEADS > 0
+static netpkt_t *vlan_alloc(struct netdev_lowerhalf_s *dev, int priority,
+                            uint16_t size, bool throttled,
+                            unsigned int timeout)
+{
+  FAR struct vlan_device_s      *vlan = (FAR struct vlan_device_s *)dev;
+  FAR struct netdev_lowerhalf_s *real = vlan->real;
+
+  if (real->ops->alloc)
+    {
+      return real->ops->alloc(real, (vlan->tci & VLAN_PRIO_MASK)
+                                    >> VLAN_PRIO_SHIFT,
+                              size, throttled, timeout);
+    }
+  else
+    {
+      return iob_timedalloc_with_size(size, throttled, timeout);
     }
 }
 #endif

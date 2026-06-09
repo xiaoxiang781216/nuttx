@@ -253,7 +253,8 @@ int32_t ipv6_fragin(FAR struct net_driver_s *dev);
  *  building the L3 header related to the fragmentation.
  *
  * Input Parameters:
- *   iob       - The data comes from
+ *   dev       - The device whose d_iob holds the data to fragment and whose
+ *               allocator supplies the fragment buffers
  *   domain    - PF_INET or PF_INET6
  *   mtu       - MTU of given NIC
  *   unfraglen - The starting position to fragmentation processing
@@ -263,11 +264,12 @@ int32_t ipv6_fragin(FAR struct net_driver_s *dev);
  *   Number of fragments
  *
  * Assumptions:
- *   Data length(iob->io_pktlen) is grater than the MTU of current NIC
+ *   Data length(dev->d_iob->io_pktlen) is grater than the MTU of current NIC
  *
  ****************************************************************************/
 
-int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
+int32_t ip_fragout_slice(FAR struct net_driver_s *dev,
+                         uint8_t domain, uint16_t mtu,
                          uint16_t unfraglen, FAR struct iob_queue_s *fragq);
 
 /****************************************************************************

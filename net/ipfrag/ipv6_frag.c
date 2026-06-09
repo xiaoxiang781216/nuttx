@@ -599,7 +599,8 @@ int32_t ipv6_fragout(FAR struct net_driver_s *dev, uint16_t mtu)
    * the space for the L3 header
    */
 
-  nfrags = ip_fragout_slice(dev->d_iob, PF_INET6, mtu, unfraglen, &fragq);
+  nfrags = ip_fragout_slice(dev, PF_INET6, mtu, unfraglen,
+                            &fragq);
   netdev_iob_clear(dev);
 
   /* No I/O Buffer is the only cause of failure */

@@ -81,15 +81,12 @@ int devif_iob_send(FAR struct net_driver_s *dev, FAR struct iob_s *iob,
     }
 #endif
 
-  /* Append the send buffer after device buffer */
-
-  if (len > iob_navail(false) * CONFIG_IOB_BUFSIZE)
-    {
-      ret = -ENOMEM;
-      goto errout;
-    }
-
-  /* Clone the iob to target device buffer */
+  /* Clone the iob to target device buffer.  iob_clone_partial() extends the
+   * destination chain as needed; when the device supplies its own allocator
+   * the head IOB carries a per-chain allocator (io_alloc) so the
+   * continuation buffers come from the same source.  Pre-sizing the chain
+   * with netdev_iob_update_pktlen is no longer required.
+   */
 
   ret = iob_clone_partial(iob, len, offset, dev->d_iob,
                           target_offset, false, false);

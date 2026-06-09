@@ -141,7 +141,7 @@ static uint16_t icmp_datahandler(FAR struct net_driver_s *dev,
     }
 #endif
 
-  iob = iob_tryalloc(false);
+  iob = netdev_iob_tryalloc(dev, CONFIG_IOB_BUFSIZE, false);
   if (iob == NULL)
     {
       return -ENOMEM;

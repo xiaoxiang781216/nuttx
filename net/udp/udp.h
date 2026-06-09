@@ -175,6 +175,7 @@ struct udp_wrbuffer_s
 {
   sq_entry_t wb_node;              /* Supports a singly linked list */
   struct sockaddr_storage wb_dest; /* Destination address */
+  FAR struct net_driver_s *wb_dev; /* Egress device selected at send time */
   FAR struct iob_s *wb_iob;        /* Head of the I/O buffer chain */
 };
 #endif
@@ -533,6 +534,7 @@ int udp_setsockopt(FAR struct socket *psock, int option,
  *   this wait will be terminated when the specified timeout expires.
  *
  * Input Parameters:
+ *   dev       - The egress device selected for this transfer (may be NULL).
  *   timeout   - The relative time to wait until a timeout is declared.
  *
  * Assumptions:
@@ -542,7 +544,9 @@ int udp_setsockopt(FAR struct socket *psock, int option,
 
 #ifdef CONFIG_NET_UDP_WRITE_BUFFERS
 struct udp_wrbuffer_s;
-FAR struct udp_wrbuffer_s *udp_wrbuffer_timedalloc(unsigned int timeout);
+FAR struct udp_wrbuffer_s *
+udp_wrbuffer_timedalloc(FAR struct net_driver_s *dev, uint16_t len,
+                        unsigned int timeout);
 #endif /* CONFIG_NET_UDP_WRITE_BUFFERS */
 
 /****************************************************************************
@@ -555,7 +559,7 @@ FAR struct udp_wrbuffer_s *udp_wrbuffer_timedalloc(unsigned int timeout);
  *   immediately if allocation fails.
  *
  * Input parameters:
- *   None
+ *   dev - The egress device selected for this transfer (may be NULL).
  *
  * Assumptions:
  *   Called from user logic with the network locked.
@@ -563,11 +567,7 @@ FAR struct udp_wrbuffer_s *udp_wrbuffer_timedalloc(unsigned int timeout);
  ****************************************************************************/
 
 #ifdef CONFIG_NET_UDP_WRITE_BUFFERS
-#ifdef CONFIG_NET_JUMBO_FRAME
-FAR struct udp_wrbuffer_s *udp_wrbuffer_tryalloc(int len);
-#else
-FAR struct udp_wrbuffer_s *udp_wrbuffer_tryalloc(void);
-#endif
+#  define udp_wrbuffer_tryalloc(d,l) udp_wrbuffer_timedalloc(d,l,0)
 #endif /* CONFIG_NET_UDP_WRITE_BUFFERS */
 
 /****************************************************************************

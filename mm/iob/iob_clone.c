@@ -60,11 +60,11 @@ static int iob_next(FAR struct iob_s *iob, bool throttled, bool block)
     {
       if (block)
         {
-          next = iob_alloc_with_size(IOB_BUFSIZE(iob), throttled);
+          next = iob_alloc_next(iob, throttled);
         }
       else
         {
-          next = iob_tryalloc_with_size(IOB_BUFSIZE(iob), throttled);
+          next = iob_tryalloc_next(iob, throttled);
         }
 
       if (next == NULL)

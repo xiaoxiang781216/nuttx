@@ -89,6 +89,8 @@ static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
       iob->io_pktlen  = 0;    /* Total length of the packet */
       iob->io_conn    = NULL;
 #if CONFIG_IOB_EXTRA_HEADS > 0
+      iob->io_alloc   = NULL; /* No per-chain continuation allocator */
+      iob->io_arg     = NULL;
       iob->io_free    = NULL;
       iob->io_data    = iob->io_data_;
       iob->io_bufsize = (uint16_t)(uintptr_t)mempool->priv;

@@ -117,7 +117,7 @@ static uint16_t icmpv6_datahandler(FAR struct net_driver_s *dev,
   uint16_t buflen;
   int ret;
 
-  iob = iob_tryalloc(false);
+  iob = netdev_iob_tryalloc(dev, CONFIG_IOB_BUFSIZE, false);
   if (iob == NULL)
     {
       return -ENOMEM;

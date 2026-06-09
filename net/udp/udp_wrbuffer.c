@@ -42,6 +42,7 @@
 #include <nuttx/queue.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/net.h>
+#include <nuttx/net/netdev.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/mm/mempool.h>
 
@@ -71,6 +72,7 @@ MEMPOOL_DEFINE(g_wrbuffer, sizeof(struct udp_wrbuffer_s),
  *   this wait will be terminated when the specified timeout expires.
  *
  * Input Parameters:
+ *   dev       - The egress device selected for this transfer (may be NULL).
  *   timeout   - The relative time to wait until a timeout is declared.
  *
  * Assumptions:
@@ -78,7 +80,9 @@ MEMPOOL_DEFINE(g_wrbuffer, sizeof(struct udp_wrbuffer_s),
  *
  ****************************************************************************/
 
-FAR struct udp_wrbuffer_s *udp_wrbuffer_timedalloc(unsigned int timeout)
+FAR struct udp_wrbuffer_s *
+udp_wrbuffer_timedalloc(FAR struct net_driver_s *dev, uint16_t len,
+                        unsigned int timeout)
 {
   FAR struct udp_wrbuffer_s *wrb;
 
@@ -96,73 +100,23 @@ FAR struct udp_wrbuffer_s *udp_wrbuffer_timedalloc(unsigned int timeout)
       return NULL;
     }
 
-  /* Now get the first I/O buffer for the write buffer structure */
+  /* Now get the first I/O buffer for the write buffer structure.  Prefer the
+   * egress device's own allocator (d_alloc) via netdev_iob_alloc so the
+   * staged payload originates from the device's (DMA) memory;
+   * netdev_iob_alloc falls back to the global pool when dev is NULL or has
+   * no d_alloc.
+   */
 
-  wrb->wb_iob = iob_timedalloc(true, timeout);
+#ifndef CONFIG_NET_JUMBO_FRAME
+  len = MIN(len, CONFIG_IOB_BUFSIZE);
+#endif
+  wrb->wb_iob = netdev_iob_timedalloc(dev, len, true, timeout);
 
   /* Did we get an IOB?  We should always get one except under some really
    * weird error conditions.
    */
 
   if (wrb->wb_iob == NULL)
-    {
-      nerr("ERROR: Failed to allocate I/O buffer\n");
-      udp_wrbuffer_release(wrb);
-      return NULL;
-    }
-
-  return wrb;
-}
-
-/****************************************************************************
- * Name: udp_wrbuffer_tryalloc
- *
- * Description:
- *   Try to allocate a UDP write buffer by taking a pre-allocated buffer from
- *   the free list.  This function is called from UDP logic when a buffer
- *   of UDP data is about to be sent on a non-blocking socket. Returns
- *   immediately if the allocation failed.
- *
- * Input parameters:
- *   None
- *
- * Assumptions:
- *   Called from user logic with the network locked. Will return if no buffer
- *   is available.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_JUMBO_FRAME
-FAR struct udp_wrbuffer_s *udp_wrbuffer_tryalloc(int len)
-#else
-FAR struct udp_wrbuffer_s *udp_wrbuffer_tryalloc(void)
-#endif
-{
-  FAR struct udp_wrbuffer_s *wrb;
-
-  /* We need to allocate two things:  (1) A write buffer structure and (2)
-   * at least one I/O buffer to start the chain.
-   *
-   * Allocate the write buffer structure first then the IOB.  In order to
-   * avoid deadlocks, we will need to free the IOB first, then the write
-   * buffer
-   */
-
-  wrb = mempool_zallocate(&g_wrbuffer, 0);
-  if (wrb == NULL)
-    {
-      return NULL;
-    }
-
-  /* Now get the first I/O buffer for the write buffer structure */
-
-  wrb->wb_iob =
-#ifdef CONFIG_NET_JUMBO_FRAME
-    iob_tryalloc_with_size(len, false);
-#else
-    iob_tryalloc(false);
-#endif
-  if (!wrb->wb_iob)
     {
       nerr("ERROR: Failed to allocate I/O buffer\n");
       udp_wrbuffer_release(wrb);

@@ -572,6 +572,27 @@ struct net_driver_s
   CODE int (*d_ioctl)(FAR struct net_driver_s *dev, int cmd,
                       unsigned long arg);
 #endif
+#if CONFIG_IOB_EXTRA_HEADS > 0
+  /* Optional: driver-supplied IOB allocator. When set, the network stack
+   * obtains the device IOB from this callback instead of the global IOB
+   * pool. The returned IOB is owned by the device and reserved for
+   * CONFIG_NET_LL_GUARDSIZE at its head.
+   *
+   *   dev       - The device requesting the buffer.
+   *   size      - Requested total buffer capacity in bytes, including the
+   *               L2 guard. 0 means "default single IOB
+   *               (CONFIG_IOB_BUFSIZE)".
+   *   throttled - Draw from the throttled reserve when true.
+   *   timeout   - Allocation timeout in milliseconds (0 = no wait,
+   *               UINT_MAX = wait forever).
+   *
+   * Returns a prepared FAR struct iob_s * on success, or NULL on failure.
+   */
+
+  CODE FAR struct iob_s *(*d_alloc)(FAR struct net_driver_s *dev,
+                                    uint16_t size, bool throttled,
+                                    unsigned int timeout);
+#endif
 
   /* CAN gateway */
 
@@ -1104,6 +1125,73 @@ int netdev_iob_prepare(FAR struct net_driver_s *dev, bool throttled,
 
 void netdev_iob_prepare_with_size(FAR struct net_driver_s *dev,
                                   uint16_t size);
+
+/****************************************************************************
+ * Name: netdev_iob_timedalloc
+ *
+ * Description:
+ *   Allocate and initialize a single IOB for a given NIC, waiting up to the
+ *   caller-specified timeout.  This is the allocation core of
+ *   netdev_iob_prepare(): it dispatches to the driver-supplied d_alloc
+ *   callback when present (CONFIG_IOB_EXTRA_HEADS > 0), otherwise to the
+ *   global IOB pool, but it returns the prepared IOB to the caller WITHOUT
+ *   assigning dev->d_iob or dev->d_buf.  The returned IOB has
+ *   CONFIG_NET_LL_GUARDSIZE reserved at its head and is owned by the device.
+ *
+ * Input Parameters:
+ *   dev       - The device requesting the buffer.
+ *   size      - Requested total buffer capacity in bytes, including the
+ *               L2 guard.
+ *   throttled - Draw from the throttled reserve when true.
+ *   timeout   - Allocation timeout in milliseconds (0 = no wait,
+ *               UINT_MAX = wait forever).
+ *
+ * Assumptions:
+ *   The caller has locked the network.
+ *
+ * Returned Value:
+ *   A prepared FAR struct iob_s * on success, or NULL on allocation failure.
+ *
+ ****************************************************************************/
+
+FAR struct iob_s *netdev_iob_timedalloc(FAR struct net_driver_s *dev,
+                                        uint16_t size, bool throttled,
+                                        unsigned int timeout);
+
+/****************************************************************************
+ * Name: netdev_iob_alloc
+ *
+ * Description:
+ *   Allocate and initialize a single IOB for a given NIC, waiting
+ *   indefinitely for a buffer to become available.  Same source selection
+ *   as netdev_iob_timedalloc (driver-supplied d_alloc when present,
+ *   otherwise the global IOB pool).
+ *
+ ****************************************************************************/
+
+static inline_function FAR struct iob_s *
+netdev_iob_alloc(FAR struct net_driver_s *dev, uint16_t size, bool throttled)
+{
+  return netdev_iob_timedalloc(dev, size, throttled, UINT_MAX);
+}
+
+/****************************************************************************
+ * Name: netdev_iob_tryalloc
+ *
+ * Description:
+ *   Try to allocate and initialize a single IOB for a given NIC without
+ *   waiting for a buffer to become free.  Same source selection as
+ *   netdev_iob_timedalloc (driver-supplied d_alloc when present,
+ *   otherwise the global IOB pool).
+ *
+ ****************************************************************************/
+
+static inline_function FAR struct iob_s *
+netdev_iob_tryalloc(FAR struct net_driver_s *dev, uint16_t size,
+                    bool throttled)
+{
+  return netdev_iob_timedalloc(dev, size, throttled, 0);
+}
 
 /****************************************************************************
  * Name: netdev_iob_replace / netdev_iob_replace_l2

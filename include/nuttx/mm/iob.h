@@ -476,6 +476,28 @@ struct iob_s
 #endif
 
 #if CONFIG_IOB_EXTRA_HEADS > 0
+  /* Optional per-chain continuation allocator.
+   *
+   * When io_alloc is non-NULL, the iob data operations that must extend the
+   * chain (iob_copyin, iob_clone_partial, iob_update_pktlen) obtain
+   * continuation buffers through io_alloc(io_arg, size, throttled, timeout)
+   * instead of the global IOB pool.  This lets a chain whose head
+   * originated from a driver-supplied allocator (the network device
+   * d_alloc callback, e.g. DMA-capable / zero-copy memory) keep growing
+   * from the same source, so callers no longer need to pre-size the chain
+   * before each copyin.  The throttled/timeout arguments carry the caller's
+   * allocation policy so a driver continuation can block or draw from the
+   * throttled reserve exactly like the global-pool path.
+   *
+   * A NULL io_alloc means the chain extends from the global IOB pool, which
+   * is the case for any iob originally obtained from the global pool.  The
+   * allocator is propagated to every continuation buffer so the whole chain
+   * stays consistent.
+   */
+
+  FAR struct iob_s *(*io_alloc)(FAR void *arg, uint16_t size,
+                                bool throttled, unsigned int timeout);
+  FAR void     *io_arg;
   iob_free_cb_t io_free;  /* Custom free callback */
   FAR uint8_t  *io_data;
   uint8_t io_data_[] aligned_data(IOB_ALIGNMENT);
@@ -665,7 +687,103 @@ FAR struct iob_s *iob_alloc_with_data(FAR void *data, uint16_t size,
 FAR struct iob_s *iob_init_with_data(FAR void *data, uint16_t size,
                                      iob_free_cb_t free_cb);
 
+/****************************************************************************
+ * Name: iob_timedalloc_next
+ *
+ * Description:
+ *   Allocate the next buffer to extend an existing I/O buffer chain, with a
+ *   caller-specified timeout.
+ *
+ *   When the buffer being extended carries a per-chain allocator (io_alloc,
+ *   set up for chains whose buffers originate from a network driver's
+ *   d_alloc), the next buffer is obtained from that same allocator and
+ *   the allocator is propagated onto the new buffer so the whole chain
+ *   keeps growing from one source.
+ *
+ *   Otherwise the buffer is allocated from the global IOB pool, exactly
+ *   matching the legacy iob_timedalloc_with_size behavior.
+ *
+ * Input Parameters:
+ *   iob       - A buffer in the chain being extended (its io_alloc, if any,
+ *               selects the allocation source).
+ *   throttled - Draw from the throttled reserve when true.
+ *   timeout   - Allocation timeout in milliseconds (0 = no wait,
+ *               UINT_MAX = wait forever); forwarded to both the global pool
+ *               path and the per-chain allocator.
+ *
+ * Returned Value:
+ *   A clean next buffer on success, or NULL on allocation failure.
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR struct iob_s *iob_timedalloc_next(FAR struct iob_s *iob, bool throttled,
+                                      unsigned int timeout)
+{
+  FAR struct iob_s *next;
+
+  if (iob->io_alloc != NULL)
+    {
+      /* Extend the chain from the same driver-supplied allocator that
+       * produced the head buffer.  Never fall back to the global pool.
+       * Forward the caller's allocation policy (throttled/timeout) so a
+       * driver continuation can block or honor the throttled reserve exactly
+       * like the global-pool path below.
+       */
+
+      next = iob->io_alloc(iob->io_arg, IOB_BUFSIZE(iob),
+                           throttled, timeout);
+      if (next != NULL)
+        {
+          next->io_alloc = iob->io_alloc;
+          next->io_arg   = iob->io_arg;
+        }
+    }
+  else
+    {
+      next = iob_timedalloc_with_size(IOB_BUFSIZE(iob), throttled, timeout);
+    }
+
+  return next;
+}
+#else
+#  define iob_timedalloc_next(i, th, ti) \
+          iob_timedalloc_with_size(IOB_BUFSIZE(i), th, ti)
 #endif
+
+/****************************************************************************
+ * Name: iob_alloc_next
+ *
+ * Description:
+ *   Allocate the next buffer to extend an existing I/O buffer chain,
+ *   waiting indefinitely for a buffer to become available.  Same source
+ *   selection as iob_timedalloc_next (per-chain allocator when set,
+ *   otherwise the global IOB pool).
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR struct iob_s *iob_alloc_next(FAR struct iob_s *iob, bool throttled)
+{
+  return iob_timedalloc_next(iob, throttled, UINT_MAX);
+}
+
+/****************************************************************************
+ * Name: iob_tryalloc_next
+ *
+ * Description:
+ *   Try to allocate the next buffer to extend an existing I/O buffer chain
+ *   without waiting for a buffer to become free.  Same source selection as
+ *   iob_timedalloc_next (per-chain allocator when set, otherwise the global
+ *   IOB pool).
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR struct iob_s *iob_tryalloc_next(FAR struct iob_s *iob, bool throttled)
+{
+  return iob_timedalloc_next(iob, throttled, 0);
+}
 
 /****************************************************************************
  * Name: iob_navail_with_size

@@ -180,16 +180,19 @@ static int iob_copyin_internal(FAR struct iob_s *iob, FAR const uint8_t *src,
         {
           /* Yes.. allocate a new buffer.
            *
-           * Copy as many bytes as possible. Block if we're allowed.
+           * Copy as many bytes as possible. Block if we're allowed.  When
+           * the chain carries a per-chain allocator (io_alloc), the new
+           * buffer comes from that same source; otherwise it comes from the
+           * global IOB pool.
            */
 
           if (can_block)
             {
-              next = iob_alloc_with_size(IOB_BUFSIZE(iob), throttled);
+              next = iob_alloc_next(iob, throttled);
             }
           else
             {
-              next = iob_tryalloc_with_size(IOB_BUFSIZE(iob), throttled);
+              next = iob_tryalloc_next(iob, throttled);
             }
 
           if (next == NULL)

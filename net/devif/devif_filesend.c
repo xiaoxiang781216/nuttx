@@ -85,12 +85,17 @@ int devif_file_send(FAR struct net_driver_s *dev, FAR struct file *file,
     }
 #endif
 
-  /* Append the send buffer after device buffer */
+  /* Append the send buffer after device buffer.
+   *
+   * The iob_navail() capacity check applies only to the global IOB pool.
+   * When the device supplies its own allocator (d_alloc), the chain is
+   * built from the driver's buffers instead, so skip that check and let the
+   * chain extension below report any allocation failure.
+   */
 
-  if (len > iob_navail(false) * CONFIG_IOB_BUFSIZE ||
-      netdev_iob_prepare(dev, false, 0) != OK)
+  ret = netdev_iob_prepare(dev, false, 0);
+  if (ret != OK)
     {
-      ret = -ENOMEM;
       goto errout;
     }
 
@@ -111,7 +116,14 @@ int devif_file_send(FAR struct net_driver_s *dev, FAR struct file *file,
         {
           if (iob->io_flink == NULL)
             {
-              iob->io_flink = iob_tryalloc(false);
+              /* Extend the chain from the same source as the head buffer:
+               * the driver's allocator when the head came from d_alloc
+               * (io_alloc set), otherwise the global IOB pool.  The helper
+               * also resets io_offset/io_len/io_pktlen so the full capacity
+               * is available for payload.
+               */
+
+              iob->io_flink = iob_tryalloc_next(iob, false);
               if (iob->io_flink == NULL)
                 {
                   ret = -ENOMEM;

@@ -290,7 +290,15 @@ conn_dev_iobtimedalloc_with_size(size_t size, bool throttled,
   int          blresult1 = -ENOENT;
   int          blresult2 = -ENOENT;
 
-  iob = iob_tryalloc_with_size(size, throttled);
+  if (dev != NULL)
+    {
+      iob = netdev_iob_tryalloc(dev, size, throttled);
+    }
+  else
+    {
+      iob = iob_tryalloc_with_size(size, throttled);
+    }
+
   if (iob != NULL || timeout == 0)
     {
       return iob;
@@ -312,7 +320,14 @@ conn_dev_iobtimedalloc_with_size(size_t size, bool throttled,
 
   /* Now take the semaphore, waiting if so requested. */
 
-  iob = iob_timedalloc_with_size(size, throttled, timeout);
+  if (dev != NULL)
+    {
+      iob = netdev_iob_timedalloc(dev, size, throttled, timeout);
+    }
+  else
+    {
+      iob = iob_timedalloc_with_size(size, throttled, timeout);
+    }
 
   /* Recover the network lock at the proper count (if we held it before) */
 

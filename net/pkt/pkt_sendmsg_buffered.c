@@ -273,7 +273,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
     }
 #endif
 
-  iob = iob_tryalloc(true);
+  iob = netdev_iob_tryalloc(dev, CONFIG_IOB_BUFSIZE, true);
   if (iob == NULL && !nonblock)
     {
       iob = conn_dev_iobtimedalloc(true, _SO_TIMEOUT(conn->sconn.s_sndtimeo),

@@ -223,36 +223,6 @@ static void netpkt_put(FAR struct net_driver_s *dev, FAR netpkt_t *pkt,
 }
 
 /****************************************************************************
- * Name: netdev_upper_alloc
- *
- * Description:
- *   Get the upper half of lower half structure, create one if not present.
- *
- ****************************************************************************/
-
-static FAR struct netdev_upperhalf_s *
-netdev_upper_alloc(FAR struct netdev_lowerhalf_s *dev, size_t extra_size)
-{
-  /* Allocate the upper-half data structure */
-
-  FAR struct netdev_upperhalf_s *upper;
-
-  DEBUGASSERT(dev != NULL && dev->netdev.d_private == NULL);
-
-  upper = kmm_zalloc(sizeof(struct netdev_upperhalf_s) + extra_size);
-  if (upper == NULL)
-    {
-      nerr("ERROR: Allocation failed\n");
-      return NULL;
-    }
-
-  upper->lower = dev;
-  dev->netdev.d_private = upper;
-
-  return upper;
-}
-
-/****************************************************************************
  * Name: netdev_upper_can_tx
  *
  * Description:
@@ -1001,6 +971,41 @@ static int netdev_upper_txavail(FAR struct net_driver_s *dev)
 }
 
 /****************************************************************************
+ * Name: netdev_upper_alloc
+ *
+ * Description:
+ *   Driver-supplied IOB allocator (the d_alloc callback).  Delegates to the
+ *   lower-half's ioballoc operation so the lower half can supply its own
+ *   (e.g. DMA-capable / zero-copy) TX buffer.
+ *
+ * Input Parameters:
+ *   dev       - Reference to the NuttX driver state structure
+ *   size      - Requested total buffer capacity in bytes, including the
+ *               L2 guard. 0 means "default single IOB (CONFIG_IOB_BUFSIZE)".
+ *   throttled - Draw from the throttled reserve when true.
+ *   timeout   - Allocation timeout in milliseconds (0 = no wait,
+ *               UINT_MAX = wait forever).
+ *
+ * Returned Value:
+ *   A prepared TX IOB on success, or NULL on failure.
+ *
+ ****************************************************************************/
+
+#if CONFIG_IOB_EXTRA_HEADS > 0
+static FAR struct iob_s *
+netdev_upper_alloc(FAR struct net_driver_s *dev, uint16_t size,
+                   bool throttled, unsigned int timeout)
+{
+  FAR struct netdev_upperhalf_s *upper = dev->d_private;
+
+  /* Delegate to the lower-half supplied allocator. */
+
+  return upper->lower->ops->alloc(upper->lower, 0, size, throttled,
+                                  timeout);
+}
+#endif
+
+/****************************************************************************
  * Name: netdev_upper_ethtool_ioctl
  *
  * Description:
@@ -1678,10 +1683,15 @@ int netdev_lower_register(FAR struct netdev_lowerhalf_s *dev,
         return -EINVAL;
     }
 
-  if ((upper = netdev_upper_alloc(dev, extra_size)) == NULL)
+  upper = kmm_zalloc(sizeof(struct netdev_upperhalf_s) + extra_size);
+  if (upper == NULL)
     {
+      nerr("ERROR: Allocation failed\n");
       return -ENOMEM;
     }
+
+  upper->lower = dev;
+  dev->netdev.d_private = upper;
 
   upper->txing = false;
 
@@ -1695,6 +1705,13 @@ int netdev_lower_register(FAR struct netdev_lowerhalf_s *dev,
 #ifdef CONFIG_NETDEV_IOCTL
   dev->netdev.d_ioctl   = netdev_upper_ioctl;
 #endif
+#if CONFIG_IOB_EXTRA_HEADS > 0
+  if (dev->ops->alloc != NULL)
+    {
+      dev->netdev.d_alloc = netdev_upper_alloc;
+    }
+#endif
+
   dev->netdev.d_private = upper;
 
   ret = netdev_register(&dev->netdev, lltype);
@@ -2052,17 +2069,9 @@ FAR netpkt_t *netpkt_alloc(FAR struct netdev_lowerhalf_s *dev,
       return NULL;
     }
 
-#ifdef CONFIG_NET_CAN
-  if (dev->netdev.d_lltype == NET_LL_CAN)
-    {
-      pkt = iob_tryalloc_with_size(NET_CAN_BUFSIZE, false);
-    }
-  else
-#endif
-    {
-      pkt = iob_tryalloc(false);
-    }
-
+  pkt = netdev_iob_tryalloc(&dev->netdev,
+                            MIN(dev->netdev.d_pktsize, CONFIG_IOB_BUFSIZE),
+                            false);
   if (pkt == NULL)
     {
       atomic_add(&dev->quota_ptr[type], 1);

@@ -93,12 +93,17 @@ int devif_send(FAR struct net_driver_s *dev, FAR const void *buf,
     }
 #endif
 
-  /* Append the send buffer after device buffer */
+  /* Append the send buffer after device buffer.
+   *
+   * The iob_navail() capacity check applies only to the global IOB pool.
+   * When the device supplies its own allocator (d_alloc), the chain is
+   * built from the driver's buffers instead, so skip that check and let the
+   * copyin below report any allocation failure.
+   */
 
-  if (len > iob_navail(false) * CONFIG_IOB_BUFSIZE ||
-      netdev_iob_prepare(dev, false, 0) != OK)
+  ret = netdev_iob_prepare(dev, false, 0);
+  if (ret != OK)
     {
-      ret = -ENOMEM;
       goto errout;
     }
 
@@ -106,8 +111,15 @@ int devif_send(FAR struct net_driver_s *dev, FAR const void *buf,
 
   iob_update_pktlen(dev->d_iob, offset < 0 ? 0 : offset, false);
 
+  /* Copy the data in.  iob_trycopyin() extends the chain as needed; when the
+   * device supplies its own allocator the head IOB carries a per-chain
+   * allocator (io_alloc) so the continuation buffers come from the same
+   * source.  There is no longer a need to pre-size the chain with
+   * netdev_iob_update_pktlen before the copy.
+   */
+
   ret = iob_trycopyin(dev->d_iob, buf, len, offset, false);
-  if (ret != len)
+  if (ret < 0)
     {
       netdev_iob_release(dev);
       goto errout;

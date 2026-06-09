@@ -770,14 +770,22 @@ static ssize_t can_raw_sendmsg(FAR struct socket *psock,
   nonblock =
       _SS_ISNONBLOCK(conn->sconn.s_flags) || (flags & MSG_DONTWAIT) != 0;
 
+  /* Allocate the send buffer through the egress device.  When the device
+   * supplies its own allocator (d_alloc, e.g. DMA / zero-copy capable
+   * hardware) the head IOB is drawn from the device's own memory and carries
+   * a per-chain allocator so any later growth comes from the same source;
+   * netdev_iob_timedalloc falls back to the global IOB pool when conn->dev
+   * is NULL or has no d_alloc, preserving the previous behavior.
+   */
+
   if (nonblock)
     {
-      iob = iob_timedalloc_with_size(NET_CAN_BUFSIZE, true, 0);
+      iob = netdev_iob_tryalloc(conn->dev, NET_CAN_BUFSIZE, true);
     }
   else
     {
-      iob = iob_timedalloc_with_size(NET_CAN_BUFSIZE, true,
-                                     _SO_TIMEOUT(conn->sconn.s_sndtimeo));
+      iob = netdev_iob_timedalloc(conn->dev, NET_CAN_BUFSIZE, true,
+                                  _SO_TIMEOUT(conn->sconn.s_sndtimeo));
     }
 
   if (iob == NULL)

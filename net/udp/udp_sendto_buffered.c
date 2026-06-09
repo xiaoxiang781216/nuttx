@@ -232,17 +232,26 @@ static int sendto_next_transfer(FAR struct udp_conn_s *conn)
   /* Get the device that will handle the remote packet transfers.  This
    * should never be NULL.
    *
+   * The egress device was already resolved at send time and cached in
+   * wrb->wb_dev, so reuse it to avoid a redundant route lookup.  Fall back
+   * to udp_find_raddr_device() only if it was not resolved (e.g. the socket
+   * was not yet bound when queued).
+   *
    * REVISIT:  There is a logical error here for the case where there are
    * multiple network devices.  In that case, the packets may need to be sent
    * in a different order than they were queued.  Forcing FIFO packet
    * transmission could harm performance.
    */
 
-  dev = udp_find_raddr_device(conn, &wrb->wb_dest);
+  dev = wrb->wb_dev;
   if (dev == NULL)
     {
-      nerr("ERROR: udp_find_raddr_device failed\n");
-      return -ENETUNREACH;
+      dev = udp_find_raddr_device(conn, &wrb->wb_dest);
+      if (dev == NULL)
+        {
+          nerr("ERROR: udp_find_raddr_device failed\n");
+          return -ENETUNREACH;
+        }
     }
 
   /* Make sure that the device is in the UP state */
@@ -531,6 +540,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 {
   FAR struct udp_wrbuffer_s *wrb;
   FAR struct udp_conn_s *conn;
+  FAR struct net_driver_s *dev;
   unsigned int timeout;
   uint16_t udpiplen;
   bool nonblock;
@@ -670,6 +680,29 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
   BUF_DUMP("psock_udp_sendto", buf, len);
 
+  /* Determine the egress device BEFORE allocating the write buffer so the
+   * head IOB can be drawn from the device's own (DMA) allocator via
+   * netdev_iob_alloc.  The destination is known here: for a connected socket
+   * udp_find_raddr_device() falls back to the connected remote (remote ==
+   * NULL); for an unconnected socket build a sockaddr_storage from the 'to'
+   * argument, mirroring how sendto_next_transfer() resolves it.
+   *
+   * The device list lookup requires the network lock.  This is only an
+   * optimization hint: the authoritative device is re-resolved at poll time
+   * in sendto_next_transfer().  If the lookup fails here, dev stays NULL and
+   * netdev_iob_alloc() falls back to the global IOB pool, preserving the
+   * previous behavior.
+   */
+
+  if (_SS_ISCONNECTED(conn->sconn.s_flags))
+    {
+      dev = udp_find_raddr_device(conn, NULL);
+    }
+  else
+    {
+      dev = udp_find_raddr_device(conn, (FAR struct sockaddr_storage *)to);
+    }
+
 #if CONFIG_NET_SEND_BUFSIZE > 0
   /* If the send buffer size exceeds the send limit,
    * wait for the write buffer to be released
@@ -706,22 +739,17 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
    * unlocked here.
    */
 
-#ifdef CONFIG_NET_JUMBO_FRAME
-
-  /* alloc iob of gso pkt for udp data */
-
-  wrb = udp_wrbuffer_tryalloc(len + udpip_hdrsize(conn) +
-                              CONFIG_NET_LL_GUARDSIZE);
-#else
   if (nonblock)
     {
-      wrb = udp_wrbuffer_tryalloc();
+      wrb = udp_wrbuffer_tryalloc(dev, len + udpip_hdrsize(conn) +
+                                  CONFIG_NET_LL_GUARDSIZE);
     }
   else
     {
-      wrb = udp_wrbuffer_timedalloc(udp_send_gettimeout(start, timeout));
+      wrb = udp_wrbuffer_timedalloc(dev, len + udpip_hdrsize(conn) +
+                                         CONFIG_NET_LL_GUARDSIZE,
+                                    udp_send_gettimeout(start, timeout));
     }
-#endif
 
   if (wrb == NULL)
     {
@@ -740,6 +768,13 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
       return ret;
     }
+
+  /* Remember the egress device resolved above so sendto_next_transfer()
+   * does not need to repeat the route lookup.  May be NULL if it was not
+   * resolved.
+   */
+
+  wrb->wb_dev = dev;
 
   /* Initialize the write buffer
    *
@@ -803,13 +838,11 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
     {
       if (nonblock)
         {
-          ret = iob_trycopyin(wrb->wb_iob, (FAR uint8_t *)buf, len, udpiplen,
-                              false);
+          ret = iob_trycopyin(wrb->wb_iob, buf, len, udpiplen, false);
         }
       else
         {
-          ret = iob_copyin(wrb->wb_iob, (FAR uint8_t *)buf, len, udpiplen,
-                           false);
+          ret = iob_copyin(wrb->wb_iob, buf, len, udpiplen, false);
         }
 
       if (ret < 0)

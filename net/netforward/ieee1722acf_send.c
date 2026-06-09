@@ -338,7 +338,7 @@ ieee1722acf_alloc_packet(FAR struct ieee1722acf_stream_s *stream,
   FAR struct iob_s *iob;
   int ret;
 
-  iob = iob_tryalloc(true);
+  iob = netdev_iob_tryalloc(dev, CONFIG_IOB_BUFSIZE, true);
   if (iob == NULL)
     {
       nerr("ERROR: Failed to alloc iob buffer\n");

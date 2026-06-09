@@ -160,7 +160,8 @@ ip_fragin_freelink(FAR struct ip_fraglink_s *fraglink);
 static void ip_fragin_check(FAR struct ip_fragsnode_s *fragsnode);
 static void ip_fragin_cachemonitor(FAR struct ip_fragsnode_s *curnode);
 static inline FAR struct iob_s *
-ip_fragout_allocfragbuf(FAR struct iob_queue_s *fragq,
+ip_fragout_allocfragbuf(FAR struct net_driver_s *dev,
+                        FAR struct iob_queue_s *fragq,
                         FAR const char *owner);
 
 /****************************************************************************
@@ -515,12 +516,22 @@ static void ip_fragin_cachemonitor(FAR struct ip_fragsnode_s *curnode)
  ****************************************************************************/
 
 static inline FAR struct iob_s *
-ip_fragout_allocfragbuf(FAR struct iob_queue_s *fragq,
+ip_fragout_allocfragbuf(FAR struct net_driver_s *dev,
+                        FAR struct iob_queue_s *fragq,
                         FAR const char *owner)
 {
   FAR struct iob_s *iob;
 
-  iob = iob_tryalloc(false);
+  /* Obtain the fragment buffer through netdev_iob_alloc so that, when the
+   * egress device provides a d_alloc callback (e.g. DMA-capable /
+   * zero-copy memory), every fragment installed onto the device via
+   * netdev_iob_replace originates from the device's own allocator.  When the
+   * device has no d_alloc, this falls back to the global IOB pool,
+   * preserving the previous netdev_iob_tryalloc(false) behavior.  The
+   * per-buffer offset/len fields are fixed up by the caller's UPDATE_IOB.
+   */
+
+  iob = netdev_iob_tryalloc(dev, CONFIG_IOB_BUFSIZE, false);
   if (iob != NULL)
     {
       IOB_SET_OWNER(iob, "%s", owner);
@@ -807,9 +818,11 @@ bool ip_fragin_enqueue(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
+int32_t ip_fragout_slice(FAR struct net_driver_s *dev,
+                         uint8_t domain, uint16_t mtu,
                          uint16_t unfraglen, FAR struct iob_queue_s *fragq)
 {
+  FAR struct iob_s *iob = dev->d_iob;
   FAR uint8_t      *leftstart;
   uint16_t          leftlen = 0;
   uint16_t          ncopy;
@@ -879,7 +892,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
 
       if (leftlen == 0 && orig != NULL)
         {
-          reorg = ip_fragout_allocfragbuf(fragq, owner);
+          reorg = ip_fragout_allocfragbuf(dev, fragq, owner);
           GOTO_IF(reorg == NULL, allocfail);
 
           nfrags++;
@@ -902,7 +915,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
 
           while (leftlen > 0)
             {
-              reorg = ip_fragout_allocfragbuf(fragq, owner);
+              reorg = ip_fragout_allocfragbuf(dev, fragq, owner);
               GOTO_IF(reorg == NULL, allocfail);
 
               nfrags++;
@@ -955,7 +968,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
        * for all fragments
        */
 
-      reorg = ip_fragout_allocfragbuf(fragq, owner);
+      reorg = ip_fragout_allocfragbuf(dev, fragq, owner);
       GOTO_IF(reorg == NULL, allocfail);
 
       nfrags++;
@@ -1024,7 +1037,7 @@ int32_t ip_fragout_slice(FAR struct iob_s *iob, uint8_t domain, uint16_t mtu,
 
           if (expand)
             {
-              reorg = ip_fragout_allocfragbuf(fragq, owner);
+              reorg = ip_fragout_allocfragbuf(dev, fragq, owner);
               GOTO_IF(reorg == NULL, allocfail);
 
               nfrags++;

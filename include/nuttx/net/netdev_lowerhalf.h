@@ -197,6 +197,29 @@ struct netdev_ops_s
 
   CODE void (*txpoll)(FAR struct netdev_lowerhalf_s *dev);
 #endif
+
+#if CONFIG_IOB_EXTRA_HEADS > 0
+  /* alloc - Optional: allocate a TX I/O buffer from the driver.
+   *         When provided, the network stack obtains the device TX buffer
+   *         from this callback (e.g. DMA-capable / zero-copy memory)
+   *         instead of the global IOB pool.
+   *   Input Parameters:
+   *     dev       - The lower-half device requesting the buffer.
+   *     priority  - The packet priority hint.
+   *     size      - Requested total buffer capacity in bytes, including the
+   *                 L2 guard. 0 means "default single IOB
+   *                 (CONFIG_IOB_BUFSIZE)".
+   *     throttled - Draw from the throttled reserve when true.
+   *     timeout   - Allocation timeout in milliseconds (0 = no wait,
+   *                 UINT_MAX = wait forever).
+   *   Returned Value:
+   *     A prepared netpkt on success, or NULL on failure.
+   */
+
+  CODE FAR netpkt_t *(*alloc)(FAR struct netdev_lowerhalf_s *dev,
+                              int priority, uint16_t size, bool throttled,
+                              unsigned int timeout);
+#endif
 };
 
 /* This structure is a set of wireless handlers, leave unsupported operations

@@ -82,7 +82,7 @@ static uint16_t pkt_datahandler(FAR struct net_driver_s *dev,
                                 FAR struct pkt_conn_s *conn,
                                 FAR struct iob_queue_s *iobq)
 {
-  FAR struct iob_s *iob = iob_tryalloc(true);
+  FAR struct iob_s *iob = netdev_iob_tryalloc(dev, CONFIG_IOB_BUFSIZE, true);
   int ret;
 
   if (iob == NULL)
