@@ -721,6 +721,16 @@ static int audio_rpmsg_message_handler(FAR struct rpmsg_endpoint *ept,
     {
       aud->navail = 0;
     }
+  else if (req->msgid == AUDIO_MSG_START || req->msgid == AUDIO_MSG_RESUME)
+    {
+      /* Peer starts a new playback cycle. Clear any stale faulted flag
+       * left from a previous cycle, so that a subsequent locally
+       * initiated HWRESET (e.g. peer fails to start) can be forwarded
+       * to notify the peer instead of being swallowed.
+       */
+
+      aud->faulted = false;
+    }
 
   nxrmutex_unlock(&aud->mutex);
   msg.msg_id = req->msgid;
