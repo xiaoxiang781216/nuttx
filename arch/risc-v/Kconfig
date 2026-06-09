@@ -411,6 +411,7 @@ config ARCH_RV_ISA_M
 config ARCH_RV_ISA_A
 	bool
 	default n
+	select ARCH_HAVE_JUMP_LABEL
 
 config ARCH_RV_ISA_C
 	bool

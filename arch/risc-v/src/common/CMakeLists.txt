@@ -138,6 +138,10 @@ if(CONFIG_RISCV_PMU)
   list(APPEND SRCS riscv_pmu.c)
 endif()
 
+if(CONFIG_ARCH_JUMP_LABEL)
+  list(APPEND SRCS riscv_jump_label.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})
 
 nuttx_add_aux_library(STARTUP_OBJS crt0.c)

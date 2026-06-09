@@ -138,3 +138,7 @@ endif
 ifeq ($(CONFIG_RISCV_PMU),y)
 CMN_CSRCS += riscv_pmu.c
 endif
+
+ifeq ($(CONFIG_ARCH_JUMP_LABEL),y)
+CMN_CSRCS += riscv_jump_label.c
+endif
