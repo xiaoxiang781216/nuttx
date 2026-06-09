@@ -59,9 +59,9 @@
 int isotp_encode_frame(FAR struct isotp_encode_s *ctx,
                        FAR uint8_t *frame, FAR uint8_t *dlen)
 {
-  uint8_t  max_dlen  = *dlen;
-  uint16_t remaining = ctx->len - ctx->done;
-  uint16_t payload;
+  uint8_t     max_dlen  = *dlen;
+  isotp_len_t remaining = ctx->len - ctx->done;
+  uint16_t    payload;
 
   if (remaining == 0)
     {
@@ -105,12 +105,32 @@ int isotp_encode_frame(FAR struct isotp_encode_s *ctx,
 
       /* First Frame (same for classic CAN and CAN FD) */
 
-      frame[0] = ISOTP_MAKE_FF(ctx->len >> 8);
-      frame[1] = ctx->len & 0xff;
-      payload  = max_dlen - 2;
-      memcpy(&frame[2], ctx->buf, payload);
-      ctx->done = payload;
+#ifdef CONFIG_LIBC_CAN_ISOTP_LONG_PDU
+      if (ctx->len > ISOTP_MAX_MSG_LEN)
+        {
+          /* Escaped FF: {0x10, 0x00, len[31:24..7:0]}, 32-bit FF_DL. */
 
+          frame[0] = ISOTP_MAKE_FF(0);
+          frame[1] = 0;
+          frame[2] = (ctx->len >> 24) & 0xff;
+          frame[3] = (ctx->len >> 16) & 0xff;
+          frame[4] = (ctx->len >> 8) & 0xff;
+          frame[5] = ctx->len & 0xff;
+          payload  = max_dlen - ISOTP_ESC_FF_HDR_LEN;
+          memcpy(&frame[ISOTP_ESC_FF_HDR_LEN], ctx->buf, payload);
+        }
+      else
+#endif
+        {
+          /* Classic FF: {0x1L, LL}, 12-bit FF_DL. */
+
+          frame[0] = ISOTP_MAKE_FF(ctx->len >> 8);
+          frame[1] = ctx->len & 0xff;
+          payload  = max_dlen - 2;
+          memcpy(&frame[2], ctx->buf, payload);
+        }
+
+      ctx->done = payload;
       *dlen = max_dlen;
       return 1;
     }
@@ -205,6 +225,37 @@ int isotp_decode_frame(FAR struct isotp_decode_s *ctx,
 
       case ISOTP_PCI_TYPE_FF:
         {
+#ifdef CONFIG_LIBC_CAN_ISOTP_LONG_PDU
+          if ((frame[0] & ISOTP_FF_DL_MASK) == 0 && frame[1] == 0)
+            {
+              /* Escaped FF: 32-bit FF_DL follows the {0x10, 0x00} header. */
+
+              if (dlen < ISOTP_ESC_FF_HDR_LEN)
+                {
+                  return -EINVAL;
+                }
+
+              ctx->total = ((uint32_t)frame[2] << 24) |
+                           ((uint32_t)frame[3] << 16) |
+                           ((uint32_t)frame[4] << 8) | frame[5];
+              if (ctx->total == 0)
+                {
+                  return -EINVAL;
+                }
+
+              if (ctx->total > ctx->len)
+                {
+                  return -ENOBUFS;
+                }
+
+              payload = dlen - ISOTP_ESC_FF_HDR_LEN;
+              memcpy(ctx->buf, &frame[ISOTP_ESC_FF_HDR_LEN], payload);
+              ctx->done = payload;
+
+              return 1;
+            }
+#endif
+
           ctx->total = ((frame[0] & ISOTP_FF_DL_MASK) << 8) | frame[1];
           if (ctx->total == 0 || ctx->total > ctx->len)
             {

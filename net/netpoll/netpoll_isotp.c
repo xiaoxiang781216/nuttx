@@ -193,12 +193,11 @@ ssize_t netpoll_isotp_send(FAR struct netpoll_s *np, FAR const void *buf,
   clock_t                        deadline;
   int                            ret;
 
-  if (len > ISOTP_MAX_MSG_LEN)
+  ret = isotp_encode_init(&enc, buf, len);
+  if (ret < 0)
     {
-      return -EMSGSIZE;
+      return ret;
     }
-
-  isotp_encode_init(&enc, buf, len);
 
   for (; ; )
     {

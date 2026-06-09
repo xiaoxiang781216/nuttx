@@ -27,8 +27,11 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -64,7 +67,11 @@
 #define ISOTP_FC_WAIT        1     /* Wait */
 #define ISOTP_FC_OVFLW       2     /* Overflow */
 
-/* Maximum ISO-TP message length (12-bit FF length field) */
+/* Maximum ISO-TP message length carried by the classic 12-bit FF length
+ * field.  Messages longer than this are sent with the 32-bit FF_DL escape
+ * (FF_DL == 0, followed by a 32-bit length), so the absolute upper bound is
+ * 2^32-1.
+ */
 
 #define ISOTP_MAX_MSG_LEN    4095
 
@@ -80,6 +87,13 @@
 
 #define ISOTP_ESF_HDR_LEN    2
 
+/* Escaped First Frame header size: {0x10, 0x00, len[31:24], len[23:16],
+ * len[15:8], len[7:0]} used when the message length exceeds the 12-bit
+ * FF_DL field (ISOTP_MAX_MSG_LEN).
+ */
+
+#define ISOTP_ESC_FF_HDR_LEN 6
+
 /* Build the first PCI byte for each frame type */
 
 #define ISOTP_MAKE_SF(dl)    (ISOTP_PCI_TYPE_SF | ((dl) & ISOTP_SF_DL_MASK))
@@ -91,13 +105,26 @@
  * Public Types
  ****************************************************************************/
 
+/* ISO-TP length type. Messages up to 4095 bytes fit the classic 12-bit
+ * FF_DL field; longer ones need 32 bits and the FF_DL escape, which is only
+ * compiled in when CONFIG_LIBC_CAN_ISOTP_LONG_PDU is selected. Classic-only
+ * builds should keep 16-bit fields to avoid spending memory on long
+ * messages.
+ */
+
+#ifdef CONFIG_LIBC_CAN_ISOTP_LONG_PDU
+typedef uint32_t isotp_len_t;
+#else
+typedef uint16_t isotp_len_t;
+#endif
+
 /* TX encode context */
 
 struct isotp_encode_s
 {
   FAR const uint8_t *buf;  /* Source data */
-  uint16_t           len;  /* Total message length */
-  uint16_t           done; /* Bytes encoded so far */
+  isotp_len_t        len;  /* Total message length */
+  isotp_len_t        done; /* Bytes encoded so far */
   uint8_t            sn;   /* Next consecutive frame sequence number */
 };
 
@@ -106,9 +133,9 @@ struct isotp_encode_s
 struct isotp_decode_s
 {
   FAR uint8_t *buf;     /* Destination buffer */
-  uint16_t     len;     /* Buffer capacity */
-  uint16_t     total;   /* Expected total length (set after FF) */
-  uint16_t     done;    /* Bytes received so far */
+  isotp_len_t  len;     /* Buffer capacity */
+  isotp_len_t  total;   /* Expected total length (set after FF) */
+  isotp_len_t  done;    /* Bytes received so far */
   uint8_t      sn;      /* Expected next sequence number */
 };
 
@@ -199,15 +226,33 @@ static inline void isotp_build_fc(FAR uint8_t *frame, uint8_t flags,
 
 /****************************************************************************
  * Name: isotp_encode_init
+ *
+ * Description:
+ *   Initialize a TX encode context for a message of 'len' bytes.
+ *
+ * Returned Value:
+ *   0 on success, or -EMSGSIZE when the message is too long for the
+ *   configured PDU support.
+ *
  ****************************************************************************/
 
-static inline void isotp_encode_init(FAR struct isotp_encode_s *ctx,
-                                     FAR const uint8_t *buf, uint16_t len)
+static inline int isotp_encode_init(FAR struct isotp_encode_s *ctx,
+                                     FAR const uint8_t *buf, size_t len)
 {
+#ifndef CONFIG_LIBC_CAN_ISOTP_LONG_PDU
+  /* Without long-PDU support the First Frame carries only a 12-bit length. */
+
+  if (len > ISOTP_MAX_MSG_LEN)
+    {
+      return -EMSGSIZE;
+    }
+#endif
+
   ctx->buf  = buf;
   ctx->len  = len;
   ctx->done = 0;
   ctx->sn   = 1;
+  return 0;
 }
 
 /****************************************************************************
@@ -215,7 +260,7 @@ static inline void isotp_encode_init(FAR struct isotp_encode_s *ctx,
  ****************************************************************************/
 
 static inline void isotp_decode_init(FAR struct isotp_decode_s *ctx,
-                                     FAR uint8_t *buf, uint16_t len)
+                                     FAR uint8_t *buf, isotp_len_t len)
 {
   ctx->buf   = buf;
   ctx->len   = len;
