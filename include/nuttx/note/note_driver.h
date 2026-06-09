@@ -302,7 +302,6 @@
 #define NOTE_SETIRQFILTER                _NOTEIOC(0x0B)
 #define NOTE_GETTAGFILTER                _NOTEIOC(0x0C)
 #define NOTE_SETTAGFILTER                _NOTEIOC(0x0D)
-#define NOTE_GETFREQ                     _NOTEIOC(0x0E)
 #define NOTE_GETRATELIMIT                _NOTEIOC(0x0F)
 #define NOTE_SETRATELIMIT                _NOTEIOC(0x10)
 #define NOTE_GETLEVEL                    _NOTEIOC(0x11)

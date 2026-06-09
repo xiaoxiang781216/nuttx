@@ -866,18 +866,6 @@ static int note_driver_ioctl(FAR struct file *filep, int cmd,
 
         return OK;
 
-      /* NOTE_GETFREQ
-       *   Report the cycle counter frequency that timestamps in note
-       *   records are encoded in.  Lets the host pipeline
-       *   (nxtrace --freq=auto) discover the conversion ratio without
-       *   hard-coding it on the launcher side.  Backend independent --
-       *   all backends share the same perf timestamp source.
-       */
-
-      case NOTE_GETFREQ:
-        *(FAR unsigned long *)arg = perf_getfreq();
-        break;
-
 #ifdef CONFIG_DRIVERS_NOTE_STATS
       /* NOTE_GETSTATS / NOTE_CLEARSTATS
        *   Read or clear the cumulative producer counters maintained by
