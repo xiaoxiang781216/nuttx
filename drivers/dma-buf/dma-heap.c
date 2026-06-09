@@ -94,9 +94,9 @@ static int dma_heap_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
 
           data->fd = dma_buf_fd(dmabuf, data->fd_flags);
+          dma_buf_put(dmabuf);
           if (data->fd < 0)
             {
-              dma_buf_put(dmabuf);
               ret = data->fd;
             }
 

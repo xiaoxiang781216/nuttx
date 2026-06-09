@@ -34,6 +34,7 @@
  * Private Function Prototypes
  ****************************************************************************/
 
+static int dma_buf_close(FAR struct file *filep);
 static off_t dma_buf_seek(FAR struct file *filep, off_t offset, int whence);
 static int dma_buf_ioctl(FAR struct file *filep, int cmd,
                          unsigned long arg);
@@ -47,7 +48,7 @@ static int dma_buf_mmap(FAR struct file *filep,
 static const struct file_operations g_dma_buf_fops =
 {
   NULL,           /* open  */
-  NULL,           /* close */
+  dma_buf_close,  /* close */
   NULL,           /* read  */
   NULL,           /* write */
   dma_buf_seek,   /* seek  */
@@ -76,6 +77,16 @@ static struct inode g_dma_buf_inode =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static int dma_buf_close(FAR struct file *filep)
+{
+  FAR struct dma_buf *dmabuf = filep->f_priv;
+
+  DEBUGASSERT(dmabuf != NULL);
+  dma_buf_put(dmabuf);
+
+  return OK;
+}
 
 static off_t dma_buf_seek(FAR struct file *filep, off_t offset, int whence)
 {

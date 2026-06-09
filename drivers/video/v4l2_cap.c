@@ -3976,10 +3976,10 @@ static int capture_expbuf(FAR struct file *filep,
     }
 
   ret = dma_buf_fd(dbuf, ebuf->flags);
+  dma_buf_put(dbuf);
   if (ret < 0)
     {
       verr("dma_buf_fd failed\n");
-      dma_buf_put(dbuf);
       return ret;
     }
 
