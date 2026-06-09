@@ -243,14 +243,6 @@ void notesnap_notify_register(void);
 #endif
 
 /****************************************************************************
- * Name: notesnap_dump_with_stream
- ****************************************************************************/
-
-#ifdef CONFIG_DRIVERS_NOTESNAP
-void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream);
-#endif
-
-/****************************************************************************
  * Name: noterpmsg_server_init
  ****************************************************************************/
 
