@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 #include <nuttx/atomic.h>
 #include <nuttx/dma-buf.h>
+#include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
 
@@ -265,12 +266,21 @@ static int dma_buf_mmap(FAR struct file *filep,
 
 int dma_buf_fd(FAR struct dma_buf *dmabuf, int flags)
 {
+  int fd;
+
   if (dmabuf == NULL)
     {
       return -EINVAL;
     }
 
-  return file_dup(&dmabuf->file, 0, flags);
+  atomic_add(&dmabuf->refcount, 1);
+  fd = file_allocate_from_inode(&g_dma_buf_inode, flags, 0, dmabuf, 0);
+  if (fd < 0)
+    {
+      dma_buf_put(dmabuf);
+    }
+
+  return fd;
 }
 
 /****************************************************************************
@@ -292,19 +302,22 @@ int dma_buf_fd(FAR struct dma_buf *dmabuf, int flags)
 FAR struct dma_buf *dma_buf_get(int fd)
 {
   FAR struct file *filep;
+  FAR struct dma_buf *dmabuf = NULL;
 
   if (file_get(fd, &filep) < 0)
     {
       return NULL;
     }
 
-  if (filep->f_inode == NULL || filep->f_inode->u.i_ops != &g_dma_buf_fops)
+  if (filep->f_inode != NULL &&
+      filep->f_inode->u.i_ops == &g_dma_buf_fops)
     {
-      file_put(filep);
-      return NULL;
+      dmabuf = filep->f_priv;
+      atomic_add(&dmabuf->refcount, 1);
     }
 
-  return filep->f_priv;
+  file_put(filep);
+  return dmabuf;
 }
 
 /****************************************************************************
@@ -323,7 +336,7 @@ FAR struct dma_buf *dma_buf_get(int fd)
 
 void dma_buf_put(FAR struct dma_buf *dmabuf)
 {
-  if (dmabuf != NULL && atomic_sub(&dmabuf->file.f_refs, 1) == 1)
+  if (dmabuf != NULL && atomic_sub(&dmabuf->refcount, 1) == 1)
     {
       dmabuf->ops->release(dmabuf);
       nxmutex_destroy(&dmabuf->lock);
@@ -619,10 +632,7 @@ dma_buf_export(FAR const struct dma_buf_export_info *exp_info)
   nxmutex_init(&dmabuf->lock);
   list_initialize(&dmabuf->attachments);
 
-  dmabuf->file.f_inode = &g_dma_buf_inode;
-  dmabuf->file.f_oflags = exp_info->flags;
-  dmabuf->file.f_priv = dmabuf;
-  atomic_add(&dmabuf->file.f_refs, 1);
+  atomic_set(&dmabuf->refcount, 1);
 
   return dmabuf;
 }

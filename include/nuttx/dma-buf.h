@@ -27,7 +27,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/fs/fs.h>
+#include <nuttx/atomic.h>
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
 
@@ -354,9 +354,9 @@ struct dma_buf
 
   size_t size;
 
-  /* File structure used for sharing buffers across, and for refcounting */
+  /* Reference count for the buffer object */
 
-  struct file file;
+  atomic_t refcount;
 
   /* List of dma_buf_attachment that denotes all devices attached,
    * protected by &dma_resv lock @resv.
