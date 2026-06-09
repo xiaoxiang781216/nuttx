@@ -8,9 +8,14 @@ menu "TCP/IP Networking"
 config NET_TCP
 	bool "TCP/IP Networking"
 	default n
+	depends on SCHED_LPWORK || SCHED_HPWORK
 	select NET_READAHEAD if !NET_TCP_NO_STACK
 	---help---
 		Enable or disable TCP networking support.
+
+		SCHED_LPWORK is required: the TCP timers (net/tcp/tcp_timer.c,
+		net/tcp/tcp_conn.c) schedule deferred work on the low-priority
+		work queue via work_queue(LPWORK, ...).
 
 config NET_TCP_NO_STACK
 	bool "Disable TCP/IP Stack"
