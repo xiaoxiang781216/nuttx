@@ -322,6 +322,8 @@ static int ipv4_in(FAR struct net_driver_s *dev)
   srcipaddr = net_ip4addr_conv32(ipv4->srcipaddr);
 
   if (net_ipv4addr_cmp(srcipaddr, INADDR_BROADCAST) ||
+      (net_ipv4addr_maskcmp(srcipaddr, dev->d_ipaddr, dev->d_netmask) &&
+       net_ipv4addr_broadcast(srcipaddr, dev->d_netmask)) ||
       IN_MULTICAST(NTOHL(srcipaddr)))
     {
 #ifdef CONFIG_NET_STATISTICS
