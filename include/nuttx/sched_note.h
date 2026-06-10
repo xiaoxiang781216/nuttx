@@ -119,6 +119,31 @@ extern "C"
           } \
         while (0)
 
+/* A single NOTE_DUMP_BINARY note is bounded by NOTE_BUFFER_SIZE and the
+ * uint8_t nc_length field, so the note framework silently truncates a
+ * larger payload.  sched_note_binary splits the buffer into note-sized
+ * chunks so the whole payload is recorded through the global note path.
+ */
+
+#define SCHED_NOTE_BINARY_MAX (UINT8_MAX - SIZEOF_NOTE_EVENT(0))
+
+#define sched_note_binary(tag, level, buf, len) \
+        do \
+          { \
+            FAR const char *_sb_p = (FAR const char *)(buf); \
+            size_t _sb_n = (len); \
+            while (_sb_n > 0) \
+              { \
+                size_t _sb_c = _sb_n > SCHED_NOTE_BINARY_MAX ? \
+                               SCHED_NOTE_BINARY_MAX : _sb_n; \
+                sched_note_event(NOTE_DUMP_BINARY, tag, level, \
+                                 _sb_p, _sb_c); \
+                _sb_p += _sb_c; \
+                _sb_n -= _sb_c; \
+              } \
+          } \
+        while (0)
+
 #define sched_note_counter(tag, name_, value_) \
         do \
           { \

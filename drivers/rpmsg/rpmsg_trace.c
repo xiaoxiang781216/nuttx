@@ -101,13 +101,7 @@ void rpmsg_vtrace(FAR const char *name, bool bt, FAR const void *buf,
                               format, &ap);
         }
 
-      while (len > 0)
-        {
-          size_t written = note_driver_binary(g_rpmsg_trace_drv,
-                                              NXTAG_RPMSG, buf, len);
-          buf += written;
-          len -= written;
-        }
+      note_driver_binary(g_rpmsg_trace_drv, NXTAG_RPMSG, buf, len);
 
       spin_unlock_irqrestore(&g_rpmsg_trace_lock, flags);
     }

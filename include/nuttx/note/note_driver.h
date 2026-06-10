@@ -245,8 +245,24 @@
         note_driver_event(driver, NOTE_DUMP_MARK, tag, \
                           buf, strlen(buf))
 #define note_driver_binary(driver, tag, buf, len) \
-        note_driver_event(driver, NOTE_DUMP_BINARY, tag, \
-                          buf, len)
+        do \
+          { \
+            FAR const char *_nb_p = (FAR const char *)(buf); \
+            size_t _nb_n = (len); \
+            while (_nb_n > 0) \
+              { \
+                ssize_t _nb_w = note_driver_event_ip(driver, \
+                                  NOTE_DUMP_BINARY, tag, 0, \
+                                  up_getpc(), _nb_p, _nb_n); \
+                if (_nb_w <= 0) \
+                  { \
+                    break; \
+                  } \
+                _nb_p += _nb_w; \
+                _nb_n -= _nb_w; \
+              } \
+          } \
+        while (0)
 
 /* IOCTL Commands ***********************************************************/
 
