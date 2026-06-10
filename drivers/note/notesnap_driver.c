@@ -123,6 +123,8 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
 {
   FAR struct notesnap_s *snap = (FAR struct notesnap_s *)drv;
   irqstate_t flags;
+  ssize_t written;
+  size_t skipped = 0;
   uint8_t skip;
 
   if (atomic_read(&snap->dumping))
@@ -144,18 +146,22 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
           break;
         }
 
+      skipped += skip;
       if (skip > 1)
         {
           ring_spsc_skip(snap->ring, skip - 1);
         }
     }
 
-  /* Cast to uint8_t * so the ring macro derives an element size of 1. */
+  /* Cast to uint8_t * so the ring macro derives an element size of 1.
+   * Return the net change in ring occupancy: the bytes enqueued minus the
+   * bytes evicted to make room (like a ring overwrite enqueue).
+   */
 
-  ring_spsc_enqueue(snap->ring, (FAR uint8_t *)note, notelen);
+  written = ring_spsc_enqueue(snap->ring, (FAR uint8_t *)note, notelen);
 
   spin_unlock_irqrestore_notrace(&snap->lock, flags);
-  return notelen;
+  return written - skipped;
 }
 
 #ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
