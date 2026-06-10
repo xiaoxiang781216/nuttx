@@ -948,6 +948,17 @@ config SCHED_THREAD_LOCAL
 		This option enables architecture-specific TLS support (__thread/thread_local keyword)
 		Note: Toolchain must be compiled with '--enable-tls' enabled
 
+config SCHED_HOOK
+	bool
+	default n
+	---help---
+		Enable the scheduler hook registry invoked at the tail of
+		nxsched_suspend_scheduler() / nxsched_resume_scheduler().
+		Out-of-tree subsystems (e.g. AUTOSAR-OS SC2 timing
+		protection) `select` this when they need to observe context
+		switches.  Has no user prompt: do not enable directly, let
+		the consuming feature pull it in.
+
 endmenu # Tasks and Scheduling
 
 menu "Pthread Options"

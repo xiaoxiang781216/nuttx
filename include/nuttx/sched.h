@@ -945,6 +945,41 @@ typedef CODE int (*nxsched_cpu_call_t)(FAR void *arg);
 
 #define NXSCHED_CPU_CALL_BUSYWAIT (1 << 0)
 
+#ifdef CONFIG_SCHED_HOOK
+/* Out-of-tree extension: register one or more callbacks invoked at
+ * the tail of nxsched_suspend_scheduler() / nxsched_resume_scheduler().
+ * Replaces the older single-slot weak nxsched_external_*_hook symbols
+ * which only allowed one consumer and could not be enumerated at
+ * runtime.  Add new event slots by appending to the enum.
+ */
+
+enum nxsched_hook_event_e
+{
+  NXSCHED_HOOK_SUSPEND = 0,  /* Called from nxsched_suspend_scheduler() */
+  NXSCHED_HOOK_RESUME,       /* Called from nxsched_resume_scheduler() */
+  NXSCHED_HOOK_NEVENTS
+};
+
+typedef CODE void (*nxsched_hook_fn_t)(FAR struct tcb_s *tcb,
+                                       enum nxsched_hook_event_e event);
+
+/* Storage for a registered hook.  The caller owns the struct (typically
+ * a file-scope static); the dispatcher only links it into a list.  A
+ * single hook receives every event in nxsched_hook_event_e; the
+ * callback inspects the event argument to decide what to do.
+ *
+ * The leading dq_entry_t is required by the kernel-internal
+ * doubly-linked-queue helpers; the field name `entry` is reserved for
+ * the dispatcher and must not be touched by callers.
+ */
+
+struct nxsched_hook_s
+{
+  dq_entry_t        entry;  /* Internal: queue node, must come first */
+  nxsched_hook_fn_t fn;     /* Callback */
+};
+#endif /* CONFIG_SCHED_HOOK */
+
 #ifndef CONFIG_UP
 struct cpu_call_cookie_s;
 struct cpu_call_data_s
@@ -1864,6 +1899,36 @@ void nxsched_lock(FAR struct tcb_s *rtcb);
 #endif
 
 void nxsched_unlock(FAR struct tcb_s *rtcb);
+
+/****************************************************************************
+ * Name: nxsched_hook_register / nxsched_hook_unregister
+ *
+ * Description:
+ *   Append/remove a scheduler hook on the global chain.  The same hook
+ *   instance receives every event in nxsched_hook_event_e; the
+ *   callback inspects the event argument to decide what to do.
+ *
+ *   Caller owns the storage (typically a file-scope static); the
+ *   dispatcher only links it.  The flink field is managed internally
+ *   and must not be touched by the caller.
+ *
+ *   Re-registering the same hook struct without an intervening
+ *   nxsched_hook_unregister() returns -EEXIST.
+ *
+ *   Designed for register-once-at-init / unregister-on-teardown
+ *   patterns; not optimised for high-rate churn.
+ *
+ * Returned Value:
+ *   OK on success; -EINVAL on a malformed argument; -EEXIST on
+ *   duplicate registration; -ENOENT on unregister of an entry that is
+ *   not on the chain.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_HOOK
+int nxsched_hook_register(FAR struct nxsched_hook_s *hook);
+int nxsched_hook_unregister(FAR struct nxsched_hook_s *hook);
+#endif
 
 #ifndef CONFIG_UP
 /****************************************************************************
