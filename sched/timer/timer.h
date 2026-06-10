@@ -97,7 +97,7 @@ DECLARE_PER_CPU_BMP(spinlock_t, g_locktimers);
 
 void timer_initialize(void);
 void timer_deleteall(pid_t pid);
-bool timer_release(FAR struct posix_timer_s *timer, bool delay,
+bool timer_release(FAR struct posix_timer_s *timer,
                    bool in_expiration);
 FAR struct posix_timer_s *timer_gethandle(timer_t timerid);
 

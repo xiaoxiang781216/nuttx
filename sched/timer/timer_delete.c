@@ -73,7 +73,7 @@ int timer_delete(timer_t timerid)
        * with the POSIX standards.
        */
 
-      timer_release(timer, false, false);
+      timer_release(timer, false);
       ret = OK;
     }
   else

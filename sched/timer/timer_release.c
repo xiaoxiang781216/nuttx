@@ -51,7 +51,7 @@
  *
  ****************************************************************************/
 
-static inline void timer_free(struct posix_timer_s *timer, bool delay)
+static inline void timer_free(struct posix_timer_s *timer)
 {
   irqstate_t flags;
 
@@ -74,14 +74,7 @@ static inline void timer_free(struct posix_timer_s *timer, bool delay)
       /* Otherwise, return it to the heap */
 
       spin_unlock_irqrestore(&g_locktimers, flags);
-      if (delay)
-        {
-          kmm_delayfree(timer);
-        }
-      else
-        {
-          kmm_free(timer);
-        }
+      kmm_free(timer);
     }
 }
 
@@ -100,7 +93,6 @@ static inline void timer_free(struct posix_timer_s *timer, bool delay)
  * Input Parameters:
  *   timer - The per-thread timer, previously created by the call to
  *     timer_create(), to be deleted.
- *   delay - If true, timer_free will use delayfree.
  *   in_expiration  - If true, we can not call hrtimer_cancel_sync.
  *
  * Returned Value:
@@ -112,7 +104,7 @@ static inline void timer_free(struct posix_timer_s *timer, bool delay)
  *
  ****************************************************************************/
 
-bool timer_release(FAR struct posix_timer_s *timer, bool delay,
+bool timer_release(FAR struct posix_timer_s *timer,
                    bool in_expiration)
 {
   bool valid = true;
@@ -143,7 +135,7 @@ bool timer_release(FAR struct posix_timer_s *timer, bool delay,
 
       /* Release the timer structure */
 
-      timer_free(timer, delay);
+      timer_free(timer);
 
       atomic_sub(&group->itimer_count, 1);
       valid = false;

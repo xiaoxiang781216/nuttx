@@ -146,7 +146,7 @@ static uint64_t timer_timeout(FAR const hrtimer_t *hrtimer, uint64_t expired)
        * count to zero will become the timer owner.
        */
 
-      if (timer_release(timer, false, true) && timer->pt_delay)
+      if (timer_release(timer, true) && timer->pt_delay)
         {
           /* If this is a repetitive timer, then restart the timer.
            * First, calculate the number of timer overruns and the next
