@@ -83,7 +83,7 @@ uint64_t *const g_cpu_int_stacktop[CONFIG_NCPUS] =
 #endif /* CONFIG_NCPUS > 1 */
 };
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+#if defined(CONFIG_ARCH_HIPRI_INTERRUPT) || defined(CONFIG_ARCH_TRUSTZONE_SECURE)
 uint64_t *const g_cpu_int_fiq_stacktop[CONFIG_NCPUS] =
 {
   (uint64_t *)(g_interrupt_fiq_stack[0] + INTSTACK_SIZE),

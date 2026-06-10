@@ -166,6 +166,10 @@
   ARM_SMCCC_CALL_VAL(ARM_SMCCC_STD_CALL, ARM_SMCCC_SMC_64, \
                      ARM_SMCCC_OWNER_TRUSTED_OS_END, 0x0002)
 
+#define ARM_SMCCC_NUTTX_FOREIGN_INTR \
+  ARM_SMCCC_CALL_VAL(ARM_SMCCC_STD_CALL, ARM_SMCCC_SMC_64, \
+                     ARM_SMCCC_OWNER_TRUSTED_OS_END, 0x0003)
+
 #ifndef __ASSEMBLY__
 
 /****************************************************************************

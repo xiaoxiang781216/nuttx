@@ -91,7 +91,7 @@ void arm64_new_task(struct tcb_s * tcb)
   xcp->regs[REG_X18]       = tcb->shadow_base_ptr;
 #endif
 
-#ifndef CONFIG_ARCH_HIPRI_INTERRUPT
+#if !defined(CONFIG_ARCH_HIPRI_INTERRUPT) && !defined(CONFIG_ARCH_TRUSTZONE_SECURE)
   xcp->regs[REG_SPSR]     |= DAIF_FIQ_BIT;
 #endif
 

@@ -68,7 +68,7 @@ INIT_STACK_ARRAY_DEFINE(g_cpu_idlestackalloc, CONFIG_NCPUS,
 INIT_STACK_ARRAY_DEFINE(g_interrupt_stack, CONFIG_NCPUS,
                         INTSTACK_SIZE);
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+#if defined(CONFIG_ARCH_HIPRI_INTERRUPT) || defined(CONFIG_ARCH_TRUSTZONE_SECURE)
 INIT_STACK_ARRAY_DEFINE(g_interrupt_fiq_stack, CONFIG_NCPUS,
                         INTSTACK_SIZE);
 #endif

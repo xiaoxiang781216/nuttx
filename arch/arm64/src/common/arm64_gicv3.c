@@ -859,7 +859,16 @@ uint64_t * arm64_decodeirq(uint64_t * regs)
   return regs;
 }
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+uint64_t * arm64_decodefiq(uint64_t * regs)
+{
+  struct arm_smccc_res res;
+
+  arm_smccc_smc(ARM_SMCCC_NUTTX_FOREIGN_INTR,
+                0, 0, 0, 0, 0, 0, 0, &res);
+  return regs;
+}
+#elif defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 uint64_t * arm64_decodefiq(uint64_t * regs)
 {
   int irq;
