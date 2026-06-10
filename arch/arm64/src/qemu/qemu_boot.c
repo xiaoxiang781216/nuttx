@@ -54,7 +54,7 @@ static const struct arm_mmu_region g_mmu_regions[] =
 
   MMU_REGION_FLAT_ENTRY("PCI_MEM",
                         CONFIG_PCI_MEM_BASEADDR, CONFIG_PCI_MEM_SIZE,
-                        MT_NORMAL | MT_RW | MT_SECURE),
+                        MT_DEVICE_NGNRNE | MT_RW | MT_SECURE),
 
   MMU_REGION_FLAT_ENTRY("PCI_IO",
                         CONFIG_PCI_IO_BASEADDR, CONFIG_PCI_IO_SIZE,
