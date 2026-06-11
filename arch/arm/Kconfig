@@ -700,6 +700,7 @@ config ARCH_CHIP_TLSR82
 
 config ARCH_CHIP_MPS
 	bool "MPS ARM Series"
+	select ARCH_HAVE_POWEROFF
 	---help---
 		MPS platform (MPS2 MPS3)
 
