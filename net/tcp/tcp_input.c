@@ -1372,20 +1372,27 @@ found:
 
       flags |= TCP_ACKDATA;
 
-      /* Check if no packet need to retransmission, clear timer. */
+      /* RFC 6298 Section 5.3: Only reset the retransmission timer when
+       * the ACK acknowledges new data (i.e., tx_unacked has decreased).
+       * Duplicate ACKs (where ACK number does not advance) must NOT
+       * reset the RTO timer, otherwise RTO-based retransmission will
+       * never trigger when the peer keeps sending data with unchanged
+       * ACK number.
+       */
 
-      if (conn->tx_unacked == 0)
+      if (conn->tx_unacked < lasttxunacked)
         {
-          timeout = 0;
-        }
-      else
-        {
-          timeout = conn->rto;
-        }
+          if (conn->tx_unacked == 0)
+            {
+              timeout = 0;
+            }
+          else
+            {
+              timeout = conn->rto;
+            }
 
-      /* Reset the retransmission timer. */
-
-      tcp_update_retrantimer(conn, timeout);
+          tcp_update_retrantimer(conn, timeout);
+        }
     }
 
 skip_rtt:
