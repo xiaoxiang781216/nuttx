@@ -1542,4 +1542,62 @@ config MTD_CFI_PAGE_SIZE
 		is introduced. The Configured page size within the range of
 		the maximum number of bytes is considered valid.
 
+config MTD_MCAL_MEM
+	bool "AUTOSAR MCAL Mem MTD adapter"
+	default n
+	---help---
+		Generic MTD adapter that bridges an AUTOSAR SWS MemoryDriver
+		(Mem) asynchronous polling job model onto the synchronous NuttX
+		MTD interface.  A vendor binding layer supplies the concrete Mem
+		driver through mtd_mcal_mem_register().  This is vendor-agnostic:
+		it works with any Mem instance (e.g. Infineon Mem_17_Nvm for
+		AURIX eFlash/RRAM) that exposes the standard service set.
+
+if MTD_MCAL_MEM
+
+config MTD_MCAL_MEM_POLL_SLEEP_US
+	int "Mem job poll sleep interval (us)"
+	default 10
+	range 0 1000
+	---help---
+		Microseconds to sleep between polls of the Mem state machine
+		while a job is in flight.  0 means tight polling (no sleep).
+		When the vendor binding provides a busy hook, the adapter only
+		sleeps while the hardware is genuinely executing a command.
+
+config MCAL_MEM_READ_HOOKS
+	bool "Enable per-read binding hooks (pre_read/after_read)"
+	default n
+	---help---
+		Bracket every MemAcc read with the binding-provided pre_read /
+		after_read hooks.  These are an escape hatch for memories that
+		need a vendor-specific workaround around the read sequence (for
+		example a silicon erratum or a buggy access path).  Leave
+		disabled unless a binding documents a read-side workaround.
+
+config MCAL_MEM_WRITE_HOOKS
+	bool "Enable per-write binding hooks (pre_write/after_write)"
+	default n
+	---help---
+		Bracket every MemAcc write with the binding-provided pre_write /
+		after_write hooks.  These are an escape hatch for memories that
+		need a vendor-specific workaround around the write sequence.  On
+		Infineon AURIX RRAM this must be enabled to apply the PRRAM
+		prefetch-buffer workaround for erratum NVMR_TC.003 (a later read
+		of a just-written address may otherwise return stale prefetched
+		data).  Leave disabled unless a binding documents a write-side
+		workaround.
+
+config MCAL_MEM_ERASE_HOOKS
+	bool "Enable per-erase binding hooks (pre_erase/after_erase)"
+	default n
+	---help---
+		Bracket every MemAcc erase with the binding-provided pre_erase /
+		after_erase hooks.  These are an escape hatch for memories that
+		need a vendor-specific workaround around the erase sequence.
+		Leave disabled unless a binding documents an erase-side
+		workaround.
+
+endif # MTD_MCAL_MEM
+
 endif # MTD

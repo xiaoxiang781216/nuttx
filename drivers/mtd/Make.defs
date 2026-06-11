@@ -221,6 +221,10 @@ CSRCS += mtd_cfi.c
 CSRCS += cfi.c
 endif
 
+ifeq ($(CONFIG_MTD_MCAL_MEM),y)
+CSRCS += mtd_mcal_mem.c
+endif
+
 # Include MTD driver support
 
 DEPPATH += --dep-path mtd

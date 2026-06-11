@@ -200,5 +200,13 @@ if(CONFIG_MTD)
     list(APPEND SRCS cfi.c)
   endif()
 
+  # AUTOSAR MemAcc / Mem MTD adapter core.  Compiled here like every other
+  # *_mcal.c driver: the vendor MCAL CMakeLists exposes the MemAcc standard API
+  # headers (MemAcc/ssc/inc and a patched MemAcc_GeneralTypes.h) on the global
+  # include path, so this generic tree carries NO chip-vendor include path.
+  if(CONFIG_MTD_MCAL_MEM)
+    list(APPEND SRCS mtd_mcal_mem.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
 endif()

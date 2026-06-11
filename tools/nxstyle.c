@@ -804,13 +804,17 @@ static const char *g_white_files[] =
   "program_generated.h",
 
   /* Skip Mixed case - AUTOSAR MCAL adaptation layers.
-   * Uses AUTOSAR-mandated PascalCase identifiers (Pwm_*, Dio_*, Det_*)
-   * defined in MCAL headers per AUTOSAR SWS specifications.
-   * Applies to all files matching *_mcal.c / *_mcal.h.
+   * Uses AUTOSAR-mandated PascalCase identifiers (Pwm_*, Dio_*, Det_*,
+   * MemAcc_*, Std_ReturnType) defined in MCAL headers per AUTOSAR SWS
+   * specifications.  Covers *_mcal.c / *_mcal.h and the MTD MemAcc adapter
+   * mtd_mcal_mem.c / .h (the _mem infix means it is not matched by the
+   * *_mcal.c / *_mcal.h substrings above).
    */
 
   "_mcal.c",
   "_mcal.h",
+  "mtd_mcal_mem.c",
+  "mtd_mcal_mem.h",
 
   /* Skip Mixed case
    * nuttx/include/link.h:54:7: error: Mixed case identifier found
