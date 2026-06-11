@@ -44,12 +44,14 @@
 #include <poll.h>
 #include <errno.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/crypto/crypto.h>
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/percpu.h>
+#include <nuttx/spinlock.h>
 
 #include <crypto/xform.h>
 #include <crypto/cryptodev.h>
@@ -94,6 +96,8 @@ struct fcrypt
   TAILQ_HEAD(csessionlist, csession) csessions;
   TAILQ_HEAD(cryptoplist, cryptop) crp_ret;
   TAILQ_HEAD(cryptkoplist, cryptkop) crpk_ret;
+  atomic_t refcount;
+  spinlock_t lock;
   int sesn;
   FAR struct pollfd *fds;
 };
@@ -261,6 +265,56 @@ MEMPOOL_DEFINE(g_cryptkop_pool, sizeof(struct cryptkop),
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static FAR struct fcrypt *fcrypt_get(FAR struct fcrypt *fcr)
+{
+  atomic_add(&fcr->refcount, 1);
+  return fcr;
+}
+
+static void fcrypt_put(FAR struct fcrypt *fcr)
+{
+  FAR struct csession *cse;
+  FAR struct cryptop *crp;
+  FAR struct cryptkop *krp;
+  int i;
+
+  if (atomic_sub(&fcr->refcount, 1) != 1)
+    {
+      return;
+    }
+
+  while ((cse = TAILQ_FIRST(&fcr->csessions)))
+    {
+      TAILQ_REMOVE(&fcr->csessions, cse, next);
+      csefree(cse);
+    }
+
+  while ((crp = TAILQ_FIRST(&fcr->crp_ret)))
+    {
+      TAILQ_REMOVE(&fcr->crp_ret, crp, crp_next);
+      cryptop_free(crp);
+    }
+
+  while ((krp = TAILQ_FIRST(&fcr->crpk_ret)))
+    {
+      TAILQ_REMOVE(&fcr->crpk_ret, krp, krp_next);
+      if (!(krp->krp_flags & CRYPTO_F_REL))
+        {
+          for (i = 0; i < CRK_MAXPARAM; i++)
+            {
+              if (krp->krp_param[i].crp_p)
+                {
+                  kmm_free(krp->krp_param[i].crp_p);
+                }
+            }
+        }
+
+      cryptkop_free(krp);
+    }
+
+  kmm_free(fcr);
+}
 
 /* ARGSUSED */
 
@@ -500,7 +554,7 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
 
       scrp->crp_reqid    = cop->reqid;
       scrp->crp_olen     = cop->olen;
-      scrp->crp_opaque   = fcr;
+      scrp->crp_opaque   = fcrypt_get(fcr);
       scrp->crp_callback = cryptodevop_cb;
       crp.crp_opaque     = scrp;
       crp.crp_flags      = CRYPTO_F_CBIMM;
@@ -617,6 +671,11 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
 
   if (error && scrp)
     {
+      if (cop->flags & COP_FLAG_CBIMM)
+        {
+          fcrypt_put(fcr);
+        }
+
       cryptop_free(scrp);
     }
 
@@ -626,40 +685,52 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
 static int cryptodevop_cb(FAR struct cryptop *crp)
 {
   FAR struct fcrypt *fcr = crp->crp_opaque;
+  FAR struct pollfd *fds;
+  irqstate_t flags;
 
+  flags = spin_lock_irqsave(&fcr->lock);
   TAILQ_INSERT_TAIL(&fcr->crp_ret, crp, crp_next);
-  if (fcr->fds != NULL)
+  fds = fcr->fds;
+  spin_unlock_irqrestore(&fcr->lock, flags);
+
+  if (fds != NULL)
     {
-      poll_notify(&fcr->fds, 1, POLLIN);
+      poll_notify(&fds, 1, POLLIN);
     }
 
+  fcrypt_put(fcr);
   return OK;
+}
+
+static FAR struct cryptop *
+fcrypt_dequeue_op(FAR struct fcrypt *fcr, uint32_t reqid)
+{
+  FAR struct cryptop *crp;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&fcr->lock);
+  TAILQ_FOREACH(crp, &fcr->crp_ret, crp_next)
+    {
+      if (crp->crp_reqid == reqid)
+        {
+          TAILQ_REMOVE(&fcr->crp_ret, crp, crp_next);
+          break;
+        }
+    }
+
+  spin_unlock_irqrestore(&fcr->lock, flags);
+  return crp;
 }
 
 static int cryptodev_getopstatus(FAR struct fcrypt *fcr,
                                  FAR struct crypt_op *cop)
 {
-  FAR struct cryptop *crp = NULL;
-
-  if (TAILQ_EMPTY(&fcr->crp_ret))
-    {
-      return -EAGAIN;
-    }
-
-  TAILQ_FOREACH(crp, &fcr->crp_ret, crp_next)
-    {
-      if (crp->crp_reqid == cop->reqid)
-        {
-          break;
-        }
-    }
+  FAR struct cryptop *crp = fcrypt_dequeue_op(fcr, cop->reqid);
 
   if (crp == NULL)
     {
-      return -EINVAL;
+      return -EAGAIN;
     }
-
-  TAILQ_REMOVE(&fcr->crp_ret, crp, crp_next);
 
   if (!(crp->crp_flags & CRYPTO_F_REL))
     {
@@ -887,6 +958,7 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
     {
       krp->krp_fcr = fcr;
       krp->krp_callback = cryptodevkey_cb;
+      fcrypt_get(fcr);
     }
 
   for (i = 0; i < CRK_MAXPARAM; i++)
@@ -956,6 +1028,11 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
 fail:
   if (krp)
     {
+      if (krp->krp_flags & CRYPTO_F_CBIMM)
+        {
+          fcrypt_put(fcr);
+        }
+
       kop->crk_status = krp->krp_status;
       if (!(krp->krp_flags & CRYPTO_F_REL))
         {
@@ -979,41 +1056,54 @@ fail:
 static int cryptodevkey_cb(FAR struct cryptkop *krp)
 {
   FAR struct fcrypt *fcr = krp->krp_fcr;
+  FAR struct pollfd *fds;
+  irqstate_t flags;
 
+  flags = spin_lock_irqsave(&fcr->lock);
   TAILQ_INSERT_TAIL(&fcr->crpk_ret, krp, krp_next);
-  if (fcr->fds != NULL)
+  fds = fcr->fds;
+  spin_unlock_irqrestore(&fcr->lock, flags);
+
+  if (fds != NULL)
     {
-      poll_notify(&fcr->fds, 1, POLLIN);
+      poll_notify(&fds, 1, POLLIN);
     }
 
+  fcrypt_put(fcr);
   return OK;
 }
 
-static int cryptodev_getkeystatus(struct fcrypt *fcr, struct crypt_kop *ret)
+static FAR struct cryptkop *
+fcrypt_dequeue_key(FAR struct fcrypt *fcr, uint32_t reqid)
 {
-  FAR struct cryptkop *krp = NULL;
-  int i;
-  int size;
+  FAR struct cryptkop *krp;
+  irqstate_t flags;
 
-  if (TAILQ_EMPTY(&fcr->crpk_ret))
-    {
-      return -EAGAIN;
-    }
-
+  flags = spin_lock_irqsave(&fcr->lock);
   TAILQ_FOREACH(krp, &fcr->crpk_ret, krp_next)
     {
-      if (krp->krp_reqid == ret->crk_reqid)
+      if (krp->krp_reqid == reqid)
         {
+          TAILQ_REMOVE(&fcr->crpk_ret, krp, krp_next);
           break;
         }
     }
 
+  spin_unlock_irqrestore(&fcr->lock, flags);
+  return krp;
+}
+
+static int cryptodev_getkeystatus(struct fcrypt *fcr, struct crypt_kop *ret)
+{
+  FAR struct cryptkop *krp = fcrypt_dequeue_key(fcr, ret->crk_reqid);
+  int size;
+  int i;
+
   if (krp == NULL)
     {
-      return -EINVAL;
+      return -EAGAIN;
     }
 
-  TAILQ_REMOVE(&fcr->crpk_ret, krp, krp_next);
   ret->crk_op = krp->krp_op;
   ret->crk_status = krp->krp_status;
   ret->crk_iparams = krp->krp_iparams;
@@ -1055,34 +1145,45 @@ static int cryptof_poll(FAR struct file *filep,
                         FAR struct pollfd *fds, bool setup)
 {
   FAR struct fcrypt *fcr = filep->f_priv;
+  bool ready = false;
+  irqstate_t flags;
+  int ret = OK;
 
   if (fcr == NULL || fds == NULL)
     {
       return -EINVAL;
     }
 
+  flags = spin_lock_irqsave(&fcr->lock);
   if (setup)
     {
       if (!TAILQ_EMPTY(&fcr->crp_ret) ||
           !TAILQ_EMPTY(&fcr->crpk_ret))
         {
-          poll_notify(&fds, 1, POLLIN);
-          return OK;
+          ready = true;
         }
-
-      if (fcr->fds)
+      else if (fcr->fds)
         {
-          return -EBUSY;
+          ret = -EBUSY;
         }
-
-      fcr->fds = fds;
+      else
+        {
+          fcr->fds = fds;
+        }
     }
   else
     {
       fcr->fds = NULL;
     }
 
-  return OK;
+  spin_unlock_irqrestore(&fcr->lock, flags);
+
+  if (ready)
+    {
+      poll_notify(&fds, 1, POLLIN);
+    }
+
+  return ret;
 }
 
 /* ARGSUSED */
@@ -1090,42 +1191,14 @@ static int cryptof_poll(FAR struct file *filep,
 static int cryptof_close(FAR struct file *filep)
 {
   FAR struct fcrypt *fcr = filep->f_priv;
-  FAR struct csession *cse;
-  FAR struct cryptop *crp;
-  FAR struct cryptkop *krp;
-  int i;
+  irqstate_t flags;
 
-  while ((cse = TAILQ_FIRST(&fcr->csessions)))
-    {
-      TAILQ_REMOVE(&fcr->csessions, cse, next);
-      (void)csefree(cse);
-    }
+  flags = spin_lock_irqsave(&fcr->lock);
+  fcr->fds = NULL;
+  spin_unlock_irqrestore(&fcr->lock, flags);
 
-  while ((crp = TAILQ_FIRST(&fcr->crp_ret)))
-    {
-      TAILQ_REMOVE(&fcr->crp_ret, crp, crp_next);
-      cryptop_free(crp);
-    }
-
-  while ((krp = TAILQ_FIRST(&fcr->crpk_ret)))
-    {
-      TAILQ_REMOVE(&fcr->crpk_ret, krp, krp_next);
-      if (!(krp->krp_flags & CRYPTO_F_REL))
-        {
-          for (i = 0; i < CRK_MAXPARAM; i++)
-            {
-              if (krp->krp_param[i].crp_p)
-                {
-                  kmm_free(krp->krp_param[i].crp_p);
-                }
-            }
-        }
-
-      cryptkop_free(krp);
-    }
-
-  kmm_free(fcr);
   filep->f_priv = NULL;
+  fcrypt_put(fcr);
   return 0;
 }
 
@@ -1163,6 +1236,10 @@ static int cryptof_open(FAR struct file *filep)
     }
 
   TAILQ_INIT(&fcrd->csessions);
+  TAILQ_INIT(&fcrd->crp_ret);
+  TAILQ_INIT(&fcrd->crpk_ret);
+  atomic_set(&fcrd->refcount, 1);
+  spin_lock_init(&fcrd->lock);
   TAILQ_FOREACH(cse, &fcr->csessions, next)
     {
       bzero(&crie, sizeof(crie));
@@ -1261,6 +1338,8 @@ static int cryptoioctl(FAR struct file *filep, int cmd, unsigned long arg)
         TAILQ_INIT(&fcr->csessions);
         TAILQ_INIT(&fcr->crp_ret);
         TAILQ_INIT(&fcr->crpk_ret);
+        atomic_set(&fcr->refcount, 1);
+        spin_lock_init(&fcr->lock);
 
         fd = file_allocate_from_inode(&g_cryptoinode, 0, 0, fcr, 0);
         if (fd < 0)
