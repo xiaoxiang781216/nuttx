@@ -80,10 +80,12 @@ struct ftl_struct_s
   FAR uint8_t          *eblock;   /* One, in-memory erase block */
   int                   oflags;
 
-  /* The nand block map between logic block and physical block */
+#ifdef CONFIG_FTL_BBM
+  /* The block map between logic block and physical block */
 
   FAR off_t            *lptable;
   off_t                 lpcount;
+#endif
 };
 
 /****************************************************************************
@@ -112,8 +114,10 @@ static int     ftl_ioctl(FAR struct inode *inode, int cmd,
 static int     ftl_unlink(FAR struct inode *inode);
 #endif
 
+#ifdef CONFIG_FTL_BBM
 static int     ftl_mtd_bmove(FAR struct ftl_struct_s *dev,
                              off_t startblock);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -136,12 +140,14 @@ static const struct block_operations g_bops =
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_FTL_BBM
+
 /****************************************************************************
  * Name: ftl_init_map
  *
  * Description: Allocate logical block and physical block mapping table
- *              space, and scan the entire nand flash device to establish
- *              the mapping relationship between logical block and physical
+ *              space, and scan the entire MTD device to establish the
+ *              mapping relationship between logical block and physical
  *              good block.
  *
  ****************************************************************************/
@@ -210,6 +216,7 @@ static size_t ftl_get_cblock(FAR struct ftl_struct_s *dev, off_t start,
 
   return count;
 }
+#endif
 
 /****************************************************************************
  * Name: ftl_open
@@ -276,11 +283,15 @@ static int ftl_close(FAR struct inode *inode)
 static ssize_t ftl_mtd_bread(FAR struct ftl_struct_s *dev, off_t startblock,
                              size_t nblocks, FAR uint8_t *buffer)
 {
+#ifdef CONFIG_FTL_BBM
   off_t mask = dev->blkper - 1;
   size_t nread = nblocks;
+#endif
   ssize_t ret = OK;
 
+#ifdef CONFIG_FTL_BBM
   if (dev->lptable == NULL)
+#endif
     {
       ret = MTD_BREAD(dev->mtd, startblock, nblocks, buffer);
       if (ret != nblocks)
@@ -292,6 +303,7 @@ static ssize_t ftl_mtd_bread(FAR struct ftl_struct_s *dev, off_t startblock,
       return ret;
     }
 
+#ifdef CONFIG_FTL_BBM
   while (nblocks > 0)
     {
       off_t startphysicalblock;
@@ -327,6 +339,7 @@ static ssize_t ftl_mtd_bread(FAR struct ftl_struct_s *dev, off_t startblock,
     }
 
   return nblocks != nread ? nread - nblocks : ret;
+#endif
 }
 
 /****************************************************************************
@@ -344,7 +357,9 @@ static ssize_t ftl_mtd_erase(FAR struct ftl_struct_s *dev, off_t startblock)
 {
   ssize_t ret;
 
+#ifdef CONFIG_FTL_BBM
   if (dev->lptable == NULL)
+#endif
     {
       ret = MTD_ERASE(dev->mtd, startblock, 1);
       if (ret < 0 && ret != -ENOSYS)
@@ -357,6 +372,7 @@ static ssize_t ftl_mtd_erase(FAR struct ftl_struct_s *dev, off_t startblock)
       return OK;
     }
 
+#ifdef CONFIG_FTL_BBM
   while (1)
     {
       if (startblock >= dev->lpcount)
@@ -379,6 +395,7 @@ static ssize_t ftl_mtd_erase(FAR struct ftl_struct_s *dev, off_t startblock)
           return ret;
         }
     }
+#endif
 }
 
 /****************************************************************************
@@ -394,10 +411,14 @@ static ssize_t ftl_mtd_erase(FAR struct ftl_struct_s *dev, off_t startblock)
 static ssize_t ftl_mtd_bwrite(FAR struct ftl_struct_s *dev, off_t startblock,
                               FAR const uint8_t *buffer)
 {
+#ifdef CONFIG_FTL_BBM
   off_t starteraseblock;
+#endif
   ssize_t ret;
 
+#ifdef CONFIG_FTL_BBM
   if (dev->lptable == NULL)
+#endif
     {
       ret = MTD_BWRITE(dev->mtd, startblock, dev->blkper, buffer);
       if (ret != dev->blkper)
@@ -409,6 +430,7 @@ static ssize_t ftl_mtd_bwrite(FAR struct ftl_struct_s *dev, off_t startblock,
       return ret;
     }
 
+#ifdef CONFIG_FTL_BBM
   starteraseblock = startblock / dev->blkper;
   while (1)
     {
@@ -439,7 +461,10 @@ static ssize_t ftl_mtd_bwrite(FAR struct ftl_struct_s *dev, off_t startblock,
           return ret;
         }
     }
+#endif
 }
+
+#ifdef CONFIG_FTL_BBM
 
 /****************************************************************************
  * Name: ftl_is_erasedblock
@@ -596,6 +621,7 @@ out:
   kmm_free(tmpbuf);
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: ftl_reload
@@ -689,7 +715,9 @@ static ssize_t ftl_flush_direct(FAR struct ftl_struct_s *dev,
             }
         }
 
+#ifdef CONFIG_FTL_BBM
       if (dev->lptable == NULL)
+#endif
         {
           ret = MTD_BWRITE(dev->mtd, startblock, count, buffer);
           if (ret != count)
@@ -699,6 +727,7 @@ static ssize_t ftl_flush_direct(FAR struct ftl_struct_s *dev,
               return ret;
             }
         }
+#ifdef CONFIG_FTL_BBM
       else
         {
           if (starteraseblock >= dev->lpcount)
@@ -724,6 +753,7 @@ static ssize_t ftl_flush_direct(FAR struct ftl_struct_s *dev,
               continue;
             }
         }
+#endif
 
       nblocks -= count;
       startblock += count;
@@ -747,7 +777,11 @@ static ssize_t ftl_flush(FAR void *priv, FAR const uint8_t *buffer,
   int    nbytes;
   int    ret;
 
+#ifdef CONFIG_FTL_BBM
   if (dev->mtd->erase == NULL && dev->lptable == NULL)
+#else
+  if (dev->mtd->erase == NULL)
+#endif
     {
       ret = MTD_BWRITE(dev->mtd, startblock, nblocks, buffer);
       if (ret != nblocks)
@@ -1089,6 +1123,15 @@ int ftl_initialize_by_path(FAR const char *path, FAR struct mtd_dev_s *mtd,
 
   finfo("path=\"%s\"\n", path);
 
+#ifndef CONFIG_FTL_BBM
+  /* It is likely a configuration error if the mtd driver implements
+   * the bad block management, but it is still disabled by the
+   * configuration.
+   */
+
+  DEBUGASSERT(mtd->isbad == NULL && mtd->markbad == NULL);
+#endif
+
   /* Allocate a FTL device structure */
 
   dev = kmm_zalloc(sizeof(struct ftl_struct_s));
@@ -1145,6 +1188,7 @@ int ftl_initialize_by_path(FAR const char *path, FAR struct mtd_dev_s *mtd,
         }
 #endif
 
+#ifdef CONFIG_FTL_BBM
       if (MTD_ISBAD(dev->mtd, 0) != -ENOSYS)
         {
           ret = ftl_init_map(dev);
@@ -1153,6 +1197,7 @@ int ftl_initialize_by_path(FAR const char *path, FAR struct mtd_dev_s *mtd,
               goto out;
             }
         }
+#endif
 
       /* Inode private data is a reference to the FTL device structure */
 
@@ -1160,8 +1205,10 @@ int ftl_initialize_by_path(FAR const char *path, FAR struct mtd_dev_s *mtd,
       if (ret < 0)
         {
           ferr("ERROR: register_blockdriver failed: %d\n", -ret);
+#ifdef CONFIG_FTL_BBM
           kmm_free(dev->lptable);
 out:
+#endif
 #ifdef FTL_HAVE_RWBUFFER
           rwb_uninitialize(&dev->rwb);
 #endif
