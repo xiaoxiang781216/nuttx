@@ -85,6 +85,15 @@ if(CONFIG_BUILTIN_COMPILER_RT)
   set(BUILTINS_DIR ${CMAKE_CURRENT_LIST_DIR}/compiler-rt/lib/builtins)
 
   file(GLOB RT_BUILTINS_SRCS ${BUILTINS_DIR}/*.c)
+  file(GLOB RT_BUILTINS_ARCH_SRCS ${BUILTINS_DIR}/${ARCH}/*.S
+       ${BUILTINS_DIR}/${ARCH}/.*c)
+
+  foreach(src ${RT_BUILTINS_ARCH_SRCS})
+    get_filename_component(src_base ${src} NAME_WE)
+    list(REMOVE_ITEM RT_BUILTINS_SRCS ${BUILTINS_DIR}/${src_base}.c)
+  endforeach()
+
+  list(APPEND RT_BUILTINS_SRCS ${RT_BUILTINS_ARCH_SRCS})
 
   file(GLOB SRCSTMP ${BUILTINS_DIR}/${ARCH}/*.S)
   list(APPEND RT_BUILTINS_SRCS ${SRCSTMP})

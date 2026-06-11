@@ -88,9 +88,14 @@ ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
 FLAGS += -Wno-implicit-function-declaration
 endif
 
-CSRCS += $(wildcard compiler-rt/compiler-rt/lib/builtins/*.c)
 ASRCS += $(wildcard compiler-rt/compiler-rt/lib/builtins/$(ARCH)/*.S)
 CSRCS += $(wildcard compiler-rt/compiler-rt/lib/builtins/$(ARCH)/*.c)
+
+CSRCS += $(filter-out \
+  $(addsuffix .c,$(addprefix compiler-rt/compiler-rt/lib/builtins/,\
+  $(notdir $(basename $(wildcard compiler-rt/compiler-rt/lib/builtins/$(ARCH)/*.S) \
+                      $(wildcard compiler-rt/compiler-rt/lib/builtins/$(ARCH)/*.c))))),\
+  $(wildcard compiler-rt/compiler-rt/lib/builtins/*.c))
 
 ifeq ($(CONFIG_LIB_COMPILER_RT_HAS_BFLOAT16),)
   BFLOAT16_SRCS := compiler-rt/compiler-rt/lib/builtins/truncdfbf2.c
