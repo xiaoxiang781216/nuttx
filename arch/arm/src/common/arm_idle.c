@@ -44,7 +44,7 @@
  *
  ****************************************************************************/
 
-void up_idle(void)
+void weak_function up_idle(void)
 {
 #if defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
   /* If the system is idle and there are no timer interrupts, then process
