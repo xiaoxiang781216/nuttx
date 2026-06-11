@@ -376,20 +376,19 @@ int tricore_assertiontrap(uint32_t tid, void *context, void *arg)
 void tricore_trapcall(volatile void *trap)
 {
   uintptr_t *regs;
-
+  uintptr_t saved_fcx;
+  uintptr_t saved_lcx;
+  bool switch_csa;
   IfxCpu_Trap *ctrap = (IfxCpu_Trap *)trap;
   IfxCpu_Trap_Class tclass = (IfxCpu_Trap_Class)ctrap->tClass;
   unsigned int tid = ctrap->tId;
-  bool was_interrupt_context;
-  uint32_t saved_fcx;
-  uint32_t saved_lcx;
 
   /* enter this funtion means that the regs is upcsa */
 
   regs = tricore_csa2addr(__mfcr(CPU_PCXI));
 
-  was_interrupt_context = up_interrupt_context();
-  if (!was_interrupt_context)
+  switch_csa = !(tricore_csa2addr(regs[REG_LPCXI])[REG_PSW] & PSW_IS);
+  if (switch_csa)
     {
       uintptr_t istackbase = up_get_intstackbase(up_cpu_index());
 
@@ -455,7 +454,7 @@ void tricore_trapcall(volatile void *trap)
            * with the correct CSA chain.
            */
 
-          if (!was_interrupt_context)
+          if (switch_csa)
             {
               /* Restore the original FCX/LCX that were saved before
                * switching to the IRQ stack CSA. Without this, rslcx
