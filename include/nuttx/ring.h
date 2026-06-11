@@ -224,6 +224,8 @@
 #define RING_DECLARE(name, type, buflen)                 \
   struct ring_##name##_s                                 \
   {                                                      \
+    static_assert(RING_CAPACITY(buflen) <= RING_SIZE_MAX,\
+                  "ring capacity exceeds RING_SIZE_MAX");\
     struct ring_s base;                                  \
     type          buf[RING_CAPACITY(buflen)];            \
   } name aligned_data(CACHELINE_SIZE)
@@ -257,6 +259,8 @@
 #define RING_DEFINE_BMP(name, buflen)                    \
   DEFINE_PER_CPU_BMP(struct                              \
   {                                                      \
+    static_assert(RING_CAPACITY(buflen) <= RING_SIZE_MAX,\
+                  "ring capacity exceeds RING_SIZE_MAX");\
     struct ring_s base;                                  \
     char          buf[RING_CAPACITY(buflen)];            \
   }, name) aligned_data(CACHELINE_SIZE) = RING_INIT(buflen)
