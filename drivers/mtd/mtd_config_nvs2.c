@@ -2843,10 +2843,20 @@ static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
       return 0;
     }
 
+  if (pdata->len)
+    {
+      required_space += ate_size;
+      if (NVS_MAX_KEY_LEN > nvs_free_space_in_ate(fs))
+        {
+          required_space += nvs_align_up(fs, NVS_MAX_KEY_LEN);
+        }
+    }
+
   for (gc_count = 0; gc_count < fs->nblocks; gc_count++)
     {
       if (fs->ate_wra >= fs->data_wra + required_space &&
-          (fs->ate_wra & NVS_ADDR_OFFSET_MASK))
+          (fs->ate_wra & NVS_ADDR_OFFSET_MASK) &&
+          (((fs->ate_wra - ate_size) & NVS_ADDR_OFFSET_MASK) || !pdata->len))
         {
           rc = nvs_flash_wrt_entry(fs, hash_id, key, key_len,
                                    pdata->configdata, pdata->len);
