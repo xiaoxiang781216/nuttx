@@ -78,6 +78,15 @@ config PWM_NCHANNELS
 		Specifies the number of output channels per timer.  Each timer
 		may support fewer output channels than this value.
 
+config MCAL_PWM_DRIVER
+	bool "AUTOSAR MCAL PWM Adaptation Layer"
+	default n
+	---help---
+		Enables the AUTOSAR MCAL PWM adaptation layer that bridges
+		the NuttX PWM upper-half driver to the AUTOSAR Pwm MCAL
+		module.  Board-level code provides per-channel mapping via
+		struct mcal_pwm_devinfo_s.
+
 endif # PWM
 
 config CAPTURE
