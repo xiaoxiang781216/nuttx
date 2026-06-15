@@ -171,7 +171,7 @@ void mm_free_delaylist(FAR struct mm_heap_s *heap)
  *
  ****************************************************************************/
 
-FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
+__jumpfunc__ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 {
   FAR struct mm_freenode_s *node;
   size_t alignsize;

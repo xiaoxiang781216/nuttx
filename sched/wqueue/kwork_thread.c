@@ -299,7 +299,7 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
  *
  ****************************************************************************/
 
-static int work_thread(int argc, FAR char *argv[])
+__jumpfunc__ static int work_thread(int argc, FAR char *argv[])
 {
   FAR struct kwork_wqueue_s *wqueue;
   FAR struct kworker_s      *kworker;
@@ -418,7 +418,7 @@ static int work_thread_create(FAR const char *name, int priority,
  *
  ****************************************************************************/
 
-void work_queue_dispatch(FAR struct kwork_wqueue_s *wqueue)
+__jumpfunc__ void work_queue_dispatch(FAR struct kwork_wqueue_s *wqueue)
 {
   FAR struct kworker_s *kworker = wq_get_worker(wqueue);
   pid_t pid = gettid();

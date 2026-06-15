@@ -35,6 +35,7 @@
 #include <string.h>
 
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/jump_label.h>
 #include <nuttx/percpu.h>
 #include <nuttx/tag.h>
 
@@ -202,9 +203,6 @@
  * one mask check.
  */
 
-#  define note_filter_type(type) \
-     NOTE_FILTER_TYPEMASK_ISSET(type, &g_note_filter.mode)
-
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
 #    define note_filter_syscall(nr) \
         NOTE_FILTER_SYSCALLMASK_ISSET((nr) - CONFIG_SYS_RESERVED, \
@@ -222,7 +220,6 @@
 #  endif
 
 #else /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
-#  define note_filter_type(type) (0)
 #  define note_filter_syscall(nr) (0)
 #  define note_filter_irq(irq) (0)
 #  define note_filter_dump(tag) (0)
@@ -743,6 +740,15 @@ struct note_max_s
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 DECLARE_PER_CPU_BMP(struct note_filter_s, g_note_filter);
 #  define g_note_filter this_cpu_var_bmp(g_note_filter)
+
+/* Global per-type static keys for zero-cost note filtering.
+ * All keys default TRUE (NOP = enabled).  note_update_filter() syncs
+ * from the global type_mask: bit SET -> key disabled, bit CLEAR -> key
+ * enabled.
+ * Callers use static_branch_unlikely(&g_note_keys[TYPE]).
+ */
+
+DECLARE_STATIC_KEY_ARRAY_FALSE(g_note_keys, NOTE_TYPE_LAST);
 #endif
 
 /****************************************************************************
@@ -847,23 +853,6 @@ void note_preemption(FAR struct tcb_s *tcb, bool locked);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
 void note_csection(FAR struct tcb_s *tcb, bool enter);
-#endif
-
-/****************************************************************************
- * Name: note_spinlock
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-void note_spinlock(FAR volatile void *spinlock, int type);
-#endif
-
-/****************************************************************************
- * Name: note_syscall_enter/leave
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-void note_syscall_enter(int nr, int argc, ...);
-void note_syscall_leave(int nr, uintptr_t result);
 #endif
 
 /****************************************************************************

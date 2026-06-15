@@ -67,8 +67,8 @@
  *
  ****************************************************************************/
 
-FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
-                     size_t size)
+__jumpfunc__ FAR void *mm_realloc(FAR struct mm_heap_s *heap,
+                                  FAR void *oldmem, size_t size)
 {
   FAR struct mm_allocnode_s *oldnode;
   FAR struct mm_freenode_s  *prev = NULL;

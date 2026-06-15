@@ -107,8 +107,8 @@ static FAR void *mempool_memalign(FAR void *arg, size_t alignment,
  *
  ****************************************************************************/
 
-void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
-                  size_t heapsize)
+__jumpfunc__ void mm_addregion(FAR struct mm_heap_s *heap,
+                               FAR void *heapstart, size_t heapsize)
 {
   FAR struct mm_freenode_s *node;
   uintptr_t heapbase;
@@ -406,7 +406,7 @@ void mm_initialize_pool(FAR const struct mm_heap_config_s *config,
  *
  ****************************************************************************/
 
-void mm_uninitialize(FAR struct mm_heap_s *heap)
+__jumpfunc__ void mm_uninitialize(FAR struct mm_heap_s *heap)
 {
   int i;
 

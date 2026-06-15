@@ -58,7 +58,7 @@
  *
  ****************************************************************************/
 
-int wd_cancel(FAR struct wdog_s *wdog)
+__jumpfunc__ int wd_cancel(FAR struct wdog_s *wdog)
 {
   FAR struct wdog_s *first;
   irqstate_t         flags;

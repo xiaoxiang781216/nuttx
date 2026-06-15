@@ -268,6 +268,16 @@ static DEFINE_PER_CPU_BMP(struct notifier_block, g_note_reboot_nb) =
 #undef g_note_filter
 DEFINE_PER_CPU_BMP(struct note_filter_s, g_note_filter);
 #define g_note_filter this_cpu_var_bmp(g_note_filter)
+#undef g_note_keys
+DEFINE_STATIC_KEY_ARRAY_FALSE(g_note_keys, NOTE_TYPE_LAST);
+
+/* After this point, plain 'g_note_keys' resolves to this_cpu's copy
+ * for use in the hot-path sched_note_xxx functions.
+ * Each CPU only reads/patches its own key array — no cross-CPU access
+ * is needed because note_update_filter() runs per-CPU.
+ */
+
+#define g_note_keys REFERENCE_STATIC_KEY(g_note_keys)
 #endif
 
 /****************************************************************************
@@ -354,6 +364,26 @@ static void note_update_filter(void)
   if (*type_mask & (1ULL << NOTE_ALL))
     {
       *type_mask = UINT64_MAX;
+    }
+
+  /* Sync global static keys from the computed type_mask.
+   * Convention: bit SET in type_mask = type DISABLED (filtered out).
+   * Keys are static_key_false (default NOP = disabled).
+   */
+
+  for (i = 1; i < NOTE_TYPE_LAST; i++)
+    {
+      bool want_enabled = !(*type_mask & (1ULL << i));
+      bool enabled = static_key_enabled(&g_note_keys[i].key);
+
+      if (want_enabled && !enabled)
+        {
+          static_key_enable(&g_note_keys[i].key);
+        }
+      else if (!want_enabled && enabled)
+        {
+          static_key_disable(&g_note_keys[i].key);
+        }
     }
 
   /* Step 2: Compute sub-masks.  If the corresponding type
@@ -869,6 +899,58 @@ note_driver_isenabled_type(FAR struct note_driver_s *driver, int type)
 }
 
 /****************************************************************************
+ * Name: note_spinlock
+ *
+ * Description:
+ *   Common spinlock note logic
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+static void note_spinlock(FAR volatile spinlock_t *spinlock, int type)
+{
+  FAR struct tcb_s *tcb = running_task();
+  FAR struct note_driver_s **driver;
+  struct note_spinlock_s note;
+  bool formatted = false;
+
+  note_drivers_initialize();
+  for (driver = g_note_drivers; *driver; driver++)
+    {
+      if (!note_driver_isenabled_type(*driver, type))
+        {
+          continue;
+        }
+
+      if (note_do_spinlock(*driver, tcb, spinlock, type))
+        {
+          continue;
+        }
+
+      if ((*driver)->ops->add == NULL)
+        {
+          continue;
+        }
+
+      /* Format the note */
+
+      if (!formatted)
+        {
+          formatted = true;
+          note_common(tcb, &note.nsp_cmn, sizeof(struct note_spinlock_s),
+                      type);
+          note.nsp_spinlock = (uintptr_t)spinlock;
+          note.nsp_value = (uint8_t)(uintptr_t)spinlock->lock;
+        }
+
+      /* Add the note to circular buffer */
+
+      note_do_add(*driver, &note, note.nsp_cmn.nc_length, true);
+    }
+}
+#endif
+
+/****************************************************************************
  * Name: note_driver_isenabled_syscall
  *
  * Description:
@@ -922,6 +1004,131 @@ note_driver_isenabled_syscall(FAR struct note_driver_s *driver, int type,
 #endif
 
   return true;
+}
+
+static void note_vsyscall_enter(int nr, int argc, va_list ap)
+{
+  FAR struct tcb_s *tcb = running_task();
+  FAR struct note_driver_s **driver;
+  struct note_syscall_enter_s note;
+  unsigned int length = 0;
+  bool formatted = false;
+
+  note_drivers_initialize();
+  for (driver = g_note_drivers; *driver; driver++)
+    {
+      va_list copy;
+
+      if (!note_driver_isenabled_syscall(*driver, NOTE_SYSCALL_ENTER, nr))
+        {
+          continue;
+        }
+
+      va_copy(copy, ap);
+      if (note_do_syscall_enter(*driver, nr, argc, &copy))
+        {
+          va_end(copy);
+          continue;
+        }
+
+      if ((*driver)->ops->add == NULL)
+        {
+          va_end(copy);
+          continue;
+        }
+
+      /* Format the note */
+
+      if (!formatted)
+        {
+          int i;
+          UNUSED(i);
+          formatted = true;
+          length = SIZEOF_NOTE_SYSCALL_ENTER(argc);
+          note_common(tcb, &note.nsc_cmn, length, NOTE_SYSCALL_ENTER);
+          DEBUGASSERT(nr <= UCHAR_MAX);
+          note.nsc_nr = nr;
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER_SYSCALL_ARGS
+          /* If needed, retrieve the given syscall arguments */
+
+          DEBUGASSERT(argc <= MAX_SYSCALL_ARGS);
+          note.nsc_argc = argc;
+
+          for (i = 0; i < argc; i++)
+            {
+              uintptr_t arg;
+              arg = (uintptr_t)va_arg(copy, uintptr_t);
+              note.nsc_args[i] = arg;
+            }
+#endif
+        }
+
+      va_end(copy);
+
+      /* Add the note to circular buffer */
+
+      note_do_add(*driver, &note, length, false);
+    }
+}
+
+/****************************************************************************
+ * Name: note_syscall_leave
+ *
+ * Description:
+ *   Record a system call leave note into all enabled note drivers.
+ *
+ * Input Parameters:
+ *   nr     - The system call number
+ *   result - The system call return value
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void note_syscall_leave(int nr, uintptr_t result)
+{
+  FAR struct tcb_s *tcb = running_task();
+  FAR struct note_driver_s **driver;
+  struct note_syscall_leave_s note;
+  bool formatted = false;
+
+  note_drivers_initialize();
+  for (driver = g_note_drivers; *driver; driver++)
+    {
+      if (!note_driver_isenabled_syscall(*driver, NOTE_SYSCALL_LEAVE, nr))
+        {
+          continue;
+        }
+
+      if (note_do_syscall_leave(*driver, nr, result))
+        {
+          continue;
+        }
+
+      if ((*driver)->ops->add == NULL)
+        {
+          continue;
+        }
+
+      /* Format the note */
+
+      if (!formatted)
+        {
+          formatted = true;
+          note_common(tcb, &note.nsc_cmn,
+                      sizeof(struct note_syscall_leave_s),
+                      NOTE_SYSCALL_LEAVE);
+          DEBUGASSERT(nr <= UCHAR_MAX);
+          note.nsc_nr = nr;
+          note.nsc_result = result;
+        }
+
+      /* Add the note to circular buffer */
+
+      note_do_add(*driver, &note, note.nsc_cmn.nc_length, false);
+    }
 }
 #endif
 
@@ -1647,7 +1854,7 @@ void note_csection(FAR struct tcb_s *tcb, bool enter)
 #endif
 
 /****************************************************************************
- * Name: sched_note_spinlock
+ * Name: sched_note_spinlock_xxx
  *
  * Description:
  *   Common logic for NOTE_SPINLOCK, NOTE_SPINLOCKED, and NOTE_SPINUNLOCK
@@ -1662,161 +1869,59 @@ void note_csection(FAR struct tcb_s *tcb, bool enter)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-void note_spinlock(FAR volatile spinlock_t *spinlock, int type)
+__jumpfunc__ void sched_note_spinlock_lock(FAR volatile void *spinlock)
 {
-  FAR struct tcb_s *tcb = running_task();
-  struct note_spinlock_s note;
-  FAR struct note_driver_s **driver;
-  bool formatted = false;
-
-  note_drivers_initialize();
-  for (driver = g_note_drivers; *driver; driver++)
+  if (static_branch_unlikely(&g_note_keys[NOTE_SPINLOCK_LOCK]))
     {
-      if (!note_driver_isenabled_type(*driver, type))
-        {
-          continue;
-        }
+      note_spinlock(spinlock, NOTE_SPINLOCK_LOCK);
+    }
+}
 
-      if (note_do_spinlock(*driver, tcb, spinlock, type))
-        {
-          continue;
-        }
+__jumpfunc__ void sched_note_spinlock_locked(FAR volatile void *spinlock)
+{
+  if (static_branch_unlikely(&g_note_keys[NOTE_SPINLOCK_LOCKED]))
+    {
+      note_spinlock(spinlock, NOTE_SPINLOCK_LOCKED);
+    }
+}
 
-      if ((*driver)->ops->add == NULL)
-        {
-          continue;
-        }
+__jumpfunc__ void sched_note_spinlock_unlock(FAR volatile void *spinlock)
+{
+  if (static_branch_unlikely(&g_note_keys[NOTE_SPINLOCK_UNLOCK]))
+    {
+      note_spinlock(spinlock, NOTE_SPINLOCK_UNLOCK);
+    }
+}
 
-      /* Format the note */
-
-      if (!formatted)
-        {
-          formatted = true;
-          note_common(tcb, &note.nsp_cmn, sizeof(struct note_spinlock_s),
-                      type);
-          note.nsp_spinlock = (uintptr_t)spinlock;
-          note.nsp_value = (uint8_t)(uintptr_t)spinlock->lock;
-        }
-
-      /* Add the note to circular buffer */
-
-      note_do_add(*driver, &note, note.nsp_cmn.nc_length, true);
+__jumpfunc__ void sched_note_spinlock_abort(FAR volatile void *spinlock)
+{
+  if (static_branch_unlikely(&g_note_keys[NOTE_SPINLOCK_ABORT]))
+    {
+      note_spinlock(spinlock, NOTE_SPINLOCK_ABORT);
     }
 }
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-void note_syscall_enter(int nr, int argc, ...)
+__jumpfunc__ void sched_note_syscall_enter(int nr, int argc, ...)
 {
-  struct note_syscall_enter_s note;
-  FAR struct note_driver_s **driver;
-  bool formatted = false;
-  FAR struct tcb_s *tcb = running_task();
-  unsigned int length = 0;
   va_list ap;
 
-  note_drivers_initialize();
-  va_start(ap, argc);
-  for (driver = g_note_drivers; *driver; driver++)
+  if (static_branch_unlikely(&g_note_keys[NOTE_SYSCALL_ENTER]) &&
+      !note_filter_syscall(nr))
     {
-      va_list copy;
-
-      if (!note_driver_isenabled_syscall(*driver, NOTE_SYSCALL_ENTER, nr))
-        {
-          continue;
-        }
-
-      va_copy(copy, ap);
-      if (note_do_syscall_enter(*driver, nr, argc, &copy))
-        {
-          va_end(copy);
-          continue;
-        }
-
-      if ((*driver)->ops->add == NULL)
-        {
-          va_end(copy);
-          continue;
-        }
-
-      /* Format the note */
-
-      if (!formatted)
-        {
-          int i;
-          UNUSED(i);
-          formatted = true;
-          length = SIZEOF_NOTE_SYSCALL_ENTER(argc);
-          note_common(tcb, &note.nsc_cmn, length, NOTE_SYSCALL_ENTER);
-          DEBUGASSERT(nr <= UCHAR_MAX);
-          note.nsc_nr = nr;
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER_SYSCALL_ARGS
-          /* If needed, retrieve the given syscall arguments */
-
-          DEBUGASSERT(argc <= MAX_SYSCALL_ARGS);
-          note.nsc_argc = argc;
-
-          for (i = 0; i < argc; i++)
-            {
-              uintptr_t arg;
-              arg = (uintptr_t)va_arg(copy, uintptr_t);
-              note.nsc_args[i] = arg;
-            }
-#endif
-        }
-
-      va_end(copy);
-
-      /* Add the note to circular buffer */
-
-      note_do_add(*driver, &note, length, false);
+      va_start(ap, argc);
+      note_vsyscall_enter(nr, argc, ap);
+      va_end(ap);
     }
-
-    va_end(ap);
 }
 
-void note_syscall_leave(int nr, uintptr_t result)
+__jumpfunc__ void sched_note_syscall_leave(int nr, uintptr_t result)
 {
-  struct note_syscall_leave_s note;
-  FAR struct note_driver_s **driver;
-  bool formatted = false;
-  FAR struct tcb_s *tcb = running_task();
-
-  note_drivers_initialize();
-  for (driver = g_note_drivers; *driver; driver++)
+  if (static_branch_unlikely(&g_note_keys[NOTE_SYSCALL_LEAVE]) &&
+      !note_filter_syscall(nr))
     {
-      if (!note_driver_isenabled_syscall(*driver, NOTE_SYSCALL_LEAVE, nr))
-        {
-          continue;
-        }
-
-      if (note_do_syscall_leave(*driver, nr, result))
-        {
-          continue;
-        }
-
-      if ((*driver)->ops->add == NULL)
-        {
-          continue;
-        }
-
-      /* Format the note */
-
-      if (!formatted)
-        {
-          formatted = true;
-          note_common(tcb, &note.nsc_cmn,
-                      sizeof(struct note_syscall_leave_s),
-                      NOTE_SYSCALL_LEAVE);
-          DEBUGASSERT(nr <= UCHAR_MAX);
-          note.nsc_nr = nr;
-          note.nsc_result = result;
-        }
-
-      /* Add the note to circular buffer */
-
-      note_do_add(*driver, &note, note.nsc_cmn.nc_length, false);
+      note_syscall_leave(nr, result);
     }
 }
 #endif
@@ -2206,45 +2311,45 @@ void note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip, uint8_t event,
 {
   FAR struct note_driver_s **driver;
 
-  if (note_filter_dump(tag))
-    {
-      return;
-    }
-
   note_drivers_initialize();
-  for (driver = g_note_drivers; *driver; driver++)
+  if (static_key_enabled(&REFERENCE_STATIC_KEY(g_note_keys)[event].key) &&
+      !note_filter_dump(tag))
     {
-      if (!note_driver_isenabled_dump(*driver, tag, level, event))
+      for (driver = g_note_drivers; *driver; driver++)
         {
-          continue;
-        }
+          if (!note_driver_isenabled_dump(*driver, tag, level, event))
+            {
+              continue;
+            }
 
-      note_driver_event_ip(*driver, tag, level, ip, event, buf, len);
+          note_driver_event_ip(*driver, tag, level, ip, event, buf, len);
+        }
     }
 }
 
-void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                     FAR const char *fmt, uintptr_t type, FAR va_list *va)
+__jumpfunc__ void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
+                                  FAR const char *fmt, uintptr_t type,
+                                  FAR va_list *va)
 {
   FAR struct note_driver_s **driver;
 
-  if (note_filter_dump(tag))
-    {
-      return;
-    }
-
   note_drivers_initialize();
-  for (driver = g_note_drivers; *driver; driver++)
+  if (static_branch_unlikely(&g_note_keys[NOTE_DUMP_PRINTF]) &&
+      !note_filter_dump(tag))
     {
-      va_list copy;
-      if (!note_driver_isenabled_dump(*driver, tag, level, NOTE_DUMP_PRINTF))
+      for (driver = g_note_drivers; *driver; driver++)
         {
-          continue;
-        }
+          va_list copy;
+          if (!note_driver_isenabled_dump(*driver, tag, level,
+                                         NOTE_DUMP_PRINTF))
+            {
+              continue;
+            }
 
-      va_copy(copy, *va);
-      note_driver_vprintf_ip(*driver, tag, level, ip, type, fmt, &copy);
-      va_end(copy);
+          va_copy(copy, *va);
+          note_driver_vprintf_ip(*driver, tag, level, ip, type, fmt, &copy);
+          va_end(copy);
+        }
     }
 }
 

@@ -63,7 +63,7 @@
 #if (defined(CONFIG_SCHED_CRITMONITOR) && \
      CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0) || \
     defined(CONFIG_SCHED_INSTRUMENTATION_PREEMPTION)
-void nxsched_lock(FAR struct tcb_s *rtcb)
+__jumpfunc__ void nxsched_lock(FAR struct tcb_s *rtcb)
 {
   if (!up_interrupt_context())
     {

@@ -72,7 +72,7 @@
  *
  ****************************************************************************/
 
-int nxtask_exit(void)
+__jumpfunc__ int nxtask_exit(void)
 {
   FAR struct tcb_s *dtcb;
   FAR struct tcb_s *rtcb;

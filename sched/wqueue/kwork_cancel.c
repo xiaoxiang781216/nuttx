@@ -44,8 +44,8 @@
  * Private Functions
  ****************************************************************************/
 
-static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
-                        FAR struct work_s *work)
+__jumpfunc__ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue,
+                                     bool sync, FAR struct work_s *work)
 {
   irqstate_t flags;
   FAR sem_t *sync_wait = NULL;

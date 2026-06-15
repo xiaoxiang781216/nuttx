@@ -55,7 +55,7 @@
  *
  ****************************************************************************/
 
-void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
+__jumpfunc__ void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
 {
   if (tcb == NULL)
     {
@@ -108,7 +108,7 @@ void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
  *
  ****************************************************************************/
 
-void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
+__jumpfunc__ void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
 {
 #ifdef CONFIG_SCHED_SPORADIC
   if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)

@@ -53,8 +53,8 @@
  *
  ****************************************************************************/
 
-FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
-                      size_t size)
+__jumpfunc__ FAR void *mm_memalign(FAR struct mm_heap_s *heap,
+                                   size_t alignment, size_t size)
 {
   FAR struct mm_allocnode_s *node;
   uintptr_t rawchunk;

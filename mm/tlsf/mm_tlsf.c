@@ -396,7 +396,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
  *
  ****************************************************************************/
 
-static void forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
+__jumpfunc__ static void forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 {
   size_t size;
 
@@ -644,8 +644,8 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
  *
  ****************************************************************************/
 
-void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
-                  size_t heapsize)
+__jumpfunc__ void mm_addregion(FAR struct mm_heap_s *heap,
+                               FAR void *heapstart, size_t heapsize)
 {
 #if CONFIG_MM_REGIONS > 1
   int idx;
@@ -1488,7 +1488,7 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
  *
  ****************************************************************************/
 
-FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
+__jumpfunc__ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 {
   size_t nodesize;
   FAR void *ret;
@@ -1580,8 +1580,8 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
  *
  ****************************************************************************/
 
-FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
-                      size_t size)
+__jumpfunc__ FAR void *mm_memalign(FAR struct mm_heap_s *heap,
+                                   size_t alignment, size_t size)
 {
   size_t nodesize;
   FAR void *ret;
@@ -1671,8 +1671,8 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
  *
  ****************************************************************************/
 
-FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
-                     size_t size)
+__jumpfunc__ FAR void *mm_realloc(FAR struct mm_heap_s *heap,
+                                  FAR void *oldmem, size_t size)
 {
   FAR void *newmem;
 #ifndef CONFIG_MM_KASAN
@@ -1799,7 +1799,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
  *
  ****************************************************************************/
 
-void mm_uninitialize(FAR struct mm_heap_s *heap)
+__jumpfunc__ void mm_uninitialize(FAR struct mm_heap_s *heap)
 {
   int i;
 

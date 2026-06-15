@@ -68,7 +68,7 @@
  ****************************************************************************/
 
 #ifndef CONFIG_SMP
-bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
+__jumpfunc__ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 {
   FAR struct tcb_s *rtcb = this_task();
   bool ret;
@@ -248,7 +248,7 @@ bool nxsched_switch_running(int cpu, bool switch_equal)
  *
  ****************************************************************************/
 
-bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
+__jumpfunc__ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 {
   bool doswitch = false;
   int target_cpu = btcb->flags & TCB_FLAG_CPU_LOCKED ? btcb->cpu :

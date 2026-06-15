@@ -48,6 +48,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* Printf argument type */
 
 #define NOTE_PRINTF_UINT32 0
@@ -148,7 +153,7 @@
 #  define sched_note_start(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_START)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_START])) \
              { \
                note_start(t); \
              } \
@@ -157,7 +162,7 @@
 #  define sched_note_stop(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_STOP)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_STOP])) \
              { \
                note_stop(t); \
              } \
@@ -166,7 +171,7 @@
 #  define sched_note_suspend(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_SUSPEND)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_SUSPEND])) \
              { \
                note_suspend(t); \
              } \
@@ -175,7 +180,7 @@
 #  define sched_note_resume(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_RESUME)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_RESUME])) \
              { \
                note_resume(t); \
              } \
@@ -184,7 +189,7 @@
 #  define sched_note_ready(t,s) \
        do \
          { \
-           if (!note_filter_type(NOTE_READY)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_READY])) \
              { \
                note_ready(t,s); \
              } \
@@ -202,7 +207,7 @@
 #  define sched_note_cpu_start(t,c) \
        do \
          { \
-           if (!note_filter_type(NOTE_CPU_START)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_CPU_START])) \
              { \
                note_cpu_start(t,c); \
              } \
@@ -211,7 +216,7 @@
 #  define sched_note_cpu_started(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_CPU_STARTED)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_CPU_STARTED])) \
              { \
                note_cpu_started(t); \
              } \
@@ -226,7 +231,7 @@
 #  define sched_note_preempt_lock(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_PREEMPT_LOCK)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_PREEMPT_LOCK])) \
              { \
                note_preemption(t, true); \
              } \
@@ -235,7 +240,7 @@
 #  define sched_note_preempt_unlock(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_PREEMPT_UNLOCK)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_PREEMPT_UNLOCK])) \
              { \
                note_preemption(t, false); \
              } \
@@ -250,7 +255,7 @@
 #  define sched_note_csection_enter(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_CSECTION_ENTER)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_CSECTION_ENTER])) \
              { \
                note_csection(t, true); \
              } \
@@ -259,7 +264,7 @@
 #  define sched_note_csection_leave(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_CSECTION_LEAVE)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_CSECTION_LEAVE])) \
              { \
                note_csection(t, false); \
              } \
@@ -271,42 +276,10 @@
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_spinlock_lock(s) \
-       do \
-         { \
-           if (!note_filter_type(NOTE_SPINLOCK_LOCK)) \
-             { \
-               note_spinlock(s, NOTE_SPINLOCK_LOCK); \
-             } \
-         } \
-       while (0)
-#  define sched_note_spinlock_locked(s) \
-       do \
-         { \
-           if (!note_filter_type(NOTE_SPINLOCK_LOCKED)) \
-             { \
-               note_spinlock(s, NOTE_SPINLOCK_LOCKED); \
-             } \
-         } \
-       while (0)
-#  define sched_note_spinlock_unlock(s) \
-       do \
-         { \
-           if (!note_filter_type(NOTE_SPINLOCK_UNLOCK)) \
-             { \
-               note_spinlock(s, NOTE_SPINLOCK_UNLOCK); \
-             } \
-         } \
-       while (0)
-#  define sched_note_spinlock_abort(s) \
-       do \
-         { \
-           if (!note_filter_type(NOTE_SPINLOCK_ABORT)) \
-             { \
-               note_spinlock(s, NOTE_SPINLOCK_ABORT); \
-             } \
-         } \
-       while (0)
+void sched_note_spinlock_lock(FAR volatile void *spinlock);
+void sched_note_spinlock_locked(FAR volatile void *spinlock);
+void sched_note_spinlock_unlock(FAR volatile void *spinlock);
+void sched_note_spinlock_abort(FAR volatile void *spinlock);
 #else
 #  define sched_note_spinlock_lock(s)
 #  define sched_note_spinlock_locked(s)
@@ -315,24 +288,8 @@
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_SYSCALL) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_syscall_enter(n,a,...) \
-       do \
-         { \
-           if (!note_filter_syscall(n)) \
-             { \
-               note_syscall_enter(n,a,##__VA_ARGS__); \
-             } \
-         } \
-       while (0)
-#  define sched_note_syscall_leave(n,r) \
-       do \
-         { \
-           if (!note_filter_syscall(n)) \
-             { \
-               note_syscall_leave(n,r); \
-             } \
-         } \
-       while (0)
+void sched_note_syscall_enter(int nr, int argc, ...);
+void sched_note_syscall_leave(int nr, uintptr_t result);
 #else
 #  define sched_note_syscall_enter(n,a,...)
 #  define sched_note_syscall_leave(n,r)
@@ -342,7 +299,8 @@
 #  define sched_note_irq_enter(i,h) \
        do \
          { \
-           if (!note_filter_irq(i)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_IRQ_ENTER]) && \
+               !note_filter_irq(i)) \
              { \
                note_irqhandler(i, h, true); \
              } \
@@ -351,7 +309,8 @@
 #  define sched_note_irq_leave(i,h) \
        do \
          { \
-           if (!note_filter_irq(i)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_IRQ_LEAVE]) && \
+               !note_filter_irq(i)) \
              { \
                note_irqhandler(i, h, false); \
              } \
@@ -366,7 +325,7 @@
 #  define sched_note_wdog_start(h,a) \
        do \
          { \
-           if (!note_filter_type(NOTE_WDOG_START)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_WDOG_START])) \
              { \
                note_wdog(NOTE_WDOG_START, h, a); \
              } \
@@ -375,7 +334,7 @@
 #  define sched_note_wdog_cancel(h,a) \
        do \
          { \
-           if (!note_filter_type(NOTE_WDOG_CANCEL)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_WDOG_CANCEL])) \
              { \
                note_wdog(NOTE_WDOG_CANCEL, h, a); \
              } \
@@ -384,7 +343,7 @@
 #  define sched_note_wdog_enter(h,a) \
        do \
          { \
-           if (!note_filter_type(NOTE_WDOG_ENTER)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_WDOG_ENTER])) \
              { \
                note_wdog(NOTE_WDOG_ENTER, h, a); \
              } \
@@ -393,7 +352,7 @@
 #  define sched_note_wdog_leave(h,a) \
        do \
          { \
-           if (!note_filter_type(NOTE_WDOG_LEAVE)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_WDOG_LEAVE])) \
              { \
                note_wdog(NOTE_WDOG_LEAVE, h, a); \
              } \
@@ -410,7 +369,7 @@
 #  define sched_note_heap_add(h,m,s,c) \
        do \
          { \
-           if (!note_filter_type(NOTE_HEAP_ADD)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_HEAP_ADD])) \
              { \
                note_heap(NOTE_HEAP_ADD, h, m, s, c); \
              } \
@@ -419,7 +378,7 @@
 #  define sched_note_heap_remove(h,m,s,c) \
        do \
          { \
-           if (!note_filter_type(NOTE_HEAP_REMOVE)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_HEAP_REMOVE])) \
              { \
                note_heap(NOTE_HEAP_REMOVE, h, m, s, c); \
              } \
@@ -428,7 +387,7 @@
 #  define sched_note_heap_alloc(h,m,s,c) \
        do \
          { \
-           if (!note_filter_type(NOTE_HEAP_ALLOC)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_HEAP_ALLOC])) \
              { \
                note_heap(NOTE_HEAP_ALLOC, h, m, s, c); \
              } \
@@ -437,7 +396,7 @@
 #  define sched_note_heap_free(h,m,s,c) \
        do \
          { \
-           if (!note_filter_type(NOTE_HEAP_FREE)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_HEAP_FREE])) \
              { \
                note_heap(NOTE_HEAP_FREE, h, m, s, c); \
              } \
@@ -454,7 +413,7 @@
 #  define sched_note_wqueue_start(w,a) \
        do \
          { \
-           if (!note_filter_type(NOTE_WQUEUE_START)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_WQUEUE_START])) \
              { \
                note_wqueue(NOTE_WQUEUE_START, w, a); \
              } \
@@ -463,7 +422,7 @@
 #  define sched_note_wqueue_cancel(w,a) \
        do \
          { \
-           if (!note_filter_type(NOTE_WQUEUE_CANCEL)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_WQUEUE_CANCEL])) \
              { \
                note_wqueue(NOTE_WQUEUE_CANCEL, w, a); \
              } \
@@ -472,7 +431,7 @@
 #  define sched_note_wqueue_enter(w,a) \
        do \
          { \
-           if (!note_filter_type(NOTE_WQUEUE_ENTER)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_WQUEUE_ENTER])) \
              { \
                note_wqueue(NOTE_WQUEUE_ENTER, w, a); \
              } \
@@ -481,7 +440,7 @@
 #  define sched_note_wqueue_leave(w,a) \
        do \
          { \
-           if (!note_filter_type(NOTE_WQUEUE_LEAVE)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_WQUEUE_LEAVE])) \
              { \
                note_wqueue(NOTE_WQUEUE_LEAVE, w, a); \
              } \
@@ -656,5 +615,9 @@ extern struct ratelimit_state_s g_note_ratelimit;
 #  define sched_note_printf_ip_ratelimited(t,l,i,f,...)
 #  define sched_note_async(t,e,r,n,c)
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP && CONFIG_DRIVERS_NOTE */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __INCLUDE_NUTTX_SCHED_NOTE_H */

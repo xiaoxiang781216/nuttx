@@ -51,7 +51,7 @@ DEFINE_PER_CPU_BMP(rspinlock_t, g_schedlock) = RSPINLOCK_INITIALIZER;
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
-void restore_critical_section(uint16_t count)
+__jumpfunc__ void restore_critical_section(uint16_t count)
 {
   /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0,
    * start counting time of busy-waiting.
@@ -89,7 +89,7 @@ uint16_t break_critical_section(void)
   return rspin_breaklock(&g_schedlock);
 }
 
-irqstate_t enter_critical_section(void)
+__jumpfunc__ irqstate_t enter_critical_section(void)
 {
   irqstate_t flags;
 
@@ -118,7 +118,7 @@ irqstate_t enter_critical_section(void)
   return flags;
 }
 
-void leave_critical_section(irqstate_t flags)
+__jumpfunc__ void leave_critical_section(irqstate_t flags)
 {
   if (!up_interrupt_context())
     {

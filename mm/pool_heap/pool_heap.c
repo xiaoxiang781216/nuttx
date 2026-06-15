@@ -168,8 +168,8 @@ static size_t mempool_malloc_size(FAR void *arg, FAR void *mem)
  *
  ****************************************************************************/
 
-void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
-                  size_t heapsize)
+__jumpfunc__ void mm_addregion(FAR struct mm_heap_s *heap,
+                               FAR void *heapstart, size_t heapsize)
 {
 #if CONFIG_MM_REGIONS > 1
   int idx;

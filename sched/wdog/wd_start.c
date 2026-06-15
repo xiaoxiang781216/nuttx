@@ -262,8 +262,8 @@ bool wd_insert(FAR struct wdog_s *wdog, clock_t expired,
  *
  ****************************************************************************/
 
-int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
-                     wdentry_t wdentry, wdparm_t arg)
+__jumpfunc__ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
+                                  wdentry_t wdentry, wdparm_t arg)
 {
   int ret = -EINVAL;
   irqstate_t flags;
@@ -347,8 +347,8 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
  *
  ****************************************************************************/
 
-int wd_start(FAR struct wdog_s *wdog, clock_t delay,
-             wdentry_t wdentry, wdparm_t arg)
+__jumpfunc__ int wd_start(FAR struct wdog_s *wdog, clock_t delay,
+                          wdentry_t wdentry, wdparm_t arg)
 {
   int ret = -EINVAL;
 

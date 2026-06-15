@@ -124,7 +124,7 @@ static DEFINE_PER_CPU_BSS(atomic_t, g_irq_level);
  *
  ****************************************************************************/
 
-void irq_dispatch(int irq, FAR void *context)
+__jumpfunc__ void irq_dispatch(int irq, FAR void *context)
 {
 #ifdef CONFIG_DEBUG_MM
   FAR struct tls_info_s *info = tls_get_info();

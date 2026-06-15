@@ -119,7 +119,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
  *
  ****************************************************************************/
 
-void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
+__jumpfunc__ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 {
   FAR struct mm_freenode_s *node;
   FAR struct mm_freenode_s *prev;

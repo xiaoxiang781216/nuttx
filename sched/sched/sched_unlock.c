@@ -55,7 +55,7 @@
  *
  ****************************************************************************/
 
-void nxsched_unlock(FAR struct tcb_s *rtcb)
+__jumpfunc__ void nxsched_unlock(FAR struct tcb_s *rtcb)
 {
   irqstate_t flags = enter_critical_section();
   FAR struct tcb_s *ptcb;
