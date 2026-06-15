@@ -57,6 +57,10 @@ extern "C"
 #define EXTERN extern
 #endif
 
+#if defined(CONFIG_LIBC_INLINE_MUTEX) && !defined(MUTEX_INLINE)
+#  define MUTEX_INLINE static inline_function
+#endif
+
 /****************************************************************************
  * Name: nxmutex_add_backtrace
  *
@@ -105,22 +109,7 @@ static inline_function void nxmutex_remove_backtrace(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
-static inline_function
-int nxmutex_init(FAR mutex_t *mutex)
-{
-  int ret = nxsem_init(&mutex->sem, 0, NXSEM_NO_MHOLDER);
-
-  if (ret >= 0)
-    {
-#ifdef CONFIG_PRIORITY_INHERITANCE
-      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX | SEM_PRIO_INHERIT);
-#else
-      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX);
-#endif
-    }
-
-  return ret;
-}
+int nxmutex_init(FAR mutex_t *mutex);
 
 /****************************************************************************
  * Name: nxmutex_get_holder
@@ -284,7 +273,8 @@ int nxmutex_timedlock(FAR mutex_t *mutex, unsigned int timeout);
  *
  ****************************************************************************/
 
-static inline_function int nxmutex_lock(FAR mutex_t *mutex)
+#ifdef CONFIG_LIBC_INLINE_MUTEX
+MUTEX_INLINE int nxmutex_lock(FAR mutex_t *mutex)
 {
   int ret;
 
@@ -306,6 +296,9 @@ static inline_function int nxmutex_lock(FAR mutex_t *mutex)
 
   return ret;
 }
+#else
+int nxmutex_lock(FAR mutex_t *mutex);
+#endif
 
 /****************************************************************************
  * Name: nrxmutex_lock

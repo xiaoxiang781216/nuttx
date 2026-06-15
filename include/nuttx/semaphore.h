@@ -489,6 +489,10 @@ int nxsem_setprioceiling(FAR sem_t *sem, int prioceiling,
  * Inline functions
  ****************************************************************************/
 
+#if defined(CONFIG_LIBC_INLINE_SEMAPHORE) && !defined(SEMAPHORE_INLINE)
+#  define SEMAPHORE_INLINE static inline_function
+#endif
+
 /****************************************************************************
  * Name: nxmutex_wait
  *
@@ -506,7 +510,8 @@ int nxsem_setprioceiling(FAR sem_t *sem, int prioceiling,
  *
  ****************************************************************************/
 
-static inline_function int nxmutex_wait(FAR sem_t *sem)
+#ifdef CONFIG_LIBC_INLINE_SEMAPHORE
+SEMAPHORE_INLINE int nxmutex_wait(FAR sem_t *sem)
 {
   /* Disable fast path if priority protection is enabled on the semaphore */
 
@@ -525,6 +530,9 @@ static inline_function int nxmutex_wait(FAR sem_t *sem)
 
   return nxsem_wait_slow(sem);
 }
+#else
+int nxmutex_wait(FAR sem_t *sem);
+#endif
 
 /****************************************************************************
  * Name: nxmutex_post
@@ -543,7 +551,8 @@ static inline_function int nxmutex_wait(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-static inline_function int nxmutex_post(FAR sem_t *sem)
+#ifdef CONFIG_LIBC_INLINE_SEMAPHORE
+SEMAPHORE_INLINE int nxmutex_post(FAR sem_t *sem)
 {
   /* Disable fast path if priority protection is enabled on the semaphore */
 
@@ -562,6 +571,9 @@ static inline_function int nxmutex_post(FAR sem_t *sem)
 
   return nxsem_post_slow(sem);
 }
+#else
+int nxmutex_post(FAR sem_t *sem);
+#endif
 
 /****************************************************************************
  * Name: nxmutex_trywait
@@ -615,7 +627,8 @@ int nxmutex_trywait(FAR sem_t *sem);
  *
  ****************************************************************************/
 
-static inline_function int nxsem_wait(FAR sem_t *sem)
+#ifdef CONFIG_LIBC_INLINE_SEMAPHORE
+SEMAPHORE_INLINE int nxsem_wait(FAR sem_t *sem)
 {
   /* Disable fast path if priority protection is enabled on the semaphore */
 
@@ -637,6 +650,9 @@ static inline_function int nxsem_wait(FAR sem_t *sem)
 
   return nxsem_wait_slow(sem);
 }
+#else
+int nxsem_wait(FAR sem_t *sem);
+#endif
 
 /****************************************************************************
  * Name: nxsem_post
@@ -667,7 +683,8 @@ static inline_function int nxsem_wait(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-static inline_function int nxsem_post(FAR sem_t *sem)
+#ifdef CONFIG_LIBC_INLINE_SEMAPHORE
+SEMAPHORE_INLINE int nxsem_post(FAR sem_t *sem)
 {
   /* Disable fast path if priority protection is enabled on the semaphore */
 
@@ -694,6 +711,9 @@ static inline_function int nxsem_post(FAR sem_t *sem)
 
   return nxsem_post_slow(sem);
 }
+#else
+int nxsem_post(FAR sem_t *sem);
+#endif
 
 /****************************************************************************
  * Name: nxsem_trywait
@@ -763,20 +783,8 @@ int nxsem_trywait(FAR sem_t *sem);
  *
  ****************************************************************************/
 
-static inline_function
 int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
-                    FAR const struct timespec *abstime)
-{
-  int ret;
-
-  ret = nxsem_trywait(sem);
-  if (ret != OK)
-    {
-      ret = nxsem_clockwait_slow(sem, clockid, abstime);
-    }
-
-  return ret;
-}
+                    FAR const struct timespec *abstime);
 
 /****************************************************************************
  * Name: nxsem_clockwait_uninterruptible

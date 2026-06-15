@@ -25,11 +25,56 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+/* When the inline mutex helpers are disabled, emit callable non-inline
+ * versions of the helpers defined in <nuttx/mutex.h> from this file.
+ */
+
+#ifndef CONFIG_LIBC_INLINE_MUTEX
+#  define CONFIG_LIBC_INLINE_MUTEX
+#  define MUTEX_INLINE
+#endif
+
 #include <nuttx/mutex.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: nxmutex_init
+ *
+ * Description:
+ *   This function initializes the UNNAMED mutex. Following a
+ *   successful call to nxmutex_init(), the mutex may be used in subsequent
+ *   calls to nxmutex_lock(), nxmutex_unlock(), and nxmutex_trylock().  The
+ *   mutex remains usable until it is destroyed.
+ *
+ * Parameters:
+ *   mutex - Semaphore to be initialized
+ *
+ * Return Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *
+ ****************************************************************************/
+
+int nxmutex_init(FAR mutex_t *mutex)
+{
+  int ret = nxsem_init(&mutex->sem, 0, NXSEM_NO_MHOLDER);
+
+  if (ret >= 0)
+    {
+#ifdef CONFIG_PRIORITY_INHERITANCE
+      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX | SEM_PRIO_INHERIT);
+#else
+      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX);
+#endif
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: nxmutex_trywait

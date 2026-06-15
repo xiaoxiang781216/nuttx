@@ -173,3 +173,19 @@ config LIBC_MUTEX_BACKTRACE
 	---help---
 		Enable the mutex backtrace, dumping the backtrace of thread which
 		last acquired the mutex.
+
+config LIBC_INLINE_SEMAPHORE
+	bool "Inline semaphore helpers"
+	default !DEFAULT_SMALL
+	---help---
+		Inline semaphore helper functions to improve performance.  Disable this
+		option to emit callable non-inline versions and reduce header-inline code
+		growth.
+
+config LIBC_INLINE_MUTEX
+	bool "Inline mutex helpers"
+	default !DEFAULT_SMALL
+	---help---
+		Inline mutex helper functions to improve performance.  Disable this
+		option to emit callable non-inline versions and reduce header-inline code
+		growth.

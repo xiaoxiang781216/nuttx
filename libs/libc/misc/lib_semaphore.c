@@ -25,11 +25,57 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+/* When the inline semaphore helpers are disabled, emit callable non-inline
+ * versions of the helpers defined in <nuttx/semaphore.h> from this file.
+ */
+
+#ifndef CONFIG_LIBC_INLINE_SEMAPHORE
+#  define CONFIG_LIBC_INLINE_SEMAPHORE
+#  define SEMAPHORE_INLINE
+#endif
+
 #include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: nxsem_clockwait
+ *
+ * Description:
+ *   This function will lock the semaphore referenced by sem as in the
+ *   nxsem_wait() function. However, if the semaphore cannot be locked
+ *   without waiting for another process or thread to unlock the semaphore
+ *   by performing a nxsem_post() function, this wait will be terminated
+ *   when the specified timeout expires.
+ *
+ * Input Parameters:
+ *   sem     - Semaphore object
+ *   clockid - The timing source to use in the conversion
+ *   abstime - The absolute time to wait until a timeout is declared.
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *
+ ****************************************************************************/
+
+int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
+                    FAR const struct timespec *abstime)
+{
+  int ret;
+
+  ret = nxsem_trywait(sem);
+  if (ret != OK)
+    {
+      ret = nxsem_clockwait_slow(sem, clockid, abstime);
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: nxsem_trywait
