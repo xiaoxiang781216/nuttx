@@ -129,52 +129,37 @@ static uint64_t timer_timeout(FAR const hrtimer_t *hrtimer, uint64_t expired)
 
   DEBUGASSERT(timer);
 
-  /* Send the specified signal to the specified task. Increment the
-   * reference count on the timer first so that will not be deleted until
-   * after the signal handler returns.
-   * If the timer->pt_crefs <= 0, it means the timer has been deleted by the
-   * user, we should return immediately.
+  /* Send the specified signal to the specified task. */
+
+  timer_signotify(timer);
+
+  /* If this is a repetitive timer, then restart the timer.
+   * First, calculate the number of timer overruns and the next
+   * expected tick.
+   * The next expired tick frame can be computed as align up:
+   * frame <- (elapsed_ticks + pt_delay) / pt_delay
+   * For instance:
+   *  |   pt_delay   |   pt_delay   |   pt_delay   | ... |
+   *  ^ expected                    ^ ticks        ^ next
+   * In this case, frame equals 3.
+   * Then, pt_overrun <- frame - 1 and
+   * the next expected <- expected + frame * pt_delay.
+   * Assumption of correctness:
+   * (delay + timer->pt_delay) should not overflow.
    */
 
-  if (timer->pt_crefs > 0u)
+  if (timer->pt_delay)
     {
-      timer->pt_crefs++;
-      timer_signotify(timer);
+      uint64_t frame = (delay + timer->pt_delay) / timer->pt_delay;
+      next_delay     = frame * timer->pt_delay;
+      atomic_set(&timer->pt_overrun, (int32_t)(frame - 1u));
+      DEBUGASSERT(frame <= INT_MAX + 1u);
 
-      /* Release the reference. timer_release will return nonzero if
-       * the timer was not deleted. The thread that decreases the reference
-       * count to zero will become the timer owner.
+      /* To avoid the periodical hrtimer starving,
+       * we have to round-up the minimal interval to NSEC_PER_TICK.
        */
 
-      if (timer_release(timer, true) && timer->pt_delay)
-        {
-          /* If this is a repetitive timer, then restart the timer.
-           * First, calculate the number of timer overruns and the next
-           * expected tick.
-           * The next expired tick frame can be computed as align up:
-           * frame <- (elapsed_ticks + pt_delay) / pt_delay
-           * For instance:
-           *  |   pt_delay   |   pt_delay   |   pt_delay   | ... |
-           *  ^ expected                    ^ ticks        ^ next
-           * In this case, frame equals 3.
-           * Then, pt_overrun <- frame - 1 and
-           * the next expected <- expected + frame * pt_delay.
-           * Assumption of correctness:
-           * (delay + timer->pt_delay) should not overflow.
-           */
-
-          uint64_t frame = (delay + timer->pt_delay) / timer->pt_delay;
-          next_delay     = frame * timer->pt_delay;
-          atomic_set(&timer->pt_overrun, (int32_t)(frame - 1u));
-          DEBUGASSERT(frame <= INT_MAX + 1u);
-
-          /* To avoid the periodical hrtimer starving,
-           * we have to round-up the minimal interval to NSEC_PER_TICK.
-           */
-
-          next_delay = next_delay < NSEC_PER_TICK ?
-                       NSEC_PER_TICK : next_delay;
-        }
+      next_delay = next_delay < NSEC_PER_TICK ? NSEC_PER_TICK : next_delay;
     }
 
   DEBUGASSERT(next_delay <= HRTIMER_MAX_DELAY);

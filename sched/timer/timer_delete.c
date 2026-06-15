@@ -58,8 +58,6 @@
  *
  *   EINVAL - The timer specified timerid is not valid.
  *
- * Assumptions:
- *
  ****************************************************************************/
 
 int timer_delete(timer_t timerid)
@@ -69,11 +67,7 @@ int timer_delete(timer_t timerid)
 
   if (timer != NULL)
     {
-      /* Note that the timer_release may return 1, which is non-compliant
-       * with the POSIX standards.
-       */
-
-      timer_release(timer, false);
+      timer_release(timer);
       ret = OK;
     }
   else

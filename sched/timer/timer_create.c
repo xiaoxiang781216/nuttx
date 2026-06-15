@@ -190,7 +190,6 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
           /* Initialize the timer instance */
 
           ret->pt_clock = clockid;
-          ret->pt_crefs = 1u;
           ret->pt_owner = tcb->pid;
           ret->pt_delay = 0u;
 

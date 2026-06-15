@@ -58,7 +58,6 @@ struct posix_timer_s
 
   clockid_t        pt_clock;       /* Specifies the clock to use as the timing base. */
   uint8_t          pt_flags;       /* See PT_FLAGS_* definitions */
-  uint8_t          pt_crefs;       /* Reference count */
   pid_t            pt_owner;       /* Creator of timer */
   atomic_t         pt_overrun;     /* Overrun time */
   uint64_t         pt_delay;       /* If non-zero, periodic interval in nanoseconds */
@@ -97,8 +96,7 @@ DECLARE_PER_CPU_BMP(spinlock_t, g_locktimers);
 
 void timer_initialize(void);
 void timer_deleteall(pid_t pid);
-bool timer_release(FAR struct posix_timer_s *timer,
-                   bool in_expiration);
+void timer_release(FAR struct posix_timer_s *timer);
 FAR struct posix_timer_s *timer_gethandle(timer_t timerid);
 
 #endif /* CONFIG_DISABLE_POSIX_TIMERS */

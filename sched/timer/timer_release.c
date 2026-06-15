@@ -86,28 +86,24 @@ static inline void timer_free(struct posix_timer_s *timer)
  * Name: timer_release
  *
  * Description:
- *   timer_release implements the heart of timer_delete.  It is private to
- *   the OS internals and differs only in that return value of 1 means that
- *   the timer was not actually deleted.
+ *   timer_release implements the heart of timer_delete.  It waits for any
+ *   running callback to complete, then frees the timer structure.
  *
  * Input Parameters:
  *   timer - The per-thread timer, previously created by the call to
  *     timer_create(), to be deleted.
- *   in_expiration  - If true, we can not call hrtimer_cancel_sync.
  *
  * Returned Value:
- *   If the call succeeds, timer_release() will return false or true (meaning
- *   that the timer is still valid).
+ *   None.
  *
  * Assumptions:
  *   The timer should not be NULL.
  *
  ****************************************************************************/
 
-bool timer_release(FAR struct posix_timer_s *timer,
-                   bool in_expiration)
+void timer_release(FAR struct posix_timer_s *timer)
 {
-  bool valid = true;
+  FAR struct task_group_s *group;
 
   /* Some sanity checks */
 
@@ -115,33 +111,17 @@ bool timer_release(FAR struct posix_timer_s *timer,
 
   /* Wait the callback to finish then we acquire the ownership. */
 
-  if (!in_expiration)
-    {
-      hrtimer_cancel_sync(&timer->pt_timer);
-    }
+  hrtimer_cancel_sync(&timer->pt_timer);
 
-  /* Release one reference to timer.  Don't delete the timer until the count
-   * would decrement to zero. The thread that decreases the reference
-   * count to zero will become the timer owner.
-   */
+  /* Cancel any pending notification */
 
-  if (--timer->pt_crefs == 0u)
-    {
-      FAR struct task_group_s *group = this_task()->group;
+  nxsig_cancel_notification(&timer->pt_work);
 
-      /* Cancel any pending notification */
+  /* Release the timer structure */
 
-      nxsig_cancel_notification(&timer->pt_work);
-
-      /* Release the timer structure */
-
-      timer_free(timer);
-
-      atomic_sub(&group->itimer_count, 1);
-      valid = false;
-    }
-
-  return valid;
+  group = this_task()->group;
+  timer_free(timer);
+  atomic_sub(&group->itimer_count, 1);
 }
 
 #endif /* CONFIG_DISABLE_POSIX_TIMERS */
