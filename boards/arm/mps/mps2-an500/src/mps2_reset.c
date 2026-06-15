@@ -62,3 +62,13 @@ int board_reset(int status)
 }
 
 #endif /* CONFIG_BOARDCTL_RESET */
+
+#ifdef CONFIG_BOARDCTL_POWEROFF
+int board_power_off(int status)
+{
+  UNUSED(status);
+
+  up_systempoweroff();
+  return 0;
+}
+#endif
