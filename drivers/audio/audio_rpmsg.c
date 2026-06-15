@@ -1092,7 +1092,7 @@ static int audio_rpmsg_allocshm(FAR struct audio_rpmsg_s *aud)
       aud->base = rpmsg_alloc_buf(rdev, shmsize, 4);
       if (aud->base == NULL)
         {
-          auderr("%s failed to alloc share memory, size:%d!!!\n",
+          auderr("%s failed to alloc share memory, size:%zu!!!\n",
                  aud->devname, shmsize);
           return -ENOMEM;
         }
