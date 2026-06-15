@@ -1610,7 +1610,7 @@ int mfs_mn_sync(FAR struct mfs_sb_s *sb,
  *
  ****************************************************************************/
 
-FAR const char * mfs_path2childname(FAR const char *relpath);
+FAR const char *mfs_path2childname(FAR const char *relpath);
 
 /****************************************************************************
  * Name: mfs_get_fsz

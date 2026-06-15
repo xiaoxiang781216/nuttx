@@ -113,9 +113,9 @@ static DEFINE_PER_CPU_BSS_BMP(struct msgpool_s, g_msgpool);
  ****************************************************************************/
 
 #ifndef CONFIG_DISABLE_MQUEUE
-static FAR void * mq_msgblockinit(FAR struct list_node *list,
-                                  FAR uint8_t *block,
-                                  uint16_t nmsgs, uint8_t alloc_type)
+static FAR void *mq_msgblockinit(FAR struct list_node *list,
+                                 FAR uint8_t *block,
+                                 uint16_t nmsgs, uint8_t alloc_type)
 {
   FAR struct mqueue_msg_s *mqmsgblock;
   int i;

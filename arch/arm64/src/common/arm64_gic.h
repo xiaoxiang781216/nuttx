@@ -310,7 +310,7 @@ int  arm64_gic_initialize(void);
  *
  ****************************************************************************/
 
-uint64_t * arm64_decodeirq(uint64_t *regs);
+uint64_t *arm64_decodeirq(uint64_t *regs);
 
 void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list);
 

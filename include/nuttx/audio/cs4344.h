@@ -132,7 +132,7 @@ extern "C"
 struct i2s_dev_s;         /* Forward reference. Defined in include/nuttx/audio/i2s.h */
 struct audio_lowerhalf_s; /* Forward reference. Defined in nuttx/audio/audio.h */
 
-FAR struct audio_lowerhalf_s * cs4344_initialize(FAR struct i2s_dev_s *i2s);
+FAR struct audio_lowerhalf_s *cs4344_initialize(FAR struct i2s_dev_s *i2s);
 
 #undef EXTERN
 #ifdef __cplusplus

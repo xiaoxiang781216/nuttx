@@ -698,7 +698,7 @@ void binder_free_ref(FAR struct binder_ref *ref);
 /* function prototype define for binder_thread.c */
 
 FAR struct binder_thread *binder_get_thread(FAR struct binder_proc *proc);
-FAR struct binder_thread * binder_select_thread_ilocked(
+FAR struct binder_thread *binder_select_thread_ilocked(
   FAR struct binder_proc *proc);
 int binder_thread_write(FAR struct binder_proc *proc,
                         FAR struct binder_thread *thread,

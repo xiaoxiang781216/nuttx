@@ -832,7 +832,7 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
  *   regs - A pointer to the register save area on the stack.
  ***************************************************************************/
 
-uint64_t * arm64_decodeirq(uint64_t * regs)
+uint64_t *arm64_decodeirq(uint64_t *regs)
 {
   int irq;
 
@@ -860,7 +860,7 @@ uint64_t * arm64_decodeirq(uint64_t * regs)
 }
 
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-uint64_t * arm64_decodefiq(uint64_t * regs)
+uint64_t *arm64_decodefiq(uint64_t *regs)
 {
   struct arm_smccc_res res;
 
@@ -869,7 +869,7 @@ uint64_t * arm64_decodefiq(uint64_t * regs)
   return regs;
 }
 #elif defined(CONFIG_ARCH_HIPRI_INTERRUPT)
-uint64_t * arm64_decodefiq(uint64_t * regs)
+uint64_t *arm64_decodefiq(uint64_t *regs)
 {
   int irq;
 

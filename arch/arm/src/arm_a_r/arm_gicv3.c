@@ -698,7 +698,7 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
  *   regs - A pointer to the register save area on the stack.
  ***************************************************************************/
 
-uint32_t * arm_decodeirq(uint32_t * regs)
+uint32_t *arm_decodeirq(uint32_t *regs)
 {
   int irq;
 
