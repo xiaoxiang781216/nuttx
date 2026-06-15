@@ -115,7 +115,7 @@ void board_late_initialize(void)
 }
 #endif /* CONFIG_BOARD_LATE_INITIALIZE */
 
-#if defined(CONFIG_BOARDCTL_POWEROFF) && defined(CONFIG_ARM_PSCI)
+#ifdef CONFIG_BOARDCTL_POWEROFF
 int board_power_off(int status)
 {
   UNUSED(status);
