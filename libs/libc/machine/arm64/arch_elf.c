@@ -489,7 +489,7 @@ int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
 
   /* val corresponds to (S + A) in the AArch64 ELF document. */
 
-  val = sym->st_value + rel->r_addend;
+  val = sym ? sym->st_value + rel->r_addend : 0;
 
   /* Handle the relocation by relocation type */
 
