@@ -2693,7 +2693,7 @@ config DEBUG_SYMBOLS
 config DEBUG_SYMBOLS_LEVEL
 	string "Custom symbols level"
 	depends on DEBUG_SYMBOLS
-	default "-g3"
+	default "-g"
 	---help---
 		This string represents the custom symbol level that will be
 		used if DEBUG_SYMBOLS.
