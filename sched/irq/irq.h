@@ -36,6 +36,9 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/spinlock.h>
+#ifdef CONFIG_PM
+#  include <nuttx/power/pm.h>
+#endif
 
 /****************************************************************************
  * Public Types
@@ -58,6 +61,9 @@ struct irq_info_s
   atomic_t count;    /* Number of interrupts on this IRQ */
 #  ifdef CONFIG_ARCH_IRQPRIO
   atomic_t nests;    /* Number of preemptions by this IRQ */
+#  endif
+#  ifdef CONFIG_PM
+  atomic_t nwakeup[PM_COUNT]; /* Wakeups indexed by PM state */
 #  endif
 #endif
 };
@@ -108,6 +114,18 @@ extern "C"
  ****************************************************************************/
 
 void irq_initialize(void);
+
+/****************************************************************************
+ * Name: irq_wakeup_initialize
+ *
+ * Description:
+ *   Register the PM callback used for IRQ wakeup source tracking.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_SCHED_IRQMONITOR) && defined(CONFIG_PM)
+void irq_wakeup_initialize(void);
+#endif
 
 /****************************************************************************
  * Name: irq_unexpected_isr

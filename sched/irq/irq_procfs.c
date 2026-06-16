@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <string.h>
+#include <inttypes.h>
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
@@ -60,12 +61,22 @@
  * the typical configuration where CONFIG_HAVE_LONG_LONG=y, the COUNT field
  * may not be wide enough.
  */
-#ifndef CONFIG_ARCH_IRQPRIO
+#if !defined(CONFIG_ARCH_IRQPRIO) && !defined(CONFIG_PM)
 #  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT       RATE  TIME\n"
-#  define IRQ_FMT "%3u %08lx %08lx %10lu %6lu.%03lu %5lu\n"
-#else
+#  define IRQ_FMT "%3d %08lx %08lx %10lu %6lu.%03lu %5ld\n"
+#elif defined(CONFIG_ARCH_IRQPRIO) && !defined(CONFIG_PM)
 #  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT       RATE  TIME  NEST\n"
-#  define IRQ_FMT "%3u %08lx %08lx %10lu %6lu.%03lu %5lu %5lu\n"
+#  define IRQ_FMT "%3d %08lx %08lx %10lu %6lu.%03lu %5ld %5lu\n"
+#elif !defined(CONFIG_ARCH_IRQPRIO) && defined(CONFIG_PM)
+#  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT       RATE  TIME" \
+                  "   IDLE STANDBY   SLEEP\n"
+#  define IRQ_FMT "%3d %08lx %08lx %10lu %6lu.%03lu %5ld %6" PRId32 \
+                  " %7" PRId32 " %7" PRId32 "\n"
+#else
+#  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT       RATE  TIME  NEST" \
+                  "   IDLE STANDBY   SLEEP\n"
+#  define IRQ_FMT "%3d %08lx %08lx %10lu %6lu.%03lu %5ld %5lu %6" PRId32 \
+                  " %7" PRId32 " %7" PRId32 "\n"
 #endif
 
 /* Determines the size of an intermediate buffer that must be large enough
@@ -73,10 +84,14 @@
  * bytes).
  */
 
-#ifndef CONFIG_ARCH_IRQPRIO
+#if !defined(CONFIG_ARCH_IRQPRIO) && !defined(CONFIG_PM)
 #  define IRQ_LINELEN 53
-#else
+#elif defined(CONFIG_ARCH_IRQPRIO) && !defined(CONFIG_PM)
 #  define IRQ_LINELEN 58
+#elif !defined(CONFIG_ARCH_IRQPRIO) && defined(CONFIG_PM)
+#  define IRQ_LINELEN 90
+#else
+#  define IRQ_LINELEN 96
 #endif
 
 /****************************************************************************
@@ -203,14 +218,18 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
 
   /* Output information about this interrupt */
 
-  linesize = snprintf(irqfile->line, IRQ_LINELEN, IRQ_FMT,
-                      (unsigned int)irq,
+  linesize = snprintf(irqfile->line, IRQ_LINELEN, IRQ_FMT, irq,
                       (unsigned long)((uintptr_t)copy.handler),
                       (unsigned long)((uintptr_t)copy.arg),
                       count, intpart, fracpart,
-                      (unsigned long)delta.tv_nsec / 1000
+                      delta.tv_nsec / 1000
 #ifdef CONFIG_ARCH_IRQPRIO
-                      , copy.nests
+                      , atomic_read(&copy.nests)
+#endif
+#ifdef CONFIG_PM
+                      , atomic_read(&copy.nwakeup[PM_IDLE])
+                      , atomic_read(&copy.nwakeup[PM_STANDBY])
+                      , atomic_read(&copy.nwakeup[PM_SLEEP])
 #endif
                       );
 

@@ -93,6 +93,10 @@ void irq_initialize(void)
   irqchain_initialize();
 #endif
 
+#if defined(CONFIG_SCHED_IRQMONITOR) && defined(CONFIG_PM)
+  irq_wakeup_initialize();
+#endif
+
   up_irqinitialize();
 
 #ifdef CONFIG_ARCH_PROTECT_ZERO_ADDRESS

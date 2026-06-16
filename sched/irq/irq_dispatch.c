@@ -35,6 +35,10 @@
 #include <nuttx/sched_note.h>
 #include <nuttx/tls.h>
 
+#if defined(CONFIG_SCHED_IRQMONITOR) && defined(CONFIG_PM)
+#  include <nuttx/power/pm.h>
+#endif
+
 #include "irq/irq.h"
 #include "clock/clock.h"
 #include "sched/sched.h"
@@ -59,42 +63,64 @@
 #    define DEC_NESTLEVEL(ndx) \
        do \
          { \
-           if (atomic_sub(&g_irq_level, 1) > 1 && \
-               ndx < NUSER_IRQS) \
+           if (atomic_sub(&g_irq_level, 1) > 1) \
              { \
                atomic_add(&g_irqvector[ndx].nests, 1); \
              } \
-          } \
+         } \
        while (0)
 #  else
 #    define INC_NESTLEVEL()
 #    define DEC_NESTLEVEL(ndx)
 #  endif
 
-#  define IRQ_MONITOR_ENABLED(ndx) \
-    ((ndx) >= 0 && (ndx) < NUSER_IRQS && g_irqvector[ndx].monitor)
+#  ifdef CONFIG_PM
+#    define WAKEUP_COUNT(ndx) \
+       if (g_wakeup_state != PM_NORMAL) \
+         { \
+           atomic_add(&g_irqvector[ndx].nwakeup[g_wakeup_state], 1); \
+           g_wakeup_state = PM_NORMAL; \
+         }
+#  else
+#    define WAKEUP_COUNT(ndx)
+#  endif
+
+/* CALL_VECTOR always collects the cheap statistics (interrupt count, nest
+ * level and, when PM is enabled, the wakeup count) for any valid IRQ.  The
+ * expensive timing statistics are only collected for IRQs that opted in via
+ * the per-IRQ monitor flag.
+ */
 
 #  define CALL_VECTOR(ndx, vector, irq, context, arg) \
      do \
        { \
-         if (IRQ_MONITOR_ENABLED(ndx)) \
+         if ((unsigned int)(ndx) < NUSER_IRQS) \
            { \
-             clock_t start; \
-             clock_t elapsed; \
              INC_NESTLEVEL(); \
-             start = perf_gettime(); \
-             vector(irq, context, arg); \
-             elapsed = perf_gettime() - start; \
+             WAKEUP_COUNT(ndx); \
              atomic_add(&g_irqvector[ndx].count, 1); \
-             if (elapsed > g_irqvector[ndx].time) \
+             if (g_irqvector[ndx].monitor) \
                { \
-                 g_irqvector[ndx].time = elapsed; \
+                 clock_t start; \
+                 clock_t elapsed; \
+                 start = perf_gettime(); \
+                 vector(irq, context, arg); \
+                 elapsed = perf_gettime() - start; \
+                 if (elapsed > g_irqvector[ndx].time) \
+                   { \
+                     g_irqvector[ndx].time = elapsed; \
+                   } \
+                 if (CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0 && \
+                     elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ) \
+                   { \
+                     CRITMONITOR_PANIC("IRQ %d(%p), execute time too long " \
+                                       "%ju\n", irq, vector, \
+                                       (uintmax_t)elapsed); \
+                   } \
                } \
-             if (CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0 && \
-                 elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ) \
+             else \
                { \
-                 CRITMONITOR_PANIC("IRQ %d(%p), execute time too long %ju\n", \
-                                   irq, vector, (uintmax_t)elapsed); \
+                 vector(irq, context, arg); \
                } \
              DEC_NESTLEVEL(ndx); \
            } \
@@ -118,9 +144,46 @@ static DEFINE_PER_CPU_BSS(atomic_t, g_irq_level);
 #  define g_irq_level this_cpu_var(g_irq_level)
 #endif
 
+#if defined(CONFIG_SCHED_IRQMONITOR) && defined(CONFIG_PM)
+static DEFINE_PER_CPU_BSS(enum pm_state_e, g_wakeup_state);
+#  define g_wakeup_state this_cpu_var(g_wakeup_state)
+
+static void irq_wakeup_notify(FAR struct pm_callback_s *cb, int domain,
+                              enum pm_state_e pmstate)
+{
+  /* Arm the wakeup tag when entering a low-power state.  The first IRQ
+   * dispatched after this point is the one that woke the system, so it
+   * consumes the tag in WAKEUP_COUNT().  PM_RESTORE and PM_NORMAL leave
+   * the tag untouched.
+   */
+
+  if (pmstate >= PM_IDLE && pmstate < PM_COUNT)
+    {
+      g_wakeup_state = pmstate;
+    }
+}
+
+static struct pm_callback_s g_wakeup_cb =
+{
+  .notify = irq_wakeup_notify,
+};
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+#if defined(CONFIG_SCHED_IRQMONITOR) && defined(CONFIG_PM)
+void irq_wakeup_initialize(void)
+{
+  int i;
+
+  for (i = 0; i < CONFIG_PM_NDOMAINS; i++)
+    {
+      pm_domain_register(i, &g_wakeup_cb);
+    }
+}
+#endif
 
 /****************************************************************************
  * Name: irq_dispatch
@@ -261,6 +324,9 @@ int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
 {
   int ndx = IRQ_TO_NDX(irq);
   clock_t elapsed;
+#ifdef CONFIG_PM
+  int i;
+#endif
 #ifdef CONFIG_HAVE_LONG_LONG
   unsigned long long intcount;
 #else
@@ -304,6 +370,12 @@ int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
       atomic_set(&g_irqvector[ndx].count, 0);
 #ifdef CONFIG_ARCH_IRQPRIO
       atomic_set(&g_irqvector[ndx].nests, 0);
+#endif
+#if defined(CONFIG_PM)
+      for (i = 0; i < PM_COUNT; i++)
+        {
+          atomic_set(&g_irqvector[ndx].nwakeup[i], 0);
+        }
 #endif
     }
 
