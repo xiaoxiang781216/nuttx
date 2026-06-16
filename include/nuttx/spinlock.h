@@ -56,6 +56,10 @@ extern "C"
  * Pre-processor Definitions
  ****************************************************************************/
 
+#if defined(CONFIG_SPINLOCK_INLINE) && !defined(SPINLOCK_INLINE)
+#  define SPINLOCK_INLINE static inline_function
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -157,7 +161,8 @@ DECLARE_PER_CPU_BMP(rspinlock_t, g_schedlock);
  ****************************************************************************/
 
 #ifdef CONFIG_SPINLOCK
-static inline_function noinstrument_function
+#  ifdef CONFIG_SPINLOCK_INLINE
+SPINLOCK_INLINE noinstrument_function
 void spin_lock_notrace(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_TICKET_SPINLOCK
@@ -173,6 +178,10 @@ void spin_lock_notrace(FAR volatile spinlock_t *lock)
     }
 #endif
 }
+#  else
+noinstrument_function
+void spin_lock_notrace(FAR volatile spinlock_t *lock);
+#  endif
 #else
 #  define spin_lock_notrace(lock) ((void)(lock))
 #endif /* CONFIG_SPINLOCK */
@@ -592,14 +601,15 @@ bool rspin_lock_is_hold(FAR volatile rspinlock_t *lock)
    * leading to incorrect judgment.
    */
 
-  irqstate_t flags = irq_save();
 #ifdef CONFIG_SPINLOCK
+  irqstate_t flags = irq_save();
   ret = RSPINLOCK_OWNER(atomic_read(&lock->val)) ==
                         (uint32_t)this_cpu() + 1u;
+  irq_restore(flags);
 #else
   ret = RSPINLOCK_COUNT(&lock->local_val) > 0u;
 #endif
-  irq_restore(flags);
+
   return ret;
 }
 
@@ -676,7 +686,8 @@ uint16_t rspin_lock_count(FAR volatile rspinlock_t *lock)
  ****************************************************************************/
 
 #ifdef CONFIG_SPINLOCK
-static inline_function noinstrument_function
+#  ifdef CONFIG_SPINLOCK_INLINE
+SPINLOCK_INLINE noinstrument_function
 void rspin_lock_notrace(FAR rspinlock_t *lock)
 {
   uint32_t new_val;
@@ -713,6 +724,10 @@ void rspin_lock_notrace(FAR rspinlock_t *lock)
       compiler_assume(lock->local_val == new_val);
     }
 }
+#  else
+noinstrument_function
+void rspin_lock_notrace(FAR rspinlock_t *lock);
+#  endif
 
 static inline_function
 void rspin_lock(FAR rspinlock_t *lock)
@@ -808,7 +823,8 @@ irqstate_t rspin_lock_irqsave_nopreempt(FAR rspinlock_t *lock)
  ****************************************************************************/
 
 #ifdef CONFIG_SPINLOCK
-static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
+#  ifdef CONFIG_SPINLOCK_INLINE
+SPINLOCK_INLINE bool rspin_trylock(FAR rspinlock_t *lock)
 {
   uint32_t old_val;
   bool         ret = false;
@@ -849,6 +865,9 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 
   return ret;
 }
+#  else
+bool rspin_trylock(FAR rspinlock_t *lock);
+#  endif
 
 #  define rspin_trylock_irqsave(l, f) \
     ({ \
@@ -1095,9 +1114,6 @@ bool rspin_unlock_notrace(FAR rspinlock_t *lock)
   bool     ret = false;
   uint32_t val = lock->local_val;
 
-  DEBUGASSERT(RSPINLOCK_OWNER(val) == (uint32_t)this_cpu() + 1u);
-  DEBUGASSERT(RSPINLOCK_COUNT(val) >= 1u);
-
   if (RSPINLOCK_COUNT(val) == 1u)
     {
       atomic_set_release(&lock->val, 0u);
@@ -1257,7 +1273,7 @@ void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
 }
 #endif
 
-#if defined(CONFIG_RW_SPINLOCK)
+#ifdef CONFIG_RW_SPINLOCK
 
 /****************************************************************************
  * Name: rwlock_init
@@ -1303,7 +1319,8 @@ void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
  *
  ****************************************************************************/
 
-static inline_function void read_lock(FAR volatile rwlock_t *lock)
+#  ifdef CONFIG_SPINLOCK_INLINE
+SPINLOCK_INLINE void read_lock(FAR volatile rwlock_t *lock)
 {
   nxsched_critmon_busywait(true, return_address(0));
   for (; ; )
@@ -1323,6 +1340,9 @@ static inline_function void read_lock(FAR volatile rwlock_t *lock)
 
   nxsched_critmon_busywait(false, return_address(0));
 }
+#  else
+void read_lock(FAR volatile rwlock_t *lock);
+#  endif
 
 /****************************************************************************
  * Name: read_trylock
@@ -1349,7 +1369,8 @@ static inline_function void read_lock(FAR volatile rwlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function bool read_trylock(FAR volatile rwlock_t *lock)
+#  ifdef CONFIG_SPINLOCK_INLINE
+SPINLOCK_INLINE bool read_trylock(FAR volatile rwlock_t *lock)
 {
   bool ret = false;
 
@@ -1371,6 +1392,9 @@ static inline_function bool read_trylock(FAR volatile rwlock_t *lock)
 
   return ret;
 }
+#  else
+bool read_trylock(FAR volatile rwlock_t *lock);
+#  endif
 
 /****************************************************************************
  * Name: read_unlock
@@ -1424,7 +1448,8 @@ static inline_function void read_unlock(FAR volatile rwlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function void write_lock(FAR volatile rwlock_t *lock)
+#  ifdef CONFIG_SPINLOCK_INLINE
+SPINLOCK_INLINE void write_lock(FAR volatile rwlock_t *lock)
 {
   /* Mark that we want to hold lock */
 
@@ -1445,6 +1470,9 @@ static inline_function void write_lock(FAR volatile rwlock_t *lock)
   spinlock_mark_locked(&lock->info);
   nxsched_critmon_busywait(false, return_address(0));
 }
+#  else
+void write_lock(FAR volatile rwlock_t *lock);
+#  endif
 
 /****************************************************************************
  * Name: write_trylock
@@ -1540,7 +1568,15 @@ static inline_function void write_unlock(FAR volatile rwlock_t *lock)
  ****************************************************************************/
 
 #ifdef CONFIG_SPINLOCK
-irqstate_t read_lock_irqsave(FAR rwlock_t *lock);
+static inline_function irqstate_t read_lock_irqsave(FAR rwlock_t *lock)
+{
+  irqstate_t ret;
+  ret = irq_save();
+
+  read_lock(lock);
+
+  return ret;
+}
 #else
 #  define read_lock_irqsave(l) ((void)(l), irq_save())
 #endif
@@ -1569,7 +1605,12 @@ irqstate_t read_lock_irqsave(FAR rwlock_t *lock);
  ****************************************************************************/
 
 #ifdef CONFIG_SPINLOCK
-void read_unlock_irqrestore(FAR rwlock_t *lock, irqstate_t flags);
+static inline_function
+void read_unlock_irqrestore(rwlock_t *lock, irqstate_t flags)
+{
+  read_unlock(lock);
+  irq_restore(flags);
+}
 #else
 #  define read_unlock_irqrestore(l, f) ((void)(l), irq_restore(f))
 #endif
@@ -1600,7 +1641,15 @@ void read_unlock_irqrestore(FAR rwlock_t *lock, irqstate_t flags);
  ****************************************************************************/
 
 #ifdef CONFIG_SPINLOCK
-irqstate_t write_lock_irqsave(FAR rwlock_t *lock);
+static inline_function irqstate_t write_lock_irqsave(rwlock_t *lock)
+{
+  irqstate_t ret;
+  ret = irq_save();
+
+  write_lock(lock);
+
+  return ret;
+}
 #else
 #  define write_lock_irqsave(l) ((void)(l), irq_save())
 #endif
@@ -1629,7 +1678,13 @@ irqstate_t write_lock_irqsave(FAR rwlock_t *lock);
  ****************************************************************************/
 
 #ifdef CONFIG_SPINLOCK
-void write_unlock_irqrestore(FAR rwlock_t *lock, irqstate_t flags);
+static inline_function
+void write_unlock_irqrestore(rwlock_t *lock, irqstate_t flags)
+{
+  write_unlock(lock);
+
+  irq_restore(flags);
+}
 #else
 #  define write_unlock_irqrestore(l, f) ((void)(l), irq_restore(f))
 #endif
