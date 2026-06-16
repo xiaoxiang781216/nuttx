@@ -39,6 +39,7 @@
 #include "group/group.h"
 #include "signal/signal.h"
 #include "task/task.h"
+#include "timer/timer.h"
 
 /****************************************************************************
  * Private Types
@@ -181,6 +182,15 @@ int nxtask_terminate(pid_t pid)
           nxtask_exithook(dtcb, EXIT_SUCCESS);
 
           leave_critical_section(flags);
+
+#ifndef CONFIG_DISABLE_POSIX_TIMERS
+          /* Release any timers that the task might hold.  We do this
+           * before release the PID because it may still be trying to
+           * deliver signals.
+           */
+
+          timer_deleteall(dtcb->pid);
+#endif
 
           /* Leave the task group.  Perhaps discarding any un-reaped child
            * status (no zombies here!)

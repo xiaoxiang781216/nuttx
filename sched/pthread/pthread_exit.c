@@ -44,6 +44,7 @@
 #include "group/group.h"
 #include "task/task.h"
 #include "pthread/pthread.h"
+#include "timer/timer.h"
 
 /****************************************************************************
  * Public Functions
@@ -120,6 +121,15 @@ void nx_pthread_exit(FAR void *exit_value)
           usleep(1000);
         }
     }
+
+#ifndef CONFIG_DISABLE_POSIX_TIMERS
+  /* Release any timers that the task might hold.  We do this
+   * before release the PID because it may still be trying to
+   * deliver signals.
+   */
+
+  timer_deleteall(tcb->pid);
+#endif
 
   flags = enter_critical_section();
 

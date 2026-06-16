@@ -50,16 +50,6 @@ static void release_tcb_cb(FAR void *arg)
   FAR struct tcb_s *tcb = arg;
   int ttype = tcb->flags & TCB_FLAG_TTYPE_MASK;
 
-#ifndef CONFIG_DISABLE_POSIX_TIMERS
-  /* Release any timers that the task might hold.  We do this
-   * before release the PID because it may still be trying to
-   * deliver signals (although interrupts are should be
-   * disabled here).
-   */
-
-  timer_deleteall(tcb->pid);
-#endif
-
   /* Delete the thread's stack if one has been allocated */
 
   if (tcb->stack_alloc_ptr)
