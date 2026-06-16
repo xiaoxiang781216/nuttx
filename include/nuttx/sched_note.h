@@ -56,12 +56,18 @@
 #define NOTE_PRINTF_STRING 3
 
 /* Get/set printf tag. each parameter occupies 2 bits. The highest
- * four bits are used to represent the number of parameters, So up to
- * 29 variable arguments can be passed.
+ * bits are used to represent the number of parameters.
+ * On 32-bit platforms (uintptr_t = 4 bytes): 4-bit count, up to 14 args.
+ * On 64-bit platforms (uintptr_t = 8 bytes): 5-bit count, up to 29 args.
  */
 
+#define NOTE_PRINTF_COUNT_BITS \
+    (sizeof(uintptr_t) >= 8 ? 5 : 4)
+#define NOTE_PRINTF_COUNT_SHIFT \
+    (sizeof(uintptr_t) * 8 - NOTE_PRINTF_COUNT_BITS)
+
 #define NOTE_PRINTF_GET_TYPE(tag, index) (((tag) >> (index) * 2) & 0x03)
-#define NOTE_PRINTF_GET_COUNT(tag)       ((tag) >> 58)
+#define NOTE_PRINTF_GET_COUNT(tag)       ((tag) >> NOTE_PRINTF_COUNT_SHIFT)
 
 #define sched_note_event(tag, level, event, buf, len) \
         sched_note_event_ip(tag, level, up_getpc(), event, buf, len)
@@ -323,7 +329,7 @@
               static const struct { uint8_t sz; char str[sizeof(f)]; } \
               fmt = { sizeof(f) - 1, f }; \
               locate_data("note_type") used_data \
-              static const union { FAR const char *fmt; uint64_t type; } \
+              static const union { FAR const char *fmt; uintptr_t type; } \
               ft = { .fmt = fmt.str }; \
               note_vprintf_ip(t,l,i,fmt.str,ft.type,&(v)); \
             } \
@@ -335,7 +341,7 @@
               static const struct { uint8_t sz; char str[sizeof(f)]; } \
               fmt = { sizeof(f) - 1, f }; \
               locate_data("note_type") used_data \
-              static const union { FAR const char *fmt; uint64_t type; } \
+              static const union { FAR const char *fmt; uintptr_t type; } \
               ft = { .fmt = fmt.str }; \
               note_printf_ip(t,l,i,fmt.str,ft.type,##__VA_ARGS__); \
             } \

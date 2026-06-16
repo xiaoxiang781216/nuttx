@@ -61,7 +61,7 @@ static int noterpmsg_add(FAR struct note_driver_s *driver,
                          FAR const void *note, size_t notelen,
                          bool noswitches);
 static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
-                              uint8_t level, uintptr_t ip, uint64_t type,
+                              uint8_t level, uintptr_t ip, uintptr_t type,
                               FAR const char *fmt, va_list va);
 
 /****************************************************************************
@@ -287,7 +287,7 @@ static int noterpmsg_add(FAR struct note_driver_s *driver,
 }
 
 static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
-                              uint8_t level, uintptr_t ip, uint64_t type,
+                              uint8_t level, uintptr_t ip, uintptr_t type,
                               FAR const char *fmt, va_list va)
 {
   FAR struct tcb_s *tcb = running_task();

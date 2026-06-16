@@ -449,7 +449,7 @@ struct note_driver_ops_s
                      uint8_t level, uintptr_t ip, uint8_t event,
                      FAR const void *buf, size_t len);
   CODE void (*vprintf)(FAR struct note_driver_s *drv, uint8_t tag,
-                       uint8_t level, uintptr_t ip, uint64_t type,
+                       uint8_t level, uintptr_t ip, uintptr_t type,
                        FAR const char *fmt, va_list va) printf_like(6, 0);
 #endif
   CODE void (*flush)(FAR struct note_driver_s *drv);
@@ -688,7 +688,7 @@ struct note_printf_s
   struct note_common_s npt_cmn; /* Common note parameters */
   uintptr_t npt_ip;             /* Instruction pointer called from */
   uintptr_t npt_fmt;            /* Printf format string */
-  uint64_t npt_type;            /* Printf parameter type */
+  uintptr_t npt_type;           /* Printf parameter type */
   uint8_t npt_tag;              /* Printf tag */
   uint8_t npt_level;            /* Event level */
   char npt_data[2];             /* Print arguments */
@@ -908,12 +908,12 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver,
                             FAR const void *buf, size_t len);
 void note_driver_vprintf_ip(FAR struct note_driver_s *driver,
                             uint8_t tag, uint8_t level,
-                            uintptr_t ip, uint64_t type,
+                            uintptr_t ip, uintptr_t type,
                             FAR const char *fmt,
                             va_list *va) printf_like(6, 0);
 void note_driver_printf_ip(FAR struct note_driver_s *driver,
                            uint8_t tag, uint8_t level,
-                           uintptr_t ip, uint64_t type,
+                           uintptr_t ip, uintptr_t type,
                            FAR const char *fmt, ...)
                            printf_like(6, 7);
 
@@ -924,10 +924,10 @@ void note_driver_printf_ip(FAR struct note_driver_s *driver,
 void note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip, uint8_t event,
                    FAR const void *buf, size_t len);
 void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                     FAR const char *fmt, uint64_t type,
+                     FAR const char *fmt, uintptr_t type,
                      va_list *va) printf_like(4, 0);
 void note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                    FAR const char *fmt, uint64_t type,
+                    FAR const char *fmt, uintptr_t type,
                     ...) printf_like(4, 6);
 #endif
 

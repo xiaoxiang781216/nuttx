@@ -2030,7 +2030,7 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
 }
 
 void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                            uint8_t level, uintptr_t ip, uint64_t type,
+                            uint8_t level, uintptr_t ip, uintptr_t type,
                             FAR const char *fmt, FAR va_list *va)
 {
   FAR struct tcb_s *tcb = running_task();
@@ -2165,7 +2165,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
 }
 
 void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                           uint8_t level, uintptr_t ip, uint64_t type,
+                           uint8_t level, uintptr_t ip, uintptr_t type,
                            FAR const char *fmt, ...)
 {
   va_list va;
@@ -2197,7 +2197,7 @@ void note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip, uint8_t event,
 }
 
 void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                     FAR const char *fmt, uint64_t type, FAR va_list *va)
+                     FAR const char *fmt, uintptr_t type, FAR va_list *va)
 {
   FAR struct note_driver_s **driver;
 
@@ -2222,7 +2222,7 @@ void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
 }
 
 void note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                    FAR const char *fmt, uint64_t type, ...)
+                    FAR const char *fmt, uintptr_t type, ...)
 {
   va_list va;
   va_start(va, type);
