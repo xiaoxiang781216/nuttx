@@ -2413,29 +2413,36 @@ static int nvs_init(FAR struct nvs_fs *fs)
         {
           return rc;
         }
+    }
 
-      if (!nvs_empty_ate_valid(fs, empty_ate))
+  /* At this point addr points to the active block and empty_ate holds its
+   * empty ATE. If that empty ATE is invalid, the block preparation (erase +
+   * empty ATE) was interrupted by a power loss. Reset it so it is never
+   * adopted as a malformed block (valid close ATE + invalid empty ATE).
+   * Such a block, once filled and closed, would be skipped by the open-block
+   * scan on the very next normal boot, orphaning the following block and its
+   * data.
+   */
+
+  if (!nvs_empty_ate_valid(fs, empty_ate))
+    {
+      rc = nvs_flash_block_reset(fs, addr);
+      if (rc)
         {
-          rc = nvs_flash_block_reset(fs, addr);
-          if (rc)
-            {
-              return rc;
-            }
+          return rc;
         }
 
       rc = nvs_get_block_cycle(fs, addr, &fs->cycle_cnt);
-      if (rc == -ENOENT)
+      if (rc)
         {
-          /* Block never used */
-
-          fs->cycle_cnt = 0;
-        }
-      else if (rc)
-        {
-          /* Bad flash read */
-
           return rc;
         }
+    }
+  else
+    {
+      /* The empty ATE is valid, its cycle is already in hand */
+
+      fs->cycle_cnt = empty_ate->cycle_cnt;
     }
 
   /* Addr contains address of closing ate in the most recent block,
