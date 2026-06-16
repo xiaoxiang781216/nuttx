@@ -54,32 +54,14 @@
  *
  ****************************************************************************/
 
-static inline void timer_free(struct posix_timer_s *timer)
+static inline_function void timer_free(FAR struct posix_timer_s *timer)
 {
-  struct posix_timer_s  *entry;
-  struct posix_timer_s **prev_flink = &g_alloctimers;
-  irqstate_t             flags = spin_lock_irqsave(&g_locktimers);
-
   DEBUGASSERT(timer);
-
-  /* Remove the timer from the allocated list */
-
-  for (entry = g_alloctimers; entry != NULL; entry = entry->flink)
-    {
-      if (entry == timer)
-        {
-          *prev_flink = entry->flink;
-          break;
-        }
-
-      prev_flink = &entry->flink;
-    }
-
-  /* Return it to the free list if it is one of the preallocated timers */
 
 #if CONFIG_PREALLOC_TIMERS > 0
   if ((timer->pt_flags & PT_FLAGS_PREALLOCATED) != 0u)
     {
+      irqstate_t flags = spin_lock_irqsave(&g_locktimers);
       timer->flink = g_freetimers;
       g_freetimers = timer;
       spin_unlock_irqrestore(&g_locktimers, flags);
@@ -87,9 +69,6 @@ static inline void timer_free(struct posix_timer_s *timer)
   else
 #endif
     {
-      /* Otherwise, return it to the heap */
-
-      spin_unlock_irqrestore(&g_locktimers, flags);
       kmm_free(timer);
     }
 }

@@ -34,6 +34,49 @@
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
 
 /****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: timer_remove
+ *
+ * Description:
+ *   Remove a timer from the allocated timer list.
+ *
+ * Input Parameters:
+ *   timerid- The timerid to remove from g_alloctimers.
+ *
+ * Returned Value:
+ *   The timer pointer if it was found and removed, or NULL if not found.
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR struct posix_timer_s *timer_remove(timer_t timerid)
+{
+  FAR struct posix_timer_s  *entry;
+  FAR struct posix_timer_s  *ret        = NULL;
+  FAR struct posix_timer_s **prev_flink = &g_alloctimers;
+  irqstate_t                 flags      = spin_lock_irqsave(&g_locktimers);
+
+  for (entry = g_alloctimers; entry != NULL; entry = entry->flink)
+    {
+      if ((uintptr_t)entry == timerid)
+        {
+          *prev_flink = entry->flink;
+          ret         = entry;
+          break;
+        }
+
+      prev_flink = &entry->flink;
+    }
+
+  spin_unlock_irqrestore(&g_locktimers, flags);
+
+  return ret;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -62,13 +105,12 @@
 
 int timer_delete(timer_t timerid)
 {
-  int ret;
-  FAR struct posix_timer_s *timer = timer_gethandle(timerid);
+  int ret = OK;
+  FAR struct posix_timer_s *timer = timer_remove(timerid);
 
   if (timer != NULL)
     {
       timer_release(timer, this_task());
-      ret = OK;
     }
   else
     {
