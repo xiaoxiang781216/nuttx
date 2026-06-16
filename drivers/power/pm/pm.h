@@ -120,22 +120,6 @@ EXTERN struct pm_domain_s g_pmdomains[CONFIG_PM_NDOMAINS];
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pm_domain_initlock
- *
- * Description:
- *   Initialize the lock for a PM domain.
- *
- * Input Parameters:
- *   domain - The PM domain to initialize lock
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void pm_domain_initlock(int domain);
-
-/****************************************************************************
  * Name: pm_domain_lock
  *
  * Description:

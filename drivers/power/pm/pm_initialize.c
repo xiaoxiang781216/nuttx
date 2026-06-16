@@ -38,7 +38,25 @@
 
 /* All PM global data: */
 
-struct pm_domain_s g_pmdomains[CONFIG_PM_NDOMAINS];
+struct pm_domain_s g_pmdomains[CONFIG_PM_NDOMAINS] =
+{
+  [PM_IDLE_DOMAIN] =
+    {
+      .u =
+        {
+          .slock = SP_UNLOCKED
+        }
+    },
+#if CONFIG_PM_NDOMAINS > 1
+  [PM_IDLE_DOMAIN + 1 ... CONFIG_PM_NDOMAINS - 1] =
+    {
+      .u =
+        {
+          .rlock = NXRMUTEX_INITIALIZER
+        }
+    }
+#endif
+};
 
 /****************************************************************************
  * Public Functions
@@ -91,8 +109,6 @@ void pm_initialize(void)
 #if defined(CONFIG_PM_STAT)
       clock_systime_timespec(&g_pmdomains[i].start);
 #endif
-
-      pm_domain_initlock(i);
 
 #if CONFIG_PM_GOVERNOR_EXPLICIT_RELAX
       for (state = 0; state < PM_COUNT; state++)

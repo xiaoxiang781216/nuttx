@@ -34,33 +34,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pm_domain_initlock
- *
- * Description:
- *   Initialize the lock for a PM domain.
- *
- * Input Parameters:
- *   domain - The PM domain to initialize lock
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void pm_domain_initlock(int domain)
-{
-#if CONFIG_PM_NDOMAINS > 1
-  if (domain != PM_IDLE_DOMAIN)
-    {
-      nxrmutex_init(&g_pmdomains[domain].u.rlock);
-      return;
-    }
-#endif
-
-  spin_lock_init(&g_pmdomains[domain].u.slock);
-}
-
-/****************************************************************************
  * Name: pm_domain_lock
  *
  * Description:
