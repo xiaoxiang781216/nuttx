@@ -130,13 +130,6 @@
 
 #ifndef __ASSEMBLY__
 
-/* Bus trap hook function type for safety test modules.
- * Returns OK if the trap was handled, ERROR otherwise.
- */
-
-typedef int (*tricore_bustrap_hook_t)(uint32_t tid, void *context);
-#endif
-
 typedef struct
 {
   uint32_t used;
@@ -146,8 +139,6 @@ typedef struct
 /****************************************************************************
  * Public Data
  ****************************************************************************/
-
-#ifndef __ASSEMBLY__
 
 /* This is the beginning of heap as provided from up_head.S. This is the
  * first address in DRAM after the loaded program+bss+idle stack.  The
@@ -207,13 +198,6 @@ void tricore_register_irq_srpn(int irq);
 /* Signal handling **********************************************************/
 
 void tricore_sigdeliver(void);
-
-/* Exception Handler ********************************************************/
-
-void tricore_svcall(volatile void *trap);
-void tricore_trapcall(volatile void *trap);
-void tricore_trapinit(void);
-void tricore_bustrap_register_hook(tricore_bustrap_hook_t hook);
 
 /* Context Save Areas *******************************************************/
 

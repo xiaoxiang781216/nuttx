@@ -28,11 +28,155 @@
 
 #include <arch/irq.h>
 
+#include "tricore_vectors.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#if defined(__TASKING__)
+#define TRICORE_TRAP_CALLTSR(serviceRoutine)      \
+{                                                 \
+  __asm__(".align 32\n\t");                       \
+  __asm__("svlcx\n\t");                           \
+  __asm__("mov d4, d15\n\t");                     \
+  __asm__("ji %0\n\t" : : "a" (serviceRoutine));  \
+  __asm__("rfe");                                 \
+}
+
+#define TRICORE_TRAP_TSRHOOK(trap, handler)       \
+{                                                 \
+  __asm__("mov.aa a4, %0" :: "a"(trap) : "a4");   \
+  __asm__("jli %0" :: "a"(handler));              \
+}
+
+#else
+#define TRICORE_TRAP_CALLTSR(serviceRoutine)      \
+{                                                 \
+  __asm__(".align 5\n\t");                        \
+  __asm__("svlcx\n\t");                           \
+  __asm__("mov %d4, %d15\n\t");                   \
+  __asm__("ji %0\n\t" : : "a" (serviceRoutine));  \
+  __asm__("rfe");                                 \
+}
+
+#define TRICORE_TRAP_TSRHOOK(trap, handler)       \
+{                                                 \
+  __asm__("mov.aa %%a4, %0" :: "a"(trap) : "a4"); \
+  __asm__("jli %0" :: "a"(handler));              \
+}
+#endif
+
+#define TRICORE_TRAP_RET()  __asm__("rslcx\n\trfe")
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+noinstrument_function inline_function
+static void tricore_trap_class(uint32_t tin, uint8_t tclass, void *handler)
+{
+  struct tricore_trap_s trap;
+
+  trap.tAddr  = (uintptr_t)__getA11();
+  trap.tClass = tclass;
+  trap.tId    = tin;
+  trap.tCpu   = up_cpu_index();
+
+  TRICORE_TRAP_TSRHOOK(&trap, handler);
+}
+
+noinstrument_function
+static void tricore_trap_memory_management(uint32_t tin)
+{
+  tricore_trap_class(tin, TRICORE_TRAP_CLASS_MMU,
+                     (void *)tricore_trapcall);
+  TRICORE_TRAP_RET();
+}
+
+noinstrument_function
+static void tricore_trap_internal_protection(uint32_t tin)
+{
+  tricore_trap_class(tin, TRICORE_TRAP_CLASS_INTPROT,
+                     (void *)tricore_trapcall);
+  TRICORE_TRAP_RET();
+}
+
+noinstrument_function
+static void tricore_trap_instruction(uint32_t tin)
+{
+  tricore_trap_class(tin, TRICORE_TRAP_CLASS_INSTERR,
+                     (void *)tricore_trapcall);
+  TRICORE_TRAP_RET();
+}
+
+noinstrument_function
+static void tricore_trap_context_management(uint32_t tin)
+{
+  tricore_trap_class(tin, TRICORE_TRAP_CLASS_CTXMGMT,
+                     (void *)tricore_trapcall);
+  TRICORE_TRAP_RET();
+}
+
+noinstrument_function
+static void tricore_trap_bus(uint32_t tin)
+{
+  tricore_trap_class(tin, TRICORE_TRAP_CLASS_BUS,
+                     (void *)tricore_trapcall);
+  TRICORE_TRAP_RET();
+}
+
+noinstrument_function
+static void tricore_trap_assertion(uint32_t tin)
+{
+  tricore_trap_class(tin, TRICORE_TRAP_CLASS_ASSERT,
+                     (void *)tricore_trapcall);
+  TRICORE_TRAP_RET();
+}
+
+noinstrument_function
+static void tricore_trap_system_call(uint32_t tin)
+{
+  tricore_trap_class(tin, TRICORE_TRAP_CLASS_SYSCALL,
+                     (void *)tricore_svcall);
+  TRICORE_TRAP_RET();
+}
+
+noinstrument_function
+static void tricore_trap_non_maskable_interrupt(uint32_t tin)
+{
+  tricore_trap_class(tin, TRICORE_TRAP_CLASS_NMI,
+                     (void *)tricore_trapcall);
+  TRICORE_TRAP_RET();
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-/* TriCore Interrupt Vector Table (BIV)
+/****************************************************************************
+ * TriCore TRAP Vector Table (BTV)
+ ****************************************************************************/
+
+#if defined(__TASKING__)
+noinstrument_function locate_code(".text.traptab")
+#else
+noinstrument_function locate_code(".traptab")
+#endif
+void tricore_traptab(void)
+{
+  TRICORE_TRAP_CALLTSR(tricore_trap_memory_management)
+  TRICORE_TRAP_CALLTSR(tricore_trap_internal_protection)
+  TRICORE_TRAP_CALLTSR(tricore_trap_instruction)
+  TRICORE_TRAP_CALLTSR(tricore_trap_context_management)
+  TRICORE_TRAP_CALLTSR(tricore_trap_bus)
+  TRICORE_TRAP_CALLTSR(tricore_trap_assertion)
+  TRICORE_TRAP_CALLTSR(tricore_trap_system_call)
+  TRICORE_TRAP_CALLTSR(tricore_trap_non_maskable_interrupt)
+}
+
+/****************************************************************************
+ * TriCore Interrupt Vector Table (BIV)
  *
  * Unlike ARM/RISC-V which store function pointers, TriCore's interrupt
  * vector table contains executable code directly. Each entry is a 32-byte
@@ -41,8 +185,9 @@
  *
  * Entry layout (SRPN = Service Request Priority Number):
  *   SRPN 1 (lowest priority)  -> tricore_irq_sched (context switch)
- *   SRPN 2 ~ MAX (all others) -> tricore_irq_direct     (fast dispatch)
- */
+ *   SRPN 2 ~ MAX (all others) -> tricore_irq_direct (fast dispatch)
+ *
+ ****************************************************************************/
 
 #ifdef CONFIG_TRICORE_TOOLCHAIN_TASKING
 
