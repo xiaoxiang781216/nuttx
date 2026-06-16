@@ -128,7 +128,7 @@ void nx_pthread_exit(FAR void *exit_value)
    * deliver signals.
    */
 
-  timer_deleteall(tcb->pid);
+  timer_deleteall(tcb);
 #endif
 
   flags = enter_critical_section();

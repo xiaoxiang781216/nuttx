@@ -189,7 +189,7 @@ int nxtask_terminate(pid_t pid)
            * deliver signals.
            */
 
-          timer_deleteall(dtcb->pid);
+          timer_deleteall(dtcb);
 #endif
 
           /* Leave the task group.  Perhaps discarding any un-reaped child

@@ -127,22 +127,26 @@ void timer_initialize(void)
  *   resources are referenced.
  *
  * Input Parameters:
- *   pid - the task ID of the thread that exited
+ *   tcb - the TCB of the thread that exited
  *
  * Returned Value:
  *   None
  *
+ * Assumptions:
+ *   This function can not be called after the pid is released or
+ *   the group is exited.
+ *
  ****************************************************************************/
 
-void timer_deleteall(pid_t pid)
+void timer_deleteall(FAR struct tcb_s *tcb)
 {
-  FAR struct posix_timer_s *timer;
-  FAR struct posix_timer_s *next;
-  FAR struct posix_timer_s *free = NULL;
+  FAR struct posix_timer_s  *timer;
+  FAR struct posix_timer_s  *next;
+  FAR struct posix_timer_s  *free = NULL;
   FAR struct posix_timer_s **prev_flink = &g_alloctimers;
-  irqstate_t flags;
+  pid_t        pid = tcb->pid;
+  irqstate_t flags = spin_lock_irqsave(&g_locktimers);
 
-  flags = spin_lock_irqsave(&g_locktimers);
   for (timer = g_alloctimers; timer != NULL; timer = next)
     {
       next = timer->flink;
@@ -168,7 +172,7 @@ void timer_deleteall(pid_t pid)
   for (timer = free; timer != NULL; timer = next)
     {
       next = timer->flink;
-      timer_release(timer);
+      timer_release(timer, tcb);
     }
 }
 

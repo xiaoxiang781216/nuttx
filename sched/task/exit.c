@@ -109,7 +109,7 @@ void _exit(int status)
    * deliver signals.
    */
 
-  timer_deleteall(tcb->pid);
+  timer_deleteall(tcb);
 #endif
 
   flags = enter_critical_section();

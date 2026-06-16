@@ -95,8 +95,8 @@ DECLARE_PER_CPU_BMP(spinlock_t, g_locktimers);
  ****************************************************************************/
 
 void timer_initialize(void);
-void timer_deleteall(pid_t pid);
-void timer_release(FAR struct posix_timer_s *timer);
+void timer_deleteall(struct tcb_s *tcb);
+void timer_release(FAR struct posix_timer_s *timer, FAR struct tcb_s *tcb);
 FAR struct posix_timer_s *timer_gethandle(timer_t timerid);
 
 #endif /* CONFIG_DISABLE_POSIX_TIMERS */

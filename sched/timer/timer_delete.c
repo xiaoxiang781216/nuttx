@@ -67,7 +67,7 @@ int timer_delete(timer_t timerid)
 
   if (timer != NULL)
     {
-      timer_release(timer);
+      timer_release(timer, this_task());
       ret = OK;
     }
   else

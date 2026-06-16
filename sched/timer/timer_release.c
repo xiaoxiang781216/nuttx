@@ -108,6 +108,7 @@ static inline void timer_free(struct posix_timer_s *timer)
  * Input Parameters:
  *   timer - The per-thread timer, previously created by the call to
  *     timer_create(), to be deleted.
+ *   tcb  - the TCB of the timer owner.
  *
  * Returned Value:
  *   None.
@@ -117,13 +118,11 @@ static inline void timer_free(struct posix_timer_s *timer)
  *
  ****************************************************************************/
 
-void timer_release(FAR struct posix_timer_s *timer)
+void timer_release(FAR struct posix_timer_s *timer, FAR struct tcb_s *tcb)
 {
-  FAR struct task_group_s *group;
-
   /* Some sanity checks */
 
-  DEBUGASSERT(timer);
+  DEBUGASSERT(timer && tcb && timer->pt_owner == tcb->pid);
 
   /* Wait the callback to finish then we acquire the ownership. */
 
@@ -135,9 +134,8 @@ void timer_release(FAR struct posix_timer_s *timer)
 
   /* Release the timer structure */
 
-  group = this_task()->group;
   timer_free(timer);
-  atomic_sub(&group->itimer_count, 1);
+  atomic_sub(&tcb->group->itimer_count, 1);
 }
 
 #endif /* CONFIG_DISABLE_POSIX_TIMERS */
