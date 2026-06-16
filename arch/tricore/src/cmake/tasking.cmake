@@ -133,7 +133,7 @@ endif()
 if(CONFIG_DEBUG_CUSTOMOPT)
   add_compile_options(${CONFIG_DEBUG_OPTLEVEL})
 elseif(CONFIG_DEBUG_FULLOPT)
-  add_compile_options(-Os)
+  add_compile_options(-O3)
 endif()
 
 # pragma align <4> (default: 0)
