@@ -49,23 +49,39 @@
  *   to the free list (depending on whether or not the timer is one of the
  *   preallocated timers)
  *
+ * Assumptions:
+ *   The timer should not be NULL.
+ *
  ****************************************************************************/
 
 static inline void timer_free(struct posix_timer_s *timer)
 {
-  irqstate_t flags;
+  struct posix_timer_s  *entry;
+  struct posix_timer_s **prev_flink = &g_alloctimers;
+  irqstate_t             flags = spin_lock_irqsave(&g_locktimers);
+
+  DEBUGASSERT(timer);
 
   /* Remove the timer from the allocated list */
 
-  flags = spin_lock_irqsave(&g_locktimers);
-  sq_rem((FAR sq_entry_t *)timer, (FAR sq_queue_t *)&g_alloctimers);
+  for (entry = g_alloctimers; entry != NULL; entry = entry->flink)
+    {
+      if (entry == timer)
+        {
+          *prev_flink = entry->flink;
+          break;
+        }
+
+      prev_flink = &entry->flink;
+    }
 
   /* Return it to the free list if it is one of the preallocated timers */
 
 #if CONFIG_PREALLOC_TIMERS > 0
   if ((timer->pt_flags & PT_FLAGS_PREALLOCATED) != 0u)
     {
-      sq_addlast((FAR sq_entry_t *)timer, (FAR sq_queue_t *)&g_freetimers);
+      timer->flink = g_freetimers;
+      g_freetimers = timer;
       spin_unlock_irqrestore(&g_locktimers, flags);
     }
   else

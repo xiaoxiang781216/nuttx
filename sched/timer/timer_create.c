@@ -63,9 +63,9 @@ static FAR struct posix_timer_s *timer_allocate(void)
   /* Try to get a preallocated timer from the free list */
 
 #if CONFIG_PREALLOC_TIMERS > 0
-  flags = spin_lock_irqsave(&g_locktimers);
-  ret   = (FAR struct posix_timer_s *)
-    sq_remfirst((FAR sq_queue_t *)&g_freetimers);
+  flags        = spin_lock_irqsave(&g_locktimers);
+  ret          = g_freetimers;
+  g_freetimers = ret ? ret->flink : NULL;
   spin_unlock_irqrestore(&g_locktimers, flags);
 
   /* Did we get one? */
@@ -96,7 +96,8 @@ static FAR struct posix_timer_s *timer_allocate(void)
       /* And add it to the end of the list of allocated timers */
 
       flags = spin_lock_irqsave(&g_locktimers);
-      sq_addlast((FAR sq_entry_t *)ret, (FAR sq_queue_t *)&g_alloctimers);
+      ret->flink = g_alloctimers;
+      g_alloctimers = ret;
       spin_unlock_irqrestore(&g_locktimers, flags);
     }
 

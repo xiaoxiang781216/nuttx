@@ -53,7 +53,7 @@ typedef struct posix_timer_s posix_timer_prealloc_t[CONFIG_PREALLOC_TIMERS];
 /* This is a list of free, preallocated timer structures */
 
 #  undef g_freetimers
-DEFINE_PER_CPU_BSS_BMP(volatile sq_queue_t, g_freetimers);
+DEFINE_PER_CPU_BSS_BMP(struct posix_timer_s *, g_freetimers);
 #  define g_freetimers this_cpu_var_bmp(g_freetimers)
 #endif
 
@@ -63,7 +63,7 @@ DEFINE_PER_CPU_BSS_BMP(volatile sq_queue_t, g_freetimers);
  */
 
 #undef g_alloctimers
-DEFINE_PER_CPU_BSS_BMP(volatile sq_queue_t, g_alloctimers);
+DEFINE_PER_CPU_BSS_BMP(struct posix_timer_s *, g_alloctimers);
 #define g_alloctimers this_cpu_var_bmp(g_alloctimers)
 
 #undef g_locktimers
@@ -104,19 +104,14 @@ void timer_initialize(void)
 
   /* Place all of the pre-allocated timers into the free timer list */
 
-  sq_init((FAR sq_queue_t *)&g_freetimers);
-
-  for (i = 0; i < CONFIG_PREALLOC_TIMERS; i++)
+  for (i = CONFIG_PREALLOC_TIMERS - 1; i >= 0; i--)
     {
       g_prealloctimers[i].pt_flags = PT_FLAGS_PREALLOCATED;
-      sq_addlast((FAR sq_entry_t *)&g_prealloctimers[i],
-                 (FAR sq_queue_t *)&g_freetimers);
+      g_prealloctimers[i].flink = g_freetimers;
+      g_freetimers = &g_prealloctimers[i];
     }
 #endif
 
-  /* Initialize the list of allocated timers */
-
-  sq_init((FAR sq_queue_t *)&g_alloctimers);
   sched_trace_end();
 }
 
@@ -143,32 +138,36 @@ void timer_deleteall(pid_t pid)
 {
   FAR struct posix_timer_s *timer;
   FAR struct posix_timer_s *next;
-  sq_queue_t freetimers;
+  FAR struct posix_timer_s *free = NULL;
+  FAR struct posix_timer_s **prev_flink = &g_alloctimers;
   irqstate_t flags;
 
-  sq_init(&freetimers);
-
   flags = spin_lock_irqsave(&g_locktimers);
-  for (timer = (FAR struct posix_timer_s *)g_alloctimers.head;
-       timer != NULL;
-       timer = next)
+  for (timer = g_alloctimers; timer != NULL; timer = next)
     {
       next = timer->flink;
       if (timer->pt_owner == pid)
         {
-          sq_rem((FAR sq_entry_t *)timer, (FAR sq_queue_t *)&g_alloctimers);
-          sq_addlast((FAR sq_entry_t *)timer, (FAR sq_queue_t *)&freetimers);
+          /* Remove the timer from the allocated timer list  */
+
+          *prev_flink = next;
+
+          /* Push the timer to the free list */
+
+          timer->flink = free;
+          free = timer;
+        }
+      else
+        {
+          prev_flink = &timer->flink;
         }
     }
 
   spin_unlock_irqrestore(&g_locktimers, flags);
 
-  for (timer = (FAR struct posix_timer_s *)freetimers.head;
-       timer != NULL;
-       timer = next)
+  for (timer = free; timer != NULL; timer = next)
     {
       next = timer->flink;
-      sq_rem((FAR sq_entry_t *)timer, (FAR sq_queue_t *)&freetimers);
       timer_release(timer);
     }
 }
@@ -192,18 +191,18 @@ void timer_deleteall(pid_t pid)
 FAR struct posix_timer_s *timer_gethandle(timer_t timerid)
 {
   FAR struct posix_timer_s *timer = NULL;
-  FAR sq_entry_t *entry;
+  FAR struct posix_timer_s *entry;
   irqstate_t flags;
 
   if (timerid != 0u)
     {
       flags = spin_lock_irqsave(&g_locktimers);
 
-      sq_for_every(&g_alloctimers, entry)
+      for (entry = g_alloctimers; entry != NULL; entry = entry->flink)
         {
           if ((uintptr_t)entry == timerid)
             {
-              timer = (FAR struct posix_timer_s *)timerid;
+              timer = entry;
               break;
             }
         }
