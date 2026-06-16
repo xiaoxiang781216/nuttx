@@ -147,6 +147,10 @@ if(CONFIG_ARM64_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS arm64_hostfs.c)
 endif()
 
+if(CONFIG_ARM64_SEMIHOSTING_POWEROFF)
+  list(APPEND SRCS arm64_poweroff.c)
+endif()
+
 if(CONFIG_PERF_EVENTS)
   list(APPEND SRCS arm64_pmuv3.c)
 endif()

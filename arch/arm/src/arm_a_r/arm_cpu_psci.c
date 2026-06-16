@@ -225,6 +225,7 @@ int arm_psci_init(const char *method)
  *
  ***************************************************************************/
 
+#ifndef CONFIG_ARM_SEMIHOSTING_POWEROFF
 void up_systempoweroff(void)
 {
   int ret;
@@ -241,6 +242,7 @@ void up_systempoweroff(void)
 
   for (; ; );
 }
+#endif
 
 /***************************************************************************
  * Name: up_systemreset

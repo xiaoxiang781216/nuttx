@@ -452,6 +452,12 @@ config ARM64_SEMIHOSTING_HOSTFS_CACHE_COHERENCE
 
 endif # ARM64_SEMIHOSTING_HOSTFS
 
+config ARM64_SEMIHOSTING_POWEROFF
+	bool "Semihosting POWEROFF support"
+	default n
+	---help---
+		Enable use of semihosting function to poweroff target.
+
 config ARM64_GENERIC_TIMER
 	bool "Using ARM Generic Timer as Oneshot Timer"
 	default y
