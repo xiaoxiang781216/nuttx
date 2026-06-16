@@ -40,6 +40,29 @@ config MTD_PARTITION
 		managing the sub-region of flash beginning at 'offset' (in blocks)
 		and of size 'nblocks' on the device specified by 'mtd'.
 
+config MTD_BBM
+	bool "MTD Bad Block Management library"
+	default n
+	---help---
+		Enable a reusable bad block management library that provides
+		transparent logical-to-physical block mapping with automatic
+		bad block detection and recovery. Can be used by FTL,
+		mtdoutstream, or any other component that needs
+		transparent bad block handling on NAND flash.
+
+		When the underlying MTD device does not support bad block
+		detection (e.g. NOR flash), all operations pass through
+		directly with zero overhead.
+
+config MTD_BBM_USLEEP
+	int "BBM usleep between block moves"
+	default 0
+	depends on MTD_BBM
+	---help---
+		Add a usleep delay between block move operations to avoid
+		watchdog timeout during large data migrations. Set to 0
+		to disable.
+
 config FTL_WRITEBUFFER
 	bool "Enable write buffering in the FTL layer"
 	default n

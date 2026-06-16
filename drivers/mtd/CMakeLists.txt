@@ -31,6 +31,10 @@ if(CONFIG_MTD)
     list(APPEND SRCS ftl.c)
   endif()
 
+  if(CONFIG_MTD_BBM)
+    list(APPEND SRCS mtd_bbm.c)
+  endif()
+
   if(CONFIG_MTD_CONFIG_NVS2)
     list(APPEND SRCS mtd_config_nvs2.c)
   elseif(CONFIG_MTD_CONFIG_NVS)

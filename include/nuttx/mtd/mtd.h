@@ -350,6 +350,50 @@ int mtd_setpartitionname(FAR struct mtd_dev_s *mtd, FAR const char *name);
 FAR struct mtd_dev_s *mtd_rwb_initialize(FAR struct mtd_dev_s *mtd);
 #endif
 
+#ifdef CONFIG_MTD_BBM
+
+/****************************************************************************
+ * Name: mtd_bbm_initialize
+ *
+ * Description:
+ *   Create an MTD device instance that adds transparent bad block
+ *   management to another MTD driver.  The returned device can be used
+ *   wherever an MTD device is expected: callers keep using the standard
+ *   MTD_BREAD/MTD_BWRITE/MTD_ERASE macros and bad blocks are handled
+ *   underneath, the exposed address space containing good blocks only.
+ *
+ *   A device that cannot report bad blocks (NOR flash returns -ENOSYS for
+ *   isbad) needs no translation, so 'mtd' itself is handed back and this
+ *   layer stays out of the data path entirely.
+ *
+ * Input Parameters:
+ *   mtd - The MTD device to add bad block management to
+ *
+ * Returned Value:
+ *   An MTD device on success, NULL on failure.  The result is not
+ *   necessarily a new instance, see above.
+ *
+ ****************************************************************************/
+
+FAR struct mtd_dev_s *mtd_bbm_initialize(FAR struct mtd_dev_s *mtd);
+
+/****************************************************************************
+ * Name: mtd_bbm_uninitialize
+ *
+ * Description:
+ *   Release the resources held by a device returned from
+ *   mtd_bbm_initialize().  Passing a device that this layer did not create
+ *   is harmless.
+ *
+ * Input Parameters:
+ *   mtd - The MTD device returned by mtd_bbm_initialize()
+ *
+ ****************************************************************************/
+
+void mtd_bbm_uninitialize(FAR struct mtd_dev_s *mtd);
+
+#endif /* CONFIG_MTD_BBM */
+
 /****************************************************************************
  * Name: ftl_initialize_by_path
  *
