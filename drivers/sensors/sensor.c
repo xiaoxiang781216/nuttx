@@ -1187,9 +1187,11 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             {
               /* If flush is not supported, complete immediately */
 
+              nxrmutex_lock(&upper->lock);
               user->flushing = false;
               user->event |= SENSOR_EVENT_FLUSH_COMPLETE;
               sensor_pollnotify_one(user, POLLPRI, user->role);
+              nxrmutex_unlock(&upper->lock);
 
               /* If caller isn't from remote core, convert ENOTTY
                * to zero return, indicating the flush is completed.
