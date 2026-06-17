@@ -34,6 +34,41 @@
 #include "sched/sched.h"
 
 /****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: nxsched_hold_tcb
+ *
+ * Description:
+ *   Increment the reference count of the obtained TCB (and of this_task()
+ *   when running in thread context) so that it cannot be released while it
+ *   is in use.  Must be called while holding g_pidhashlock.
+ *
+ ****************************************************************************/
+
+static void nxsched_hold_tcb(FAR struct tcb_s *tcb)
+{
+  if (tcb && tcb != running_task())
+    {
+      if (!up_interrupt_context())
+        {
+          /* If we are in the thread context, after obtaining a reference to
+           * another task, we may not be able to release this reference
+           * immediately. The purpose of refs is also to prevent the
+           * situation where this_task is killed and thus unable to release
+           * the references to other tasks. We need to record the total
+           * number of references that this_task makes to other tasks.
+           */
+
+          atomic_add(&this_task()->refs, 1);
+        }
+
+      atomic_add(&tcb->refs, 1);
+    }
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -77,23 +112,7 @@ FAR struct tcb_s *nxsched_get_tcb(pid_t pid)
         }
     }
 
-  if (ret && ret != running_task())
-    {
-      if (!up_interrupt_context())
-        {
-          /* If we are in the thread context, after obtaining a reference to
-           * another task, we may not be able to release this reference
-           * immediately. The purpose of refs is also to prevent the
-           * situation where this_task is killed and thus unable to release
-           * the references to other tasks. We need to record the total
-           * number of references that this_task makes to other tasks.
-           */
-
-          atomic_add(&this_task()->refs, 1);
-        }
-
-      atomic_add(&ret->refs, 1);
-    }
+  nxsched_hold_tcb(ret);
 
   spin_unlock_irqrestore_notrace(&g_pidhashlock, flags);
 
@@ -151,23 +170,7 @@ FAR struct tcb_s *nxsched_get_tcb_by_index(int index)
   flags = spin_lock_irqsave_notrace(&g_pidhashlock);
   ret = g_pidhash[index];
 
-  if (ret && ret != running_task())
-    {
-      if (!up_interrupt_context())
-        {
-          /* If we are in the thread context, after obtaining a reference to
-           * another task, we may not be able to release this reference
-           * immediately. The purpose of refs is also to prevent the
-           * situation where this_task is killed and thus unable to release
-           * the references to other tasks. We need to record the total
-           * number of references that this_task makes to other tasks.
-           */
-
-          atomic_add(&this_task()->refs, 1);
-        }
-
-      atomic_add(&ret->refs, 1);
-    }
+  nxsched_hold_tcb(ret);
 
   spin_unlock_irqrestore_notrace(&g_pidhashlock, flags);
 
@@ -202,23 +205,7 @@ FAR struct tcb_s *nxsched_get_childtcb(FAR struct tcb_s *parent)
         }
     }
 
-  if (ret && ret != running_task())
-    {
-      if (!up_interrupt_context())
-        {
-          /* If we are in the thread context, after obtaining a reference to
-           * another task, we may not be able to release this reference
-           * immediately. The purpose of refs is also to prevent the
-           * situation where this_task is killed and thus unable to release
-           * the references to other tasks. We need to record the total
-           * number of references that this_task makes to other tasks.
-           */
-
-          atomic_add(&this_task()->refs, 1);
-        }
-
-      atomic_add(&ret->refs, 1);
-    }
+  nxsched_hold_tcb(ret);
 
   spin_unlock_irqrestore_notrace(&g_pidhashlock, flags);
 
