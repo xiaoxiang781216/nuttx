@@ -44,7 +44,7 @@
 #include "coredump.h"
 
 /****************************************************************************
- * Private Data
+ * Pre-processor Definitions
  ****************************************************************************/
 
 #ifdef PAGESIZE
@@ -92,15 +92,9 @@ struct elf_dumpinfo_s
   FAR struct tcb_s           *tcb;
 };
 
-typedef uint8_t running_regs_t[XCPTCONTEXT_SIZE]
-                aligned_data(XCPTCONTEXT_ALIGN);
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static DEFINE_PER_CPU_BSS_BMP(running_regs_t, g_running_regs);
-#define g_running_regs this_cpu_var_bmp(g_running_regs)
 
 #ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
 static DEFINE_PER_CPU_BSS_BMP(struct lib_lzfoutstream_s, g_lzfstream);
@@ -421,8 +415,8 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
         }
       else
         {
-          up_saveusercontext(g_running_regs);
-          regs = (FAR uintptr_t *)g_running_regs;
+          up_saveusercontext(this_cpu_var(g_last_regs));
+          regs = (FAR uintptr_t *)this_cpu_var(g_last_regs);
         }
     }
   else

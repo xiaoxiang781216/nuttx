@@ -29,7 +29,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <nuttx/cache.h>
-#include <nuttx/coredump.h>
 #include <nuttx/compiler.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/irq.h>
@@ -59,10 +58,7 @@
 #include "irq/irq.h"
 #include "sched/sched.h"
 #include "group/group.h"
-
-#ifdef CONFIG_COREDUMP
-#  include "coredump.h"
-#endif
+#include "coredump.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -106,7 +102,6 @@
 #ifdef CONFIG_SMP
 static noreturn_function int pause_cpu_handler(FAR void *arg);
 #endif
-typedef uintptr_t last_regs_t[XCPTCONTEXT_REGS];
 
 /****************************************************************************
  * Private Data
@@ -118,8 +113,12 @@ static struct cpu_call_data_s g_call_data =
 CPU_CALL_INITIALIZER(pause_cpu_handler, NULL);
 #endif
 
-static DEFINE_PER_CPU_BSS(last_regs_t, g_last_regs)
-       aligned_data(XCPTCONTEXT_ALIGN);
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+DEFINE_PER_CPU_BSS(last_regs_t, g_last_regs)
+  aligned_data(XCPTCONTEXT_ALIGN);
 
 /****************************************************************************
  * Private Functions
