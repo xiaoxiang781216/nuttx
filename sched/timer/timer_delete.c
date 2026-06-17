@@ -38,7 +38,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: timer_remove
+ * Name: timer_remove_from_alloclist
  *
  * Description:
  *   Remove a timer from the allocated timer list.
@@ -52,7 +52,7 @@
  ****************************************************************************/
 
 static inline_function
-FAR struct posix_timer_s *timer_remove(timer_t timerid)
+FAR struct posix_timer_s *timer_remove_from_alloclist(timer_t timerid)
 {
   FAR struct posix_timer_s  *entry;
   FAR struct posix_timer_s  *ret        = NULL;
@@ -106,7 +106,7 @@ FAR struct posix_timer_s *timer_remove(timer_t timerid)
 int timer_delete(timer_t timerid)
 {
   int ret = OK;
-  FAR struct posix_timer_s *timer = timer_remove(timerid);
+  FAR struct posix_timer_s *timer = timer_remove_from_alloclist(timerid);
 
   if (timer != NULL)
     {
