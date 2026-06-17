@@ -63,7 +63,7 @@ int board_reset(int status)
 
 #endif /* CONFIG_BOARDCTL_RESET */
 
-#if defined(CONFIG_BOARDCTL_POWEROFF) && defined(CONFIG_ARM_SEMIHOSTING_POWEROFF)
+#ifdef CONFIG_BOARDCTL_POWEROFF
 int board_power_off(int status)
 {
   UNUSED(status);
