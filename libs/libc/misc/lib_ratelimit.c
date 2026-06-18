@@ -39,6 +39,40 @@
 #endif
 
 /****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: ratelimit_lock
+ ****************************************************************************/
+
+static inline irqstate_t
+ratelimit_lock(FAR struct ratelimit_state_s *state)
+{
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
+  return spin_lock_irqsave_notrace(&state->lock.spin);
+#else
+  pthread_mutex_lock(&state->lock.mutex);
+  return 0;
+#endif
+}
+
+/****************************************************************************
+ * Name: ratelimit_unlock
+ ****************************************************************************/
+
+static inline void
+ratelimit_unlock(FAR struct ratelimit_state_s *state, irqstate_t flags)
+{
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
+  spin_unlock_irqrestore_notrace(&state->lock.spin, flags);
+#else
+  (void)flags;
+  pthread_mutex_unlock(&state->lock.mutex);
+#endif
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -53,10 +87,8 @@
 bool ratelimit_islimited(FAR struct ratelimit_state_s *state)
 {
   bool result = true;
-  clock_t now;
-#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
   irqstate_t flags;
-#endif
+  clock_t now;
 
   /* The current-limiting parameter is invalid and no
    * current-limiting will be performed.
@@ -76,11 +108,7 @@ bool ratelimit_islimited(FAR struct ratelimit_state_s *state)
       return true;
     }
 
-#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-  flags = spin_lock_irqsave_notrace(&state->lock.spin);
-#else
-  pthread_mutex_lock(&state->lock.mutex);
-#endif
+  flags = ratelimit_lock(state);
 
   now = TICK2SEC(clock());
   if (state->begin == 0)
@@ -108,11 +136,74 @@ bool ratelimit_islimited(FAR struct ratelimit_state_s *state)
       state->missed++;
     }
 
-#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-  spin_unlock_irqrestore_notrace(&state->lock.spin, flags);
-#else
-  pthread_mutex_unlock(&state->lock.mutex);
-#endif
+  ratelimit_unlock(state, flags);
 
   return result;
+}
+
+/****************************************************************************
+ * Name: ratelimit_setlimit
+ *
+ * Description:
+ *   Update the rate limiting parameters (time window and burst). The
+ *   accounting window is reset so that the new setting takes effect from a
+ *   fresh time window.
+ *
+ ****************************************************************************/
+
+void ratelimit_setlimit(FAR struct ratelimit_state_s *state,
+                        unsigned int interval, unsigned int burst)
+{
+  irqstate_t flags;
+
+  if (state == NULL)
+    {
+      return;
+    }
+
+  flags = ratelimit_lock(state);
+
+  state->interval = interval;
+  state->burst    = burst;
+
+  /* Reset the accounting window so the new setting applies immediately. */
+
+  state->begin = 0;
+  state->count = 0;
+
+  ratelimit_unlock(state, flags);
+}
+
+/****************************************************************************
+ * Name: ratelimit_getlimit
+ *
+ * Description:
+ *   Read back the current rate limiting parameters.  NULL output pointers
+ *   are ignored.
+ *
+ ****************************************************************************/
+
+void ratelimit_getlimit(FAR struct ratelimit_state_s *state,
+                        FAR unsigned int *interval, FAR unsigned int *burst)
+{
+  irqstate_t flags;
+
+  if (state == NULL)
+    {
+      return;
+    }
+
+  flags = ratelimit_lock(state);
+
+  if (interval != NULL)
+    {
+      *interval = state->interval;
+    }
+
+  if (burst != NULL)
+    {
+      *burst = state->burst;
+    }
+
+  ratelimit_unlock(state, flags);
 }

@@ -115,6 +115,31 @@ extern "C"
 bool ratelimit_islimited(FAR struct ratelimit_state_s *state);
 
 /****************************************************************************
+ * Name: ratelimit_setlimit
+ *
+ * Description:
+ *   Update the rate limiting parameters (time window and burst). The
+ *   accounting window is reset so that the new setting takes effect from a
+ *   fresh time window.
+ *
+ ****************************************************************************/
+
+void ratelimit_setlimit(FAR struct ratelimit_state_s *state,
+                        unsigned int interval, unsigned int burst);
+
+/****************************************************************************
+ * Name: ratelimit_getlimit
+ *
+ * Description:
+ *   Read back the current rate limiting parameters.  NULL output pointers
+ *   are ignored.
+ *
+ ****************************************************************************/
+
+void ratelimit_getlimit(FAR struct ratelimit_state_s *state,
+                        FAR unsigned int *interval, FAR unsigned int *burst);
+
+/****************************************************************************
  * Name: ratelimit_missed
  *
  * Description:
