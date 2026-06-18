@@ -1135,7 +1135,7 @@ static int w25_erase(FAR struct mtd_dev_s *dev,
 #endif
 
   w25_unlock(priv->spi);
-  return (int)nblocks;
+  return OK;
 #endif
 }
 

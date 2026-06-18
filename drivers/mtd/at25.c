@@ -487,7 +487,7 @@ static int at25_erase(FAR struct mtd_dev_s *dev,
     }
 
   at25_unlock(priv->dev);
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

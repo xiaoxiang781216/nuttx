@@ -1293,7 +1293,7 @@ static int s25fl1_erase(FAR struct mtd_dev_s *dev,
 #endif
 
   s25fl1_unlock(priv->qspi);
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

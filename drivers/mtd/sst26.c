@@ -680,7 +680,7 @@ static int sst26_erase(FAR struct mtd_dev_s *dev,
     }
 
   sst26_unlock(priv->dev);
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

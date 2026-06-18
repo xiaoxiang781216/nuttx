@@ -515,7 +515,7 @@ static int at25ee_erase(FAR struct mtd_dev_s *dev,
                        size_t nblocks)
 {
 #ifndef CONFIG_AT25EE_ENABLE_BLOCK_ERASE
-  return (int)nblocks;
+  return OK;
 #else
   FAR struct at25ee_dev_s *priv = (FAR struct at25ee_dev_s *)dev;
   uint8_t *buf;
@@ -564,11 +564,11 @@ static int at25ee_erase(FAR struct mtd_dev_s *dev,
   kmm_free(buf);
   if (priv->blocksize > priv->pgsize)
     {
-      return (int)(nblocks / (priv->blocksize / priv->pgsize));
+      return OK;
     }
   else
     {
-      return (int)nblocks;
+      return OK;
     }
 #endif
 }

@@ -310,7 +310,7 @@ static int s512_erase(FAR struct mtd_dev_s *dev,
 
   s512_cacheflush(priv);
 
-  return (int)nsectors;
+  return OK;
 #endif
 }
 

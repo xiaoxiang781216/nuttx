@@ -782,7 +782,7 @@ static int gd25_erase(FAR struct mtd_dev_s *dev, off_t startblock,
 
   gd25_pd(priv);
   gd25_unlock(priv->spi);
-  return (int)nblocks;
+  return OK;
 #endif
 }
 

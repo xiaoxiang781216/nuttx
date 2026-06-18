@@ -462,5 +462,9 @@ ssize_t spiffs_mtd_erase(FAR struct spiffs_s *fs, off_t offset, size_t len)
       return nerased;
     }
 
-  return erasesize * nerased;
+  /* MTD_ERASE returns OK when all requested blocks are erased, so the
+   * number of bytes erased is derived from the requested block count.
+   */
+
+  return erasesize * (eblkend - eblkstart);
 }

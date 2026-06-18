@@ -638,7 +638,7 @@ static int ramtron_erase(FAR struct mtd_dev_s *dev,
         (unsigned long)startblock,
         (int)nblocks);
   finfo("On RAMTRON devices erasing makes no sense, returning as OK\n");
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

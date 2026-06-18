@@ -1181,7 +1181,7 @@ static int yaffs_write_chunk_fn(FAR struct yaffs_dev *dev, int nand_chunk,
 static int yaffs_erase_block_fn(FAR struct yaffs_dev *dev, int block_no)
 {
   FAR struct mtd_dev_s *mtd = yaffs_dev_to_mtd(dev);
-  return MTD_ERASE(mtd, block_no, 1) == 1 ? YAFFS_OK : YAFFS_FAIL;
+  return MTD_ERASE(mtd, block_no, 1) < 0 ? YAFFS_FAIL : YAFFS_OK;
 }
 
 /****************************************************************************

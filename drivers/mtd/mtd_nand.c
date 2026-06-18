@@ -559,7 +559,7 @@ static int nand_erase(FAR struct mtd_dev_s *dev, off_t startblock,
     }
 
   nxmutex_unlock(&nand->lock);
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

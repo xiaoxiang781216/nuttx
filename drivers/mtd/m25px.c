@@ -851,7 +851,7 @@ static int m25p_erase(FAR struct mtd_dev_s *dev,
     }
 
   m25p_unlock(priv->dev);
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

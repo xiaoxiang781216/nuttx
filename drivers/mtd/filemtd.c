@@ -325,7 +325,7 @@ static int filemtd_erase(FAR struct mtd_dev_s *dev, off_t startblock,
       nbytes -= MIN(nbytes, sizeof(buffer));
     }
 
-  return nblocks;
+  return OK;
 }
 
 /****************************************************************************

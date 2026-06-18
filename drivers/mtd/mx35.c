@@ -546,7 +546,7 @@ static int mx35_erase(FAR struct mtd_dev_s *dev,
     }
 
   mx35_unlock(priv->dev);
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

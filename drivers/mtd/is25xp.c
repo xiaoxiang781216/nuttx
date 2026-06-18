@@ -790,7 +790,7 @@ static int is25xp_erase(FAR struct mtd_dev_s *dev,
     }
 
   is25xp_unlock(priv->dev);
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

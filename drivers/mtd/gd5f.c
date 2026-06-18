@@ -453,7 +453,7 @@ static int gd5f_erase(FAR struct mtd_dev_s *dev,
     }
 
   gd5f_unlock(priv->dev);
-  return nblocks - blocksleft;
+  return blocksleft == 0 ? OK : -EIO;
 }
 
 /****************************************************************************

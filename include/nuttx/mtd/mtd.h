@@ -188,6 +188,10 @@ struct mtd_dev_s
    * to the FLASH data sheet.  Rather, we are referring to the *smallest*
    * erasable part of the FLASH which may have a name like a page or sector
    * or subsector.
+   *
+   * Returns OK when all of the requested erase blocks have been erased; a
+   * negated errno value is returned on any failure.  The driver is
+   * responsible for guaranteeing this all-or-nothing semantic.
    */
 
   CODE int (*erase)(FAR struct mtd_dev_s *dev, off_t startblock,

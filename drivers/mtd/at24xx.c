@@ -314,7 +314,7 @@ static int at24c_erase(FAR struct mtd_dev_s *dev,
 {
   /* EEprom need not erase */
 
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

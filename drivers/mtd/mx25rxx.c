@@ -642,7 +642,7 @@ int mx25rxx_erase(FAR struct mtd_dev_s *dev,
 
   mx25rxx_unlock(priv->qspi);
 
-  return (int)nblocks;
+  return OK;
 }
 
 ssize_t mx25rxx_bread(FAR struct mtd_dev_s *dev, off_t startblock,

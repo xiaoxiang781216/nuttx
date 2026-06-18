@@ -1387,7 +1387,7 @@ static int w25qxxxjv_erase(FAR struct mtd_dev_s *dev, off_t startblock,
 
   w25qxxxjv_unlock(priv->qspi);
 
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

@@ -663,7 +663,7 @@ static int sst25xx_erase(FAR struct mtd_dev_s *dev, off_t startblock,
     }
 
   sst25xx_unlock(priv->dev);
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************

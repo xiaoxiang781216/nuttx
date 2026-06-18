@@ -649,7 +649,7 @@ static int at45db_erase(FAR struct mtd_dev_s *mtd, off_t startblock,
 
   at45db_pwrdown(priv);
   at45db_unlock(priv);
-  return (int)nblocks;
+  return OK;
 }
 
 /****************************************************************************
