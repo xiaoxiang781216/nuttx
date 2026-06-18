@@ -221,6 +221,7 @@ static const char *g_white_prefix[] =
   "tClass",  /* Ref:  arch/tricore/src */
   "tCpu",    /* Ref:  arch/tricore/src */
   "tId",     /* Ref:  arch/tricore/src */
+  "yaffs",   /* Ref:  fs/yaffs (yaffs_DIR, yaffsfs_GetLastError, etc.) */
   NULL
 };
 
