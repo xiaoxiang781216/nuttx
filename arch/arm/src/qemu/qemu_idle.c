@@ -143,6 +143,30 @@ void up_idle(void)
       arm_sm_boot_nsec(g_ap_entry);
       arm_sm_switch_nsec();
     }
+#elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+
+  struct arm_smccc_res res;
+
+  irqstate_t flags = irq_save();
+
+  arm_smccc_smc(ARM_SMCCC_NUTTX_TEE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
+
+  irq_restore(flags);
+
+  asm("dsb sy");
+  asm("wfi");
+
+#elif defined(CONFIG_ARCH_TRUSTZONE_NONSECURE) && defined(CONFIG_ARM_HAVE_EL3_MONITOR)
+
+  /* REE idle: no tasks ready, yield CPU to TEE unconditionally.
+   * TEE will WFI. When a NS interrupt fires, EL3 preempts TEE
+   * and returns here. When a G1S fires, EL3 switches to TEE
+   * and TEE_IDLE will resume us later.
+   */
+
+  struct arm_smccc_res res;
+
+  arm_smccc_smc(ARM_SMCCC_NUTTX_REE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
 #elif defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
   /* If the system is idle and there are no timer interrupts, then process
    * "fake" timer interrupts. Hopefully, something will wake up.
