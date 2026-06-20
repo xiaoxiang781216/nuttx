@@ -156,7 +156,7 @@
 	srsdb		sp!, #PSR_MODE_SYS
 
 #  ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-	cpsid		f, #PSR_MODE_SYS
+	cpsid		if, #PSR_MODE_SYS
 #  else
 	cpsid		i, #PSR_MODE_SYS
 #  endif
@@ -551,7 +551,6 @@ arm_vectorfiq:
 	.cfi_startproc
 	.cfi_signal_frame
 	.cfi_return_column 15
-#ifdef CONFIG_ARM_DECODEFIQ
 
 	/* On entry: FIQ mode, spsr = SVC CPSR, lr = SVC PC */
 
@@ -631,25 +630,4 @@ arm_vectoraddrexcptn:
 	b		arm_vectoraddrexcptn
 	.size	arm_vectoraddrexcptn, . - arm_vectoraddrexcptn
 
-#if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-/****************************************************************************
- *  Name: g_fiqstackalloc/g_fiqstacktop
- ****************************************************************************/
-
-#ifdef CONFIG_ARM_DECODEFIQ
-	.bss
-	.balign	8
-	.globl	g_fiqstackalloc
-	.type	g_fiqstackalloc, object
-	.globl	g_fiqstacktop
-	.type	g_fiqstacktop, object
-
-g_fiqstackalloc:
-	.skip	((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
-g_fiqstacktop:
-	.size	g_fiqstacktop, 0
-	.size	g_fiqstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~7)
-#endif
-
-#endif /* !CONFIG_SMP && CONFIG_ARCH_INTERRUPTSTACK > 7 */
 	.end

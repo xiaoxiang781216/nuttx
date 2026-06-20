@@ -388,7 +388,7 @@ noinstrument_function static inline_function irqstate_t up_irq_save(void)
     (
       "\tmrs    %0, cpsr\n"
 #  ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-      "\tcpsid  f\n"
+      "\tcpsid  if\n"
 #  else
       "\tcpsid  i\n"
 #  endif
@@ -421,7 +421,7 @@ static inline_function irqstate_t up_irq_enable(void)
 #if __ARM_ARCH >= 6
   __asm__ __volatile__(
       "\tmrs    %0, cpsr\n"
-#  if defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#  if defined(CONFIG_ARCH_HIPRI_INTERRUPT) || defined(CONFIG_ARM_HAVE_EL3_MONITOR)
       "\tcpsie  if\n"
 #  elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
       "\tcpsie  f\n"
