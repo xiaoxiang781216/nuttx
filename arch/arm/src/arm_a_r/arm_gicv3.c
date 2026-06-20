@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 #include <debug.h>
 #include <assert.h>
+#include <errno.h>
 
 #include <nuttx/arch.h>
 #include <arch/barriers.h>
@@ -682,6 +683,19 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
 
       putreg32(mask, ISPENDR(GET_DIST_BASE(irq), idx));
     }
+}
+
+/***************************************************************************
+ * Name: up_get_legacy_irq
+ *
+ * Description:
+ *   Reserve vector for legacy PCI interrupts.
+ *
+ ***************************************************************************/
+
+int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
+{
+  return -ENOTSUP;
 }
 
 /***************************************************************************
