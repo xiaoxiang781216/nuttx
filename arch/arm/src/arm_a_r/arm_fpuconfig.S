@@ -77,7 +77,7 @@ arm_fpuconfig:
 
 	/* Enable access to CP10 and CP11 in CP15.NSACR */
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
 	mrc		CP15_NSACR(r0)
 	orr		r0, r0, #0xc00
 	mcr		CP15_NSACR(r0)

@@ -103,19 +103,18 @@ ifeq ($(CONFIG_ARCH_ADDRENV)$(CONFIG_ARCH_USE_MMU),yy)
 endif
 
 ifeq ($(CONFIG_ARCH_TRUSTZONE_SECURE),y)
+ifneq ($(CONFIG_ARM_HAVE_EL3_MONITOR),y)
   CMN_CSRCS += arm_sm_runtime.c
   CMN_ASRCS += arm_sm_vector.S
 endif
-
-ifeq ($(CONFIG_ARM_PSCI),y)
-  CMN_ASRCS += arm_smccc.S
-  CMN_CSRCS += arm_cpu_psci.c
 endif
 
-ifeq ($(CONFIG_ARCH_TRUSTZONE_NONSECURE),y)
-  ifneq ($(CONFIG_ARM_PSCI),y)
-    CMN_ASRCS += arm_smccc.S
-  endif
+ifneq ($(CONFIG_ARM_PSCI)$(CONFIG_ARCH_TRUSTZONE_NONSECURE)$(CONFIG_ARCH_TRUSTZONE_SECURE),)
+  CMN_ASRCS += arm_smccc.S
+endif
+
+ifeq ($(CONFIG_ARM_PSCI),y)
+  CMN_CSRCS += arm_cpu_psci.c
 endif
 
 ifeq ($(CONFIG_ARCH_USE_MMU),y)

@@ -119,9 +119,12 @@ void up_initialize(void)
   arm_enable_dbgmonitor();
 #endif
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+  /* Register the panic notifier that switches to the non-secure world on a
+   * secure-world crash.  Resolves to a no-op when no secure-monitor backend
+   * is linked (e.g. ARMv8-A AArch32 where the monitor lives in TF-A).
+   */
+
   arm_panic_switch_nsec_register();
-#endif
 
 #ifdef CONFIG_ARCH_TRUSTZONE_MONITOR
   arm_trustzone_monitor_init();

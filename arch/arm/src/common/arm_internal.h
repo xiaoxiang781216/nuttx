@@ -493,9 +493,13 @@ void arm_color_intstack(void);
 
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
 int arm_gen_nonsecurefault(int irq, uint32_t *regs);
-void arm_panic_switch_nsec_register(void);
 #else
 # define arm_gen_nonsecurefault(i, r)  (0)
+#endif
+
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
+void arm_panic_switch_nsec_register(void);
+#else
 # define arm_panic_switch_nsec_register()
 #endif
 

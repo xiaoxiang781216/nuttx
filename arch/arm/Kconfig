@@ -1118,11 +1118,25 @@ config ARCH_ARMV8A
 	select ARCH_HAVE_PERF_EVENTS_USER_ACCESS if !SMP
 	select ARM_HAVE_WFE_SEV
 	select ARM_PMUV2 if PERF_EVENTS
+	select ARM_HAVE_EL3_MONITOR if ARCH_TRUSTZONE_SECURE
 	---help---
 		ARMv8-A architecture running in AArch32 state. This is a superset
 		of ARMv7-A with additional features such as cryptography extensions
 		and EL3 (Monitor mode / Secure world) support. CPUs like Cortex-A53
 		and Cortex-A57 can operate in this mode.
+
+config ARM_HAVE_EL3_MONITOR
+	bool
+	default n
+	---help---
+		Set when the Secure Monitor / EL3 is provided by a separate
+		AArch64 firmware (e.g. TF-A) rather than by NuttX itself.  In this
+		case the NuttX image runs in the AArch32 state of an ARMv8 (or
+		later) core as a secure payload, and must not install its own
+		ARMv7-style secure monitor.  This is a general, architecture
+		version independent indicator, as opposed to legacy ARMv7-A where
+		NuttX provides its own monitor.  It is selected by the relevant
+		architecture config (e.g. ARCH_ARMV8A) and is not user-selectable.
 
 config ARCH_CORTEXA53_AARCH32
 	bool

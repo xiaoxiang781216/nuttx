@@ -899,8 +899,7 @@ __cpu0_start:
 	.type	.Lvstart, %function
 
 .Lvstart:
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
 	/* Perform init the secure monitor runtime. As the following arm_boot may
 	 * using smc to perform psci related func, so the secure monitor init
 	 * procedure should be placed before arm_boot

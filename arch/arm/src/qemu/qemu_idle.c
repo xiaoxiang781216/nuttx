@@ -27,7 +27,7 @@
 #include <nuttx/arch.h>
 #include "arm_internal.h"
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
 #include "sm.h"
 #endif
 
@@ -48,7 +48,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
 extern volatile uint32_t g_ap_entry;
 #endif
 
@@ -136,7 +136,7 @@ void up_idle(void)
   pm_idle(pm_idle_handler);
 #endif
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
   if (g_ap_entry != 0)
     {
       up_irq_disable();
