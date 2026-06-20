@@ -496,7 +496,6 @@ static int dir_close(FAR struct file *filep)
   FAR struct fs_dirent_s *dir = filep->f_priv;
   FAR struct inode *inode = dir->fd_root;
   FAR char *relpath = dir->fd_path;
-  int ret = 0;
 
   /* This is the 'root' inode of the directory. This means different
    * things with different filesystems.
@@ -509,40 +508,19 @@ static int dir_close(FAR struct file *filep)
 
   if (INODE_IS_MOUNTPT(inode))
     {
-      /* The node is a file system mointpoint. Verify that the
-       * mountpoint supports the closedir() method (not an error if it
-       * does not)
-       */
-
-      if (inode->u.i_mops->closedir != NULL)
-        {
-          ret = inode->u.i_mops->closedir(inode, dir);
-        }
+      close_mountpoint(inode, dir);
     }
   else
 #endif
     {
-      FAR struct fs_pseudodir_s *pdir = filep->f_priv;
-
-      /* The node is part of the root pseudo file system, release
-       * our contained reference to the 'next' inode.
-       */
-
-      if (pdir->next != NULL)
-        {
-          inode_release(pdir->next);
-        }
-
-      /* Then release the container */
-
-      fs_heap_free(dir);
+      close_pseudodir(dir);
     }
 
   /* Release our references on the contained 'root' inode */
 
   inode_release(inode);
   fs_heap_free(relpath);
-  return ret;
+  return OK;
 }
 
 static ssize_t dir_read(FAR struct file *filep, FAR char *buffer,
