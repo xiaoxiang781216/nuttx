@@ -637,14 +637,6 @@
 
 #define GIC_IRQ_SPI              32 /* First SPI interrupt ID */
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-#  define GIC_CPU_CALL           GIC_IRQ_SGI10
-#  define GIC_SMP_SCHED          GIC_IRQ_SGI11
-#else
-#  define GIC_CPU_CALL           GIC_IRQ_SGI2
-#  define GIC_SMP_SCHED          GIC_IRQ_SGI3
-#endif
-
 /* Peripheral ID2 Register */
 
 #define GIC_ICPIDR2              (6)
