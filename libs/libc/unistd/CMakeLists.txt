@@ -63,6 +63,9 @@ set(SRCS
     lib_usleep.c
     lib_getpgrp.c
     lib_getpgid.c
+    lib_getsid.c
+    lib_setpgid.c
+    lib_setsid.c
     lib_lockf.c
     lib_flock.c
     lib_getpass.c
