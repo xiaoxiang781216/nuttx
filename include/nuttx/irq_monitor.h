@@ -34,6 +34,35 @@
 #include <stdint.h>
 
 #include <nuttx/irq.h>
+#ifdef CONFIG_PM
+#  include <nuttx/power/pm.h>
+#endif
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+#ifndef __ASSEMBLY__
+#ifdef CONFIG_SCHED_IRQMONITOR_PROCFS
+/* User-space view of per-IRQ statistics, parsed from /proc/irqs by the
+ * irq_monitor_info() helper in libc.
+ */
+
+struct irq_monitor_info_s
+{
+  int           irq;
+  unsigned long handler;
+  unsigned long arg;
+  uint32_t      count;
+  uint32_t      rate_int;
+  uint32_t      rate_frac;
+  uint32_t      time;
+#ifdef CONFIG_PM
+  uint32_t      nwakeup[PM_COUNT]; /* Wakeups indexed by PM state */
+#endif
+};
+#endif
+#endif /* __ASSEMBLY__ */
 
 /****************************************************************************
  * Public Function Prototypes
@@ -100,6 +129,26 @@ void irq_monitor_disable_all(void);
 
 int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
                          FAR unsigned long *fracfreq);
+
+/****************************************************************************
+ * Name: irq_monitor_info
+ *
+ * Description:
+ *   Read IRQ statistics from /proc/irqs into a caller-provided array.
+ *
+ * Input Parameters:
+ *   core     - Remote core name to query via rpmsgfs, or NULL for local.
+ *   buf      - Caller-provided output array.
+ *   maxcount - Maximum number of entries buf can hold.
+ *
+ * Returned Value:
+ *   The number of entries filled, or a negated errno on failure.
+ *
+ ****************************************************************************/
+
+ssize_t irq_monitor_info(FAR const char *core,
+                         FAR struct irq_monitor_info_s *buf,
+                         size_t maxcount);
 #endif
 
 #undef EXTERN

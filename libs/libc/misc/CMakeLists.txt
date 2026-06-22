@@ -75,6 +75,16 @@ if(CONFIG_PIPES)
   list(APPEND SRCS lib_mkfifo.c)
 endif()
 
+# Statistics access helpers (procfs readers)
+
+if(CONFIG_PM_PROCFS)
+  list(APPEND SRCS lib_pminfo.c)
+endif()
+
+if(CONFIG_SCHED_IRQMONITOR_PROCFS)
+  list(APPEND SRCS lib_irqinfo.c)
+endif()
+
 # Add the miscellaneous C files to the build
 
 list(

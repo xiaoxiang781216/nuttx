@@ -44,6 +44,16 @@ ifeq ($(CONFIG_PIPES),y)
 CSRCS += lib_mkfifo.c
 endif
 
+# Statistics access helpers (procfs readers)
+
+ifeq ($(CONFIG_PM_PROCFS),y)
+CSRCS += lib_pminfo.c
+endif
+
+ifeq ($(CONFIG_SCHED_IRQMONITOR_PROCFS),y)
+CSRCS += lib_irqinfo.c
+endif
+
 # Add the miscellaneous C files to the build
 
 CSRCS += lib_dumpbuffer.c lib_dumpvbuffer.c lib_fnmatch.c lib_debug.c

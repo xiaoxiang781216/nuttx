@@ -61,7 +61,10 @@
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
 
+#include <sys/types.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <limits.h>
 #include <time.h>
 
 #ifdef CONFIG_PM
@@ -975,6 +978,72 @@ bool pm_idle_lock(int cpu);
 #else
 #  define pm_idle_lock(cpu) (0)
 #endif
+
+#ifdef CONFIG_PM_PROCFS
+/* User-space views of PM statistics, parsed from procfs by the helpers
+ * below.
+ */
+
+struct pm_wakelock_info_s
+{
+  char            name[NAME_MAX];
+  enum pm_state_e state;
+  uint32_t        count;
+  time_t          time;
+};
+
+struct pm_state_info_s
+{
+  enum pm_state_e state;
+  time_t          wake;
+  uint32_t        wake_pct;
+  time_t          sleep;
+  uint32_t        sleep_pct;
+  time_t          total;
+  uint32_t        total_pct;
+};
+
+/****************************************************************************
+ * Name: pm_wakelock_info
+ *
+ * Description:
+ *   Read wakelock statistics from /proc/pm/wakelock<domain>.
+ *
+ * Input Parameters:
+ *   core     - Remote core name to query via rpmsgfs, or NULL for local.
+ *   domain   - The PM domain to query.
+ *   buf      - Caller-provided output array.
+ *   maxcount - Maximum number of entries buf can hold.
+ *
+ * Returned Value:
+ *   The number of entries filled, or a negated errno on failure.
+ *
+ ****************************************************************************/
+
+ssize_t pm_wakelock_info(FAR const char *core, int domain,
+                         FAR struct pm_wakelock_info_s *buf,
+                         size_t maxcount);
+
+/****************************************************************************
+ * Name: pm_state_info
+ *
+ * Description:
+ *   Read per-state wake/sleep time from /proc/pm/state<domain>.
+ *
+ * Input Parameters:
+ *   core     - Remote core name to query via rpmsgfs, or NULL for local.
+ *   domain   - The PM domain to query.
+ *   buf      - Caller-provided output array.
+ *   maxcount - Maximum number of entries buf can hold.
+ *
+ * Returned Value:
+ *   The number of entries filled, or a negated errno on failure.
+ *
+ ****************************************************************************/
+
+ssize_t pm_state_info(FAR const char *core, int domain,
+                      FAR struct pm_state_info_s *buf, size_t maxcount);
+#endif /* CONFIG_PM_PROCFS */
 
 #undef EXTERN
 #ifdef __cplusplus
