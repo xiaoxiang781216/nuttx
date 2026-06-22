@@ -15,6 +15,15 @@ config FS_FUSE
 		no transport; enable at least one transport to mount a FUSE
 		filesystem.
 
+config FS_FUSE_DEV
+	bool "FUSE /dev/fuse local transport"
+	default n
+	depends on FS_FUSE
+	---help---
+		Register the /dev/fuse character device transport.  A userspace
+		FUSE server (for example libfuse) opens /dev/fuse and mounts a
+		filesystem with the "fd=<n>" mount option to drive the FUSE core.
+
 config FS_VIRTIOFS
 	bool "virtio-fs guest transport"
 	default n

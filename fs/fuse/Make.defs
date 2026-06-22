@@ -24,6 +24,10 @@ ifeq ($(CONFIG_FS_FUSE),y)
 
 CSRCS += fuse.c
 
+ifeq ($(CONFIG_FS_FUSE_DEV),y)
+CSRCS += fuse_dev.c
+endif
+
 ifeq ($(CONFIG_FS_VIRTIOFS),y)
 CSRCS += fuse_virtio.c
 endif

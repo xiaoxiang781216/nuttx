@@ -22,6 +22,9 @@
 
 if(CONFIG_FS_FUSE)
   set(SRCS fuse.c)
+  if(CONFIG_FS_FUSE_DEV)
+    list(APPEND SRCS fuse_dev.c)
+  endif()
   if(CONFIG_FS_VIRTIOFS)
     list(APPEND SRCS fuse_virtio.c)
   endif()

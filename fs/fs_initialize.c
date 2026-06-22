@@ -29,6 +29,7 @@
 
 #include "rpmsgfs/rpmsgfs.h"
 #include "inode/inode.h"
+#include "fuse/fuse.h"
 #include "aio/aio.h"
 #include "vfs/vfs.h"
 #include "fs_heap.h"
@@ -74,6 +75,12 @@ void fs_initialize(void)
 
 #ifdef CONFIG_FS_NOTIFY
   notify_initialize();
+#endif
+
+#ifdef CONFIG_FS_FUSE_DEV
+  /* Register the /dev/fuse transport device */
+
+  fuse_dev_initialize();
 #endif
 
   fs_reboot_initialize();

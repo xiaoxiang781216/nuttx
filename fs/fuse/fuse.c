@@ -1606,6 +1606,10 @@ static int fuse_bind(FAR struct inode *blkdriver, FAR const void *data,
    * device, "tag=" for the virtio-conn device.
    */
 
+#ifdef CONFIG_FS_FUSE_DEV
+  ret = fuse_dev_connect(conn, data);
+#endif
+
 #ifdef CONFIG_FS_VIRTIOFS
   if (ret < 0)
     {
