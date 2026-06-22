@@ -161,6 +161,12 @@ FAR const char *fs_gettype(FAR struct statfs *statbuf)
         break;
 #endif
 
+#ifdef CONFIG_FS_FUSEFS
+      case FUSEFS_MAGIC:
+        fstype = "fusefs";
+        break;
+#endif
+
 #ifdef CONFIG_FS_ZIPFS
       case ZIPFS_MAGIC:
         fstype = "zipfs";

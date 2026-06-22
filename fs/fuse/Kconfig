@@ -1,0 +1,16 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config FS_FUSE
+	bool "FUSE (Filesystem in Userspace) core"
+	default n
+	depends on !DISABLE_MOUNTPOINT
+	---help---
+		Enable the transport-independent FUSE client core.  The core
+		implements the NuttX mountpt_operations on top of the standard
+		FUSE wire protocol and dispatches requests through a pluggable
+		transport (see FS_FUSE_DEV and FS_VIRTIOFS).  The core alone has
+		no transport; enable at least one transport to mount a FUSE
+		filesystem.

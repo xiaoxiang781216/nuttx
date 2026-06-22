@@ -118,10 +118,11 @@
 #define _VHOSTBASE      (0x4800) /* VHost ioctl commands */
 #define _PULSECOUNTBASE (0x4900) /* Pulse count driver ioctl commands */
 #define _OCUIOCBASE     (0x4a00) /* OCU (Output Compare Unit) ioctl commands */
+#define _SAFETYBASE     (0x4b00) /* Safety modules ioctl commands */
+#define _DMABUFBASE     (0x4c00) /* DMA-Buf modules ioctl commands */
+#define _SENTIOCBASE    (0X4d00) /* Sent modules ioctl commmands */
+#define _FUSEIOCBASE    (0x4e00) /* FUSE modules ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
-#define _SAFETYBASE     (0x8c00) /* Safety modules ioctl commands */
-#define _DMABUFBASE     (0x8d00) /* DMA-Buf modules ioctl commands */
-#define _SENTIOCBASE    (0X8d00) /* Sent modules ioctl commmands */
 
 /* boardctl() commands share the same number space */
 

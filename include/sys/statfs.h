@@ -97,6 +97,7 @@
 #define UNIONFS_MAGIC         0x53464e55
 #define HOSTFS_MAGIC          0x54534f48
 #define USERFS_MAGIC          0x52455355
+#define FUSEFS_MAGIC          0x65735546
 #define CROMFS_MAGIC          0x4d4f5243
 #define RPMSGFS_MAGIC         0x54534f47
 #define ZIPFS_MAGIC           0x504b
