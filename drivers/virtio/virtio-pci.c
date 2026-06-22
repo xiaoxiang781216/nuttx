@@ -80,8 +80,16 @@ static DEFINE_PER_CPU_BMP(struct pci_driver_s, g_virtio_pci_drv) =
 
 static const struct virtio_memory_ops g_virtio_pci_mmops =
 {
-  virtio_pci_alloc_buf, /* Alloc */
-  virtio_pci_free_buf,  /* Free */
+  .alloc        = virtio_pci_alloc_buf,
+  .free         = virtio_pci_free_buf,
+
+  /* The host (QEMU) can access arbitrary guest memory, so buffers are used
+   * as is: no map/unmap (zero copy) and no map-size limit.
+   */
+
+  .free_largest = NULL,
+  .map          = NULL,
+  .unmap        = NULL,
 };
 
 /****************************************************************************
