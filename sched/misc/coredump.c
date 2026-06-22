@@ -90,6 +90,8 @@ struct elf_dumpinfo_s
   FAR const struct memory_region_s *regions;
   FAR struct lib_outstream_s *stream;
   FAR struct tcb_s           *tcb;
+  int                         stksegs;
+  int                         memsegs;
 };
 
 /****************************************************************************
@@ -240,8 +242,7 @@ static int elf_emit_align(FAR struct elf_dumpinfo_s *cinfo)
  *
  ****************************************************************************/
 
-static int elf_emit_hdr(FAR struct elf_dumpinfo_s *cinfo,
-                        int segs)
+static int elf_emit_hdr(FAR struct elf_dumpinfo_s *cinfo)
 {
   Elf_Ehdr ehdr;
 
@@ -260,7 +261,7 @@ static int elf_emit_hdr(FAR struct elf_dumpinfo_s *cinfo,
   ehdr.e_flags             = EF_FLAG;
   ehdr.e_ehsize            = sizeof(Elf_Ehdr);
   ehdr.e_phentsize         = sizeof(Elf_Phdr);
-  ehdr.e_phnum             = segs;
+  ehdr.e_phnum             = cinfo->stksegs + cinfo->memsegs + 1 + 1;
 
   return elf_emit(cinfo, &ehdr, sizeof(ehdr));
 }
@@ -334,14 +335,14 @@ static int elf_get_ntcb(void)
  *
  ****************************************************************************/
 
-static int elf_get_note_size(int stksegs)
+static int elf_get_note_size(FAR struct elf_dumpinfo_s *cinfo)
 {
   int total;
 
-  total  = stksegs * (sizeof(Elf_Nhdr) + COREDUMP_INFONAME_SIZE +
-                      sizeof(elf_prstatus_t));
-  total += stksegs * (sizeof(Elf_Nhdr) + COREDUMP_INFONAME_SIZE +
-                      sizeof(elf_prpsinfo_t));
+  total  = cinfo->stksegs * (sizeof(Elf_Nhdr) + COREDUMP_INFONAME_SIZE +
+                             sizeof(elf_prstatus_t));
+  total += cinfo->stksegs * (sizeof(Elf_Nhdr) + COREDUMP_INFONAME_SIZE +
+                             sizeof(elf_prpsinfo_t));
   return total;
 }
 
@@ -603,11 +604,11 @@ static void elf_emit_stack(FAR struct elf_dumpinfo_s *cinfo)
  *
  ****************************************************************************/
 
-static void elf_emit_memory(FAR struct elf_dumpinfo_s *cinfo, int memsegs)
+static void elf_emit_memory(FAR struct elf_dumpinfo_s *cinfo)
 {
   int i;
 
-  for (i = 0; i < memsegs; i++)
+  for (i = 0; i < cinfo->memsegs; i++)
     {
       if (cinfo->regions[i].flags & PF_REGISTER)
         {
@@ -745,11 +746,10 @@ static void elf_emit_tcb_phdr(FAR struct elf_dumpinfo_s *cinfo,
  *
  ****************************************************************************/
 
-static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
-                          int stksegs, int memsegs)
+static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo)
 {
   off_t offset = cinfo->stream->nput +
-                 (stksegs + memsegs + 1 + 1) * sizeof(Elf_Phdr);
+                 (cinfo->stksegs + cinfo->memsegs + 1 + 1) * sizeof(Elf_Phdr);
   FAR struct tcb_s *tcb;
   Elf_Phdr phdr;
   int i;
@@ -758,7 +758,7 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
 
   phdr.p_type   = PT_NOTE;
   phdr.p_offset = offset;
-  phdr.p_filesz = elf_get_note_size(stksegs);
+  phdr.p_filesz = elf_get_note_size(cinfo);
   offset       += phdr.p_filesz;
 
   elf_emit(cinfo, &phdr, sizeof(phdr));
@@ -794,7 +794,7 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
 
   /* Write program headers for segments dump */
 
-  for (i = 0; i < memsegs; i++)
+  for (i = 0; i < cinfo->memsegs; i++)
     {
       phdr.p_type   = PT_LOAD;
       phdr.p_offset = ALIGN_UP(offset, ELF_PAGESIZE);
@@ -848,6 +848,42 @@ coredump_print_memory_regions(FAR const struct memory_region_s *regions)
 #endif
 
 /****************************************************************************
+ * Name: elf_setup_dumpinfo
+ *
+ * Description:
+ *   Initialize dump info structure.
+ *
+ ****************************************************************************/
+
+static int elf_setup_dumpinfo(FAR struct elf_dumpinfo_s *cinfo,
+                              FAR const struct memory_region_s *regions,
+                              FAR struct lib_outstream_s *stream,
+                              FAR struct tcb_s *tcb)
+{
+  cinfo->regions = regions;
+  cinfo->stream  = stream;
+  cinfo->tcb     = tcb;
+  cinfo->memsegs = 0;
+
+  if (cinfo->tcb != NULL)
+    {
+      cinfo->stksegs = 1;
+    }
+  else
+    {
+      cinfo->stksegs = elf_get_ntcb();
+    }
+
+  if (cinfo->regions != NULL)
+    {
+      for (; cinfo->regions[cinfo->memsegs].start <
+             cinfo->regions[cinfo->memsegs].end; cinfo->memsegs++);
+    }
+
+  return OK;
+}
+
+/****************************************************************************
  * Name: coredump_with_tcb
  *
  * Description:
@@ -860,41 +896,25 @@ static int coredump_with_tcb(FAR const struct memory_region_s *regions,
                              FAR struct tcb_s *tcb)
 {
   struct elf_dumpinfo_s cinfo;
-  int memsegs = 0;
-  int stksegs;
+  int ret;
 
-  cinfo.regions = regions;
-  cinfo.stream  = stream;
-  cinfo.tcb     = tcb;
-
-  if (cinfo.tcb != NULL)
+  ret = elf_setup_dumpinfo(&cinfo, regions, stream, tcb);
+  if (ret < 0)
     {
-      stksegs = 1;
-    }
-  else
-    {
-      stksegs = elf_get_ntcb();
-    }
-
-  /* Check the memory region */
-
-  if (cinfo.regions != NULL)
-    {
-      for (; cinfo.regions[memsegs].start <
-             cinfo.regions[memsegs].end; memsegs++);
+      return ret;
     }
 
   /* Fill notes section, with additional one for program header,
    * and one for the core file info defined by NuttX.
    */
 
-  elf_emit_hdr(&cinfo, stksegs + memsegs + 1 + 1);
+  elf_emit_hdr(&cinfo);
 
   /* Fill all the program information about the process for the
    * notes.  This also sets up the file header.
    */
 
-  elf_emit_phdr(&cinfo, stksegs, memsegs);
+  elf_emit_phdr(&cinfo);
 
   /* Fill note information */
 
@@ -910,9 +930,9 @@ static int coredump_with_tcb(FAR const struct memory_region_s *regions,
 
   /* Dump memory segments */
 
-  if (memsegs > 0)
+  if (cinfo.memsegs > 0)
     {
-      elf_emit_memory(&cinfo, memsegs);
+      elf_emit_memory(&cinfo);
     }
 
   /* Emit core info note */
