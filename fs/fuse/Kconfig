@@ -14,3 +14,15 @@ config FS_FUSE
 		transport (see FS_FUSE_DEV and FS_VIRTIOFS).  The core alone has
 		no transport; enable at least one transport to mount a FUSE
 		filesystem.
+
+config FS_VIRTIOFS
+	bool "virtio-fs guest transport"
+	default n
+	depends on FS_FUSE
+	select DRIVERS_VIRTIO
+	---help---
+		Register the virtio-fs guest transport.  Mount a host directory
+		shared through a virtio-fs device with the "tag=<name>" mount
+		option; the FUSE protocol is carried over the request virtqueue
+		to the host server (for example QEMU virtiofsd or the vhost-fs
+		host service).

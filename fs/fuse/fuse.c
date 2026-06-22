@@ -1601,6 +1601,18 @@ static int fuse_bind(FAR struct inode *blkdriver, FAR const void *data,
   spin_lock_init(&conn->lock);
   conn->max_write = FUSE_MAX_WRITE_BUFFER;
 
+  /* Select the transport from the mount options.  Each transport claims a
+   * distinct option keyword: "fd=" for the local /dev/fuse character
+   * device, "tag=" for the virtio-conn device.
+   */
+
+#ifdef CONFIG_FS_VIRTIOFS
+  if (ret < 0)
+    {
+      ret = fuse_virtio_connect(conn, data);
+    }
+#endif
+
   if (ret < 0)
     {
       fs_heap_free(conn);

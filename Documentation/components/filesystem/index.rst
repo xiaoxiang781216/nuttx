@@ -552,6 +552,7 @@ NuttX provides support for a variety of file systems out of the box.
   tmpfs.rst
   unionfs.rst
   userfs.rst
+  virtiofs.rst
   zipfs.rst
   inotify.rst
   nuttxfs.rst
@@ -569,7 +570,8 @@ they require:
    littlefs.
 2. They require MTD drivers. They include romfs, spiffs, littlefs.
 3. They require neither block nor MTD drivers. They include nxffs, tmpfs, nfs
-   binfs, procfs, userfs, hostfs, cromfs, unionfs, rpmsgfs, fuse, and zipfs.
+   binfs, procfs, userfs, hostfs, cromfs, unionfs, rpmsgfs, fuse, virtiofs,
+   and zipfs.
 
 The requirements are specified by declaring the filesystem in the proper
 array in ``fs/mount/fs_mount.c``.

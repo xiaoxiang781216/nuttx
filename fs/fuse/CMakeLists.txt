@@ -21,5 +21,9 @@
 # ##############################################################################
 
 if(CONFIG_FS_FUSE)
-  target_sources(fs PRIVATE fuse.c)
+  set(SRCS fuse.c)
+  if(CONFIG_FS_VIRTIOFS)
+    list(APPEND SRCS fuse_virtio.c)
+  endif()
+  target_sources(fs PRIVATE ${SRCS})
 endif()

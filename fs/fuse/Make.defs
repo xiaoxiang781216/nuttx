@@ -24,6 +24,10 @@ ifeq ($(CONFIG_FS_FUSE),y)
 
 CSRCS += fuse.c
 
+ifeq ($(CONFIG_FS_VIRTIOFS),y)
+CSRCS += fuse_virtio.c
+endif
+
 DEPPATH += --dep-path fuse
 VPATH += :fuse
 

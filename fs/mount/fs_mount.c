@@ -78,7 +78,7 @@
     defined(CONFIG_FS_CROMFS) || defined(CONFIG_FS_UNIONFS) || \
     defined(CONFIG_FS_HOSTFS) || defined(CONFIG_FS_ZIPFS) || \
     defined(CONFIG_FS_RPMSGFS) || defined(CONFIG_FS_V9FS) || \
-    defined(CONFIG_FS_FUSE)
+    defined(CONFIG_FS_FUSE) || defined(CONFIG_FS_VIRTIOFS)
 #  define NODFS_SUPPORT
 #endif
 
@@ -265,6 +265,9 @@ static const struct fsmap_t g_nonbdfsmap[] =
 #endif
 #ifdef CONFIG_FS_FUSE
     { "fuse", &g_fuse_operations},
+#endif
+#ifdef CONFIG_FS_VIRTIOFS
+    { "virtiofs", &g_fuse_operations},
 #endif
     { NULL, NULL },
 };

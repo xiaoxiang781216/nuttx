@@ -114,4 +114,11 @@ int fuse_request(FAR struct fuse_conn_s *conn, FAR struct fuse_req_s *req,
                  FAR const struct iovec *vin, size_t vin_cnt,
                  FAR const struct iovec *vout, size_t out_cnt);
 
+#ifdef CONFIG_FS_VIRTIOFS
+/* Implemented by fs/fuse/fuse_virtio.c */
+
+int fuse_virtio_connect(FAR struct fuse_conn_s *conn,
+                        FAR const char *options);
+#endif
+
 #endif /* __FS_FUSE_FUSE_H */
