@@ -204,13 +204,16 @@ size_t mm_heapfree(FAR struct mm_heap_s *heap)
  * Name: mm_heapfree_largest
  *
  * Description:
- *   Return the largest chunk of contiguous memory in the heap
+ *   Return the largest size that can be allocated from the heap in a single
+ *   mm_malloc call, i.e. the largest free chunk minus the allocation node
+ *   overhead.
  *
  ****************************************************************************/
 
 size_t mm_heapfree_largest(FAR struct mm_heap_s *heap)
 {
   FAR struct mm_freenode_s *node;
+  size_t nodesize;
   int i;
 
   mm_free_delaylist(heap);
@@ -221,7 +224,9 @@ size_t mm_heapfree_largest(FAR struct mm_heap_s *heap)
              heap->mm_nodelist[i].blink;
       if (node != NULL && MM_SIZEOF_NODE(node) != 0)
         {
-          return MM_SIZEOF_NODE(node);
+          nodesize = MM_SIZEOF_NODE(node);
+          return nodesize > MM_ALLOCNODE_OVERHEAD ?
+                 nodesize - MM_ALLOCNODE_OVERHEAD : 0;
         }
     }
 

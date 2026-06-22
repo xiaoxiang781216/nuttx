@@ -1897,7 +1897,8 @@ size_t mm_heapfree(FAR struct mm_heap_s *heap)
  * Name: mm_heapfree_largest
  *
  * Description:
- *   Return the largest chunk of contiguous memory in the heap
+ *   Return the largest size that can be allocated from the heap in a single
+ *   mm_malloc call.
  *
  ****************************************************************************/
 
