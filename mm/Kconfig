@@ -244,6 +244,14 @@ config MM_HEAP_FORBID_HOOK
 		value decides whether to proceed (true = skip, false = allow).
 		Board layer implements this weak function.
 
+config MM_HEAP_FORBID_TRACE
+	bool "Trace alloc/free call sites under forbid (development)"
+	depends on LIBC_BACKTRACE_DEPTH > 0 && LIBC_BACKTRACE_LOAD_FACTOR = 100 && MM_RECORD_STACK
+	---help---
+		Allow malloc/free to proceed under forbid, reusing
+		MM_RECORD_STACK to record the call site in each node.
+		Use memdump or backtrace_dump to identify violators.
+
 endchoice
 
 config MM_HEAP_MEMPOOL_THRESHOLD

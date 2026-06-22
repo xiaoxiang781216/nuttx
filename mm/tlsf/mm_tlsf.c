@@ -205,6 +205,8 @@ static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap)
   return true;
 #  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
   return board_heap_forbid_hook(heap);
+#  elif defined(CONFIG_MM_HEAP_FORBID_TRACE)
+  return false;
 #  else
 #    error "Invalid MM_HEAP_FORBID config"
 #  endif
