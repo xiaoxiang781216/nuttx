@@ -264,8 +264,16 @@ static const struct virtio_dispatch g_virtio_mmio_dispatch =
 
 static const struct virtio_memory_ops g_virtio_mmio_mmops =
 {
-  virtio_mmio_alloc_buf, /* Alloc */
-  virtio_mmio_free_buf,  /* Free */
+  .alloc        = virtio_mmio_alloc_buf,
+  .free         = virtio_mmio_free_buf,
+
+  /* The host (QEMU) can access arbitrary guest memory, so buffers are used
+   * as is: no map/unmap (zero copy) and no map-size limit.
+   */
+
+  .free_largest = NULL,
+  .map          = NULL,
+  .unmap        = NULL,
 };
 
 /****************************************************************************
