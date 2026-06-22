@@ -38,6 +38,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/percpu.h>
+#include <nuttx/fs/procfs.h>
 
 #include "sched/sched.h"
 #include "coredump.h"
@@ -71,6 +72,14 @@
 /****************************************************************************
  * Private Types
  ****************************************************************************/
+
+#if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
+struct coredump_procfs_s
+{
+  struct coredump_info_s info;
+  struct file            file;
+};
+#endif
 
 /* This struct provides a description of the dump information of
  * memory regions.
@@ -1157,6 +1166,242 @@ int coredump_remove_memory_region(FAR const void *ptr, size_t size)
   return -ENOENT;
 }
 
+#if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
+/****************************************************************************
+ * Name: coredump_get_info
+ *
+ * Description:
+ *   Scan a device for a valid coredump and extract its metadata.
+ *   Supports both raw ELF and LZF-compressed formats.
+ *
+ ****************************************************************************/
+
+static int coredump_get_info(FAR struct lib_sistream_s *stream,
+                             FAR struct coredump_info_s *info,
+                             FAR bool *compressed)
+{
+#ifdef CONFIG_LIBC_LZF
+  struct lib_lzfsistream_s lzfstream;
+#endif
+  char name[COREDUMP_INFONAME_SIZE];
+  char magic[2];
+  Elf_Ehdr ehdr;
+  Elf_Phdr phdr;
+  Elf_Nhdr nhdr;
+  int ret;
+
+  /* Detect format by reading the first 2 bytes */
+
+  ret = lib_stream_gets(stream, magic, sizeof(magic));
+  if (ret != sizeof(magic))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  lib_stream_seek(stream, 0, SEEK_SET);
+
+  *compressed = false;
+  if (magic[0] == 'Z' && magic[1] == 'V')
+    {
+      *compressed = true;
+#ifdef CONFIG_LIBC_LZF
+      lib_lzfsistream(&lzfstream, stream);
+      stream = (FAR struct lib_sistream_s *)&lzfstream;
+#else
+      return -ENOTSUP;
+#endif
+    }
+
+  ret = lib_stream_gets(stream, &ehdr, sizeof(ehdr));
+  if (ret != sizeof(ehdr))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  if (memcmp(ehdr.e_ident, ELFMAG, EI_MAGIC_SIZE) != 0)
+    {
+      return -EINVAL;
+    }
+
+  /* The last program header contains the info note */
+
+  ret = lib_stream_seek(stream,
+                        ehdr.e_phoff +
+                        ehdr.e_phentsize * (ehdr.e_phnum - 1),
+                        SEEK_SET);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = lib_stream_gets(stream, &phdr, sizeof(phdr));
+  if (ret != sizeof(phdr))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  ret = lib_stream_seek(stream, phdr.p_offset, SEEK_SET);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = lib_stream_gets(stream, &nhdr, sizeof(nhdr));
+  if (ret != sizeof(nhdr))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  if (nhdr.n_type != COREDUMP_MAGIC ||
+      nhdr.n_namesz != COREDUMP_INFONAME_SIZE ||
+      nhdr.n_descsz != sizeof(struct coredump_info_s))
+    {
+      return -EINVAL;
+    }
+
+  ret = lib_stream_gets(stream, name, nhdr.n_namesz);
+  if (ret != nhdr.n_namesz)
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  if (strncmp(name, "NuttX", 6) != 0)
+    {
+      return -EINVAL;
+    }
+
+  ret = lib_stream_gets(stream, info, sizeof(*info));
+  if (ret != sizeof(*info))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: coredump_procfs_read / coredump_procfs_write
+ *
+ * Description:
+ *   procfs callbacks for coredump file read and clear operations.
+ *
+ ****************************************************************************/
+
+static ssize_t coredump_procfs_read(FAR struct file *filep,
+                                    FAR char *buffer, size_t buflen,
+                                    FAR void *priv)
+{
+  FAR struct coredump_procfs_s *ctx = priv;
+  off_t offset = filep->f_pos;
+  ssize_t nread;
+
+  if (buflen > ctx->info.size - offset)
+    {
+      buflen = ctx->info.size - offset;
+    }
+
+  nread = file_pread(&ctx->file, buffer, buflen, offset);
+  if (nread > 0)
+    {
+      filep->f_pos += nread;
+    }
+
+  return nread;
+}
+
+static ssize_t coredump_procfs_write(FAR struct file *filep,
+                                     FAR const char *buffer, size_t buflen,
+                                     FAR void *priv)
+{
+  FAR struct coredump_procfs_s *ctx = priv;
+  char zero[EI_MAGIC_SIZE] =
+    {
+      0
+    };
+
+  int ret;
+
+  if (buflen < 5 || strncmp(buffer, "clear", 5) != 0)
+    {
+      return -EINVAL;
+    }
+
+  /* Clear file header magic */
+
+  ret = file_pwrite(&ctx->file, zero, EI_MAGIC_SIZE, 0);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  file_ioctl(&ctx->file, BIOC_FLUSH, 0);
+  return buflen;
+}
+
+static void coredump_procfs_register(FAR const char *devpath)
+{
+  struct lib_filesistream_s filestream;
+  struct coredump_info_s info;
+  FAR struct coredump_procfs_s *ctx;
+  FAR const char *ext;
+  FAR char *path;
+  bool compressed = false;
+  int ret;
+
+  ret = lib_filesistream_open(&filestream, devpath, O_RDONLY | O_CLOEXEC, 0);
+  if (ret < 0)
+    {
+      return;
+    }
+
+  ret = coredump_get_info(&filestream.common, &info, &compressed);
+  lib_filesistream_close(&filestream);
+  if (ret < 0)
+    {
+      return;
+    }
+
+  ctx = kmm_zalloc(sizeof(struct coredump_procfs_s));
+  if (ctx == NULL)
+    {
+      return;
+    }
+
+  ctx->info = info;
+  ret = file_open(&ctx->file, devpath, O_RDWR | O_CLOEXEC);
+  if (ret < 0)
+    {
+      kmm_free(ctx);
+      return;
+    }
+
+  ext = compressed ? "lzf" : "core";
+  ret = asprintf(&path, "coredump/%.16s-%jx.%s",
+                 info.name.version, (intmax_t)info.time.tv_sec, ext);
+  if (ret < 0)
+    {
+      file_close(&ctx->file);
+      kmm_free(ctx);
+      return;
+    }
+
+  /* Replace spaces and colons with dashes in filename */
+
+  for (ret = 0; path[ret] != '\0'; ret++)
+    {
+      if (path[ret] == ' ' || path[ret] == ':')
+        {
+          path[ret] = '-';
+        }
+    }
+
+  procfs_create_custom(path, 0644,
+                       coredump_procfs_read,
+                       coredump_procfs_write, ctx);
+}
+
+#endif /* CONFIG_FS_PROCFS_REGISTER && CONFIG_BOARD_COREDUMP_DEVPATH */
+
 /****************************************************************************
  * Name: coredump_initialize
  *
@@ -1223,6 +1468,10 @@ int coredump_initialize(void)
 #endif
 
   g_stream_initialized = true;
+
+#if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
+  coredump_procfs_register(CONFIG_BOARD_COREDUMP_DEVPATH);
+#endif
 
   return ret;
 }
