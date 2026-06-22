@@ -332,14 +332,13 @@ static void noteram_timeout_handler(wdparm_t arg)
   dq_for_every_entry(&drv->poll_list, ctx,
                      struct noteram_dump_context_s, poll_node)
     {
-      /* Relaxed read of ctx->read and ctx->threshold without
-       * ctx->lock: we already hold drv lock which serializes with
-       * poll_list add/remove, so ctx stays valid.  A stale value
-       * only causes a harmless extra or missed notification.
+      /* On timeout, notify as long as there is any unread data,
+       * regardless of threshold. This ensures events are delivered
+       * within bounded latency even when data volume is low.
        */
 
       if (ctx->pfd &&
-          noteram_unread_length(drv, ctx->read) >= ctx->threshold)
+          noteram_unread_length(drv, ctx->read) > 0)
         {
           rspin_unlock_irqrestore_notrace(&drv->lock, flags);
           poll_notify(&ctx->pfd, 1, POLLIN);
