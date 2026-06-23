@@ -603,6 +603,8 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
     }
   else
     {
+      crypto_drivers[hid].cc_operations++;
+      crypto_drivers[hid].cc_bytes += crp.crp_ilen;
       error = crypto_drivers[hid].cc_process(&crp);
     }
 
