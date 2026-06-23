@@ -73,12 +73,15 @@
 
 #ifdef CONFIG_PERCPU_ARRAY
 #  define DEFINE_PER_CPU(t, v)         t v[CONFIG_NCPUS]
+#  define DEFINE_PER_CPU_INIT(t, v, i) \
+     DEFINE_PER_CPU(t, v) = { [0 ... CONFIG_NCPUS - 1] = i }
 #  define DEFINE_PER_CPU_BSS(t, v)     t v[CONFIG_NCPUS]
 #  define DECLARE_PER_CPU(t, v)        extern t v[CONFIG_NCPUS]
 #  define per_cpu_var_smp(v, c)        v[c]
 #  define this_cpu_var(v)              v[this_cpu()]
 #elif defined(CONFIG_PERCPU_SECTION)
 #  define DEFINE_PER_CPU(t, v)         locate_data(".data..percpu") t v
+#  define DEFINE_PER_CPU_INIT(t, v, i) DEFINE_PER_CPU(t, v) = i
 #  define DEFINE_PER_CPU_BSS(t, v)     locate_data(".bss..percpu") t v
 #  define DECLARE_PER_CPU(t, v)        extern t v
 
@@ -111,11 +114,15 @@ extern char _percpu_offset[];
 
 #ifdef CONFIG_BMP
 #  define DEFINE_PER_CPU_BMP(t, v)     DEFINE_PER_CPU(t, v)
+#  define DEFINE_PER_CPU_BMP_INIT(t, v, i) \
+     DEFINE_PER_CPU_INIT(t, v, i)
 #  define DEFINE_PER_CPU_BSS_BMP(t, v) DEFINE_PER_CPU_BSS(t, v)
 #  define DECLARE_PER_CPU_BMP(t, v)    DECLARE_PER_CPU(t, v)
 #  define this_cpu_var_bmp(v)          this_cpu_var(v)
 #else
 #  define DEFINE_PER_CPU_BMP(t, v)     t v
+#  define DEFINE_PER_CPU_BMP_INIT(t, v, i) \
+     t v = i
 #  define DEFINE_PER_CPU_BSS_BMP(t, v) t v
 #  define DECLARE_PER_CPU_BMP(t, v)    extern t v
 #  define this_cpu_var_bmp(v)          v

@@ -121,6 +121,31 @@ struct static_key_false
 #define DECLARE_STATIC_KEY_FALSE(name) \
   DECLARE_PER_CPU_BMP(struct static_key_false, name)
 
+/* Static key array helpers — define/declare fixed-size arrays of
+ * static keys with proper per-element initialization.
+ *
+ * Uses typedef to wrap the array type so it can be passed to
+ * DEFINE_PER_CPU_BMP_INIT which handles the per-CPU replication.
+ */
+
+#define DEFINE_STATIC_KEY_ARRAY_TRUE(name, count)         \
+  typedef struct static_key_true name##_keys_t[(count)];  \
+  DEFINE_PER_CPU_BMP_INIT(name##_keys_t, name,            \
+    { [0 ... (count) - 1] = STATIC_KEY_TRUE_INIT })
+
+#define DEFINE_STATIC_KEY_ARRAY_FALSE(name, count)        \
+  typedef struct static_key_false name##_keys_t[(count)]; \
+  DEFINE_PER_CPU_BMP_INIT(name##_keys_t, name,            \
+    { [0 ... (count) - 1] = STATIC_KEY_FALSE_INIT })
+
+#define DECLARE_STATIC_KEY_ARRAY_TRUE(name, count)       \
+  typedef struct static_key_true name##_keys_t[(count)]; \
+  DECLARE_PER_CPU_BMP(name##_keys_t, name)
+
+#define DECLARE_STATIC_KEY_ARRAY_FALSE(name, count)       \
+  typedef struct static_key_false name##_keys_t[(count)]; \
+  DECLARE_PER_CPU_BMP(name##_keys_t, name)
+
 /* Resolve a static key lvalue for access: select the current core's
  * per-CPU instance.
  */
@@ -138,6 +163,24 @@ struct static_key_false
 #define DECLARE_STATIC_KEY_TRUE(name) extern struct static_key_true name
 
 #define DECLARE_STATIC_KEY_FALSE(name) extern struct static_key_false name
+
+#define DEFINE_STATIC_KEY_ARRAY_TRUE(name, count) \
+  struct static_key_true name[(count)] =          \
+    {                                             \
+      [0 ... (count) - 1] = STATIC_KEY_TRUE_INIT, \
+    }
+
+#define DEFINE_STATIC_KEY_ARRAY_FALSE(name, count) \
+  struct static_key_false name[(count)] =          \
+    {                                              \
+      [0 ... (count) - 1] = STATIC_KEY_FALSE_INIT, \
+    }
+
+#define DECLARE_STATIC_KEY_ARRAY_TRUE(name, count) \
+  extern struct static_key_true name[(count)]
+
+#define DECLARE_STATIC_KEY_ARRAY_FALSE(name, count) \
+  extern struct static_key_false name[(count)]
 
 /* Resolve a static key lvalue for access: plain variable, accessed by
  * name directly (no per-CPU offset).
@@ -189,6 +232,13 @@ struct jump_entry_s
 /****************************************************************************
  * Pre-processor Definitions (JUMP_LABEL path)
  ****************************************************************************/
+
+/* __jumpfunc__ — place code in the .ramfunc writable section.
+ * Functions containing static_branch() jump sites need to reside in
+ * writable memory so static_key_enable/disable can patch NOP<->branch.
+ */
+
+#define __jumpfunc__ locate_code(".ramfunc") noinline_function
 
 /* Branch check API - dispatches based on key type at compile time.
  *
@@ -254,6 +304,10 @@ void static_key_disable(FAR struct static_key_s *key);
  * Pre-processor Definitions (fallback path)
  ****************************************************************************/
 
+/* __jumpfunc__ — no-op when jump_label is disabled */
+
+#define __jumpfunc__
+
 /* Branch check API — volatile bool + branch prediction */
 
 #define static_branch_unlikely(x) \
@@ -303,6 +357,19 @@ static inline_function void static_key_disable(FAR struct static_key_s *key)
 #define DECLARE_STATIC_KEY_0(name) DECLARE_STATIC_KEY_FALSE(name)
 #define DECLARE_STATIC_KEY_MAYBE(cfg, name) \
   CONCATENATE(DECLARE_STATIC_KEY_, NX_IS_ENABLED(cfg))(name)
+
+#define DEFINE_STATIC_KEY_ARRAY_1(name, count) \
+  DEFINE_STATIC_KEY_ARRAY_TRUE(name, count)
+#define DEFINE_STATIC_KEY_ARRAY_0(name, count) \
+  DEFINE_STATIC_KEY_ARRAY_FALSE(name, count)
+#define DEFINE_STATIC_KEY_ARRAY_MAYBE(cfg, name, count) \
+  CONCATENATE(DEFINE_STATIC_KEY_ARRAY_, NX_IS_ENABLED(cfg))(name, count)
+#define DECLARE_STATIC_KEY_ARRAY_1(name, count) \
+  DECLARE_STATIC_KEY_ARRAY_TRUE(name, count)
+#define DECLARE_STATIC_KEY_ARRAY_0(name, count) \
+  DECLARE_STATIC_KEY_ARRAY_FALSE(name, count)
+#define DECLARE_STATIC_KEY_ARRAY_MAYBE(cfg, name, count) \
+  CONCATENATE(DECLARE_STATIC_KEY_ARRAY_, NX_IS_ENABLED(cfg))(name, count)
 
 #define static_branch_maybe(config, x) \
   (NX_IS_ENABLED(config) ? static_branch_likely(x) \
