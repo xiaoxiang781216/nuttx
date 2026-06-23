@@ -350,7 +350,6 @@
 #    define sched_note_vprintf_ip(t,l,i,f,v) \
          do \
            { \
-             locate_data("note_format") used_data \
              static const struct { uint8_t sz; char str[sizeof(f)]; } \
              fmt = { sizeof(f) - 1, f }; \
              note_vprintf_ip(t,l,i,fmt.str,0,&(v)); \
@@ -359,7 +358,6 @@
 #    define sched_note_printf_ip(t,l,i,f,...) \
          do \
            { \
-             locate_data("note_format") used_data \
              static const struct { uint8_t sz; char str[sizeof(f)]; } \
              fmt = { sizeof(f) - 1, f }; \
              note_printf_ip(t,l,i,fmt.str,0,##__VA_ARGS__); \
