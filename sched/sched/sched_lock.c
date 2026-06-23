@@ -70,7 +70,7 @@ void nxsched_lock(FAR struct tcb_s *rtcb)
       /* Note that we have pre-emption locked */
 
       nxsched_critmon_preemption(rtcb, true, return_address(0));
-      sched_note_preemption(rtcb, true);
+      sched_note_preempt_lock(rtcb);
     }
 }
 #endif

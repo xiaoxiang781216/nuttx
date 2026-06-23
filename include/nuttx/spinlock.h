@@ -209,7 +209,7 @@ static inline_function void spin_lock(FAR volatile spinlock_t *lock)
 
   /* Notify that we are waiting for a spinlock */
 
-  sched_note_spinlock(lock, NOTE_SPINLOCK_LOCK);
+  sched_note_spinlock_lock(lock);
 
   /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0, count busy-waiting. */
 
@@ -229,7 +229,7 @@ static inline_function void spin_lock(FAR volatile spinlock_t *lock)
 
   /* Notify that we have the spinlock */
 
-  sched_note_spinlock(lock, NOTE_SPINLOCK_LOCKED);
+  sched_note_spinlock_locked(lock);
 }
 #else
 #  define spin_lock(lock) ((void)(lock))
@@ -298,7 +298,7 @@ static inline_function bool spin_trylock(FAR volatile spinlock_t *lock)
 
   /* Notify that we are waiting for a spinlock */
 
-  sched_note_spinlock(lock, NOTE_SPINLOCK_LOCK);
+  sched_note_spinlock_lock(lock);
 
   /* Try lock without trace note */
 
@@ -311,13 +311,13 @@ static inline_function bool spin_trylock(FAR volatile spinlock_t *lock)
 
       /* Notify that we have the spinlock */
 
-      sched_note_spinlock(lock, NOTE_SPINLOCK_LOCKED);
+      sched_note_spinlock_locked(lock);
     }
   else
     {
       /* Notify that we abort for a spinlock */
 
-      sched_note_spinlock(lock, NOTE_SPINLOCK_ABORT);
+      sched_note_spinlock_abort(lock);
     }
 
   return locked;
@@ -392,7 +392,7 @@ static inline_function void spin_unlock(FAR volatile spinlock_t *lock)
 
   /* Notify that we are unlocking the spinlock */
 
-  sched_note_spinlock(lock, NOTE_SPINLOCK_UNLOCK);
+  sched_note_spinlock_unlock(lock);
 }
 #else
 #  define spin_unlock(lock) ((void)(lock))
@@ -479,7 +479,7 @@ irqstate_t spin_lock_irqsave(FAR volatile spinlock_t *lock)
 
   /* Notify that we are waiting for a spinlock */
 
-  sched_note_spinlock(lock, NOTE_SPINLOCK_LOCK);
+  sched_note_spinlock_lock(lock);
 
   /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0, count busy-waiting. */
 
@@ -499,7 +499,7 @@ irqstate_t spin_lock_irqsave(FAR volatile spinlock_t *lock)
 
   /* Notify that we have the spinlock */
 
-  sched_note_spinlock(lock, NOTE_SPINLOCK_LOCKED);
+  sched_note_spinlock_locked(lock);
 
   return flags;
 }
@@ -727,7 +727,7 @@ void rspin_lock(FAR rspinlock_t *lock)
   if (RSPINLOCK_OWNER(old_val) != owner)
     {
       spinlock_mark_locking(&lock->info);
-      sched_note_spinlock(lock, NOTE_SPINLOCK_LOCK);
+      sched_note_spinlock_lock(lock);
     }
 
   rspin_lock_notrace(lock);
@@ -735,7 +735,7 @@ void rspin_lock(FAR rspinlock_t *lock)
   if (RSPINLOCK_OWNER(old_val) != owner)
     {
       spinlock_mark_locked(&lock->info);
-      sched_note_spinlock(lock, NOTE_SPINLOCK_LOCKED);
+      sched_note_spinlock_locked(lock);
     }
 }
 
@@ -1022,7 +1022,7 @@ void spin_unlock_irqrestore(FAR volatile spinlock_t *lock, irqstate_t flags)
 
   /* Notify that we are unlocking the spinlock */
 
-  sched_note_spinlock(lock, NOTE_SPINLOCK_UNLOCK);
+  sched_note_spinlock_unlock(lock);
   irq_restore(flags);
 }
 #else
@@ -1122,7 +1122,7 @@ bool rspin_unlock(FAR rspinlock_t *lock)
 
   if (RSPINLOCK_COUNT(val) == 1u)
     {
-      sched_note_spinlock(lock, NOTE_SPINLOCK_UNLOCK);
+      sched_note_spinlock_unlock(lock);
       spinlock_mark_unlocked(&lock->info);
     }
 

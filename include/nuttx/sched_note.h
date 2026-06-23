@@ -223,45 +223,95 @@
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_PREEMPTION) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_preemption(t,l) \
+#  define sched_note_preempt_lock(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_PREEMPT_LOCK + !(l))) \
+           if (!note_filter_type(NOTE_PREEMPT_LOCK)) \
              { \
-               note_preemption(t,l); \
+               note_preemption(t, true); \
+             } \
+         } \
+       while (0)
+#  define sched_note_preempt_unlock(t) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_PREEMPT_UNLOCK)) \
+             { \
+               note_preemption(t, false); \
              } \
          } \
        while (0)
 #else
-#  define sched_note_preemption(t,l)
+#  define sched_note_preempt_lock(t)
+#  define sched_note_preempt_unlock(t)
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_csection(t,e) \
+#  define sched_note_csection_enter(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_CSECTION_ENTER + !(e))) \
+           if (!note_filter_type(NOTE_CSECTION_ENTER)) \
              { \
-               note_csection(t,e); \
+               note_csection(t, true); \
+             } \
+         } \
+       while (0)
+#  define sched_note_csection_leave(t) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_CSECTION_LEAVE)) \
+             { \
+               note_csection(t, false); \
              } \
          } \
        while (0)
 #else
-#  define sched_note_csection(t,e)
+#  define sched_note_csection_enter(t)
+#  define sched_note_csection_leave(t)
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_spinlock(s,t) \
+#  define sched_note_spinlock_lock(s) \
        do \
          { \
-           if (!note_filter_type(t)) \
+           if (!note_filter_type(NOTE_SPINLOCK_LOCK)) \
              { \
-               note_spinlock(s,t); \
+               note_spinlock(s, NOTE_SPINLOCK_LOCK); \
+             } \
+         } \
+       while (0)
+#  define sched_note_spinlock_locked(s) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_SPINLOCK_LOCKED)) \
+             { \
+               note_spinlock(s, NOTE_SPINLOCK_LOCKED); \
+             } \
+         } \
+       while (0)
+#  define sched_note_spinlock_unlock(s) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_SPINLOCK_UNLOCK)) \
+             { \
+               note_spinlock(s, NOTE_SPINLOCK_UNLOCK); \
+             } \
+         } \
+       while (0)
+#  define sched_note_spinlock_abort(s) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_SPINLOCK_ABORT)) \
+             { \
+               note_spinlock(s, NOTE_SPINLOCK_ABORT); \
              } \
          } \
        while (0)
 #else
-#  define sched_note_spinlock(s,t)
+#  define sched_note_spinlock_lock(s)
+#  define sched_note_spinlock_locked(s)
+#  define sched_note_spinlock_unlock(s)
+#  define sched_note_spinlock_abort(s)
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_SYSCALL) && defined(CONFIG_DRIVERS_NOTE)
@@ -289,59 +339,159 @@
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_irqhandler(i,h,e) \
+#  define sched_note_irq_enter(i,h) \
        do \
          { \
            if (!note_filter_irq(i)) \
              { \
-               note_irqhandler(i,h,e); \
+               note_irqhandler(i, h, true); \
+             } \
+         } \
+       while (0)
+#  define sched_note_irq_leave(i,h) \
+       do \
+         { \
+           if (!note_filter_irq(i)) \
+             { \
+               note_irqhandler(i, h, false); \
              } \
          } \
        while (0)
 #else
-#  define sched_note_irqhandler(i,h,e)
+#  define sched_note_irq_enter(i,h)
+#  define sched_note_irq_leave(i,h)
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_WDOG) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_wdog(e,h,a) \
+#  define sched_note_wdog_start(h,a) \
        do \
          { \
-           if (!note_filter_type(e)) \
+           if (!note_filter_type(NOTE_WDOG_START)) \
              { \
-               note_wdog(e,h,a); \
+               note_wdog(NOTE_WDOG_START, h, a); \
+             } \
+         } \
+       while (0)
+#  define sched_note_wdog_cancel(h,a) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_WDOG_CANCEL)) \
+             { \
+               note_wdog(NOTE_WDOG_CANCEL, h, a); \
+             } \
+         } \
+       while (0)
+#  define sched_note_wdog_enter(h,a) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_WDOG_ENTER)) \
+             { \
+               note_wdog(NOTE_WDOG_ENTER, h, a); \
+             } \
+         } \
+       while (0)
+#  define sched_note_wdog_leave(h,a) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_WDOG_LEAVE)) \
+             { \
+               note_wdog(NOTE_WDOG_LEAVE, h, a); \
              } \
          } \
        while (0)
 #else
-#  define sched_note_wdog(e,h,a)
+#  define sched_note_wdog_start(h,a)
+#  define sched_note_wdog_cancel(h,a)
+#  define sched_note_wdog_enter(h,a)
+#  define sched_note_wdog_leave(h,a)
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_HEAP) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_heap(e,h,m,s,c) \
+#  define sched_note_heap_add(h,m,s,c) \
        do \
          { \
-           if (!note_filter_type(e)) \
+           if (!note_filter_type(NOTE_HEAP_ADD)) \
              { \
-               note_heap(e,h,m,s,c); \
+               note_heap(NOTE_HEAP_ADD, h, m, s, c); \
+             } \
+         } \
+       while (0)
+#  define sched_note_heap_remove(h,m,s,c) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_HEAP_REMOVE)) \
+             { \
+               note_heap(NOTE_HEAP_REMOVE, h, m, s, c); \
+             } \
+         } \
+       while (0)
+#  define sched_note_heap_alloc(h,m,s,c) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_HEAP_ALLOC)) \
+             { \
+               note_heap(NOTE_HEAP_ALLOC, h, m, s, c); \
+             } \
+         } \
+       while (0)
+#  define sched_note_heap_free(h,m,s,c) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_HEAP_FREE)) \
+             { \
+               note_heap(NOTE_HEAP_FREE, h, m, s, c); \
              } \
          } \
        while (0)
 #else
-#  define sched_note_heap(e,h,m,s,c)
+#  define sched_note_heap_add(h,m,s,c)
+#  define sched_note_heap_remove(h,m,s,c)
+#  define sched_note_heap_alloc(h,m,s,c)
+#  define sched_note_heap_free(h,m,s,c)
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_WQUEUE) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_wqueue(e,w,a) \
+#  define sched_note_wqueue_start(w,a) \
        do \
          { \
-           if (!note_filter_type(e)) \
+           if (!note_filter_type(NOTE_WQUEUE_START)) \
              { \
-               note_wqueue(e,w,a); \
+               note_wqueue(NOTE_WQUEUE_START, w, a); \
+             } \
+         } \
+       while (0)
+#  define sched_note_wqueue_cancel(w,a) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_WQUEUE_CANCEL)) \
+             { \
+               note_wqueue(NOTE_WQUEUE_CANCEL, w, a); \
+             } \
+         } \
+       while (0)
+#  define sched_note_wqueue_enter(w,a) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_WQUEUE_ENTER)) \
+             { \
+               note_wqueue(NOTE_WQUEUE_ENTER, w, a); \
+             } \
+         } \
+       while (0)
+#  define sched_note_wqueue_leave(w,a) \
+       do \
+         { \
+           if (!note_filter_type(NOTE_WQUEUE_LEAVE)) \
+             { \
+               note_wqueue(NOTE_WQUEUE_LEAVE, w, a); \
              } \
          } \
        while (0)
 #else
-#  define sched_note_wqueue(e,w,a)
+#  define sched_note_wqueue_start(w,a)
+#  define sched_note_wqueue_cancel(w,a)
+#  define sched_note_wqueue_enter(w,a)
+#  define sched_note_wqueue_leave(w,a)
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_DUMP) && defined(CONFIG_DRIVERS_NOTE)

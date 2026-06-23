@@ -75,7 +75,7 @@ void nxsched_unlock(FAR struct tcb_s *rtcb)
   if (!up_interrupt_context())
     {
       nxsched_critmon_preemption(rtcb, false, return_address(0));
-      sched_note_preemption(rtcb, false);
+      sched_note_preempt_unlock(rtcb);
     }
 
   /* Release any ready-to-run tasks that have collected in

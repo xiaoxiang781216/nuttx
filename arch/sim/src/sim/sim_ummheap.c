@@ -327,7 +327,7 @@ static void forcefree(struct mm_heap_s *heap, void *mem)
 
   node = (struct mm_allocnode_s *)((uintptr_t)mem - MM_ALLOCNODE_SIZE);
   update_stats(heap, mem, node->size, false);
-  sched_note_heap(NOTE_HEAP_FREE, heap, mem, node->size, 0);
+  sched_note_heap_free(heap, mem, node->size, 0);
 #ifdef CONFIG_MM_RECORD_STACK
   if (node->stack)
     {
@@ -437,7 +437,7 @@ static void *reallocate(void *oldmem, size_t alignment, size_t size)
 
       mem = init_allocnode(g_mmheap, new_alloc_addr, aligned_size,
                            padding_size);
-      sched_note_heap(NOTE_HEAP_ALLOC, g_mmheap, mem, aligned_size, 0);
+      sched_note_heap_alloc(g_mmheap, mem, aligned_size, 0);
       return mem;
     }
 
@@ -475,13 +475,13 @@ static void *reallocate(void *oldmem, size_t alignment, size_t size)
       old_node->padding = padding_size;
       MM_RECORD(g_mmheap, old_node);
       update_stats(g_mmheap, oldmem, aligned_size, true);
-      sched_note_heap(NOTE_HEAP_ALLOC, g_mmheap, mem, aligned_size, 0);
+      sched_note_heap_alloc(g_mmheap, mem, aligned_size, 0);
       return oldmem;
     }
 
-  sched_note_heap(NOTE_HEAP_FREE, g_mmheap, oldmem, old_size, 0);
+  sched_note_heap_free(g_mmheap, oldmem, old_size, 0);
   mem = init_allocnode(g_mmheap, new_alloc_addr, aligned_size, padding_size);
-  sched_note_heap(NOTE_HEAP_ALLOC, g_mmheap, mem, aligned_size, 0);
+  sched_note_heap_alloc(g_mmheap, mem, aligned_size, 0);
   return mem;
 }
 
@@ -850,7 +850,7 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
 void umm_initialize(void *heap_start, size_t heap_size)
 {
-  sched_note_heap(NOTE_HEAP_ADD, g_mmheap, heap_start, heap_size, 0);
+  sched_note_heap_add(g_mmheap, heap_start, heap_size, 0);
   UNUSED(heap_start);
   UNUSED(heap_size);
 

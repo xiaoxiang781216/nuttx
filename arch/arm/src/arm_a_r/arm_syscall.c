@@ -165,7 +165,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   /* Note to ram */
 
-  sched_note_irqhandler(NR_IRQS, arm_syscall, true);
+  sched_note_irq_enter(NR_IRQS, arm_syscall);
 
   /* The SYSCALL command is in R0 on entry.  Parameters follow in R1..R7 */
 
@@ -598,7 +598,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   /* Note to ram */
 
-  sched_note_irqhandler(NR_IRQS, arm_syscall, false);
+  sched_note_irq_leave(NR_IRQS, arm_syscall);
 
   /* Update the TLS pointer.
    * The TLS pointer must skip over the

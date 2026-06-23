@@ -216,8 +216,8 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   heap->mm_nregions++;
 #endif
 
-  sched_note_heap(NOTE_HEAP_ADD, heap, heapstart, heapsize,
-                  heap->mm_curused);
+  sched_note_heap_add(heap, heapstart, heapsize,
+                      heap->mm_curused);
   DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 }
 

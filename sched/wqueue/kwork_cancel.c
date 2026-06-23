@@ -73,8 +73,7 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
               work_timer_reset(wqueue);
             }
 
-          sched_note_wqueue(NOTE_WQUEUE_CANCEL,
-                            (FAR void *)work->worker, work->arg);
+          sched_note_wqueue_cancel(work->worker, work->arg);
         }
       else
         {

@@ -256,9 +256,9 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
        * performed... we don't have any idea how long this will take!
        */
 
-      sched_note_wqueue(NOTE_WQUEUE_ENTER, (FAR void *)worker, arg);
+      sched_note_wqueue_enter(worker, arg);
       CALL_WORKER(worker, arg);
-      sched_note_wqueue(NOTE_WQUEUE_LEAVE, (FAR void *)worker, arg);
+      sched_note_wqueue_leave(worker, arg);
       flags = wqueue_lock(wqueue, true);
 
       /* Mark the thread un-busy */

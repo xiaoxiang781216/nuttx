@@ -68,7 +68,7 @@ void restore_critical_section(uint16_t count)
   if (!up_interrupt_context())
     {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-      sched_note_csection(this_task(), true);
+      sched_note_csection_enter(this_task());
 #  endif
     }
 }
@@ -82,7 +82,7 @@ uint16_t break_critical_section(void)
   if (rtcb != NULL)
     {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-      sched_note_csection(rtcb, false);
+      sched_note_csection_leave(rtcb);
 #  endif
     }
 
@@ -110,7 +110,7 @@ irqstate_t enter_critical_section(void)
       if (RSPINLOCK_COUNT(g_schedlock.local_val) == 1)
         {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-          sched_note_csection(this_task(), true);
+          sched_note_csection_enter(this_task());
 #  endif
         }
     }
@@ -125,7 +125,7 @@ void leave_critical_section(irqstate_t flags)
       if (RSPINLOCK_COUNT(g_schedlock.local_val) == 1)
         {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-          sched_note_csection(this_task(), false);
+          sched_note_csection_leave(this_task());
 #  endif
         }
     }

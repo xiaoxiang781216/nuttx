@@ -117,7 +117,7 @@ int nxtask_exit(void)
   /* When task exits, need to trace before release tcb. */
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-  sched_note_csection(dtcb, false);
+  sched_note_csection_leave(dtcb);
 #endif
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0
   nxsched_critmon_irqdisable(false, false, return_address(0));

@@ -66,7 +66,7 @@ void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
 
   /* Record enqueue trace for scheduling latency analysis */
 
-  sched_note_wqueue(NOTE_WQUEUE_START, (FAR void *)worker, arg);
+  sched_note_wqueue_start(worker, arg);
 
   /* Insert to the pending list of the wqueue. */
 
