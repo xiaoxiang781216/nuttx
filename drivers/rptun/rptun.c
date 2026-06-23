@@ -743,7 +743,7 @@ rptun_get_peer_status(FAR struct rptun_priv_s *priv)
   FAR struct rptun_status_s *status =
     RPTUN_RSC2STATUS(priv->rproc.rsc_table);
 
-  RPTUN_INVALIDATE(*status);
+  RPTUN_INVALIDATE(status, sizeof(*status));
 
   return RPTUN_IS_MASTER(priv->dev) ?
          status->slave : status->master;
@@ -770,7 +770,7 @@ static inline_function void rptun_set_status(FAR struct rptun_priv_s *priv,
       RPTUN_STATUS_SET(status->slave, reason);
     }
 
-  RPTUN_FLUSH(*status);
+  RPTUN_FLUSH(status, sizeof(*status));
 }
 
 static void rptun_set_status_notify(FAR struct rptun_priv_s *priv,
