@@ -38,12 +38,6 @@
 #include "rpmsg_crypto.h"
 
 /****************************************************************************
- * Pre-processor definitions
- ****************************************************************************/
-
-#define RPMSG_CRYPTO_SESSIONS_NUM 4
-
-/****************************************************************************
  * Private Types
  ****************************************************************************/
 
@@ -191,29 +185,6 @@ static int rpmsg_crypto_send_recv(FAR struct rpmsg_crypto_s *priv,
   return ret;
 }
 
-static int rpmsg_crypto_alloc_session(FAR struct rpmsg_crypto_s *rdev)
-{
-  FAR struct rpmsg_crypto_session_s *session;
-
-  if (rdev->sesnum == 0)
-    {
-      rdev->sesnum = RPMSG_CRYPTO_SESSIONS_NUM;
-    }
-
-  session = kmm_realloc(rdev->sessions, rdev->sesnum * 2 *
-                        sizeof(struct rpmsg_crypto_session_s));
-  if (session == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  memset(session + rdev->sesnum, 0,
-         rdev->sesnum * sizeof(struct rpmsg_crypto_session_s));
-  rdev->sessions = session;
-  rdev->sesnum *= 2;
-  return OK;
-}
-
 static int rpmsg_crypto_get_session(FAR struct rpmsg_crypto_s *rdev)
 {
   uint32_t i;
@@ -228,7 +199,7 @@ static int rpmsg_crypto_get_session(FAR struct rpmsg_crypto_s *rdev)
         }
     }
 
-  if (i == rdev->sesnum && rpmsg_crypto_alloc_session(rdev) < 0)
+  if (i == rdev->sesnum)
     {
       nxmutex_unlock(&rdev->lock);
       return -ENOMEM;
@@ -352,7 +323,14 @@ static int rpmsg_crypto_newsession(FAR uint32_t *sid,
       return -EINVAL;
     }
 
-  *sid = rpmsg_crypto_get_session(rdev);
+  ret = rpmsg_crypto_get_session(rdev);
+  if (ret < 0)
+    {
+      rpmsgerr("No available session slot\n");
+      return ret;
+    }
+
+  *sid = ret;
   msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
   if (msg == NULL)
     {
@@ -833,7 +811,7 @@ static int rpmsg_crypto_process(FAR struct cryptop *crp)
       return -EINVAL;
     }
 
-  if (sid > rdev->sesnum || !rdev->sessions[sid].used)
+  if (sid >= rdev->sesnum || !rdev->sessions[sid].used)
     {
       rpmsgerr("Invalid sid\n");
       return -EINVAL;
@@ -900,7 +878,7 @@ static int rpmsg_crypto_freesession(uint64_t tid)
       return -EINVAL;
     }
 
-  if (sid > rdev->sesnum)
+  if (sid >= rdev->sesnum)
     {
       rpmsgerr("Invalid sid\n");
       return -EINVAL;
@@ -984,7 +962,15 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
     }
 
   memset(keybuf, 0, keybufsize);
-  sid = rpmsg_crypto_get_session(rdev);
+  ret = rpmsg_crypto_get_session(rdev);
+  if (ret < 0)
+    {
+      rpmsgerr("No available session slot\n");
+      rpmsg_release_tx_buffer(&rdev->ept, msg);
+      return ret;
+    }
+
+  sid = ret;
   session = &rdev->sessions[sid];
 
   /* Pad ctrl header for passing key parameters */
@@ -1147,7 +1133,15 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
   memset(msg, 0, sizeof(*msg));
   ctrl = &msg->ctrl;
   data = &msg->data;
-  sid = rpmsg_crypto_get_session(rdev);
+  ret = rpmsg_crypto_get_session(rdev);
+  if (ret < 0)
+    {
+      rpmsgerr("No available session slot\n");
+      rpmsg_release_tx_buffer(&rdev->ept, msg);
+      return ret;
+    }
+
+  sid = ret;
   session = &rdev->sessions[sid];
 
   /* Pad ctrl header for passing key parameters */
@@ -1295,7 +1289,15 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
       return -ENOMEM;
     }
 
-  sid = rpmsg_crypto_get_session(rdev);
+  ret = rpmsg_crypto_get_session(rdev);
+  if (ret < 0)
+    {
+      rpmsgerr("No available session slot\n");
+      rpmsg_release_tx_buffer(&rdev->ept, msg);
+      return ret;
+    }
+
+  sid = ret;
   session = &rdev->sessions[sid];
   memset(msg, 0, sizeof(*msg));
   msg->data.cmd = krp->krp_op;
@@ -1697,7 +1699,7 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
 
   /* Pre-allocate session slots to avoid realloc during concurrent use */
 
-  rdev->sessions = kmm_zalloc(RPMSG_CRYPTO_SESSIONS_NUM *
+  rdev->sessions = kmm_zalloc(CONFIG_CRYPTO_RPMSG_SESSIONS_NUM *
                               sizeof(struct rpmsg_crypto_session_s));
   if (rdev->sessions == NULL)
     {
@@ -1705,7 +1707,7 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
       return -ENOMEM;
     }
 
-  rdev->sesnum = RPMSG_CRYPTO_SESSIONS_NUM;
+  rdev->sesnum = CONFIG_CRYPTO_RPMSG_SESSIONS_NUM;
   rdev->remotecpu = remotecpu;
   nxsem_init(&rdev->wait, 0, 0);
   nxmutex_init(&rdev->lock);

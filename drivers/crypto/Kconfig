@@ -86,6 +86,19 @@ config CRYPTO_RPMSG_SERVER
 	default n
 	depends on RPMSG && CRYPTO_CRYPTODEV
 
+config CRYPTO_RPMSG_SESSIONS_NUM
+	int "Number of pre-allocated rpmsg crypto session slots"
+	default 8
+	depends on CRYPTO_RPMSG
+	---help---
+		Number of session slots pre-allocated at registration time for
+		the rpmsg crypto client. The slot array has a fixed size and is
+		never reallocated, because relocating it would move the embedded
+		per-session semaphore and dangle any in-flight waiter and response
+		handler cookie (use-after-free). Set this to the maximum number of
+		concurrent crypto sessions plus in-flight async operations. When
+		all slots are busy, new session requests fail with -ENOMEM.
+
 config CRYPTO_RPMSG_RSA_KEYBUF_SIZE
 	int "RSA key buffer size for rpmsg crypto"
 	default 80
