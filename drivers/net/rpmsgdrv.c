@@ -75,9 +75,8 @@ struct net_rpmsg_drv_s
 {
   char                  cpuname[RPMSG_NAME_SIZE];
   netpkt_queue_t        rxqueue; /* RX packet queue */
-  FAR netpkt_t         *txpkt;   /* Deferred TX packet (quota=1) */
   spinlock_t            lock;    /* Spinlock for protecting rxqueue */
-  struct work_s         txwork;  /* Deferred TX work */
+  struct work_s         txwork;  /* Deferred TX re-arm work */
   FAR void             *priv;    /* Private data for upper layer */
   net_rpmsg_drv_cb_t    cb;      /* IFUP/DOWN Callback function */
   sem_t                 wait;    /* Wait sem, used for preventing any
@@ -204,29 +203,32 @@ static const struct netdev_ops_s g_net_rpmsg_drv_ops =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: net_rpmsg_drv_do_transmit
+ * Name: net_rpmsg_drv_transmit
  *
  * Description:
- *   Transmit a single pkt via rpmsg. Acquires the rpmsg TX buffer
- *   internally. When delay == 0 the buffer allocation is non-blocking
- *   (fast path from transmit); when delay != 0 it blocks (deferred worker).
- *   On any transient failure the pkt is cached back and a worker is
- *   scheduled with the given delay.
+ *   Start hardware transmission.  Acquires an rpmsg TX buffer without
+ *   blocking and sends the packet.  When the buffer is temporarily
+ *   unavailable (or the send fails transiently), returns -EBUSY so the
+ *   upper half keeps the packet at the head of its txq and pauses TX; a
+ *   deferred worker then re-arms TX via netdev_lower_txdone().
  *
  * Parameters:
- *   drv   - Reference to the driver state structure
- *   pkt   - The packet to be sent
- *   delay - 0 for non-blocking try, >0 for blocking try and retry delay
+ *   dev - Reference to the NuttX driver state structure
+ *   pkt - The packet to be sent
  *
  * Returned Value:
- *   OK on success; a negated errno on failure
+ *   OK on success; -EBUSY to defer; a negated errno on permanent failure
+ *
+ * Assumptions:
+ *   The network is locked.
  *
  ****************************************************************************/
 
-static int net_rpmsg_drv_do_transmit(FAR struct net_rpmsg_drv_s *drv,
-                                     FAR netpkt_t *pkt, clock_t delay)
+static int net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
+                                  FAR netpkt_t *pkt)
 {
-  FAR struct netdev_lowerhalf_s *dev = &drv->dev;
+  FAR struct net_rpmsg_drv_s *drv =
+                              container_of(dev, struct net_rpmsg_drv_s, dev);
   FAR struct net_rpmsg_transfer_s *transfer;
   uint32_t buflen;
 #ifdef CONFIG_NET_PRMSG_DRV_ZERO_COPY_TRANSFER
@@ -234,9 +236,18 @@ static int net_rpmsg_drv_do_transmit(FAR struct net_rpmsg_drv_s *drv,
 #else
   unsigned int datalen = netpkt_getdatalen(dev, pkt);
 #endif
-  int ret = -EAGAIN;
+  int ret;
 
-  transfer = rpmsg_get_tx_payload_buffer(&drv->ept, &buflen, delay != 0);
+  /* Try to acquire an rpmsg TX buffer without blocking.  The quota tracking
+   * that used to throttle the upper half to a single in-flight packet has
+   * been removed, so we must not cache the packet in the driver.  Instead,
+   * when no buffer is available we return -EBUSY: the upper half then keeps
+   * the packet at the head of its txq and pauses TX (txdone=true), and a
+   * deferred worker re-arms TX via netdev_lower_txdone() after a short
+   * delay.
+   */
+
+  transfer = rpmsg_get_tx_payload_buffer(&drv->ept, &buflen, false);
   if (transfer == NULL)
     {
       goto defer;
@@ -246,12 +257,6 @@ static int net_rpmsg_drv_do_transmit(FAR struct net_rpmsg_drv_s *drv,
     {
       nerr("ERROR: Buffer is too small for xmit\n");
       rpmsg_release_tx_buffer(&drv->ept, transfer);
-      if (delay != 0)
-        {
-          netpkt_free(dev, pkt, NETPKT_TX);
-          netdev_lower_txdone(dev);
-        }
-
       return -EMSGSIZE;
     }
 
@@ -277,58 +282,56 @@ static int net_rpmsg_drv_do_transmit(FAR struct net_rpmsg_drv_s *drv,
 #ifndef CONFIG_NET_PRMSG_DRV_ZERO_COPY_TRANSFER
   netpkt_free(dev, pkt, NETPKT_TX);
 #endif
-  netdev_lower_txdone(dev);
   return OK;
 
 defer:
-  drv->txpkt = pkt;
-  work_queue(LPWORK, &drv->txwork, net_rpmsg_drv_deferred_tx, drv, delay);
-  return OK;
+  /* Schedule a worker to wait for a TX buffer to become available and then
+   * re-arm the upper-half TX path.  The packet itself stays in the
+   * upper-half txq (because we return -EBUSY), so the worker only needs to
+   * wake the TX path once a buffer is free; the upper half re-delivers the
+   * packet.
+   */
+
+  work_queue(LPWORK, &drv->txwork, net_rpmsg_drv_deferred_tx, drv, 0);
+  return -EBUSY;
 }
 
 /****************************************************************************
  * Name: net_rpmsg_drv_deferred_tx
  *
  * Description:
- *   Worker function for deferred TX retry.
+ *   Worker function for deferred TX retry.  Blocks until an rpmsg TX buffer
+ *   becomes available, releases it immediately (it is only used as an
+ *   availability probe), and re-arms the upper-half TX path via
+ *   netdev_lower_txdone() so it re-delivers the packet that was paused in
+ *   its txq when transmit() returned -EBUSY.
  *
  ****************************************************************************/
 
 static void net_rpmsg_drv_deferred_tx(FAR void *arg)
 {
   FAR struct net_rpmsg_drv_s *drv = arg;
-  FAR netpkt_t *pkt = drv->txpkt;
+  FAR struct net_rpmsg_transfer_s *transfer;
+  uint32_t buflen;
 
-  drv->txpkt = NULL;
+  /* Block until a TX buffer is available, then release it and re-arm TX. */
 
-  if (pkt != NULL)
+  transfer = rpmsg_get_tx_payload_buffer(&drv->ept, &buflen, true);
+  if (transfer == NULL)
     {
-      net_rpmsg_drv_do_transmit(drv, pkt, TICK_PER_SEC);
+      /* The blocking get failed (e.g. transient error / endpoint not ready).
+       * Re-schedule with a delay so TX can recover; otherwise the upper-half
+       * txq would stay paused forever.  On teardown this work is cancelled
+       * by net_rpmsg_drv_device_destroy().
+       */
+
+      work_queue(LPWORK, &drv->txwork, net_rpmsg_drv_deferred_tx, drv,
+                 TICK_PER_SEC);
+      return;
     }
-}
 
-/****************************************************************************
- * Name: net_rpmsg_drv_transmit
- *
- * Description:
- *   Start hardware transmission. Called with the network lock held.
- *
- * Parameters:
- *   dev - Reference to the NuttX driver state structure
- *   pkt - The packet to be sent
- *
- * Returned Value:
- *   OK on success; a negated errno on failure
- *
- ****************************************************************************/
-
-static int net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
-                                  FAR netpkt_t *pkt)
-{
-  FAR struct net_rpmsg_drv_s *drv =
-                              container_of(dev, struct net_rpmsg_drv_s, dev);
-
-  return net_rpmsg_drv_do_transmit(drv, pkt, 0);
+  rpmsg_release_tx_buffer(&drv->ept, transfer);
+  netdev_lower_txdone(&drv->dev);
 }
 
 static FAR netpkt_t *
@@ -654,15 +657,12 @@ static void net_rpmsg_drv_device_destroy(FAR struct rpmsg_device *rdev,
 
   if (!strcmp(drv->cpuname, rpmsg_get_cpuname(rdev)))
     {
-      /* Cancel any pending deferred TX and free the cached packet */
+      /* Cancel any pending deferred TX re-arm work.  The packet itself (if
+       * any) is owned by the upper-half txq and released by the network
+       * stack, so there is nothing to free here.
+       */
 
       work_cancel_sync(LPWORK, &drv->txwork);
-      if (drv->txpkt != NULL)
-        {
-          netpkt_free(&drv->dev, drv->txpkt, NETPKT_TX);
-          drv->txpkt = NULL;
-          netdev_lower_txdone(&drv->dev);
-        }
 
       rpmsg_destroy_ept(&drv->ept);
     }
