@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
+#include <sys/param.h>
 
 #include <nuttx/atomic.h>
 #include <nuttx/fs/fs.h>
@@ -149,7 +150,17 @@ static ssize_t notebuf_add(FAR struct note_driver_s *drv,
 #ifdef CONFIG_DRIVERS_NOTEBUF_NOOVERWRITE
   written += ring_mpmc_enqueue(buf->ring, note, len);
 #else
-  written += ring_mpmc_overwrite(buf->ring, note, len);
+#  ifdef CONFIG_DRIVERS_NOTE_STATS
+  uint32_t discard = ring_mpmc_overwrite(buf->ring, note, len);
+
+  if (discard != 0)
+    {
+      atomic_add_relaxed(&buf->driver.stats.drop_bytes, discard);
+    }
+#  else
+  ring_mpmc_overwrite(buf->ring, note, len);
+#  endif
+  written += MIN(len, ring_capacity(buf->ring));
 #endif
 
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
