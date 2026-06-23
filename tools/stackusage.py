@@ -59,7 +59,8 @@ CALL_MNEMONICS = {
     "callx4",
     "callx8",
     "callx12",  # Xtensa indirect
-    "calli",  # TriCore
+    "calli",  # TriCore indirect
+    "calla",  # TriCore absolute
 }
 
 # Function names that indicate dynamic stack allocation.
