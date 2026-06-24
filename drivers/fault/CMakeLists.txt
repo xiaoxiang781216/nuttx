@@ -23,6 +23,14 @@
 if(CONFIG_DRIVERS_FAULT_INJECT)
   set(SRCS fault_core.c fault_dev.c)
 
+  if(CONFIG_DRIVERS_FAULT_INJECT_WRAP_MM)
+    list(APPEND SRCS wraps/fault_wrap_mm.c)
+  endif()
+
+  if(CONFIG_DRIVERS_FAULT_INJECT_WRAP_IRQ)
+    list(APPEND SRCS wraps/fault_wrap_irq.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
   target_include_directories(drivers PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 

@@ -25,8 +25,17 @@ ifeq ($(CONFIG_DRIVERS_FAULT_INJECT),y)
 CSRCS += fault_core.c
 CSRCS += fault_dev.c
 
+ifeq ($(CONFIG_DRIVERS_FAULT_INJECT_WRAP_MM),y)
+CSRCS += wraps/fault_wrap_mm.c
+endif
+
+ifeq ($(CONFIG_DRIVERS_FAULT_INJECT_WRAP_IRQ),y)
+CSRCS += wraps/fault_wrap_irq.c
+endif
+
 DEPPATH += --dep-path fault
-VPATH   += :fault
+DEPPATH += --dep-path fault/wraps
+VPATH   += :fault:fault/wraps
 CFLAGS  += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)fault
 
 endif

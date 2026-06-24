@@ -53,4 +53,25 @@ config DRIVERS_FAULT_INJECT_STANDBY
 		  1. Place .fi_standby in standby RAM (NOLOAD)
 		  2. Provide __start_fi_standby / __stop_fi_standby symbols
 
+comment "Wrapper-based injection points"
+
+config DRIVERS_FAULT_INJECT_WRAP_MM
+	bool "mm_* wrappers (malloc/free/realloc/calloc/zalloc/memalign)"
+	default n
+	---help---
+		Build the __wrap_mm_* implementations in drivers/fault/
+		wraps/fault_wrap_mm.c.  The board build must arrange for the kernel
+		image to consume fault_wrapsymbol.cmd (via the wrapsymbol tool
+		or GNU ld --wrap=) so the in-image callers are redirected to
+		these wrappers.  Without that integration, the wrappers are
+		dead code at link time.
+
+config DRIVERS_FAULT_INJECT_WRAP_IRQ
+	bool "irq_* wrappers (attach/attach_thread/attach_wqueue/up_*_irq)"
+	default n
+	---help---
+		Build the __wrap_irq_* implementations in drivers/fault/
+		wraps/fault_wrap_irq.c.  Same board-integration requirement as
+		DRIVERS_FAULT_INJECT_WRAP_MM.
+
 endif # DRIVERS_FAULT_INJECT

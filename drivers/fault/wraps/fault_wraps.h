@@ -48,3 +48,20 @@
 #endif
 
 WRAPOPTSTARTS
+
+#ifdef CONFIG_DRIVERS_FAULT_INJECT_WRAP_MM
+UP_WRAPOPT(mm_malloc)
+UP_WRAPOPT(mm_free)
+UP_WRAPOPT(mm_realloc)
+UP_WRAPOPT(mm_calloc)
+UP_WRAPOPT(mm_zalloc)
+UP_WRAPOPT(mm_memalign)
+#endif
+
+#ifdef CONFIG_DRIVERS_FAULT_INJECT_WRAP_IRQ
+UP_WRAPOPT(irq_attach)
+UP_WRAPOPT(irq_attach_thread)
+UP_WRAPOPT(irq_attach_wqueue)
+UP_WRAPOPT(up_enable_irq)
+UP_WRAPOPT(up_disable_irq)
+#endif
