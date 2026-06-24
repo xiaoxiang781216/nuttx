@@ -568,6 +568,23 @@ if(CONFIG_LIB_SYSCALL_WRAPPER)
   )
 endif()
 
+if(CONFIG_DRIVERS_FAULT_INJECT)
+  set(CMAKE_C_COMPILE_OBJECT
+      ${CMAKE_C_COMPILE_OBJECT}
+      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/fault_wrapsymbol.cmd --cflags=\"<DEFINES>\" --force-wrap"
+  )
+
+  set(CMAKE_ASM_COMPILE_OBJECT
+      ${CMAKE_ASM_COMPILE_OBJECT}
+      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/fault_wrapsymbol.cmd --cflags=\"<DEFINES>\" --force-wrap"
+  )
+
+  set(CMAKE_CXX_COMPILE_OBJECT
+      ${CMAKE_CXX_COMPILE_OBJECT}
+      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/fault_wrapsymbol.cmd --cflags=\"<DEFINES>\" --force-wrap"
+  )
+endif()
+
 add_executable(nuttx)
 add_custom_target(nuttx_post)
 if(CONFIG_BUILD_PROTECTED)

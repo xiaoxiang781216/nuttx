@@ -34,6 +34,7 @@
 #include <nuttx/drivers/rpmsgdev.h>
 #include <nuttx/drivers/rpmsgblk.h>
 #include <nuttx/dma-heap.h>
+#include <nuttx/fault_inject.h>
 #include <nuttx/fs/loop.h>
 #include <nuttx/fs/smart.h>
 #include <nuttx/fs/loopmtd.h>
@@ -188,6 +189,10 @@ void drivers_initialize(void)
 
 #if defined(CONFIG_DRIVERS_NOTE)
   note_initialize();    /* Non-standard /dev/note */
+#endif
+
+#if defined(CONFIG_DRIVERS_FAULT_INJECT)
+  fault_inject_init();
 #endif
 
 #if defined(CONFIG_RPMSG)

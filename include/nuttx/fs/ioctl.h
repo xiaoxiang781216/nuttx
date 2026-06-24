@@ -122,6 +122,7 @@
 #define _DMABUFBASE     (0x4c00) /* DMA-Buf modules ioctl commands */
 #define _SENTIOCBASE    (0X4d00) /* Sent modules ioctl commmands */
 #define _FUSEIOCBASE    (0x4e00) /* FUSE modules ioctl commands */
+#define _FAULTBASE      (0x4f00) /* Fault injection framework ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */

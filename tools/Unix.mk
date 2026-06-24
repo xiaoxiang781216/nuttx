@@ -475,6 +475,11 @@ ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
 		$(CPP) $(CPPFLAGS) -I. $(TOPDIR)$(DELIM)syscall$(DELIM)syscall_wraps.h | \
 		sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' > $(TOPDIR)$(DELIM)syscall$(DELIM)$(SYSCALLWRAPS))
 endif
+ifeq ($(CONFIG_DRIVERS_FAULT_INJECT),y)
+	$(Q) $(MAKE) -C $(TOPDIR)$(DELIM)tools -f Makefile.host wrapsymbol
+	$(Q) $(CPP) $(CPPFLAGS) $(TOPDIR)$(DELIM)drivers$(DELIM)fault$(DELIM)wraps$(DELIM)fault_wraps.h | \
+		sed -e '0,/WRAPOPTSTARTS/d' -e '/^#/d' > $(TOPDIR)$(DELIM)drivers$(DELIM)fault$(DELIM)fault_wrapsymbol.cmd
+endif
 
 context: tools/incdir$(HOSTEXEEXT) include/nuttx/config.h include/nuttx/version.h wrapper_symbol .dirlinks $(CONTEXTDIRS_DEPS) | staging
 

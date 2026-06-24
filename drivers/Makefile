@@ -91,6 +91,7 @@ include pci/Make.defs
 include hwtracing/Make.defs
 include aie/Make.defs
 include safety/Make.defs
+include fault/Make.defs
 include trace32/Make.defs
 include tee/Make.defs
 

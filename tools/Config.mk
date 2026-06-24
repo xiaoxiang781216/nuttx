@@ -311,6 +311,7 @@ define COMPILE
 	$(Q) $(CCACHE) $(CC) -c $(CFLAGS) $3 $($(strip $1)_CFLAGS) $1 -o $2
 	$(ECHO_END)
 	$(if $(CONFIG_LIB_SYSCALL_WRAPPER), $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)syscall$(DELIM)wrapsymbol.cmd) --cflags="$(CFLAGS) $($(strip $1)_CFLAGS)"
+	$(if $(CONFIG_DRIVERS_FAULT_INJECT), $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)drivers$(DELIM)fault$(DELIM)fault_wrapsymbol.cmd --cflags="$(CFLAGS) $($(strip $1)_CFLAGS)" --force-wrap)
 endef
 
 # COMPILEXX - Default macro to compile one C++ file
@@ -331,6 +332,7 @@ define COMPILEXX
 	$(Q) $(CCACHE) $(CXX) -c $(CXXFLAGS) $3 $($(strip $1)_CXXFLAGS) $1 -o $2
 	$(ECHO_END)
 	$(if $(CONFIG_LIB_SYSCALL_WRAPPER), $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)syscall$(DELIM)wrapsymbol.cmd) --cflags="$(CXXFLAGS) $($(strip $1)_CXXFLAGS)"
+	$(if $(CONFIG_DRIVERS_FAULT_INJECT), $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)drivers$(DELIM)fault$(DELIM)fault_wrapsymbol.cmd --cflags="$(CXXFLAGS) $($(strip $1)_CXXFLAGS)" --force-wrap)
 endef
 
 # COMPILERUST - Default macro to compile one Rust file
@@ -433,6 +435,7 @@ define ASSEMBLE
 	$(ECHO_BEGIN)"AS: $1 "
 	$(Q) $(CCACHE) $(CC) -c $(AFLAGS) $1 $($(strip $1)_AFLAGS) -o $2
 	$(if $(CONFIG_LIB_SYSCALL_WRAPPER),$(Q) $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)syscall$(DELIM)wrapsymbol.cmd) --cflags="$(CXXFLAGS) $($(strip $1)_CXXFLAGS)"
+	$(if $(CONFIG_DRIVERS_FAULT_INJECT),$(Q) $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)drivers$(DELIM)fault$(DELIM)fault_wrapsymbol.cmd --cflags="$(CXXFLAGS) $($(strip $1)_CXXFLAGS)" --force-wrap)
 	$(ECHO_END)
 endef
 

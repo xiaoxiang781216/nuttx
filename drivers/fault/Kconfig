@@ -1,0 +1,56 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+menuconfig DRIVERS_FAULT_INJECT
+	bool "Fault Injection Framework"
+	default n
+	---help---
+		Generic fault-injection framework for NuttX.  Provides per-site
+		policy + executor split, a wrapper macro family for zero-touch
+		integration, an embedded macro family for register / exception
+		injection, and optional audit records routed through sched_note.
+
+		The framework core does not depend on sched_note; only the
+		optional audit stream (DRIVERS_FAULT_INJECT_AUDIT) does.
+
+		Disabled by default.  When this option is off no fault-injection
+		symbol is emitted into the final image (`nm out/nuttx |
+		grep -i fault_inject` returns no matches).
+
+if DRIVERS_FAULT_INJECT
+
+config DRIVERS_FAULT_INJECT_AUDIT
+	bool "Emit audit records via sched_note"
+	depends on SCHED_INSTRUMENTATION_DUMP && DRIVERS_NOTE
+	default y
+	---help---
+		Append a structured fault_audit_record_s into the sched_note
+		stream (under NXTAG_SAFETY) every time an injection fires.
+
+		Only available when the platform provides a sched_note dump
+		backend.  When unavailable this option is hidden and the
+		framework runs without an audit stream.
+
+config DRIVERS_FAULT_INJECT_VERBOSE
+	bool "Verbose logging"
+	default n
+	---help---
+		Emit verbose `finfo` logs from the framework hot path.  Useful
+		during framework bring-up; off in production.
+
+comment "Standby RAM support"
+
+config DRIVERS_FAULT_INJECT_STANDBY
+	bool "Standby RAM fault points (persist across warm reset)"
+	default n
+	---help---
+		Place FAULT_INJECT_*_STANDBY points in a dedicated linker
+		section (.fi_standby) that survives warm reset.
+
+		The board linker script must:
+		  1. Place .fi_standby in standby RAM (NOLOAD)
+		  2. Provide __start_fi_standby / __stop_fi_standby symbols
+
+endif # DRIVERS_FAULT_INJECT
