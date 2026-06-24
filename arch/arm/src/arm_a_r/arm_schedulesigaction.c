@@ -91,6 +91,18 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 
   tcb->xcp.saved_regs      = tcb->xcp.regs;
 
+  /* Verify that duplicating the context frame will not underflow the
+   * task stack.  The new frame is placed XCPTCONTEXT_SIZE below the
+   * current one; if it drops below the stack allocation, the memcpy
+   * below would write outside the stack.
+   */
+
+  if ((uint32_t)tcb->xcp.regs - XCPTCONTEXT_SIZE <
+      (uint32_t)tcb->stack_alloc_ptr)
+    {
+      PANIC();
+    }
+
   /* Duplicate the register context.  These will be
    * restored by the signal trampoline after the signal has been
    * delivered.
