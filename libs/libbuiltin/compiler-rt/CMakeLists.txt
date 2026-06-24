@@ -86,7 +86,7 @@ if(CONFIG_BUILTIN_COMPILER_RT)
 
   file(GLOB RT_BUILTINS_SRCS ${BUILTINS_DIR}/*.c)
   file(GLOB RT_BUILTINS_ARCH_SRCS ${BUILTINS_DIR}/${ARCH}/*.S
-       ${BUILTINS_DIR}/${ARCH}/.*c)
+       ${BUILTINS_DIR}/${ARCH}/*.c)
 
   foreach(src ${RT_BUILTINS_ARCH_SRCS})
     get_filename_component(src_base ${src} NAME_WE)
