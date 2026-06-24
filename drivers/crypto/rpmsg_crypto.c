@@ -132,7 +132,17 @@ rpmsg_crypto_get_tx_payload_buffer(FAR struct rpmsg_crypto_s *priv,
   nxsem_get_value(&priv->wait, &sval);
   if (sval <= 0)
     {
-      rpmsg_wait(&priv->ept, &priv->wait);
+#if CONFIG_CRYPTO_RPMSG_CONNECT_TIMEOUT_MS < 0
+      if (rpmsg_wait(&priv->ept, &priv->wait) < 0)
+#else
+      if (rpmsg_tickwait(&priv->ept, &priv->wait,
+                         MSEC2TICK(
+                           CONFIG_CRYPTO_RPMSG_CONNECT_TIMEOUT_MS)) < 0)
+#endif
+        {
+          return NULL;
+        }
+
       rpmsg_post(&priv->ept, &priv->wait);
     }
 

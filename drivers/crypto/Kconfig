@@ -99,6 +99,15 @@ config CRYPTO_RPMSG_SESSIONS_NUM
 		concurrent crypto sessions plus in-flight async operations. When
 		all slots are busy, new session requests fail with -ENOMEM.
 
+config CRYPTO_RPMSG_CONNECT_TIMEOUT_MS
+	int "Timeout (ms) waiting for rpmsg crypto server connection"
+	default -1
+	depends on CRYPTO_RPMSG
+	---help---
+		Maximum time in milliseconds to wait for the remote rpmsg crypto
+		server endpoint to bind before returning -ENOTCONN. A value of -1
+		means wait indefinitely (original behaviour).
+
 config CRYPTO_RPMSG_RSA_KEYBUF_SIZE
 	int "RSA key buffer size for rpmsg crypto"
 	default 80
