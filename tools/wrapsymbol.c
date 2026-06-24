@@ -57,7 +57,8 @@ typedef struct
  * Private Data
  ****************************************************************************/
 
-static int g_kernel_mode;
+static int g_undef_to_real;
+static int g_force_wrap;
 static int g_verbose;
 const char *g_input_filename;
 const char *g_output_filename;
@@ -110,6 +111,10 @@ static void print_usage(const char *progname)
                   "__real_<symbol>\n");
   fprintf(stderr, "                       - Undefined symbols: renamed to "
                   "__wrap_<symbol>\n");
+  fprintf(stderr, "  --force-wrap:         Force undefined symbols to keep "
+                  "the __wrap_ prefix,\n");
+  fprintf(stderr, "                        overriding the kernel-mode "
+                  "__real_ default\n");
   fprintf(stderr, "  -o <output-elf-file>: Output to a new file "
                   "(optional)\n");
   fprintf(stderr, "  -v, --verbose:        Enable verbose output\n");
@@ -272,15 +277,26 @@ static int process_single_option(const char *opt,
     {
       g_verbose = 1;
     }
+  else if (strcmp(opt, "--force-wrap") == 0)
+    {
+      /* Force undefined symbols to keep the __wrap_ prefix.  This always
+       * wins over the __KERNEL__ auto-detection regardless of option order.
+       */
+
+      g_force_wrap = 1;
+      g_undef_to_real = 0;
+    }
   else if (strncmp(opt, "--cflags=", sizeof("--cflags=") - 1) == 0)
     {
       opt += sizeof("--cflags=") - 1;
 
-      /* If __KERNEL__ in cflags, set kernel mode */
+      /* If __KERNEL__ in cflags, undefined symbols default to __real_,
+       * unless --force-wrap has been explicitly requested.
+       */
 
-      if (strstr(opt, "__KERNEL__") != NULL)
+      if (!g_force_wrap && strstr(opt, "__KERNEL__") != NULL)
         {
-          g_kernel_mode = 1;
+          g_undef_to_real = 1;
         }
     }
   else
@@ -617,9 +633,11 @@ static size_t modify_symbols(Elf_Data *symtab_data,
 
       if (sym.st_shndx == SHN_UNDEF)
         {
-          /* Undefined symbol -> __wrap_xxxx */
+          /* Undefined symbol -> __wrap_xxxx by default, or __real_xxxx
+           * when g_undef_to_real is set (kernel mode without --force-wrap)
+           */
 
-          if (g_kernel_mode)
+          if (g_undef_to_real)
             {
               snprintf(new_name, sizeof(new_name), "__real_%s", name);
             }
