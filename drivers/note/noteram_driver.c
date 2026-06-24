@@ -175,6 +175,7 @@ static int noteram_dump_one(FAR const struct note_max_s *p,
 #endif
 static uint32_t noteram_unread_length(FAR struct noteram_driver_s *drv,
                                       uint32_t read);
+static uint32_t noteram_length(FAR struct noteram_driver_s *drv);
 
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
 static void noteram_timeout_handler(wdparm_t arg);
@@ -311,7 +312,7 @@ static void noteram_driver_initialize(void)
 static inline_function
 void noteram_timeout_reset(FAR struct noteram_driver_s *drv)
 {
-  if (dq_empty(&drv->poll_list))
+  if (dq_empty(&drv->poll_list) || noteram_length(drv) == 0)
     {
       wd_cancel(&drv->wdog);
     }
