@@ -47,6 +47,14 @@
 	.text
 	.syntax	unified
 
+	/* Enable the Security and Virtualization Extensions so the assembler
+	 * accepts the SMC/HVC instructions on ARMv7-A cores (e.g. Cortex-A5)
+	 * where these extensions are not enabled by the default -mcpu flags.
+	 */
+
+	.arch_extension sec
+	.arch_extension virt
+
 	.global	arm_smccc_smc
 	.type	arm_smccc_smc, function
 
