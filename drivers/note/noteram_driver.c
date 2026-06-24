@@ -1209,7 +1209,6 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
             {
               rspin_unlock_irqrestore_notrace(&drv->lock, flags);
               poll_notify(&ctx->pfd, 1, POLLIN);
-              noteram_timeout_reset(drv);
               flags = rspin_lock_irqsave_notrace(&drv->lock);
             }
         }
@@ -1218,6 +1217,8 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
     }
 
   rspin_unlock_irqrestore_notrace(&drv->lock, flags);
+
+  noteram_timeout_reset(drv);
 
 #ifdef CONFIG_DRIVERS_NOTE_STATS
   if (dropped > 0)
