@@ -475,6 +475,15 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
                     {
                       goto errout_with_newinode;
                     }
+
+#ifdef CONFIG_FS_PATHCACHE
+                  if (INODE_IS_PATHCACHE(oldinode))
+                    {
+                      /* Remove cached entry for the directory just removed */
+
+                      pathcache_remove(newpath);
+                    }
+#endif
                 }
             }
           else
