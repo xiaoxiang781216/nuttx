@@ -802,6 +802,17 @@ static const char *g_white_files[] =
   "scalar_type_generated.h",
   "program_generated.h",
 
+  /* Skip Mixed case - AUTOSAR MCAL PWM adaptation layer.
+   * Uses AUTOSAR-mandated PascalCase identifiers (Pwm_*, Det_*)
+   * defined in <Pwm.h> per AUTOSAR_SWS_PWMDriver.
+   * Ref:
+   * drivers/timers/pwm_mcal.c
+   * include/nuttx/timers/pwm_mcal.h
+   */
+
+  "drivers/timers/pwm_mcal.c",
+  "timers/pwm_mcal.h",
+
   NULL
 };
 
