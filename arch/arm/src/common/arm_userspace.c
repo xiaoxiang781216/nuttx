@@ -91,7 +91,7 @@ const struct userspace_s userspace locate_data(".userspace") =
   .us_bssstart      = (uintptr_t)_sbss,
   .us_bssend        = (uintptr_t)_ebss,
 
-#ifdef CONFIG_UNWINDER_ARM
+#ifdef CONFIG_ARM_UNWINDER_EXIDX
   .us_unwindstart   = (uintptr_t)__exidx_start,
   .us_unwindend     = (uintptr_t)__exidx_end,
 #endif

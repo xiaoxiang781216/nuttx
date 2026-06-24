@@ -78,7 +78,7 @@
 #endif
 	.type	arm_dispatch_syscall, function
 arm_dispatch_syscall:
-#ifdef CONFIG_UNWINDER_ARM
+#ifdef CONFIG_ARM_UNWINDER_EXIDX
 	.fnstart
 #endif
 	.cfi_sections	.debug_frame
@@ -95,7 +95,7 @@ arm_dispatch_syscall:
 	.cfi_offset lr, -20
 	str	ip, [sp, #16]
 	.cfi_offset pc, -16
-#ifdef CONFIG_UNWINDER_ARM
+#ifdef CONFIG_ARM_UNWINDER_EXIDX
 	.save {r4, r5, r6, lr}
 	.pad #32
 #endif
@@ -112,7 +112,7 @@ arm_dispatch_syscall:
 	mov	r0, SYS_syscall_return
 	svc	SYS_syscall
 	.cfi_endproc
-#ifdef CONFIG_UNWINDER_ARM
+#ifdef CONFIG_ARM_UNWINDER_EXIDX
 	.fnend
 #endif
 	.size	arm_dispatch_syscall, .-arm_dispatch_syscall

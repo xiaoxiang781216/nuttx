@@ -183,7 +183,7 @@ if(CONFIG_PROFILE_ALL)
   add_compile_options(-pg)
 endif()
 
-if(CONFIG_UNWINDER_ARM)
+if(CONFIG_ARM_UNWINDER_EXIDX)
   add_compile_options(-funwind-tables -fasynchronous-unwind-tables)
 endif()
 

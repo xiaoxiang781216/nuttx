@@ -72,15 +72,15 @@ ifeq ($(CONFIG_ARM_SEMIHOSTING_HOSTFS),y)
   CMN_CSRCS += arm_hostfs.c
 endif
 
-ifeq ($(CONFIG_UNWINDER_FRAME_POINTER),y)
+ifeq ($(CONFIG_ARM_UNWINDER_FRAME_POINTER),y)
   CMN_CSRCS += arm_backtrace_fp.c
 endif
 
-ifeq ($(CONFIG_UNWINDER_STACK_POINTER),y)
+ifeq ($(CONFIG_ARM_UNWINDER_STACK_POINTER),y)
   CMN_CSRCS += arm_backtrace_sp.c
 endif
 
-ifeq ($(CONFIG_UNWINDER_ARM),y)
+ifeq ($(CONFIG_ARM_UNWINDER_EXIDX),y)
   CMN_CSRCS += arm_backtrace_unwind.c
 endif
 

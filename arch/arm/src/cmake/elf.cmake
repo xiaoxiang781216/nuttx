@@ -24,7 +24,7 @@ nuttx_elf_compile_options(-fvisibility=hidden)
 
 nuttx_mod_compile_options(-fvisibility=hidden)
 
-nuttx_elf_compile_options_ifdef(CONFIG_UNWINDER_ARM -fno-unwind-tables
+nuttx_elf_compile_options_ifdef(CONFIG_ARM_UNWINDER_EXIDX -fno-unwind-tables
                                 -fno-asynchronous-unwind-tables)
 
 nuttx_elf_compile_options_ifdef(CONFIG_PIC --fixed-r10 -mpic-register=r10)

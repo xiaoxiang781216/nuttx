@@ -100,15 +100,15 @@ if(CONFIG_ARM_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS arm_hostfs.c)
 endif()
 
-if(CONFIG_UNWINDER_FRAME_POINTER)
+if(CONFIG_ARM_UNWINDER_FRAME_POINTER)
   list(APPEND SRCS arm_backtrace_fp.c)
 endif()
 
-if(CONFIG_UNWINDER_STACK_POINTER)
+if(CONFIG_ARM_UNWINDER_STACK_POINTER)
   list(APPEND SRCS arm_backtrace_sp.c)
 endif()
 
-if(CONFIG_UNWINDER_ARM)
+if(CONFIG_ARM_UNWINDER_EXIDX)
   list(APPEND SRCS arm_backtrace_unwind.c)
 endif()
 

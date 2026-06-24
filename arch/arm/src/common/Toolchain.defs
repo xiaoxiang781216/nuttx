@@ -148,7 +148,7 @@ ifeq ($(CONFIG_ARM_GCC_SECTION_PLUGIN),y)
   ARCHOPTIMIZATION += -fplugin=$(GCCPLUGINDIR)/gccsection$(GCCMAJORVER).so
 endif
 
-ifeq ($(CONFIG_UNWINDER_ARM),y)
+ifeq ($(CONFIG_ARM_UNWINDER_EXIDX),y)
   ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
     ARCHOPTIMIZATION += -gtws
   else
@@ -627,7 +627,7 @@ LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/elf/gnu-elf.ld)
 CELFFLAGS = $(CFLAGS) -fvisibility=hidden # --target1-abs
 CXXELFFLAGS = $(CXXFLAGS)-fvisibility=hidden
 
-ifeq ($(CONFIG_UNWINDER_ARM),y)
+ifeq ($(CONFIG_ARM_UNWINDER_EXIDX),y)
   CELFFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables
   CXXELFFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables
 endif
