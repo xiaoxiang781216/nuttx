@@ -869,9 +869,15 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
   if (conn->sendsize == 0)
     {
       spin_unlock_irqrestore(&conn->sendlock, flags);
+
       if (_SS_ISNONBLOCK(conn->sconn.s_flags))
         {
           return -EINPROGRESS;
+        }
+
+      if (!conn->ept.rdev)
+        {
+          return -ECONNREFUSED;
         }
 
       ret = net_sem_timedwait(&conn->sendsem,
