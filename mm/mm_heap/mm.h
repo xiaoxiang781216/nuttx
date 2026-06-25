@@ -354,41 +354,8 @@ static inline_function int mm_size2ndx(size_t size)
   return flsl(size) - 1;
 }
 
-static inline_function void mm_addfreechunk(FAR struct mm_heap_s *heap,
-                                            FAR struct mm_freenode_s *node)
-{
-  FAR struct mm_freenode_s *next;
-  FAR struct mm_freenode_s *prev;
-  size_t nodesize = MM_SIZEOF_NODE(node);
-  int ndx;
-
-  DEBUGASSERT(nodesize >= MM_MIN_CHUNK);
-  DEBUGASSERT(MM_NODE_IS_FREE(node));
-
-  /* Convert the size to a nodelist index */
-
-  ndx = mm_size2ndx(nodesize);
-
-  /* Now put the new node into the next */
-
-  for (prev = &heap->mm_nodelist[ndx],
-       next = heap->mm_nodelist[ndx].flink;
-       next && next->size && MM_SIZEOF_NODE(next) < nodesize;
-       prev = next, next = next->flink);
-
-  /* Does it go in mid next or at the end? */
-
-  prev->flink = node;
-  node->blink = prev;
-  node->flink = next;
-
-  if (next)
-    {
-      /* The new node goes between prev and next */
-
-      next->blink = node;
-    }
-}
+void mm_addfreechunk(FAR struct mm_heap_s *heap,
+                     FAR struct mm_freenode_s *node);
 
 static inline_function
 FAR struct mm_delayhead_s *get_delayhead(FAR struct mm_heap_s *heap)

@@ -39,7 +39,8 @@ if(CONFIG_MM_DEFAULT_MANAGER)
       mm_realloc.c
       mm_zalloc.c
       mm_heapmember.c
-      mm_memdump.c)
+      mm_memdump.c
+      mm_addfreechunk.c)
 
   if(CONFIG_DEBUG_MM)
     list(APPEND SRCS mm_checkcorruption.c)
