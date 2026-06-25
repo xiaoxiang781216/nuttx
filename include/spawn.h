@@ -51,7 +51,9 @@
 #define POSIX_SPAWN_RESETIDS      (1u << 0)  /* 1: Reset effective user ID */
 #define POSIX_SPAWN_SETPGROUP     (1u << 1)  /* 1: Set process group */
 #define POSIX_SPAWN_SETSCHEDPARAM (1u << 2)  /* 1: Set task's priority */
-#define POSIX_SPAWN_SETSCHEDULER  (1u << 3)  /* 1: Set task's scheduler policy */
+#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
+#  define POSIX_SPAWN_SETSCHEDULER  (1u << 3)  /* 1: Set task's scheduler policy */
+#endif
 #define POSIX_SPAWN_SETSIGDEF     (1u << 4)  /* 1: Set default signal actions */
 #define POSIX_SPAWN_SETSIGMASK    (1u << 5)  /* 1: Set sigmask */
 #define POSIX_SPAWN_SETSID        (1u << 7)  /* 1: Create the new session(glibc specific) */

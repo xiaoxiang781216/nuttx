@@ -191,7 +191,9 @@ int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr)
            * then we will call nxsched_set_scheduler() below.
            */
 
+#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
           if ((attr->flags & POSIX_SPAWN_SETSCHEDULER) == 0u)
+#endif
             {
               sinfo("Setting priority=%d for pid=%d\n",
                     param.sched_priority, pid);
@@ -201,6 +203,7 @@ int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr)
         }
     }
 
+#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
   /* If we are only changing the scheduling policy, then reset
    * the priority to the default value (the same as this thread) in
    * preparation for the nxsched_set_scheduler() call below.
@@ -232,6 +235,7 @@ int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr)
 #endif
       nxsched_set_scheduler(pid, attr->policy, &param);
     }
+#endif /* CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC) */
 
   return ret;
 }

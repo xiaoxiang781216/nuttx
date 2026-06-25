@@ -86,10 +86,12 @@ void posix_spawnattr_dump(posix_spawnattr_t *attr)
           _err("            POSIX_SPAWN_SETSCHEDPARAM\n");
         }
 
+#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
       if ((attr->flags & POSIX_SPAWN_SETSCHEDULER) != 0)
         {
           _err("            POSIX_SPAWN_SETSCHEDULER\n");
         }
+#endif
 
       if ((attr->flags & POSIX_SPAWN_SETSIGDEF) != 0)
         {
