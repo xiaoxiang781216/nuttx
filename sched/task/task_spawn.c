@@ -115,7 +115,7 @@ static int nxtask_spawn_create(FAR const char *name, main_t entry,
 
           /* Set the attributes */
 
-          ret = spawn_execattrs(pid, attr);
+          ret = spawn_execattrs(tcb, attr);
           if (ret < 0)
             {
               nxtask_uninit(tcb);

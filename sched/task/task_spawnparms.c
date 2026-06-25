@@ -37,6 +37,7 @@
 #include <nuttx/spawn.h>
 #include <nuttx/fs/fs.h>
 
+#include "sched/sched.h"
 #include "task/spawn.h"
 #include "task/task.h"
 
@@ -128,7 +129,7 @@ static inline int nxspawn_open(FAR struct tcb_s *tcb,
  *
  * Input Parameters:
  *
- *   pid - The pid of the new task.
+ *   tcb - The TCB of the new task.
  *   attr - The attributes to use
  *
  * Returned Value:
@@ -143,9 +144,10 @@ static inline int nxspawn_open(FAR struct tcb_s *tcb,
  *
  ****************************************************************************/
 
-int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr)
+int spawn_execattrs(FAR struct tcb_s *tcb, FAR const posix_spawnattr_t *attr)
 {
   struct sched_param param;
+  pid_t pid = tcb->pid;
   int ret = OK;
 
   DEBUGASSERT(attr);
@@ -159,12 +161,7 @@ int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr)
 
   if ((attr->flags & POSIX_SPAWN_SETSIGMASK) != 0u)
     {
-      FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
-      if (tcb)
-        {
-          tcb->sigprocmask = attr->sigmask;
-          nxsched_put_tcb(tcb);
-        }
+      tcb->sigprocmask = attr->sigmask;
     }
 
   /* If we are only setting the priority, then call sched_setparm()
@@ -183,6 +180,7 @@ int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr)
 
       if (ret == OK)
         {
+#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
           /* Get the priority from the attributes */
 
           param.sched_priority = attr->priority;
@@ -191,14 +189,16 @@ int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr)
            * then we will call nxsched_set_scheduler() below.
            */
 
-#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
           if ((attr->flags & POSIX_SPAWN_SETSCHEDULER) == 0u)
 #endif
             {
               sinfo("Setting priority=%d for pid=%d\n",
                     param.sched_priority, pid);
-
+#ifdef CONFIG_SCHED_SPORADIC
               ret = nxsched_set_param(pid, &param);
+#else
+              ret = nxsched_set_priority(tcb, attr->priority);
+#endif
             }
         }
     }

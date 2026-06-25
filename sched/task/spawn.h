@@ -43,7 +43,7 @@
  *
  * Input Parameters:
  *
- *   pid - The pid of the new task.
+ *   tcb - The TCB of the new task.
  *   attr - The attributes to use
  *
  * Returned Value:
@@ -58,6 +58,7 @@
  *
  ****************************************************************************/
 
-int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr);
+int spawn_execattrs(FAR struct tcb_s *tcb,
+                    FAR const posix_spawnattr_t *attr);
 
 #endif /* __SCHED_TASK_SPAWN_H */

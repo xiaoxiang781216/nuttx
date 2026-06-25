@@ -390,7 +390,7 @@ int exec_module(FAR struct binary_s *binp,
 
   if (attr)
     {
-      ret = spawn_execattrs(pid, &tmp);
+      ret = spawn_execattrs(tcb, &tmp);
       if (ret < 0)
         {
           goto errout_with_tcbinit;
