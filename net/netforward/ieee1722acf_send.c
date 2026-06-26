@@ -497,6 +497,8 @@ ieee1722acf_stream_flush(FAR struct ieee1722acf_stream_s *stream,
   ret = ieee1722acf_dev_send(stream, fwddev);
   if (ret < 0)
     {
+      iob_free_chain(stream->iob);
+      stream->iob = NULL;
       nwarn("WARNING: stream send failed: %d\n", ret);
     }
 
@@ -754,12 +756,6 @@ int ieee1722acf_send(FAR struct cangw_rule_s *fwdrule,
               fwdrule->dest_dev->d_llhdrlen > CONFIG_NET_IEEE1722_PKTSIZE)
             {
               ieee1722acf_stream_flush(stream, fwdrule->dest_dev);
-              if (stream->iob != NULL)
-                {
-                  nerr("ERROR: Stream packet flush failed!\n");
-                  iob_free_chain(stream->iob);
-                  stream->iob = NULL;
-                }
             }
 
           /* Prepare Stream packet */
