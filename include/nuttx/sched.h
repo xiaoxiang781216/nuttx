@@ -351,7 +351,8 @@ enum tstate_e
 #endif
   TSTATE_TASK_RUNNING,        /* READY_TO_RUN - And running */
 
-  TSTATE_TASK_INACTIVE,       /* BLOCKED      - Initialized but not yet activated */
+  TSTATE_TASK_INACTIVE,       /* LIMBO        - Initialized but not yet activated,
+                               * not linked into any task list */
   TSTATE_WAIT_SEM,            /* BLOCKED      - Waiting for a semaphore */
   TSTATE_WAIT_SIG,            /* BLOCKED      - Waiting for a signal */
 #if !defined(CONFIG_DISABLE_MQUEUE) || !defined(CONFIG_DISABLE_MQUEUE_SYSV)
@@ -381,7 +382,7 @@ typedef void (*pthread_trampoline_t)(pthread_startroutine_t, void *);
 #define LAST_READY_TO_RUN_STATE    TSTATE_TASK_RUNNING
 #define FIRST_ASSIGNED_STATE       TSTATE_TASK_ASSIGNED
 #define LAST_ASSIGNED_STATE        TSTATE_TASK_RUNNING
-#define FIRST_BLOCKED_STATE        TSTATE_TASK_INACTIVE
+#define FIRST_BLOCKED_STATE        TSTATE_WAIT_SEM
 #define LAST_BLOCKED_STATE         (tstate_t)(NUM_TASK_STATES - (tstate_t)1)
 
 /* The following is the form of a thread start-up function */

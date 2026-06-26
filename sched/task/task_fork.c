@@ -390,10 +390,6 @@ pid_t nxtask_start_fork(FAR struct tcb_s *child)
 
 void nxtask_abort_fork(FAR struct tcb_s *child, int errcode)
 {
-  /* The TCB was added to the active task list by nxtask_setup_scheduler() */
-
-  dq_rem((FAR dq_entry_t *)child, list_inactivetasks());
-
   /* Release the TCB */
 
   nxsched_release_tcb(child,

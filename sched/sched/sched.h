@@ -64,7 +64,6 @@
 #define list_waitingforsignal()  (&g_waitingforsignal)
 #define list_waitingforfill()    (&g_waitingforfill)
 #define list_stoppedtasks()      (&g_stoppedtasks)
-#define list_inactivetasks()     (&g_inactivetasks)
 
 /* These are macros to access the current CPU and the current task on a CPU.
  * These macros are intended to support a future SMP implementation.
@@ -205,13 +204,6 @@ DECLARE_PER_CPU_BMP(dq_queue_t, g_waitingforfill);
 DECLARE_PER_CPU_BMP(dq_queue_t, g_stoppedtasks);
 #define g_stoppedtasks this_cpu_var_bmp(g_stoppedtasks)
 #endif
-
-/* This the list of all tasks that have been initialized, but not yet
- * activated. NOTE:  This is the only list that is not prioritized.
- */
-
-DECLARE_PER_CPU_BMP(dq_queue_t, g_inactivetasks);
-#define g_inactivetasks this_cpu_var_bmp(g_inactivetasks)
 
 /* This is the value of the last process ID assigned to a task */
 

@@ -417,7 +417,6 @@ static int nxthread_setup_scheduler(FAR struct tcb_s *tcb, int priority,
                                     int ttype)
 {
   FAR struct tcb_s *rtcb = this_task();
-  irqstate_t flags;
   int ret;
 
   /* Assign a unique task ID to the task. */
@@ -499,12 +498,7 @@ static int nxthread_setup_scheduler(FAR struct tcb_s *tcb, int priority,
 
       up_initial_state(tcb);
 
-      /* Add the task to the inactive task list */
-
-      flags = enter_critical_section();
-      dq_addfirst((FAR dq_entry_t *)tcb, list_inactivetasks());
       tcb->task_state = TSTATE_TASK_INACTIVE;
-      leave_critical_section(flags);
     }
 
   return ret;

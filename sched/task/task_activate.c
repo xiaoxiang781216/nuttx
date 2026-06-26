@@ -90,10 +90,6 @@ void nxtask_activate(FAR struct tcb_s *tcb)
   perf_event_task_init(tcb);
 #endif
 
-  /* Remove the task from waitting list */
-
-  nxsched_remove_blocked(tcb);
-
   sinfo("%s pid=%d,TCB=%p\n", get_task_name(tcb),
         tcb->pid, tcb);
 

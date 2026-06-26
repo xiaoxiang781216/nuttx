@@ -178,14 +178,6 @@ DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_stoppedtasks);
 #define g_stoppedtasks this_cpu_var_bmp(g_stoppedtasks)
 #endif
 
-/* This list of all tasks that have been initialized, but not yet
- * activated. NOTE:  This is the only list that is not prioritized.
- */
-
-#undef g_inactivetasks
-DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_inactivetasks);
-#define g_inactivetasks this_cpu_var_bmp(g_inactivetasks)
-
 /* This is the value of the last process ID assigned to a task */
 
 #undef g_lastpid
@@ -289,10 +281,9 @@ static void tasklist_table_initialize(void)
                                     TLIST_ATTR_RUNNABLE;
 #endif
 
-  /* TSTATE_TASK_INACTIVE */
-
-  tlist[TSTATE_TASK_INACTIVE].list = list_inactivetasks();
-  tlist[TSTATE_TASK_INACTIVE].attr = 0;
+  /* TSTATE_TASK_INACTIVE is a limbo state: the task is not linked into
+   * any task list, so there is no backing list for this state.
+   */
 
   /* TSTATE_WAIT_SEM */
 
