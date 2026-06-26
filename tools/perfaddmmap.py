@@ -26,8 +26,6 @@ import os
 
 import elftools.elf.elffile as elffile
 
-PERF_ELF_FILENAME_MAX_LEN = 64
-
 
 class Descriptor(object):
     """Descriptor of a structure in the perf.data"""
@@ -36,7 +34,6 @@ class Descriptor(object):
         "u16": ctypes.c_uint16,
         "u32": ctypes.c_uint32,
         "u64": ctypes.c_uint64,
-        "char_p": ctypes.c_char * PERF_ELF_FILENAME_MAX_LEN,
     }
 
     def __init__(self, fields):
@@ -103,7 +100,6 @@ PERF_MMAP_EVENT_BODY_DESC = Descriptor(
         ("start", "u64"),
         ("len", "u64"),
         ("pgoff", "u64"),
-        ("file", "char_p"),
     ]
 )
 
@@ -191,14 +187,16 @@ class TraceReader(object):
         return Descriptor(fields)
 
 
-def checkElfLength(filename):
-    if len(filename) > PERF_ELF_FILENAME_MAX_LEN:
-        raise argparse.ArgumentTypeError(f"{filename} is too long")
-    return filename
+def default_output(trace):
+    """Derive a default output path that keeps the input file intact."""
+    root, ext = os.path.splitext(trace)
+    return root + "-mmap" + (ext if ext else ".data")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Add the mmap info for perf.data file")
+    parser = argparse.ArgumentParser(
+        description="Add the mmap info for perf.data file (keeps the input file)"
+    )
     parser.add_argument(
         "-f",
         "--trace",
@@ -210,11 +208,23 @@ if __name__ == "__main__":
         "--elffile",
         required=True,
         action="append",
-        type=checkElfLength,
         help="ELF file name list",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="output perf trace file name "
+        "[default: <trace>-mmap.<ext>, input is preserved]",
     )
 
     options = parser.parse_args()
+
+    if options.output is None:
+        options.output = default_output(options.trace)
+
+    if os.path.abspath(options.output) == os.path.abspath(options.trace):
+        parser.error("output file must be different from the input trace file")
 
     pids = []
 
@@ -224,7 +234,13 @@ if __name__ == "__main__":
         if not header:
             break
         if header.type == PERF_RECORD_MMAP:
-            print("perf.data have exist mmap info")
+            print("perf.data already has mmap info, copying as-is")
+            with open(options.output, "wb") as file_copy:
+                file_copy.write(trace_reader.trace[:])
+            trace_reader.Dispose()
+            print("\nperf.data written to: %s" % options.output)
+            print("Run the following command to view the report:")
+            print("  perf report -i %s --stdio" % options.output)
             exit(0)
         elif header.type == PERF_RECORD_SAMPLE:
             sample = trace_reader.ReadSample(header, offset)
@@ -232,8 +248,7 @@ if __name__ == "__main__":
                 pids.append(sample.pid)
             del sample
 
-    tempfile = "tmp.perf.data"
-    with open(tempfile, "wb+") as file_write:
+    with open(options.output, "wb+") as file_write:
         mmap_len = 0
         file_write.write(trace_reader.trace[: trace_reader.trace_header.data_offset])
         file_write.seek(trace_reader.trace_header.data_offset)
@@ -257,10 +272,20 @@ if __name__ == "__main__":
                                 mmap_info.start = segment.header["p_vaddr"]
                                 mmap_info.len = segment.header["p_filesz"]
                                 mmap_info.pgoff = segment.header["p_offset"]
-                                mmap_info.file = elf.encode()
-                                header.size = ctypes.sizeof(
-                                    PERF_EVENT_HEADER_DESC.ctype
-                                ) + ctypes.sizeof(PERF_MMAP_EVENT_BODY_DESC.ctype)
+
+                                # The filename is variable-length: NUL
+                                # terminated and padded so the whole record
+                                # stays 8-byte aligned, matching the perf
+                                # PERF_RECORD_MMAP layout.  This removes the
+                                # old fixed 64-byte cap on the ELF path.
+                                fname = elf.encode() + b"\0"
+                                fname += b"\0" * ((-len(fname)) % 8)
+
+                                header.size = (
+                                    ctypes.sizeof(PERF_EVENT_HEADER_DESC.ctype)
+                                    + ctypes.sizeof(PERF_MMAP_EVENT_BODY_DESC.ctype)
+                                    + len(fname)
+                                )
                                 mmap_len += header.size
                                 file_write.write(
                                     ctypes.string_at(
@@ -273,6 +298,7 @@ if __name__ == "__main__":
                                         ctypes.sizeof(mmap_info),
                                     )
                                 )
+                                file_write.write(fname)
                         elf_file.close()
                 except FileNotFoundError:
                     print(elf + " FileNotFoundError")
@@ -288,5 +314,11 @@ if __name__ == "__main__":
 
     file_write.close()
     trace_reader.Dispose()
-    os.remove(options.trace)
-    os.rename(tempfile, options.trace)
+
+    # The input trace file is left untouched; results go to options.output.
+    print("\nInput perf.data preserved: %s" % options.trace)
+    print("Converted perf.data written to: %s" % options.output)
+    print("Run the following command to view the report:")
+    print("  perf report -i %s --stdio" % options.output)
+    print("Or inspect individual samples with:")
+    print("  perf script -i %s" % options.output)
