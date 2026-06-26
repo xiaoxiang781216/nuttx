@@ -141,7 +141,7 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
 
   while (ring_space(snap->ring) < notelen)
     {
-      if (ring_spsc_dequeue(snap->ring, &skip, 1) == 0)
+      if (ring_mpmc_dequeue(snap->ring, &skip, 1) == 0)
         {
           break;
         }
@@ -149,7 +149,7 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
       skipped += skip;
       if (skip > 1)
         {
-          ring_spsc_skip(snap->ring, skip - 1);
+          ring_mpmc_skip(snap->ring, skip - 1);
         }
     }
 
@@ -158,7 +158,7 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
    * bytes evicted to make room (like a ring overwrite enqueue).
    */
 
-  written = ring_spsc_enqueue(snap->ring, (FAR uint8_t *)note, notelen);
+  written = ring_mpmc_enqueue(snap->ring, (FAR uint8_t *)note, notelen);
 
   spin_unlock_irqrestore_notrace(&snap->lock, flags);
   return written - skipped;
@@ -184,7 +184,7 @@ static void notesnap_dump_with_stream(FAR struct note_driver_s *drv,
    * advancing the ring, so the snapshot survives the dump.
    */
 
-  while (ring_spsc_peek(snap->ring, &len, 1, &index) != 0)
+  while (ring_mpmc_peek(snap->ring, &len, 1, &index) != 0)
     {
       /* Peek the length byte that prefixes the next note. */
 
@@ -193,7 +193,7 @@ static void notesnap_dump_with_stream(FAR struct note_driver_s *drv,
       /* Peek the whole note (the peek copies across any wrap-around). */
 
       index -= 1;
-      DEBUGVERIFY(ring_spsc_peek(snap->ring, (FAR uint8_t *)&note,
+      DEBUGVERIFY(ring_mpmc_peek(snap->ring, (FAR uint8_t *)&note,
                                  len, &index) == len);
 
       note_dump_one(&note, stream, &ctx);
