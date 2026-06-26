@@ -39,7 +39,6 @@ set(SRCS
     lib_psa_getstacksize.c
     lib_psa_setstacksize.c
     lib_psa_getpriority.c
-    lib_psa_setpriority.c
     lib_psa_destroy.c)
 
 if(NOT CONFIG_BUILD_KERNEL)

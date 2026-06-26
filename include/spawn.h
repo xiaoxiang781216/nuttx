@@ -120,6 +120,18 @@ typedef struct posix_spawnattr_s posix_spawnattr_t;
 typedef FAR void *posix_spawn_file_actions_t;
 
 /****************************************************************************
+ * Inline functions
+ ****************************************************************************/
+
+static inline_function
+int posix_spawnattr_setpriority(FAR posix_spawnattr_t *attr,
+                                int priority)
+{
+  attr->priority = priority;
+  return OK;
+}
+
+/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
@@ -215,8 +227,6 @@ int posix_spawnattr_getstacksize(FAR const posix_spawnattr_t *attr,
 int posix_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
                                  size_t stacksize);
 
-int posix_spawnattr_setpriority(FAR posix_spawnattr_t *attr,
-                                int priority);
 int posix_spawnattr_getpriority(FAR posix_spawnattr_t *attr);
 
 #ifndef CONFIG_BUILD_KERNEL
