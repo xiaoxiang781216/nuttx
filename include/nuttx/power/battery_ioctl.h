@@ -88,12 +88,13 @@
 
 enum battery_status_e
 {
-  BATTERY_UNKNOWN = 0, /* Battery state is not known */
-  BATTERY_FAULT,       /* Charger reported a fault, get health for more info */
-  BATTERY_IDLE,        /* Not full, not charging, not discharging */
-  BATTERY_FULL,        /* Full, not discharging */
-  BATTERY_CHARGING,    /* Not full, charging */
-  BATTERY_DISCHARGING  /* Probably not full, discharging */
+  BATTERY_UNKNOWN = 0,  /* Battery state is not known */
+  BATTERY_FAULT,        /* Charger reported a fault, get health for more info */
+  BATTERY_IDLE,         /* Not full, not charging, not discharging */
+  BATTERY_FULL,         /* Full, not discharging */
+  BATTERY_CHARGING,     /* Not full, charging */
+  BATTERY_DISCHARGING,  /* Probably not full, discharging */
+  BATTERY_WEAK_CHARGING /* Not full, weak charging */
 };
 
 /* Battery Health status */
