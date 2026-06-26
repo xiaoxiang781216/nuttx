@@ -1812,8 +1812,8 @@ skip_rtt:
             if ((flags & TCP_ACKDATA) != 0 && conn->tx_unacked == 0)
               {
                 conn->tcpstateflags = TCP_TIME_WAIT;
-                tcp_update_retrantimer(conn,
-                                       TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+                tcp_start_timewait(conn,
+                                   TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
                 ninfo("TCP state: TCP_TIME_WAIT\n");
               }
             else
@@ -1869,8 +1869,8 @@ skip_rtt:
         if ((tcp->flags & TCP_FIN) != 0)
           {
             conn->tcpstateflags = TCP_TIME_WAIT;
-            tcp_update_retrantimer(conn,
-                                   TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+            tcp_start_timewait(conn,
+                               TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
             ninfo("TCP state: TCP_TIME_WAIT\n");
 
             net_incr32(conn->rcvseq, 1); /* ack FIN */
@@ -1896,8 +1896,8 @@ skip_rtt:
         if ((flags & TCP_ACKDATA) != 0)
           {
             conn->tcpstateflags = TCP_TIME_WAIT;
-            tcp_update_retrantimer(conn,
-                                   TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+            tcp_start_timewait(conn,
+                               TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
             ninfo("TCP state: TCP_TIME_WAIT\n");
           }
 

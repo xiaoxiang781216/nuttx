@@ -1088,6 +1088,27 @@ void tcp_update_timer(FAR struct tcp_conn_s *conn);
 void tcp_update_retrantimer(FAR struct tcp_conn_s *conn, int timeout);
 
 /****************************************************************************
+ * Name: tcp_start_timewait
+ *
+ * Description:
+ *   Start the TIME_WAIT timer for the provided TCP connection.
+ *   Sets the connection timer and schedules the expiry handler.
+ *
+ * Input Parameters:
+ *   conn    - The TCP "connection" entering TIME_WAIT state
+ *   timeout - Timeout value in half-second units
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   conn is not NULL.
+ *
+ ****************************************************************************/
+
+void tcp_start_timewait(FAR struct tcp_conn_s *conn, int timeout);
+
+/****************************************************************************
  * Name: tcp_update_keeptimer
  *
  * Description:

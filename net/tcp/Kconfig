@@ -124,9 +124,11 @@ config NET_TCP_MAXSYNRTX
 config NET_TCP_WAIT_TIMEOUT
 	int "TIME_WAIT Length of TCP/IP connections"
 	default 120
+	range 0 120
 	---help---
 		TIME_WAIT Length of TCP/IP connections (all tasks).  In units
-		of seconds.
+		of seconds.  Set to 0 to reclaim TIME_WAIT connections
+		immediately.
 
 config NET_TCP_FIN_WAIT2_TIMEOUT
 	int "FIN_WAIT2 timeout of TCP/IP connections"

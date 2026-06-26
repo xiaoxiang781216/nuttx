@@ -303,6 +303,33 @@ void tcp_update_retrantimer(FAR struct tcp_conn_s *conn, int timeout)
 }
 
 /****************************************************************************
+ * Name: tcp_start_timewait
+ *
+ * Description:
+ *   Start the TIME_WAIT timer for the provided TCP connection.
+ *   Sets the connection timer and schedules the expiry handler.
+ *
+ * Input Parameters:
+ *   conn    - The TCP "connection" entering TIME_WAIT state
+ *   timeout - Timeout value in half-second units
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   conn is not NULL.
+ *   The connection (conn) is bound to the polling device (dev).
+ *
+ ****************************************************************************/
+
+void tcp_start_timewait(FAR struct tcp_conn_s *conn, int timeout)
+{
+  conn->timer = timeout;
+  work_queue(LPWORK, &conn->work, tcp_timer_expiry,
+             conn, HSEC2TICK(timeout));
+}
+
+/****************************************************************************
  * Name: tcp_update_keeptimer
  *
  * Description:
