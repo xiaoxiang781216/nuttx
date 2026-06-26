@@ -37,6 +37,8 @@
 *~
 .depend
 /.cache
+/buildinfo
+/sysinfo.h
 /.config
 /.config.*
 /.config-*
