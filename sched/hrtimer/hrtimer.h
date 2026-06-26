@@ -683,8 +683,6 @@ static inline_function void hrtimer_process(uint64_t now)
       DEBUGASSERT(HRTIMER_TIME_BEFORE_EQ(expired + delay,
                                          now + HRTIMER_MAX_DELAY));
 
-      UP_SEV();
-
       /* Re-enter critical section to update timer state */
 
       flags = hrtimer_lock();
@@ -703,6 +701,8 @@ static inline_function void hrtimer_process(uint64_t now)
     }
 
   hrtimer_unmark_running(cpu);
+
+  UP_SEV();
 
   /* Note that the g_hrtimer_guard.expired is not monotonic. */
 
