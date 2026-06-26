@@ -20,6 +20,7 @@
 #
 # ##############################################################################
 set(SRCS
+    sched_addprioritized.c
     sched_profil.c
     sched_addreadytorun.c
     sched_removereadytorun.c
