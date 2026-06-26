@@ -115,4 +115,8 @@ ifeq ($(CONFIG_ARCH_JUMP_LABEL),y)
   CMN_CSRCS += tricore_jump_label.c
 endif
 
+ifeq ($(CONFIG_MCAL_UART),y)
+  CMN_CSRCS += tricore_uart_mcal.c
+endif
+
 CFLAGS += -DIFX_CFG_EXTEND_TRAP_HOOKS

@@ -154,4 +154,29 @@ config HAVE_SECURITY_CORE
 if ARCH_CHIP_TC3XX
 source "arch/tricore/src/tc3xx/Kconfig"
 endif
+
+config MCAL_UART
+	bool "Enable the MCAL UART adaptation layer"
+	select SERIAL_TXDMA
+	select SERIAL_RXDMA
+	default n
+	---help---
+		Enable the MCAL UART adaptation layer.
+		Bridges MCAL Uart driver to NuttX serial framework.
+
+if MCAL_UART
+
+config MCAL_UART_MAX_CHANNELS
+	int "Maximum number of MCAL UART channels"
+	default 2
+	---help---
+		Maximum number of UART channels supported by the MCAL UART
+		adaptation layer. This defines the size of the internal
+		channel-to-device mapping table used for notification callback
+		dispatch. The channel_id of each configured UART must be less
+		than this value. Set it to match or exceed the total number of
+		UART channels configured in the MCAL EB tool.
+
+endif # MCAL_UART
+
 endif # ARCH_TRICORE

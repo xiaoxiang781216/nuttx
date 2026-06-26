@@ -101,6 +101,10 @@ if(CONFIG_ARCH_JUMP_LABEL)
   list(APPEND SRCS tricore_jump_label.c)
 endif()
 
+if(CONFIG_MCAL_UART)
+  list(APPEND SRCS tricore_uart_mcal.c)
+endif()
+
 set(IFXFLAGS -DIFX_CFG_EXTEND_TRAP_HOOKS)
 
 target_sources(arch PRIVATE ${SRCS})
