@@ -497,9 +497,14 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
     }
 
 #ifdef CONFIG_NET_SOLINGER
-  /* Send reset immediately if linger timeout */
+  /* Send reset immediately if linger timeout.
+   * Skip for TIME_WAIT -- by this state the four-way handshake is
+   * complete, close() has returned, and the connection should simply
+   * expire silently without sending RST.
+   */
 
   if (conn->ltimeout != 0 &&
+      conn->tcpstateflags != TCP_TIME_WAIT &&
       ((sclock_t)(conn->ltimeout - clock_systime_ticks()) <= 0))
     {
       conn->tcpstateflags = TCP_CLOSED;
