@@ -24,9 +24,9 @@
 
 MEMORY
 {
-  flash (rx)  : ORIGIN = 0x00000000, LENGTH = 512K
-  sram1 (rwx) : ORIGIN = 0x01000000, LENGTH = 2M
-  sram2 (rwx) : ORIGIN = 0x22000000, LENGTH = 2M
+  bootm (rx)  : ORIGIN = 0x00000000, LENGTH = 1K
+  flash (rx)  : ORIGIN = 0x01000000, LENGTH = 2M
+  sram1 (rwx) : ORIGIN = 0x21000000, LENGTH = 4M
 }
 
 OUTPUT_ARCH(arm)
@@ -35,11 +35,14 @@ ENTRY(__start)
 
 SECTIONS
 {
+    .vectors : {
+#ifndef CONFIG_BUILD_PIC /* We need change vectors use pic */
+        KEEP(*(.vectors))
+#endif
+    } > bootm
+
     .text : {
         _stext = ABSOLUTE(.);
-#ifndef CONFIG_BUILD_PIC /* We need change vectors use pic */
-        *(.vectors)
-#endif
         *(.text .text.*)
         *(.fixup)
         *(.gnu.warning)
