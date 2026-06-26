@@ -2206,10 +2206,15 @@ int note_dump_one(FAR struct note_dump_stream_s *stream,
       {
         FAR struct note_event_s *nbi = (FAR struct note_event_s *)p;
         FAR struct note_counter_s *counter;
+        int64_t value;
         counter = (FAR struct note_counter_s *)nbi->nev_data;
+
+        /* nev_data is not word aligned, copy the wide field out first. */
+
+        memcpy(&value, &counter->value, sizeof(value));
         ret += note_dump_header(s, &nbi->nev_cmn);
         ret += lib_sprintf(s, "tracing_mark_write: C|%d|%s|%" PRId64 "\n",
-                           pid, counter->name, counter->value);
+                           pid, counter->name, value);
       }
       break;
     case NOTE_DUMP_THREADTIME:
@@ -2217,9 +2222,14 @@ int note_dump_one(FAR struct note_dump_stream_s *stream,
         FAR struct note_event_s *nev = (FAR struct note_event_s *)p;
         FAR struct note_threadtime_s *nts = (FAR struct note_threadtime_s *)
                                             nev->nev_data;
+        clock_t elapsed;
+
+        /* nev_data is not word aligned, copy the wide field out first. */
+
+        memcpy(&elapsed, &nts->elapsed, sizeof(elapsed));
         ret += note_dump_header(s, &nev->nev_cmn);
         ret += lib_sprintf(s, "tracing_mark_write: I|%d|elapsed:%llu\n",
-                           pid, (unsigned long long)nts->elapsed);
+                           pid, (unsigned long long)elapsed);
       }
       break;
     case NOTE_DUMP_ASYNC_BEGIN:
@@ -2239,7 +2249,9 @@ int note_dump_one(FAR struct note_dump_stream_s *stream,
             break;
           }
 
-        cookie = nas->cookie;
+        /* nev_data is not word aligned, copy the wide field out first. */
+
+        memcpy(&cookie, &nas->cookie, sizeof(cookie));
         nlen = strnlen(nas->names, total) + 1;
         if (nlen > total)
           {
