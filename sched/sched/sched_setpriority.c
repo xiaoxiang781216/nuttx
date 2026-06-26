@@ -42,7 +42,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name:  nxsched_running_setpriority
+ * Name:  nxsched_set_running_priority
  *
  * Description:
  *   This function sets the priority of a running task.  This does nothing
@@ -63,10 +63,17 @@
  *
  ****************************************************************************/
 
-static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
-                                               int sched_priority)
+void nxsched_set_running_priority(FAR struct tcb_s *tcb, int sched_priority)
 {
   FAR struct tcb_s *nxttcb;
+  irqstate_t flags;
+
+  /* nxsched_set_running_priority() operates on the ready-to-run list and may
+   * trigger a context switch, so the whole operation must run inside a
+   * critical section.
+   */
+
+  flags = enter_critical_section();
 
   /* Get the TCB of the next highest priority, ready to run task */
 
@@ -170,6 +177,8 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
       tcb->sched_priority = sched_priority;
     }
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -314,7 +323,7 @@ int nxsched_set_priority(FAR struct tcb_s *tcb, int sched_priority)
            */
 
           case TSTATE_TASK_RUNNING:
-            nxsched_running_setpriority(tcb, sched_priority);
+            nxsched_set_running_priority(tcb, sched_priority);
             break;
 
           /* CASE 2. The task is ready-to-run (but not running) and a context

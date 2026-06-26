@@ -280,6 +280,14 @@ void nxsched_remove_self(FAR struct tcb_s *tcb);
 void nxsched_add_blocked(FAR struct tcb_s *btcb, tstate_t task_state);
 void nxsched_remove_blocked(FAR struct tcb_s *btcb);
 int  nxsched_set_priority(FAR struct tcb_s *tcb, int sched_priority);
+
+/* nxsched_set_running_priority() reprioritizes a running task.  It updates
+ * the ready-to-run list and may trigger a context switch.  It takes its own
+ * critical section internally, so callers do not need to hold one (nesting
+ * is harmless if they already do).
+ */
+
+void nxsched_set_running_priority(FAR struct tcb_s *tcb, int sched_priority);
 #ifndef CONFIG_SMP
 bool nxsched_merge_pending(void);
 bool nxsched_reprioritize_rtr(FAR struct tcb_s *tcb, int priority);

@@ -54,13 +54,12 @@
 int sched_yield(void)
 {
   FAR struct tcb_s *rtcb = this_task();
-  int ret;
 
   /* This equivalent to just resetting the task priority to its current value
    * since this will cause the task to be rescheduled behind any other tasks
    * at the same priority.
    */
 
-  ret = nxsched_set_priority(rtcb, rtcb->sched_priority);
-  return ret < 0 ? ERROR : OK;
+  nxsched_set_running_priority(rtcb, rtcb->sched_priority);
+  return OK;
 }

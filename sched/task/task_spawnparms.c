@@ -197,7 +197,7 @@ int spawn_execattrs(FAR struct tcb_s *tcb, FAR const posix_spawnattr_t *attr)
 #ifdef CONFIG_SCHED_SPORADIC
               ret = nxsched_set_param(pid, &param);
 #else
-              ret = nxsched_set_priority(tcb, attr->priority);
+              tcb->sched_priority = attr->priority;
 #endif
             }
         }
