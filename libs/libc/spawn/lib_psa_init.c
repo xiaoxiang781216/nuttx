@@ -56,7 +56,9 @@
 
 int posix_spawnattr_init(posix_spawnattr_t *attr)
 {
+#ifdef CONFIG_SCHED_SPORADIC
   struct sched_param param;
+#endif
   int ret;
 
   DEBUGASSERT(attr);
@@ -69,11 +71,13 @@ int posix_spawnattr_init(posix_spawnattr_t *attr)
 
   /* Set the default priority to the same priority as this task */
 
+#ifdef CONFIG_SCHED_SPORADIC
   ret = _SCHED_GETPARAM(0, &param);
   if (ret < 0)
     {
       return _SCHED_ERRNO(ret);
     }
+#endif
 
   /* Set the default scheduler policy to the policy of this task */
 

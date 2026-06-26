@@ -61,27 +61,15 @@
 
 static int load_default_priority(FAR struct binary_s *bin)
 {
-  struct sched_param param;
-  int ret;
-
-  /* Get the priority of this thread */
-
-  ret = nxsched_get_param(0, &param);
-  if (ret < 0)
-    {
-      berr("ERROR: nxsched_get_param failed: %d\n", ret);
-      return ret;
-    }
-
   /* Save that as the priority of child thread */
 
-  bin->priority = param.sched_priority;
+  bin->priority = this_task()->sched_priority;
   if (bin->priority <= 0)
     {
       bin->priority = SCHED_PRIORITY_DEFAULT;
     }
 
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
