@@ -36,6 +36,7 @@
 #include <nuttx/ring.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/syslog/syslog.h>
 
 #include "note_driver.h"
 
@@ -165,56 +166,33 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
 }
 
 #ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
-static void notesnap_dump_with_stream(FAR struct note_driver_s *drv,
-                                      FAR struct lib_outstream_s *stream)
-{
-  FAR struct notesnap_s *snap = (FAR struct notesnap_s *)drv;
-  struct note_dump_stream_s ctx;
-  struct note_max_s note;
-  uint32_t index = 0;
-  uint8_t len;
-
-  /* Stop recording while dumping */
-
-  atomic_set(&snap->dumping, true);
-
-  note_dump_stream(&ctx, snap->ring, false);
-
-  /* Walk every note from the oldest (cons_tail) to the newest without
-   * advancing the ring, so the snapshot survives the dump.
-   */
-
-  while (ring_mpmc_peek(snap->ring, &len, 1, &index) != 0)
-    {
-      /* Peek the length byte that prefixes the next note. */
-
-      DEBUGASSERT(len > 0);
-
-      /* Peek the whole note (the peek copies across any wrap-around). */
-
-      index -= 1;
-      DEBUGVERIFY(ring_mpmc_peek(snap->ring, (FAR uint8_t *)&note,
-                                 len, &index) == len);
-
-      note_dump_one(&ctx, &note, stream);
-    }
-
-  atomic_set(&snap->dumping, false);
-}
-
 static int notesnap_notifier(FAR struct notifier_block *nb,
                              unsigned long action, FAR void *data)
 {
   FAR struct notesnap_s *snap = container_of(nb, struct notesnap_s, nb);
+  struct note_dump_stream_s stream;
+  char buf[NOTE_BUFFER_SIZE];
+  ssize_t n;
 
-  if (action == PANIC_KERNEL)
+  if (action != PANIC_KERNEL)
     {
-      struct lib_syslograwstream_s stream;
-
-      lib_syslograwstream_open(&stream);
-      notesnap_dump_with_stream(&snap->driver, &stream.common);
-      lib_syslograwstream_close(&stream);
+      return 0;
     }
+
+  /* Stop recording while dumping so the snapshot survives, then print the
+   * formatted notes from the non-consuming dump stream to syslog.  Each
+   * gets() fills the buffer with as many whole notes as fit.
+   */
+
+  atomic_set(&snap->dumping, true);
+  note_dump_stream(&stream, snap->ring, false);
+
+  while ((n = lib_stream_gets(&stream, buf, sizeof(buf))) > 0)
+    {
+      syslog_write(buf, n);
+    }
+
+  atomic_set(&snap->dumping, false);
 
   return 0;
 }
