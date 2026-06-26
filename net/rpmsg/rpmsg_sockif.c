@@ -308,30 +308,61 @@ static void rpmsg_socket_free(FAR struct rpmsg_socket_conn_s *conn)
 
 static int rpmsg_socket_wakeup(FAR struct rpmsg_socket_conn_s *conn)
 {
-  struct rpmsg_socket_data_s msg;
+  FAR struct rpmsg_socket_data_s *msg;
+  uint32_t len = sizeof(*msg);
   irqstate_t flags;
   uint32_t space;
   int ret = 0;
 
   if (!conn->ept.rdev || atomic_read(&conn->unbind))
     {
-      return ret;
+      return 0;
     }
 
   flags = spin_lock_irqsave(&conn->recvlock);
   space = conn->recvpos - conn->lastpos;
-
-  if (space > circbuf_size(&conn->recvbuf) / 2)
+  if (space <= circbuf_size(&conn->recvbuf) / 2)
     {
-      conn->lastpos = conn->recvpos;
-      msg.cmd = RPMSG_SOCKET_CMD_DATA;
-      msg.pos = conn->recvpos;
-      msg.len = 0;
-      ret = 1;
+      spin_unlock_irqrestore(&conn->recvlock, flags);
+      return 0;
     }
 
+  /* Reserve the tx buffer without holding recvlock, since it may block
+   * waiting for a free vring buffer.
+   */
+
   spin_unlock_irqrestore(&conn->recvlock, flags);
-  return ret ? rpmsg_send(&conn->ept, &msg, sizeof(msg)) : 0;
+  msg = rpmsg_get_tx_payload_buffer(&conn->ept, &len, true);
+  if (msg == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  DEBUGASSERT(len >= sizeof(*msg));
+  flags = spin_lock_irqsave(&conn->recvlock);
+
+  /* The peer endpoint may have been destroyed while reserving the buffer.
+   * Check it is still ready and not unbound before sending, so we never
+   * send on a dead endpoint (and spin 15s on dest_addr == ANY).
+   */
+
+  if (!is_rpmsg_ept_ready(&conn->ept) || atomic_read(&conn->unbind))
+    {
+      spin_unlock_irqrestore(&conn->recvlock, flags);
+      rpmsg_release_tx_buffer(&conn->ept, msg);
+      return -ECONNRESET;
+    }
+
+  conn->lastpos = conn->recvpos;
+  msg->cmd = RPMSG_SOCKET_CMD_DATA;
+  msg->pos = conn->recvpos;
+  msg->len = 0;
+  ret = rpmsg_send_offchannel_nocopy(&conn->ept, conn->ept.addr,
+                                     conn->ept.dest_addr, msg,
+                                     sizeof(*msg));
+
+  spin_unlock_irqrestore(&conn->recvlock, flags);
+  return ret;
 }
 
 static inline uint32_t
