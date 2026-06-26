@@ -242,4 +242,9 @@ if(CONFIG_LIB_LIBUNWIND)
   add_link_options(-Wl,--eh-frame-hdr)
 endif()
 
+# Link clang prebuilt libunwind.a for C++ exception support
+if(CONFIG_CXX_EXCEPTION_UNWINDER_TOOLCHAIN AND CONFIG_ARCH_TOOLCHAIN_CLANG)
+  nuttx_find_toolchain_lib(libunwind.a)
+endif()
+
 set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)

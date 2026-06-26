@@ -303,3 +303,8 @@ else()
     nuttx_add_extra_library(${extra_lib_path})
   endfunction()
 endif()
+
+# Link clang prebuilt libunwind.a for C++ exception support
+if(CONFIG_CXX_EXCEPTION_UNWINDER_TOOLCHAIN AND CONFIG_ARCH_TOOLCHAIN_CLANG)
+  nuttx_find_toolchain_lib(libunwind.a)
+endif()

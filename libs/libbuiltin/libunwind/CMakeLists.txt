@@ -32,6 +32,12 @@ if(CONFIG_LIB_LIBUNWIND)
     list(APPEND UNWIND_CXX_SOURCES ${UNWIND_SRCDIR}/Unwind-EHABI.cpp)
   endif()
 
+  # DWARF UnwindLevel1: only for C++ exception unwinding on non-ARM32 arches
+  if(CONFIG_CXX_EXCEPTION_UNWINDER_LIBUNWIND AND NOT CONFIG_ARCH_ARM)
+    list(APPEND UNWIND_C_SOURCES ${UNWIND_SRCDIR}/UnwindLevel1-gcc-ext.c)
+    list(APPEND UNWIND_C_SOURCES ${UNWIND_SRCDIR}/UnwindLevel1.c)
+  endif()
+
   set(UNWIND_DEFS _LIBUNWIND_IS_NATIVE_ONLY NDEBUG)
   set(UNWIND_OPTS -Wno-undef -fno-sanitize=all)
   set(UNWIND_CXX_FLAGS "-fno-exceptions -fno-rtti")

@@ -123,6 +123,27 @@ config CXX_EXCEPTION
 		Enable C++ exception need handling exception storage, Default THREAD_LOCAL
 		method is preferred. Should add Task Local Storage (TLS) otherwise.
 
+choice
+	prompt "C++ exception unwinder"
+	depends on CXX_EXCEPTION
+	default CXX_EXCEPTION_UNWINDER_LIBUNWIND if ARCH_X86_64 || ARCH_RISCV
+	default CXX_EXCEPTION_UNWINDER_TOOLCHAIN
+
+config CXX_EXCEPTION_UNWINDER_TOOLCHAIN
+	bool "C++ exception unwinder from toolchain"
+	---help---
+		Use the toolchain's prebuilt unwind library for C++ exception.
+		libgcc.a for GCC and libunwind.a for Clang.
+
+config CXX_EXCEPTION_UNWINDER_LIBUNWIND
+	bool "C++ exception unwinder from llvm libunwind source"
+	select LIB_LIBUNWIND
+	---help---
+		Use source-built libunwind for C++ exception unwinding.
+		Supports both builtin apps and dynamically loaded ELF modules.
+
+endchoice
+
 config CXX_RTTI
 	bool "Enable RTTI Support"
 

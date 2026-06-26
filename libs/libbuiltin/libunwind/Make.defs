@@ -42,6 +42,15 @@ ifeq ($(CONFIG_ARCH_ARM),y)
 CPPSRCS += $(UNWIND_SRCDIR)/Unwind-EHABI.cpp
 endif
 
+# DWARF UnwindLevel1: only for C++ exception unwinding on non-ARM32 arches
+
+ifeq ($(CONFIG_CXX_EXCEPTION_UNWINDER_LIBUNWIND),y)
+ifneq ($(CONFIG_ARCH_ARM),y)
+CSRCS += $(UNWIND_SRCDIR)/UnwindLevel1-gcc-ext.c
+CSRCS += $(UNWIND_SRCDIR)/UnwindLevel1.c
+endif
+endif
+
 # Exclude coverage instrumentation
 
 ifneq ($(CONFIG_COVERAGE_NONE),y)
