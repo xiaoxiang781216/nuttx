@@ -118,6 +118,21 @@ static inline int tcp_send_fin(FAR struct socket *psock)
   DEBUGASSERT(conn != NULL);
 
   conn_dev_lock(&conn->sconn, conn->dev);
+
+  /* Only one shutdown callback may be registered per connection.  A second
+   * registration (e.g. a two-phase close: shutdown(SHUT_RD) followed by
+   * shutdown(SHUT_WR)) would overwrite the conn->shdcb pointer and leak the
+   * previous callback in the connection's callback list, where it would
+   * keep firing on every poll and trigger repeated FIN transmissions.  The
+   * already-registered callback will pick up the newly added shutdown
+   * direction from conn->shutdown on its next invocation.
+   */
+
+  if (conn->shdcb != NULL)
+    {
+      goto out;
+    }
+
   if ((conn->tcpstateflags == TCP_ESTABLISHED ||
        conn->tcpstateflags == TCP_SYN_SENT ||
        conn->tcpstateflags == TCP_SYN_RCVD ||
@@ -179,6 +194,19 @@ int tcp_shutdown(FAR struct socket *psock, int how)
   if (!(how & SHUT_RDWR))
     {
       return -EOPNOTSUPP;
+    }
+
+  /* shutdown() is idempotent: if the requested direction(s) have already
+   * been shut down on this connection, there is nothing new to do.  Return
+   * success immediately without re-arming the FIN logic.  This also avoids
+   * the case where an application closes a socket by calling shutdown()
+   * more than once, which previously registered a duplicate shutdown
+   * callback and flooded the link with repeated FINs.
+   */
+
+  if ((conn->shutdown & how) == how)
+    {
+      return OK;
     }
 
   conn->shutdown |= how;
