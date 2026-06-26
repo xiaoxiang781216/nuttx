@@ -25,9 +25,8 @@
  ****************************************************************************/
 
 #include <assert.h>
-#include <errno.h>
 #include <string.h>
-#include <nuttx/atomic.h>
+#include <sys/param.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/note/note_driver.h>
@@ -35,7 +34,6 @@
 #include <nuttx/panic_notifier.h>
 #include <nuttx/ring.h>
 #include <nuttx/sched_note.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/syslog/syslog.h>
 
 #include "note_driver.h"
@@ -48,9 +46,7 @@ struct notesnap_s
 {
   struct note_driver_s  driver;
   FAR struct ring_s   * ring;
-  spinlock_t            lock;
   struct notifier_block nb;
-  atomic_t              dumping;
 };
 
 /****************************************************************************
@@ -100,7 +96,6 @@ DEFINE_PER_CPU_BMP(struct notesnap_s, g_notesnap) =
     &g_notesnap_ops
   },
   RING_BASE(&g_notesnap_buffer),
-  SP_UNLOCKED,
 };
 #define g_notesnap this_cpu_var_bmp(g_notesnap)
 
@@ -123,46 +118,15 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
                             bool noswitches)
 {
   FAR struct notesnap_s *snap = (FAR struct notesnap_s *)drv;
-  irqstate_t flags;
-  ssize_t written;
-  size_t skipped = 0;
-  uint8_t skip;
 
-  if (atomic_read(&snap->dumping))
-    {
-      return -EBUSY;
-    }
-
-  flags = spin_lock_irqsave_notrace(&snap->lock);
-
-  /* Drop oldest whole notes until there is room for the new one. The first
-   * byte of each note is its total length, so dequeue that byte and skip
-   * the rest of the record to stay record-aligned.
+  /* ring_mpmc_overwrite is CAS-based and reentrancy-safe, so no lock is
+   * needed even if an interrupt preempts a task-context add on the same
+   * CPU.  Cast to uint8_t * so the ring macro derives an element size of
+   * one; the dump path resyncs past any fragment a wrap may leave behind.
    */
 
-  while (ring_space(snap->ring) < notelen)
-    {
-      if (ring_mpmc_dequeue(snap->ring, &skip, 1) == 0)
-        {
-          break;
-        }
-
-      skipped += skip;
-      if (skip > 1)
-        {
-          ring_mpmc_skip(snap->ring, skip - 1);
-        }
-    }
-
-  /* Cast to uint8_t * so the ring macro derives an element size of 1.
-   * Return the net change in ring occupancy: the bytes enqueued minus the
-   * bytes evicted to make room (like a ring overwrite enqueue).
-   */
-
-  written = ring_mpmc_enqueue(snap->ring, (FAR uint8_t *)note, notelen);
-
-  spin_unlock_irqrestore_notrace(&snap->lock, flags);
-  return written - skipped;
+  ring_mpmc_overwrite(snap->ring, (FAR const uint8_t *)note, notelen);
+  return MIN(notelen, ring_capacity(snap->ring));
 }
 
 #ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
@@ -179,20 +143,18 @@ static int notesnap_notifier(FAR struct notifier_block *nb,
       return 0;
     }
 
-  /* Stop recording while dumping so the snapshot survives, then print the
-   * formatted notes from the non-consuming dump stream to syslog.  Each
-   * gets() fills the buffer with as many whole notes as fit.
+  /* Print the formatted notes from the non-consuming dump stream to
+   * syslog.  The overwrite ring keeps moving under the reader, so the dump
+   * stream resyncs past any fragment a wrap leaves behind; each gets()
+   * fills the buffer with as many whole notes as fit.
    */
 
-  atomic_set(&snap->dumping, true);
   note_dump_stream(&stream, snap->ring, false);
 
   while ((n = lib_stream_gets(&stream, buf, sizeof(buf))) > 0)
     {
       syslog_write(buf, n);
     }
-
-  atomic_set(&snap->dumping, false);
 
   return 0;
 }
@@ -254,7 +216,6 @@ notesnap_initialize(FAR const char *devname, size_t bufsize)
       return NULL;
     }
 
-  spin_lock_init(&snap->lock);
   memcpy(snap + 1, devname, len);
   snap->ring = ring_alloc(bufsize, 1);
   if (snap->ring == NULL)
