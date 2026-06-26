@@ -36,6 +36,7 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/percpu.h>
+#include <nuttx/ring.h>
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/streams.h>
@@ -88,7 +89,7 @@ void UP_REALSYM(perf_convert)(clock_t elapsed, FAR struct timespec *ts);
 
 /* The structure to hold the per-CPU context data of trace dump */
 
-struct note_dump_cpu_context_s
+struct note_dump_context_s
 {
   int intr_nest;            /* Interrupt nest level */
   bool pendingswitch;       /* sched_switch pending flag */
@@ -99,9 +100,14 @@ struct note_dump_cpu_context_s
   uint8_t next_priority;    /* Task Priority of the next line */
 };
 
-struct note_dump_context_s
+struct note_dump_stream_s
 {
-  struct note_dump_cpu_context_s cpu[CONFIG_SMP_NCPUS];
+  struct lib_instream_s      common;  /* Embedded non-consuming stream */
+  FAR struct ring_s         *ring;    /* Ring being read, NULL if none */
+  uint32_t                   pos;     /* Absolute ring index of next note */
+  bool                       binary;  /* Emit raw notes instead of text */
+  struct note_max_s          note;    /* Scratch note read from the ring */
+  struct note_dump_context_s ctx[CONFIG_SMP_NCPUS];
 };
 
 /****************************************************************************
@@ -197,17 +203,30 @@ static inline bool note_is_safe(FAR const void *note, size_t len,
 void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
                  uint8_t length, uint8_t type);
 
-#ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
-
 /****************************************************************************
- * Name: note_dump_context_init
+ * Name: note_dump_stream
  *
  * Description:
- *   Initialize the per-CPU trace dump context used by note_dump_one().
+ *   Initialize a trace dump stream and wire its embedded non-consuming
+ *   input stream to a byte ring buffer.  Notes are then read from the
+ *   embedded stream->common with lib_stream_gets(); the live ring is read
+ *   without consuming it, so the caller must freeze the producer while
+ *   dumping so the ring contents stay stable.
+ *
+ * Input Parameters:
+ *   stream - The dump stream to initialize
+ *   ring   - The byte ring buffer (element size one) to read from
+ *   binary - Emit raw binary notes when true, ftrace text when false
+ *
+ * Returned Value:
+ *   None
  *
  ****************************************************************************/
 
-void note_dump_context_init(FAR struct note_dump_context_s *ctx);
+void note_dump_stream(FAR struct note_dump_stream_s *stream,
+                      FAR struct ring_s *ring, bool binary);
+
+#ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
 
 /****************************************************************************
  * Name: note_dump_one
@@ -217,18 +236,18 @@ void note_dump_context_init(FAR struct note_dump_context_s *ctx);
  *   it to the output stream.
  *
  * Input Parameters:
- *   p   - The binary note to parse
- *   s   - The output stream
- *   ctx - The trace dump context (tracks sched_switch state per CPU)
+ *   stream - The trace dump stream (tracks sched_switch state per CPU)
+ *   p      - The binary note to parse
+ *   s      - The output stream
  *
  * Returned Value:
  *   The number of bytes written to the stream.
  *
  ****************************************************************************/
 
-int note_dump_one(FAR const struct note_max_s *p,
-                  FAR struct lib_outstream_s *s,
-                  FAR struct note_dump_context_s *ctx);
+int note_dump_one(FAR struct note_dump_stream_s *stream,
+                  FAR const struct note_max_s *p,
+                  FAR struct lib_outstream_s *s);
 
 #endif /* CONFIG_DRIVERS_NOTE_TEXT_DUMP */
 

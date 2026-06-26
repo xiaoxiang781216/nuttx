@@ -77,7 +77,7 @@ struct noteram_driver_s
 
 struct noteram_dump_context_s
 {
-  struct note_dump_context_s ctx;
+  struct note_dump_stream_s ctx;  /* Shared per-CPU parse context */
   unsigned int mode;
   uint32_t read;
   unsigned int threshold;   /* Per-file poll threshold */
@@ -294,7 +294,7 @@ static int noteram_open(FAR struct file *filep)
 
   filep->f_priv = ctx;
 #ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
-  note_dump_context_init(&ctx->ctx);
+  note_dump_stream(&ctx->ctx, NULL, false);
 #endif
   return OK;
 }
@@ -410,8 +410,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 
           /* Parse notes into text format */
 
-          ret = note_dump_one(&note, (FAR struct lib_outstream_s *)&stream,
-                              &ctx->ctx);
+          ret = note_dump_one(&ctx->ctx, &note, &stream.common);
         }
       while (ret == 0 && stream.common.nput < buflen);
 

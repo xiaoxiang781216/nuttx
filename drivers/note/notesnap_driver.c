@@ -169,7 +169,7 @@ static void notesnap_dump_with_stream(FAR struct note_driver_s *drv,
                                       FAR struct lib_outstream_s *stream)
 {
   FAR struct notesnap_s *snap = (FAR struct notesnap_s *)drv;
-  struct note_dump_context_s ctx;
+  struct note_dump_stream_s ctx;
   struct note_max_s note;
   uint32_t index = 0;
   uint8_t len;
@@ -178,7 +178,7 @@ static void notesnap_dump_with_stream(FAR struct note_driver_s *drv,
 
   atomic_set(&snap->dumping, true);
 
-  note_dump_context_init(&ctx);
+  note_dump_stream(&ctx, snap->ring, false);
 
   /* Walk every note from the oldest (cons_tail) to the newest without
    * advancing the ring, so the snapshot survives the dump.
@@ -196,7 +196,7 @@ static void notesnap_dump_with_stream(FAR struct note_driver_s *drv,
       DEBUGVERIFY(ring_mpmc_peek(snap->ring, (FAR uint8_t *)&note,
                                  len, &index) == len);
 
-      note_dump_one(&note, stream, &ctx);
+      note_dump_one(&ctx, &note, stream);
     }
 
   atomic_set(&snap->dumping, false);

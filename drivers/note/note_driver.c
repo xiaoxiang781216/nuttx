@@ -1341,8 +1341,7 @@ note_driver_isenabled_dump(FAR struct note_driver_s *driver, uint8_t tag,
  ****************************************************************************/
 
 static int note_dump_header(FAR struct lib_outstream_s *s,
-                            FAR const struct note_common_s *note,
-                            FAR struct note_dump_context_s *ctx)
+                            FAR const struct note_common_s *note)
 {
   struct timespec ts;
   char buf[TASK_NAME_SIZE];
@@ -1373,10 +1372,8 @@ static int note_dump_header(FAR struct lib_outstream_s *s,
  ****************************************************************************/
 
 static int note_dump_sched_switch(FAR struct lib_outstream_s *s,
-                                  FAR const struct note_common_s *note,
                                   FAR struct note_dump_context_s *ctx)
 {
-  FAR struct note_dump_cpu_context_s *cctx;
   char current_buf[TASK_NAME_SIZE];
   char next_buf[TASK_NAME_SIZE];
   uint8_t current_priority;
@@ -1384,18 +1381,12 @@ static int note_dump_sched_switch(FAR struct lib_outstream_s *s,
   pid_t current_pid;
   pid_t next_pid;
   int ret;
-#ifdef CONFIG_SMP
-  int cpu = note->nc_cpu;
-#else
-  int cpu = 0;
-#endif
 
-  cctx = &ctx->cpu[cpu];
-  current_pid = cctx->current_pid;
-  next_pid = cctx->next_pid;
+  current_pid = ctx->current_pid;
+  next_pid = ctx->next_pid;
 
-  current_priority = cctx->current_priority;
-  next_priority = cctx->next_priority;
+  current_priority = ctx->current_priority;
+  next_priority = ctx->next_priority;
 
   nxtask_namepool_get(current_pid, current_buf, TASK_NAME_SIZE);
   nxtask_namepool_get(next_pid, next_buf, TASK_NAME_SIZE);
@@ -1404,13 +1395,13 @@ static int note_dump_sched_switch(FAR struct lib_outstream_s *s,
                     "prev_prio=%u prev_state=%c ==> "
                     "next_comm=%s next_pid=%u next_prio=%u\n",
                     current_buf, get_pid(current_pid),
-                    current_priority, get_task_state(cctx->current_state),
+                    current_priority, get_task_state(ctx->current_state),
                     next_buf, get_pid(next_pid),
                     next_priority);
 
-  cctx->current_pid = cctx->next_pid;
-  cctx->current_priority = cctx->next_priority;
-  cctx->pendingswitch = false;
+  ctx->current_pid = ctx->next_pid;
+  ctx->current_priority = ctx->next_priority;
+  ctx->pendingswitch = false;
   return ret;
 }
 #endif
@@ -1473,6 +1464,222 @@ static int note_dump_printf(FAR struct lib_outstream_s *s,
 #endif
 
 #endif /* CONFIG_DRIVERS_NOTE_TEXT_DUMP */
+
+/****************************************************************************
+ * Name: note_type_size
+ *
+ * Description:
+ *   Return the exact byte size of a fixed-length note type, or zero for a
+ *   variable-length type (where only nc_length >= the common header can be
+ *   checked).  The sizes mirror the write side so a header whose type is
+ *   fixed but whose length disagrees can be rejected during resync.
+ *
+ ****************************************************************************/
+
+static inline_function size_t note_type_size(uint8_t type)
+{
+  switch (type)
+    {
+      case NOTE_STOP:
+      case NOTE_RESUME:
+      case NOTE_READY:
+        return sizeof(struct note_common_s);
+      case NOTE_SUSPEND:
+        return sizeof(struct note_suspend_s);
+      case NOTE_CPU_START:
+        return sizeof(struct note_cpu_start_s);
+      case NOTE_CPU_STARTED:
+        return sizeof(struct note_cpu_started_s);
+      case NOTE_PREEMPT_LOCK:
+      case NOTE_PREEMPT_UNLOCK:
+        return sizeof(struct note_preempt_s);
+      case NOTE_CSECTION_ENTER:
+      case NOTE_CSECTION_LEAVE:
+        return sizeof(struct note_csection_s);
+      case NOTE_SPINLOCK_LOCK:
+      case NOTE_SPINLOCK_LOCKED:
+      case NOTE_SPINLOCK_UNLOCK:
+      case NOTE_SPINLOCK_ABORT:
+        return sizeof(struct note_spinlock_s);
+      case NOTE_SYSCALL_LEAVE:
+        return sizeof(struct note_syscall_leave_s);
+      case NOTE_IRQ_ENTER:
+      case NOTE_IRQ_LEAVE:
+        return sizeof(struct note_irqhandler_s);
+      case NOTE_WDOG_START:
+      case NOTE_WDOG_CANCEL:
+      case NOTE_WDOG_ENTER:
+      case NOTE_WDOG_LEAVE:
+        return sizeof(struct note_wdog_s);
+      case NOTE_WQUEUE_START:
+      case NOTE_WQUEUE_CANCEL:
+      case NOTE_WQUEUE_ENTER:
+      case NOTE_WQUEUE_LEAVE:
+        return sizeof(struct note_wqueue_s);
+      case NOTE_HEAP_ADD:
+      case NOTE_HEAP_REMOVE:
+      case NOTE_HEAP_ALLOC:
+      case NOTE_HEAP_FREE:
+        return sizeof(struct note_heap_s);
+      default:
+        return 0;
+    }
+}
+
+/****************************************************************************
+ * Name: note_is_valid
+ *
+ * Description:
+ *   Check whether a common note header read at some ring offset is
+ *   plausible: a real type, a CPU within range, and a length that fits the
+ *   remaining bytes.  For a fixed-length type the length must match exactly.
+ *
+ ****************************************************************************/
+
+static inline_function bool
+note_is_valid(FAR const struct note_common_s *hdr)
+{
+  size_t size;
+
+  if (hdr->nc_type <= NOTE_ALL || hdr->nc_type >= NOTE_TYPE_LAST ||
+      hdr->nc_cpu >= CONFIG_NCPUS ||
+      hdr->nc_length < sizeof(struct note_common_s))
+    {
+      return false;
+    }
+
+  size = note_type_size(hdr->nc_type);
+  return size == 0 || hdr->nc_length == size;
+}
+
+/****************************************************************************
+ * Name: note_read
+ ****************************************************************************/
+
+static inline_function ssize_t
+note_read(FAR struct note_dump_stream_s *stream)
+{
+  FAR struct note_common_s *cmn = &stream->note.cmn;
+  uint32_t len;
+
+  /* Peek the fixed-size header from a copy of the position; the peek
+   * advances that copy to the payload.  A short read means the ring holds
+   * less than a whole header, so there is nothing left to dump.
+   */
+
+  if (ring_mpmc_peek(stream->ring, (FAR uint8_t *)cmn, sizeof(*cmn),
+                     &stream->pos) != sizeof(*cmn))
+    {
+      return 0;
+    }
+
+  if (!note_is_valid(cmn))
+    {
+      return -EINVAL;
+    }
+
+  /* A short payload read likewise means the whole note is not present. */
+
+  len = cmn->nc_length - sizeof(*cmn);
+  if (ring_mpmc_peek(stream->ring, stream->note.data, len,
+                     &stream->pos) != len)
+    {
+      return 0;
+    }
+
+  return cmn->nc_length;
+}
+
+/****************************************************************************
+ * Name: note_dump_gets
+ ****************************************************************************/
+
+static ssize_t note_dump_gets(FAR struct lib_instream_s *self,
+                              FAR void *buffer, size_t len)
+{
+  FAR struct note_dump_stream_s *stream =
+                              (FAR struct note_dump_stream_s *)self;
+  FAR char *dest = buffer;
+  FAR char *end = dest + len;
+  ssize_t ret = 0;
+
+  /* Emit as many whole notes as fit into the caller's buffer.  Binary mode
+   * hands back the raw notes unchanged; text mode formats each note into
+   * ftrace text.  A note that would not fit is left for the next call so it
+   * is never split; the caller must provide a buffer large enough for at
+   * least one note.
+   */
+
+  for (; ; )
+    {
+      uint32_t saved = stream->pos;
+      ssize_t notelen;
+
+      ret = note_read(stream);
+      if (ret <= 0)
+        {
+          break;
+        }
+
+#ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
+      if (!stream->binary)
+        {
+          struct lib_memoutstream_s out;
+
+          /* note_dump_one() returns the full formatted length even when the
+           * stream clamps it, so a length past the remaining space means
+           * the whole note did not fit.
+           */
+
+          lib_memoutstream(&out, dest, end - dest);
+          notelen = note_dump_one(stream, &stream->note, &out.common);
+          if (notelen > out.buflen)
+            {
+              /* Leave this note for the next call so it is never split. */
+
+              stream->pos = saved;
+              break;
+            }
+        }
+      else
+#endif
+        {
+          notelen = stream->note.cmn.nc_length;
+          if (dest + notelen > end)
+            {
+              /* Leave this note for the next call so it is never split. */
+
+              stream->pos = saved;
+              break;
+            }
+
+          memcpy(dest, &stream->note, notelen);
+        }
+
+      dest += notelen;
+    }
+
+  /* If no note was emitted, propagate the last read error (for example
+   * -EAGAIN at the end of the ring) so the caller can tell end-of-data
+   * apart from a short fill.
+   */
+
+  return dest != buffer ? dest - (FAR char *)buffer : ret;
+}
+
+/****************************************************************************
+ * Name: note_dump_getc
+ ****************************************************************************/
+
+static int note_dump_getc(FAR struct lib_instream_s *self)
+{
+  /* This stream only yields formatted text through gets(); a single-byte
+   * read has no meaning here and must not consume a note.
+   */
+
+  UNUSED(self);
+  return -EINVAL;
+}
 
 /****************************************************************************
  * Public Functions
@@ -1543,49 +1750,56 @@ void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
 #endif
 }
 
-#ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
-
 /****************************************************************************
- * Name: note_dump_*
- *
- * Description:
- *   Shared binary-note to ftrace-text parser used by the noteram and
- *   notesnap drivers.
- *
+ * Name: note_dump_stream
  ****************************************************************************/
 
-/****************************************************************************
- * Name: note_dump_context_init
- ****************************************************************************/
-
-void note_dump_context_init(FAR struct note_dump_context_s *ctx)
+void note_dump_stream(FAR struct note_dump_stream_s *stream,
+                      FAR struct ring_s *ring, bool binary)
 {
   int cpu;
+
+#ifndef CONFIG_DRIVERS_NOTE_TEXT_DUMP
+  /* Without the text formatter built in, only binary dumps are possible. */
+
+  DEBUGASSERT(binary);
+#endif
+
+  /* Wire the embedded non-consuming ring input stream. */
+
+  stream->ring        = ring;
+  stream->binary      = binary;
+  stream->pos         = RING_IDX_OLDEST;
+  stream->common.getc = note_dump_getc;
+  stream->common.gets = note_dump_gets;
+  stream->common.nget = 0;
 
   /* Initialize the trace dump context */
 
   for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
     {
-      ctx->cpu[cpu].intr_nest = 0;
-      ctx->cpu[cpu].pendingswitch = false;
-      ctx->cpu[cpu].current_state = TSTATE_TASK_RUNNING;
-      ctx->cpu[cpu].current_pid = -1;
-      ctx->cpu[cpu].next_pid = -1;
-      ctx->cpu[cpu].current_priority = -1;
-      ctx->cpu[cpu].next_priority = -1;
+      stream->ctx[cpu].intr_nest = 0;
+      stream->ctx[cpu].pendingswitch = false;
+      stream->ctx[cpu].current_state = TSTATE_TASK_RUNNING;
+      stream->ctx[cpu].current_pid = -1;
+      stream->ctx[cpu].next_pid = -1;
+      stream->ctx[cpu].current_priority = -1;
+      stream->ctx[cpu].next_priority = -1;
     }
 }
+
+#ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
 
 /****************************************************************************
  * Name: note_dump_one
  ****************************************************************************/
 
-int note_dump_one(FAR const struct note_max_s *p,
-                  FAR struct lib_outstream_s *s,
-                  FAR struct note_dump_context_s *ctx)
+int note_dump_one(FAR struct note_dump_stream_s *stream,
+                  FAR const struct note_max_s *p,
+                  FAR struct lib_outstream_s *s)
 {
   FAR const struct note_common_s *note = &p->cmn;
-  FAR struct note_dump_cpu_context_s *cctx;
+  FAR struct note_dump_context_s *ctx;
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   char buf[TASK_NAME_SIZE];
 #endif
@@ -1597,12 +1811,12 @@ int note_dump_one(FAR const struct note_max_s *p,
   int ret = 0;
   pid_t pid;
 
-  cctx = &ctx->cpu[cpu];
+  ctx = &stream->ctx[cpu];
   pid = note->nc_pid;
 
-  if (cctx->current_pid < 0)
+  if (ctx->current_pid < 0)
     {
-      cctx->current_pid = pid;
+      ctx->current_pid = pid;
     }
 
   /* Output one note */
@@ -1613,7 +1827,7 @@ int note_dump_one(FAR const struct note_max_s *p,
     case NOTE_START:
       {
         nxtask_namepool_get(pid, buf, TASK_NAME_SIZE);
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "sched_wakeup_new: comm=%s pid=%d "
                            "target_cpu=%d\n",
                            buf, get_pid(pid), cpu);
@@ -1626,7 +1840,7 @@ int note_dump_one(FAR const struct note_max_s *p,
          * Change current task state for the succeeding NOTE_RESUME.
          */
 
-        cctx->current_state = 0;
+        ctx->current_state = 0;
       }
       break;
 
@@ -1635,7 +1849,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR const char *name =
           (FAR const char *)p + sizeof(struct note_common_s);
 
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "task_rename: pid=%d comm=%s\n",
                            get_pid(pid), name);
       }
@@ -1652,7 +1866,7 @@ int note_dump_one(FAR const struct note_max_s *p,
          * Preserve the information for the succeeding NOTE_RESUME.
          */
 
-        cctx->current_state = nsu->nsu_state;
+        ctx->current_state = nsu->nsu_state;
 
 #if CONFIG_SCHED_INSTRUMENTATION_SWITCH_BACKTRACE > 0
         ret += lib_sprintf(s, "   <-");
@@ -1677,17 +1891,17 @@ int note_dump_one(FAR const struct note_max_s *p,
          * The task switch timing depends on the running context.
          */
 
-        cctx->next_pid = pid;
-        cctx->next_priority = note->nc_priority;
+        ctx->next_pid = pid;
+        ctx->next_priority = note->nc_priority;
 
-        if (cctx->intr_nest == 0)
+        if (ctx->intr_nest == 0)
           {
             /* If not in the interrupt context, the task switch is
              * executed immediately.
              */
 
-            ret += note_dump_header(s, note, ctx);
-            ret += note_dump_sched_switch(s, note, ctx);
+            ret += note_dump_header(s, note);
+            ret += note_dump_sched_switch(s, ctx);
           }
         else
           {
@@ -1695,12 +1909,12 @@ int note_dump_one(FAR const struct note_max_s *p,
              * until leaving the interrupt handler.
              */
 
-            nxtask_namepool_get(cctx->next_pid, buf, TASK_NAME_SIZE);
-            ret += note_dump_header(s, note, ctx);
+            nxtask_namepool_get(ctx->next_pid, buf, TASK_NAME_SIZE);
+            ret += note_dump_header(s, note);
             ret += lib_sprintf(s, "sched_waking: comm=%s "
                                "pid=%d target_cpu=%d\n",
-                               buf, get_pid(cctx->next_pid), cpu);
-            cctx->pendingswitch = true;
+                               buf, get_pid(ctx->next_pid), cpu);
+            ctx->pendingswitch = true;
           }
       }
       break;
@@ -1713,7 +1927,7 @@ int note_dump_one(FAR const struct note_max_s *p,
          */
 
         nxtask_namepool_get(pid, buf, TASK_NAME_SIZE);
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "sched_waking: comm=%s "
                            "pid=%d prio=%d target_cpu=%d\n",
                            buf, get_pid(pid), note->nc_priority, cpu);
@@ -1735,7 +1949,7 @@ int note_dump_one(FAR const struct note_max_s *p,
             break;
           }
 
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "sys_%s(",
                            g_funcnames[nsc->nsc_nr - CONFIG_SYS_RESERVED]);
 
@@ -1771,7 +1985,7 @@ int note_dump_one(FAR const struct note_max_s *p,
             break;
           }
 
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         result = nsc->nsc_result;
         ret += lib_sprintf(s, "sys_%s -> 0x%" PRIxPTR "\n",
                            g_funcnames[nsc->nsc_nr - CONFIG_SYS_RESERVED],
@@ -1786,10 +2000,10 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_irqhandler_s *nih;
 
         nih = (FAR struct note_irqhandler_s *)p;
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "irq_handler_entry: irq=%u name=%pS\n",
                            nih->nih_irq, (FAR void *)nih->nih_handler);
-        cctx->intr_nest++;
+        ctx->intr_nest++;
       }
       break;
 
@@ -1798,20 +2012,20 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_irqhandler_s *nih;
 
         nih = (FAR struct note_irqhandler_s *)p;
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "irq_handler_exit: irq=%u ret=handled\n",
                            nih->nih_irq);
-        cctx->intr_nest--;
+        ctx->intr_nest--;
 
-        if (cctx->intr_nest <= 0)
+        if (ctx->intr_nest <= 0)
           {
-            cctx->intr_nest = 0;
-            if (cctx->pendingswitch)
+            ctx->intr_nest = 0;
+            if (ctx->pendingswitch)
               {
                 /* If the pending task switch exists, it is executed here */
 
-                ret += note_dump_header(s, note, ctx);
-                ret += note_dump_sched_switch(s, note, ctx);
+                ret += note_dump_header(s, note);
+                ret += note_dump_sched_switch(s, ctx);
               }
           }
       }
@@ -1825,7 +2039,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_wdog_s *nw;
 
         nw = (FAR struct note_wdog_s *)p;
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "tracing_mark_write: I|%d|"
                            "wdog_%s: handler=%pS arg=0x%" PRIxPTR "\n",
                            pid,
@@ -1840,7 +2054,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_wdog_s *nw;
 
         nw = (FAR struct note_wdog_s *)p;
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "tracing_mark_write: %c|%d|"
                            "wdog: handler=%pS arg=0x%" PRIxPTR "\n",
                            note->nc_type == NOTE_WDOG_ENTER ? 'B' : 'E',
@@ -1855,7 +2069,7 @@ int note_dump_one(FAR const struct note_max_s *p,
       {
         struct note_csection_s *ncs;
         ncs = (FAR struct note_csection_s *)p;
-        ret += note_dump_header(s, &ncs->ncs_cmn, ctx);
+        ret += note_dump_header(s, &ncs->ncs_cmn);
         ret += lib_sprintf(s, "tracing_mark_write: %c|%d|critical_section\n",
                            note->nc_type == NOTE_CSECTION_ENTER ?
                            'B' : 'E', pid);
@@ -1871,7 +2085,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         int16_t count;
         npr = (FAR struct note_preempt_s *)p;
         count = npr->npr_count;
-        ret += note_dump_header(s, &npr->npr_cmn, ctx);
+        ret += note_dump_header(s, &npr->npr_cmn);
         ret += lib_sprintf(s,  "tracing_mark_write: %c|%d|sched_lock:%d\n",
                           note->nc_type == NOTE_PREEMPT_LOCK ?
                           'B' : 'E', pid, count);
@@ -1885,7 +2099,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_printf_s *npt;
 
         npt = (FAR struct note_printf_s *)p;
-        ret += note_dump_header(s, &npt->npt_cmn, ctx);
+        ret += note_dump_header(s, &npt->npt_cmn);
         ret += lib_sprintf(s, "tracing_mark_write: I|%d|", pid);
         ret += note_dump_printf(s, npt);
         lib_stream_putc(s, '\n');
@@ -1901,7 +2115,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         uintptr_t ip;
 
         ip = nbi->nev_ip;
-        ret += note_dump_header(s, &nbi->nev_cmn, ctx);
+        ret += note_dump_header(s, &nbi->nev_cmn);
         if (len > 0)
           {
             ret += lib_sprintf(s, "tracing_mark_write: %c|%d|%.*s\n",
@@ -1919,7 +2133,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_event_s *nbi = (FAR struct note_event_s *)p;
         int len = note->nc_length - SIZEOF_NOTE_EVENT(0);
 
-        ret += note_dump_header(s, &nbi->nev_cmn, ctx);
+        ret += note_dump_header(s, &nbi->nev_cmn);
         ret += lib_sprintf(s, "tracing_mark_write: I|%d|%.*s\n",
                            pid, len, (FAR const char *)nbi->nev_data);
       }
@@ -1930,7 +2144,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         int len = note->nc_length - SIZEOF_NOTE_EVENT(0);
         int i;
 
-        ret += note_dump_header(s, &nbi->nev_cmn, ctx);
+        ret += note_dump_header(s, &nbi->nev_cmn);
         ret += lib_sprintf(s, "tracing_mark_write: I|%d|", pid);
 
         for (i = 0; i < len; i++)
@@ -1947,7 +2161,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_event_s *nbi = (FAR struct note_event_s *)p;
         FAR struct note_counter_s *counter;
         counter = (FAR struct note_counter_s *)nbi->nev_data;
-        ret += note_dump_header(s, &nbi->nev_cmn, ctx);
+        ret += note_dump_header(s, &nbi->nev_cmn);
         ret += lib_sprintf(s, "tracing_mark_write: C|%d|%s|%" PRId64 "\n",
                            pid, counter->name, counter->value);
       }
@@ -1957,7 +2171,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_event_s *nev = (FAR struct note_event_s *)p;
         FAR struct note_threadtime_s *nts = (FAR struct note_threadtime_s *)
                                             nev->nev_data;
-        ret += note_dump_header(s, &nev->nev_cmn, ctx);
+        ret += note_dump_header(s, &nev->nev_cmn);
         ret += lib_sprintf(s, "tracing_mark_write: I|%d|elapsed:%llu\n",
                            pid, (unsigned long long)nts->elapsed);
       }
@@ -1986,7 +2200,7 @@ int note_dump_one(FAR const struct note_max_s *p,
             nlen = total;
           }
 
-        ret += note_dump_header(s, &nev->nev_cmn, ctx);
+        ret += note_dump_header(s, &nev->nev_cmn);
         if (nlen < total)
           {
             ret += lib_sprintf(s, "tracing_mark_write: "
@@ -2014,7 +2228,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_wqueue_s *nwq;
 
         nwq = (FAR struct note_wqueue_s *)p;
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "tracing_mark_write: I|%d|"
                            "wqueue_%s: worker=%pS arg=0x%" PRIxPTR "\n",
                            pid, note->nc_type == NOTE_WQUEUE_START
@@ -2028,7 +2242,7 @@ int note_dump_one(FAR const struct note_max_s *p,
         FAR struct note_wqueue_s *nwq;
 
         nwq = (FAR struct note_wqueue_s *)p;
-        ret += note_dump_header(s, note, ctx);
+        ret += note_dump_header(s, note);
         ret += lib_sprintf(s, "tracing_mark_write: %c|%d|"
                            "wqueue: worker=%pS arg=0x%" PRIxPTR "\n",
                            note->nc_type == NOTE_WQUEUE_ENTER ? 'B' : 'E',
@@ -2048,7 +2262,7 @@ int note_dump_one(FAR const struct note_max_s *p,
             "add", "remove", "malloc", "free"
           };
 
-        ret += note_dump_header(s, &nmm->nhp_cmn, ctx);
+        ret += note_dump_header(s, &nmm->nhp_cmn);
         ret += lib_sprintf(s, "tracing_mark_write: C|%d|Heap Usage|%zu|%s"
                            ": heap: 0x%" PRIxPTR
                            " size: %zu, address: 0x%" PRIxPTR "\n",
