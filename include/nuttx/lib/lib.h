@@ -146,7 +146,11 @@ FAR char *lib_realpath(FAR const char *path, FAR char *resolved,
 
 /* Functions defined in lib_cxx_initialize.c ********************************/
 
+#if defined(CONFIG_HAVE_CXXINITIALIZE) || defined(CONFIG_CXX_EXCEPTION)
 void lib_cxx_initialize(void);
+#else
+#  define lib_cxx_initialize()
+#endif
 
 #undef EXTERN
 #ifdef __cplusplus

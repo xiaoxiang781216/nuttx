@@ -36,7 +36,6 @@ list(
   lib_xorshift128.c
   lib_tea_encrypt.c
   lib_tea_decrypt.c
-  lib_cxx_initialize.c
   lib_idr.c
   lib_impure.c
   lib_memfd.c
@@ -57,6 +56,10 @@ list(
 
 if(CONFIG_LIBC_TEMPBUFFER)
   list(APPEND SRCS lib_tempbuffer.c)
+endif()
+
+if(CONFIG_HAVE_CXXINITIALIZE OR CONFIG_CXX_EXCEPTION)
+  list(APPEND SRCS lib_cxx_initialize.c)
 endif()
 
 # Support for platforms that do not have long long types
