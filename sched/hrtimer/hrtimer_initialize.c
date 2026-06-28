@@ -61,12 +61,7 @@ DEFINE_PER_CPU_BMP(seqcount_t, g_hrtimer_lock) = SEQLOCK_INITIALIZER;
  */
 
 #undef g_hrtimer_guard
-DEFINE_PER_CPU_BMP(struct hrtimer_s, g_hrtimer_guard) =
-{
-  { NULL },
-  NULL,
-  HRTIMER_GUARD_DELAY
-};
+DEFINE_PER_CPU_BSS_BMP(struct hrtimer_s, g_hrtimer_guard);
 #define g_hrtimer_guard this_cpu_var_bmp(g_hrtimer_guard)
 
 #ifdef CONFIG_HRTIMER_TREE

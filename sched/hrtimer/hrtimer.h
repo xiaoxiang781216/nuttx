@@ -733,6 +733,14 @@ static inline_function void hrtimer_process(uint64_t now)
 
 static inline_function void hrtimer_initialize(void)
 {
+  /* The guard timer lives in a per-CPU .bss region, so its sentinel
+   * expiration time must be initialized at runtime (on each CPU).  The
+   * other fields are zero-initialized by .bss and fixed up by the queue
+   * insertion below.
+   */
+
+  g_hrtimer_guard.expired = HRTIMER_GUARD_DELAY;
+
 #ifdef CONFIG_HRTIMER_TREE
   RB_INSERT(hrtimer_tree_s, &g_hrtimer_tree, &g_hrtimer_guard);
   g_hrtimer_head = &g_hrtimer_guard;
