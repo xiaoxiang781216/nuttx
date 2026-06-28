@@ -243,8 +243,6 @@ static void fdlist_install(FAR struct fdlist *list, int fd,
 
 static void task_fssync(FAR struct tcb_s *tcb, FAR void *arg)
 {
-  FAR struct tcb_s *ctcb;
-  int pid = tcb->pid;
   uint8_t rows;
   int i;
   int j;
@@ -262,15 +260,8 @@ static void task_fssync(FAR struct tcb_s *tcb, FAR void *arg)
         {
           FAR struct file *filep;
 
-          ctcb = nxsched_get_tcb(pid);
-          if (ctcb == NULL || ctcb->group == NULL || ctcb != tcb)
-            {
-              nxsched_put_tcb(ctcb);
-              return;
-            }
+          fdlist_get_by_index(&tcb->group->tg_fdlist, i, j, &filep, NULL);
 
-          fdlist_get_by_index(&ctcb->group->tg_fdlist, i, j, &filep, NULL);
-          nxsched_put_tcb(ctcb);
           if (filep != NULL)
             {
               file_fsync(filep);
