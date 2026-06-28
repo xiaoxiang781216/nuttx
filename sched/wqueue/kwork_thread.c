@@ -89,30 +89,7 @@
 
 #undef g_hpwork
 aligned_data(64)
-DEFINE_PER_CPU_BMP(struct hp_wqueue_s, g_hpwork) =
-{
-  {
-    SP_UNLOCKED,
-    {
-      NULL,
-      NULL,
-    },
-    {
-      NULL,
-      NULL,
-    },
-    SEM_INITIALIZER(0),
-    {
-      {
-        0
-      },
-    },
-    CONFIG_SCHED_HPNTHREADS,
-    false,
-    SEM_INITIALIZER(0),
-  },
-};
-
+DEFINE_PER_CPU_BSS_BMP(struct hp_wqueue_s, g_hpwork);
 #  define g_hpwork this_cpu_var_bmp(g_hpwork)
 #endif /* CONFIG_SCHED_HPWORK */
 
@@ -121,30 +98,7 @@ DEFINE_PER_CPU_BMP(struct hp_wqueue_s, g_hpwork) =
 
 #undef g_lpwork
 aligned_data(64)
-DEFINE_PER_CPU_BMP(struct lp_wqueue_s, g_lpwork) =
-{
-  {
-    SP_UNLOCKED,
-    {
-      NULL,
-      NULL,
-    },
-    {
-      NULL,
-      NULL,
-    },
-    SEM_INITIALIZER(0),
-    {
-      {
-        0
-      },
-    },
-    CONFIG_SCHED_LPNTHREADS,
-    false,
-    SEM_INITIALIZER(0),
-  }
-};
-
+DEFINE_PER_CPU_BSS_BMP(struct lp_wqueue_s, g_lpwork);
 #  define g_lpwork this_cpu_var_bmp(g_lpwork)
 #endif /* CONFIG_SCHED_LPWORK */
 
@@ -792,19 +746,28 @@ void worklist_initialize(void)
 #ifdef CONFIG_SCHED_HPWORK
   wq = &g_hpwork.wq;
 
-  /* For BMP compile time init will make cpun point to cpu0 */
+  /* The work queue state lives in a per-CPU .bss region, so it must be
+   * initialized at runtime.  In the BMP case this also ensures the list
+   * self-pointers reference the current CPU's copy instead of CPU0.
+   */
 
+  spin_lock_init(&wq->lock);
   list_initialize(&wq->expired);
   list_initialize(&wq->pending);
+  nxsem_init(&wq->sem, 0, 0);
+  nxsem_init(&wq->exsem, 0, 0);
+  wq->nthreads = CONFIG_SCHED_HPNTHREADS;
 #endif
 
 #ifdef CONFIG_SCHED_LPWORK
   wq = &g_lpwork.wq;
 
-  /* For BMP compile time init will make cpun point to cpu0 */
-
+  spin_lock_init(&wq->lock);
   list_initialize(&wq->expired);
   list_initialize(&wq->pending);
+  nxsem_init(&wq->sem, 0, 0);
+  nxsem_init(&wq->exsem, 0, 0);
+  wq->nthreads = CONFIG_SCHED_LPNTHREADS;
 #endif
 }
 
