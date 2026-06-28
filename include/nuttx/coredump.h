@@ -86,6 +86,12 @@ int coredump_remove_memory_region(FAR const void *ptr, size_t size);
  * Description:
  *   This function for generating core dump stream.
  *
+ * Input Parameters:
+ *   regions - The memory regions to dump.
+ *   stream  - The output stream.
+ *   pid     - The task ID to dump.  INVALID_PROCESS_ID means dump all
+ *             tasks.
+ *
  ****************************************************************************/
 
 int coredump(FAR const struct memory_region_s *regions,

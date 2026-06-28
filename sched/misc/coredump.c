@@ -89,7 +89,7 @@ struct elf_dumpinfo_s
 {
   FAR const struct memory_region_s *regions;
   FAR struct lib_outstream_s *stream;
-  pid_t                       pid;
+  FAR struct tcb_s           *tcb;
 };
 
 typedef uint8_t running_regs_t[XCPTCONTEXT_SIZE]
@@ -148,10 +148,6 @@ static DEFINE_PER_CPU_BMP(mutex_t, g_regions_lock) = NXMUTEX_INITIALIZER;
 #define g_regions_lock this_cpu_var_bmp(g_regions_lock)
 static DEFINE_PER_CPU_BSS_BMP(bool, g_stream_initialized);
 #define g_stream_initialized this_cpu_var_bmp(g_stream_initialized)
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Private Functions
@@ -467,7 +463,7 @@ static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo)
   FAR struct tcb_s *tcb;
   int i;
 
-  if (cinfo->pid == INVALID_PROCESS_ID)
+  if (cinfo->tcb == NULL)
     {
      FAR struct tcb_s *rtcb = running_task();
 
@@ -497,12 +493,7 @@ static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo)
     }
   else
     {
-      tcb = nxsched_get_tcb(cinfo->pid);
-      if (tcb)
-        {
-          elf_emit_tcb_note(cinfo, tcb);
-          nxsched_put_tcb(tcb);
-        }
+      elf_emit_tcb_note(cinfo, cinfo->tcb);
     }
 }
 
@@ -574,7 +565,7 @@ static void elf_emit_stack(FAR struct elf_dumpinfo_s *cinfo)
   FAR struct tcb_s *tcb;
   int i;
 
-  if (cinfo->pid == INVALID_PROCESS_ID)
+  if (cinfo->tcb == NULL)
     {
       FAR struct tcb_s *rtcb = running_task();
 
@@ -599,12 +590,7 @@ static void elf_emit_stack(FAR struct elf_dumpinfo_s *cinfo)
     }
   else
     {
-      tcb = nxsched_get_tcb(cinfo->pid);
-      if (tcb)
-        {
-          elf_emit_tcb_stack(cinfo, tcb);
-          nxsched_put_tcb(tcb);
-        }
+      elf_emit_tcb_stack(cinfo, cinfo->tcb);
     }
 }
 
@@ -777,7 +763,7 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
   elf_emit(cinfo, &phdr, sizeof(phdr));
 
   phdr.p_align  = ELF_PAGESIZE;
-  if (cinfo->pid == INVALID_PROCESS_ID)
+  if (cinfo->tcb == NULL)
     {
       FAR struct tcb_s *rtcb = running_task();
 
@@ -802,12 +788,7 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
     }
   else
     {
-      tcb = nxsched_get_tcb(cinfo->pid);
-      if (tcb)
-        {
-          elf_emit_tcb_phdr(cinfo, tcb, &phdr, &offset);
-          nxsched_put_tcb(tcb);
-        }
+      elf_emit_tcb_phdr(cinfo, cinfo->tcb, &phdr, &offset);
     }
 
   /* Write program headers for segments dump */
@@ -863,6 +844,85 @@ coredump_print_memory_regions(FAR const struct memory_region_s *regions)
     }
 }
 
+/****************************************************************************
+ * Name: coredump_with_tcb
+ *
+ * Description:
+ *   This function for generating core dump stream.
+ *
+ ****************************************************************************/
+
+static int coredump_with_tcb(FAR const struct memory_region_s *regions,
+                             FAR struct lib_outstream_s *stream,
+                             FAR struct tcb_s *tcb)
+{
+  struct elf_dumpinfo_s cinfo;
+  int memsegs = 0;
+  int stksegs;
+
+  cinfo.regions = regions;
+  cinfo.stream  = stream;
+  cinfo.tcb     = tcb;
+
+  if (cinfo.tcb != NULL)
+    {
+      stksegs = 1;
+    }
+  else
+    {
+      stksegs = elf_get_ntcb();
+    }
+
+  /* Check the memory region */
+
+  if (cinfo.regions != NULL)
+    {
+      for (; cinfo.regions[memsegs].start <
+             cinfo.regions[memsegs].end; memsegs++);
+    }
+
+  /* Fill notes section, with additional one for program header,
+   * and one for the core file info defined by NuttX.
+   */
+
+  elf_emit_hdr(&cinfo, stksegs + memsegs + 1 + 1);
+
+  /* Fill all the program information about the process for the
+   * notes.  This also sets up the file header.
+   */
+
+  elf_emit_phdr(&cinfo, stksegs, memsegs);
+
+  /* Fill note information */
+
+  elf_emit_note(&cinfo);
+
+  /* Align to page */
+
+  elf_emit_align(&cinfo);
+
+  /* Dump stack */
+
+  elf_emit_stack(&cinfo);
+
+  /* Dump memory segments */
+
+  if (memsegs > 0)
+    {
+      elf_emit_memory(&cinfo, memsegs);
+    }
+
+  /* Emit core info note */
+
+  elf_emit_info_note(&cinfo);
+
+  /* Flush the dump */
+
+  elf_flush(&cinfo);
+
+  return OK;
+}
+
 #ifdef CONFIG_BOARD_COREDUMP_NETPOLL
 /****************************************************************************
  * Name: coredump_dump_netpoll
@@ -872,7 +932,7 @@ coredump_print_memory_regions(FAR const struct memory_region_s *regions)
  *
  ****************************************************************************/
 
-static void coredump_dump_netpoll(pid_t pid)
+static void coredump_dump_netpoll(FAR struct tcb_s *tcb)
 {
   FAR struct lib_netpolloutstream_s *netstream = &g_netpollstream;
   FAR struct lib_outstream_s *stream;
@@ -885,7 +945,7 @@ static void coredump_dump_netpoll(pid_t pid)
   stream = (FAR struct lib_outstream_s *)&g_lzfstream;
 #  endif
 
-  ret = coredump(g_regions, stream, pid);
+  ret = coredump_with_tcb(g_regions, stream, tcb);
   if (ret < 0)
     {
       _alert("Coredump fail %d\n", ret);
@@ -906,7 +966,7 @@ static void coredump_dump_netpoll(pid_t pid)
  ****************************************************************************/
 
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
-static void coredump_dump_syslog(pid_t pid)
+static void coredump_dump_syslog(FAR struct tcb_s *tcb)
 {
   FAR void *stream;
   FAR const char *streamname;
@@ -940,7 +1000,7 @@ static void coredump_dump_syslog(pid_t pid)
 
   /* Do core dump */
 
-  coredump(g_regions, stream, pid);
+  coredump_with_tcb(g_regions, stream, tcb);
 
 #  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   _alert("Coredump finish (Compression Enabled). %s formatted\n",
@@ -962,7 +1022,7 @@ static void coredump_dump_syslog(pid_t pid)
  ****************************************************************************/
 
 #ifdef CONFIG_BOARD_COREDUMP_DEV
-static void coredump_dump_dev(pid_t pid)
+static void coredump_dump_dev(FAR struct tcb_s *tcb)
 {
   FAR void *stream = &g_devstream;
   int ret;
@@ -990,7 +1050,7 @@ static void coredump_dump_dev(pid_t pid)
   stream = &g_lzfstream;
 # endif
 
-  ret = coredump(g_regions, stream, pid);
+  ret = coredump_with_tcb(g_regions, stream, tcb);
   if (ret < 0)
     {
       _alert("Coredump fail %d\n", ret);
@@ -1409,6 +1469,10 @@ static void coredump_procfs_register(FAR const char *devpath)
 #endif /* CONFIG_FS_PROCFS_REGISTER && CONFIG_BOARD_COREDUMP_DEVPATH */
 
 /****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
  * Name: coredump_initialize
  *
  * Description:
@@ -1486,14 +1550,14 @@ int coredump_initialize(void)
  * Name: coredump_dump
  *
  * Description:
- *   Do coredump of the task specified by pid.
+ *   Do coredump of the task specified by tcb.
  *
  * Input Parameters:
- *   pid - The task/thread ID of the thread to dump
+ *   tcb - The TCB of the task to dump.  NULL means dump all tasks.
  *
  ****************************************************************************/
 
-void coredump_dump(pid_t pid)
+void coredump_dump(FAR struct tcb_s *tcb)
 {
   if (!g_stream_initialized)
     {
@@ -1503,11 +1567,11 @@ void coredump_dump(pid_t pid)
 
   coredump_print_memory_regions(g_regions);
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
-  coredump_dump_syslog(pid);
+  coredump_dump_syslog(tcb);
 #elif defined(CONFIG_BOARD_COREDUMP_DEV)
-  coredump_dump_dev(pid);
+  coredump_dump_dev(tcb);
 #elif defined(CONFIG_BOARD_COREDUMP_NETPOLL)
-  coredump_dump_netpoll(pid);
+  coredump_dump_netpoll(tcb);
 #endif
 }
 
@@ -1517,80 +1581,37 @@ void coredump_dump(pid_t pid)
  * Description:
  *   This function for generating core dump stream.
  *
+ * Input Parameters:
+ *   regions - The memory regions to dump.
+ *   stream  - The output stream.
+ *   pid     - The task ID to dump.  INVALID_PROCESS_ID means dump all
+ *             tasks.
+ *
  ****************************************************************************/
 
 int coredump(FAR const struct memory_region_s *regions,
              FAR struct lib_outstream_s *stream,
              pid_t pid)
 {
-  struct elf_dumpinfo_s cinfo;
-  int memsegs = 0;
-  int stksegs;
+  FAR struct tcb_s *tcb = NULL;
+  int ret;
 
-  cinfo.regions = regions;
-  cinfo.stream  = stream;
-  cinfo.pid     = pid;
+  /* Resolve the pid to a TCB once, holding a reference for the whole dump.
+   * INVALID_PROCESS_ID keeps the "dump all tasks" semantics (tcb == NULL).
+   */
 
-  if (cinfo.pid != INVALID_PROCESS_ID)
+  if (pid != INVALID_PROCESS_ID)
     {
-      if (!nxsched_verify_pid(cinfo.pid))
+      tcb = nxsched_get_tcb(pid);
+      if (tcb == NULL)
         {
           return -EINVAL;
         }
-
-      stksegs = 1;
-    }
-  else
-    {
-      stksegs = elf_get_ntcb();
     }
 
-  /* Check the memory region */
+  ret = coredump_with_tcb(regions, stream, tcb);
 
-  if (cinfo.regions != NULL)
-    {
-      for (; cinfo.regions[memsegs].start <
-             cinfo.regions[memsegs].end; memsegs++);
-    }
+  nxsched_put_tcb(tcb);
 
-  /* Fill notes section, with additional one for program header,
-   * and one for the core file info defined by NuttX.
-   */
-
-  elf_emit_hdr(&cinfo, stksegs + memsegs + 1 + 1);
-
-  /* Fill all the program information about the process for the
-   * notes.  This also sets up the file header.
-   */
-
-  elf_emit_phdr(&cinfo, stksegs, memsegs);
-
-  /* Fill note information */
-
-  elf_emit_note(&cinfo);
-
-  /* Align to page */
-
-  elf_emit_align(&cinfo);
-
-  /* Dump stack */
-
-  elf_emit_stack(&cinfo);
-
-  /* Dump memory segments */
-
-  if (memsegs > 0)
-    {
-      elf_emit_memory(&cinfo, memsegs);
-    }
-
-  /* Emit core info note */
-
-  elf_emit_info_note(&cinfo);
-
-  /* Flush the dump */
-
-  elf_flush(&cinfo);
-
-  return OK;
+  return ret;
 }

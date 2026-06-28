@@ -49,10 +49,10 @@ int coredump_initialize(void);
  *   Do coredump of the task specified by pid.
  *
  * Input Parameters:
- *   pid - The task/thread ID of the thread to dump
+ *   tcb - The TCB of the task to dump.  NULL means dump all tasks.
  *
  ****************************************************************************/
 
-void coredump_dump(pid_t pid);
+void coredump_dump(FAR struct tcb_s *tcb);
 
 #endif /* __SCHED_MISC_COREDUMP_H */

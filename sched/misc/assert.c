@@ -833,9 +833,9 @@ static void dump_core_info(FAR struct tcb_s *rtcb, FAR const char *filename,
       /* Dump core information */
 
 #  ifdef CONFIG_BOARD_COREDUMP_FULL
-      coredump_dump(INVALID_PROCESS_ID);
+      coredump_dump(NULL);
 #  else
-      coredump_dump(rtcb->pid);
+      coredump_dump(rtcb);
 #  endif
 #endif
 
