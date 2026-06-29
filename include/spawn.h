@@ -194,56 +194,127 @@ int posix_spawn_file_actions_addopen(
 
 int posix_spawnattr_init(FAR posix_spawnattr_t *attr);
 
-int posix_spawnattr_destroy(FAR posix_spawnattr_t *attr);
+static inline_function
+int posix_spawnattr_destroy(FAR posix_spawnattr_t *attr)
+{
+  return OK;
+}
 
 /* Get spawn attributes interfaces */
 
+static inline_function
 int posix_spawnattr_getflags(FAR const posix_spawnattr_t *attr,
-                             FAR short *flags);
+                             FAR short *flags)
+{
+  *flags = (short)attr->flags;
+  return OK;
+}
 #define posix_spawnattr_getpgroup(attr,group) (ENOSYS)
 int posix_spawnattr_getschedparam(FAR const posix_spawnattr_t *attr,
                                   FAR struct sched_param *param);
+static inline_function
 int posix_spawnattr_getschedpolicy(FAR const posix_spawnattr_t *attr,
-                                   FAR int *policy);
+                                   FAR int *policy)
+{
+  *policy = attr->policy;
+  return OK;
+}
 #define posix_spawnattr_getsigdefault(attr,sigdefault) (ENOSYS)
+static inline_function
 int posix_spawnattr_getsigmask(FAR const posix_spawnattr_t *attr,
-                               FAR sigset_t *sigmask);
+                               FAR sigset_t *sigmask)
+{
+  *sigmask = attr->sigmask;
+  return OK;
+}
 
 /* Set spawn attributes interfaces */
 
-int posix_spawnattr_setflags(FAR posix_spawnattr_t *attr, short flags);
+static inline_function
+int posix_spawnattr_setflags(FAR posix_spawnattr_t *attr, short flags)
+{
+  attr->flags = (uint8_t)flags;
+  return OK;
+}
 #define posix_spawnattr_setpgroup(attr,group) (ENOSYS)
 int posix_spawnattr_setschedparam(FAR posix_spawnattr_t *attr,
                                   FAR const struct sched_param *param);
-int posix_spawnattr_setschedpolicy(FAR posix_spawnattr_t *attr, int policy);
+static inline_function
+int posix_spawnattr_setschedpolicy(FAR posix_spawnattr_t *attr, int policy)
+{
+  attr->policy = policy;
+  return OK;
+}
 #define posix_spawnattr_setsigdefault(attr,sigdefault) (ENOSYS)
+static inline_function
 int posix_spawnattr_setsigmask(FAR posix_spawnattr_t *attr,
-                               FAR const sigset_t *sigmask);
+                               FAR const sigset_t *sigmask)
+{
+  attr->sigmask = *sigmask;
+  return OK;
+}
 
 /* Non-standard get/set spawn attributes interfaces */
 
+static inline_function
 int posix_spawnattr_getstacksize(FAR const posix_spawnattr_t *attr,
-                                 FAR size_t *stacksize);
-int posix_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
-                                 size_t stacksize);
+                                 FAR size_t *stacksize)
+{
+  *stacksize = attr->stacksize;
+  return OK;
+}
 
-int posix_spawnattr_getpriority(FAR posix_spawnattr_t *attr);
+static inline_function
+int posix_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
+                                 size_t stacksize)
+{
+  attr->stacksize = stacksize;
+  return OK;
+}
+
+static inline_function
+int posix_spawnattr_getpriority(FAR posix_spawnattr_t *attr)
+{
+  return attr->priority;
+}
 
 #ifndef CONFIG_BUILD_KERNEL
+static inline_function
 int posix_spawnattr_getstackaddr(FAR const posix_spawnattr_t *attr,
-                                 FAR void **stackaddr);
+                                 FAR void **stackaddr)
+{
+  *stackaddr = attr->stackaddr;
+  return OK;
+}
+
+static inline_function
 int posix_spawnattr_setstackaddr(FAR posix_spawnattr_t *attr,
-                                 FAR void *stackaddr);
+                                 FAR void *stackaddr)
+{
+  attr->stackaddr = stackaddr;
+  return OK;
+}
 #else
 #  define posix_spawnattr_getstackaddr(attr, addr) (*(addr) = NULL, 0)
 #  define posix_spawnattr_setstackaddr(attr, addr) (0)
 #endif
 
 #ifdef CONFIG_MM_TASK_HEAP
+static inline_function
 int posix_spawnattr_setheapsize(FAR posix_spawnattr_t *attr,
-                                size_t heapsize);
+                                size_t heapsize)
+{
+  attr->heapsize = heapsize ? heapsize : CONFIG_MM_TASK_HEAP_DEFAULT_SIZE;
+  return OK;
+}
+
+static inline_function
 int posix_spawnattr_getheapsize(FAR const posix_spawnattr_t *attr,
-                                FAR size_t *heapsize);
+                                FAR size_t *heapsize)
+{
+  *heapsize = attr->heapsize;
+  return OK;
+}
 #else
 #  define posix_spawnattr_setheapsize(attr, heapsize) (0)
 #  define posix_spawnattr_getheapsize(attr, heapsize) (*(heapsize) = 0, 0)
