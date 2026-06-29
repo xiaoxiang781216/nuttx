@@ -115,8 +115,4 @@ if(NOT CONFIG_UP)
   list(APPEND SRCS sched_cpucall.c)
 endif()
 
-if(CONFIG_PERF_EVENTS)
-  list(APPEND SRCS sched_perf.c)
-endif()
-
 target_sources(sched PRIVATE ${SRCS})

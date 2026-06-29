@@ -31,7 +31,6 @@
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/circbuf.h>
 #include <nuttx/hrtimer.h>
 
 /****************************************************************************
@@ -230,13 +229,6 @@ struct perf_event_attr_s
     {
       uint64_t config1;
     };
-};
-
-struct perf_buffer_s
-{
-  struct circbuf_s rb;
-  uint32_t ref_count;
-  spinlock_t lock;
 };
 
 struct perf_event_s
@@ -705,33 +697,6 @@ enum perf_event_type_e
   PERF_RECORD_TEXT_POKE      = 20,
 
   PERF_RECORD_MAX,      /* non-ABI */
-};
-
-/* sample data need match linux perf, element align with uint64_t */
-
-struct perf_sample_data_s
-{
-  uint64_t sample_flags;
-  uint64_t period;
-  uint64_t dyn_size;
-
-  struct
-  {
-    pid_t pid;
-    pid_t tid;
-  } tid_entry;
-
-  uint64_t time;
-  uint64_t id;
-
-  struct
-  {
-    uint32_t cpu;
-    uint32_t reserved;
-  } cpu_entry;
-
-  uint64_t ip;
-  uint64_t stream_id;
 };
 
 struct perf_event_header_s

@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/sched/sched_perf.c
+ * sched/perf/perf.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -33,6 +33,7 @@
 #include <sys/param.h>
 
 #include <nuttx/atomic.h>
+#include <nuttx/circbuf.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/perf.h>
@@ -41,6 +42,7 @@
 #include <nuttx/hrtimer.h>
 
 #include "sched/sched.h"
+#include "perf.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -48,10 +50,6 @@
 
 #define PERF_GET_COUNT(event) \
         (atomic64_read(&(event)->count) + atomic64_read(&(event)->child_count))
-
-#define PERF_RECORD_MISC_USER (2 << 0)
-#define FLAME_GRAPH_SKIP 11
-#define PERF_MAX_BACKTRACE 20
 
 /* Default sampling periods.
  *
@@ -73,12 +71,6 @@
 
 typedef int (*perf_func_t)(FAR struct perf_event_s *event);
 
-struct swevent_manger_s
-{
-  struct list_node list_swevent;
-  spinlock_t lock;
-};
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -93,30 +85,6 @@ static int perf_poll(FAR struct file *filep, FAR struct pollfd *fds,
 static int perf_mmap(FAR struct file *filep,
                      FAR struct mm_map_entry_s *map);
 #endif
-
-static int perf_cpuclock_event_init(FAR struct perf_event_s *event);
-static int perf_cpuclock_event_add(FAR struct perf_event_s *event,
-                                   int flags);
-static void perf_cpuclock_event_del(FAR struct perf_event_s *event,
-                                    int flags);
-static int perf_cpuclock_event_start(FAR struct perf_event_s *event,
-                                     int flags);
-static int perf_cpuclock_event_stop(FAR struct perf_event_s *event,
-                                    int flags);
-static int perf_cpuclock_event_read(FAR struct perf_event_s *event);
-static int perf_cpuclock_event_match(FAR struct perf_event_s *event);
-
-static int perf_swevent_init(FAR struct perf_event_s *event);
-static int perf_swevent_add(FAR struct perf_event_s *event,
-                            int flags);
-static void perf_swevent_del(FAR struct perf_event_s *event,
-                             int flags);
-static int perf_swevent_start(FAR struct perf_event_s *event,
-                              int flags);
-static int perf_swevent_stop(FAR struct perf_event_s *event,
-                             int flags);
-static int perf_swevent_read(FAR struct perf_event_s *event);
-static int perf_swevent_match(FAR struct perf_event_s *event);
 
 /****************************************************************************
  * Private Data
@@ -147,41 +115,6 @@ static struct inode g_perf_inode =
   {
     &g_perf_fops          /* u */
   }
-};
-
-static struct pmu_ops_s g_perf_cpu_clock_ops =
-{
-  .event_init  = perf_cpuclock_event_init,
-  .event_add   = perf_cpuclock_event_add,
-  .event_del   = perf_cpuclock_event_del,
-  .event_start = perf_cpuclock_event_start,
-  .event_stop  = perf_cpuclock_event_stop,
-  .event_read  = perf_cpuclock_event_read,
-  .event_match = perf_cpuclock_event_match,
-};
-
-static struct pmu_s g_perf_cpu_clock =
-{
-  .ops = &g_perf_cpu_clock_ops,
-};
-
-/* swevent */
-
-static DEFINE_PER_CPU_BSS_SMP(struct swevent_manger_s, g_swevent);
-static struct pmu_ops_s g_perf_swevent_ops =
-{
-  .event_init  = perf_swevent_init,
-  .event_add   = perf_swevent_add,
-  .event_del   = perf_swevent_del,
-  .event_start = perf_swevent_start,
-  .event_stop  = perf_swevent_stop,
-  .event_read  = perf_swevent_read,
-  .event_match = perf_swevent_match,
-};
-
-static struct pmu_s g_perf_swevent =
-{
-  .ops = &g_perf_swevent_ops,
 };
 
 /****************************************************************************
@@ -220,318 +153,6 @@ static int64_t perf_default_sample_period(uint32_t type, uint64_t config)
     }
 
   return UINT32_MAX - 1;
-}
-
-/****************************************************************************
- * Name: perf_get_eventid
- *
- * Description:
- *   Get the perf event id
- *
- * Input Parameters:
- *   event - Perf event
- *
- * Returned Value:
- *   Event id
- *
- ****************************************************************************/
-
-static uint64_t perf_get_eventid(FAR struct perf_event_s *event)
-{
-  if (event->parent_event != NULL)
-    {
-      return event->parent_event->id;
-    }
-  else
-    {
-      return event->id;
-    }
-}
-
-static void perf_sample_data_init(FAR struct perf_sample_data_s *data,
-                                  uint64_t period)
-{
-  data->sample_flags = PERF_SAMPLE_PERIOD;
-  data->period = period;
-}
-
-static uint16_t perf_prepare_sample(FAR struct perf_sample_data_s *data,
-                                    FAR struct perf_event_s *event,
-                                    uintptr_t ip)
-{
-  uint64_t sample_type = event->attr.sample_type;
-  uint16_t size = sizeof(struct perf_event_header_s);
-
-  if (sample_type & PERF_SAMPLE_IP)
-    {
-      data->ip = ip;
-      data->sample_flags |= PERF_SAMPLE_IP;
-      size += sizeof(data->ip);
-    }
-
-  if (sample_type & PERF_SAMPLE_ID)
-    {
-      data->id = perf_get_eventid(event);
-      data->sample_flags |= PERF_SAMPLE_ID;
-      size += sizeof(event->id);
-    }
-
-  if (sample_type & PERF_SAMPLE_IDENTIFIER)
-    {
-      data->id = perf_get_eventid(event);
-      data->sample_flags |= PERF_SAMPLE_IDENTIFIER;
-      size += sizeof(event->id);
-    }
-
-  if (sample_type & PERF_SAMPLE_CALLCHAIN)
-    {
-      data->sample_flags |= PERF_SAMPLE_CALLCHAIN;
-      size += sizeof(uint64_t) * (PERF_MAX_BACKTRACE + 1);
-    }
-
-  if (sample_type & PERF_SAMPLE_CPU)
-    {
-      data->cpu_entry.cpu = this_cpu();
-      data->cpu_entry.reserved = 0;
-      data->sample_flags |= PERF_SAMPLE_CPU;
-      size += sizeof(data->cpu_entry);
-    }
-
-  if (sample_type & PERF_SAMPLE_TIME)
-    {
-      data->time = up_perf_gettime();
-      data->sample_flags |= PERF_SAMPLE_TIME;
-      size += sizeof(data->time);
-    }
-
-  if (sample_type & PERF_SAMPLE_STREAM_ID)
-    {
-      data->stream_id = event->id;
-      data->sample_flags |= PERF_SAMPLE_STREAM_ID;
-      size += sizeof(data->stream_id);
-    }
-
-  if (sample_type & PERF_SAMPLE_PERIOD)
-    {
-      size += sizeof(data->period);
-    }
-
-  if (sample_type & PERF_SAMPLE_TID)
-    {
-      pid_t pid, tid;
-
-      if (event->ctx && event->ctx->tcb)
-        {
-          tid = event->ctx->tcb->pid;
-          if (event->ctx->tcb->group)
-            {
-              pid = event->ctx->tcb->group->tg_pid;
-            }
-          else
-            {
-              pid = tid;
-            }
-        }
-      else
-        {
-          pid = nxsched_getpid();
-          tid = gettid();
-        }
-
-      data->tid_entry.pid = pid;
-      data->tid_entry.tid = tid;
-      data->sample_flags |= PERF_SAMPLE_TID;
-      size += sizeof(data->tid_entry);
-    }
-
-  return size;
-}
-
-static bool perf_buffer_has_space(FAR struct perf_event_s *event,
-                                  size_t size)
-{
-  size_t space = circbuf_space(&(event->buf->rb));
-
-  /* Wake up the reader (perf record) when the buffer is filling up so it
-   * can drain the data before we start dropping samples.
-   */
-
-  if (space < circbuf_size(&(event->buf->rb)) / 5 && event->pfd)
-    {
-      poll_notify(&event->pfd, 1, POLLIN);
-    }
-
-  /* Non-overwrite semantics: the producer only ever advances head, never
-   * tail.  The consumer (perf record) maps the ring buffer and is the sole
-   * owner of tail via circbuf_read().  If we evicted old records here we
-   * would advance tail from the producer side too, racing the mmap'd
-   * consumer (which cannot take event->buf->lock across the mmap boundary)
-   * and corrupting the record stream.  Instead, when there is not enough
-   * room for the whole record, drop the new sample and keep the stream
-   * byte-aligned.  This matches the default behaviour of perf record.
-   */
-
-  return space >= size;
-}
-
-static inline void perf_backtrace_convert(FAR uint64_t *ptr, int nr)
-{
-  while (sizeof(uintptr_t) != sizeof(uint64_t) && nr-- >= 0)
-    {
-      *(ptr + nr) = *((FAR uintptr_t *)ptr + nr);
-    }
-}
-
-static void perf_output_sample(FAR struct perf_event_header_s *header,
-                               FAR struct perf_sample_data_s *data,
-                               FAR struct perf_event_s *event)
-{
-  uint64_t sample_type = data->sample_flags;
-  uint8_t record[sizeof(struct perf_event_header_s) +
-                 sizeof(uint64_t) * 8 +
-                 sizeof(uint64_t) * (PERF_MAX_BACKTRACE + 1)];
-  FAR struct perf_event_header_s *rec_header;
-  size_t len;
-
-  /* header->size already accounts for the worst case (including the full
-   * PERF_MAX_BACKTRACE callchain).  If the whole record cannot fit, drop it
-   * rather than evicting old records, so that the producer never advances
-   * tail and the byte-aligned record stream stays intact for the mmap'd
-   * reader.
-   */
-
-  if (!perf_buffer_has_space(event, header->size))
-    {
-      return;
-    }
-
-  /* Assemble the whole record in a local buffer first, then publish it to
-   * the ring buffer with a single circbuf_write().  circbuf_write() advances
-   * head exactly once, after all bytes are in place, so the mmap'd reader
-   * never observes a partially written record.  Writing field-by-field
-   * (advancing head per field) let the lockless reader copy out a truncated
-   * record at buffer-wrap boundaries, corrupting the stream.
-   */
-
-  rec_header = (FAR struct perf_event_header_s *)record;
-  memcpy(record, header, sizeof(*header));
-  len = sizeof(*header);
-
-  if (sample_type & PERF_SAMPLE_IDENTIFIER)
-    {
-      memcpy(record + len, &data->id, sizeof(data->id));
-      len += sizeof(data->id);
-    }
-
-  if (sample_type & PERF_SAMPLE_IP)
-    {
-      memcpy(record + len, &data->ip, sizeof(data->ip));
-      len += sizeof(data->ip);
-    }
-
-  if (sample_type & PERF_SAMPLE_TID)
-    {
-      memcpy(record + len, &data->tid_entry, sizeof(data->tid_entry));
-      len += sizeof(data->tid_entry);
-    }
-
-  if (sample_type & PERF_SAMPLE_TIME)
-    {
-      memcpy(record + len, &data->time, sizeof(data->time));
-      len += sizeof(data->time);
-    }
-
-  if (sample_type & PERF_SAMPLE_ID)
-    {
-      memcpy(record + len, &data->id, sizeof(data->id));
-      len += sizeof(data->id);
-    }
-
-  if (sample_type & PERF_SAMPLE_STREAM_ID)
-    {
-      memcpy(record + len, &data->stream_id, sizeof(data->stream_id));
-      len += sizeof(data->stream_id);
-    }
-
-  if (sample_type & PERF_SAMPLE_CPU)
-    {
-      memcpy(record + len, &data->cpu_entry, sizeof(data->cpu_entry));
-      len += sizeof(data->cpu_entry);
-    }
-
-  if (sample_type & PERF_SAMPLE_PERIOD)
-    {
-      memcpy(record + len, &data->period, sizeof(data->period));
-      len += sizeof(data->period);
-    }
-
-  if (sample_type & PERF_SAMPLE_CALLCHAIN)
-    {
-      FAR uint64_t *nr_ptr = (FAR uint64_t *)(record + len);
-      FAR uint64_t *frames = nr_ptr + 1;
-      int nr;
-
-      nr = sched_backtrace(gettid(), (FAR void **)frames,
-                           PERF_MAX_BACKTRACE, FLAME_GRAPH_SKIP);
-      perf_backtrace_convert(frames, nr);
-      *nr_ptr = nr;
-      len += sizeof(uint64_t) * (nr + 1);
-    }
-
-  /* Publish the actual record length (the callchain may be shorter than the
-   * reserved worst case) and commit the record atomically.
-   */
-
-  rec_header->size = len;
-  circbuf_write(&(event->buf->rb), record, len);
-}
-
-static int perf_event_data_overflow(FAR struct perf_event_s *event,
-                                    FAR struct perf_sample_data_s *data,
-                                    uintptr_t ip)
-{
-  struct perf_event_header_s header;
-  irqstate_t flags;
-
-  if (!event->buf)
-    {
-      return -ENOMEM;
-    }
-
-  header.size = perf_prepare_sample(data, event, ip);
-  header.misc = PERF_RECORD_MISC_USER;
-  header.type = PERF_RECORD_SAMPLE;
-
-  flags = spin_lock_irqsave(&event->buf->lock);
-  perf_output_sample(&header, data, event);
-  spin_unlock_irqrestore(&event->buf->lock, flags);
-  return 0;
-}
-
-static int perf_buffer_set_output(FAR struct perf_event_s *event,
-                                  FAR struct perf_event_s *output)
-{
-  if (output->buf)
-    {
-      event->buf = output->buf;
-      event->buf->ref_count++;
-      return 0;
-    }
-
-  return -1;
-}
-
-static void perf_buffer_release(FAR struct perf_event_s *event)
-{
-  if (event->buf)
-    {
-      event->buf->ref_count--;
-      if (event->buf->ref_count == 0)
-        {
-          kumm_free(event->buf);
-          event->buf = NULL;
-        }
-    }
 }
 
 /****************************************************************************
@@ -743,8 +364,8 @@ static void perf_free_context(FAR struct perf_event_context_s *ctx)
  *
  ****************************************************************************/
 
-void perf_init_pmu_context(FAR struct pmu_event_context_s *pmu_ctx,
-                           FAR struct pmu_s *pmu)
+static void perf_init_pmu_context(FAR struct pmu_event_context_s *pmu_ctx,
+                                  FAR struct pmu_s *pmu)
 {
   pmu_ctx->pmu = pmu;
   list_clear_node(&pmu_ctx->pmu_ctx_node);
@@ -1682,57 +1303,6 @@ static int perf_event_for_group(FAR struct perf_event_s *event,
 }
 
 /****************************************************************************
- * Name: perf_get_event_count
- *
- * Description:
- *   Perf event read count from lowerhalf
- *
- * Input Parameters:
- *   arg - Perf event
- *
- * Returned Value:
- *   Count result
- *
- ****************************************************************************/
-
-static int perf_get_event_count(FAR void *arg)
-{
-  FAR struct perf_event_s *event = arg;
-  FAR struct perf_event_s *sub_event;
-  int ret;
-
-#ifdef CONFIG_SMP
-  if (event->oncpu != this_cpu())
-    {
-      return -EAGAIN;
-    }
-#endif
-
-  if (event->state != PERF_EVENT_STATE_ACTIVE)
-    {
-      return OK;
-    }
-
-  ret = event->pmu->ops->event_read(event);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  list_for_every_entry(&event->sibling_list, sub_event,
-                       struct perf_event_s, group_node)
-    {
-      ret = sub_event->pmu->ops->event_read(sub_event);
-      if (ret < 0)
-        {
-          return ret;
-        }
-    }
-
-  return OK;
-}
-
-/****************************************************************************
  * Name: perf_read_event_count
  *
  * Description:
@@ -2376,267 +1946,60 @@ static int perf_mmap(FAR struct file *filep,
 }
 #endif
 
-static int perf_swevent_timer_handle_cpu(FAR void *arg)
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: perf_get_event_count
+ *
+ * Description:
+ *   Perf event read count from lowerhalf
+ *
+ * Input Parameters:
+ *   arg - Perf event
+ *
+ * Returned Value:
+ *   Count result
+ *
+ ****************************************************************************/
+
+int perf_get_event_count(FAR void *arg)
 {
-  FAR struct perf_event_s *event = (FAR struct perf_event_s *)arg;
-  struct perf_sample_data_s data;
+  FAR struct perf_event_s *event = arg;
+  FAR struct perf_event_s *sub_event;
   int ret;
 
-  /* TODO: ISR thread cannot get pc */
+#ifdef CONFIG_SMP
+  if (event->oncpu != this_cpu())
+    {
+      return -EAGAIN;
+    }
+#endif
 
-  ret = perf_get_event_count(event);
+  if (event->state != PERF_EVENT_STATE_ACTIVE)
+    {
+      return OK;
+    }
+
+  ret = event->pmu->ops->event_read(event);
   if (ret < 0)
     {
       return ret;
     }
 
-  perf_sample_data_init(&data, atomic64_read(&event->hw.last_period));
-
-  perf_event_data_overflow(event, &data, up_getusrpc(NULL));
-  return ret;
-}
-
-static uint64_t perf_swevent_timer_handle(FAR const hrtimer_t *timer,
-                                          uint64_t expired)
-{
-  FAR struct perf_event_s *event = container_of(timer, struct perf_event_s,
-                                                hw.timer);
-#ifdef CONFIG_SMP
-  int cpu = this_cpu();
-
-  if (event->oncpu != -1 && event->oncpu != cpu)
+  list_for_every_entry(&event->sibling_list, sub_event,
+                       struct perf_event_s, group_node)
     {
-      nxsched_cpu_call_single(event->oncpu,
-                              perf_swevent_timer_handle_cpu, event);
-    }
-  else if(event->cpu != -1 && event->cpu != cpu)
-    {
-      nxsched_cpu_call_single(event->cpu,
-                              perf_swevent_timer_handle_cpu, event);
-    }
-  else
-    {
-      perf_swevent_timer_handle_cpu(event);
-    }
-#else
-    perf_swevent_timer_handle_cpu(event);
-#endif
-
-  return event->attr.sample_period;
-}
-
-/****************************************************************************
- * Name: perf_cpuclock_event_init
- *
- * Description:
- *   CPU clock event init
- *
- * Input Parameters:
- *   event  - Perf event
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-static int perf_cpuclock_event_init(FAR struct perf_event_s *event)
-{
-  if (event->attr.config != PERF_COUNT_SW_CPU_CLOCK)
-    {
-      return -ENOENT;
+      ret = sub_event->pmu->ops->event_read(sub_event);
+      if (ret < 0)
+        {
+          return ret;
+        }
     }
 
-  atomic64_set(&event->hw.prev_count, 0);
-  atomic64_set(&event->hw.last_period, 0);
-  atomic64_set(&event->count, 0);
-  return 0;
+  return OK;
 }
-
-/****************************************************************************
- * Name: perf_cpuclock_event_add
- *
- * Description:
- *   Add cpu clock event
- *
- * Input Parameters:
- *   event  - Perf event
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-static int perf_cpuclock_event_add(FAR struct perf_event_s *event,
-                                   int flags)
-{
-  return 0;
-}
-
-/****************************************************************************
- * Name: perf_cpuclock_event_del
- *
- * Description:
- *   Del cpu clock event
- *
- * Input Parameters:
- *   event  - Perf event
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void perf_cpuclock_event_del(FAR struct perf_event_s *event,
-                                    int flags)
-{
-  hrtimer_cancel_sync(&event->hw.timer);
-}
-
-/****************************************************************************
- * Name: perf_cpuclock_event_start
- *
- * Description:
- *   Start cpu clock event
- *
- * Input Parameters:
- *   event  - Perf event
- *   flags  - Perf event flags
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-static int perf_cpuclock_event_start(FAR struct perf_event_s *event,
-                                     int flags)
-{
-  atomic64_set(&event->hw.prev_count, clock_systime_nsec());
-  hrtimer_start(&event->hw.timer, perf_swevent_timer_handle,
-                event->attr.sample_period, HRTIMER_MODE_REL);
-  return 0;
-}
-
-/****************************************************************************
- * Name: perf_cpuclock_event_stop
- *
- * Description:
- *   Stop cpu clock event
- *
- * Input Parameters:
- *   event  - Perf event
- *   flags  - Perf event flags
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-static int perf_cpuclock_event_stop(FAR struct perf_event_s *event,
-                                    int flags)
-{
-  hrtimer_cancel(&event->hw.timer);
-  return 0;
-}
-
-/****************************************************************************
- * Name: perf_cpuclock_event_read
- *
- * Description:
- *   Read cpu clock event
- *
- * Input Parameters:
- *   event  - Perf event
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-static int perf_cpuclock_event_read(FAR struct perf_event_s *event)
-{
-  uint64_t now   = clock_systime_nsec();
-  uint64_t delta = now - atomic64_xchg(&event->hw.prev_count, now);
-  atomic64_set(&event->hw.last_period, delta);
-  atomic64_add(&event->count, delta);
-  return 0;
-}
-
-static int perf_cpuclock_event_match(FAR struct perf_event_s *event)
-{
-  if (event->attr.type == PERF_TYPE_SOFTWARE &&
-      event->attr.config == PERF_COUNT_SW_CPU_CLOCK)
-    {
-      return 0;
-    }
-
-  return -ENOENT;
-}
-
-static int perf_swevent_init(FAR struct perf_event_s *event)
-{
-  if (event->attr.type != PERF_TYPE_SOFTWARE)
-    {
-      return -ENOENT;
-    }
-
-  return 0;
-}
-
-static int perf_swevent_add(FAR struct perf_event_s *event,
-                            int flags)
-{
-  irqstate_t irq_flags;
-
-  irq_flags = spin_lock_irqsave(&this_cpu_var_smp(g_swevent).lock);
-  list_add_tail(&this_cpu_var_smp(g_swevent).list_swevent, &event->sw_list);
-  spin_unlock_irqrestore(&this_cpu_var_smp(g_swevent).lock, irq_flags);
-
-  return 0;
-}
-
-static void perf_swevent_del(FAR struct perf_event_s *event,
-                             int flags)
-{
-  irqstate_t irq_flags;
-
-  irq_flags = spin_lock_irqsave(&this_cpu_var_smp(g_swevent).lock);
-  list_delete(&event->sw_list);
-  spin_unlock_irqrestore(&this_cpu_var_smp(g_swevent).lock, irq_flags);
-}
-
-static int perf_swevent_start(FAR struct perf_event_s *event,
-                                     int flags)
-{
-  event->hw.state = 1;
-  return 0;
-}
-
-static int perf_swevent_stop(FAR struct perf_event_s *event,
-                                    int flags)
-{
-  event->hw.state = 0;
-  return 0;
-}
-
-static int perf_swevent_read(FAR struct perf_event_s *event)
-{
-  return 0;
-}
-
-static int perf_swevent_match(FAR struct perf_event_s *event)
-{
-  if (event->attr.type == PERF_TYPE_SOFTWARE &&
-      event->attr.config == PERF_COUNT_SW_CONTEXT_SWITCHES)
-    {
-      return 0;
-    }
-
-  return -ENOENT;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 int perf_event_overflow(FAR struct perf_event_s *event)
 {
@@ -2655,29 +2018,6 @@ int perf_event_overflow(FAR struct perf_event_s *event)
 
   perf_event_data_overflow(event, &data, pc);
   return 0;
-}
-
-void perf_swevent(uint32_t event_id, uintptr_t ip)
-{
-  struct perf_sample_data_s data;
-  irqstate_t flags;
-  FAR struct perf_event_s *node;
-
-  perf_sample_data_init(&data, 0);
-
-  flags = spin_lock_irqsave(&this_cpu_var_smp(g_swevent).lock);
-
-  list_for_every_entry(&this_cpu_var_smp(g_swevent).list_swevent, node,
-                       struct perf_event_s, sw_list)
-    {
-      if (node->attr.type == PERF_TYPE_SOFTWARE &&
-          node->attr.config == event_id && node->hw.state == 1)
-        {
-          perf_event_data_overflow(node, &data, ip);
-        }
-    }
-
-  spin_unlock_irqrestore(&this_cpu_var_smp(g_swevent).lock, flags);
 }
 
 /****************************************************************************
@@ -2703,14 +2043,11 @@ int perf_event_init(void)
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
       perf_init_context(&per_cpu_var_smp(g_perf_cpu_ctx, i));
-      list_initialize(&per_cpu_var_smp(g_swevent, i).list_swevent);
-      spin_lock_init(&per_cpu_var_smp(g_swevent, i).lock);
     }
 
-  /* Register clock event */
+  /* Register the built-in software and cpu-clock PMUs */
 
-  perf_pmu_register(&g_perf_swevent, "software");
-  perf_pmu_register(&g_perf_cpu_clock, "cpu_clock");
+  perf_pmu_builtin_register();
 
   return OK;
 }

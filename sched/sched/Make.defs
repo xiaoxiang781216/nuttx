@@ -100,10 +100,6 @@ ifneq ($(CONFIG_UP),y)
 CSRCS += sched_cpucall.c
 endif
 
-ifeq ($(CONFIG_PERF_EVENTS),y)
-CSRCS += sched_perf.c
-endif
-
 # Include sched build support
 
 DEPPATH += --dep-path sched
