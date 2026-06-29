@@ -27,6 +27,10 @@ MEMORY
   bootm (rx)  : ORIGIN = 0x00000000, LENGTH = 1K
   flash (rx)  : ORIGIN = 0x01000000, LENGTH = 2M
   sram1 (rwx) : ORIGIN = 0x21000000, LENGTH = 4M
+
+#ifdef CONFIG_MM_KASAN_GLOBAL
+  empty (rwx) : ORIGIN = 0x01200000, LENGTH = 2M
+#endif
 }
 
 OUTPUT_ARCH(arm)
@@ -61,6 +65,19 @@ SECTIONS
         KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
         _einit = ABSOLUTE(.);
     } > flash
+
+#ifdef CONFIG_MM_KASAN_GLOBAL
+    .kasan.unused : {
+        *(.data..LASANLOC*)
+    } > empty
+    .kasan.global : {
+        KEEP (*(.data..LASAN0))
+        KEEP (*(.data.rel.local..LASAN0))
+    } > empty
+    .kasan.shadows : {
+        *(.kasan.shadows)
+    } > flash
+#endif
 
     __llvm_prf_names : {
         __start__llvm_prf_names = .;
