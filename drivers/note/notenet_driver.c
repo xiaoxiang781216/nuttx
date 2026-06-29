@@ -167,7 +167,7 @@ static ssize_t note_netdev_add(FAR struct note_driver_s *driver,
       return ret;
     }
 
-  dropped = iob_get_queue_size(&drv->pktq);
+  dropped = netpoll_queue_get_payload_size(&drv->np, &drv->pktq);
   if (dropped <= 3 * maxlen / 4)
     {
       spin_unlock_irqrestore_notrace(&drv->lock, flags);
@@ -209,7 +209,7 @@ static void note_netdev_flush(FAR struct note_driver_s *driver)
 
   flags = spin_lock_irqsave_notrace(&drv->lock);
 
-  qsize = iob_get_queue_size(&drv->pktq);
+  qsize = netpoll_queue_get_payload_size(&drv->np, &drv->pktq);
   if (qsize > 0)
     {
       sent = drv->send(&drv->np, &drv->pktq);
@@ -259,7 +259,8 @@ static int note_netdev_ioctl(FAR struct file *filep, int cmd,
         flags = spin_lock_irqsave_notrace(&drv->lock);
 #ifdef CONFIG_DRIVERS_NOTE_STATS
         atomic_add_relaxed(&drv->driver.stats.drop_bytes,
-                           iob_get_queue_size(&drv->pktq));
+                           netpoll_queue_get_payload_size(&drv->np,
+                                                          &drv->pktq));
 #endif
         iob_free_queue(&drv->pktq);
         spin_unlock_irqrestore_notrace(&drv->lock, flags);
