@@ -479,7 +479,6 @@ endif # RAMMTD
 config FILEMTD
 	bool "File-based MTD driver"
 	default n
-	select FTL_BBM
 	---help---
 		Build support for a File-based MTD driver.
 
@@ -1500,6 +1499,7 @@ endif # MTD_GD5F
 config MTD_DHARA
 	bool "MTD Nandflash use dhara map"
 	default n
+	select FTL_BBM
 
 if MTD_DHARA
 

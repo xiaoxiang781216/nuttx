@@ -7,6 +7,7 @@ config FS_YAFFS
 	bool "YAFFS File System"
 	default n
 	depends on !DISABLE_MOUNTPOINT
+	select FTL_BBM
 	---help---
 		Build the YAFFS file system. https://yaffs.net/documents/yaffs-direct-interface
 
