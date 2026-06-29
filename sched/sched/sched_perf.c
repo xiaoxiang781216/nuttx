@@ -347,25 +347,31 @@ static uint16_t perf_prepare_sample(FAR struct perf_sample_data_s *data,
   return size;
 }
 
-static void perf_buffer_release_space(FAR struct perf_event_s *event,
-                                      size_t size)
+static bool perf_buffer_has_space(FAR struct perf_event_s *event,
+                                  size_t size)
 {
   size_t space = circbuf_space(&(event->buf->rb));
+
+  /* Wake up the reader (perf record) when the buffer is filling up so it
+   * can drain the data before we start dropping samples.
+   */
 
   if (space < circbuf_size(&(event->buf->rb)) / 5 && event->pfd)
     {
       poll_notify(&event->pfd, 1, POLLIN);
     }
 
-  while (space < size)
-    {
-      struct perf_event_header_s remove_header;
+  /* Non-overwrite semantics: the producer only ever advances head, never
+   * tail.  The consumer (perf record) maps the ring buffer and is the sole
+   * owner of tail via circbuf_read().  If we evicted old records here we
+   * would advance tail from the producer side too, racing the mmap'd
+   * consumer (which cannot take event->buf->lock across the mmap boundary)
+   * and corrupting the record stream.  Instead, when there is not enough
+   * room for the whole record, drop the new sample and keep the stream
+   * byte-aligned.  This matches the default behaviour of perf record.
+   */
 
-      circbuf_peek(&(event->buf->rb), &remove_header,
-                    sizeof(struct perf_event_header_s));
-      circbuf_readcommit(&(event->buf->rb), remove_header.size);
-      space = circbuf_space(&(event->buf->rb));
-    }
+  return space >= size;
 }
 
 static inline void perf_backtrace_convert(FAR uint64_t *ptr, int nr)
@@ -381,104 +387,103 @@ static void perf_output_sample(FAR struct perf_event_header_s *header,
                                FAR struct perf_event_s *event)
 {
   uint64_t sample_type = data->sample_flags;
-  size_t pos;
+  uint8_t record[sizeof(struct perf_event_header_s) +
+                 sizeof(uint64_t) * 8 +
+                 sizeof(uint64_t) * (PERF_MAX_BACKTRACE + 1)];
+  FAR struct perf_event_header_s *rec_header;
+  size_t len;
 
-  perf_buffer_release_space(event, header->size);
-  pos = event->buf->rb.head % event->buf->rb.size +
-                      offsetof(struct perf_event_header_s, size);
-  circbuf_overwrite(&(event->buf->rb), header,
-                    sizeof(struct perf_event_header_s));
+  /* header->size already accounts for the worst case (including the full
+   * PERF_MAX_BACKTRACE callchain).  If the whole record cannot fit, drop it
+   * rather than evicting old records, so that the producer never advances
+   * tail and the byte-aligned record stream stays intact for the mmap'd
+   * reader.
+   */
+
+  if (!perf_buffer_has_space(event, header->size))
+    {
+      return;
+    }
+
+  /* Assemble the whole record in a local buffer first, then publish it to
+   * the ring buffer with a single circbuf_write().  circbuf_write() advances
+   * head exactly once, after all bytes are in place, so the mmap'd reader
+   * never observes a partially written record.  Writing field-by-field
+   * (advancing head per field) let the lockless reader copy out a truncated
+   * record at buffer-wrap boundaries, corrupting the stream.
+   */
+
+  rec_header = (FAR struct perf_event_header_s *)record;
+  memcpy(record, header, sizeof(*header));
+  len = sizeof(*header);
 
   if (sample_type & PERF_SAMPLE_IDENTIFIER)
     {
-      circbuf_overwrite(&(event->buf->rb), &data->id,
-                        sizeof(data->id));
+      memcpy(record + len, &data->id, sizeof(data->id));
+      len += sizeof(data->id);
     }
 
   if (sample_type & PERF_SAMPLE_IP)
     {
-      circbuf_overwrite(&(event->buf->rb), &data->ip, sizeof(data->ip));
+      memcpy(record + len, &data->ip, sizeof(data->ip));
+      len += sizeof(data->ip);
     }
 
   if (sample_type & PERF_SAMPLE_TID)
     {
-      circbuf_overwrite(&(event->buf->rb), &data->tid_entry,
-                        sizeof(data->tid_entry));
+      memcpy(record + len, &data->tid_entry, sizeof(data->tid_entry));
+      len += sizeof(data->tid_entry);
     }
 
   if (sample_type & PERF_SAMPLE_TIME)
     {
-      circbuf_overwrite(&(event->buf->rb), &data->time,
-                        sizeof(data->time));
+      memcpy(record + len, &data->time, sizeof(data->time));
+      len += sizeof(data->time);
     }
 
   if (sample_type & PERF_SAMPLE_ID)
     {
-      circbuf_overwrite(&(event->buf->rb), &data->id, sizeof(data->id));
+      memcpy(record + len, &data->id, sizeof(data->id));
+      len += sizeof(data->id);
     }
 
   if (sample_type & PERF_SAMPLE_STREAM_ID)
     {
-      circbuf_overwrite(&(event->buf->rb), &data->stream_id,
-                        sizeof(data->stream_id));
+      memcpy(record + len, &data->stream_id, sizeof(data->stream_id));
+      len += sizeof(data->stream_id);
     }
 
   if (sample_type & PERF_SAMPLE_CPU)
     {
-      circbuf_overwrite(&(event->buf->rb), &data->cpu_entry,
-                        sizeof(data->cpu_entry));
+      memcpy(record + len, &data->cpu_entry, sizeof(data->cpu_entry));
+      len += sizeof(data->cpu_entry);
     }
 
   if (sample_type & PERF_SAMPLE_PERIOD)
     {
-      circbuf_overwrite(&(event->buf->rb), &data->period,
-                        sizeof(data->period));
+      memcpy(record + len, &data->period, sizeof(data->period));
+      len += sizeof(data->period);
     }
 
   if (sample_type & PERF_SAMPLE_CALLCHAIN)
     {
-      FAR uint64_t *ptr;
-      FAR uint64_t *next_ptr;
-      size_t remain_len;
-      size_t off;
-      size_t size;
+      FAR uint64_t *nr_ptr = (FAR uint64_t *)(record + len);
+      FAR uint64_t *frames = nr_ptr + 1;
       int nr;
 
-      ptr = circbuf_get_writeptr(&(event->buf->rb), &size);
-      off = event->buf->rb.head % event->buf->rb.size;
-      remain_len = event->buf->rb.size - off;
-
-      if (remain_len >= (1 + PERF_MAX_BACKTRACE * sizeof(uint64_t)) ||
-          remain_len == 8)
-        {
-          next_ptr = (remain_len == 8) ? event->buf->rb.base : (ptr + 1);
-          nr = sched_backtrace(gettid(), (FAR void **)next_ptr,
+      nr = sched_backtrace(gettid(), (FAR void **)frames,
                            PERF_MAX_BACKTRACE, FLAME_GRAPH_SKIP);
-          perf_backtrace_convert(next_ptr, nr);
-        }
-      else
-        {
-          int remain_size = remain_len / sizeof(uint64_t) - 1;
-
-          nr = sched_backtrace(gettid(), (FAR void **)(ptr + 1),
-                                remain_size, FLAME_GRAPH_SKIP);
-          perf_backtrace_convert(ptr + 1, nr);
-
-          if (nr == remain_size)
-            {
-              next_ptr = event->buf->rb.base;
-              nr += sched_backtrace(gettid(), (FAR void **)next_ptr,
-                  PERF_MAX_BACKTRACE - remain_size, FLAME_GRAPH_SKIP + nr);
-              perf_backtrace_convert(next_ptr, nr - remain_size);
-            }
-        }
-
-      *ptr = nr;
-      *(uint16_t *)(event->buf->rb.base + pos) -=
-                        (PERF_MAX_BACKTRACE - nr) * sizeof(uint64_t);
-
-      circbuf_writecommit(&(event->buf->rb), (nr + 1) * sizeof(uint64_t));
+      perf_backtrace_convert(frames, nr);
+      *nr_ptr = nr;
+      len += sizeof(uint64_t) * (nr + 1);
     }
+
+  /* Publish the actual record length (the callchain may be shorter than the
+   * reserved worst case) and commit the record atomically.
+   */
+
+  rec_header->size = len;
+  circbuf_write(&(event->buf->rb), record, len);
 }
 
 static int perf_event_data_overflow(FAR struct perf_event_s *event,
