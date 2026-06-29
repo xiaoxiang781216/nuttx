@@ -2059,7 +2059,7 @@ static int nvs_find_ate(FAR struct nvs_fs *fs,
   uint8_t key[NVS_MAX_KEY_LEN];
   int rc;
 
-  rc = nvs_rd_key(fs, entry, entry_addr, key, entry->ate_key_len);
+  rc = nvs_rd_key(fs, entry, entry_addr, key, sizeof(key));
   if (rc)
     {
       return rc;
@@ -2158,7 +2158,8 @@ static int nvs_gc(FAR struct nvs_fs *fs)
         }
 
       if (!nvs_ate_valid(fs, gc_ate) || !gc_ate->ate_len ||
-          gc_ate->id == nvs_special_ate_id(fs))
+          gc_ate->id == nvs_special_ate_id(fs) ||
+          gc_ate->ate_key_len > NVS_MAX_KEY_LEN)
         {
           continue;
         }
@@ -2599,7 +2600,7 @@ static int nvs_read(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
 
 #ifdef CONFIG_MTD_CONFIG_NAMED
   FAR const uint8_t *key = (FAR const uint8_t *)pdata->name;
-  size_t key_len = strlen(pdata->name) + 1;
+  size_t key_len = strnlen(pdata->name, NVS_MAX_KEY_LEN - 1) + 1;
 #else
   uint8_t key[sizeof(pdata->id) + sizeof(pdata->instance)];
   memcpy(key, &pdata->id, sizeof(pdata->id));
@@ -2670,7 +2671,7 @@ static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
 
 #ifdef CONFIG_MTD_CONFIG_NAMED
   FAR const uint8_t *key = (FAR const uint8_t *)pdata->name;
-  size_t key_len = strlen(pdata->name) + 1;
+  size_t key_len = strnlen(pdata->name, NVS_MAX_KEY_LEN - 1) + 1;
 #else
   uint8_t key[sizeof(pdata->id) + sizeof(pdata->instance)];
   memcpy(key, &pdata->id, sizeof(pdata->id));
@@ -2885,7 +2886,8 @@ static int nvs_next(FAR struct nvs_fs *fs, FAR struct file *filep,
 
       prev_block = rd_addr >> NVS_ADDR_BLOCK_SHIFT;
       if (step_ate->id != nvs_special_ate_id(fs) && step_ate->ate_len != 0 &&
-          nvs_ate_valid_different_block(fs, step_ate, cycle_cnt))
+          nvs_ate_valid_different_block(fs, step_ate, cycle_cnt) &&
+          step_ate->ate_key_len <= NVS_MAX_KEY_LEN)
         {
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
           wlk_addr = nvs_lookup_addr(fs, step_ate->id);
