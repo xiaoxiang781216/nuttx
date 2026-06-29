@@ -58,7 +58,6 @@ struct perf_sample_data_s
 {
   uint64_t sample_flags;
   uint64_t period;
-  uint64_t dyn_size;
 
   struct
   {

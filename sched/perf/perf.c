@@ -66,12 +66,6 @@
 #define PERF_SW_CPU_CLOCK_PERIOD 1000000
 
 /****************************************************************************
- * Private Types
- ****************************************************************************/
-
-typedef int (*perf_func_t)(FAR struct perf_event_s *event);
-
-/****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
@@ -504,7 +498,6 @@ static void perf_free_pmu_context(FAR struct pmu_event_context_s *pmu_ctx)
  * Input Parameters:
  *   attr         - Perf event attribute
  *   cpu          - Cpu id perf event bind
- *   tcb          - Task perf event bind
  *   group_leader - Group leader
  *   parent_event - Parent event
  *
@@ -514,8 +507,7 @@ static void perf_free_pmu_context(FAR struct pmu_event_context_s *pmu_ctx)
  ****************************************************************************/
 
 static FAR struct perf_event_s *
-perf_event_alloc(FAR struct perf_event_attr_s *attr,
-                 int cpu, FAR struct tcb_s *tcb,
+perf_event_alloc(FAR struct perf_event_attr_s *attr, int cpu,
                  FAR struct perf_event_s *group_leader,
                  FAR struct perf_event_s *parent_event)
 {
@@ -664,7 +656,7 @@ perf_inherit_event(FAR struct perf_event_s *parent_event,
   FAR struct perf_event_s *event;
 
   event = perf_event_alloc(&parent_event->attr, parent_event->cpu,
-                           child, group_leader, parent_event);
+                           group_leader, parent_event);
   if (event == NULL)
     {
       serr("perf_inherit_event alloc perf event fail\n");
@@ -683,7 +675,6 @@ perf_inherit_event(FAR struct perf_event_s *parent_event,
     }
 
   list_add_tail(&parent_event->child_list, &event->child_list);
-  parent_event->child_num++;
   event->attach_state |= PERF_ATTACH_CHILD;
   event->ctx = child->perf_event_ctx;
   perf_buffer_set_output(event, parent_event);
@@ -1568,7 +1559,6 @@ static void perf_child_detach(FAR struct perf_event_s *event)
 
   child_count = PERF_GET_COUNT(event);
   parent_event->child_count += child_count;
-  parent_event->child_num--;
 
   nxmutex_unlock(&parent_event->child_mutex);
 
@@ -2132,7 +2122,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
         }
     }
 
-  event = perf_event_alloc(attr, cpu, tcb, group_leader, NULL);
+  event = perf_event_alloc(attr, cpu, group_leader, NULL);
   if (event == NULL)
     {
       ret = -ENOMEM;

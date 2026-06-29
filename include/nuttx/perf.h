@@ -244,7 +244,6 @@ struct perf_event_s
   atomic64_t count;                         /* Count vaule for this event */
   uint64_t child_count;                     /* Detached child events count */
   uint32_t sibling_num;                     /* sibling number for sibling_list */
-  uint32_t child_num;                       /* Child number for child_list */
   struct perf_event_attr_s attr;            /* Perf event attr */
   FAR struct pmu_s *pmu;                    /* PMU entry this event used */
   FAR struct perf_event_context_s *ctx;     /* Event context this event belongs to */
