@@ -99,6 +99,30 @@ FAR netpkt_t *netpoll_pkt_alloc(FAR struct netpoll_s *np)
 }
 
 /****************************************************************************
+ * Name: netpoll_queue_get_payload_size
+ *
+ * Description:
+ *   Return the total payload byte count (Sum of io_pktlen - np->hdrlen)
+ *   of a netpoll packet queue, matching what netpoll_*_queue_send()
+ *   reports as sent.
+ *
+ * Input Parameters:
+ *   np   - pointer to netpoll data
+ *   pktq - packet queue to measure
+ *
+ * Returned Value:
+ *   The total payload byte count of the queue.
+ *
+ ****************************************************************************/
+
+size_t netpoll_queue_get_payload_size(FAR struct netpoll_s *np,
+                                      FAR netpkt_queue_t *pktq)
+{
+  return iob_get_queue_size(pktq) -
+         iob_get_queue_entry_count(pktq) * np->hdrlen;
+}
+
+/****************************************************************************
  * Name: netpoll_queue_copyin
  *
  * Description:
