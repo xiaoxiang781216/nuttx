@@ -39,6 +39,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/sched.h>
 #include <nuttx/clock.h>
+#include <nuttx/clock_notifier.h>
 #include <nuttx/timers/clkcnt.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/notebuf_driver.h>
@@ -246,9 +247,11 @@ FAR static DEFINE_PER_CPU_BMP(note_drivers_t, g_note_drivers) =
 static DEFINE_PER_CPU_BSS_BMP(spinlock_t, g_note_lock);
 #define g_note_lock this_cpu_var_bmp(g_note_lock)
 
-#if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
+#if CONFIG_DRIVERS_NOTE_CLOCKID > 0
 static DEFINE_PER_CPU_BSS_BMP(clock_t, g_note_perf_offset);
 #  define g_note_perf_offset this_cpu_var_bmp(g_note_perf_offset)
+static DEFINE_PER_CPU_BSS_BMP(struct notifier_block, g_note_clock_nb);
+#  define g_note_clock_nb this_cpu_var_bmp(g_note_clock_nb)
 #endif
 
 static DEFINE_PER_CPU_BMP(struct notifier_block, g_note_reboot_nb) =
@@ -268,6 +271,30 @@ struct note_filter_s g_note_filter;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#if CONFIG_DRIVERS_NOTE_CLOCKID > 0
+
+static void note_update_perf_offset(FAR const struct timespec *ts)
+{
+  unsigned long freq = perf_getfreq();
+  clock_t perftime = NOTE_PERF_GETTIME();
+
+  g_note_perf_offset =
+    clkcnt_delta_time2cnt(ts->tv_nsec, freq, NSEC_PER_SEC) +
+    ts->tv_sec * freq - perftime;
+}
+
+static int note_clock_notify(FAR struct notifier_block *nb,
+                             unsigned long action, FAR void *data)
+{
+  if (action == CLOCK_REALTIME)
+    {
+      note_update_perf_offset((FAR const struct timespec *)data);
+    }
+
+  return 0;
+}
+#endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 /****************************************************************************
@@ -1049,19 +1076,17 @@ void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
     }
 
   perftime = NOTE_PERF_GETTIME();
-#if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
+#if CONFIG_DRIVERS_NOTE_CLOCKID > 0
   if (g_note_perf_offset == 0 && OSINIT_HW_READY())
     {
       struct timespec ts;
-      unsigned long freq;
 
       if (clock_gettime(CONFIG_DRIVERS_NOTE_CLOCKID, &ts) == 0)
         {
-          freq = perf_getfreq();
+          note_update_perf_offset(&ts);
 
-          g_note_perf_offset =
-            clkcnt_delta_time2cnt(ts.tv_nsec, freq, NSEC_PER_SEC) +
-            ts.tv_sec * freq - perftime;
+          g_note_clock_nb.notifier_call = note_clock_notify;
+          register_clock_notifier(&g_note_clock_nb);
         }
     }
 
