@@ -1560,32 +1560,78 @@ static inline_function ssize_t
 note_read(FAR struct note_dump_stream_s *stream)
 {
   FAR struct note_common_s *cmn = &stream->note.cmn;
+  uint32_t start;
+  uint32_t base;
   uint32_t len;
+  int scan;
 
-  /* Peek the fixed-size header from a copy of the position; the peek
-   * advances that copy to the payload.  A short read means the ring holds
-   * less than a whole header, so there is nothing left to dump.
-   */
-
-  if (ring_mpmc_peek(stream->ring, (FAR uint8_t *)cmn, sizeof(*cmn),
-                     &stream->pos) != sizeof(*cmn))
+  do
     {
-      return 0;
-    }
+      /* Scan forward for the first position whose header validates.  A
+       * fragment left by an overwrite cannot exceed one note, so bound the
+       * scan by the maximum note length.
+       */
 
-  if (!note_is_valid(cmn))
-    {
-      return -EINVAL;
-    }
+      for (scan = 0; scan < NOTE_BUFFER_SIZE; scan++)
+        {
+          base = stream->pos;
+          len = ring_mpmc_peek(stream->ring, (FAR uint8_t *)cmn,
+                               sizeof(*cmn), &stream->pos);
+          if (len < sizeof(*cmn))
+            {
+              /* Less than a whole header remains; nothing left to dump. */
 
-  /* A short payload read likewise means the whole note is not present. */
+              return 0;
+            }
 
-  len = cmn->nc_length - sizeof(*cmn);
-  if (ring_mpmc_peek(stream->ring, stream->note.data, len,
-                     &stream->pos) != len)
-    {
-      return 0;
+          if (note_is_valid(cmn))
+            {
+              break;
+            }
+
+          /* No valid header here.  The peek reads from the live cons_tail
+           * when base fell behind it, so the real read start is
+           * stream->pos - len.
+           */
+
+          start = ring_wrap(stream->pos - len);
+          if (base != RING_IDX_OLDEST && start != base)
+            {
+              /* An overwrite evicted the scanned bytes, re-anchor the scan
+               * to the new cons_tail and restart the fragment-length budget.
+               */
+
+              stream->pos = start;
+              scan = -1;
+            }
+          else
+            {
+              stream->pos = ring_wrap(start + 1);
+            }
+        }
+
+      if (scan == NOTE_BUFFER_SIZE)
+        {
+          return -EAGAIN;
+        }
+
+      /* stream->pos now sits at the payload; read it from there.  A short
+       * read means the whole note is not present, so nothing is left.
+       */
+
+      start = stream->pos;
+      len = cmn->nc_length - sizeof(*cmn);
+      if (ring_mpmc_peek(stream->ring, stream->note.data, len,
+                         &stream->pos) != len)
+        {
+          return 0;
+        }
+
+      /* If an overwrite advanced cons_tail between the header and payload
+       * peeks, need rescan.
+       */
     }
+  while (stream->pos != ring_wrap(start + len));
 
   return cmn->nc_length;
 }
