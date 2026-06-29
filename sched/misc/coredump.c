@@ -149,6 +149,13 @@ static DEFINE_PER_CPU_BMP(mutex_t, g_regions_lock) = NXMUTEX_INITIALIZER;
 static DEFINE_PER_CPU_BSS_BMP(bool, g_stream_initialized);
 #define g_stream_initialized this_cpu_var_bmp(g_stream_initialized)
 
+/* Runtime switch controlling automatic coredump on crash/panic, exposed
+ * via the procfs node "coredump/ctl" (write 1 to enable, 0 to disable).
+ * Default enabled to preserve the existing behavior.
+ */
+
+static bool g_coredump_enabled = true;
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -1539,6 +1546,10 @@ int coredump_initialize(void)
 
   g_stream_initialized = true;
 
+#ifdef CONFIG_FS_PROCFS_REGISTER
+  procfs_create_bool("coredump/ctl", 0644, &g_coredump_enabled);
+#endif
+
 #if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
   coredump_procfs_register(CONFIG_BOARD_COREDUMP_DEVPATH);
 #endif
@@ -1562,6 +1573,12 @@ void coredump_dump(FAR struct tcb_s *tcb)
   if (!g_stream_initialized)
     {
       _alert("Coredump device is not initialized.\n");
+      return;
+    }
+
+  if (!g_coredump_enabled)
+    {
+      _alert("Coredump is disabled.\n");
       return;
     }
 
