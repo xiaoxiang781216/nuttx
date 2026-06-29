@@ -566,7 +566,6 @@ static int codec_qbuf(FAR struct file *filep,
   FAR codec_type_inf_t *type_inf;
   FAR vbuf_container_t *container;
   struct v4l2_format format;
-  uint32_t offset = 0;
   uint8_t i;
 
   if (buf == NULL)
@@ -594,7 +593,6 @@ static int codec_qbuf(FAR struct file *filep,
     }
   else
     {
-      offset = CAPTURE_BUF_OFFSET;
       CODEC_CAPTURE_G_FMT(cmng->codec, cfile->priv, &format);
     }
 
@@ -602,6 +600,18 @@ static int codec_qbuf(FAR struct file *filep,
 
   if (V4L2_TYPE_IS_MULTIPLANAR(buf->type))
     {
+      size_t bufsize;
+      uint32_t plane_offset = 0;
+
+      if (buf->m.planes == NULL)
+        {
+          return -EINVAL;
+        }
+
+      bufsize = V4L2_TYPE_IS_OUTPUT(buf->type) ?
+        CODEC_OUTPUT_G_BUFSIZE(cmng->codec, cfile->priv) :
+        CODEC_CAPTURE_G_BUFSIZE(cmng->codec, cfile->priv);
+
       memcpy(container->planes, buf->m.planes,
              sizeof(struct v4l2_plane) * format.fmt.pix_mp.num_planes);
       container->buf.m.planes = container->planes;
@@ -610,9 +620,15 @@ static int codec_qbuf(FAR struct file *filep,
           switch (container->buf.memory)
             {
               case V4L2_MEMORY_MMAP:
+                if (type_inf->bufheap == NULL)
+                  {
+                    return -EINVAL;
+                  }
+
                 container->buf.m.planes[i].m.vaddr =
-                    (FAR void *)(buf->m.planes[i].m.mem_offset -
-                     offset + type_inf->bufheap);
+                    (FAR void *)(type_inf->bufheap +
+                     bufsize * buf->index + plane_offset);
+                plane_offset += format.fmt.pix_mp.plane_fmt[i].sizeimage;
                 break;
 
               case V4L2_MEMORY_USERPTR:
@@ -651,8 +667,20 @@ static int codec_qbuf(FAR struct file *filep,
       switch (buf->memory)
         {
           case V4L2_MEMORY_MMAP:
-            container->buf.m.vaddr =
-                (FAR void *)(type_inf->bufheap + buf->m.offset - offset);
+            {
+              size_t bufsize;
+
+              if (type_inf->bufheap == NULL)
+                {
+                  return -EINVAL;
+                }
+
+              bufsize = V4L2_TYPE_IS_OUTPUT(buf->type) ?
+                CODEC_OUTPUT_G_BUFSIZE(cmng->codec, cfile->priv) :
+                CODEC_CAPTURE_G_BUFSIZE(cmng->codec, cfile->priv);
+              container->buf.m.vaddr =
+                  (FAR void *)(type_inf->bufheap + bufsize * buf->index);
+            }
             break;
 
           case V4L2_MEMORY_USERPTR:
@@ -699,12 +727,12 @@ static int codec_qbuf(FAR struct file *filep,
 static int codec_dqbuf(FAR struct file *filep,
                        FAR struct v4l2_buffer *buf)
 {
-  FAR struct v4l2_plane *plans = buf->m.planes;
   FAR struct inode *inode = filep->f_inode;
   FAR codec_mng_t *cmng = inode->i_private;
   FAR codec_file_t *cfile = filep->f_priv;
   FAR codec_type_inf_t *type_inf;
   FAR vbuf_container_t *container;
+  FAR struct v4l2_plane *plans;
   struct v4l2_format format;
   uint32_t offset = 0;
   uint8_t i;
@@ -714,6 +742,7 @@ static int codec_dqbuf(FAR struct file *filep,
       return -EINVAL;
     }
 
+  plans = buf->m.planes;
   type_inf = codec_get_type_inf(cfile, buf->type);
   if (type_inf == NULL)
     {
@@ -745,6 +774,11 @@ static int codec_dqbuf(FAR struct file *filep,
   memcpy(buf, &container->buf, sizeof(struct v4l2_buffer));
   if (V4L2_TYPE_IS_MULTIPLANAR(buf->type))
     {
+      if (plans == NULL)
+        {
+          return -EINVAL;
+        }
+
       buf->m.planes = plans;
       memcpy(plans, container->planes,
              sizeof(struct v4l2_plane) * format.fmt.pix_mp.num_planes);
