@@ -283,6 +283,15 @@ long sysconf(int name)
       case _SC_RTSIG_MAX:
         return RTSIG_MAX;
 
+      /* NuttX collapses duplicate pending signals per signo and never
+       * returns EAGAIN from sigqueue(); there is no enforced queue
+       * limit. Per POSIX, report "no limit" as -1 without setting
+       * errno (only an invalid name sets errno).
+       */
+
+      case _SC_SIGQUEUE_MAX:
+        return ERROR;
+
       case _SC_SEM_NSEMS_MAX:
         return SEM_NSEMS_MAX;
 
