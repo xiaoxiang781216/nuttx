@@ -31,7 +31,7 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/seqlock.h>
 #include <nuttx/userspace.h>
-#include <nuttx/wdog.h>
+#include <nuttx/hrtimer.h>
 
 /****************************************************************************
  * Preprocessors
@@ -47,11 +47,11 @@
  * Private Data
  ****************************************************************************/
 
-static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_timeout);
-#define g_timeout this_cpu_var_bmp(g_timeout)
+static DEFINE_PER_CPU_BSS_BMP(uint64_t, g_timeout_ns);
+#define g_timeout_ns this_cpu_var_bmp(g_timeout_ns)
 
-static DEFINE_PER_CPU_BSS_BMP(struct wdog_s, g_wdog);
-#define g_wdog this_cpu_var_bmp(g_wdog)
+static DEFINE_PER_CPU_BSS_BMP(hrtimer_t, g_timer);
+#define g_timer this_cpu_var_bmp(g_timer)
 
 /****************************************************************************
  * Private Functions
@@ -61,12 +61,11 @@ static DEFINE_PER_CPU_BSS_BMP(struct wdog_s, g_wdog);
  * perf_update
  ****************************************************************************/
 
-static void perf_update(wdparm_t arg)
+static uint64_t perf_update(FAR const hrtimer_t *timer, uint64_t expired)
 {
-  FAR struct perf_s *perf = (FAR struct perf_s *)arg;
-
-  irqstate_t flags = write_seqlock_irqsave(&perf->lock);
-  clock_t now = up_perf_gettime();
+  FAR struct perf_s *perf  = &g_perf;
+  irqstate_t         flags = write_seqlock_irqsave(&perf->lock);
+  clock_t            now   = up_perf_gettime();
 
   if (now < perf->last)
     {
@@ -75,7 +74,8 @@ static void perf_update(wdparm_t arg)
 
   perf->last = now;
   write_sequnlock_irqrestore(&perf->lock, flags);
-  wd_start_next(&g_wdog, g_timeout, perf_update, arg);
+
+  return g_timeout_ns;
 }
 
 /****************************************************************************
@@ -88,19 +88,21 @@ static void perf_update(wdparm_t arg)
 
 void perf_setup(void)
 {
-  FAR struct perf_s *perf = &g_perf;
-
-  /* Settup periodic-wdog here, this function can be called after
+  /* Setup periodic-hrtimer here, this function can be called after
    * perf_gettime(), but suggested to be called in initialization phase.
    */
 
-  g_timeout =
-      ((clock_t)1 << (CONFIG_ARCH_PERF_COUNT_BITWIDTH - 1)) *
-      TICK_PER_SEC / up_perf_getfreq();
+  g_timeout_ns =
+      ((uint64_t)1 << (CONFIG_ARCH_PERF_COUNT_BITWIDTH - 1)) *
+      NSEC_PER_SEC / up_perf_getfreq();
+
+  /* In case of starvation of the periodic timer. */
+
+  DEBUGASSERT(g_timeout_ns >= NSEC_PER_TICK);
 
   /* Periodic check for overflow */
 
-  wd_start(&g_wdog, g_timeout, perf_update, (wdparm_t)perf);
+  hrtimer_start(&g_timer, perf_update, g_timeout_ns, HRTIMER_MODE_REL);
 }
 #endif
 
