@@ -813,7 +813,7 @@ static int nvs_rd_key(FAR struct nvs_fs *fs, FAR const struct nvs_ate *entry,
   if (nvs_fnv_hash_id(nvs_fnv_hash(key, key_len)) != entry->id)
     {
       ferr("Key hash mismatch\n");
-      return -EIO;
+      return -EBADMSG;
     }
 
   return rc;
@@ -966,7 +966,6 @@ static int nvs_flash_block_move(FAR struct nvs_fs *fs,
   size_t len = nvs_align_up(fs, entry->ate_key_len + entry->ate_len);
   uint8_t buf[NVS_BUFFER_SIZE(fs)];
   size_t buf_size = nvs_align_down(fs, sizeof(buf));
-  uint32_t hash = NVS_HASH_INITIAL_VALUE;
   uint64_t data_begin = addr;
   uint64_t data_end;
   uint8_t data_crc8 = 0;
@@ -974,12 +973,6 @@ static int nvs_flash_block_move(FAR struct nvs_fs *fs,
 
   if (nvs_data_in_ate(fs, entry))
     {
-      hash = nvs_fnv_hash_id(nvs_fnv_hash(entry->data, entry->ate_key_len));
-      if (hash != entry->id)
-        {
-          return -EBADMSG;
-        }
-
       data_crc8 = crc8part(entry->data + entry->ate_key_len,
                            entry->ate_len, data_crc8);
       if (data_crc8 != entry->data_crc8)
@@ -989,15 +982,7 @@ static int nvs_flash_block_move(FAR struct nvs_fs *fs,
 
       return 0;
     }
-  else if (nvs_key_in_ate(fs, entry))
-    {
-      hash = nvs_fnv_hash_id(nvs_fnv_hash(entry->data, entry->ate_key_len));
-      if (hash != entry->id)
-        {
-          return -EBADMSG;
-        }
-    }
-  else
+  else if (!nvs_key_in_ate(fs, entry))
     {
       data_begin += entry->ate_key_len;
     }
@@ -1012,22 +997,10 @@ static int nvs_flash_block_move(FAR struct nvs_fs *fs,
           return rc;
         }
 
-      if (addr < data_begin)
-        {
-          hash = nvs_fnv_hash_part(buf, MIN(bytes_to_copy,
-                                   data_begin - addr), hash);
-        }
-
       if (addr + bytes_to_copy > data_begin)
         {
           uint64_t end_addr = MIN(data_end, addr + bytes_to_copy);
           uint64_t begin_addr = MAX(data_begin, addr);
-
-          if (!nvs_key_in_ate(fs, entry) &&
-              nvs_fnv_hash_id(hash) != entry->id)
-            {
-              return -EBADMSG;
-            }
 
           data_crc8 = crc8part(buf + (begin_addr - addr),
                                end_addr - begin_addr, data_crc8);
@@ -2178,7 +2151,11 @@ static int nvs_gc(FAR struct nvs_fs *fs)
 
       rc = nvs_find_ate(fs, gc_ate, gc_prev_addr, wlk_addr, gc_prev_addr,
                         wlk_ate, &wlk_addr);
-      if (rc < 0)
+      if (rc == -EBADMSG)
+        {
+          continue;
+        }
+      else if (rc < 0)
         {
           return rc;
         }
@@ -2899,7 +2876,7 @@ static int nvs_next(FAR struct nvs_fs *fs, FAR struct file *filep,
 
           rc = nvs_find_ate(fs, step_ate, rd_addr, wlk_addr, rd_addr,
                             wlk_ate, &wlk_addr);
-          if (rc < 0)
+          if (rc < 0 && rc != -EBADMSG)
             {
               return rc;
             }
