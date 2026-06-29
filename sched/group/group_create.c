@@ -50,10 +50,7 @@
 
 /* Shared among kthreads */
 
-static DEFINE_PER_CPU_BMP(struct task_group_s, g_kthread_group) =
-{
-  .tg_flags = GROUP_FLAG_KERNEL,
-};
+static DEFINE_PER_CPU_BMP(struct task_group_s, g_kthread_group);
 #define g_kthread_group this_cpu_var_bmp(g_kthread_group)
 
 /****************************************************************************
@@ -141,6 +138,7 @@ int group_allocate(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
   if (ttype == TCB_FLAG_TTYPE_KERNEL)
     {
       group = &g_kthread_group;
+      group->tg_flags = GROUP_FLAG_KERNEL;
       tcb->group = group;
 #ifdef CONFIG_MM_TASK_HEAP
       group->tg_heap = KNR_HEAP;
