@@ -53,6 +53,20 @@
 #define FLAME_GRAPH_SKIP 11
 #define PERF_MAX_BACKTRACE 20
 
+/* Default sampling periods.
+ *
+ * PERF_HW_SAMPLE_PERIOD: hardware PMU events count raw hardware occurrences,
+ * so one sample every 100000 events keeps the interrupt rate sane.
+ *
+ * PERF_SW_CPU_CLOCK_PERIOD: software cpu-clock counts in nanoseconds; 10ms
+ * keeps the sampling interrupt rate low enough that profiling a CPU-bound
+ * task does not drown the CPU in sampling interrupts (an interrupt storm
+ * that starves the profiled task).
+ */
+
+#define PERF_HW_SAMPLE_PERIOD    1000000
+#define PERF_SW_CPU_CLOCK_PERIOD 1000000
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -170,52 +184,43 @@ static struct pmu_s g_perf_swevent =
   .ops = &g_perf_swevent_ops,
 };
 
-static const int64_t g_perf_sample_period[PERF_TYPE_MAX]
-                     [MAX(PERF_COUNT_HW_MAX, PERF_COUNT_SW_MAX)] =
-{
-  [PERF_TYPE_HARDWARE] =
-    {
-      [PERF_COUNT_HW_CPU_CYCLES] =
-        CONFIG_PERF_EVENTS_HW_CPU_CYCLES_SAMPLE_PERIOD,
-      [PERF_COUNT_HW_INSTRUCTIONS] =
-        CONFIG_PERF_EVENTS_HW_INSTRUCTIONS_SAMPLE_PERIOD,
-      [PERF_COUNT_HW_CACHE_REFERENCES] =
-        CONFIG_PERF_EVENTS_HW_CACHE_REFERENCES_SAMPLE_PERIOD,
-      [PERF_COUNT_HW_CACHE_MISSES] =
-        CONFIG_PERF_EVENTS_HW_CACHE_MISSES_SAMPLE_PERIOD,
-      [PERF_COUNT_HW_BRANCH_INSTRUCTIONS] =
-        CONFIG_PERF_EVENTS_HW_BRANCH_INSTRUCTIONS_SAMPLE_PERIOD,
-      [PERF_COUNT_HW_BRANCH_MISSES] =
-        CONFIG_PERF_EVENTS_HW_BRANCH_MISSES_SAMPLE_PERIOD,
-      [PERF_COUNT_HW_BUS_CYCLES] =
-        CONFIG_PERF_EVENTS_HW_BUS_CYCLES_SAMPLE_PERIOD,
-      [PERF_COUNT_HW_STALLED_CYCLES_FRONTEND] =
-        CONFIG_PERF_EVENTS_HW_STALLED_CYCLES_FRONTEND_SAMPLE_PERIOD,
-      [PERF_COUNT_HW_STALLED_CYCLES_BACKEND] =
-        CONFIG_PERF_EVENTS_HW_STALLED_CYCLES_BACKEND_SAMPLE_PERIOD,
-      [PERF_COUNT_HW_REF_CPU_CYCLES] =
-        CONFIG_PERF_EVENTS_HW_REF_CPU_CYCLES_SAMPLE_PERIOD,
-    },
-
-  [PERF_TYPE_SOFTWARE] =
-    {
-      [PERF_COUNT_SW_CPU_CLOCK]        = CONFIG_PERF_EVENTS_SW_MIN_PERIOD_NSEC,
-      [PERF_COUNT_SW_TASK_CLOCK]       = UINT32_MAX - 1,
-      [PERF_COUNT_SW_PAGE_FAULTS]      = UINT32_MAX - 1,
-      [PERF_COUNT_SW_CONTEXT_SWITCHES] = UINT32_MAX - 1,
-      [PERF_COUNT_SW_CPU_MIGRATIONS]   = UINT32_MAX - 1,
-      [PERF_COUNT_SW_PAGE_FAULTS_MIN]  = UINT32_MAX - 1,
-      [PERF_COUNT_SW_PAGE_FAULTS_MAJ]  = UINT32_MAX - 1,
-      [PERF_COUNT_SW_ALIGNMENT_FAULTS] = UINT32_MAX - 1,
-      [PERF_COUNT_SW_EMULATION_FAULTS] = UINT32_MAX - 1,
-      [PERF_COUNT_SW_DUMMY]            = UINT32_MAX - 1,
-      [PERF_COUNT_SW_BPF_OUTPUT]       = UINT32_MAX - 1,
-    },
-};
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: perf_default_sample_period
+ *
+ * Description:
+ *   Return the default sampling period used when the user did not specify
+ *   one (attr.sample_period == 0).  Replaces the former
+ *   g_perf_sample_period[][] lookup table, which also avoided an
+ *   out-of-bounds read for unhandled type/config values coming from
+ *   user space.
+ *
+ * Input Parameters:
+ *   type   - perf_event_attr.type
+ *   config - perf_event_attr.config
+ *
+ * Returned Value:
+ *   Default sample period for the event.
+ *
+ ****************************************************************************/
+
+static int64_t perf_default_sample_period(uint32_t type, uint64_t config)
+{
+  if (type == PERF_TYPE_HARDWARE)
+    {
+      return PERF_HW_SAMPLE_PERIOD;
+    }
+
+  if (type == PERF_TYPE_SOFTWARE && config == PERF_COUNT_SW_CPU_CLOCK)
+    {
+      return PERF_SW_CPU_CLOCK_PERIOD;
+    }
+
+  return UINT32_MAX - 1;
+}
 
 /****************************************************************************
  * Name: perf_get_eventid
@@ -901,7 +906,7 @@ perf_event_alloc(FAR struct perf_event_attr_s *attr,
   if (!attr->sample_period)
     {
       attr->sample_period =
-        g_perf_sample_period[attr->type][attr->config];
+        perf_default_sample_period(attr->type, attr->config);
     }
 
   event->attr  = *attr;
