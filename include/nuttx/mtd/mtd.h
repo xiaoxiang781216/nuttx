@@ -93,11 +93,11 @@
 #define MTD_IOCTL(d,c,a)   ((d)->ioctl   ? (d)->ioctl(d,c,a)    : (-ENOSYS))
 
 #ifdef CONFIG_FTL_BBM
-#  define MTD_ISBAD(d,b)   ((d)->isbad   ? (d)->isbad(d,b)      : (-ENOSYS))
-#  define MTD_MARKBAD(d,b) ((d)->markbad ? (d)->markbad(d,b)    : (-ENOSYS))
+#  define MTD_ISBAD(d,b)   ((d)->isbad   ? (d)->isbad(d,b)      : (OK))
+#  define MTD_MARKBAD(d,b) ((d)->markbad ? (d)->markbad(d,b)    : (OK))
 #else
-#  define MTD_ISBAD(d,b)   (-ENOSYS)
-#  define MTD_MARKBAD(d,b) (-ENOSYS)
+#  define MTD_ISBAD(d,b)   (OK)
+#  define MTD_MARKBAD(d,b) (OK)
 #endif
 
 /* If any of the low-level device drivers declare they want sub-sector erase

@@ -1180,7 +1180,7 @@ int ftl_initialize_by_path(FAR const char *path, FAR struct mtd_dev_s *mtd,
 #endif
 
 #ifdef CONFIG_FTL_BBM
-      if (MTD_ISBAD(dev->mtd, 0) != -ENOSYS)
+      if (dev->mtd->isbad != NULL)
         {
           ret = ftl_init_map(dev);
           if (ret < 0)
