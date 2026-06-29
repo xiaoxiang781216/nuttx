@@ -22,6 +22,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/compiler.h>
+
 #include "nvic.h"
 #include "arm_internal.h"
 
@@ -54,6 +56,7 @@
  *
  ****************************************************************************/
 
+nosanitize_address
 void arm_fpuconfig(void)
 {
   uint32_t regval;
