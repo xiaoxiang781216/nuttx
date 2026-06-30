@@ -155,6 +155,17 @@
 #define IPOPT_TIMESTAMP_TYPE \
   IPOPT_MKTYPE(IPOPT_TYPE_NOTCOPIED, IPOPT_TYPE_CLASS_MEASURE, IPOPT_TYPE_OPTION_TIMESTAMP)
 
+/* RFC 791 Timestamp option self-consistency limits (len/pointer/entry) */
+
+#define IPOPT_TIMESTAMP_LEN_HDR        4    /* fixed header bytes */
+#define IPOPT_TIMESTAMP_MIN_POINTER    5    /* first slot offset, 1-based */
+#define IPOPT_TIMESTAMP_LEN_ENTRY      4    /* timestamp entry size */
+#define IPOPT_TIMESTAMP_LEN_ADDR_ENTRY 8    /* addr+timestamp entry size */
+#define IPOPT_TIMESTAMP_FLAG_MASK      0x0f
+#define IPOPT_TIMESTAMP_FLAG_TSONLY    0    /* timestamps only */
+#define IPOPT_TIMESTAMP_FLAG_TSADDR    1    /* timestamp then address */
+#define IPOPT_TIMESTAMP_FLAG_PRESPEC   3    /* prespecified addresses */
+
 #define IPOPT_EXTSEC_TYPE \
   IPOPT_MKTYPE(IPOPT_TYPE_COPIED, IPOPT_TYPE_CLASS_CTRL, IPOPT_TYPE_OPTION_EXTSEC)
 
@@ -163,6 +174,12 @@
 
 #define IPOPT_RR_TYPE \
   IPOPT_MKTYPE(IPOPT_TYPE_NOTCOPIED, IPOPT_TYPE_CLASS_CTRL, IPOPT_TYPE_OPTION_RR)
+
+/* RFC 791 Record-Route / Source-Route option self-consistency limits */
+
+#define IPOPT_RR_LEN_HDR     3    /* type, length, pointer */
+#define IPOPT_RR_MIN_POINTER 4    /* first address offset, 1-based */
+#define IPOPT_RR_LEN_ENTRY   4    /* IPv4 address entry size */
 
 #define IPOPT_SSID_LEN 4
 #define IPOPT_SSID_TYPE \

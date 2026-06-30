@@ -128,7 +128,6 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_DEBUG_FEATURES
 static int ipv4_check_opt(FAR struct ipv4_hdr_s *ipv4)
 {
   FAR uint8_t *opt = (FAR uint8_t *)(ipv4 + 1);
@@ -137,11 +136,13 @@ static int ipv4_check_opt(FAR struct ipv4_hdr_s *ipv4)
   optlen = ((ipv4->vhl & IPv4_HLMASK) << 2) - IPv4_HDRLEN;
   while (optlen > 0)
     {
-      if (opt[0] == IPOPT_END_TYPE)
+      uint8_t type = opt[0];
+
+      if (type == IPOPT_END_TYPE)
         {
           break;
         }
-      else if (opt[0] == IPOPT_NOOP_TYPE)
+      else if (type == IPOPT_NOOP_TYPE)
         {
           opt++;
           optlen--;
@@ -149,9 +150,68 @@ static int ipv4_check_opt(FAR struct ipv4_hdr_s *ipv4)
       else if (optlen > 1)
         {
           int len = opt[1];
-          if (len > optlen)
+          if (len < 2 || len > optlen)
             {
               return -EINVAL;
+            }
+
+          /* Validate the internal consistency of options that carry a
+           * pointer field (RFC 791).  A malformed option (e.g. a Timestamp
+           * option whose length / pointer are not aligned to the entry
+           * size) MUST cause the datagram to be silently discarded.
+           */
+
+          if (type == IPOPT_TIMESTAMP_TYPE)
+            {
+              uint8_t ptr;
+              uint8_t flag;
+              int entry;
+
+              if (len < IPOPT_TIMESTAMP_LEN_HDR)
+                {
+                  return -EINVAL;
+                }
+
+              ptr  = opt[2];
+              flag = opt[3] & IPOPT_TIMESTAMP_FLAG_MASK;
+
+              /* Only flags 0/1/3 are defined by RFC 791; reject others */
+
+              if (flag != IPOPT_TIMESTAMP_FLAG_TSONLY &&
+                  flag != IPOPT_TIMESTAMP_FLAG_TSADDR &&
+                  flag != IPOPT_TIMESTAMP_FLAG_PRESPEC)
+                {
+                  return -EINVAL;
+                }
+
+              entry = flag == IPOPT_TIMESTAMP_FLAG_TSONLY ?
+                      IPOPT_TIMESTAMP_LEN_ENTRY :
+                      IPOPT_TIMESTAMP_LEN_ADDR_ENTRY;
+
+              if (ptr < IPOPT_TIMESTAMP_MIN_POINTER || ptr >= len ||
+                  ((len - IPOPT_TIMESTAMP_LEN_HDR) % entry) != 0 ||
+                  ((ptr - IPOPT_TIMESTAMP_MIN_POINTER) % entry) != 0)
+                {
+                  return -EINVAL;
+                }
+            }
+          else if (type == IPOPT_RR_TYPE ||
+                   type == IPOPT_LSRR_TYPE ||
+                   type == IPOPT_SSRR_TYPE)
+            {
+              uint8_t ptr;
+
+              if (len < IPOPT_RR_LEN_HDR)
+                {
+                  return -EINVAL;
+                }
+
+              ptr = opt[2];
+              if (ptr < IPOPT_RR_MIN_POINTER || ptr >= len ||
+                  ((ptr - IPOPT_RR_MIN_POINTER) % IPOPT_RR_LEN_ENTRY) != 0)
+                {
+                  return -EINVAL;
+                }
             }
 
           opt += len;
@@ -165,7 +225,6 @@ static int ipv4_check_opt(FAR struct ipv4_hdr_s *ipv4)
 
   return OK;
 }
-#endif
 
 /****************************************************************************
  * Name: ipv4_in
@@ -309,7 +368,6 @@ static int ipv4_in(FAR struct net_driver_s *dev)
       goto drop;
     }
 
-#ifdef CONFIG_DEBUG_FEATURES
   if (ipv4_check_opt(ipv4) != OK)
     {
 #ifdef CONFIG_NET_STATISTICS
@@ -318,7 +376,6 @@ static int ipv4_in(FAR struct net_driver_s *dev)
       nwarn("WARNING: IP options error\n");
       goto drop;
     }
-#endif
 
   srcipaddr = net_ip4addr_conv32(ipv4->srcipaddr);
 
