@@ -36,6 +36,12 @@ ifeq ($(CONFIG_DEBUG_IOB),y)
 CSRCS += fs_procfsiobinfo.c
 endif
 
+ifneq ($(CONFIG_LIBC_BACKTRACE_DEPTH),)
+ifneq ($(CONFIG_LIBC_BACKTRACE_DEPTH),0)
+CSRCS += fs_procfsbacktrace.c
+endif
+endif
+
 ifeq ($(CONFIG_FS_PROCFS_INCLUDE_PRESSURE),y)
 CSRCS += fs_procfspressure.c
 endif

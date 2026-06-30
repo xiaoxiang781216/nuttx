@@ -50,6 +50,10 @@ if(NOT CONFIG_DISABLE_MOUNTPOINT)
       list(APPEND SRCS fs_procfsiobinfo.c)
     endif()
 
+    if(CONFIG_LIBC_BACKTRACE_DEPTH GREATER 0)
+      list(APPEND SRCS fs_procfsbacktrace.c)
+    endif()
+
     target_sources(fs PRIVATE ${SRCS})
 
   endif()

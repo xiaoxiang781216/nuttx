@@ -69,6 +69,9 @@ extern const struct procfs_operations g_irq_operations;
 #ifdef CONFIG_DEBUG_IOB
 extern const struct procfs_operations g_iobinfo_operations;
 #endif
+#if defined(CONFIG_LIBC_BACKTRACE_DEPTH) && CONFIG_LIBC_BACKTRACE_DEPTH > 0
+extern const struct procfs_operations g_backtrace_operations;
+#endif
 extern const struct procfs_operations g_meminfo_operations;
 extern const struct procfs_operations g_memdump_operations;
 extern const struct procfs_operations g_mempool_operations;
@@ -108,6 +111,10 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
   { "[0-9]*/**",    &g_proc_operations,     PROCFS_UNKOWN_TYPE, 0    },
   { "[0-9]*",       &g_proc_operations,     PROCFS_DIR_TYPE,    0555 },
+#endif
+
+#if defined(CONFIG_LIBC_BACKTRACE_DEPTH) && CONFIG_LIBC_BACKTRACE_DEPTH > 0
+  { "backtrace",    &g_backtrace_operations, PROCFS_FILE_TYPE,  0666 },
 #endif
 
 #if defined(CONFIG_CLK) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK)
