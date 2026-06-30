@@ -338,9 +338,18 @@ static int perf_event_do_enable(FAR void *arg)
 {
   FAR struct perf_event_s *event = arg;
   FAR struct perf_event_context_s *ctx = event->ctx;
+  irqstate_t flags;
+
+  /* Hold ctx->lock with interrupts disabled so the scheduler hooks
+   * (perf_event_task_sched_in/out) cannot preempt us on the same CPU and
+   * reenter sched_in/out on the same context while we are mid-update.
+   */
+
+  flags = spin_lock_irqsave(&ctx->lock);
 
   if (event->state >= PERF_EVENT_STATE_INACTIVE)
     {
+      spin_unlock_irqrestore(&ctx->lock, flags);
       return OK;
     }
 
@@ -349,6 +358,8 @@ static int perf_event_do_enable(FAR void *arg)
   event->state = PERF_EVENT_STATE_INACTIVE;
 
   perf_context_sched_in(ctx);
+
+  spin_unlock_irqrestore(&ctx->lock, flags);
 
   return OK;
 }
@@ -371,9 +382,18 @@ static int perf_event_do_disable(FAR void *arg)
 {
   FAR struct perf_event_s *event = arg;
   FAR struct perf_event_context_s *ctx = event->ctx;
+  irqstate_t flags;
+
+  /* Hold ctx->lock with interrupts disabled so the scheduler hooks cannot
+   * preempt us on the same CPU and reenter sched_out on the same context
+   * while we are tearing this event down.
+   */
+
+  flags = spin_lock_irqsave(&ctx->lock);
 
   if (event->state == PERF_EVENT_STATE_OFF)
     {
+      spin_unlock_irqrestore(&ctx->lock, flags);
       return OK;
     }
 
@@ -387,6 +407,8 @@ static int perf_event_do_disable(FAR void *arg)
     }
 
   event->state = PERF_EVENT_STATE_OFF;
+
+  spin_unlock_irqrestore(&ctx->lock, flags);
 
   return OK;
 }
@@ -470,8 +492,37 @@ static int perf_cpu_function_call(int cpu, FAR struct perf_event_s *event,
 static int perf_context_detach_internal(FAR void *arg)
 {
   FAR struct perf_event_s *event = arg;
+  FAR struct perf_event_context_s *ctx = event->ctx;
+
+  /* Best-effort PMU teardown.  perf_event_sched_out() only clears ACTIVE
+   * state and drops the ctx->active_num reference when it can actually stop
+   * the counter on its owning CPU (state == ACTIVE && oncpu == this_cpu).
+   */
 
   perf_event_sched_out(event);
+
+  /* Reconcile ctx->active_num for the event we are about to unlink.
+   *
+   * perf_event_sched_out() above may leave the event ACTIVE: on SMP it
+   * returns -EAGAIN when the event migrated to another CPU (its per-CPU PMU
+   * state cannot be torn down from the wrong CPU), and the scheduler-hook
+   * trylock may have skipped deactivation under contention.  We unlink the
+   * event regardless, so drop its active_num reference now; otherwise
+   * perf_free_context() trips ASSERT(active_num == 0) on an empty
+   * event_list.
+   */
+
+  if (event->state == PERF_EVENT_STATE_ACTIVE)
+    {
+      event->state = PERF_EVENT_STATE_INACTIVE;
+#ifdef CONFIG_SMP
+      event->oncpu = -1;
+#endif
+      if (ctx != NULL && ctx->active_num > 0)
+        {
+          ctx->active_num--;
+        }
+    }
 
   perf_group_detach(event);
 
@@ -501,7 +552,6 @@ static int perf_setup_task_context(FAR struct tcb_s *tcb)
   FAR struct tcb_s *parent = this_task();
   FAR struct perf_event_context_s *parent_ctx = parent->perf_event_ctx;
   FAR struct perf_event_s *group_leader;
-  irqstate_t flags;
   int ret = OK;
 
   DEBUGASSERT(tcb->perf_event_ctx == NULL);
@@ -524,7 +574,15 @@ static int perf_setup_task_context(FAR struct tcb_s *tcb)
   perf_init_context(tcb->perf_event_ctx);
   tcb->perf_event_ctx->tcb = tcb;
 
-  flags = spin_lock_irqsave(&parent_ctx->lock);
+  /* Walk the parent's group list and inherit each group into the child.
+   *
+   * Do NOT hold parent_ctx->lock here: perf_inherit_event() may sleep
+   * (kmm_zalloc, child_mutex), and sleeping under a spinlock with interrupts
+   * disabled deadlocks against the scheduler hook.  The walk is safe without
+   * it: the parent's group_list is mutated only by the parent itself (via
+   * perf open/close), and the parent is currently running this spawn path;
+   * the scheduler hooks only read-traverse the list.
+   */
 
   list_for_every_entry(&parent_ctx->group_list, group_leader,
                        struct perf_event_s, group_node)
@@ -536,7 +594,6 @@ static int perf_setup_task_context(FAR struct tcb_s *tcb)
         }
     }
 
-  spin_unlock_irqrestore(&parent_ctx->lock, flags);
   return ret;
 }
 
@@ -976,14 +1033,25 @@ void perf_event_task_exit(FAR struct tcb_s *tcb)
 void perf_event_task_sched_in(FAR struct tcb_s *tcb)
 {
   FAR struct perf_event_context_s *ctx = tcb->perf_event_ctx;
+  irqstate_t flags;
 
   if (ctx != NULL)
     {
-      irqstate_t flags = spin_lock_irqsave(&ctx->lock);
+      /* Non-blocking trylock to break a cross-CPU lock-order inversion.
+       * This hook runs under g_schedlock; blocking on ctx->lock deadlocks
+       * when a concurrent cross-CPU enable/disable holds it via an IPI whose
+       * servicing core is itself spinning on g_schedlock (held by us).  If
+       * contended, skip activating the events this switch; a later switch
+       * or the enable/disable path reconciles the PMU state.  Perf
+       * accounting is best-effort, so a rare skipped activation is
+       * acceptable.
+       */
 
-      perf_context_sched_in(ctx);
-
-      spin_unlock_irqrestore(&ctx->lock, flags);
+      if (spin_trylock_irqsave(&ctx->lock, flags))
+        {
+          perf_context_sched_in(ctx);
+          spin_unlock_irqrestore(&ctx->lock, flags);
+        }
     }
 }
 
@@ -1004,15 +1072,22 @@ void perf_event_task_sched_in(FAR struct tcb_s *tcb)
 void perf_event_task_sched_out(FAR struct tcb_s *tcb)
 {
   FAR struct perf_event_context_s *ctx = tcb->perf_event_ctx;
+  irqstate_t flags;
 
   perf_swevent(PERF_COUNT_SW_CONTEXT_SWITCHES, up_getpc());
 
   if (ctx != NULL)
     {
-      irqstate_t flags = spin_lock_irqsave(&ctx->lock);
+      /* Non-blocking trylock, same rationale as perf_event_task_sched_in().
+       * If contended, skip deactivating the events this switch; they stay
+       * ACTIVE and are reconciled on a later switch or the enable/disable
+       * path.
+       */
 
-      perf_context_sched_out(ctx);
-
-      spin_unlock_irqrestore(&ctx->lock, flags);
+      if (spin_trylock_irqsave(&ctx->lock, flags))
+        {
+          perf_context_sched_out(ctx);
+          spin_unlock_irqrestore(&ctx->lock, flags);
+        }
     }
 }
