@@ -158,9 +158,10 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
         {
           ret = pseudofile_create(&desc.node, path, mode);
         }
-#endif
 
       if (ret < 0)
+#endif
+
         {
           /* "O_CREAT is not set and the named file does not exist.  Or, a
            * directory component in pathname does not exist or is a dangling
