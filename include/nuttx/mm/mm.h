@@ -371,6 +371,7 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
 
 #ifndef CONFIG_MM_HEAP_FORBID_NONE
 bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid);
+bool mm_heap_is_forbid(FAR struct mm_heap_s *heap);
 #endif
 
 /* Functions contained in kmm_free.c ****************************************/

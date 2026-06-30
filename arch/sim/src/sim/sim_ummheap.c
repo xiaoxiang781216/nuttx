@@ -931,6 +931,13 @@ bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
 
   return atomic_xchg(&heap->mm_heapforbid, forbid) != 0;
 }
+
+bool mm_heap_is_forbid(FAR struct mm_heap_s *heap)
+{
+  DEBUGASSERT(heap != NULL);
+
+  return atomic_read(&heap->mm_heapforbid) != 0;
+}
 #endif
 
 #else /* CONFIG_MM_UMM_CUSTOMIZE_MANAGER */

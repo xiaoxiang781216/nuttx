@@ -75,6 +75,10 @@ extern const struct procfs_operations g_backtrace_operations;
 extern const struct procfs_operations g_meminfo_operations;
 extern const struct procfs_operations g_memdump_operations;
 extern const struct procfs_operations g_mempool_operations;
+#if !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO) && \
+    !defined(CONFIG_MM_HEAP_FORBID_NONE)
+extern const struct procfs_operations g_mmforbid_operations;
+#endif
 extern const struct procfs_operations g_module_operations;
 extern const struct procfs_operations g_pm_operations;
 extern const struct procfs_operations g_proc_operations;
@@ -165,6 +169,9 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMINFO
 #  ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMDUMP
   { "memdump",      &g_memdump_operations,  PROCFS_FILE_TYPE,   0666 },
+#  endif
+#  ifndef CONFIG_MM_HEAP_FORBID_NONE
+  { "mmforbid",     &g_mmforbid_operations, PROCFS_FILE_TYPE,   0666 },
 #  endif
   { "meminfo",      &g_meminfo_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif

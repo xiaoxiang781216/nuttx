@@ -112,6 +112,17 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
                             size_t buflen);
 
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+static int     mmforbid_open(FAR struct file *filep,
+                             FAR const char *relpath, int oflags,
+                             mode_t mode);
+static int     mmforbid_close(FAR struct file *filep);
+static ssize_t mmforbid_read(FAR struct file *filep,
+                             FAR char *buffer, size_t buflen);
+static ssize_t mmforbid_write(FAR struct file *filep,
+                              FAR const char *buffer, size_t buflen);
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -135,6 +146,16 @@ const struct procfs_operations g_memdump_operations =
   meminfo_close,  /* close */
   memdump_read,   /* read */
   memdump_write,  /* write */
+};
+#endif
+
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+const struct procfs_operations g_mmforbid_operations =
+{
+  mmforbid_open,   /* open */
+  mmforbid_close,  /* close */
+  mmforbid_read,   /* read */
+  mmforbid_write,  /* write */
 };
 #endif
 
@@ -847,4 +868,139 @@ void procfs_unregister_meminfo(FAR struct procfs_meminfo_entry_s *entry)
   meminfo_release_entry_locked(entry);
   spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
 }
+
+/****************************************************************************
+ * Name: mmforbid_open
+ *
+ * Description:
+ *   Snapshot the current heap forbid state into the line buffer so that
+ *   mmforbid_read only needs to copy it out.
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+static int mmforbid_open(FAR struct file *filep,
+                         FAR const char *relpath,
+                         int oflags, mode_t mode)
+{
+  FAR struct procfs_meminfo_entry_s *entry;
+  FAR struct meminfo_file_s *procfile;
+  irqstate_t flags;
+  bool allforbid = true;
+
+  procfile = fs_heap_zalloc(sizeof(struct meminfo_file_s));
+  if (procfile == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  /* Check if ALL registered heaps are in forbid state */
+
+  flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
+  for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
+    {
+      if (!mm_heap_is_forbid(entry->heap))
+        {
+          allforbid = false;
+          break;
+        }
+    }
+
+  /* If no heap registered, report not forbidden */
+
+  if (g_procfs_meminfo == NULL)
+    {
+      allforbid = false;
+    }
+
+  spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
+
+  procfile->linesize = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
+                                       "%d\n", allforbid ? 1 : 0);
+
+  filep->f_priv = procfile;
+  return OK;
+}
+
+/****************************************************************************
+ * Name: mmforbid_close
+ ****************************************************************************/
+
+static int mmforbid_close(FAR struct file *filep)
+{
+  FAR struct meminfo_file_s *procfile;
+
+  procfile = filep->f_priv;
+  DEBUGASSERT(procfile);
+  fs_heap_free(procfile);
+  filep->f_priv = NULL;
+  return OK;
+}
+
+/****************************************************************************
+ * Name: mmforbid_read
+ *
+ * Description:
+ *   Return the line prepared in mmforbid_open: "1\n" if all heaps are
+ *   forbidden, "0\n" otherwise.
+ *
+ ****************************************************************************/
+
+static ssize_t mmforbid_read(FAR struct file *filep,
+                             FAR char *buffer, size_t buflen)
+{
+  FAR struct meminfo_file_s *procfile;
+  off_t offset;
+  ssize_t ret;
+
+  procfile = filep->f_priv;
+  DEBUGASSERT(procfile);
+
+  offset = filep->f_pos;
+  ret = procfs_memcpy(procfile->line, procfile->linesize,
+                      buffer, buflen, &offset);
+
+  if (ret > 0)
+    {
+      filep->f_pos += ret;
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: mmforbid_write
+ *
+ * Description:
+ *   Write "1" to forbid all heaps, "0" to allow dynamic memory operations
+ *   on all registered heaps.
+ *
+ ****************************************************************************/
+
+static ssize_t mmforbid_write(FAR struct file *filep,
+                              FAR const char *buffer, size_t buflen)
+{
+  FAR struct procfs_meminfo_entry_s *entry;
+  irqstate_t flags;
+  bool forbid;
+
+  if (buflen == 0)
+    {
+      return 0;
+    }
+
+  forbid = (buffer[0] == '1');
+
+  flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
+  for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
+    {
+      mm_heap_forbid(entry->heap, forbid);
+    }
+
+  spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
+
+  return buflen;
+}
+#endif /* !CONFIG_MM_HEAP_FORBID_NONE */
+
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_MEMINFO */
