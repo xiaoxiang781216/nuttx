@@ -80,6 +80,13 @@ struct pmu_hw_events_s
   /* PMU interrupt number */
 
   int                 irq;
+
+  /* Serialize events[] access between the overflow IRQ handler and the
+   * add/del paths running in thread context on the same CPU.  Without it
+   * the IRQ handler can dereference an event that the del path is freeing.
+   */
+
+  spinlock_t          lock;
 };
 
 struct arm64_pmu_s
@@ -486,12 +493,17 @@ static void arm64pmu_del(FAR struct perf_event_s *event, int flags)
   FAR struct arm64_pmu_s *arm64pmu = to_arm64_pmu(event->pmu);
   FAR struct pmu_hw_events_s *hw_events = &arm64pmu->hw_events[this_cpu()];
   FAR struct hw_perf_event_s *hwc = &event->hw;
+  irqstate_t irqflags;
   int idx = hwc->idx;
+
+  irqflags = spin_lock_irqsave(&hw_events->lock);
 
   arm64pmu_stop(event, PERF_EF_UPDATE);
   hw_events->events[idx] = NULL;
   arm64pmu->clear_event_idx(hw_events, event);
   hwc->idx = -1;
+
+  spin_unlock_irqrestore(&hw_events->lock, irqflags);
 }
 
 static int arm64pmu_add(FAR struct perf_event_s *event, int flags)
@@ -499,6 +511,7 @@ static int arm64pmu_add(FAR struct perf_event_s *event, int flags)
   FAR struct arm64_pmu_s *arm64pmu = to_arm64_pmu(event->pmu);
   FAR struct pmu_hw_events_s *hw_events = &arm64pmu->hw_events[this_cpu()];
   FAR struct hw_perf_event_s *hwc = &event->hw;
+  irqstate_t irqflags;
   int idx;
 
   if (!cpumask_test_cpu(this_cpu(), arm64pmu->supported_cpus))
@@ -506,9 +519,12 @@ static int arm64pmu_add(FAR struct perf_event_s *event, int flags)
       return -ENOENT;
     }
 
+  irqflags = spin_lock_irqsave(&hw_events->lock);
+
   idx = arm64pmu->get_event_idx(hw_events, event);
   if (idx < 0)
     {
+      spin_unlock_irqrestore(&hw_events->lock, irqflags);
       return idx;
     }
 
@@ -521,6 +537,8 @@ static int arm64pmu_add(FAR struct perf_event_s *event, int flags)
     {
       arm64pmu_start(event, PERF_EF_RELOAD);
     }
+
+  spin_unlock_irqrestore(&hw_events->lock, irqflags);
 
   return 0;
 }
@@ -827,6 +845,7 @@ static int pmuv3_handle_irq(FAR struct arm64_pmu_s *cpu_pmu)
 {
   uint32_t pmovsr;
   FAR struct pmu_hw_events_s *cpuc = &cpu_pmu->hw_events[this_cpu()];
+  irqstate_t flags;
   int idx;
 
   /* Get the IRQ flags and reset */
@@ -843,6 +862,12 @@ static int pmuv3_handle_irq(FAR struct arm64_pmu_s *cpu_pmu)
   /* Stop the PMU while processing the counter overflows */
 
   pmuv3_stop(cpu_pmu);
+
+  /* Hold the per-CPU lock so the add/del paths cannot free an event or
+   * clear events[] while we are dereferencing it here.
+   */
+
+  flags = spin_lock_irqsave(&cpuc->lock);
 
   /* Iterate over the overflow counter and update the data */
 
@@ -871,6 +896,8 @@ static int pmuv3_handle_irq(FAR struct arm64_pmu_s *cpu_pmu)
 
       arm64pmu_event_update_period(event);
     }
+
+  spin_unlock_irqrestore(&cpuc->lock, flags);
 
   /* Start the PMU after the interrupt processing is complete */
 
@@ -1085,6 +1112,7 @@ static int pmuv3_common_pmu_init(FAR struct arm64_pmu_s *cpu_pmu, char *name,
       cpu_pmu->supported_cpus |= (1U << cpu);
       events = &cpu_pmu->hw_events[cpu];
       events->irq = 23;
+      spin_lock_init(&events->lock);
     }
 
   return 0;
