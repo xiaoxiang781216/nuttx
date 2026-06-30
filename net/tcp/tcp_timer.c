@@ -621,13 +621,23 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 
                   tcp_send(dev, conn, TCP_RST | TCP_ACK, hdrlen);
 
-                  /* Defer the free to avoid use-after-free when
-                   * this connection is being freed while the TCP
-                   * connection list is being traversed (e.g.,
-                   * devif_poll_tcp_connections holds
-                   * tcp_conn_list_lock and iterates via
-                   * tcp_nextconn).
+                  /* Notify the application that the connection has
+                   * timed out. Only do this for active connect()
+                   * (TCP_SYN_SENT → TCP_SYN_RCVD via simultaneous
+                   * open), not for passive backlog connections.
+                   *
+                   * For the connecting case, let the callback handle
+                   * cleanup and jump to done (matching TCP_SYN_SENT
+                   * path).  For passive backlog, defer the free to
+                   * avoid use-after-free when traversing the TCP
+                   * connection list.
                    */
+
+                  if (_SS_ISCONNECTING(conn->sconn.s_flags))
+                    {
+                      tcp_callback(dev, conn, TCP_TIMEDOUT);
+                      goto done;
+                    }
 
                   conn->crefs = 0;
                   conn->flags |= TCP_CLOSE_ARRANGED;
