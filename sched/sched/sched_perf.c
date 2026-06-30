@@ -659,6 +659,7 @@ perf_get_context(FAR struct perf_event_s *event,
       if (ctx == NULL)
         {
           serr("task perf event alloc fail\n");
+          nxmutex_unlock(&tcb->perf_event_mutex);
           return NULL;
         }
 
