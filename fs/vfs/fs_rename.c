@@ -94,7 +94,6 @@ static int pseudorename(FAR const char *oldpath, FAR struct inode *oldinode,
 {
   struct inode_search_s newdesc;
   FAR struct inode *newinode;
-  FAR char *subdir = NULL;
   bool isdir = INODE_IS_PSEUDODIR(oldinode);
   int ret;
 
@@ -313,10 +312,6 @@ errout_with_lock:
 
 errout:
   RELEASE_SEARCH(&newdesc);
-  if (subdir != NULL)
-    {
-      fs_heap_free(subdir);
-    }
 
   return ret;
 }
@@ -338,7 +333,6 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
   struct inode_search_s newdesc;
   FAR struct inode *newinode;
   FAR const char *newrelpath;
-  FAR char *subdir = NULL;
   bool newisdir = false;
   bool oldisdir = false;
   int ret;
@@ -554,10 +548,6 @@ errout_with_newinode:
 
 errout_with_newsearch:
   RELEASE_SEARCH(&newdesc);
-  if (subdir != NULL)
-    {
-      fs_heap_free(subdir);
-    }
 
   return ret;
 }
