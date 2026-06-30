@@ -183,7 +183,7 @@ static bool perf_buffer_has_space(FAR struct perf_event_s *event,
 
 static inline void perf_backtrace_convert(FAR uint64_t *ptr, int nr)
 {
-  while (sizeof(uintptr_t) != sizeof(uint64_t) && nr-- >= 0)
+  while (sizeof(uintptr_t) != sizeof(uint64_t) && nr-- > 0)
     {
       *(ptr + nr) = *((FAR uintptr_t *)ptr + nr);
     }
