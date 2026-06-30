@@ -19,4 +19,14 @@ config FS_SHMFS_VFS_PATH
 		The path to where shared memory objects will exist in the VFS
 		namespace.
 
+config FS_SHMFS_NAME_INITIAL_SLASH
+	bool "shm object name (starts with '/')"
+	default n
+	---help---
+		POSIX.1-2001 require that shm object names must start with a '/'
+		character. When enabled, creating/opening a shared memory object
+		with a name not starting with '/' will return an error.
+		POSIX.1-2008 makes non-slash names implementation-defined.
+		Disabled by default to maintain backward compatibility.
+
 endif # FS_SHMFS

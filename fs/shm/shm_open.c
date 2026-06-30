@@ -54,6 +54,15 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
       return -EINVAL;
     }
 
+#ifdef CONFIG_FS_SHMFS_NAME_INITIAL_SLASH
+  /* POSIX.1-2001 requires the shm object name to begin with a '/' */
+
+  if (name[0] != '/')
+    {
+      return -EINVAL;
+    }
+#endif
+
   /* Remove any number of leading '/' */
 
   while (*name == '/')
