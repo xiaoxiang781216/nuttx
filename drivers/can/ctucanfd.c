@@ -285,28 +285,22 @@ static DEFINE_PER_CPU_BMP(struct pci_driver_s, g_ctucanfd_drv) =
 
 #endif /* CONFIG_PCI */
 
-/* --- Channel ID allocation strategy ---
- *
- *   CTUCANFD_PCI_MAP set (BMP multi-core PCI):
- *     PCI IDs are derived deterministically from a static
- *     PCI device -> CPU core map; no global counter needed.
- *
- *   g_ctucanfd_count is used only by the CHARDEV registration
- *   path (both PCI probe and SysBus register) to compute the
- *   /dev/canN name.  SOCKET registration auto-names via
- *   NET_LL_CAN, so no counter is required there.  The counter
- *   is per-CPU under CONFIG_BMP so cores running independent
- *   NuttX instances do not race on a shared counter.
+/* PCI device to CPU assignment map.
+ * Indexed by PCI device number, value is CPU core index.
  */
 
 #ifdef CTUCANFD_PCI_MAP
+/* BMP multi-core: static map for deterministic device-to-CPU assignment */
+
 static const int g_ctucanfd_pci_map[] = CTUCANFD_PCI_MAP;
 #endif
 
-#ifdef CONFIG_CAN_CTUCANFD_CHARDEV
-static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_ctucanfd_count);
-#define g_ctucanfd_count this_cpu_var_bmp(g_ctucanfd_count)
-#endif
+/* Sequential channel ID counter (non-PCI_MAP PCI probe / SysBus register).
+ * Marked unused_data so configs that don't use it (BMP PCI_MAP uses the map
+ * above; SOCKET-only SysBus builds use neither) don't trip -Werror=unused.
+ */
+
+static uint8_t g_ctucanfd_count unused_data;
 
 /*****************************************************************************
  * Private Functions
@@ -2182,9 +2176,9 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
   FAR struct ctucanfd_driver_s  *priv   = NULL;
   uint8_t                        i      = 0;
   int                            ret;
+  uint8_t                        canid;
 #ifdef CONFIG_CAN_CTUCANFD_CHARDEV
   char                           devpath[PATH_MAX];
-  uint8_t                        canid;
 #endif
 
 #ifdef CTUCANFD_PCI_MAP
@@ -2273,13 +2267,11 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
 
   /* CAN channel ID assignment */
 
-#ifdef CONFIG_CAN_CTUCANFD_CHARDEV
-#  ifdef CTUCANFD_PCI_MAP
+#ifdef CTUCANFD_PCI_MAP
   canid = devid * priv->count;
-#  else
+#else
   canid = g_ctucanfd_count;
   g_ctucanfd_count += priv->count;
-#  endif
 #endif
 
   /* Common initialziation for all channels */
@@ -2327,18 +2319,19 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       netdev->quota[NETPKT_RX] = CTUCANFD_RX_QUOTA;
       netdev->ops = &g_ctucanfd_net_ops;
 
+      snprintf(netdev->netdev.d_ifname, IFNAMSIZ, "can%d", canid + i);
+
       /* Set the IFF Loopback flag */
 
       IFF_SET_LOOPBACK(netdev->netdev.d_flags);
 
-      /* Register the network interface (NuttX auto-names based on
-       * NET_LL_CAN registration order: can0, can1, ...).
-       */
+      /* Register the network interface. */
 
       ret = netdev_lower_register(netdev, NET_LL_CAN);
       if (ret < 0)
         {
-          pcierr("ERROR: failed to register CAN netdev: %d\n", ret);
+          pcierr("ERROR: failed to register can%d: %d\n",
+                 canid + i, ret);
           goto errout;
         }
 
