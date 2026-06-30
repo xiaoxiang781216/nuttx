@@ -87,6 +87,32 @@
         sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_END, str, strlen(str))
 #define sched_note_mark(tag, str) \
         sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_MARK, str, strlen(str))
+#define sched_note_mark_track(tag, track, name) \
+        do \
+          { \
+            struct note_max_s _tmp; \
+            FAR char *_buf = (FAR char *)_tmp.data; \
+            size_t _max = sizeof(_tmp.data); \
+            size_t _nlen; \
+            size_t _tlen = 0; \
+            _nlen = strlcpy(_buf, (name), _max) + 1; \
+            if (_nlen > _max) \
+              { \
+                _nlen = _max; \
+              } \
+            if ((track) != NULL && _nlen < _max) \
+              { \
+                _tlen = strlcpy(_buf + _nlen, (track), \
+                                _max - _nlen) + 1; \
+                if (_tlen > _max - _nlen) \
+                  { \
+                    _tlen = _max - _nlen; \
+                  } \
+              } \
+            sched_note_event((tag), LOG_DEBUG, NOTE_DUMP_MARK, \
+                             _buf, _nlen + _tlen); \
+          } \
+        while (0)
 
 #define sched_note_counter(tag, name_, value_) \
         do \
