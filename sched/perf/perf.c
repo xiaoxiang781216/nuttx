@@ -665,7 +665,18 @@ perf_inherit_event(FAR struct perf_event_s *parent_event,
 
   nxmutex_lock(&parent_event->child_mutex);
 
-  if (parent_event->state >= PERF_EVENT_STATE_INACTIVE)
+  /* Decide the initial state of the inherited child event.
+   *
+   * With enable_on_exec the parent event is deliberately left OFF so that
+   * the task that opened it (e.g. the perf tool itself) is never counted;
+   * the event is meant to start counting only in the descendants spawned
+   * afterwards.  Force such children INACTIVE so they get scheduled onto
+   * the PMU even though the parent is OFF.  Otherwise the child simply
+   * mirrors the parent's enabled/disabled state.
+   */
+
+  if (parent_event->attr.enable_on_exec ||
+      parent_event->state >= PERF_EVENT_STATE_INACTIVE)
     {
       event->state = PERF_EVENT_STATE_INACTIVE;
     }
