@@ -342,6 +342,17 @@ int perf_event_data_overflow(FAR struct perf_event_s *event,
       return -ENOMEM;
     }
 
+  /* For a system-wide event, drop samples taken while the perf tool that
+   * opened the event was the running task, so the tool is not profiled into
+   * its own system-wide capture.
+   */
+
+  if (event->exclude_pid != INVALID_PROCESS_ID &&
+      nxsched_getpid() == event->exclude_pid)
+    {
+      return 0;
+    }
+
   header.size = perf_prepare_sample(data, event, ip);
   header.misc = PERF_RECORD_MISC_USER;
   header.type = PERF_RECORD_SAMPLE;

@@ -241,6 +241,8 @@ struct perf_event_s
 
   int state;                                /* Event state */
   int attach_state;                         /* Attach states for this event */
+  pid_t exclude_pid;                        /* Skip samples from this pid
+                                             * (INVALID_PROCESS_ID = off) */
   atomic64_t count;                         /* Count vaule for this event */
   uint64_t child_count;                     /* Detached child events count */
   uint32_t sibling_num;                     /* sibling number for sibling_list */

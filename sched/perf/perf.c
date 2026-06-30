@@ -523,8 +523,9 @@ perf_event_alloc(FAR struct perf_event_attr_s *attr, int cpu,
         perf_default_sample_period(attr->type, attr->config);
     }
 
-  event->attr  = *attr;
-  event->cpu   = cpu;
+  event->attr        = *attr;
+  event->cpu         = cpu;
+  event->exclude_pid = INVALID_PROCESS_ID;
 
 #ifdef CONFIG_SMP
   event->oncpu = -1;
@@ -2134,6 +2135,19 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
     {
       ret = -ENOMEM;
       goto exit;
+    }
+
+  /* For a system-wide (CPU-bound) event, record the opener's process so the
+   * perf tool itself is excluded from the system profile.  The sampling path
+   * skips samples whose running task belongs to this pid.
+   */
+
+  if (pid == -1)
+    {
+      FAR struct tcb_s *self = this_task();
+
+      event->exclude_pid = (self->group != NULL) ?
+                           self->group->tg_pid : self->pid;
     }
 
   if (attr->disabled)
