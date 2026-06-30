@@ -210,10 +210,6 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
     ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)c
   endif
 
-  ifeq ($(CONFIG_ARCH_RV_ISA_V),y)
-    ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)v
-  endif
-
   ifeq ($(CONFIG_ARCH_RV_ISA_ZICSR_ZIFENCEI),y)
     ifeq ($(shell expr "$(GCCVER)" \>= 12), 1)
       ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)_zicsr_zifencei

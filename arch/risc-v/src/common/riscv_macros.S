@@ -170,6 +170,16 @@
 
   addi       t1,  t1, VPU_XCPT_SIZE
 
+  /* The kernel is compiled with a -march that does NOT include the 'v'
+   * extension (see arch/risc-v/src/common/Toolchain.defs), so that the
+   * compiler never auto-vectorizes kernel C code.  The vector context
+   * save/restore is the only place that legitimately needs vector
+   * instructions, so enable 'v' locally for this region only, mirroring
+   * the Linux kernel's ".option arch, +v" usage.
+   */
+
+  .option    push
+  .option    arch, +v
   vsetvli    t2,  x0, e8, m8, ta, ma
 
   vse8.v     v0,  (t1)
@@ -179,6 +189,7 @@
   vse8.v     v16, (t1)
   add        t1,  t1, t2
   vse8.v     v24, (t1)
+  .option    pop
 
 .endm
 
@@ -303,6 +314,12 @@
   mv         t0, \out
   addi       t1, t0, VPU_XCPT_SIZE
 
+  /* Enable the 'v' extension locally; the kernel -march intentionally
+   * omits it (Linux-style) so the compiler cannot auto-vectorize C code.
+   */
+
+  .option    push
+  .option    arch, +v
   vsetvli    t2, x0, e8, m8, ta, ma
 
   vle8.v     v0,  (t1)
@@ -318,6 +335,7 @@
   REGLOAD    t0, REG_VTYPE(t1)
   REGLOAD    t3, REG_VL(t1)
   vsetvl     x0, t3, t0
+  .option    pop
 
   REGLOAD    t0, REG_VSTART(t1)
   csrw       CSR_VSTART, t0
