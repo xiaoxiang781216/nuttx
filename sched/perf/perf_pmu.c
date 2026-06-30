@@ -25,15 +25,13 @@
 #include <nuttx/config.h>
 #include <nuttx/nuttx.h>
 
-#include <debug.h>
 #include <errno.h>
 
 #include <nuttx/atomic.h>
+#include <nuttx/hrtimer.h>
 #include <nuttx/perf.h>
 #include <nuttx/sched.h>
-#include <nuttx/hrtimer.h>
 
-#include "sched/sched.h"
 #include "perf.h"
 
 /****************************************************************************

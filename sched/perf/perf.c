@@ -23,25 +23,21 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/nuttx.h>
 
 #include <debug.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdbool.h>
 #include <poll.h>
-#include <sys/param.h>
+#include <stdbool.h>
 
 #include <nuttx/atomic.h>
 #include <nuttx/circbuf.h>
+#include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/perf.h>
 #include <nuttx/sched.h>
-#include <nuttx/sched_note.h>
-#include <nuttx/hrtimer.h>
 
-#include "sched/sched.h"
 #include "perf.h"
 
 /****************************************************************************

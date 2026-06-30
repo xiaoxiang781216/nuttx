@@ -26,8 +26,9 @@
 
 #include <errno.h>
 #include <poll.h>
+#include <string.h>
+#include <unistd.h>
 
-#include <nuttx/atomic.h>
 #include <nuttx/arch.h>
 #include <nuttx/circbuf.h>
 #include <nuttx/kmalloc.h>
