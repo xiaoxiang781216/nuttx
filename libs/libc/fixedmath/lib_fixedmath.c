@@ -88,14 +88,12 @@ static b16_t adjustsign(b16_t result, bool negate)
 
   if (result < 0)
     {
-      if (result)
-        {
-          return b16MIN;
-        }
-      else
-        {
-          return b16MAX;
-        }
+      /* Overflow: return limit based on expected sign.
+       * If negate is true, result should be negative, return b16MIN.
+       * If negate is false, result should be positive, return b16MAX.
+       */
+
+      return negate ? b16MIN : b16MAX;
     }
 
   /* correct the sign of the result */
