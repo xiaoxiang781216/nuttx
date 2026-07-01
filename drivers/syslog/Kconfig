@@ -123,6 +123,22 @@ config RAMLOG_NOOVERWRITE
 		When disabled (default), new data overwrites oldest data in
 		the circular buffer.
 
+config RAMLOG_RECOVER_SIZE
+	int "Bytes of pre-reboot log to recover"
+	default 0
+	---help---
+		On a warm restart, re-expose up to this many bytes of log that
+		were already consumed before the reboot but still physically
+		reside in the ring buffer.  Requires the buffer to live in a
+		noinit / battery-backed section (RAMLOG_BUFFER_SECTION) so its
+		contents survive reboot.  0 disables recovery.  The amount is
+		clamped at runtime to the available free space.
+
+		Works in both overwrite and non-overwrite modes.  The rewind is
+		applied exactly once, by the first syslog writer after a (warm)
+		restart (guarded in ramlog_addbuf); later writers never move the
+		consumer index.
+
 endif
 
 config SYSLOG_BUFFER
