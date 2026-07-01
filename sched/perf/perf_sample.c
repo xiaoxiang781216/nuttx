@@ -298,6 +298,57 @@ static void perf_output_sample(FAR struct perf_event_header_s *header,
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: perf_get_event_count
+ *
+ * Description:
+ *   Perf event read count from lowerhalf
+ *
+ * Input Parameters:
+ *   arg - Perf event
+ *
+ * Returned Value:
+ *   Count result
+ *
+ ****************************************************************************/
+
+int perf_get_event_count(FAR void *arg)
+{
+  FAR struct perf_event_s *event = arg;
+  FAR struct perf_event_s *sub_event;
+  int ret;
+
+#ifdef CONFIG_SMP
+  if (event->oncpu != this_cpu())
+    {
+      return -EAGAIN;
+    }
+#endif
+
+  if (event->state != PERF_EVENT_STATE_ACTIVE)
+    {
+      return OK;
+    }
+
+  ret = event->pmu->ops->event_read(event);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  list_for_every_entry(&event->sibling_list, sub_event,
+                       struct perf_event_s, group_node)
+    {
+      ret = sub_event->pmu->ops->event_read(sub_event);
+      if (ret < 0)
+        {
+          return ret;
+        }
+    }
+
+  return OK;
+}
+
+/****************************************************************************
  * Name: perf_get_eventid
  *
  * Description:

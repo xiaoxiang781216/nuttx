@@ -233,24 +233,40 @@ struct perf_event_attr_s
 
 struct perf_event_s
 {
+  /* Placement: which CPU the event belongs to and currently runs on */
+
   int cpu;                                  /* CPU number this event belongs to */
 
 #ifdef CONFIG_SMP
   int oncpu;                                /* CPU number this event running on */
 #endif
 
+  /* State and sampling scope */
+
   int state;                                /* Event state */
   int attach_state;                         /* Attach states for this event */
   pid_t exclude_pid;                        /* Skip samples from this pid
                                              * (INVALID_PROCESS_ID = off) */
+
+  /* Counters */
+
   atomic64_t count;                         /* Count vaule for this event */
   uint64_t child_count;                     /* Detached child events count */
   uint32_t sibling_num;                     /* sibling number for sibling_list */
+
+  /* Configuration and PMU binding */
+
   struct perf_event_attr_s attr;            /* Perf event attr */
   FAR struct pmu_s *pmu;                    /* PMU entry this event used */
   FAR struct perf_event_context_s *ctx;     /* Event context this event belongs to */
   FAR struct pmu_event_context_s *pmuctx;   /* PMU event context */
   struct hw_perf_event_s hw;                /* Performance event hardware details */
+
+  /* Linkage: this event is threaded onto several lists at once -
+   * its context (event_node/group_node), its group (sibling_list),
+   * the inherit chain (child_list) and the software PMU (sw_list).
+   */
+
   struct list_node event_node;              /* Connect to event_list in perf_event_context_s */
   struct list_node group_node;              /* Connect to group_list in perf_event_context_s */
   struct list_node sibling_list;            /* Used for list event in one group */
@@ -259,6 +275,9 @@ struct perf_event_s
   mutex_t child_mutex;                      /* Mutex for child_list */
   FAR struct perf_event_s *group_leader;    /* Indicate the group leader of this event */
   FAR struct perf_event_s *parent_event;    /* Indicate the parent event of this event */
+
+  /* File-descriptor side: identity, sample buffer and poll waiter */
+
   uint64_t id;                              /* Event id */
   FAR struct perf_buffer_s *buf;
   FAR struct pollfd *pfd;

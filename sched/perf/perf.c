@@ -26,12 +26,8 @@
 
 #include <debug.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <stdbool.h>
 
 #include <nuttx/atomic.h>
-#include <nuttx/circbuf.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
@@ -65,47 +61,9 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-static int perf_close(FAR struct file *filep);
-static ssize_t perf_read(FAR struct file *filep, FAR char *buffer,
-                         size_t len);
-static int perf_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
-static int perf_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                     bool setup);
-#ifdef CONFIG_FS_FILEMAP
-static int perf_mmap(FAR struct file *filep,
-                     FAR struct mm_map_entry_s *map);
-#endif
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static DEFINE_PER_CPU_BSS_SMP(struct perf_event_context_s, g_perf_cpu_ctx);
-static struct list_node g_perf_pmus = LIST_INITIAL_VALUE(g_perf_pmus);
-static mutex_t g_perf_pmus_lock = NXMUTEX_INITIALIZER;
-
-static const struct file_operations g_perf_fops =
-{
-  .close = perf_close, /* close */
-  .read  = perf_read,  /* read */
-  .ioctl = perf_ioctl, /* ioctl */
-  .poll  = perf_poll,  /* poll */
-#ifdef CONFIG_FS_FILEMAP
-  .mmap  = perf_mmap   /* mmap */
-#endif
-};
-
-static struct inode g_perf_inode =
-{
-  NULL,                   /* i_parent */
-  NULL,                   /* i_peer */
-  NULL,                   /* i_child */
-  1,                      /* i_crefs */
-  FSNODEFLAG_TYPE_DRIVER, /* i_flags */
-  {
-    &g_perf_fops          /* u */
-  }
-};
 
 /****************************************************************************
  * Private Functions
@@ -180,308 +138,6 @@ static void perf_pmu_disable(FAR struct pmu_s *pmu)
   if (pmu->ops->pmu_disable)
     {
       pmu->ops->pmu_disable(pmu);
-    }
-}
-
-/****************************************************************************
- * Name: perf_get_pmu
- *
- * Description:
- *   Find the suitable pmu from the event
- *
- * Input Parameters:
- *   event - Perf event
- *
- * Returned Value:
- *   Perf pmu entry
- *
- ****************************************************************************/
-
-static FAR struct pmu_s *perf_get_pmu(FAR struct perf_event_s *event)
-{
-  FAR struct pmu_s *pmu;
-
-  if (event->parent_event && event->parent_event->pmu)
-    {
-      pmu = event->parent_event->pmu;
-      event->pmu = pmu;
-      if (pmu->ops->event_init(event) == 0)
-        {
-          return pmu;
-        }
-    }
-
-  list_for_every_entry(&g_perf_pmus, pmu, struct pmu_s, node)
-    {
-      if (pmu->ops->event_match && pmu->ops->event_match(event) != 0)
-        {
-          continue;
-        }
-
-      event->pmu = pmu;
-      if (pmu->ops->event_init(event) == 0)
-        {
-          return pmu;
-        }
-    }
-
-  return NULL;
-}
-
-/****************************************************************************
- * Name: perf_init_context
- *
- * Description:
- *   Perf event context initialization
- *
- * Input Parameters:
- *   ctx - Perf event context for init
- *
- * Returned Value:
- *   Initialization result
- *
- ****************************************************************************/
-
-static void perf_init_context(FAR struct perf_event_context_s *ctx)
-{
-  spin_lock_init(&ctx->lock);
-  list_initialize(&ctx->event_list);
-  list_initialize(&ctx->group_list);
-  list_initialize(&ctx->pmu_ctx_list);
-}
-
-/****************************************************************************
- * Name: perf_get_context
- *
- * Description:
- *   Find the suitable perf context for the event
- *
- * Input Parameters:
- *   event - Perf event
- *   tcb   - tcb the event bind
- *
- * Returned Value:
- *   Perf context entry
- *
- ****************************************************************************/
-
-static FAR struct perf_event_context_s *
-perf_get_context(FAR struct perf_event_s *event,
-                 FAR struct tcb_s *tcb)
-{
-  FAR struct perf_event_context_s *ctx = NULL;
-
-  /* No tcb is specified bound to cpu, else bound to task */
-
-  if (tcb == NULL)
-    {
-      ctx = &per_cpu_var_smp(g_perf_cpu_ctx, event->cpu);
-      return ctx;
-    }
-
-  nxmutex_lock(&tcb->perf_event_mutex);
-
-  ctx = tcb->perf_event_ctx;
-  if (ctx == NULL)
-    {
-      ctx = kmm_zalloc(sizeof(struct perf_event_context_s));
-      if (ctx == NULL)
-        {
-          serr("task perf event alloc fail\n");
-          nxmutex_unlock(&tcb->perf_event_mutex);
-          return NULL;
-        }
-
-      perf_init_context(ctx);
-      tcb->perf_event_ctx = ctx;
-      ctx->tcb = tcb;
-    }
-
-  nxmutex_unlock(&tcb->perf_event_mutex);
-  return ctx;
-}
-
-/****************************************************************************
- * Name: perf_free_context
- *
- * Description:
- *   Free the perf event context for the event
- *
- * Input Parameters:
- *   ctx - perf event context
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void perf_free_context(FAR struct perf_event_context_s *ctx)
-{
-  FAR struct tcb_s *tcb = ctx->tcb;
-
-  if (tcb == NULL)
-    {
-      return;
-    }
-
-  nxmutex_lock(&tcb->perf_event_mutex);
-
-  if (list_is_empty(&ctx->event_list))
-    {
-      tcb->perf_event_ctx = NULL;
-      ASSERT(ctx->active_num == 0);
-      ASSERT(list_is_empty(&ctx->event_list));
-      ASSERT(list_is_empty(&ctx->group_list));
-      ASSERT(list_is_empty(&ctx->pmu_ctx_list));
-      kmm_free(ctx);
-    }
-
-  nxmutex_unlock(&tcb->perf_event_mutex);
-}
-
-/****************************************************************************
- * Name: perf_init_pmu_context
- *
- * Description:
- *   Init pmu context for the event
- *
- * Input Parameters:
- *   pmu_ctx - Pmu context
- *   pmu     - Pmu entry
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void perf_init_pmu_context(FAR struct pmu_event_context_s *pmu_ctx,
-                                  FAR struct pmu_s *pmu)
-{
-  pmu_ctx->pmu = pmu;
-  list_clear_node(&pmu_ctx->pmu_ctx_node);
-  pmu_ctx->refcount = 0;
-}
-
-/****************************************************************************
- * Name: perf_get_pmu_context
- *
- * Description:
- *   Find the suitable pmu context for the event
- *
- * Input Parameters:
- *   pmu   - Pmu entry
- *   event - Perf event
- *   tcb   - Tcb the event bind
- *
- * Returned Value:
- *   Pmu context entry
- *
- ****************************************************************************/
-
-static FAR struct pmu_event_context_s *
-perf_get_pmu_context(FAR struct pmu_s *pmu, FAR struct perf_event_s *event,
-                     FAR struct perf_event_context_s *ctx)
-{
-  FAR struct pmu_event_context_s *pmu_ctx;
-  irqstate_t flags;
-
-  /* This event is bound to cpu, get pmu cpu context */
-
-  if (ctx->tcb == NULL)
-    {
-      pmu_ctx = &pmu->cpu_pmu_ctx[event->cpu].pmuctx;
-
-      flags = spin_lock_irqsave(&ctx->lock);
-
-      if (pmu_ctx->ctx == NULL)
-        {
-          pmu_ctx->ctx = ctx;
-          list_add_tail(&ctx->pmu_ctx_list, &pmu_ctx->pmu_ctx_node);
-        }
-
-      pmu_ctx->refcount++;
-      goto out;
-    }
-
-  /* This event is bound to task, found the task ctx or malloc new one */
-
-  flags = spin_lock_irqsave(&ctx->lock);
-
-  list_for_every_entry(&ctx->pmu_ctx_list, pmu_ctx,
-                       struct pmu_event_context_s, pmu_ctx_node)
-    {
-      if (pmu_ctx->pmu == pmu)
-        {
-          pmu_ctx->refcount++;
-          goto out;
-        }
-    }
-
-  spin_unlock_irqrestore(&ctx->lock, flags);
-
-  pmu_ctx = kmm_malloc(sizeof(struct pmu_event_context_s));
-  if (pmu_ctx == NULL)
-    {
-      serr("malloc pmu_event_context_s fail\n");
-      return NULL;
-    }
-
-  perf_init_pmu_context(pmu_ctx, pmu);
-
-  flags = spin_lock_irqsave(&ctx->lock);
-
-  pmu_ctx->ctx = ctx;
-  pmu_ctx->refcount++;
-  list_add_tail(&ctx->pmu_ctx_list, &pmu_ctx->pmu_ctx_node);
-
-out:
-  spin_unlock_irqrestore(&ctx->lock, flags);
-  return pmu_ctx;
-}
-
-/****************************************************************************
- * Name: perf_free_pmu_context
- *
- * Description:
- *   Free the pmu context for the event
- *
- * Input Parameters:
- *   pmu_ctx - PMU context
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void perf_free_pmu_context(FAR struct pmu_event_context_s *pmu_ctx)
-{
-  bool free_flag = false;
-  irqstate_t flags;
-
-  flags = spin_lock_irqsave(&pmu_ctx->ctx->lock);
-
-  pmu_ctx->refcount--;
-
-  if (pmu_ctx->refcount == 0)
-    {
-      list_delete(&pmu_ctx->pmu_ctx_node);
-
-      if (pmu_ctx->ctx->tcb != NULL)
-        {
-          free_flag = true;
-        }
-    }
-
-  spin_unlock_irqrestore(&pmu_ctx->ctx->lock, flags);
-
-  if (pmu_ctx->refcount == 0)
-    {
-      pmu_ctx->ctx = NULL;
-    }
-
-  if (free_flag)
-    {
-      kmm_free(pmu_ctx);
     }
 }
 
@@ -562,32 +218,6 @@ nxmutex_destroy:
 }
 
 /****************************************************************************
- * Name: perf_free_event
- *
- * Description:
- *   Free perf event
- *
- * Input Parameters:
- *   event - Free perf event
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void perf_free_event(FAR struct perf_event_s *event)
-{
-  if (event->pmuctx != NULL)
-    {
-      perf_free_pmu_context(event->pmuctx);
-    }
-
-  nxmutex_destroy(&event->child_mutex);
-  perf_buffer_release(event);
-  kmm_free(event);
-}
-
-/****************************************************************************
  * Name: perf_add_event_to_count
  *
  * Description:
@@ -625,6 +255,89 @@ static void perf_add_event_to_count(FAR struct perf_event_s *event,
   list_add_tail(&ctx->event_list, &event->event_node);
 
   spin_unlock_irqrestore(&ctx->lock, flags);
+}
+
+/****************************************************************************
+ * Name: perf_event_create
+ *
+ * Description:
+ *   Allocate a perf event and bind it to its task/CPU context and PMU
+ *   context.  This is the file-descriptor agnostic core of event creation,
+ *   shared by perf_event_open() and reusable by in-kernel event creators.
+ *
+ * Input Parameters:
+ *   attr         - Perf event attribute
+ *   cpu          - Cpu id the event binds to (-1 for task-bound events)
+ *   tcb          - Task the event binds to (NULL for a system-wide event)
+ *   group_leader - Group leader for this event, or NULL
+ *   err          - On failure, receives the negated errno
+ *
+ * Returned Value:
+ *   The created event on success, NULL on failure with *err set.
+ *
+ ****************************************************************************/
+
+static FAR struct perf_event_s *
+perf_event_create(FAR struct perf_event_attr_s *attr, int cpu,
+                  FAR struct tcb_s *tcb,
+                  FAR struct perf_event_s *group_leader,
+                  FAR int *err)
+{
+  FAR struct perf_event_s *event;
+  FAR struct perf_event_context_s *ctx;
+  FAR struct pmu_event_context_s *pmu_ctx;
+
+  event = perf_event_alloc(attr, cpu, group_leader, NULL);
+  if (event == NULL)
+    {
+      *err = -ENOMEM;
+      return NULL;
+    }
+
+  /* For a system-wide (CPU-bound) event, record the opener's process so the
+   * perf tool itself is excluded from the system profile.  The sampling path
+   * skips samples whose running task belongs to this pid.
+   */
+
+  if (tcb == NULL)
+    {
+      FAR struct tcb_s *self = this_task();
+
+      event->exclude_pid = (self->group != NULL) ?
+                           self->group->tg_pid : self->pid;
+    }
+
+  if (attr->disabled)
+    {
+      event->state = PERF_EVENT_STATE_OFF;
+    }
+  else
+    {
+      event->state = PERF_EVENT_STATE_INACTIVE;
+    }
+
+  ctx = perf_get_context(event, tcb);
+  if (ctx == NULL)
+    {
+      *err = -ESRCH;
+      goto err_with_event;
+    }
+
+  event->ctx = ctx;
+
+  pmu_ctx = perf_get_pmu_context(event->pmu, event, ctx);
+  if (pmu_ctx == NULL)
+    {
+      *err = -ESRCH;
+      goto err_with_event;
+    }
+
+  event->pmuctx = pmu_ctx;
+  return event;
+
+err_with_event:
+  perf_free_event(event);
+  return NULL;
 }
 
 /****************************************************************************
@@ -1111,394 +824,6 @@ static int perf_cpu_function_call(int cpu, FAR struct perf_event_s *event,
 }
 
 /****************************************************************************
- * Name: perf_function_call
- *
- * Description:
- *   Perf event call function
- *
- * Input Parameters:
- *   event - Perf event
- *   func  - Executive function
- *
- * Returned Value:
- *   Execution result
- *
- ****************************************************************************/
-
-static int perf_function_call(FAR struct perf_event_s *event,
-                              nxsched_cpu_call_t func)
-{
-  FAR struct perf_event_context_s *ctx = event->ctx;
-
-  /* Enable event immediately if event bound in cpu */
-
-  if (ctx->tcb == NULL)
-    {
-      return perf_cpu_function_call(event->cpu, event, func);
-    }
-  else
-    {
-      return perf_task_function_call(ctx->tcb, event, func);
-    }
-}
-
-/****************************************************************************
- * Name: perf_event_enable
- *
- * Description:
- *   Perf event enable
- *
- * Input Parameters:
- *   arg - Perf event
- *
- * Returned Value:
- *   Execution result
- *
- ****************************************************************************/
-
-static int perf_event_enable(FAR void *arg)
-{
-  FAR struct perf_event_s *event = arg;
-
-  if (event->state >= PERF_EVENT_STATE_INACTIVE)
-    {
-      serr("Perf event was already enable\n");
-      return OK;
-    }
-
-  return perf_function_call(event, perf_event_do_enable);
-}
-
-/****************************************************************************
- * Name: perf_event_disable
- *
- * Description:
- *   Perf event disable
- *
- * Input Parameters:
- *   arg - Perf event
- *
- * Returned Value:
- *   Disable result
- *
- ****************************************************************************/
-
-static int perf_event_disable(FAR void *arg)
-{
-  FAR struct perf_event_s *event = arg;
-
-  if (event->state != PERF_EVENT_STATE_ACTIVE)
-    {
-      return OK;
-    }
-
-  return perf_function_call(event, perf_event_do_disable);
-}
-
-/****************************************************************************
- * Name: perf_event_reset
- *
- * Description:
- *   Perf event reset
- *
- * Input Parameters:
- *   arg - Perf event
- *
- * Returned Value:
- *   Reset result
- *
- ****************************************************************************/
-
-static int perf_event_reset(FAR void *arg)
-{
-  FAR struct perf_event_s *event = arg;
-
-  atomic64_set(&event->count, 0);
-  return 0;
-}
-
-/****************************************************************************
- * Name: perf_event_for_child
- *
- * Description:
- *   Handle func for each event for the same group leader
- *
- * Input Parameters:
- *   event - Perf event
- *   func  - Executive function
- *
- * Returned Value:
- *   Execution result
- *
- ****************************************************************************/
-
-static int perf_event_for_child(FAR struct perf_event_s *event,
-                                nxsched_cpu_call_t func)
-{
-  FAR struct perf_event_s *child_event;
-  int ret;
-
-  ret = func(event);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  nxmutex_lock(&event->child_mutex);
-
-  list_for_every_entry(&event->child_list, child_event,
-                       struct perf_event_s, child_list)
-    {
-      ret = func(child_event);
-      if (ret < 0)
-        {
-          break;
-        }
-    }
-
-  nxmutex_unlock(&event->child_mutex);
-  return ret;
-}
-
-/****************************************************************************
- * Name: perf_event_for_group
- *
- * Description:
- *   Handle func for each event in the group
- *
- * Input Parameters:
- *   event - Perf event
- *   func  - Executive function
- *
- * Returned Value:
- *   Execution result
- *
- ****************************************************************************/
-
-static int perf_event_for_group(FAR struct perf_event_s *event,
-                                nxsched_cpu_call_t func)
-{
-  FAR struct perf_event_s *sub_event;
-  int ret;
-
-  event = event->group_leader;
-  ret = perf_event_for_child(event, func);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  list_for_every_entry(&event->sibling_list, sub_event,
-                       struct perf_event_s, group_node)
-    {
-      ret = perf_event_for_child(sub_event, func);
-      if (ret < 0)
-        {
-          return ret;
-        }
-    }
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: perf_read_event_count
- *
- * Description:
- *   Perf event read event count
- *
- * Input Parameters:
- *   event       - Perf event
- *
- * Returned Value:
- *   Count result
- *
- ****************************************************************************/
-
-static uint64_t perf_read_event_count(FAR struct perf_event_s *event)
-{
-  FAR struct perf_event_s *child_event;
-  uint64_t count;
-
-  perf_function_call(event, perf_get_event_count);
-  count = PERF_GET_COUNT(event);
-
-  nxmutex_lock(&event->child_mutex);
-
-  list_for_every_entry(&event->child_list, child_event,
-                       struct perf_event_s, child_list)
-    {
-      perf_function_call(child_event, perf_get_event_count);
-      count += atomic64_read(&child_event->count);
-    }
-
-  nxmutex_unlock(&event->child_mutex);
-  return count;
-}
-
-/****************************************************************************
- * Name: perf_read_one
- *
- * Description:
- *   Perf event read result from one event
- *
- * Input Parameters:
- *   event       - Perf event
- *   buffer      - Read buffer
- *   read_format - Read format for result data
- *
- * Returned Value:
- *   Read result
- *
- ****************************************************************************/
-
-static ssize_t perf_read_one(FAR struct perf_event_s *event,
-                             FAR char *buffer, uint64_t read_format)
-{
-  FAR uint64_t *data = (FAR uint64_t *)buffer;
-  ssize_t n = 0;
-
-  data[n++] = perf_read_event_count(event);
-  if (read_format & PERF_FORMAT_TOTAL_TIME_ENABLED)
-    {
-      /* TODO */
-
-      data[n++] = 0;
-    }
-
-  if (read_format & PERF_FORMAT_TOTAL_TIME_RUNNING)
-    {
-      /* TODO */
-
-      data[n++] = 0;
-    }
-
-  if (read_format & PERF_FORMAT_ID)
-    {
-      data[n++] = perf_get_eventid(event);
-    }
-
-  if (read_format & PERF_FORMAT_LOST)
-    {
-      /* TODO */
-
-      data[n++] = 0;
-    }
-
-  return n * sizeof(uint64_t);
-}
-
-/****************************************************************************
- * Name: perf_read_group_one
- *
- * Description:
- *   Perf event read result from group
- *
- * Input Parameters:
- *   event       - Perf event
- *   buffer      - Read buffer
- *   read_format - Read format for result data
- *
- * Returned Value:
- *   Read result
- *
- ****************************************************************************/
-
-static ssize_t perf_read_group_one(FAR struct perf_event_s *event,
-                                   FAR uint64_t *data,
-                                   uint64_t read_format)
-{
-  FAR struct perf_event_s *sub_event;
-  ssize_t n = 0;
-
-  if (read_format & PERF_FORMAT_TOTAL_TIME_ENABLED)
-    {
-      /* TODO */
-
-      data[n++] += 0;
-    }
-
-  if (read_format & PERF_FORMAT_TOTAL_TIME_RUNNING)
-    {
-      /* TODO */
-
-      data[n++] += 0;
-    }
-
-  data[n++] = perf_read_event_count(event);
-  if (read_format & PERF_FORMAT_ID)
-    {
-      data[n++] = perf_get_eventid(event);
-    }
-
-  if (read_format & PERF_FORMAT_LOST)
-    {
-      /* TODO */
-
-      data[n++] = 0;
-    }
-
-  list_for_every_entry(&event->sibling_list, sub_event,
-                       struct perf_event_s, group_node)
-    {
-      data[n++] += perf_read_event_count(sub_event);
-      if (read_format & PERF_FORMAT_ID)
-        {
-          data[n++] = perf_get_eventid(sub_event);
-        }
-
-      if (read_format & PERF_FORMAT_LOST)
-        {
-          /* TODO */
-
-          data[n++] = 0;
-        }
-    }
-
-  return n * sizeof(uint64_t);
-}
-
-/****************************************************************************
- * Name: perf_read_group
- *
- * Description:
- *   Perf event read result from group
- *
- * Input Parameters:
- *   event       - Perf event
- *   buffer      - Read buffer
- *   read_format - Read format for result data
- *
- * Returned Value:
- *   Read result
- *
- ****************************************************************************/
-
-static ssize_t perf_read_group(FAR struct perf_event_s *event,
-                               FAR char *buffer, uint64_t read_format)
-{
-  FAR struct perf_event_s *group_leader = event->group_leader;
-  FAR struct perf_event_s *child_event;
-  FAR uint64_t *data = (FAR uint64_t *)buffer;
-  ssize_t ret;
-
-  data[0] = 1 + group_leader->sibling_num;
-
-  ret = perf_read_group_one(group_leader, data, read_format);
-
-  nxmutex_lock(&group_leader->child_mutex);
-
-  list_for_every_entry(&event->child_list, child_event,
-                       struct perf_event_s, child_list)
-    {
-      ret = perf_read_group_one(child_event, data, read_format);
-    }
-
-  nxmutex_unlock(&group_leader->child_mutex);
-  return ret;
-}
-
-/****************************************************************************
  * Name: perf_group_detach
  *
  * Description:
@@ -1603,40 +928,6 @@ static int perf_context_detach_internal(FAR void *arg)
 }
 
 /****************************************************************************
- * Name: perf_context_detach
- *
- * Description:
- *   Remove perf event from context
- *
- * Input Parameters:
- *   event  - Perf event
- *   ctx    - Perf event context
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void perf_context_detach(FAR struct perf_event_s *event,
-                                FAR struct perf_event_context_s *ctx)
-{
-  irqstate_t flags = spin_lock_irqsave(&ctx->lock);
-
-  /* If no event active, call remove directly */
-
-  if (ctx->active_num == 0)
-    {
-      perf_context_detach_internal(event);
-      spin_unlock_irqrestore(&ctx->lock, flags);
-      return;
-    }
-
-  spin_unlock_irqrestore(&ctx->lock, flags);
-
-  perf_function_call(event, perf_context_detach_internal);
-}
-
-/****************************************************************************
  * Name: perf_setup_task_context
  *
  * Description:
@@ -1695,308 +986,174 @@ static int perf_setup_task_context(FAR struct tcb_s *tcb)
 }
 
 /****************************************************************************
- * Name: perf_close
- *
- * Description:
- *   Perf event close
- *
- * Input Parameters:
- *   filep - File point
- *
- * Returned Value:
- *   Close result
- *
- ****************************************************************************/
-
-static int perf_close(FAR struct file *filep)
-{
-  FAR struct perf_event_s *event = filep->f_priv;
-  FAR struct perf_event_context_s *ctx;
-
-  ASSERT(event != NULL);
-
-  ctx = event->ctx;
-  if (ctx != NULL)
-    {
-      perf_context_detach(event, ctx);
-    }
-
-  perf_free_event(event);
-  return OK;
-}
-
-/****************************************************************************
- * Name: perf_read
- *
- * Description:
- *   Perf event read
- *
- * Input Parameters:
- *   filep  - File point
- *   buffer - Read buffer
- *   len    - Read data len
- *
- * Returned Value:
- *   Read data len
- *
- ****************************************************************************/
-
-static ssize_t perf_read(FAR struct file *filep, FAR char *buffer,
-                         size_t len)
-{
-  FAR struct perf_event_s *event = filep->f_priv;
-  uint64_t read_format;
-  ssize_t ret;
-
-  ASSERT(event != NULL);
-
-  read_format = event->attr.read_format;
-
-  if (read_format & PERF_FORMAT_GROUP)
-    {
-      ret = perf_read_group(event, buffer, read_format);
-    }
-  else
-    {
-      ret = perf_read_one(event, buffer, read_format);
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: perf_ioctl
- *
- * Description:
- *   Perf event ioctl
- *
- * Input Parameters:
- *   filep  - File point
- *   cmd    - Command id
- *   arg    - Command arg
- *
- * Returned Value:
- *   Ioctl result
- *
- ****************************************************************************/
-
-static int perf_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
-{
-  FAR struct perf_event_s *event = filep->f_priv;
-  nxsched_cpu_call_t func = NULL;
-  int ret = OK;
-
-  ASSERT(event != NULL);
-
-  switch (cmd)
-    {
-      case PERF_EVENT_IOC_ENABLE:
-        func = perf_event_enable;
-        break;
-      case PERF_EVENT_IOC_DISABLE:
-        func = perf_event_disable;
-        break;
-      case PERF_EVENT_IOC_RESET:
-        func = perf_event_reset;
-        break;
-      case PERF_EVENT_IOC_SET_OUTPUT:
-        {
-          FAR struct file *out_filep;
-          FAR struct perf_event_s *out_event;
-          int fd = (int) arg;
-
-          ret = file_get(fd, &out_filep);
-          if (ret < 0)
-            {
-              return -EINVAL;
-            }
-
-          out_event = out_filep->f_priv;
-
-          if (!out_event->buf)
-            {
-              return -EINVAL;
-            }
-
-          perf_buffer_set_output(event, out_event);
-          return OK;
-        }
-
-      case PERF_EVENT_IOC_ID:
-        {
-          if (!arg)
-            {
-              return -EINVAL;
-            }
-
-          *(uint64_t *)arg = perf_get_eventid(event);
-        }
-
-        return OK;
-      default:
-        return -EINVAL;
-    }
-
-  if (arg & PERF_IOC_FLAG_GROUP)
-    {
-      ret = perf_event_for_group(event, func);
-    }
-  else
-    {
-      ret = perf_event_for_child(event, func);
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: perf_poll
- *
- * Description:
- *   Perf event poll
- *
- * Input Parameters:
- *   filep  - File point
- *   fds    - Poll fds
- *   setup  - Setup or close
- *
- * Returned Value:
- *   Poll result
- *
- ****************************************************************************/
-
-static int perf_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                     bool setup)
-{
-  FAR struct perf_event_s *event = filep->f_priv;
-  irqstate_t flags;
-
-  if ((fds->events & POLLIN) == 0)
-    {
-      return -EDEADLK;
-    }
-
-  if (!event || !event->buf)
-    {
-      return -EINVAL;
-    }
-
-  flags = spin_lock_irqsave(&event->buf->lock);
-
-  if (event->state == PERF_EVENT_STATE_EXIT)
-    {
-      spin_unlock_irqrestore(&event->buf->lock, flags);
-      return -ESRCH;
-    }
-
-  if (setup)
-    {
-      if (event->pfd)
-        {
-          spin_unlock_irqrestore(&event->buf->lock, flags);
-          return -EBUSY;
-        }
-
-      event->pfd = fds;
-
-      if (circbuf_used(&(event->buf->rb)) > 0)
-        {
-          spin_unlock_irqrestore(&event->buf->lock, flags);
-          poll_notify(&event->pfd, 1, POLLIN);
-          return 0;
-        }
-    }
-  else
-    {
-      event->pfd = NULL;
-    }
-
-  spin_unlock_irqrestore(&event->buf->lock, flags);
-  return 0;
-}
-
-#ifdef CONFIG_FS_FILEMAP
-static int perf_mmap(FAR struct file *filep,
-                     FAR struct mm_map_entry_s *map)
-{
-  FAR struct perf_event_s *event = filep->f_priv;
-
-  if (!event->buf)
-    {
-      size_t buf_size = map->length;
-      FAR void *buf;
-
-      buf = kumm_zalloc(sizeof(struct perf_buffer_s) + buf_size);
-      if (buf == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      event->buf = buf;
-      event->buf->ref_count = 1;
-      circbuf_init(&event->buf->rb, buf + sizeof(struct perf_buffer_s),
-                   buf_size);
-      spin_lock_init(&event->buf->lock);
-    }
-
-  map->vaddr = event->buf;
-  return 0;
-}
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: perf_get_event_count
+ * Name: perf_free_event
  *
  * Description:
- *   Perf event read count from lowerhalf
+ *   Free perf event
+ *
+ * Input Parameters:
+ *   event - Free perf event
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void perf_free_event(FAR struct perf_event_s *event)
+{
+  if (event->pmuctx != NULL)
+    {
+      perf_free_pmu_context(event->pmuctx);
+    }
+
+  nxmutex_destroy(&event->child_mutex);
+  perf_buffer_release(event);
+  kmm_free(event);
+}
+
+/****************************************************************************
+ * Name: perf_function_call
+ *
+ * Description:
+ *   Perf event call function
+ *
+ * Input Parameters:
+ *   event - Perf event
+ *   func  - Executive function
+ *
+ * Returned Value:
+ *   Execution result
+ *
+ ****************************************************************************/
+
+int perf_function_call(FAR struct perf_event_s *event,
+                       nxsched_cpu_call_t func)
+{
+  FAR struct perf_event_context_s *ctx = event->ctx;
+
+  /* Enable event immediately if event bound in cpu */
+
+  if (ctx->tcb == NULL)
+    {
+      return perf_cpu_function_call(event->cpu, event, func);
+    }
+  else
+    {
+      return perf_task_function_call(ctx->tcb, event, func);
+    }
+}
+
+/****************************************************************************
+ * Name: perf_event_enable
+ *
+ * Description:
+ *   Perf event enable
  *
  * Input Parameters:
  *   arg - Perf event
  *
  * Returned Value:
- *   Count result
+ *   Execution result
  *
  ****************************************************************************/
 
-int perf_get_event_count(FAR void *arg)
+int perf_event_enable(FAR void *arg)
 {
   FAR struct perf_event_s *event = arg;
-  FAR struct perf_event_s *sub_event;
-  int ret;
 
-#ifdef CONFIG_SMP
-  if (event->oncpu != this_cpu())
+  if (event->state >= PERF_EVENT_STATE_INACTIVE)
     {
-      return -EAGAIN;
+      serr("Perf event was already enable\n");
+      return OK;
     }
-#endif
+
+  return perf_function_call(event, perf_event_do_enable);
+}
+
+/****************************************************************************
+ * Name: perf_event_disable
+ *
+ * Description:
+ *   Perf event disable
+ *
+ * Input Parameters:
+ *   arg - Perf event
+ *
+ * Returned Value:
+ *   Disable result
+ *
+ ****************************************************************************/
+
+int perf_event_disable(FAR void *arg)
+{
+  FAR struct perf_event_s *event = arg;
 
   if (event->state != PERF_EVENT_STATE_ACTIVE)
     {
       return OK;
     }
 
-  ret = event->pmu->ops->event_read(event);
-  if (ret < 0)
+  return perf_function_call(event, perf_event_do_disable);
+}
+
+/****************************************************************************
+ * Name: perf_event_reset
+ *
+ * Description:
+ *   Perf event reset
+ *
+ * Input Parameters:
+ *   arg - Perf event
+ *
+ * Returned Value:
+ *   Reset result
+ *
+ ****************************************************************************/
+
+int perf_event_reset(FAR void *arg)
+{
+  FAR struct perf_event_s *event = arg;
+
+  atomic64_set(&event->count, 0);
+  return 0;
+}
+
+/****************************************************************************
+ * Name: perf_context_detach
+ *
+ * Description:
+ *   Remove perf event from context
+ *
+ * Input Parameters:
+ *   event  - Perf event
+ *   ctx    - Perf event context
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void perf_context_detach(FAR struct perf_event_s *event,
+                         FAR struct perf_event_context_s *ctx)
+{
+  irqstate_t flags = spin_lock_irqsave(&ctx->lock);
+
+  /* If no event active, call remove directly */
+
+  if (ctx->active_num == 0)
     {
-      return ret;
+      perf_context_detach_internal(event);
+      spin_unlock_irqrestore(&ctx->lock, flags);
+      return;
     }
 
-  list_for_every_entry(&event->sibling_list, sub_event,
-                       struct perf_event_s, group_node)
-    {
-      ret = sub_event->pmu->ops->event_read(sub_event);
-      if (ret < 0)
-        {
-          return ret;
-        }
-    }
+  spin_unlock_irqrestore(&ctx->lock, flags);
 
-  return OK;
+  perf_function_call(event, perf_context_detach_internal);
 }
 
 int perf_event_overflow(FAR struct perf_event_s *event)
@@ -2034,14 +1191,9 @@ int perf_event_overflow(FAR struct perf_event_s *event)
 
 int perf_event_init(void)
 {
-  int i;
+  /* Init the per-CPU (system-wide) perf event contexts */
 
-  /* Init perf event context */
-
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-    {
-      perf_init_context(&per_cpu_var_smp(g_perf_cpu_ctx, i));
-    }
+  perf_init_cpu_contexts();
 
   /* Register the built-in software and cpu-clock PMUs */
 
@@ -2074,8 +1226,6 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
   FAR struct perf_event_s *group_leader = NULL;
   FAR struct perf_event_s *event = NULL;
   FAR struct tcb_s *tcb = NULL;
-  FAR struct perf_event_context_s *ctx;
-  FAR struct pmu_event_context_s *pmu_ctx;
   FAR struct file *group_file = NULL;
   int event_fd = -1;
   int ret;
@@ -2130,55 +1280,13 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
         }
     }
 
-  event = perf_event_alloc(attr, cpu, group_leader, NULL);
+  event = perf_event_create(attr, cpu, tcb, group_leader, &ret);
   if (event == NULL)
     {
-      ret = -ENOMEM;
       goto exit;
     }
 
-  /* For a system-wide (CPU-bound) event, record the opener's process so the
-   * perf tool itself is excluded from the system profile.  The sampling path
-   * skips samples whose running task belongs to this pid.
-   */
-
-  if (pid == -1)
-    {
-      FAR struct tcb_s *self = this_task();
-
-      event->exclude_pid = (self->group != NULL) ?
-                           self->group->tg_pid : self->pid;
-    }
-
-  if (attr->disabled)
-    {
-      event->state = PERF_EVENT_STATE_OFF;
-    }
-  else
-    {
-      event->state = PERF_EVENT_STATE_INACTIVE;
-    }
-
-  ctx = perf_get_context(event, tcb);
-  if (ctx == NULL)
-    {
-      ret = -ESRCH;
-      goto err_with_event;
-    }
-
-  event->ctx = ctx;
-
-  pmu_ctx = perf_get_pmu_context(event->pmu, event, ctx);
-  if (pmu_ctx == NULL)
-    {
-      ret = -ESRCH;
-      goto err_with_event;
-    }
-
-  event->pmuctx = pmu_ctx;
-
-  event_fd = file_allocate_from_inode(&g_perf_inode, O_RDONLY | flags,
-                                      0, event, 0);
+  event_fd = perf_install_fd(event, flags);
   if (event_fd < 0)
     {
       ret = -EINVAL;
@@ -2197,7 +1305,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
       file_put(group_file);
     }
 
-  perf_add_event_to_count(event, ctx);
+  perf_add_event_to_count(event, event->ctx);
   return event_fd;
 
 err_with_event:
@@ -2215,61 +1323,6 @@ exit:
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: perf_pmu_register
- *
- * Description:
- *   Register perf pmu
- *
- * Input Parameters:
- *   pmu  - Pmu entry.
- *   name - Pmu name.
- *
- * Returned Value:
- *   Register result
- *
- ****************************************************************************/
-
-int perf_pmu_register(FAR struct pmu_s *pmu, FAR const char *name)
-{
-  int i;
-
-  pmu->name = name;
-
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-    {
-      FAR struct pmu_cpu_context_s *cpu_pmu_ctx = &pmu->cpu_pmu_ctx[i];
-      perf_init_pmu_context(&cpu_pmu_ctx->pmuctx, pmu);
-    }
-
-  nxmutex_lock(&g_perf_pmus_lock);
-  list_add_tail(&g_perf_pmus, &pmu->node);
-  nxmutex_unlock(&g_perf_pmus_lock);
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: perf_pmu_unregister
- *
- * Description:
- *   Unregister perf pmu
- *
- * Input Parameters:
- *   pmu  - Pmu entry.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void perf_pmu_unregister(FAR struct pmu_s *pmu)
-{
-  nxmutex_lock(&g_perf_pmus_lock);
-  list_delete(&pmu->node);
-  nxmutex_unlock(&g_perf_pmus_lock);
 }
 
 /****************************************************************************

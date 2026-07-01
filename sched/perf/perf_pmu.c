@@ -23,403 +23,120 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/nuttx.h>
 
-#include <errno.h>
-
-#include <nuttx/atomic.h>
-#include <nuttx/hrtimer.h>
+#include <nuttx/list.h>
+#include <nuttx/mutex.h>
 #include <nuttx/perf.h>
-#include <nuttx/sched.h>
 
 #include "perf.h"
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-struct swevent_manger_s
-{
-  struct list_node list_swevent;
-  spinlock_t lock;
-};
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static int perf_cpuclock_event_init(FAR struct perf_event_s *event);
-static int perf_cpuclock_event_add(FAR struct perf_event_s *event,
-                                   int flags);
-static void perf_cpuclock_event_del(FAR struct perf_event_s *event,
-                                    int flags);
-static int perf_cpuclock_event_start(FAR struct perf_event_s *event,
-                                     int flags);
-static int perf_cpuclock_event_stop(FAR struct perf_event_s *event,
-                                    int flags);
-static int perf_cpuclock_event_read(FAR struct perf_event_s *event);
-static int perf_cpuclock_event_match(FAR struct perf_event_s *event);
-
-static int perf_swevent_init(FAR struct perf_event_s *event);
-static int perf_swevent_add(FAR struct perf_event_s *event,
-                            int flags);
-static void perf_swevent_del(FAR struct perf_event_s *event,
-                             int flags);
-static int perf_swevent_start(FAR struct perf_event_s *event,
-                              int flags);
-static int perf_swevent_stop(FAR struct perf_event_s *event,
-                             int flags);
-static int perf_swevent_read(FAR struct perf_event_s *event);
-static int perf_swevent_match(FAR struct perf_event_s *event);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static struct pmu_ops_s g_perf_cpu_clock_ops =
-{
-  .event_init  = perf_cpuclock_event_init,
-  .event_add   = perf_cpuclock_event_add,
-  .event_del   = perf_cpuclock_event_del,
-  .event_start = perf_cpuclock_event_start,
-  .event_stop  = perf_cpuclock_event_stop,
-  .event_read  = perf_cpuclock_event_read,
-  .event_match = perf_cpuclock_event_match,
-};
-
-static struct pmu_s g_perf_cpu_clock =
-{
-  .ops = &g_perf_cpu_clock_ops,
-};
-
-/* swevent */
-
-static DEFINE_PER_CPU_BSS_SMP(struct swevent_manger_s, g_swevent);
-
-static struct pmu_ops_s g_perf_swevent_ops =
-{
-  .event_init  = perf_swevent_init,
-  .event_add   = perf_swevent_add,
-  .event_del   = perf_swevent_del,
-  .event_start = perf_swevent_start,
-  .event_stop  = perf_swevent_stop,
-  .event_read  = perf_swevent_read,
-  .event_match = perf_swevent_match,
-};
-
-static struct pmu_s g_perf_swevent =
-{
-  .ops = &g_perf_swevent_ops,
-};
+static struct list_node g_perf_pmus = LIST_INITIAL_VALUE(g_perf_pmus);
+static mutex_t g_perf_pmus_lock = NXMUTEX_INITIALIZER;
 
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
-static int perf_swevent_timer_handle_cpu(FAR void *arg)
-{
-  FAR struct perf_event_s *event = (FAR struct perf_event_s *)arg;
-  struct perf_sample_data_s data;
-  int ret;
-
-  /* TODO: ISR thread cannot get pc */
-
-  ret = perf_get_event_count(event);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  perf_sample_data_init(&data, atomic64_read(&event->hw.last_period));
-
-  perf_event_data_overflow(event, &data, up_getusrpc(NULL));
-  return ret;
-}
-
-static uint64_t perf_swevent_timer_handle(FAR const hrtimer_t *timer,
-                                          uint64_t expired)
-{
-  FAR struct perf_event_s *event = container_of(timer, struct perf_event_s,
-                                                hw.timer);
-#ifdef CONFIG_SMP
-  int cpu = this_cpu();
-
-  if (event->oncpu != -1 && event->oncpu != cpu)
-    {
-      nxsched_cpu_call_single(event->oncpu,
-                              perf_swevent_timer_handle_cpu, event);
-    }
-  else if (event->cpu != -1 && event->cpu != cpu)
-    {
-      nxsched_cpu_call_single(event->cpu,
-                              perf_swevent_timer_handle_cpu, event);
-    }
-  else
-    {
-      perf_swevent_timer_handle_cpu(event);
-    }
-#else
-    perf_swevent_timer_handle_cpu(event);
-#endif
-
-  return event->attr.sample_period;
-}
-
 /****************************************************************************
- * Name: perf_cpuclock_event_init
+ * Name: perf_get_pmu
  *
  * Description:
- *   CPU clock event init
+ *   Find the suitable pmu from the event
  *
  * Input Parameters:
- *   event  - Perf event
+ *   event - Perf event
  *
  * Returned Value:
- *   Result
+ *   Perf pmu entry
  *
  ****************************************************************************/
 
-static int perf_cpuclock_event_init(FAR struct perf_event_s *event)
+FAR struct pmu_s *perf_get_pmu(FAR struct perf_event_s *event)
 {
-  if (event->attr.config != PERF_COUNT_SW_CPU_CLOCK)
+  FAR struct pmu_s *pmu;
+
+  if (event->parent_event && event->parent_event->pmu)
     {
-      return -ENOENT;
+      pmu = event->parent_event->pmu;
+      event->pmu = pmu;
+      if (pmu->ops->event_init(event) == 0)
+        {
+          return pmu;
+        }
     }
 
-  atomic64_set(&event->hw.prev_count, 0);
-  atomic64_set(&event->hw.last_period, 0);
-  atomic64_set(&event->count, 0);
-  return 0;
+  list_for_every_entry(&g_perf_pmus, pmu, struct pmu_s, node)
+    {
+      if (pmu->ops->event_match && pmu->ops->event_match(event) != 0)
+        {
+          continue;
+        }
+
+      event->pmu = pmu;
+      if (pmu->ops->event_init(event) == 0)
+        {
+          return pmu;
+        }
+    }
+
+  return NULL;
 }
 
 /****************************************************************************
- * Name: perf_cpuclock_event_add
+ * Name: perf_pmu_register
  *
  * Description:
- *   Add cpu clock event
+ *   Register perf pmu
  *
  * Input Parameters:
- *   event  - Perf event
+ *   pmu  - Pmu entry.
+ *   name - Pmu name.
  *
  * Returned Value:
- *   Result
+ *   Register result
  *
  ****************************************************************************/
 
-static int perf_cpuclock_event_add(FAR struct perf_event_s *event,
-                                   int flags)
+int perf_pmu_register(FAR struct pmu_s *pmu, FAR const char *name)
 {
-  return 0;
+  int i;
+
+  pmu->name = name;
+
+  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+    {
+      FAR struct pmu_cpu_context_s *cpu_pmu_ctx = &pmu->cpu_pmu_ctx[i];
+      perf_init_pmu_context(&cpu_pmu_ctx->pmuctx, pmu);
+    }
+
+  nxmutex_lock(&g_perf_pmus_lock);
+  list_add_tail(&g_perf_pmus, &pmu->node);
+  nxmutex_unlock(&g_perf_pmus_lock);
+
+  return OK;
 }
 
 /****************************************************************************
- * Name: perf_cpuclock_event_del
+ * Name: perf_pmu_unregister
  *
  * Description:
- *   Del cpu clock event
+ *   Unregister perf pmu
  *
  * Input Parameters:
- *   event  - Perf event
+ *   pmu  - Pmu entry.
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-static void perf_cpuclock_event_del(FAR struct perf_event_s *event,
-                                    int flags)
+void perf_pmu_unregister(FAR struct pmu_s *pmu)
 {
-  hrtimer_cancel_sync(&event->hw.timer);
-}
-
-/****************************************************************************
- * Name: perf_cpuclock_event_start
- *
- * Description:
- *   Start cpu clock event
- *
- * Input Parameters:
- *   event  - Perf event
- *   flags  - Perf event flags
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-static int perf_cpuclock_event_start(FAR struct perf_event_s *event,
-                                     int flags)
-{
-  atomic64_set(&event->hw.prev_count, clock_systime_nsec());
-  hrtimer_start(&event->hw.timer, perf_swevent_timer_handle,
-                event->attr.sample_period, HRTIMER_MODE_REL);
-  return 0;
-}
-
-/****************************************************************************
- * Name: perf_cpuclock_event_stop
- *
- * Description:
- *   Stop cpu clock event
- *
- * Input Parameters:
- *   event  - Perf event
- *   flags  - Perf event flags
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-static int perf_cpuclock_event_stop(FAR struct perf_event_s *event,
-                                    int flags)
-{
-  hrtimer_cancel(&event->hw.timer);
-  return 0;
-}
-
-/****************************************************************************
- * Name: perf_cpuclock_event_read
- *
- * Description:
- *   Read cpu clock event
- *
- * Input Parameters:
- *   event  - Perf event
- *
- * Returned Value:
- *   Result
- *
- ****************************************************************************/
-
-static int perf_cpuclock_event_read(FAR struct perf_event_s *event)
-{
-  uint64_t now   = clock_systime_nsec();
-  uint64_t delta = now - atomic64_xchg(&event->hw.prev_count, now);
-  atomic64_set(&event->hw.last_period, delta);
-  atomic64_add(&event->count, delta);
-  return 0;
-}
-
-static int perf_cpuclock_event_match(FAR struct perf_event_s *event)
-{
-  if (event->attr.type == PERF_TYPE_SOFTWARE &&
-      event->attr.config == PERF_COUNT_SW_CPU_CLOCK)
-    {
-      return 0;
-    }
-
-  return -ENOENT;
-}
-
-static int perf_swevent_init(FAR struct perf_event_s *event)
-{
-  if (event->attr.type != PERF_TYPE_SOFTWARE)
-    {
-      return -ENOENT;
-    }
-
-  return 0;
-}
-
-static int perf_swevent_add(FAR struct perf_event_s *event,
-                            int flags)
-{
-  irqstate_t irq_flags;
-
-  irq_flags = spin_lock_irqsave(&this_cpu_var_smp(g_swevent).lock);
-  list_add_tail(&this_cpu_var_smp(g_swevent).list_swevent, &event->sw_list);
-  spin_unlock_irqrestore(&this_cpu_var_smp(g_swevent).lock, irq_flags);
-
-  return 0;
-}
-
-static void perf_swevent_del(FAR struct perf_event_s *event,
-                             int flags)
-{
-  irqstate_t irq_flags;
-
-  irq_flags = spin_lock_irqsave(&this_cpu_var_smp(g_swevent).lock);
-  list_delete(&event->sw_list);
-  spin_unlock_irqrestore(&this_cpu_var_smp(g_swevent).lock, irq_flags);
-}
-
-static int perf_swevent_start(FAR struct perf_event_s *event,
-                                     int flags)
-{
-  event->hw.state = 1;
-  return 0;
-}
-
-static int perf_swevent_stop(FAR struct perf_event_s *event,
-                                    int flags)
-{
-  event->hw.state = 0;
-  return 0;
-}
-
-static int perf_swevent_read(FAR struct perf_event_s *event)
-{
-  return 0;
-}
-
-static int perf_swevent_match(FAR struct perf_event_s *event)
-{
-  if (event->attr.type == PERF_TYPE_SOFTWARE &&
-      event->attr.config == PERF_COUNT_SW_CONTEXT_SWITCHES)
-    {
-      return 0;
-    }
-
-  return -ENOENT;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-void perf_swevent(uint32_t event_id, uintptr_t ip)
-{
-  struct perf_sample_data_s data;
-  irqstate_t flags;
-  FAR struct perf_event_s *node;
-
-  perf_sample_data_init(&data, 0);
-
-  flags = spin_lock_irqsave(&this_cpu_var_smp(g_swevent).lock);
-
-  list_for_every_entry(&this_cpu_var_smp(g_swevent).list_swevent, node,
-                       struct perf_event_s, sw_list)
-    {
-      if (node->attr.type == PERF_TYPE_SOFTWARE &&
-          node->attr.config == event_id && node->hw.state == 1)
-        {
-          perf_event_data_overflow(node, &data, ip);
-        }
-    }
-
-  spin_unlock_irqrestore(&this_cpu_var_smp(g_swevent).lock, flags);
-}
-
-/****************************************************************************
- * Name: perf_pmu_builtin_register
- *
- * Description:
- *   Initialize the per-CPU software event state and register the built-in
- *   software and cpu-clock PMUs.  Called once from perf_event_init().
- *
- ****************************************************************************/
-
-void perf_pmu_builtin_register(void)
-{
-  int i;
-
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-    {
-      list_initialize(&per_cpu_var_smp(g_swevent, i).list_swevent);
-      spin_lock_init(&per_cpu_var_smp(g_swevent, i).lock);
-    }
-
-  perf_pmu_register(&g_perf_swevent, "software");
-  perf_pmu_register(&g_perf_cpu_clock, "cpu_clock");
+  nxmutex_lock(&g_perf_pmus_lock);
+  list_delete(&pmu->node);
+  nxmutex_unlock(&g_perf_pmus_lock);
 }
