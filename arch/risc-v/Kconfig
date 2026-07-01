@@ -840,14 +840,14 @@ choice
 
 config RISCV_TOOLCHAIN_GNU_RV64
 	bool "Generic GNU RV64 toolchain"
-	select ARCH_TOOLCHAIN_GNU
+	select ARCH_TOOLCHAIN_GCC
 	---help---
 		This option should work for any modern GNU toolchain (GCC 5.2 or newer)
 		configured for riscv64-unknown-elf.
 
 config RISCV_TOOLCHAIN_GNU_RV32
 	bool "Generic GNU RV32 toolchain"
-	select ARCH_TOOLCHAIN_GNU
+	select ARCH_TOOLCHAIN_GCC
 	---help---
 		This option should work for any modern GNU toolchain (GCC 5.2 or newer)
 		configured for riscv32-unknown-elf.
@@ -858,7 +858,7 @@ config RISCV_TOOLCHAIN_CLANG
 
 config RISCV_TOOLCHAIN_GNU_RV64ILP32
 	bool "Generic GNU RV64ILP32 toolchain"
-	select ARCH_TOOLCHAIN_GNU
+	select ARCH_TOOLCHAIN_GCC
 	select ARCH_RV64ILP32
 	---help---
 		This option work with Ruyisdk toolchain (GCC 13 or newer)
