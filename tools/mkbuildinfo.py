@@ -31,6 +31,7 @@ section (no SHF_ALLOC) containing one ELF gABI note per input entry.
 """
 
 import argparse
+import os
 import sys
 
 # 0x100 avoids readelf -n displaying the type as NT_VERSION (1) / NT_ARCH (2).
@@ -76,6 +77,7 @@ def main():
         sys.exit("mkbuildinfo.py: --entries must be KEY PATH pairs")
 
     seen = {}
+    os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
     with open(args.output, "w") as out:
         emit_header(out)
         for i in range(0, len(flat), 2):
