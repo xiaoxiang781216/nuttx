@@ -229,12 +229,18 @@
 #  define SSIZE_MIN    LONG_MIN
 #endif
 
-/* STREAM_MAX: the implementation's guaranteed number of concurrently
- * open FILE* streams. POSIX requires >= _POSIX_STREAM_MAX (8). Kept
- * at the historical NuttX value (16) for backward compatibility.
+/* STREAM_MAX: the maximum number of FILE* streams one process can have
+ * open concurrently. POSIX requires >= _POSIX_STREAM_MAX (8). NuttX
+ * allocates FILE structs dynamically (lib_zalloc in fopen/fdopen), so
+ * STREAM_MAX is only the soft cap enforced in lib_fopen.c — it carries
+ * no static memory cost. It is kept equal to OPEN_MAX so that the limit
+ * reported by sysconf(_SC_STREAM_MAX) matches sysconf(_SC_OPEN_MAX) and
+ * matches the actual EMFILE boundary; otherwise a process that opens
+ * OPEN_MAX descriptors cannot wrap them in FILE* streams (PSE52 VSX
+ * fopen/freopen hit EMFILE while still under OPEN_MAX).
  */
 
-#define STREAM_MAX     16
+#define STREAM_MAX     OPEN_MAX
 #define TZNAME_MAX     _POSIX_TZNAME_MAX
 #define TZ_MAX_TIMES   CONFIG_LIBC_TZ_MAX_TIMES
 #define TZ_MAX_TYPES   CONFIG_LIBC_TZ_MAX_TYPES

@@ -241,6 +241,15 @@ long sysconf(int name)
       case _SC_OPEN_MAX:
         return OPEN_MAX;
 
+      /* STREAM_MAX is the guaranteed number of FILE* streams one process
+       * can have open concurrently.  It is also the hard limit enforced by
+       * fopen()/fdopen() (see lib_fopen.c), so report the same value to
+       * keep sysconf() consistent with the actual EMFILE boundary.
+       */
+
+      case _SC_STREAM_MAX:
+        return STREAM_MAX;
+
       case _SC_ATEXIT_MAX:
         return ATEXIT_MAX;
 
@@ -364,11 +373,15 @@ long sysconf(int name)
         return _POSIX_VERSION;
 
       default:
-#if 0 /* Assume valid but not implemented for the time being */
+        /* An unrecognized name is invalid: POSIX requires sysconf() to
+         * return -1 with errno=EINVAL for a name that is not defined.
+         * Negative values (e.g. -1) and any value outside the _SC_*
+         * enumeration land here, so EINVAL is the correct response.
+         * Previously this returned ENOSYS, which violates POSIX and
+         * fails the VSX sysconf(-1) EINVAL check.
+         */
+
         errcode = EINVAL;
-#else
-        errcode = ENOSYS;
-#endif
         break;
     }
 
