@@ -710,7 +710,8 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
     {
       /* Reject the connection */
 
-      nerr("Reject the connection, Max listen %d\n", server->backlog);
+      nerr("Server %s reject the connection, Max listen %d\n",
+           server->ept.name, server->backlog);
       spin_unlock_irqrestore(&server->recvlock, flags);
       rpmsg_socket_free(new);
       return;
