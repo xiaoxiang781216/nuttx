@@ -317,7 +317,6 @@ struct pmu_ops_s
   CODE int (*event_stop)(FAR struct perf_event_s *event, int flags);
   CODE int (*event_read)(FAR struct perf_event_s *event);
   CODE int (*event_idx)(FAR struct perf_event_s *event);
-  CODE bool (*event_filter)(FAR struct pmu_s *pmu, int cpu);
   CODE int (*event_match)(FAR struct perf_event_s *event);
 };
 
