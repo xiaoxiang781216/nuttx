@@ -134,15 +134,16 @@ struct mtdlog_pos_s
 
 struct mtdlog_s
 {
-  FAR struct mtd_dev_s *mtd;       /* MTD device used by the mtdlog */
-  spinlock_t           lock;       /* Spinlock for access to the mtdlog */
-  struct mtdlog_pos_s  tailpos;    /* Tail position on the mtdlog */
-  struct mtdlog_pos_s  headpos;    /* Head position on the mtdlog */
-  uint32_t             progsize;   /* Size of one read/write block */
-  uint32_t             blocksize;  /* Size of one logical block */
-  uint32_t             nblocks;    /* Number of logical blocks */
-  uint32_t             erasesize;  /* Size of one erase block */
-  uint8_t              erasestate; /* The erase value */
+  FAR struct mtd_dev_s *mtd;            /* MTD device used by the mtdlog */
+  spinlock_t           lock;            /* Spinlock for access to mtdlog */
+  struct mtdlog_pos_s  tailpos;         /* Tail position on the mtdlog */
+  struct mtdlog_pos_s  headpos;         /* Head position on the mtdlog */
+  uint32_t             progsize;        /* Size of one read/write block */
+  uint32_t             blocksize;       /* Size of one logical block */
+  uint32_t             nblocks;         /* Number of logical blocks */
+  uint32_t             erasesize;       /* Size of one erase block */
+  uint8_t              erasestate;      /* The erase value */
+  bool                 need_new_blkgrp; /* Deferred new blkgrp flag */
 };
 
 struct mtdlog_user_s
@@ -843,14 +844,17 @@ static int mtdlog_init(FAR struct mtdlog_s *mtdlog)
   ret = mtdlog_detect(mtdlog);
   if (ret == 0)
     {
-      /* move tail to next block and update blkgrp. */
+      /* Defer start_new_blkgrp to first write to avoid unnecessary
+       * erase when no log is written during this boot cycle.
+       */
 
-      ret = mtdlog_start_new_blkgrp(mtdlog);
+      mtdlog->need_new_blkgrp = true;
     }
   else
     {
-      /* init first block of the mtdlog device. */
+      /* Init the first block of the mtdlog device. */
 
+      mtdlog->need_new_blkgrp = false;
       ret = mtdlog_first_block_init(mtdlog);
     }
 
@@ -1001,6 +1005,19 @@ static int mtdlog_write_log_entry(FAR struct mtdlog_s *mtdlog,
   uint32_t blk_remain;
   uint32_t len_write;
   struct mtdlog_entry_s entry_info;
+
+  /* Perform deferred start_new_blkgrp on first write after power-on */
+
+  if (mtdlog->need_new_blkgrp)
+    {
+      ret = mtdlog_start_new_blkgrp(mtdlog);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      mtdlog->need_new_blkgrp = false;
+    }
 
   blk_remain = (mtdlog->tailpos.entryoff > mtdlog->tailpos.dataoff) ?
     (mtdlog->tailpos.entryoff - mtdlog->tailpos.dataoff) : 0;
