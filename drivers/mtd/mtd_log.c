@@ -42,7 +42,7 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/mtd/mtd_log.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -135,7 +135,7 @@ struct mtdlog_pos_s
 struct mtdlog_s
 {
   FAR struct mtd_dev_s *mtd;            /* MTD device used by the mtdlog */
-  spinlock_t           lock;            /* Spinlock for access to mtdlog */
+  mutex_t              lock;            /* Mutex for access to mtdlog */
   struct mtdlog_pos_s  tailpos;         /* Tail position on the mtdlog */
   struct mtdlog_pos_s  headpos;         /* Head position on the mtdlog */
   uint32_t             progsize;        /* Size of one read/write block */
@@ -1545,7 +1545,6 @@ static int mtdlog_seek_blk_group(FAR struct mtdlog_s *mtdlog,
 
 static int mtdlog_open(FAR struct file *filep)
 {
-  irqstate_t flags;
   FAR struct mtdlog_user_s *upriv;
   FAR struct inode *inode = filep->f_inode;
   FAR struct mtdlog_s *mtdlog = inode->i_private;
@@ -1556,9 +1555,9 @@ static int mtdlog_open(FAR struct file *filep)
       return -ENOMEM;
     }
 
-  flags = spin_lock_irqsave(&mtdlog->lock);
+  nxmutex_lock(&mtdlog->lock);
   upriv->rpos = mtdlog->headpos;
-  spin_unlock_irqrestore(&mtdlog->lock, flags);
+  nxmutex_unlock(&mtdlog->lock);
 
   filep->f_priv = upriv;
   return 0;
@@ -1586,14 +1585,13 @@ static ssize_t mtdlog_read(FAR struct file *filep,
                            FAR char *buffer, size_t len)
 {
   int ret;
-  irqstate_t flags;
   FAR struct inode *inode = filep->f_inode;
   FAR struct mtdlog_s *mtdlog = inode->i_private;
   FAR struct mtdlog_user_s *upriv = filep->f_priv;
 
-  flags = spin_lock_irqsave(&mtdlog->lock);
+  nxmutex_lock(&mtdlog->lock);
   ret = mtdlog_read_log_entry(mtdlog, upriv, buffer, len);
-  spin_unlock_irqrestore(&mtdlog->lock, flags);
+  nxmutex_unlock(&mtdlog->lock);
 
   return ret;
 }
@@ -1606,7 +1604,6 @@ static ssize_t mtdlog_write(FAR struct file *filep,
                             FAR const char *buffer, size_t len)
 {
   int ret;
-  irqstate_t flags;
   FAR struct inode *inode = filep->f_inode;
   FAR struct mtdlog_s *mtdlog = inode->i_private;
 
@@ -1615,9 +1612,9 @@ static ssize_t mtdlog_write(FAR struct file *filep,
       return -EINVAL;
     }
 
-  flags = spin_lock_irqsave(&mtdlog->lock);
+  nxmutex_lock(&mtdlog->lock);
   ret = mtdlog_write_log_entry(mtdlog, buffer, len);
-  spin_unlock_irqrestore(&mtdlog->lock, flags);
+  nxmutex_unlock(&mtdlog->lock);
 
   return ret;
 }
@@ -1632,12 +1629,11 @@ static int mtdlog_ioctl(FAR struct file *filep,
                         int cmd, unsigned long arg)
 {
   int ret;
-  irqstate_t flags;
   FAR struct inode *inode = filep->f_inode;
   FAR struct mtdlog_s *mtdlog = inode->i_private;
   FAR struct mtdlog_user_s *upriv = filep->f_priv;
 
-  flags = spin_lock_irqsave(&mtdlog->lock);
+  nxmutex_lock(&mtdlog->lock);
 
   switch (cmd)
     {
@@ -1797,7 +1793,7 @@ static int mtdlog_ioctl(FAR struct file *filep,
         ret = -ENOTTY;
     }
 
-  spin_unlock_irqrestore(&mtdlog->lock, flags);
+  nxmutex_unlock(&mtdlog->lock);
   return ret;
 }
 
@@ -1857,7 +1853,7 @@ int mtdlog_register(FAR const char *path, FAR struct mtd_dev_s *mtd)
   mtdlog->nblocks = geo.neraseblocks / CONFIG_MTDLOG_BLOCKSIZE_MULTIPLE;
   mtdlog->progsize = geo.blocksize;
   mtdlog->erasesize = geo.erasesize;
-  spin_lock_init(&mtdlog->lock);
+  nxmutex_init(&mtdlog->lock);
 
   if (mtdlog->blocksize < MTDLOG_MIN_BLKSIZE)
     {
@@ -1915,6 +1911,7 @@ int mtdlog_unregister(FAR const char *path)
 
   inode = file.f_inode;
   mtdlog = inode->i_private;
+  nxmutex_destroy(&mtdlog->lock);
   kmm_free(mtdlog);
 
   file_close(&file);
