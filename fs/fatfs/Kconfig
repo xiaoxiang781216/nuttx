@@ -31,3 +31,19 @@ config FS_FATFS_MAX_OPEN_FILES
 	int "The maximum number of open files in fatfs filesystem"
 	depends on FS_FATFS
 	default 256
+
+config FS_FATFS_RPATH
+	int "FATFS relative path support level"
+	depends on FS_FATFS
+	default 2
+	range 0 2
+	---help---
+		Configure relative path support in FatFs (FF_FS_RPATH):
+		  0: Disable relative path. Path names starting from the root
+		     directory only. Path segments "." and ".." are rejected
+		     with FR_INVALID_NAME.
+		  1: Enable relative path. f_chdir() and f_chdrive() available.
+		  2: f_getcwd() available in addition to level 1.
+
+		Level >= 1 is required to open files through path names that
+		contain "." or ".." segments (e.g. "../data/file").
