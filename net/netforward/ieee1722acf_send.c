@@ -457,6 +457,19 @@ static void ieee1722acf_stream_cycle_work(FAR void *arg)
 
   if (IFF_IS_RUNNING(dev->d_flags) && stream->iob != NULL)
     {
+      /* If a flush (from ieee1722acf_send) re-armed this work to a later
+       * deadline while this timer instance was still pending/executing,
+       * work_timeleft() reports the remaining time of that newer schedule.
+       * In that case the next fire is already queued, so don't send the
+       * freshly-started packet early -- let the pending timer handle it.
+       */
+
+      if (work_timeleft(&stream->cycle_work) > 0)
+        {
+          netdev_unlock(dev);
+          return;
+        }
+
       /* Update stream packet len */
 
       if (ieee1722acf_update_packet_length(stream) > 0)
@@ -467,6 +480,11 @@ static void ieee1722acf_stream_cycle_work(FAR void *arg)
               nwarn("WARNING: stream send failed: %d\n", ret);
             }
         }
+
+      /* Advance to the next cyclic window and re-arm.  work_queue_next()
+       * anchors the next fire to the previous scheduled time (qtime + delay)
+       * so the periodic grid stays jitter-free.
+       */
 
       work_queue_next(HPWORK, &stream->cycle_work,
                       ieee1722acf_stream_cycle_work,
@@ -481,7 +499,8 @@ static void ieee1722acf_stream_cycle_work(FAR void *arg)
  *
  * Description:
  *   Flush the current acf stream packet: update packet length, send it
- *   out, bump sequence number, and cancel the cycle work if active.
+ *   out, and reset the cyclic window deadline so the next packet gets a
+ *   fresh cycle_us window.
  *
  ****************************************************************************/
 
@@ -489,7 +508,6 @@ static inline_function void
 ieee1722acf_stream_flush(FAR struct ieee1722acf_stream_s *stream,
                          FAR struct net_driver_s *fwddev)
 {
-  unsigned int blcount;
   int ret;
 
   ieee1722acf_update_packet_length(stream);
@@ -502,11 +520,22 @@ ieee1722acf_stream_flush(FAR struct ieee1722acf_stream_s *stream,
       nwarn("WARNING: stream send failed: %d\n", ret);
     }
 
+  /* An early flush (packet full or msg_cnt limit reached) restarts the
+   * cyclic period from this send.  Re-arm the cycle work to now + cycle_us:
+   * work_queue() is non-blocking and safe under netdev_lock (no
+   * work_cancel_sync()/netdev_breaklock() dance, hence no associated
+   * deadlock or interleaving window).  If the cycle work is currently
+   * pending, work_queue() removes the stale entry and re-inserts it at
+   * now + cycle_us (re-anchoring the periodic grid).  If it is currently
+   * executing, work_queue() just queues the next fire, which that instance
+   * detects via work_timeleft() and defers to.
+   */
+
   if (stream->cycle_us != 0)
     {
-      netdev_breaklock(fwddev, &blcount);
-      work_cancel_sync(HPWORK, &stream->cycle_work);
-      netdev_restorelock(fwddev, blcount);
+      work_queue(HPWORK, &stream->cycle_work,
+                 ieee1722acf_stream_cycle_work,
+                 stream, USEC2TICK(stream->cycle_us));
     }
 }
 
@@ -777,6 +806,15 @@ int ieee1722acf_send(FAR struct cangw_rule_s *fwdrule,
               stream->iob = iob;
 
               IOB_SET_OWNER(iob, "ieee1722acf send");
+
+              /* Arm the cyclic flush timer only when no cycle is currently
+               * running (work_available).  A normal periodic flush re-arms
+               * via work_queue_next() in ieee1722acf_stream_cycle_work(),
+               * so a new packet started mid-period must NOT reset that grid;
+               * the work_available() gate preserves the fixed period and
+               * only (re)starts the cycle on cold start or after idle.
+               */
+
               if (stream->cycle_us != 0 &&
                   work_available(&stream->cycle_work))
                 {
