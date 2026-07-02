@@ -141,6 +141,14 @@ void perf_pmu_builtin_register(void);
 
 void perf_swevent(uint32_t event_id, uintptr_t ip);
 
+/* Remove an event from any per-CPU software-event list it is still linked
+ * on.  Implemented in perf_swevent.c and called from perf_free_event() as a
+ * safety net against use-after-free when a cross-CPU teardown path skipped
+ * the normal event_del()/perf_swevent_del() unlink.
+ */
+
+void perf_swevent_purge(FAR struct perf_event_s *event);
+
 /* Core framework helpers implemented in perf.c and shared with the
  * file-operation layer in perf_fops.c.
  */
@@ -166,6 +174,18 @@ int perf_event_task_init(FAR struct tcb_s *tcb);
 void perf_event_task_exit(FAR struct tcb_s *tcb);
 void perf_event_task_sched_in(FAR struct tcb_s *tcb);
 void perf_event_task_sched_out(FAR struct tcb_s *tcb);
+
+/* Global perf teardown serialization.  Any path that walks a context to
+ * detach/free events, or that issues a cross-CPU dereference of an event
+ * (read count / enable / disable), must hold this lock so a concurrent
+ * teardown on another CPU cannot free the ctx/event out from under an
+ * in-flight cross-CPU IPI.  Both callers run in blockable task context.
+ * Lock order: perf_teardown_lock -> child_mutex/perf_event_mutex ->
+ * ctx->lock.  Implemented in perf.c.
+ */
+
+void perf_teardown_lock(void);
+void perf_teardown_unlock(void);
 
 /* File-operation layer implemented in perf_fops.c.  perf_install_fd()
  * allocates a file descriptor bound to the perf event and is called from

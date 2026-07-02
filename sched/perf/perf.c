@@ -29,6 +29,7 @@
 
 #include <nuttx/atomic.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/hrtimer.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/perf.h>
@@ -43,6 +44,25 @@
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
+/* Global perf teardown serialization lock.
+ *
+ * perf_close() (tool closes its fd) and perf_event_task_exit() (monitored
+ * task exits) can tear down the same event/ctx concurrently on different
+ * CPUs.  Both detach events via a synchronous cross-CPU IPI and then free
+ * the ctx/event, so without mutual exclusion one path can free a ctx while
+ * the peer's in-flight IPI still dereferences it, faulting in IRQ context.
+ * Serialize both paths here.  Safe to hold across the IPI: the callback
+ * never takes this lock, and the peer must acquire it before freeing.  Both
+ * callers run in blockable task context, so this sleeping mutex forms no
+ * g_schedlock <-> ctx->lock inversion.
+ *
+ * Lock order: g_perf_teardown_lock -> child_mutex / perf_event_mutex ->
+ * ctx->lock.  Placed outside the objects it protects so it is never freed
+ * with them.
+ */
+
+static mutex_t g_perf_teardown_lock = NXMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Functions
@@ -617,6 +637,61 @@ static int perf_setup_task_context(FAR struct tcb_s *tcb)
 
 void perf_free_event(FAR struct perf_event_s *event)
 {
+  /* Set EXIT before cancelling the sampling timer to close a cross-CPU
+   * re-arm race.  A periodic sampling hrtimer re-arms itself from its own
+   * callback; if that callback runs on another CPU during
+   * hrtimer_cancel_sync(), it re-inserts the timer right after cancel
+   * removes it, so it survives the free and keeps firing on freed memory
+   * (leaked timers eventually saturate hrtimer_lock and wedge every CPU).
+   * EXIT makes perf_swevent_timer_handle return 0 (do-not-re-arm), then the
+   * sync cancel waits for any running callback to finish.  Callers run in
+   * task context without ctx->lock, so the sleeping cancel is safe.
+   */
+
+  event->state = PERF_EVENT_STATE_EXIT;
+
+  hrtimer_cancel_sync(&event->hw.timer);
+
+  /* Purge the event from any per-CPU software-event list.  Cross-CPU
+   * teardown can skip the normal event_del() unlink (sched_out -EAGAIN or
+   * a skipped scheduler-hook trylock), leaving a freed node that
+   * perf_swevent() would dereference on the next context switch.  No-op if
+   * never added.
+   */
+
+  perf_swevent_purge(event);
+
+  /* Orphan any inherited children that still point back at this event.
+   *
+   * A freed fd-owned parent leaves its children (living in still-running
+   * tasks' contexts) pointing at it via parent_event/child_list; when such a
+   * child later exits, perf_child_detach() would write its count into the
+   * freed parent -- a heap-corrupting use-after-free.  Under child_mutex,
+   * clear each child's parent_event and PERF_ATTACH_CHILD (making
+   * perf_child_detach() a no-op) and unlink it.
+   *
+   * Only a top-level event owns child_list as a list head; for an inherited
+   * child (parent_event != NULL) that member is a node in its parent's list,
+   * so restrict the walk to parents.
+   */
+
+  if (event->parent_event == NULL)
+    {
+      nxmutex_lock(&event->child_mutex);
+      while (!list_is_empty(&event->child_list))
+        {
+          FAR struct perf_event_s *child =
+            list_first_entry(&event->child_list, struct perf_event_s,
+                             child_list);
+
+          child->parent_event = NULL;
+          child->attach_state &= ~PERF_ATTACH_CHILD;
+          list_delete(&child->child_list);
+        }
+
+      nxmutex_unlock(&event->child_mutex);
+    }
+
   if (event->pmuctx != NULL)
     {
       perf_free_pmu_context(event->pmuctx);
@@ -642,10 +717,43 @@ void perf_free_event(FAR struct perf_event_s *event)
  *
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: perf_teardown_lock / perf_teardown_unlock
+ *
+ * Description:
+ *   Acquire/release the global perf teardown serialization mutex.  See the
+ *   g_perf_teardown_lock comment for the SMP lifecycle rationale.  Both are
+ *   called only from blockable task context (fd close, task exit, fd
+ *   read/ioctl), never from an ISR or the scheduler hooks.
+ *
+ ****************************************************************************/
+
+void perf_teardown_lock(void)
+{
+  nxmutex_lock(&g_perf_teardown_lock);
+}
+
+void perf_teardown_unlock(void)
+{
+  nxmutex_unlock(&g_perf_teardown_lock);
+}
+
 int perf_function_call(FAR struct perf_event_s *event,
                        nxsched_cpu_call_t func)
 {
   FAR struct perf_event_context_s *ctx = event->ctx;
+
+  /* The monitored task may have already exited: perf_event_task_exit()
+   * clears event->ctx while the tool still holds the fd and can issue
+   * read()/ioctl().  The event is then unscheduled with a final counter, so
+   * run func directly on this CPU (a safe no-op / final read); dereferencing
+   * a NULL ctx below would crash.
+   */
+
+  if (ctx == NULL)
+    {
+      return func(event);
+    }
 
   /* Enable event immediately if event bound in cpu */
 
@@ -980,8 +1088,23 @@ int perf_event_task_init(FAR struct tcb_s *tcb)
 
 void perf_event_task_exit(FAR struct tcb_s *tcb)
 {
-  FAR struct perf_event_context_s *ctx = tcb->perf_event_ctx;
+  FAR struct perf_event_context_s *ctx;
 
+  /* Serialize the whole teardown against a concurrent perf_close() on
+   * another CPU.  Without this, perf_close() can read one of these events'
+   * ctx and fire a synchronous cross-CPU detach IPI referencing it while we
+   * free that ctx / event below, faulting in the IPI callback.  Holding the
+   * lock across perf_context_detach() (which itself may issue an IPI) is
+   * safe: the IPI callback never takes this lock, and perf_close() must
+   * acquire it before it can free anything.  perf_event_task_exit() runs in
+   * blockable task context (nxtask_exithook, before sched_lock()), so the
+   * sleeping mutex is safe here.  Lock order: teardown -> child_mutex
+   * (perf_free_event) / perf_event_mutex (perf_free_context) -> ctx->lock.
+   */
+
+  perf_teardown_lock();
+
+  ctx = tcb->perf_event_ctx;
   if (ctx != NULL)
     {
       FAR struct perf_event_s *event;
@@ -992,13 +1115,27 @@ void perf_event_task_exit(FAR struct tcb_s *tcb)
         {
           perf_context_detach(event, ctx);
 
-          if (event->buf && event->buf->ref_count > 1)
+          /* Only free inherited child events here; fd-owned events
+           * (parent_event == NULL) are freed by perf_close().
+           */
+
+          if (event->parent_event != NULL)
             {
               perf_free_event(event);
             }
           else
             {
-              /* wait for perf_close free */
+              /* fd-owned event: the struct is freed later by perf_close(),
+               * but its sampling hrtimer must stop now.  Left running, the
+               * self-re-arming timer keeps firing on this exiting task's CPU
+               * until the tool closes the fd; if the tool is killed
+               * mid-sample each orphan leaks a per-CPU timer that never
+               * stops and eventually wedges every CPU.  Cancel synchronously
+               * before clearing ctx / freeing pmuctx (safe to sleep in
+               * task-exit context; the IPI callback never takes our lock).
+               */
+
+              hrtimer_cancel_sync(&event->hw.timer);
 
               event->state = PERF_EVENT_STATE_EXIT;
               event->ctx = NULL;
@@ -1014,6 +1151,8 @@ void perf_event_task_exit(FAR struct tcb_s *tcb)
       perf_free_context(ctx);
       nxmutex_destroy(&tcb->perf_event_mutex);
     }
+
+  perf_teardown_unlock();
 }
 
 /****************************************************************************

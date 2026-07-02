@@ -387,6 +387,27 @@ static int perf_close(FAR struct file *filep)
 
   ASSERT(event != NULL);
 
+  /* Serialize against a concurrent perf_event_task_exit() on another CPU
+   * that may be tearing down (and freeing) the very context this event is
+   * bound to.  Two things must happen under the teardown lock:
+   *
+   *   1. Re-read event->ctx *inside* the lock.  The monitored task's exit
+   *      path clears event->ctx to NULL for fd-owned events before we get
+   *      here; reading it outside the lock is a TOCTOU race where we could
+   *      observe a non-NULL ctx that is freed a moment later, then fire a
+   *      cross-CPU detach IPI dereferencing freed memory.
+   *
+   *   2. Hold the lock across perf_context_detach() (which may issue a
+   *      synchronous cross-CPU IPI): the peer exit path must also take this
+   *      lock before it can free the ctx/event, so nothing is freed while
+   *      our IPI is in flight.
+   *
+   * perf_close() runs in blockable task context (fd close), so the sleeping
+   * mutex is safe.  Lock order: teardown -> child_mutex -> ctx->lock.
+   */
+
+  perf_teardown_lock();
+
   ctx = event->ctx;
   if (ctx != NULL)
     {
@@ -394,6 +415,8 @@ static int perf_close(FAR struct file *filep)
     }
 
   perf_free_event(event);
+
+  perf_teardown_unlock();
   return OK;
 }
 
@@ -424,6 +447,15 @@ static ssize_t perf_read(FAR struct file *filep, FAR char *buffer,
 
   read_format = event->attr.read_format;
 
+  /* Reading a count issues a cross-CPU IPI (perf_function_call ->
+   * perf_get_event_count) that dereferences event->ctx to route to the
+   * owning CPU.  Serialize against a concurrent perf_event_task_exit() that
+   * could free that ctx mid-read.  Blockable task context; lock order:
+   * teardown -> child_mutex (taken inside perf_read_*) -> ctx->lock.
+   */
+
+  perf_teardown_lock();
+
   if (read_format & PERF_FORMAT_GROUP)
     {
       ret = perf_read_group(event, buffer, read_format);
@@ -432,6 +464,8 @@ static ssize_t perf_read(FAR struct file *filep, FAR char *buffer,
     {
       ret = perf_read_one(event, buffer, read_format);
     }
+
+  perf_teardown_unlock();
 
   return ret;
 }
@@ -509,6 +543,15 @@ static int perf_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         return -EINVAL;
     }
 
+  /* enable/disable dispatch to the owning CPU via a cross-CPU IPI
+   * (perf_function_call) that dereferences event->ctx.  Serialize against a
+   * concurrent perf_event_task_exit() freeing that ctx.  reset is a local
+   * atomic set (no IPI) but is harmless to serialize.  Blockable task
+   * context; lock order: teardown -> child_mutex -> ctx->lock.
+   */
+
+  perf_teardown_lock();
+
   if (arg & PERF_IOC_FLAG_GROUP)
     {
       ret = perf_event_for_group(event, func);
@@ -517,6 +560,8 @@ static int perf_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
     {
       ret = perf_event_for_child(event, func);
     }
+
+  perf_teardown_unlock();
 
   return ret;
 }

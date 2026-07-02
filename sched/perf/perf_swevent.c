@@ -429,6 +429,54 @@ void perf_swevent(uint32_t event_id, uintptr_t ip)
 }
 
 /****************************************************************************
+ * Name: perf_swevent_purge
+ *
+ * Description:
+ *   Remove an event from whichever per-CPU software-event list it is still
+ *   linked on.  A final safety net for perf_free_event(): cross-CPU teardown
+ *   can skip the normal event_del() unlink, and a software event left linked
+ *   is dereferenced by perf_swevent() on the next context switch after it is
+ *   freed (use-after-free).  The node does not record its CPU, so scan every
+ *   CPU's list under that CPU's lock and unlink by pointer match; an event
+ *   that was never added is simply not found.
+ *
+ * Input Parameters:
+ *   event - Perf event about to be freed
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void perf_swevent_purge(FAR struct perf_event_s *event)
+{
+  int cpu;
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+    {
+      FAR struct swevent_manger_s *mgr = &per_cpu_var_smp(g_swevent, cpu);
+      FAR struct perf_event_s *node;
+      FAR struct perf_event_s *tmp;
+      irqstate_t flags;
+
+      flags = spin_lock_irqsave(&mgr->lock);
+
+      list_for_every_entry_safe(&mgr->list_swevent, node, tmp,
+                                struct perf_event_s, sw_list)
+        {
+          if (node == event)
+            {
+              list_delete(&event->sw_list);
+              spin_unlock_irqrestore(&mgr->lock, flags);
+              return;
+            }
+        }
+
+      spin_unlock_irqrestore(&mgr->lock, flags);
+    }
+}
+
+/****************************************************************************
  * Name: perf_pmu_builtin_register
  *
  * Description:
