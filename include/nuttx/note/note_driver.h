@@ -559,10 +559,7 @@ struct note_filter_irq_s
 };
 #endif
 
-struct note_filter_tag_s
-{
-  unsigned long tag_mask[NXTAG_MASK_NWORDS];
-};
+#define note_filter_tag_s nxtag_mask_s
 
 struct note_filter_level_s
 {
