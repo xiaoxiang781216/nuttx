@@ -576,7 +576,7 @@ flt_oper:
           if ((flags & FL_PREC) == 0)
             {
               prec = 6;
-              if (c == 'a' || c == 'A')
+              if (c == 'a')
                 {
                   prec = 13;
                 }
