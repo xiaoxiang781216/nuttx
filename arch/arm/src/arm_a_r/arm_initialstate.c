@@ -158,12 +158,6 @@ void up_initial_state(struct tcb_s *tcb)
 
   cpsr |= (PSR_I_BIT | PSR_F_BIT);
 
-#elif defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
-  /* In tee, we need to disable the IRQ interrupt to make the A core
-   * policy consistent with the M core.
-   */
-
-  cpsr |= PSR_I_BIT;
 #elif !defined(CONFIG_ARCH_HIPRI_INTERRUPT) && !defined(CONFIG_ARCH_TRUSTZONE_SECURE)
   /* Leave IRQs enabled (Also FIQs if CONFIG_ARCH_TRUSTZONE_SECURE or
    * CONFIG_ARCH_HIPRI_INTERRUPT is selected)

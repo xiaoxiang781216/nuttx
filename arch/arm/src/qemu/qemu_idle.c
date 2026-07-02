@@ -27,10 +27,6 @@
 #include <nuttx/arch.h>
 #include "arm_internal.h"
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
-#include "sm.h"
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -47,10 +43,6 @@
  *   power management operations might be performed.
  *
  ****************************************************************************/
-
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
-extern volatile uint32_t g_ap_entry;
-#endif
 
 #ifdef CONFIG_PM
 
@@ -136,15 +128,7 @@ void up_idle(void)
   pm_idle(pm_idle_handler);
 #endif
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
-  if (g_ap_entry != 0)
-    {
-      up_irq_disable();
-      arm_sm_boot_nsec(g_ap_entry);
-      arm_sm_switch_nsec();
-    }
-#elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
-
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
   struct arm_smccc_res res;
 
   irqstate_t flags = irq_save();
@@ -154,12 +138,16 @@ void up_idle(void)
   asm("dsb sy");
   asm("wfi");
   irq_restore(flags);
-#elif defined(CONFIG_ARCH_TRUSTZONE_NONSECURE) && (CONFIG_ARM_GIC_VERSION > 2)
+#elif defined(CONFIG_ARCH_TRUSTZONE_NONSECURE)
 
   /* REE idle: no tasks ready, yield CPU to TEE unconditionally.
-   * TEE will WFI. When a NS interrupt fires, EL3 preempts TEE
-   * and returns here. When a G1S fires, EL3 switches to TEE
-   * and TEE_IDLE will resume us later.
+   * The TEE will WFI.  When a foreign (non-secure) interrupt fires while
+   * the TEE runs, the monitor (or EL3) preempts the TEE and returns here.
+   * When a secure interrupt fires while the REE runs, the monitor switches
+   * to the TEE, which resumes us later via the TEE_IDLE handshake.
+   *
+   * This path is shared by the in-image ARMv7-A monitor (GICv2) and the
+   * external AArch64 EL3 monitor (GICv3): both use the same REE_IDLE SMC.
    */
 
   struct arm_smccc_res res;

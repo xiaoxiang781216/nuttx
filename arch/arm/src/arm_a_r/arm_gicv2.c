@@ -403,6 +403,21 @@ void arm_gic_initialize(void)
 
 uint32_t *arm_decodeirq(uint32_t *regs)
 {
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+  /* In the secure build, any Group1/IRQ is a foreign (non-secure) interrupt.
+   * Forward it unconditionally to the monitor which will switch to the REE.
+   * All TEE-owned interrupts are Group0/FIQ and never reach here.
+   *
+   * Precondition: no Group1 IRQ may fire before the REE context is seeded.
+   * This is ensured by keeping shared peripherals (SPI0) in Group0 during
+   * the boot window and moving them to Group1 only after board_boot_image.
+   */
+
+  struct arm_smccc_res res;
+
+  arm_smccc_smc(ARM_SMCCC_NUTTX_FOREIGN_INTR, 0, 0, 0, 0, 0, 0, 0, &res);
+  return regs;
+#else
   uint32_t regval;
   int irq;
 
@@ -435,6 +450,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
   putreg32(regval, GIC_ICCEOIR);
 #endif
   return regs;
+#endif /* CONFIG_ARCH_TRUSTZONE_SECURE */
 }
 
 /****************************************************************************

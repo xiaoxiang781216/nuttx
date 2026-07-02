@@ -34,6 +34,7 @@
  ****************************************************************************/
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "arm_cpu_psci.h"
 #include "sctlr.h"
@@ -49,8 +50,26 @@
  * Public Type Declarations
  ****************************************************************************/
 
-struct arm_sm_banked_regs
+/* Per-world CPU context saved/restored by the secure monitor.  The secure
+ * (TEE) and non-secure (REE) worlds use an identical layout: r8-r12 are
+ * preserved so that a context preempted by a foreign interrupt can be fully
+ * saved/restored and resumed at its exact interruption point.
+ *
+ * The banked-mode registers are the first members so that a pointer to the
+ * whole context doubles as the base the monitor assembly walks when it
+ * saves/restores the banked set.  Under CONFIG_ARCH_FPU the VFP register
+ * file follows the banked set directly, so arm_sm_save_ctx/restore_ctx can
+ * stream it out with the same advancing pointer the banked loop leaves
+ * behind (no separate offset computation).  The general-purpose registers
+ * (r8-r12, r0-r7) and the monitor return state then follow.
+ */
+
+struct arm_sm_ctx
 {
+  /* Banked-mode registers.  Note that fiq_r{8-12} are not saved here;
+   * instead the FIQ handler preserves r{8-12} explicitly.
+   */
+
   uint32_t usr_sp;
   uint32_t usr_lr;
   uint32_t irq_spsr;
@@ -59,11 +78,6 @@ struct arm_sm_banked_regs
   uint32_t fiq_spsr;
   uint32_t fiq_sp;
   uint32_t fiq_lr;
-
-  /* Note that fiq_r{8-12} are not saved here. Instead sm_fiqhandler
-   * preserves r{8-12}.
-   */
-
   uint32_t svc_spsr;
   uint32_t svc_sp;
   uint32_t svc_lr;
@@ -73,12 +87,25 @@ struct arm_sm_banked_regs
   uint32_t und_spsr;
   uint32_t und_sp;
   uint32_t und_lr;
-  uint32_t pmcr;
-};
 
-struct arm_sm_nsec_ctx
-{
-  struct arm_sm_banked_regs regs;
+#ifdef CONFIG_ARCH_FPU
+  /* VFP/NEON register file, placed immediately after the banked set so the
+   * monitor assembly reaches it with the pointer the banked save/restore
+   * loop already advanced to (no SM_CPU_CTX_VFP offset, no add).  The file
+   * is a shared hardware resource NOT banked by security state, so it must
+   * be swapped on every world switch alongside the banked integer registers
+   * (mirroring what arm64 TFA does via simd_ctx_save/restore under
+   * CTX_INCLUDE_FPREGS), letting a context be resumed at its exact
+   * interruption point.  66 * uint32_t covers d0-d31 (64 words) + FPSCR
+   * (1 word, +1 pad); it is stored/loaded with VSTMIA/VLDMIA of the d
+   * registers, which only require 4-byte alignment, so it can sit at the
+   * banked set's (word-aligned) end.  The struct size is mirrored as
+   * SM_CTX_SEC_SIZE in arm_sm_vector.S and guarded by static_assert in
+   * arm_sm_runtime.c.
+   */
+
+  uint32_t vfp[66];
+#endif
 
   uint32_t r8;
   uint32_t r9;
@@ -99,31 +126,6 @@ struct arm_sm_nsec_ctx
 
   uint32_t mon_lr;
   uint32_t mon_spsr;
-};
-
-struct arm_sm_sec_ctx
-{
-  struct arm_sm_banked_regs regs;
-
-  uint32_t r0;
-  uint32_t r1;
-  uint32_t r2;
-  uint32_t r3;
-  uint32_t r4;
-  uint32_t r5;
-  uint32_t r6;
-  uint32_t r7;
-
-  /* Return state */
-
-  uint32_t mon_lr;
-  uint32_t mon_spsr;
-};
-
-struct arm_sm_ctx
-{
-  struct arm_sm_sec_ctx sec;
-  struct arm_sm_nsec_ctx nsec;
 };
 
 /****************************************************************************
@@ -192,43 +194,45 @@ void arm_sm_boot_nsec(uintptr_t entry);
  *   None
  *
  * Returned Value:
- *   The arm_sm_nsec_ctx of which contains the non-secure context
+ *   The arm_sm_ctx of which contains the non-secure context
  *
  ****************************************************************************/
 
-struct arm_sm_nsec_ctx *arm_sm_get_nsec_ctx(void);
+struct arm_sm_ctx *arm_sm_get_nsec_ctx(void);
 
 /****************************************************************************
- * Name: arm_sm_save_banked_regs
+ * Name: arm_sm_save_ctx
  *
  * Description:
- *   Save the banked registers set
+ *   Save the per-world CPU context (banked-mode registers, and the VFP
+ *   register file under CONFIG_ARCH_FPU) into the supplied context.
  *
  * Input Parameters:
- *   arm_sm_banked_regs - the banked registers set
+ *   ctx - the per-world CPU context to save into
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void arm_sm_save_banked_regs(struct arm_sm_banked_regs *regs);
+void arm_sm_save_ctx(struct arm_sm_ctx *ctx);
 
 /****************************************************************************
- * Name: arm_sm_restore_banked_regs
+ * Name: arm_sm_restore_ctx
  *
  * Description:
- *   To restore the banked registers that saved before
+ *   Restore a per-world CPU context (banked-mode registers, and the VFP
+ *   register file under CONFIG_ARCH_FPU) saved by arm_sm_save_ctx.
  *
  * Input Parameters:
- *   arm_sm_banked_regs - the banked registers set
+ *   ctx - the per-world CPU context to restore from
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void arm_sm_restore_banked_regs(struct arm_sm_banked_regs *regs);
+void arm_sm_restore_ctx(struct arm_sm_ctx *ctx);
 
 /****************************************************************************
  * Name: arm_vectorsmc
@@ -279,20 +283,49 @@ void arm_vectorfiq_entry(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
                          uint32_t a4, uint32_t a5, uint32_t a6, uint32_t a7);
 
 /****************************************************************************
- * Name: arm_sm_switch_nsec
+ * Name: arm_sm_from_sec
  *
  * Description:
- *   This function is using to switch from secure to non-secure, is called
- *   from up_idle() function. This function is implemented by make "smc" call
- *   internal.
+ *   Called from monitor mode when an SMC arrives from the secure (TEE)
+ *   world.  Decodes ctx->sec.r0 (the SMC function ID) to service the
+ *   TEE-side world-switch protocol:
+ *
+ *   - ARM_SMCCC_NUTTX_TEE_IDLE: TEE has no ready tasks.  If a non-secure
+ *     context was preempted by a secure interrupt (ns_preempted set),
+ *     resume it (return SM_EXIT_TO_NON_SECURE).  Otherwise return 0 in
+ *     ctx->sec.r0 and stay in the secure world (SM_EXIT_TO_SECURE) so the
+ *     TEE can WFI.
+ *
+ *   - ARM_SMCCC_NUTTX_FOREIGN_INTR: TEE detected a foreign (non-secure)
+ *     interrupt pending while running and cooperatively yields the CPU to
+ *     the non-secure world (SM_EXIT_TO_NON_SECURE).  The interrupt is not
+ *     acked by the TEE; it will be handled by REE's own vector once the
+ *     non-secure world resumes.
  *
  * Input Parameters:
- *   None
+ *   None.  The per-CPU secure/non-secure contexts are the typed globals
+ *   g_monitor.sec / g_monitor.nsec.
+ *
  * Returned Value:
- *   None
+ *   SM_EXIT_TO_NON_SECURE: switch to and resume the non-secure world
+ *   SM_EXIT_TO_SECURE:     stay in the secure world (return to the TEE)
  *
  ****************************************************************************/
 
-void arm_sm_switch_nsec(void);
+uint32_t arm_sm_from_sec(void);
+
+/****************************************************************************
+ * Name: arm_sm_get_ns_preempted / arm_sm_set_ns_preempted
+ *
+ * Description:
+ *   Accessors for the ns_preempted flag.  The flag records that a
+ *   non-secure (REE) context was preempted by a secure interrupt while it
+ *   was executing, so the monitor must resume that exact context (rather
+ *   than leaving the REE parked) once the TEE goes idle.
+ *
+ ****************************************************************************/
+
+bool arm_sm_get_ns_preempted(void);
+void arm_sm_set_ns_preempted(bool preempted);
 
 #endif /* __ARCH_ARM_SRC_ARM_A_R_SM_H */

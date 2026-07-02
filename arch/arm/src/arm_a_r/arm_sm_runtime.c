@@ -42,10 +42,6 @@
 #include "gic.h"
 #include "arm_cpu_psci.h"
 
-#ifdef CONFIG_ARM_PSCI_SERVER
-#  include <arch/syscall.h>
-#endif
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -63,37 +59,67 @@
 #endif
 
 #define MONITOR_STACK_ALIGNMENT 64 /* (sizeof(long) * U(2)) */
-#define MONITOR_STACK_NSEC_SIZE ALIGN_UP(sizeof(struct arm_sm_nsec_ctx), \
-                                         MONITOR_STACK_ALIGNMENT)
 #define MONITOR_STACK_SIZE      ALIGN_UP(CONFIG_ARM_MONITOR_STACK_SIZE, \
                                          MONITOR_STACK_ALIGNMENT)
 
-typedef uint8_t monitor_stack_t[MONITOR_STACK_SIZE];
+/* Per-CPU secure-monitor storage.  The monitor-mode C dispatcher stack
+ * (the stack[] member) sits at the base, immediately below the secure and
+ * non-secure per-world contexts (the sec/nsec members); the per-CPU
+ * preemption flag and panic notifier follow the contexts.  The C code
+ * reaches every member directly as a typed global (g_monitor.sec /
+ * g_monitor.nsec / g_monitor.ns_preempted / g_monitor.nb).
+ *
+ * Flag g_monitor.ns_preempted: a non-secure (REE) context was preempted by
+ * a secure interrupt (FIQ, Group 0) while it was running.  The monitor must
+ * resume that exact context once the TEE goes idle, instead of leaving the
+ * REE parked.  Set by arm_sm_vectorfiq, cleared by the TEE_IDLE handler.
+ *
+ * The monitor SP is initialised to the top of g_monitor.sec (see
+ * arm_sm_init), so the srsdb/push in the .S entry path lands directly
+ * inside sec/nsec and the C dispatcher's stack grows down from there into
+ * stack[].  The .S path is purely SP-relative (it never references the
+ * g_monitor symbol) and only requires that stack[] sits immediately below
+ * sec and that nsec immediately follows sec, which the layout below
+ * guarantees; ns_preempted and nb follow nsec, clear of that machinery.
+ */
+
+struct arm_sm_monitor
+{
+  uint8_t               stack[MONITOR_STACK_SIZE]
+                        aligned_data(MONITOR_STACK_ALIGNMENT);
+  struct arm_sm_ctx     sec;
+  struct arm_sm_ctx     nsec;
+  bool                  ns_preempted;
+  struct notifier_block nb;
+};
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-/* the g_monitor_stack are allocated using to manage the secure context and
- * non-secure context.
- * the "g_monitor_stack" cannot be declared as "const", as the assembly
- * code need to access "g_monitor_stack", if we declared as "const",
- * the arm_sm_init procedure will not work
- */
-
-static DEFINE_PER_CPU_BSS(monitor_stack_t, g_monitor_stack)
+static DEFINE_PER_CPU_BSS(struct arm_sm_monitor, g_monitor)
 locate_data(".monitor_stack") aligned_data(MONITOR_STACK_ALIGNMENT);
-#define g_monitor_stack this_cpu_var(g_monitor_stack)
+#define g_monitor this_cpu_var(g_monitor)
 
 static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
                                      unsigned long action,
                                      FAR void *data);
 
-static DEFINE_PER_CPU_BMP(struct notifier_block, g_switch_nse_panic_nb) =
-{
-  arm_secure_panic_notifier,  /* notifier_call */
-};
-#define g_switch_nse_panic_nb this_cpu_var_bmp(g_switch_nse_panic_nb)
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* Non-secure (REE) entry point, set by board_boot_image() once the AP image
+ * has been loaded by the TEE.  Zero until then.  The first TEE_IDLE that
+ * sees a non-zero value seeds the NS context and launches the REE.
+ *
+ * This is the single canonical definition (default 0).  Boards that load an
+ * AP image reference it via `extern` and assign the entry point; secure
+ * boards without an AP loader leave it at 0, so the first-boot REE launch
+ * branch in arm_sm_from_sec() is never taken.
+ */
+
+volatile uint32_t g_ap_entry;
 
 /****************************************************************************
  * Private Functions
@@ -171,7 +197,16 @@ static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
 
   if (action == SYS_HALT)
     {
-      arm_sm_switch_nsec();
+      /* Switch the secure world to the non-secure world so the REE can
+       * take over on a secure-side panic.  Issue the world-switch SMC
+       * directly (same as arm_decodeirq): the monitor services
+       * ARM_SMCCC_NUTTX_FOREIGN_INTR by unconditionally switching to and
+       * resuming the non-secure context.
+       */
+
+      struct arm_smccc_res res;
+
+      arm_smccc_smc(ARM_SMCCC_NUTTX_FOREIGN_INTR, 0, 0, 0, 0, 0, 0, 0, &res);
     }
 
   return 0;
@@ -198,8 +233,36 @@ static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
 
 void arm_sm_init(void)
 {
-  arm_sm_init_stack(((uintptr_t)&g_monitor_stack
-                    + MONITOR_STACK_SIZE - MONITOR_STACK_NSEC_SIZE));
+  /* Point the monitor SP one arm_sm_ctx above the sec context base, which
+   * is the secure-world resting SP the .S entry path expects.  The FIRST
+   * monitor entry is a SECURE one (the TEE issues ARM_SMCCC_NUTTX_TEE_IDLE),
+   * and the secure entry path derives the context base as
+   * (mon_sp - sizeof(arm_sm_ctx)) via srsdb/push{r0-r7}/sub.  Pointing at
+   * &sec + sizeof(arm_sm_ctx) lands the derivation exactly on &sec; mon_sp
+   * then bounces to &nsec + sizeof after the switch to the non-secure
+   * world, where the nsec entry path derives the &nsec base the same way.
+   * The C dispatcher stack grows down from the context region into stack[].
+   */
+
+  arm_sm_init_stack((uintptr_t)&g_monitor.nsec);
+}
+
+/****************************************************************************
+ * Name: arm_sm_get_nsec_ctx
+ *
+ * Description:
+ *   Get the non-secure (REE) context used by the secure monitor.  The
+ *   per-CPU non-secure context is a typed global (g_monitor.nsec), so it
+ *   is returned directly rather than by reading the monitor-mode SP.
+ *
+ * Returned Value:
+ *   Pointer to the per-CPU non-secure context (g_monitor.nsec).
+ *
+ ****************************************************************************/
+
+struct arm_sm_ctx *arm_sm_get_nsec_ctx(void)
+{
+  return &g_monitor.nsec;
 }
 
 /****************************************************************************
@@ -221,7 +284,7 @@ void arm_sm_init(void)
 
 void arm_sm_boot_nsec(uintptr_t entry)
 {
-  FAR struct arm_sm_nsec_ctx *nsec_ctx;
+  FAR struct arm_sm_ctx *nsec_ctx;
 
   nsec_ctx = arm_sm_get_nsec_ctx();
   if (nsec_ctx->mon_lr == 0)
@@ -242,7 +305,8 @@ void arm_sm_boot_nsec(uintptr_t entry)
  *   Returns one of SM_EXIT_TO_* exit monitor in secure or non-secure world
  *
  * Input Parameters:
- *   ctx - The secure monitor context
+ *   None.  The per-CPU secure/non-secure contexts are the typed globals
+ *   g_monitor.sec / g_monitor.nsec.
  *
  * Returned Value:
  *   SM_EXIT_TO_NON_SECURE: return to the non-secure world after this
@@ -251,10 +315,33 @@ void arm_sm_boot_nsec(uintptr_t entry)
  *
  ****************************************************************************/
 
-uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
+uint32_t arm_sm_from_nsec(void)
 {
-  FAR uint32_t *nsec_r0 = (FAR uint32_t *)(&ctx->nsec.r0);
+  FAR struct arm_sm_ctx *sec = &g_monitor.sec;
+  FAR struct arm_sm_ctx *nsec = &g_monitor.nsec;
+  FAR uint32_t *nsec_r0 = (FAR uint32_t *)(&nsec->r0);
   FAR struct arm_smccc_res *args = (FAR struct arm_smccc_res *)nsec_r0;
+
+  /* Handle ARM_SMCCC_NUTTX_REE_IDLE: the non-secure world (REE) has no
+   * ready tasks and yields the CPU back to the secure world (TEE).
+   * Save the non-secure banked registers, restore the secure banked
+   * registers, and resume the TEE at its real interruption point.  Do
+   * NOT overwrite sec->mon_lr: it still holds the PC where the TEE
+   * last parked (e.g. the WFI in up_idle, or the FOREIGN_INTR yield
+   * point in arm_decodeirq).
+   */
+
+  if (args->a0 == ARM_SMCCC_NUTTX_REE_IDLE)
+    {
+      /* arm_sm_save/restore_ctx also swap the VFP register file
+       * (*->vfp) under CONFIG_ARCH_FPU: save the REE's live VFP, restore
+       * the TEE's saved VFP.
+       */
+
+      arm_sm_save_ctx(nsec);
+      arm_sm_restore_ctx(sec);
+      return SM_EXIT_TO_SECURE;
+    }
 
   /* Handle fast SMC: ARM_SMCCC_NUTTX_SEND_SECURE_SGI
    * REE requests monitor to send a secure (Group 0) SGI to TEE.
@@ -273,7 +360,7 @@ uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
       uint32_t cpuset = (uint32_t)args->a2;
 
       up_trigger_irq(sgi_id, cpuset);
-      ctx->nsec.r0 = 0;
+      nsec->r0 = 0;
       return SM_EXIT_TO_NON_SECURE;
     }
 #endif
@@ -287,7 +374,7 @@ uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
   switch (args->a0)
     {
       case PSCI_0_2_FN_PSCI_VERSION:
-        ctx->nsec.r0 = (1 << PSCI_VERSION_MAJOR_SHIFT) | 0;
+        nsec->r0 = (1 << PSCI_VERSION_MAJOR_SHIFT) | 0;
         return SM_EXIT_TO_NON_SECURE;
 
       case PSCI_0_2_FN_SYSTEM_OFF:
@@ -312,11 +399,11 @@ uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
       case PSCI_0_2_FN_MIGRATE:
       case PSCI_0_2_FN_MIGRATE_INFO_TYPE:
       case PSCI_0_2_FN_MIGRATE_INFO_UP_CPU:
-        ctx->nsec.r0 = PSCI_RET_NOT_SUPPORTED;
+        nsec->r0 = PSCI_RET_NOT_SUPPORTED;
         return SM_EXIT_TO_NON_SECURE;
 
       case PSCI_0_2_FN_CPU_ON:
-        ctx->nsec.r0 = PSCI_RET_NOT_SUPPORTED;
+        nsec->r0 = PSCI_RET_NOT_SUPPORTED;
         return SM_EXIT_TO_NON_SECURE;
 
       default:
@@ -324,12 +411,28 @@ uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
     }
 #endif
 
-  arm_sm_save_banked_regs(&ctx->nsec.regs);
-  arm_sm_restore_banked_regs(&ctx->sec.regs);
+  /* arm_sm_save_ctx also saves the REE's live VFP into nsec->vfp
+   * (under CONFIG_ARCH_FPU), while it is still resident in hardware.
+   */
 
-  memcpy(&ctx->sec.r0, args, sizeof(*args));
+  arm_sm_save_ctx(nsec);
 
-  ctx->sec.mon_lr = (uint32_t)arm_vectorsmc;
+  /* Set up the secure-world return payload BEFORE restoring the secure
+   * banked/VFP state.  memcpy() may be lowered to NEON instructions that
+   * clobber the VFP register file, so it must run while the VFP hardware is
+   * still scratch: the REE's VFP has already been saved by the call above,
+   * and the TEE's VFP is only restored by arm_sm_restore_ctx below.
+   */
+
+  memcpy(&sec->r0, args, sizeof(*args));
+
+  sec->mon_lr = (uint32_t)arm_vectorsmc;
+
+  /* Restore the secure banked registers and VFP register file last, so the
+   * freshly restored secure VFP cannot be corrupted by the memcpy above.
+   */
+
+  arm_sm_restore_ctx(sec);
 
   /* the following procedure return "SM_EXIT_TO_SECURE" which indicate
    * that we should still stay at secure world, until the
@@ -338,6 +441,133 @@ uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
    */
 
   return SM_EXIT_TO_SECURE;
+}
+
+/****************************************************************************
+ * Name: arm_sm_from_sec
+ *
+ * Description:
+ *   Called from monitor mode when an SMC arrives from the secure (TEE)
+ *   world.  Services the TEE-side world-switch protocol.  See sm.h for the
+ *   full contract.
+ *
+ ****************************************************************************/
+
+uint32_t arm_sm_from_sec(void)
+{
+  FAR struct arm_sm_ctx *sec = &g_monitor.sec;
+  FAR struct arm_sm_ctx *nsec = &g_monitor.nsec;
+  FAR uint32_t *sec_r0 = (FAR uint32_t *)(&sec->r0);
+  FAR struct arm_smccc_res *args = (FAR struct arm_smccc_res *)sec_r0;
+
+  if (args->a0 == ARM_SMCCC_NUTTX_TEE_IDLE)
+    {
+      /* First TEE idle after the AP image has been loaded: the non-secure
+       * (REE) context has never run, so nsec->mon_lr is still zero.
+       * Seed it with the AP entry point and launch the REE for the first
+       * time.  This is the one-shot boot switch (formerly done in up_idle
+       * via a separate secure-to-non-secure launch path); folding it here
+       * removes the separate boot path and the g_ree_booted flag.
+       *
+       * nsec here is the same per-CPU storage arm_sm_get_nsec_ctx()
+       * returns; seed it directly.
+       */
+
+      if (nsec->mon_lr == 0)
+        {
+          /* Wait for CPU0 to load the AP image and set g_ap_entry.
+           *
+           * CPU0 itself must NOT block here: it is the core that runs
+           * board_boot_image() which sets g_ap_entry.  If CPU0 reaches
+           * TEE_IDLE before that task runs (idle task preempts briefly),
+           * just return to the secure world so TEE tasks keep executing.
+           *
+           * Secondary cores use wfe to save power; CPU0's sev after
+           * writing g_ap_entry wakes them promptly.
+           */
+
+          if (g_ap_entry == 0)
+            {
+              if (up_cpu_index() == 0)
+                {
+                  sec->r0 = 0;
+                  return SM_EXIT_TO_SECURE;
+                }
+
+              while (g_ap_entry == 0)
+                {
+                  __asm__ volatile("wfe");
+                }
+            }
+
+          nsec->mon_lr = g_ap_entry;
+          nsec->mon_spsr = PSR_MODE_SVC | PSR_I_BIT;
+          if (g_ap_entry & 1)
+            {
+              nsec->mon_spsr |= PSR_T_BIT;
+            }
+
+          /* arm_sm_save/restore_ctx also swap the VFP register file
+           * under CONFIG_ARCH_FPU: save the TEE's VFP, restore the
+           * (zero-initialised) REE VFP for its first run.
+           */
+
+          arm_sm_save_ctx(sec);
+          arm_sm_restore_ctx(nsec);
+          return SM_EXIT_TO_NON_SECURE;
+        }
+
+      /* The TEE has no ready tasks.  If no non-secure context was
+       * preempted, tell the TEE to WFI by returning 0 and staying in
+       * the secure world.
+       */
+
+      if (!g_monitor.ns_preempted)
+        {
+          sec->r0 = 0;
+          return SM_EXIT_TO_SECURE;
+        }
+
+      /* A non-secure context was preempted by a secure interrupt while
+       * it was running.  Now that the TEE is idle, resume it.
+       */
+
+      g_monitor.ns_preempted = false;
+    }
+
+  /* ARM_SMCCC_NUTTX_TEE_IDLE (with a preempted REE) or
+   * ARM_SMCCC_NUTTX_FOREIGN_INTR: switch to the non-secure world and
+   * resume the saved REE context at its real interruption point.  Do NOT
+   * overwrite nsec->mon_lr.
+   */
+
+  /* arm_sm_save/restore_ctx also swap the VFP register file under
+   * CONFIG_ARCH_FPU: save the TEE's live VFP, restore the preempted REE's
+   * saved VFP.
+   */
+
+  arm_sm_save_ctx(sec);
+  arm_sm_restore_ctx(nsec);
+
+  return SM_EXIT_TO_NON_SECURE;
+}
+
+/****************************************************************************
+ * Name: arm_sm_get_ns_preempted / arm_sm_set_ns_preempted
+ *
+ * Description:
+ *   Accessors for the ns_preempted flag.
+ *
+ ****************************************************************************/
+
+bool arm_sm_get_ns_preempted(void)
+{
+  return g_monitor.ns_preempted;
+}
+
+void arm_sm_set_ns_preempted(bool preempted)
+{
+  g_monitor.ns_preempted = preempted;
 }
 
 /****************************************************************************
@@ -357,5 +587,6 @@ uint32_t arm_sm_from_nsec(FAR struct arm_sm_ctx *ctx)
 
 void arm_panic_switch_nsec_register(void)
 {
-  register_reboot_notifier(&g_switch_nse_panic_nb);
+  g_monitor.nb.notifier_call = arm_secure_panic_notifier;
+  register_reboot_notifier(&g_monitor.nb);
 }

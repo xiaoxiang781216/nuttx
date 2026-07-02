@@ -26,10 +26,6 @@
 #include <nuttx/power/pm.h>
 #include <nuttx/arch.h>
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-#include "sm.h"
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -46,10 +42,6 @@
  *   power management operations might be performed.
  *
  ****************************************************************************/
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-extern volatile uint32_t g_ap_entry;
-#endif
 
 #ifdef CONFIG_PM
 
@@ -135,14 +127,7 @@ void up_idle(void)
   pm_idle(pm_idle_handler);
 #endif
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-  if (g_ap_entry != 0)
-    {
-      up_irq_disable();
-      arm_sm_boot_nsec(g_ap_entry);
-      arm_sm_switch_nsec();
-    }
-#elif defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
+#if defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
   /* If the system is idle and there are no timer interrupts, then process
    * "fake" timer interrupts. Hopefully, something will wake up.
    */

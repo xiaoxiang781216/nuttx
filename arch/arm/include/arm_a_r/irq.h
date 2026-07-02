@@ -421,10 +421,8 @@ static inline_function irqstate_t up_irq_enable(void)
 #if __ARM_ARCH >= 6
   __asm__ __volatile__(
       "\tmrs    %0, cpsr\n"
-#  if defined(CONFIG_ARCH_HIPRI_INTERRUPT) || defined(CONFIG_ARM_HAVE_EL3_MONITOR)
+#  if defined(CONFIG_ARCH_HIPRI_INTERRUPT) || defined(CONFIG_ARCH_TRUSTZONE_SECURE)
       "\tcpsie  if\n"
-#  elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
-      "\tcpsie  f\n"
 #  else
       "\tcpsie  i\n"
 #  endif
