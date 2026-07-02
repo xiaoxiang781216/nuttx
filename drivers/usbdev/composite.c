@@ -751,8 +751,7 @@ static int composite_setup(FAR struct usbdevclass_driver_s *driver,
 
         case USB_REQ_GETINTERFACE:
           {
-            if (ctrl->type == (USB_DIR_IN | USB_REQ_RECIPIENT_INTERFACE) &&
-                priv->config == COMPOSITE_CONFIGIDNONE)
+            if (ctrl->type == (USB_DIR_IN | USB_REQ_RECIPIENT_INTERFACE))
               {
                 ret = composite_classsetup(priv, dev, ctrl, dataout, outlen);
                 dispatched = true;
