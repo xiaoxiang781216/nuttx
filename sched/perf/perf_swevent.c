@@ -275,6 +275,17 @@ static int perf_cpuclock_event_stop(FAR struct perf_event_s *event,
                                     int flags)
 {
   hrtimer_cancel(&event->hw.timer);
+
+  /* Flush the accumulated run time into event->count so that a counter
+   * without a sampling period (e.g. a resident counter) still advances on
+   * every schedule-out, and a "perf stat" read after stop is accurate.
+   */
+
+  if (flags & PERF_EF_UPDATE)
+    {
+      perf_cpuclock_event_read(event);
+    }
+
   return 0;
 }
 
@@ -394,6 +405,14 @@ void perf_swevent(uint32_t event_id, uintptr_t ip)
       if (node->attr.type == PERF_TYPE_SOFTWARE &&
           node->attr.config == event_id && node->hw.state == 1)
         {
+          /* Accumulate the counter unconditionally.  This is the counting
+           * path read back through PERF_GET_COUNT (e.g. by resident
+           * counters).  perf_event_data_overflow() below is the separate
+           * sampling path and only does work when a ring buffer is attached
+           * (perf record); it never updates event->count.
+           */
+
+          atomic64_add(&node->count, 1);
           perf_event_data_overflow(node, &data, ip);
         }
     }
