@@ -147,16 +147,12 @@ ssize_t syslog_write_foreach(FAR const char *buffer,
                     }
 
                   ret = write(channel, buffer + nwritten, head - nwritten);
-                  if (ret >= 0)
-                    {
-                      ret = write(channel, "\r\n", 2);
-                    }
-
-                  if (ret < 0)
+                  if (ret <= 0)
                     {
                       continue;
                     }
 
+                  ret = write(channel, "\r\n", 2);
                   nwritten = head + 1;
                 }
             }
@@ -165,14 +161,12 @@ ssize_t syslog_write_foreach(FAR const char *buffer,
           if (nwritten < buflen)
             {
               ret = write(channel, buffer + nwritten, buflen - nwritten);
-              if (ret < 0)
+              if (ret <= 0)
                 {
                   continue;
                 }
-              else
-                {
-                  nwritten += ret;
-                }
+
+              nwritten += ret;
             }
         }
       else
