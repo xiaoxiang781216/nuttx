@@ -830,6 +830,7 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_BOARD_COREDUMP_PRINT_REGIONS
 static void
 coredump_print_memory_regions(FAR const struct memory_region_s *regions)
 {
@@ -850,6 +851,7 @@ coredump_print_memory_regions(FAR const struct memory_region_s *regions)
       *(volatile int *)(regions[i].end - sizeof(int));
     }
 }
+#endif
 
 /****************************************************************************
  * Name: coredump_with_tcb
@@ -1582,7 +1584,9 @@ void coredump_dump(FAR struct tcb_s *tcb)
       return;
     }
 
+#ifdef CONFIG_BOARD_COREDUMP_PRINT_REGIONS
   coredump_print_memory_regions(g_regions);
+#endif
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
   coredump_dump_syslog(tcb);
 #elif defined(CONFIG_BOARD_COREDUMP_DEV)
