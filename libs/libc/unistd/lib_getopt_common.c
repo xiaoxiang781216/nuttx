@@ -419,16 +419,6 @@ int getopt_common(int argc, FAR char * const argv[],
           go->go_optptr++;
         }
 
-      /* Special case handling of "-" and "-:" */
-
-      if (!*go->go_optptr)
-        {
-          /* We'll fix up optptr the next time we are called */
-
-          go->go_optopt = '\0';
-          return '?';
-        }
-
       /* Handle the case of "-:" */
 
       if (*go->go_optptr == ':')
