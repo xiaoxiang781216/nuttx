@@ -21,6 +21,12 @@ config ARM_STRING_FUNCTION
 	select ARM_STRCMP
 	select ARM_STRCPY
 	select ARM_STRLEN
+	select ARM_MEMCMP
+	select ARM_STRCHR
+	select ARM_STRRCHR
+	select ARM_STRNCMP
+	select ARM_STRNLEN
+	select ARM_STRCHRNUL
 
 config ARM_MEMCHR
 	bool "Enable optimized memchr() for ARM"
@@ -77,6 +83,54 @@ config ARM_STRLEN
 	depends on ARCH_TOOLCHAIN_GNU
 	---help---
 		Enable optimized ARM specific strlen() library function
+
+config ARM_MEMCMP
+	bool "Enable optimized memcmp() for ARM"
+	default n
+	select LIBC_ARCH_MEMCMP
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific memcmp() library function
+
+config ARM_STRCHR
+	bool "Enable optimized strchr() for ARM"
+	default n
+	select LIBC_ARCH_STRCHR
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific strchr() library function
+
+config ARM_STRRCHR
+	bool "Enable optimized strrchr() for ARM"
+	default n
+	select LIBC_ARCH_STRRCHR
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific strrchr() library function
+
+config ARM_STRNCMP
+	bool "Enable optimized strncmp() for ARM"
+	default n
+	select LIBC_ARCH_STRNCMP
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific strncmp() library function
+
+config ARM_STRNLEN
+	bool "Enable optimized strnlen() for ARM"
+	default n
+	select LIBC_ARCH_STRNLEN
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific strnlen() library function
+
+config ARM_STRCHRNUL
+	bool "Enable optimized strchrnul() for ARM"
+	default n
+	select LIBC_ARCH_STRCHRNUL
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Enable optimized ARM specific strchrnul() library function
 
 config ARM_CRC32
 	bool "Enable optimized crc32 for ARM"

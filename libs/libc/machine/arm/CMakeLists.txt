@@ -58,6 +58,30 @@ if(CONFIG_LIBC_ARCH_STRLEN)
   list(APPEND SRCS ${ARM_SUBDIR}/arch_strlen.S)
 endif()
 
+if(CONFIG_LIBC_ARCH_MEMCMP)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_memcmp.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_STRCHR)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_strchr.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_STRRCHR)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_strrchr.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_STRNCMP)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_strncmp.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_STRNLEN)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_strnlen.S)
+endif()
+
+if(CONFIG_LIBC_ARCH_STRCHRNUL)
+  list(APPEND SRCS ${ARM_SUBDIR}/arch_strchrnul.S)
+endif()
+
 if(CONFIG_LIBC_ARCH_ELF)
   list(APPEND SRCS arch_elf.c)
 endif()
