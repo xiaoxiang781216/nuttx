@@ -112,6 +112,9 @@ endif()
 
 if(CONFIG_OCU)
   list(APPEND SRCS ocu.c)
+  if(CONFIG_MCAL_OCU)
+    list(APPEND SRCS ocu_mcal.c)
+  endif()
 endif()
 
 if(CONFIG_GOLDFISH_TIMER)

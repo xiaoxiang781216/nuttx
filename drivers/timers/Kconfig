@@ -126,6 +126,27 @@ config OCU
 		actions (pin toggle, notification callback) on match.
 		See include/nuttx/timers/ocu.h for further OCU driver information.
 
+if OCU
+
+config MCAL_OCU
+	bool "OCU MCAL Adaptation Layer"
+	default n
+	---help---
+		Enable the MCAL (Microcontroller Abstraction Layer) adaptation
+		for the OCU driver. This provides a lower-half implementation
+		that wraps AUTOSAR MCAL OCU APIs (Infineon AURIX GTM ATOM/TOM)
+		and registers them as NuttX /dev/ocuN devices.
+
+config MCAL_OCU_MAX_CHANNELS
+	int "Maximum number of MCAL OCU channels"
+	default 4
+	depends on MCAL_OCU
+	---help---
+		Maximum number of OCU channels that can be registered through
+		the MCAL adaptation layer.
+
+endif # OCU
+
 config TIMER
 	bool "Timer Support"
 	default n
