@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/list.h>
@@ -173,160 +174,13 @@ enum perf_event_state_e
   PERF_EVENT_STATE_ACTIVE   = 1,
 };
 
-struct hw_perf_event_s
-{
-  /* Hardware */
-
-  struct
-    {
-      unsigned long config_base; /* Deposit event number and type */
-      int idx;                   /* Event index */
-      int flags;                 /* Event flags */
-    };
-  int state;                     /* Event status */
-  atomic64_t prev_count;         /* Value of the previous count */
-  atomic64_t last_period;        /* Last programmed period */
-  atomic64_t left_period;        /* Remaining period until overflow */
-  struct hrtimer_s timer;
-};
-
-struct perf_event_attr_s
-{
-  uint32_t type;
-  uint32_t size;
-  uint64_t config;
-  union
-    {
-      uint64_t sample_period;
-      uint64_t sample_freq;
-    };
-  uint64_t sample_type;
-  uint64_t read_format;
-  uint32_t disabled:1;
-  uint32_t inherit:1;
-  uint32_t pinned:1;
-  uint32_t exclusive:1;
-  uint32_t exclude_user:1;
-  uint32_t exclude_kernel:1;
-  uint32_t exclude_hv:1;
-  uint32_t exclude_idle:1;
-  uint32_t mmap:1;
-  uint32_t comm:1;
-  uint32_t freq:1;
-  uint32_t inherit_stat:1;
-  uint32_t enable_on_exec:1;
-  uint32_t task:1;
-  uint32_t watermark:1;
-  uint32_t context_switch:1;
-  uint32_t reserved_1:16;
-  uint32_t reserved_2;
-  union
-    {
-      uint32_t wakeup_events;
-      uint32_t wakeup_watermark;
-    };
-  union
-    {
-      uint64_t config1;
-    };
-};
-
-struct perf_event_s
-{
-  /* Placement: which CPU the event belongs to and currently runs on */
-
-  int cpu;                                  /* CPU number this event belongs to */
-
-#ifdef CONFIG_SMP
-  int oncpu;                                /* CPU number this event running on */
-#endif
-
-  /* State and sampling scope */
-
-  int state;                                /* Event state */
-  int attach_state;                         /* Attach states for this event */
-  pid_t exclude_pid;                        /* Skip samples from this pid
-                                             * (INVALID_PROCESS_ID = off) */
-
-  /* Counters */
-
-  atomic64_t count;                         /* Count vaule for this event */
-  uint64_t child_count;                     /* Detached child events count */
-  uint32_t sibling_num;                     /* sibling number for sibling_list */
-
-  /* Configuration and PMU binding */
-
-  struct perf_event_attr_s attr;            /* Perf event attr */
-  FAR struct pmu_s *pmu;                    /* PMU entry this event used */
-  FAR struct perf_event_context_s *ctx;     /* Event context this event belongs to */
-  FAR struct pmu_event_context_s *pmuctx;   /* PMU event context */
-  struct hw_perf_event_s hw;                /* Performance event hardware details */
-
-  /* Linkage: this event is threaded onto several lists at once -
-   * its context (event_node/group_node), its group (sibling_list),
-   * the inherit chain (child_list) and the software PMU (sw_list).
-   */
-
-  struct list_node event_node;              /* Connect to event_list in perf_event_context_s */
-  struct list_node group_node;              /* Connect to group_list in perf_event_context_s */
-  struct list_node sibling_list;            /* Used for list event in one group */
-  struct list_node child_list;              /* Used for list inherit group leader event */
-  struct list_node sw_list;                 /* Used for list event in swevent_manager_s */
-  mutex_t child_mutex;                      /* Mutex for child_list */
-  FAR struct perf_event_s *group_leader;    /* Indicate the group leader of this event */
-  FAR struct perf_event_s *parent_event;    /* Indicate the parent event of this event */
-
-  /* File-descriptor side: identity, sample buffer and poll waiter */
-
-  uint64_t id;                              /* Event id */
-  FAR struct perf_buffer_s *buf;
-  FAR struct pollfd *pfd;
-};
-
-struct perf_event_context_s
-{
-  struct list_node event_list;   /* Used for list perf event */
-  struct list_node group_list;   /* Used for list group leader event */
-  struct list_node pmu_ctx_list; /* Used for list PMU context */
-  spinlock_t lock;               /* Lock for pref event context */
-  FAR struct tcb_s *tcb;         /* The tcb context belongs to */
-  uint32_t active_num;           /* Active event in this context */
-};
-
-struct pmu_event_context_s
-{
-  FAR struct pmu_s *pmu;
-  FAR struct perf_event_context_s *ctx;
-  struct list_node pmu_ctx_node;
-  int refcount;
-};
-
-struct pmu_cpu_context_s
-{
-  struct pmu_event_context_s pmuctx;
-};
-
-struct pmu_ops_s
-{
-  CODE void (*pmu_enable)(FAR struct pmu_s *pmu);
-  CODE void (*pmu_disable)(FAR struct pmu_s *pmu);
-  CODE int (*event_init)(FAR struct perf_event_s *event);
-  CODE int (*event_add)(FAR struct perf_event_s *event, int flags);
-  CODE void (*event_del)(FAR struct perf_event_s *event, int flags);
-  CODE int (*event_start)(FAR struct perf_event_s *event, int flags);
-  CODE int (*event_stop)(FAR struct perf_event_s *event, int flags);
-  CODE int (*event_read)(FAR struct perf_event_s *event);
-  CODE int (*event_idx)(FAR struct perf_event_s *event);
-  CODE int (*event_match)(FAR struct perf_event_s *event);
-};
-
-struct pmu_s
-{
-  struct list_node node;
-  FAR const char *name;
-  FAR struct pmu_ops_s *ops;
-  struct pmu_cpu_context_s cpu_pmu_ctx[CONFIG_SMP_NCPUS];
-};
+/* Sample-record wire format (perf.data ABI, shared with the perf tool).
+ *
+ * The following enums and struct describe what the mmap'd ring buffer and
+ * captured records contain; they are the on-the-wire ABI used by the perf
+ * tool to parse perf.data, distinct from the runtime event configuration
+ * and control interface below.
+ */
 
 enum perf_event_sample_format_e
 {
@@ -725,25 +579,163 @@ struct perf_event_header_s
   uint16_t  size;
 };
 
+/* Opaque to consumers of this header: the layout is private to sched/perf
+ * (see sched/perf/perf.h).  Both perf_event_s and pmu_event_context_s
+ * reference it only by pointer.
+ */
+
+struct perf_event_context_s;
+
+struct hw_perf_event_s
+{
+  /* Hardware */
+
+  struct
+    {
+      unsigned long config_base; /* Deposit event number and type */
+      int idx;                   /* Event index */
+      int flags;                 /* Event flags */
+    };
+  int state;                     /* Event status */
+  atomic64_t prev_count;         /* Value of the previous count */
+  atomic64_t last_period;        /* Last programmed period */
+  atomic64_t left_period;        /* Remaining period until overflow */
+  struct hrtimer_s timer;
+};
+
+struct perf_event_attr_s
+{
+  uint32_t type;
+  uint32_t size;
+  uint64_t config;
+  union
+    {
+      uint64_t sample_period;
+      uint64_t sample_freq;
+    };
+  uint64_t sample_type;
+  uint64_t read_format;
+  uint32_t disabled:1;
+  uint32_t inherit:1;
+  uint32_t pinned:1;
+  uint32_t exclusive:1;
+  uint32_t exclude_user:1;
+  uint32_t exclude_kernel:1;
+  uint32_t exclude_hv:1;
+  uint32_t exclude_idle:1;
+  uint32_t mmap:1;
+  uint32_t comm:1;
+  uint32_t freq:1;
+  uint32_t inherit_stat:1;
+  uint32_t enable_on_exec:1;
+  uint32_t task:1;
+  uint32_t watermark:1;
+  uint32_t context_switch:1;
+  uint32_t reserved_1:16;
+  uint32_t reserved_2;
+  union
+    {
+      uint32_t wakeup_events;
+      uint32_t wakeup_watermark;
+    };
+  union
+    {
+      uint64_t config1;
+    };
+};
+
+struct perf_event_s
+{
+  /* Placement: which CPU the event belongs to and currently runs on */
+
+  int cpu;                                  /* CPU number this event belongs to */
+
+#ifdef CONFIG_SMP
+  int oncpu;                                /* CPU number this event running on */
+#endif
+
+  /* State and sampling scope */
+
+  int state;                                /* Event state */
+  int attach_state;                         /* Attach states for this event */
+  pid_t exclude_pid;                        /* Skip samples from this pid
+                                             * (INVALID_PROCESS_ID = off) */
+
+  /* Counters */
+
+  atomic64_t count;                         /* Count vaule for this event */
+  uint64_t child_count;                     /* Detached child events count */
+  uint32_t sibling_num;                     /* sibling number for sibling_list */
+
+  /* Configuration and PMU binding */
+
+  struct perf_event_attr_s attr;            /* Perf event attr */
+  FAR struct pmu_s *pmu;                    /* PMU entry this event used */
+  FAR struct perf_event_context_s *ctx;     /* Event context this event belongs to */
+  FAR struct pmu_event_context_s *pmuctx;   /* PMU event context */
+  struct hw_perf_event_s hw;                /* Performance event hardware details */
+
+  /* Linkage: this event is threaded onto several lists at once -
+   * its context (event_node/group_node), its group (sibling_list),
+   * the inherit chain (child_list) and the software PMU (sw_list).
+   */
+
+  struct list_node event_node;              /* Connect to event_list in perf_event_context_s */
+  struct list_node group_node;              /* Connect to group_list in perf_event_context_s */
+  struct list_node sibling_list;            /* Used for list event in one group */
+  struct list_node child_list;              /* Used for list inherit group leader event */
+  struct list_node sw_list;                 /* Used for list event in swevent_manager_s */
+  mutex_t child_mutex;                      /* Mutex for child_list */
+  FAR struct perf_event_s *group_leader;    /* Indicate the group leader of this event */
+  FAR struct perf_event_s *parent_event;    /* Indicate the parent event of this event */
+
+  /* File-descriptor side: identity, sample buffer and poll waiter */
+
+  uint64_t id;                              /* Event id */
+  FAR struct perf_buffer_s *buf;
+  FAR struct pollfd *pfd;
+};
+
+struct pmu_event_context_s
+{
+  FAR struct pmu_s *pmu;
+  FAR struct perf_event_context_s *ctx;
+  struct list_node pmu_ctx_node;
+  int refcount;
+};
+
+struct pmu_cpu_context_s
+{
+  struct pmu_event_context_s pmuctx;
+};
+
+struct pmu_ops_s
+{
+  CODE void (*pmu_enable)(FAR struct pmu_s *pmu);
+  CODE void (*pmu_disable)(FAR struct pmu_s *pmu);
+  CODE int (*event_init)(FAR struct perf_event_s *event);
+  CODE int (*event_add)(FAR struct perf_event_s *event, int flags);
+  CODE void (*event_del)(FAR struct perf_event_s *event, int flags);
+  CODE int (*event_start)(FAR struct perf_event_s *event, int flags);
+  CODE int (*event_stop)(FAR struct perf_event_s *event, int flags);
+  CODE int (*event_read)(FAR struct perf_event_s *event);
+  CODE int (*event_idx)(FAR struct perf_event_s *event);
+  CODE int (*event_match)(FAR struct perf_event_s *event);
+};
+
+struct pmu_s
+{
+  struct list_node node;
+  FAR const char *name;
+  FAR struct pmu_ops_s *ops;
+  struct pmu_cpu_context_s cpu_pmu_ctx[CONFIG_SMP_NCPUS];
+};
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
-/****************************************************************************
- * Name: perf_event_init
- *
- * Description:
- *   Perf event initialization
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Init result
- *
- ****************************************************************************/
-
-int perf_event_init(void);
+/* Application ABI: userspace syscall interface. */
 
 /****************************************************************************
  * Name: perf_event_open
@@ -765,6 +757,11 @@ int perf_event_init(void);
 
 int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
                     int cpu, int group_fd, unsigned long flags);
+
+/* Kernel integration API: called by arch/ PMU drivers and fs/procfs.
+ * (Task and scheduler hooks are private to the kernel; see
+ * sched/perf/perf.h.)
+ */
 
 /****************************************************************************
  * Name: perf_event_overflow
@@ -814,69 +811,5 @@ int perf_pmu_register(FAR struct pmu_s *pmu, FAR const char *name);
  ****************************************************************************/
 
 void perf_pmu_unregister(FAR struct pmu_s *pmu);
-
-/****************************************************************************
- * Name: perf_event_task_init
- *
- * Description:
- *   Perf event task init, call during task initialization.
- *
- * Input Parameters:
- *   tcb   - Task for init.
- *
- * Returned Value:
- *   Initialization result
- *
- ****************************************************************************/
-
-int perf_event_task_init(FAR struct tcb_s *tcb);
-
-/****************************************************************************
- * Name: perf_event_task_exit
- *
- * Description:
- *   Perf event task free
- *
- * Input Parameters:
- *   tcb   - Task for free.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void perf_event_task_exit(FAR struct tcb_s *tcb);
-
-/****************************************************************************
- * Name: perf_event_task_sched_in
- *
- * Description:
- *   Record task sched in event
- *
- * Input Parameters:
- *   tcb - Refers to the head task which will be executed.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void perf_event_task_sched_in(FAR struct tcb_s *tcb);
-
-/****************************************************************************
- * Name: perf_event_task_sched_out
- *
- * Description:
- *   Record task sched out event
- *
- * Input Parameters:
- *   tcb - Refers to the running task which will be blocked.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void perf_event_task_sched_out(FAR struct tcb_s *tcb);
 
 #endif /* __INCLUDE_NUTTX_PERF_H */

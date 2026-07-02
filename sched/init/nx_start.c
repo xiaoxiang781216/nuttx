@@ -54,6 +54,7 @@
 
 #include "task/task.h"
 #include "sched/sched.h"
+#include "perf/perf.h"
 #include "signal/signal.h"
 #include "semaphore/semaphore.h"
 #include "mqueue/mqueue.h"

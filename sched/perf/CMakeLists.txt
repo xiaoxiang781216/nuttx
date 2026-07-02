@@ -24,8 +24,16 @@
 
 set(CSRCS)
 if(CONFIG_PERF_EVENTS)
-  list(APPEND CSRCS perf.c perf_swevent.c perf_sample.c perf_fops.c
-                    perf_pmu.c perf_context.c)
+  list(
+    APPEND
+    CSRCS
+    perf.c
+    perf_event.c
+    perf_swevent.c
+    perf_sample.c
+    perf_fops.c
+    perf_pmu.c
+    perf_context.c)
 endif()
 
 target_sources(sched PRIVATE ${CSRCS})

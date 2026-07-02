@@ -41,8 +41,8 @@
  ****************************************************************************/
 
 /* Cumulative count of an event including its detached children.  Shared
- * between the core framework (perf.c) and the file-operation layer
- * (perf_fops.c).
+ * across the sched/perf layers that read counters back (perf_event.c,
+ * perf_fops.c, perf_swevent.c, perf_resident.c).
  */
 
 #define PERF_GET_COUNT(event) \
@@ -92,6 +92,22 @@ struct perf_sample_data_s
   uint64_t stream_id;
 };
 
+/* Per-task (or per-CPU) event container.  Only the perf core and its split
+ * layers (perf.c, perf_context.c, perf_fops.c, perf_resident.c) touch its
+ * fields; perf_event_s and pmu_event_context_s hold it by pointer and the
+ * tcb holds it by pointer, so it is private to sched/perf.
+ */
+
+struct perf_event_context_s
+{
+  struct list_node event_list;   /* Used for list perf event */
+  struct list_node group_list;   /* Used for list group leader event */
+  struct list_node pmu_ctx_list; /* Used for list PMU context */
+  spinlock_t lock;               /* Lock for pref event context */
+  FAR struct tcb_s *tcb;         /* The tcb context belongs to */
+  uint32_t active_num;           /* Active event in this context */
+};
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -138,6 +154,19 @@ void perf_context_detach(FAR struct perf_event_s *event,
                          FAR struct perf_event_context_s *ctx);
 void perf_free_event(FAR struct perf_event_s *event);
 
+/* Task and scheduler integration entry points implemented in perf.c and
+ * called from the sched/ core: perf_event_init() once at startup,
+ * perf_event_task_init()/perf_event_task_exit() at task creation/teardown,
+ * and perf_event_task_sched_in()/perf_event_task_sched_out() on every
+ * context switch.
+ */
+
+int perf_event_init(void);
+int perf_event_task_init(FAR struct tcb_s *tcb);
+void perf_event_task_exit(FAR struct tcb_s *tcb);
+void perf_event_task_sched_in(FAR struct tcb_s *tcb);
+void perf_event_task_sched_out(FAR struct tcb_s *tcb);
+
 /* File-operation layer implemented in perf_fops.c.  perf_install_fd()
  * allocates a file descriptor bound to the perf event and is called from
  * perf_event_open() in the core framework.
@@ -167,5 +196,22 @@ FAR struct pmu_event_context_s *
 perf_get_pmu_context(FAR struct pmu_s *pmu, FAR struct perf_event_s *event,
                      FAR struct perf_event_context_s *ctx);
 void perf_free_pmu_context(FAR struct pmu_event_context_s *pmu_ctx);
+
+/* Event object lifecycle implemented in perf_event.c: allocation, creation,
+ * fork-time inheritance and group/child teardown.  Shared with the core
+ * framework (perf.c) which orchestrates open/enable/disable/sched.
+ */
+
+FAR struct perf_event_s *
+perf_event_create(FAR struct perf_event_attr_s *attr, int cpu,
+                  FAR struct tcb_s *tcb,
+                  FAR struct perf_event_s *group_leader, FAR int *err);
+void perf_add_event_to_count(FAR struct perf_event_s *event,
+                             FAR struct perf_event_context_s *ctx);
+int perf_inherit_group_events(FAR struct perf_event_s *group_leader,
+                              FAR struct tcb_s *parent,
+                              FAR struct tcb_s *child);
+void perf_group_detach(FAR struct perf_event_s *event);
+void perf_child_detach(FAR struct perf_event_s *event);
 
 #endif /* __SCHED_PERF_PERF_H */

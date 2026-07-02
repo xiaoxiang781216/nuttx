@@ -39,6 +39,7 @@
 #endif
 
 #include "sched/sched.h"
+#include "perf/perf.h"
 
 /****************************************************************************
  * Public Functions

@@ -23,8 +23,8 @@
 # Add perf event framework files to the build
 
 ifeq ($(CONFIG_PERF_EVENTS),y)
-CSRCS += perf.c perf_swevent.c perf_sample.c perf_fops.c perf_pmu.c
-CSRCS += perf_context.c
+CSRCS += perf.c perf_event.c perf_swevent.c perf_sample.c perf_fops.c
+CSRCS += perf_pmu.c perf_context.c
 endif
 
 # Include perf build support

@@ -43,6 +43,7 @@
 #endif
 
 #include "sched/sched.h"
+#include "perf/perf.h"
 #include "group/group.h"
 #include "signal/signal.h"
 #include "task/task.h"
