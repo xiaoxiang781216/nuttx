@@ -94,6 +94,7 @@ config DRIVERS_NOTE_STATS
 config DRIVERS_NOTERAM
 	bool "Note RAM driver"
 	select DRIVERS_NOTE
+	select DRIVERS_NOTE_TEXT_DUMP
 	default SCHED_INSTRUMENTATION
 	---help---
 		If this option is selected, then in-memory buffering logic is
@@ -151,14 +152,6 @@ config DRIVERS_NOTERAM_DEFAULT_NOOVERWRITE
 		Disables overwriting old notes in the circular buffer when the buffer
 		is full by default. This is useful to keep instrumentation data of the
 		beginning of a system boot.
-
-config DRIVERS_NOTERAM_TEXT_DUMP
-	bool "Enable text format read mode"
-	select DRIVERS_NOTE_TEXT_DUMP
-	default y
-	---help---
-		Enable human-readable text dump via read(). When disabled, only
-		binary mode (NOTE_MODE_READ_BINARY) is available, saving code size.
 
 config DRIVERS_NOTERAM_POLLTIMEOUT_MS
 	int "The timeout ms if poll requested and no data avaliable"

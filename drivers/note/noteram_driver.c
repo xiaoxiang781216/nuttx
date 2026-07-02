@@ -77,12 +77,10 @@ struct noteram_driver_s
 
 struct noteram_dump_context_s
 {
-  struct note_dump_stream_s ctx;  /* Shared per-CPU parse context */
-  unsigned int mode;
-  uint32_t read;
-  unsigned int threshold;   /* Per-file poll threshold */
-  FAR struct pollfd *pfd;   /* Per-file pollfd pointer */
-  dq_entry_t poll_node;     /* Poll list node */
+  struct note_dump_stream_s stream;  /* Per-file parse/read context */
+  unsigned int threshold;            /* Per-file poll threshold */
+  FAR struct pollfd *pfd;            /* Per-file pollfd pointer */
+  dq_entry_t poll_node;              /* Poll list node */
 };
 
 /****************************************************************************
@@ -241,14 +239,16 @@ static void noteram_timeout_handler(wdparm_t arg)
   dq_for_every_entry(&drv->poll_list, ctx,
                      struct noteram_dump_context_s, poll_node)
     {
-      /* Relaxed read of ctx->read and ctx->threshold:
+      FAR struct note_dump_stream_s *stream = &ctx->stream;
+
+      /* Relaxed read of ctx->stream.pos and ctx->threshold:
        * we already hold drv lock which serializes with
        * poll_list add/remove, so ctx stays valid.  A stale value
        * only causes a harmless extra or missed notification.
        */
 
       if (ctx->pfd &&
-          noteram_unread_length(drv, ctx->read) >= ctx->threshold)
+          noteram_unread_length(drv, stream->pos) >= ctx->threshold)
         {
           rspin_unlock_irqrestore_notrace(&drv->lock, flags);
           poll_notify(&ctx->pfd, 1, POLLIN);
@@ -293,8 +293,10 @@ static int noteram_open(FAR struct file *filep)
   ctx->threshold = sizeof(struct note_common_s);
 
   filep->f_priv = ctx;
-#ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
-  note_dump_stream(&ctx->ctx, NULL, false);
+#ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
+  note_dump_stream(&ctx->stream, drv->ring, false);
+#else
+  note_dump_stream(&ctx->stream, drv->ring, true);
 #endif
   return OK;
 }
@@ -334,44 +336,6 @@ int noteram_close(FAR struct file *filep)
 }
 
 /****************************************************************************
- * Name: noteram_get
- ****************************************************************************/
-
-#ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
-static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
-                           FAR uint8_t *buffer, size_t buflen,
-                           FAR uint32_t *pread)
-{
-  uint32_t tmp = *pread;
-  uint8_t nlen;
-  ssize_t n;
-
-  if (ring_mpmc_peek(drv->ring, &nlen, 1, &tmp) != 1)
-    {
-      return 0;
-    }
-
-  if (nlen == 0)
-    {
-      return -EIO;
-    }
-
-  if (nlen > buflen)
-    {
-      return -EFBIG;
-    }
-
-  n = ring_mpmc_peek(drv->ring, buffer, nlen, pread);
-  if (n != nlen)
-    {
-      return -EAGAIN;
-    }
-
-  return n;
-}
-#endif
-
-/****************************************************************************
  * Name: noteram_read
  ****************************************************************************/
 
@@ -379,44 +343,8 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
                             size_t buflen)
 {
   FAR struct noteram_dump_context_s *ctx = filep->f_priv;
-  FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
 
-#ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
-  if (ctx->mode == NOTE_MODE_READ_BINARY)
-#endif
-    {
-      return ring_mpmc_peek(drv->ring, buffer, buflen, &ctx->read);
-    }
-#ifdef CONFIG_DRIVERS_NOTERAM_TEXT_DUMP
-  else
-    {
-      FAR struct lib_memoutstream_s stream;
-      ssize_t ret = 0;
-
-      lib_memoutstream(&stream, buffer, buflen);
-
-      do
-        {
-          struct note_max_s note;
-
-          /* Get the next note (removing it from the buffer) */
-
-          ret = noteram_get(drv, (FAR uint8_t *)&note, sizeof(note),
-                            &ctx->read);
-          if (ret <= 0)
-            {
-              break;
-            }
-
-          /* Parse notes into text format */
-
-          ret = note_dump_one(&ctx->ctx, &note, &stream.common);
-        }
-      while (ret == 0 && stream.common.nput < buflen);
-
-      return stream.common.nput;
-    }
-#endif
+  return lib_stream_gets(&ctx->stream, buffer, buflen);
 }
 
 /****************************************************************************
@@ -501,7 +429,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            *(FAR unsigned int *)arg = ctx->mode;
+            *(FAR unsigned int *)arg = ctx->stream.binary ?
+                                       NOTE_MODE_READ_BINARY :
+                                       NOTE_MODE_READ_ASCII;
             ret = OK;
           }
         break;
@@ -518,7 +448,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            ctx->mode = arg;
+            ctx->stream.binary = (arg == NOTE_MODE_READ_BINARY);
             ret = OK;
           }
         break;
@@ -562,7 +492,8 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            *(FAR unsigned int *)arg = noteram_unread_length(drv, ctx->read);
+            *(FAR unsigned int *)arg =
+              noteram_unread_length(drv, ctx->stream.pos);
             ret = OK;
           }
         break;
@@ -666,6 +597,8 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   if (setup)
     {
+      FAR struct note_dump_stream_s *stream = &ctx->stream;
+
       if (ctx->pfd != NULL)
         {
           rspin_unlock_irqrestore_notrace(&drv->lock, flags);
@@ -675,7 +608,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
       ctx->pfd = fds;
       dq_addlast(&ctx->poll_node, &drv->poll_list);
 
-      if (noteram_unread_length(drv, ctx->read) >= ctx->threshold)
+      if (noteram_unread_length(drv, stream->pos) >= ctx->threshold)
         {
           rspin_unlock_irqrestore_notrace(&drv->lock, flags);
           poll_notify(&fds, 1, POLLIN);
@@ -780,8 +713,10 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
       dq_for_every_entry(&drv->poll_list, ctx,
                           struct noteram_dump_context_s, poll_node)
         {
+          FAR struct note_dump_stream_s *stream = &ctx->stream;
+
           if (ctx->pfd &&
-              noteram_unread_length(drv, ctx->read) >= ctx->threshold)
+              noteram_unread_length(drv, stream->pos) >= ctx->threshold)
             {
               rspin_unlock_irqrestore_notrace(&drv->lock, flags);
               poll_notify(&ctx->pfd, 1, POLLIN);
