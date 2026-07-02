@@ -151,12 +151,10 @@ void up_idle(void)
 
   arm_smccc_smc(ARM_SMCCC_NUTTX_TEE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
 
-  irq_restore(flags);
-
   asm("dsb sy");
   asm("wfi");
-
-#elif defined(CONFIG_ARCH_TRUSTZONE_NONSECURE) && defined(CONFIG_ARM_HAVE_EL3_MONITOR)
+  irq_restore(flags);
+#elif defined(CONFIG_ARCH_TRUSTZONE_NONSECURE) && (CONFIG_ARM_GIC_VERSION > 2)
 
   /* REE idle: no tasks ready, yield CPU to TEE unconditionally.
    * TEE will WFI. When a NS interrupt fires, EL3 preempts TEE
