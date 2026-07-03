@@ -32,6 +32,7 @@
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #  include <stdbool.h>
+#  include <sys/types.h>
 #endif
 
 /* Now include architecture-specific types */
@@ -318,6 +319,27 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
 
 int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
                       FAR void *arg, int priority);
+
+/****************************************************************************
+ * Name: irq_sched_wqueue
+ *
+ * Description:
+ *   Schedule the work handler for an IRQ that was previously attached via
+ *   irq_attach_wqueue().  This queues the isrwork callback to the work
+ *   queue with the specified delay, causing it to execute in thread
+ *   context on the IRQ's designated work queue.
+ *
+ * Input Parameters:
+ *   irq   - The IRQ number that was previously attached.
+ *   delay - Delay in clock ticks before the work handler runs.
+ *           0 means run as soon as possible.
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int irq_sched_wqueue(int irq, clock_t delay);
 
 #ifdef CONFIG_IRQCHAIN
 int irqchain_detach(int irq, xcpt_t isr, FAR void *arg);

@@ -64,6 +64,19 @@ typedef irq_work_stack_t irq_nwork_stack_t[CONFIG_IRQ_NWORKS];
 typedef FAR struct kwork_wqueue_s *irq_nworkq_t[CONFIG_IRQ_NWORKS];
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
+static DEFINE_PER_CPU_BSS_BMP(struct irq_work_info_s,
+g_irq_work_vector[CONFIG_ARCH_NUSER_INTERRUPTS]);
+#else
+static DEFINE_PER_CPU_BSS_BMP(struct irq_work_info_s,
+g_irq_work_vector[NR_IRQS]);
+#endif
+#define g_irq_work_vector this_cpu_var_bmp(g_irq_work_vector)
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -175,16 +188,6 @@ static int irq_default_handler(int irq, FAR void *context, FAR void *arg)
 int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
                       FAR void *arg, int priority)
 {
-#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
-  static DEFINE_PER_CPU_BSS_BMP(struct irq_work_info_s,
-        g_irq_work_vector[CONFIG_ARCH_NUSER_INTERRUPTS]);
-  #define g_irq_work_vector this_cpu_var_bmp(g_irq_work_vector)
-#else
-  static DEFINE_PER_CPU_BSS_BMP(struct irq_work_info_s,
-        g_irq_work_vector[NR_IRQS]);
-  #define g_irq_work_vector this_cpu_var_bmp(g_irq_work_vector)
-#endif
-
   FAR struct irq_work_info_s *info;
   int ret = OK;
 #if NR_IRQS > 0
@@ -220,6 +223,46 @@ int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
 
           irq_attach(irq, irq_default_handler, info);
         }
+    }
+#endif /* NR_IRQS */
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: irq_sched_wqueue
+ *
+ * Description:
+ *   Schedule the work handler for an IRQ that was previously attached via
+ *   irq_attach_wqueue().  This queues the isrwork callback to the work
+ *   queue with the specified delay, causing it to execute in thread
+ *   context on the IRQ's designated work queue.
+ *
+ * Input Parameters:
+ *   irq   - The IRQ number that was previously attached.
+ *   delay - Delay in clock ticks before the work handler runs.
+ *           0 means run as soon as possible.
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int irq_sched_wqueue(int irq, clock_t delay)
+{
+  int ret = OK;
+  FAR struct irq_work_info_s *info;
+#if NR_IRQS > 0
+  int ndx = IRQ_TO_NDX(irq);
+  if (ndx < 0)
+    {
+      ret = ndx;
+    }
+  else
+    {
+      info = &g_irq_work_vector[ndx];
+      ret = work_queue_wq(info->wqueue, &info->work,
+                          irq_work_handler, info, delay);
     }
 #endif /* NR_IRQS */
 
