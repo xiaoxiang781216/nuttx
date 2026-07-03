@@ -374,6 +374,9 @@ int virtio_crypto_asym_get_alg(int kalg)
       case CRK_ECDSA_SECP256R1_VERIFY:
       case CRK_ECDSA_SECP256R1_GENKEY:
         return VIRTIO_CRYPTO_AKCIPHER_ECDSA;
+      case CRK_ECDH_GEN_PUBLIC:
+      case CRK_ECDH_COMPUTE_SHARED:
+        return VIRTIO_CRYPTO_AKCIPHER_ECDH;
     }
 
   return -EINVAL;

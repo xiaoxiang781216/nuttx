@@ -1402,6 +1402,139 @@ static int rpmsg_crypto_freesession_handler(FAR struct rpmsg_endpoint *ept,
   return rpmsg_send(ept, msg, sizeof(*msg));
 }
 
+static int
+rpmsg_crypto_kprocess_ecdh(FAR struct rpmsg_endpoint *ept,
+                           FAR struct rpmsg_crypto_kprocess_s *msg,
+                           size_t len, uint32_t src, FAR void *priv)
+{
+  FAR struct rpmsg_crypto_server_data_s *rcsdata;
+  FAR struct rpmsg_crypto_kprocess_s *rsp;
+  FAR struct crparam *x;
+  FAR struct crparam *y;
+  FAR struct crparam *d;
+  FAR struct cryptkop *krp;
+  uint32_t data_len = 0;
+  uint32_t peerlen;
+  uint32_t keylen;
+  uint32_t space;
+  int ret;
+
+  rcsdata = rpmsg_crypto_data_alloc();
+  if (rcsdata == NULL)
+    {
+      rpmsgerr("Failed to allocate kprocess context\n");
+      msg->header.result = -ENOMEM;
+      return rpmsg_send(ept, &msg->header, sizeof(msg->header));
+    }
+
+  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  if (rsp == NULL)
+    {
+      rpmsgerr("get tx payload failed or no enough space\n");
+      rpmsg_crypto_data_free(rcsdata);
+      msg->header.result = -ENOMEM;
+      return rpmsg_send(ept, &msg->header, sizeof(msg->header));
+    }
+
+  rsp->header = msg->header;
+  rsp->ctrl = msg->ctrl;
+  rsp->data = msg->data;
+
+  krp = &rcsdata->krp;
+  krp->krp_flags = msg->data.header.flag;
+  switch (msg->data.header.opcode)
+    {
+      case VIRTIO_CRYPTO_AKCIPHER_GENKEY:
+
+        /* out param[0]=d, param[1]=x, param[2]=y into rsp->buf */
+
+        d = &krp->krp_param[0];
+        x = &krp->krp_param[1];
+        y = &krp->krp_param[2];
+
+        krp->krp_op = CRK_ECDH_GEN_PUBLIC;
+        krp->krp_iparams = 0;
+        krp->krp_oparams = 4;
+
+        /* Private key length from src, public key (x || y) from dst. */
+
+        keylen = msg->data.op_flf.akcipher.src_data_len;
+        d->crp_p = rsp->buf;
+        d->crp_nbits = keylen * 8;
+        data_len += keylen;
+
+        keylen = msg->data.op_flf.akcipher.dst_data_len;
+        x->crp_p = rsp->buf + data_len;
+        x->crp_nbits = keylen / 2 * 8;
+        data_len += keylen / 2;
+        y->crp_p = rsp->buf + data_len;
+        y->crp_nbits = keylen / 2 * 8;
+        data_len += keylen / 2;
+        break;
+      case VIRTIO_CRYPTO_AKCIPHER_DERIVE:
+
+        /* in param[0]=priv, param[1]=peer.x, param[2]=peer.y;
+         * out param[3]=shared secret into rsp->buf.
+         */
+
+        d = &krp->krp_param[0];
+        x = &krp->krp_param[1];
+        y = &krp->krp_param[2];
+
+        krp->krp_op = CRK_ECDH_COMPUTE_SHARED;
+        krp->krp_iparams = 3;
+        krp->krp_oparams = 1;
+
+        /* Private key (d) length from ctrl.key_len; peer public key
+         * (x || y) length from src_data_len (split in half). Buffer
+         * layout is d || x || y. Mirrors the ECDSA verify handling so
+         * no equal-segment assumption is needed.
+         */
+
+        keylen = msg->ctrl.op_flf.akcipher.key_len;
+        peerlen = msg->data.op_flf.akcipher.src_data_len;
+
+        /* Validate lengths step by step to avoid both unsigned underflow
+         * (len < sizeof(*msg) would wrap the subtraction to a huge value)
+         * and overflow of keylen + peerlen. Each comparison keeps its
+         * left operand within the remaining payload space.
+         */
+
+        if (len < sizeof(*msg) ||
+            keylen > len - sizeof(*msg) ||
+            peerlen > len - sizeof(*msg) - keylen)
+          {
+            ret = -EMSGSIZE;
+            goto err;
+          }
+
+        d->crp_p = (caddr_t)msg->buf;
+        d->crp_nbits = keylen * 8;
+        x->crp_p = (caddr_t)msg->buf + keylen;
+        x->crp_nbits = peerlen / 2 * 8;
+        y->crp_p = (caddr_t)msg->buf + keylen + peerlen / 2;
+        y->crp_nbits = peerlen / 2 * 8;
+
+        krp->krp_param[3].crp_p = rsp->buf;
+        krp->krp_param[3].crp_nbits =
+                        msg->data.op_flf.akcipher.dst_data_len * 8;
+        data_len += msg->data.op_flf.akcipher.dst_data_len;
+        break;
+      default:
+        ret = -EINVAL;
+        goto err;
+    }
+
+  return rpmsg_crypto_kdispatch(rcsdata, ept, msg, rsp,
+                                sizeof(*rsp) + data_len);
+
+err:
+  rsp->header = msg->header;
+  rsp->header.result = ret;
+  rpmsg_crypto_data_free(rcsdata);
+  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp));
+}
+
 /****************************************************************************
  * Name: rpmsg_crypto_kprocess_handler
  ****************************************************************************/
@@ -1418,6 +1551,8 @@ static int rpmsg_crypto_kprocess_handler(FAR struct rpmsg_endpoint *ept,
         return rpmsg_crypto_kprocess_rsa(ept, msg, len, src, priv);
       case VIRTIO_CRYPTO_AKCIPHER_ECDSA:
         return rpmsg_crypto_kprocess_ecdsa(ept, msg, len, src, priv);
+      case VIRTIO_CRYPTO_AKCIPHER_ECDH:
+        return rpmsg_crypto_kprocess_ecdh(ept, msg, len, src, priv);
       default:
         msg->header.result = -ENOTSUP;
         return rpmsg_send(ept, &msg->header, sizeof(msg->header));

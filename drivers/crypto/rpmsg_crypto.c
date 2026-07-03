@@ -1263,6 +1263,144 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
   return OK;
 }
 
+static int rpmsg_crypto_ecdh_process(FAR struct cryptkop *krp)
+{
+  FAR struct virtio_crypto_op_ctrl_req_s *ctrl;
+  FAR struct virtio_crypto_op_data_req_s *data;
+  FAR struct rpmsg_crypto_session_s *session;
+  FAR struct rpmsg_crypto_kprocess_s *msg;
+  FAR struct rpmsg_crypto_s *rdev;
+  FAR struct crparam *x;
+  FAR struct crparam *y;
+  FAR struct crparam *d;
+  uint32_t data_len = 0;
+  uint32_t space;
+  uint32_t sid;
+  int ret;
+
+  rdev = (FAR struct rpmsg_crypto_s *)crypto_driver_get_priv(krp->krp_hid);
+  if (rdev == NULL)
+    {
+      rpmsgerr("Invalid context\n");
+      return -EINVAL;
+    }
+
+  msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
+  if (msg == NULL)
+    {
+      rpmsgerr("No space for payload\n");
+      return -ENOMEM;
+    }
+
+  memset(msg, 0, sizeof(*msg));
+  ctrl = &msg->ctrl;
+  data = &msg->data;
+  ret = rpmsg_crypto_get_session(rdev);
+  if (ret < 0)
+    {
+      rpmsgerr("No available session slot\n");
+      rpmsg_release_tx_buffer(&rdev->ept, msg);
+      return ret;
+    }
+
+  sid = ret;
+  session = &rdev->sessions[sid];
+
+  ctrl->header.algo = virtio_crypto_asym_get_alg(krp->krp_op);
+  ctrl->op_flf.akcipher.algo = ctrl->header.algo;
+  ctrl->op_flf.akcipher.algo_flf.ecdsa.curve_id =
+                        VIRTIO_CRYPTO_CURVE_NIST_P256;
+
+  data->header.algo = ctrl->header.algo;
+  data->header.flag = krp->krp_flags;
+  switch (krp->krp_op)
+    {
+      case CRK_ECDH_GEN_PUBLIC:
+
+        /* out param[0]=d, param[1]=x, param[2]=y */
+
+        d = &krp->krp_param[0];
+        x = &krp->krp_param[1];
+        y = &krp->krp_param[2];
+
+        data->header.opcode = VIRTIO_CRYPTO_AKCIPHER_GENKEY;
+        data->op_flf.akcipher.src_data_len = d->crp_nbits / 8;
+        data->op_flf.akcipher.dst_data_len = (x->crp_nbits +
+                                              y->crp_nbits) / 8;
+        break;
+      case CRK_ECDH_COMPUTE_SHARED:
+
+        /* in param[0]=priv, param[1]=peer.x, param[2]=peer.y;
+         * out param[3]=shared secret.
+         */
+
+        d = &krp->krp_param[0];
+        x = &krp->krp_param[1];
+        y = &krp->krp_param[2];
+
+        if (d->crp_p == NULL || x->crp_p == NULL || y->crp_p == NULL)
+          {
+            rpmsg_release_tx_buffer(&rdev->ept, msg);
+            rpmsg_crypto_put_session(rdev, sid);
+            return -EINVAL;
+          }
+
+        if ((d->crp_nbits + x->crp_nbits + y->crp_nbits) / 8 >
+            space - sizeof(*msg))
+          {
+            rpmsg_release_tx_buffer(&rdev->ept, msg);
+            rpmsg_crypto_put_session(rdev, sid);
+            return -EMSGSIZE;
+          }
+
+        /* Private key length carried in ctrl.key_len; peer public key
+         * (x || y) length carried in src_data_len. This avoids assuming
+         * the three segments are equally sized (which only holds for
+         * prime-field curves) and mirrors the ECDSA verify layout.
+         */
+
+        memcpy(msg->buf, d->crp_p, d->crp_nbits / 8);
+        data_len += d->crp_nbits / 8;
+        ctrl->op_flf.akcipher.key_len = d->crp_nbits / 8;
+
+        memcpy(msg->buf + data_len, x->crp_p, x->crp_nbits / 8);
+        data_len += x->crp_nbits / 8;
+        memcpy(msg->buf + data_len, y->crp_p, y->crp_nbits / 8);
+        data_len += y->crp_nbits / 8;
+
+        data->header.opcode = VIRTIO_CRYPTO_AKCIPHER_DERIVE;
+        data->op_flf.akcipher.src_data_len = (x->crp_nbits +
+                                              y->crp_nbits) / 8;
+        data->op_flf.akcipher.dst_data_len =
+                        krp->krp_param[3].crp_nbits / 8;
+        break;
+      default:
+        rpmsg_release_tx_buffer(&rdev->ept, msg);
+        rpmsg_crypto_put_session(rdev, sid);
+        return -EINVAL;
+    }
+
+  session->data = krp;
+
+  ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
+                               RPMSG_CRYPTO_KPROCESS,
+                               sizeof(*msg) + data_len,
+                               !(krp->krp_flags & CRYPTO_F_CBIMM));
+  if (ret < 0)
+    {
+      rpmsgerr("Send msg failed\n");
+      rpmsg_crypto_put_session(rdev, sid);
+      return ret;
+    }
+
+  if (!(krp->krp_flags & CRYPTO_F_CBIMM))
+    {
+      rpmsg_crypto_put_session(rdev, sid);
+    }
+
+  return OK;
+}
+
 static int rpmsg_crypto_kprocess(FAR struct cryptkop *krp)
 {
   switch (virtio_crypto_asym_get_alg(krp->krp_op))
@@ -1271,6 +1409,8 @@ static int rpmsg_crypto_kprocess(FAR struct cryptkop *krp)
         return rpmsg_crypto_rsa_process(krp);
       case VIRTIO_CRYPTO_AKCIPHER_ECDSA:
         return rpmsg_crypto_ecdsa_process(krp);
+      case VIRTIO_CRYPTO_AKCIPHER_ECDH:
+        return rpmsg_crypto_ecdh_process(krp);
     }
 
   return -EINVAL;
@@ -1496,6 +1636,30 @@ static int rpmsg_crypto_kprocess_handler(FAR struct rpmsg_endpoint *ept,
                        msg->buf + krp->krp_param[0].crp_nbits / 8 +
                                   krp->krp_param[1].crp_nbits / 8,
                                   krp->krp_param[3].crp_nbits / 8);
+              }
+
+            break;
+          case VIRTIO_CRYPTO_AKCIPHER_ECDH:
+            if (krp->krp_op == CRK_ECDH_GEN_PUBLIC)
+              {
+                /* d || x || y into param[0], param[1], param[2] */
+
+                memcpy(krp->krp_param[0].crp_p,
+                       msg->buf, krp->krp_param[0].crp_nbits / 8);
+                memcpy(krp->krp_param[1].crp_p,
+                       msg->buf + krp->krp_param[0].crp_nbits / 8,
+                                  krp->krp_param[1].crp_nbits / 8);
+                memcpy(krp->krp_param[2].crp_p,
+                       msg->buf + krp->krp_param[0].crp_nbits / 8 +
+                                  krp->krp_param[1].crp_nbits / 8,
+                                  krp->krp_param[2].crp_nbits / 8);
+              }
+            else
+              {
+                /* shared secret into param[3] */
+
+                memcpy(krp->krp_param[3].crp_p,
+                       msg->buf, krp->krp_param[3].crp_nbits / 8);
               }
 
             break;
@@ -1768,6 +1932,8 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
   kalgs[CRK_ECDSA_SECP256R1_SIGN] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_GENKEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  kalgs[CRK_ECDH_GEN_PUBLIC] = CRYPTO_ALG_FLAG_SUPPORTED;
+  kalgs[CRK_ECDH_COMPUTE_SHARED] = CRYPTO_ALG_FLAG_SUPPORTED;
 
   ret = crypto_kregister(rdev->devid, kalgs, rpmsg_crypto_kprocess);
   if (ret < 0)
