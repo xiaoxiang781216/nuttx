@@ -456,7 +456,7 @@ static int local_getpeername(FAR struct socket *psock,
 
   /* Verify that the socket has been connected */
 
-  if (conn->lc_state != LOCAL_STATE_CONNECTED)
+  if (conn->lc_state != LOCAL_STATE_CONNECTED || peer == NULL)
     {
       return -ENOTCONN;
     }
