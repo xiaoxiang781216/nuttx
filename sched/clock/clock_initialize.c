@@ -181,6 +181,7 @@ static void clock_inittime(FAR const struct timespec *tp)
 
 #ifndef CONFIG_CLOCK_TIMEKEEPING
   struct timespec ts;
+  struct timespec tmp;
   irqstate_t flags;
 
   clock_systime_timespec(&ts);
@@ -193,6 +194,8 @@ static void clock_inittime(FAR const struct timespec *tp)
   else
     {
       clock_basetime(&g_basetime);
+      tmp = g_basetime;
+      tp = &tmp;
     }
 
   /* Adjust base time to hide initial timer ticks. */
@@ -206,7 +209,7 @@ static void clock_inittime(FAR const struct timespec *tp)
     }
 
   spin_unlock_irqrestore(&g_basetime_lock, flags);
-  clock_notifier_call_chain(CLOCK_REALTIME, &g_basetime);
+  clock_notifier_call_chain(CLOCK_REALTIME, tp);
 #else
   clock_inittimekeeping(tp);
 #endif
