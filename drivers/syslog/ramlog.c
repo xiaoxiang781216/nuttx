@@ -379,7 +379,7 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 #ifdef CONFIG_RAMLOG_SYSLOG
   if (priv == &g_ramlog_dev)
     {
-      ring_init(r, CONFIG_RAMLOG_BUFSIZE);
+      ring_mpmc_init(r, CONFIG_RAMLOG_BUFSIZE);
     }
 #endif
 
@@ -728,7 +728,7 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
     {
       /* Initialize the non-zero values in the RAM logging device structure */
 
-      priv->rl_ring = ring_init(buffer, buflen);
+      priv->rl_ring = ring_mpmc_init(buffer, buflen);
       if (priv->rl_ring == NULL)
         {
           kmm_free(priv);

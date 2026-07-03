@@ -667,11 +667,11 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
 
       if (atomic_cmpxchg(&g_noteram_init, &expected, 1))
         {
-          ring_init(drv->ring, CONFIG_DRIVERS_NOTERAM_BUFSIZE);
+          ring_mpmc_init(drv->ring, CONFIG_DRIVERS_NOTERAM_BUFSIZE);
         }
       else
         {
-          /* Do not re-enter ring_init(); just wait for the ring to be
+          /* Do not re-enter ring_mpmc_init(); just wait for the ring to be
            * ready so the metadata/index stores are visible to us.
            */
 
@@ -911,7 +911,8 @@ noteram_initialize_with_buffer(FAR const char *devname,
                                FAR void *buffer, size_t bufsize,
                                bool overwrite, bool regnote)
 {
-  return noteram_initialize_with_ring(devname, ring_init(buffer, bufsize),
+  return noteram_initialize_with_ring(devname,
+                                      ring_mpmc_init(buffer, bufsize),
                                       overwrite, regnote);
 }
 
