@@ -80,6 +80,11 @@
  * Description: Set the interrput mask.
  * Argument:    Whether to enable interrupt mask
  *              true=enable interrupt mask; false=disable interrupt mask
+ *
+ * Command:     GPIOC_TOGGLE
+ * Description: Toggle the value of an output GPIO and return the new level.
+ * Argument:    A pointer to a bool value to receive the result:
+ *              false=low value; true=high value.
  */
 
 #define GPIOC_WRITE       _GPIOC(1)
@@ -90,6 +95,7 @@
 #define GPIOC_SETPINTYPE  _GPIOC(6)
 #define GPIOC_SETDEBOUNCE _GPIOC(7)
 #define GPIOC_SETMASK     _GPIOC(8)
+#define GPIOC_TOGGLE      _GPIOC(9)
 
 /****************************************************************************
  * Public Types
@@ -139,6 +145,9 @@ typedef CODE int (*pin_interrupt_t)(FAR struct gpio_dev_s *dev, uint8_t pin);
  *   - go_setpintype.  Required for all pin types.
  *   - go_setdebounce.  Required for all pin types.
  *   - go_setmask.  Required for all pin types.
+ *   - go_toggle.  Optional for GPIO_OUTPUT_PIN pin type.  When provided,
+ *     performs an atomic toggle and returns the new level.  When NULL,
+ *     GPIOC_TOGGLE falls back to go_read + go_write.
  */
 
 struct gpio_dev_s;
@@ -156,6 +165,7 @@ struct gpio_operations_s
   CODE int (*go_setdebounce)(FAR struct gpio_dev_s *gpio,
                              unsigned long duration);
   CODE int (*go_setmask)(FAR struct gpio_dev_s *dev, bool enable);
+  CODE int (*go_toggle)(FAR struct gpio_dev_s *dev, FAR bool *value);
 };
 
 /* Signal information */
