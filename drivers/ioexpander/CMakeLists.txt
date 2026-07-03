@@ -35,6 +35,10 @@ if(CONFIG_IOEXPANDER)
     list(APPEND SRCS ioe_dummy.c)
   endif()
 
+  if(CONFIG_MCAL_DIO)
+    list(APPEND SRCS ioe_mcal.c)
+  endif()
+
   if(CONFIG_IOEXPANDER_PCA9555)
     list(APPEND SRCS pca9555.c)
   endif()

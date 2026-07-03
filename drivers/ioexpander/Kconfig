@@ -551,4 +551,12 @@ config GPIO_LOWER_HALF_INTTYPE
 
 endif
 
+config MCAL_DIO
+	bool "AUTOSAR MCAL DIO IOExpander Adapter"
+	default n
+	depends on IOEXPANDER
+	---help---
+		Adapts AUTOSAR MCAL DIO/PORT driver to NuttX IOExpander interface.
+		Board-level code provides per-pin mapping via struct mcal_dio_pin_s.
+
 endmenu # IO Expander/GPIO Support
