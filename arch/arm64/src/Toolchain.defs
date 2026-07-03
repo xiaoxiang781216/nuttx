@@ -306,13 +306,15 @@ endif
 # Link Time Optimization
 
 ifeq ($(CONFIG_LTO_FULL),y)
-  ARCHOPTIMIZATION += -flto
   ifeq ($(CONFIG_ARCH_TOOLCHAIN_GCC),y)
     LD := $(CROSSDEV)gcc
     AR := $(CROSSDEV)gcc-ar rcs
     NM := $(CROSSDEV)gcc-nm
+    ARCHOPTIMIZATION += -flto=auto
     ARCHOPTIMIZATION += -fuse-linker-plugin
     ARCHOPTIMIZATION += -fno-builtin
+  else
+    ARCHOPTIMIZATION += -flto
   endif
 endif
 

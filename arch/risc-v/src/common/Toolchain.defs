@@ -349,9 +349,11 @@ endif
 ifeq ($(CONFIG_LTO_THIN),y)
   ARCHOPTIMIZATION += -flto=thin
 else ifeq ($(CONFIG_LTO_FULL),y)
-  ARCHOPTIMIZATION += -flto
   ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
     ARCHOPTIMIZATION += -fuse-linker-plugin
+    ARCHOPTIMIZATION += -flto=auto
+  else
+    ARCHOPTIMIZATION += -flto
   endif
 endif
 
