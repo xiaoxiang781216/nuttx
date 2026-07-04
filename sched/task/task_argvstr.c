@@ -145,8 +145,7 @@ size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
                    * task's stack.
                    */
 
-                  if ((uintptr_t)argv < stack_lo ||
-                      (uintptr_t)(argv + 1) > stack_hi)
+                  if ((uintptr_t)(argv + 1) > stack_hi)
                     {
                       break;
                     }

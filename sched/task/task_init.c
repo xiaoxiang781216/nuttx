@@ -231,51 +231,48 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
   DEBUGASSERT(tcb && ttype != TCB_FLAG_TTYPE_PTHREAD);
 #endif
 
-  if (ret == OK)
+  /* Create a new task group */
+
+  ret = group_allocate(tcb, atomic_read(&tcb->flags), heapsize);
+
+  if (ret >= 0)
     {
-      /* Create a new task group */
-
-      ret = group_allocate(tcb, atomic_read(&tcb->flags), heapsize);
-
-      if (ret >= 0)
-        {
 #ifndef CONFIG_DISABLE_PTHREAD
-          /* Initialize the task join */
+      /* Initialize the task join */
 
-          nxtask_joininit(tcb);
+      nxtask_joininit(tcb);
 #endif
 
 #ifdef CONFIG_SCHED_NOPREEMPT_KERNEL
-          if (ttype == TCB_FLAG_TTYPE_KERNEL)
-            {
-              /* Disable pre-emption for this task */
+      if (ttype == TCB_FLAG_TTYPE_KERNEL)
+        {
+          /* Disable pre-emption for this task */
 
-              tcb->lockcount = 1;
-            }
+          tcb->lockcount = 1;
+        }
 #endif
 
-          nxsem_init(&tcb->exit_sem, 0, 0);
+      nxsem_init(&tcb->exit_sem, 0, 0);
 
-          ret = task_setup(tcb, name, entry, actions, attr, argv,
-                           envp, ttype);
-          if (ret >= 0)
-            {
-              /* Now we have enough in place that we can join the group */
+      ret = task_setup(tcb, name, entry, actions, attr, argv,
+                       envp, ttype);
+      if (ret >= 0)
+        {
+          /* Now we have enough in place that we can join the group */
 
-              group_initialize(tcb);
-            }
-          else
-            {
-              nxtask_joindestroy(tcb);
+          group_initialize(tcb);
+        }
+      else
+        {
+          nxtask_joindestroy(tcb);
 
-              nxsem_destroy(&tcb->exit_sem);
+          nxsem_destroy(&tcb->exit_sem);
 
-              group_leave(tcb);
+          group_leave(tcb);
 
 #ifdef CONFIG_ARCH_ADDRENV
-              addrenv_drop(tcb->group->tg_addrenv_own, false);
+          addrenv_drop(tcb->group->tg_addrenv_own, false);
 #endif
-            }
         }
     }
 

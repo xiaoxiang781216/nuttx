@@ -176,9 +176,8 @@ int spawn_execattrs(FAR struct tcb_s *tcb, FAR const posix_spawnattr_t *attr)
        */
 
       ret = nxsched_get_param(pid, &param);
-#endif
-
       if (ret == OK)
+#endif
         {
 #if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
           /* Get the priority from the attributes */

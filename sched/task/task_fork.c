@@ -112,9 +112,9 @@ static int task_setup(FAR struct tcb_s *ptcb,
                 {
                   ret = up_addrenv_kstackalloc(child);
                 }
-#endif
 
               if (ret >= OK)
+#endif
                 {
                   /* Get the priority of the parent task */
 
