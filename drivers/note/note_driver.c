@@ -1575,7 +1575,7 @@ note_read(FAR struct note_dump_stream_s *stream)
            * stream->pos - len.
            */
 
-          start = ring_wrap(stream->pos - len);
+          start = ring_dist(stream->ring, stream->pos, len);
           if (base != RING_IDX_OLDEST && start != base)
             {
               /* An overwrite evicted the scanned bytes, re-anchor the scan
@@ -1587,7 +1587,7 @@ note_read(FAR struct note_dump_stream_s *stream)
             }
           else
             {
-              stream->pos = ring_wrap(start + 1);
+              stream->pos = ring_advance(stream->ring, start, 1);
             }
         }
 
@@ -1612,7 +1612,7 @@ note_read(FAR struct note_dump_stream_s *stream)
        * peeks, need rescan.
        */
     }
-  while (stream->pos != ring_wrap(start + len));
+  while (stream->pos != ring_advance(stream->ring, start, len));
 
   return cmn->nc_length;
 }

@@ -485,7 +485,7 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
     {
       FAR struct ramlog_user_s *u = (FAR struct ramlog_user_s *)entry;
 
-      if (ring_is_valid_cons(minread, u->rl_read))
+      if (ring_is_valid_cons(r, minread, u->rl_read))
         {
           minread = u->rl_read;
         }
