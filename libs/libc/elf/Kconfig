@@ -108,7 +108,7 @@ config LIBC_ELF_SYSTEM_SYMTAB
 
 endif # LIBC_ELF_HAVE_SYMTAB
 
-config LIBC_ELF_EXIDX_SECTNAME
+config LIBC_ELF_UNWIND_SECTNAME
 	string "ELF Section Name for Exception Index"
 	default ".ARM.exidx"
 	depends on CXX_EXCEPTION && ARCH_ARM

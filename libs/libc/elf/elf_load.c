@@ -681,8 +681,8 @@ int libelf_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
       goto errout_with_buffers;
     }
 
-#ifdef CONFIG_LIBC_ELF_EXIDX_SECTNAME
-  ret = libelf_findsection(loadinfo, CONFIG_LIBC_ELF_EXIDX_SECTNAME);
+#ifdef CONFIG_LIBC_ELF_UNWIND_SECTNAME
+  ret = libelf_findsection(loadinfo, CONFIG_LIBC_ELF_UNWIND_SECTNAME);
   if (ret < 0)
     {
       binfo("libelf_findsection: Exception Index section not found: %d\n",
