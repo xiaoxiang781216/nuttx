@@ -477,6 +477,34 @@ static int part_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
         }
         break;
 
+      case MTDIOC_PROTECT:
+      case MTDIOC_UNPROTECT:
+        {
+          /* Bound the range to this partition, then shift it by the
+           * partition offset before passing to the parent.
+           */
+
+          FAR struct mtd_protect_s *prot =
+            (FAR struct mtd_protect_s *)arg;
+
+          if (prot != NULL && prot->nblocks > 0)
+            {
+              if (part_blockcheck(priv,
+                    prot->startblock + prot->nblocks - 1))
+                {
+                  prot->startblock += priv->firstblock;
+                  ret = priv->parent->ioctl(priv->parent, cmd, arg);
+                }
+              else
+                {
+                  ferr("ERROR: [Un]protect beyond the end of "
+                       "the partition\n");
+                  ret = -ENXIO;
+                }
+            }
+        }
+        break;
+
       default:
         {
           /* Pass any unhandled ioctl() calls to the underlying driver */

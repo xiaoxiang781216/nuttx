@@ -157,6 +157,14 @@ struct rammtd_config_s
   char      name[NAME_MAX + 1]; /* Name of the device */
 };
 
+/* Protection modes for MTDIOC_PROTECT. */
+
+enum mtd_protect_mode_e
+{
+  MTD_PROT_RECOVERABLE = 0, /* Reversible (can be unprotected) */
+  MTD_PROT_PERMANENT   = 1, /* Irreversible (OTP-like) */
+};
+
 /* This structure describes a range of sectors to be protected or
  * unprotected.
  */
@@ -165,6 +173,7 @@ struct mtd_protect_s
 {
   off_t  startblock;      /* First block to be [un-]protected */
   size_t nblocks;         /* Number of blocks to [un-]protect */
+  uint8_t mode;           /* Protection mode (only used by MTDIOC_PROTECT) */
 };
 
 /* The following defines the information for writing bytes to a sector
