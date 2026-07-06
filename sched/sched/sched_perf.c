@@ -2290,7 +2290,7 @@ static int perf_poll(FAR struct file *filep, FAR struct pollfd *fds,
       return -EDEADLK;
     }
 
-  if (!event && !event->buf)
+  if (!event || !event->buf)
     {
       return -EINVAL;
     }
