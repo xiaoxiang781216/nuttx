@@ -326,47 +326,6 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
 int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
                       FAR void *arg, int priority);
 
-/****************************************************************************
- * Name: irq_monitor_enable / irq_monitor_disable
- *
- * Description:
- *   Enable or disable interrupt frequency monitoring for the specified IRQ.
- *   When enabled, the system will track the interrupt count and timing
- *   statistics which can be queried via /proc/irqs or
- *   irq_monitor_get_freq().
- *
- * Input Parameters:
- *   irq - The IRQ number to enable/disable monitoring for.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_IRQMONITOR
-void irq_monitor_enable(int irq);
-void irq_monitor_disable(int irq);
-
-/****************************************************************************
- * Name: irq_monitor_get_freq
- *
- * Description:
- *   Get the interrupt frequency (interrupts per second) for the specified
- *   IRQ. Optionally reset the counter after reading.
- *
- * Input Parameters:
- *   irq      - The IRQ number to query.
- *   reset    - If true, reset the interrupt counter after reading.
- *   freq     - Pointer to store the integer part of frequency.
- *   fracfreq - Pointer to store the fractional part (*1000) of frequency.
- *              Can be NULL if not needed.
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
-                         FAR unsigned long *fracfreq);
-#endif
-
 #ifdef CONFIG_IRQCHAIN
 int irqchain_detach(int irq, xcpt_t isr, FAR void *arg);
 #else

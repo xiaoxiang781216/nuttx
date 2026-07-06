@@ -37,6 +37,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
+#include <nuttx/irq_monitor.h>
 
 #include "irq/irq.h"
 

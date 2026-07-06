@@ -29,6 +29,7 @@
 #include <debug.h>
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
+#include <nuttx/irq_monitor.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/random.h>
 #include <nuttx/sched_note.h>
