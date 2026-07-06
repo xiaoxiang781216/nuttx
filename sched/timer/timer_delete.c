@@ -29,6 +29,8 @@
 #include <time.h>
 #include <errno.h>
 
+#include <nuttx/sched.h>
+
 #include "timer/timer.h"
 
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
@@ -110,7 +112,16 @@ int timer_delete(timer_t timerid)
 
   if (timer != NULL)
     {
-      timer_release(timer, this_task());
+      /* The POSIX timer_delete() API may be called from any context,
+       * including a SIGEV_THREAD notification callback dispatched on the
+       * work queue. this_task() is therefore not necessarily the timer
+       * owner; resolve the owner TCB from pt_owner so that timer_release()
+       * accounts the itimer_count decrement to the correct group.
+       */
+
+      FAR struct tcb_s *tcb = nxsched_get_tcb(timer->pt_owner);
+      timer_release(timer, tcb);
+      nxsched_put_tcb(tcb);
     }
   else
     {
