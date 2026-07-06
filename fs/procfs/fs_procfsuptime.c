@@ -47,7 +47,6 @@
 
 #include "fs_heap.h"
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS)
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_UPTIME
 
 /****************************************************************************
@@ -263,5 +262,4 @@ static ssize_t uptime_read(FAR struct file *filep, FAR char *buffer,
   return ret;
 }
 
-#endif /* CONFIG_FS_PROCFS_EXCLUDE_PROCESS */
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */
+#endif /* CONFIG_FS_PROCFS_EXCLUDE_UPTIME */

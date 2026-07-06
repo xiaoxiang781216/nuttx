@@ -46,8 +46,8 @@
 #include "fs_heap.h"
 #include "sched/sched.h"
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
-    defined(CONFIG_ARCH_HAVE_TCBINFO) && !defined(CONFIG_FS_PROCFS_EXCLUDE_TCBINFO)
+#if defined(CONFIG_ARCH_HAVE_TCBINFO) && \
+    !defined(CONFIG_FS_PROCFS_EXCLUDE_TCBINFO)
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -208,4 +208,4 @@ static ssize_t tcbinfo_read(FAR struct file *filep, FAR char *buffer,
   return ret;
 }
 
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */
+#endif /* CONFIG_ARCH_HAVE_TCBINFO && !CONFIG_FS_PROCFS_EXCLUDE_TCBINFO */

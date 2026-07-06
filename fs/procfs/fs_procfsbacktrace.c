@@ -40,9 +40,6 @@
 
 #include "fs_heap.h"
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
-    CONFIG_LIBC_BACKTRACE_DEPTH > 0
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -117,5 +114,3 @@ static ssize_t backtrace_procfs_write(FAR struct file *filep,
 
   return buflen;
 }
-
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS && DEPTH > 0 */

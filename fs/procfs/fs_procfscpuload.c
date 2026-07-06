@@ -48,7 +48,6 @@
 
 #include "fs_heap.h"
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS)
 #if !defined(CONFIG_SCHED_CPULOAD_NONE) && \
     !defined(CONFIG_FS_PROCFS_EXCLUDE_CPULOAD)
 
@@ -269,4 +268,3 @@ static ssize_t cpuload_read(FAR struct file *filep, FAR char *buffer,
 }
 
 #endif /* CONFIG_FS_PROCFS_EXCLUDE_CPULOAD */
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */
