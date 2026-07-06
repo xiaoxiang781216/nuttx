@@ -1614,24 +1614,27 @@ noreturn_function static inline void code_unreachable(void)
 
 /* TASKING/TriCore intrinsic mappings */
 
+#define CONFIG_HAVE_BUILTIN_CLZ 1
+#define CONFIG_HAVE_BUILTIN_POPCOUNT 1
+#define CONFIG_HAVE_BUILTIN_POPCOUNTLL 1
+
 #define __builtin_clz(x)             __clz((int)(x))
 #define __builtin_clzl(x)            __clz((int)(x))
-static inline int __builtin_clzll(unsigned long long x)
-{
-  return x >> 32 ? __clz((int)(x >> 32))
-                 : 32 + __clz((int)(unsigned int)x);
-}
+#define __builtin_clzll(x)                                          \
+  ((unsigned long long)(x) >> 32 ?                                  \
+   __clz((int)((unsigned long long)(x) >> 32)) :                    \
+   32 + __clz((int)(unsigned int)(x)))
+
+#define __builtin_popcount(x)         __popcntw((unsigned int)(x))
+#define __builtin_popcountl(x)        __popcntw((unsigned int)(x))
+#define __builtin_popcountll(x)                                     \
+  (__popcntw((unsigned int)(x)) +                                   \
+   __popcntw((unsigned int)((unsigned long long)(x) >> 32)))
 
 #define __builtin_labs(x)             __labs(x)
 #define __builtin_fabsf(x)            __fabsf(x)
 #define __builtin_fabs(x)             __fabs(x)
 #define __builtin_parity(x)           __parity(x)
-#define __builtin_popcount(x)         __popcntw((unsigned int)(x))
-#define __builtin_popcountl(x)        __popcntw((unsigned int)(x))
-static inline int __builtin_popcountll(unsigned long long x)
-{
-  return __popcntw((unsigned int)x) + __popcntw((unsigned int)(x >> 32));
-}
 
 /* Compiler/language utility mappings to NuttX libc or TASKING equivalents */
 
