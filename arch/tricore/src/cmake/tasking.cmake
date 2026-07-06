@@ -104,7 +104,8 @@ add_link_options(-v)
 add_compile_options($<$<COMPILE_LANGUAGE:C>:--iso=17>)
 add_compile_options(
   $<$<COMPILE_LANGUAGE:C>:--language=+gcc,+volatile,-strings,-kanji>)
-add_compile_options(--no-stdinc)
+add_compile_options($<$<COMPILE_LANGUAGE:C>:--no-stdinc>)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:--no-stdinc>)
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:--c++=14>)
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:--g++>)
 add_compile_options(
