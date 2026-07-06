@@ -78,6 +78,10 @@ int ffs(int);
 #  define ffs(j)  __builtin_ffs(j)
 #elif defined (CONFIG_HAVE_BUILTIN_CTZ)
 #  define ffs(j)  (__builtin_ctz(j) + 1)
+#elif defined (CONFIG_HAVE_BUILTIN_CLZ)
+#  define ffs(j) \
+     ((8u * sizeof(int)) - \
+      (size_t)__builtin_clz((unsigned int)(j) & (-(unsigned int)(j))))
 #endif
 
 int ffsl(long);
@@ -86,6 +90,10 @@ int ffsl(long);
 #  define ffsl(j) __builtin_ffsl(j)
 #elif defined (CONFIG_HAVE_BUILTIN_CTZ)
 #  define ffsl(j) (__builtin_ctzl(j) + 1)
+#elif defined (CONFIG_HAVE_BUILTIN_CLZ)
+#  define ffsl(j) \
+     ((8u * sizeof(long)) - \
+      (size_t)__builtin_clzl((unsigned long)(j) & (-(unsigned long)(j))))
 #endif
 
 #ifdef CONFIG_HAVE_LONG_LONG
@@ -96,6 +104,11 @@ int ffsll(long long);
 #    define ffsll(j)  __builtin_ffsll(j)
 #  elif defined (CONFIG_HAVE_BUILTIN_CTZ)
 #    define ffsll(j)  (__builtin_ctzll(j) + 1)
+#  elif defined (CONFIG_HAVE_BUILTIN_CLZ)
+#    define ffsll(j) \
+       ((8u * sizeof(long long)) - \
+        (size_t)__builtin_clzll((unsigned long long)(j) & \
+                                (-(unsigned long long)(j))))
 #  endif
 
 #endif
