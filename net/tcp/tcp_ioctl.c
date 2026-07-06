@@ -122,7 +122,7 @@ int tcp_ioctl(FAR struct tcp_conn_s *conn, int cmd, unsigned long arg)
 {
   int ret = OK;
 
-  conn_lock(&conn->sconn);
+  conn_dev_lock(&conn->sconn, conn->dev);
 
   switch (cmd)
     {
@@ -156,7 +156,7 @@ int tcp_ioctl(FAR struct tcp_conn_s *conn, int cmd, unsigned long arg)
         break;
     }
 
-  conn_unlock(&conn->sconn);
+  conn_dev_unlock(&conn->sconn, conn->dev);
 
   return ret;
 }
