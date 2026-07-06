@@ -142,6 +142,7 @@ static ssize_t virtio_rng_read(FAR struct file *filep, FAR char *buffer,
   FAR struct virtqueue *vq = priv->vdev->vrings_info[0].vq;
   struct virtio_rng_cookie_s cookie;
   struct virtqueue_buf vb;
+  FAR void *mapped;
   irqstate_t flags;
   int ret;
 
@@ -150,22 +151,34 @@ static ssize_t virtio_rng_read(FAR struct file *filep, FAR char *buffer,
   cookie.len = 0;
   nxsem_init(&cookie.sem, 0, 0);
 
+  /* Map the user buffer so the device side can access it. On MMIO/PCI the
+   * peer reaches arbitrary memory, so map returns the buffer itself and the
+   * device writes the entropy straight into it (zero copy). On rptun the
+   * buffer is bounced through shared memory and unmap copies the result
+   * back below.
+   */
+
+  ret = virtio_map_buf(priv->vdev, buffer, buflen, VIRTIO_DMA_FROM_DEVICE,
+                       &mapped);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   /* Add the input buffer to the virtqueue, and the cookie as the virtqueue
    * cookie. (virtqueue_get_buffer() will return cookie).
    */
 
   vb.len = buflen;
-  vb.buf = virtio_zalloc_buf(priv->vdev, buflen, 16);
-  if (vb.buf == NULL)
-    {
-      return -ENOMEM;
-    }
+  vb.buf = mapped;
 
   flags = spin_lock_irqsave(&priv->lock);
   ret = virtqueue_add_buffer(vq, &vb, 0, 1, &cookie);
   if (ret < 0)
     {
       spin_unlock_irqrestore(&priv->lock, flags);
+      virtio_unmap_buf(priv->vdev, buffer, buflen, VIRTIO_DMA_FROM_DEVICE,
+                       mapped);
       return ret;
     }
 
@@ -177,8 +190,14 @@ static ssize_t virtio_rng_read(FAR struct file *filep, FAR char *buffer,
   /* Wait fot completion */
 
   nxsem_wait_uninterruptible(&cookie.sem);
-  memcpy(buffer, vb.buf, cookie.len);
-  virtio_free_buf(priv->vdev, vb.buf);
+
+  /* Unmap: on rptun this invalidates the cache and copies the device-written
+   * entropy back into the user buffer; on MMIO/PCI it is a no-op since the
+   * device wrote directly. Only cookie.len bytes are valid.
+   */
+
+  virtio_unmap_buf(priv->vdev, buffer, cookie.len, VIRTIO_DMA_FROM_DEVICE,
+                   mapped);
   return cookie.len;
 }
 
