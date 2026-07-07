@@ -1345,6 +1345,15 @@ static int tmpfs_getpath(FAR struct tmpfs_object_s *to,
 
       tdo = to->to_parent;
 
+      /* Hold the parent directory lock while traversing its entry list.
+       * On SMP, a concurrent tmpfs_unlink/rename on the same directory
+       * may free a tde_name and compact the array (see
+       * tmpfs_remove_dirent), so an unlocked traversal can dereference a
+       * freed name pointer.  Matches the locking pattern of tmpfs_readdir.
+       */
+
+      tmpfs_lock_directory(tdo);
+
       for (i = 0; i < tdo->tdo_nentries; i++)
         {
           tde = &tdo->tdo_entry[i];
@@ -1356,6 +1365,7 @@ static int tmpfs_getpath(FAR struct tmpfs_object_s *to,
 
       if (i == tdo->tdo_nentries)
         {
+          tmpfs_unlock_directory(tdo);
           return -ENOENT;
         }
 
@@ -1364,6 +1374,8 @@ static int tmpfs_getpath(FAR struct tmpfs_object_s *to,
         {
           strlcat(path, "/", len);
         }
+
+      tmpfs_unlock_directory(tdo);
     }
 
   return OK;
