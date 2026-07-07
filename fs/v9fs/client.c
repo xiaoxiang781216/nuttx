@@ -616,7 +616,17 @@ static int v9fs_client_rpc(FAR struct v9fs_transport_s *transport,
       return ret;
     }
 
-  nxsem_wait(&payload.resp);
+  /* Wait uninterruptibly for the transport to complete.  'payload' lives on
+   * this stack frame and stays referenced by the virtqueue until the
+   * completion callback (virtio_9p_done -> v9fs_transport_done) posts resp.
+   * A plain nxsem_wait() can return early on signal delivery (EINTR); the
+   * frame would then unwind, leaving the virtqueue holding a dangling
+   * pointer that the later completion IRQ dereferences -> data abort in
+   * interrupt context.  Every other virtio driver waits uninterruptibly for
+   * the same reason.
+   */
+
+  nxsem_wait_uninterruptible(&payload.resp);
   nxsem_destroy(&payload.resp);
 
   return payload.ret;
