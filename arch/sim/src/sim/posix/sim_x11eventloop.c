@@ -29,6 +29,20 @@
 #include "sim_internal.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Maximum number of X11 events drained per sim_x11events() call.  This
+ * function runs inside a non-preemptible section (irq_save_nopreempt) set
+ * up by sim_x11_work().  Bounding the drain prevents a continuously
+ * flooded event queue from keeping the scheduler blocked indefinitely,
+ * which would freeze the display and hang the system.  Remaining events
+ * are processed on the next scheduled call.
+ */
+
+#define SIM_X11EVENT_MAX_BATCH 32
+
+/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -102,8 +116,12 @@ static int sim_buttonmap(int state, int button)
 void sim_x11events(void)
 {
   XEvent event;
+  int count = 0;
 
-  /* Dequeue any pending X11 events. */
+  /* Dequeue pending X11 events, but limit the number processed per call so
+   * that a flooded queue cannot keep the non-preemptible section (and thus
+   * the scheduler) blocked indefinitely.
+   */
 
   while (g_display && host_uninterruptible(XPending, g_display) > 0)
     {
@@ -146,6 +164,11 @@ void sim_x11events(void)
 
           default :
             break;
+        }
+
+      if (++count >= SIM_X11EVENT_MAX_BATCH)
+        {
+          break;
         }
     }
 }
