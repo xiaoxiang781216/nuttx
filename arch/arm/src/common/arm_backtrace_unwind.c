@@ -261,15 +261,31 @@ unwind_find_origin(const struct __EIT_entry *start,
 nosanitize_address
 static const struct __EIT_entry *unwind_find_entry(unsigned long addr)
 {
+  static const struct __EIT_entry *origin;
   const __EIT_entry *ret = NULL;
+
+  /* The origin (first .ARM.exidx entry with a positive prel31 offset) is a
+   * link-time constant of the read-only unwind table, so cache it instead
+   * of recomputing on every lookup.  backtrace_record() reaches here for
+   * every frame of every recorded allocation when CONFIG_MM_RECORD_STACK
+   * is enabled; the redundant O(log N) binary search it previously ran per
+   * frame was a dominant cost on large KASAN debug builds and could stretch
+   * heavy allocation phases (e.g. C++ static initialization) past the test
+   * framework's busy-loop threshold.  The value is a pure function of
+   * read-only data, so the lock-free lazy init is safe: concurrent callers
+   * simply recompute the same pointer.
+   */
+
+  if (origin == NULL)
+    {
+      origin = unwind_find_origin(__exidx_start, __exidx_end);
+    }
 
   /* Main unwind table */
 
   if (addr >= (uintptr_t)_stext && addr < (uintptr_t)_etext)
     {
-       ret = search_index(addr, __exidx_start,
-                          unwind_find_origin(__exidx_start, __exidx_end),
-                          __exidx_end);
+       ret = search_index(addr, __exidx_start, origin, __exidx_end);
     }
 #ifdef CONFIG_BUILD_PROTECTED
   else
