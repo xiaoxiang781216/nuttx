@@ -498,7 +498,7 @@ static int virtio_serial_init(FAR struct virtio_serial_priv_s *priv,
   udev->priv        = priv;
   udev->ops         = &g_virtio_serial_ops;
   udev->recv.size   = CONFIG_DRIVERS_VIRTIO_SERIAL_BUFSIZE;
-  udev->recv.buffer = virtio_zalloc_buf(vdev, udev->recv.size, 16);
+  udev->recv.buffer = virtio_malloc_buf(vdev, udev->recv.size, 16);
   if (udev->recv.buffer == NULL)
     {
       vrterr("No enough memory\n");
@@ -506,7 +506,7 @@ static int virtio_serial_init(FAR struct virtio_serial_priv_s *priv,
     }
 
   udev->xmit.size   = CONFIG_DRIVERS_VIRTIO_SERIAL_BUFSIZE;
-  udev->xmit.buffer = virtio_zalloc_buf(vdev, udev->xmit.size, 16);
+  udev->xmit.buffer = virtio_malloc_buf(vdev, udev->xmit.size, 16);
   if (udev->xmit.buffer == NULL)
     {
       vrterr("No enough memory\n");
