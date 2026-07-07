@@ -140,27 +140,35 @@ static uint64_t perf_swevent_timer_handle(FAR const hrtimer_t *timer,
                                           uint64_t expired)
 {
   FAR struct perf_event_s *event = container_of(timer, struct perf_event_s,
-                                                hw.timer);
-#ifdef CONFIG_SMP
-  int cpu = this_cpu();
+                                                 hw.timer);
 
-  if (event->oncpu != -1 && event->oncpu != cpu)
+  /* Stop re-arming once the event is torn down: returning 0 tells the
+   * hrtimer core not to re-insert the timer (see hrtimer.h).  Self-
+   * terminating safety net for a sampling timer whose owning task has
+   * exited (EXIT with event->ctx cleared while the tool still holds the fd);
+   * without it a killed "perf record" leaks a per-CPU timer that never stops
+   * and eventually wedges every CPU.  Also guards the ERROR state.
+   */
+
+  if (event->state == PERF_EVENT_STATE_EXIT ||
+      event->state == PERF_EVENT_STATE_ERROR)
     {
-      nxsched_cpu_call_single(event->oncpu,
-                              perf_swevent_timer_handle_cpu, event);
+      return 0;
     }
-  else if (event->cpu != -1 && event->cpu != cpu)
+
+#ifdef CONFIG_SMP
+  if (event->oncpu == -1)
     {
-      nxsched_cpu_call_single(event->cpu,
-                              perf_swevent_timer_handle_cpu, event);
+      /* Event is not bound to any CPU right now: skip this sample but keep
+       * the timer running so sampling resumes once the event is rescheduled.
+       */
+
+      return event->attr.sample_period;
     }
-  else
-    {
-      perf_swevent_timer_handle_cpu(event);
-    }
-#else
-    perf_swevent_timer_handle_cpu(event);
+
 #endif
+
+  perf_swevent_timer_handle_cpu(event);
 
   return event->attr.sample_period;
 }
