@@ -219,7 +219,7 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
            * So only `count - 1` semaphore will be posted.
            */
 
-          if (count++ > 0u)
+          if (count++ > 0u && count <= wqueue->nthreads)
             {
               nxsem_post(&wqueue->sem);
             }
