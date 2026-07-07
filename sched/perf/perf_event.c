@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <debug.h>
+#include <inttypes.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
@@ -52,6 +53,20 @@
 
 #define PERF_HW_SAMPLE_PERIOD    1000000
 #define PERF_SW_CPU_CLOCK_PERIOD 1000000
+
+/* PERF_SW_MIN_SAMPLE_PERIOD: lower bound (ns) for the sampling period of
+ * software timer-driven events.  A tiny period (e.g. "perf record -c 1000")
+ * lets the hrtimer re-arm faster than its interrupt-context handler can be
+ * serviced, so the CPU takes back-to-back sampling interrupts and livelocks.
+ * Clamp to a floor the handler can sustain; builds with heavier per-sample
+ * cost (e.g. KASAN) need a larger floor, so scale accordingly.
+ */
+
+#ifdef CONFIG_MM_KASAN_INSTRUMENT
+#  define PERF_SW_MIN_SAMPLE_PERIOD 100000  /* 100us == 10kHz max */
+#else
+#  define PERF_SW_MIN_SAMPLE_PERIOD 10000   /* 10us  == 100kHz max */
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -127,6 +142,21 @@ perf_event_alloc(FAR struct perf_event_attr_s *attr, int cpu,
     {
       attr->sample_period =
         perf_default_sample_period(attr->type, attr->config);
+    }
+
+  /* Clamp the cpu-clock period to PERF_SW_MIN_SAMPLE_PERIOD (see its
+   * definition).  Only cpu-clock is time-based; other software events count
+   * discrete occurrences, so their period must not be treated as time.
+   */
+
+  if (attr->type == PERF_TYPE_SOFTWARE &&
+      attr->config == PERF_COUNT_SW_CPU_CLOCK &&
+      attr->sample_period < PERF_SW_MIN_SAMPLE_PERIOD)
+    {
+      sinfo("sw cpu-clock sample_period %" PRIu64
+            " below floor, clamping to %d ns\n",
+            attr->sample_period, PERF_SW_MIN_SAMPLE_PERIOD);
+      attr->sample_period = PERF_SW_MIN_SAMPLE_PERIOD;
     }
 
   event->attr        = *attr;
