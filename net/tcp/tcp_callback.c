@@ -145,7 +145,15 @@ static uint32_t tcp_ofoseg_data_event(FAR struct net_driver_s *dev,
                  seg->left, seg->right, seg->data->io_pktlen);
           rcvseq = TCP_SEQ_ADD(rcvseq,
                                seg->data->io_pktlen);
-          net_incr32(conn->rcvseq, seg->data->io_pktlen);
+
+          /* Write the 32-bit rcvseq back directly.  net_incr32()'s
+           * increment argument is uint16_t, so a merged out-of-order
+           * chunk larger than 65535 bytes would be truncated modulo
+           * 65536, under-advancing conn->rcvseq and causing the already
+           * delivered tail to be delivered again (stream corruption).
+           */
+
+          tcp_setsequence(conn->rcvseq, rcvseq);
           IOB_SET_OWNER(seg->data, "tcp readahead");
           net_iob_concat(&conn->readahead, &seg->data);
         }
@@ -180,7 +188,12 @@ static uint32_t tcp_ofoseg_data_event(FAR struct net_driver_s *dev,
                         seg->left, seg->right, seg->data->io_pktlen);
                   rcvseq = TCP_SEQ_ADD(rcvseq,
                                        seg->data->io_pktlen);
-                  net_incr32(conn->rcvseq, seg->data->io_pktlen);
+
+                  /* Write the 32-bit rcvseq back directly; net_incr32()
+                   * would truncate a >65535 byte chunk (see above).
+                   */
+
+                  tcp_setsequence(conn->rcvseq, rcvseq);
                   IOB_SET_OWNER(seg->data, "tcp readahead");
                   net_iob_concat(&conn->readahead, &seg->data);
                 }
