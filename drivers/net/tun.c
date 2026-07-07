@@ -139,6 +139,11 @@ struct tun_device_s
   FAR struct iob_s *read_buf;
   FAR struct iob_s *write_buf;
 
+#ifdef CONFIG_IOB_NOTIFIER
+  int               iob_notify_key; /* Key of a pending IOB-available notify,
+                                     * 0 if none is armed */
+#endif
+
   /* This holds the information visible to the NuttX network */
 
   struct net_driver_s dev;     /* Interface understood by the network */
@@ -198,6 +203,11 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
 static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 static int tun_poll(FAR struct file *filep, FAR struct pollfd *fds,
                     bool setup);
+#ifdef CONFIG_IOB_NOTIFIER
+static void tun_iob_notify_work(FAR void *arg);
+static bool tun_iob_notify_setup(FAR struct tun_device_s *priv);
+static void tun_iob_notify_teardown(FAR struct tun_device_s *priv);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -249,6 +259,102 @@ static void tun_pollnotify(FAR struct tun_device_s *priv,
 
   poll_notify(&fds, 1, eventset);
 }
+
+#ifdef CONFIG_IOB_NOTIFIER
+/****************************************************************************
+ * Name: tun_iob_notify_work
+ *
+ * Description:
+ *   Worker executed by the IOB notifier when an IOB has become available.
+ *   tun_poll() only tracks write_d_len, not IOB availability, so a writer
+ *   that runs out of IOBs would otherwise keep seeing POLLOUT and busy-spin.
+ *   When invoked, re-check the writable condition and either notify POLLOUT
+ *   or re-arm the notification if IOBs are still exhausted.
+ *
+ * Input Parameters:
+ *   arg - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void tun_iob_notify_work(FAR void *arg)
+{
+  FAR struct tun_device_s *priv = (FAR struct tun_device_s *)arg;
+
+  nxmutex_lock(&priv->lock);
+
+  /* The notification has fired and been automatically torn down. */
+
+  priv->iob_notify_key = 0;
+
+  /* Wake up any writer/poll waiting for POLLOUT. */
+
+  tun_pollnotify(priv, POLLOUT);
+
+  nxmutex_unlock(&priv->lock);
+}
+
+/****************************************************************************
+ * Name: tun_iob_notify_setup
+ *
+ * Description:
+ *   Arm an IOB-available notification if one is not already pending.  Must
+ *   be called with priv->lock held.
+ *
+ * Returned Value:
+ *   true  - An IOB is already available (no notification was armed); the
+ *           caller should treat the device as writable now.
+ *   false - No IOB is available.  A notification is armed (or was already
+ *           armed) and the worker will fire once an IOB is freed.
+ *
+ ****************************************************************************/
+
+static bool tun_iob_notify_setup(FAR struct tun_device_s *priv)
+{
+  int key;
+
+  if (priv->iob_notify_key != 0)
+    {
+      return false;
+    }
+
+  key = iob_notifier_setup(TUNWORK, tun_iob_notify_work, priv);
+  if (key > 0)
+    {
+      /* Notification armed; the worker will run when an IOB is freed. */
+
+      priv->iob_notify_key = key;
+      return false;
+    }
+
+  /* key == 0: IOBs are already available.  key < 0: setup failed, so fall
+   * back to reporting writable to avoid a stall.  Either way, treat the
+   * device as writable now.
+   */
+
+  return true;
+}
+
+/****************************************************************************
+ * Name: tun_iob_notify_teardown
+ *
+ * Description:
+ *   Cancel a pending IOB-available notification, if any.  Must be called
+ *   with priv->lock held.
+ *
+ ****************************************************************************/
+
+static void tun_iob_notify_teardown(FAR struct tun_device_s *priv)
+{
+  if (priv->iob_notify_key != 0)
+    {
+      iob_notifier_teardown(priv->iob_notify_key);
+      priv->iob_notify_key = 0;
+    }
+}
+#endif /* CONFIG_IOB_NOTIFIER */
 
 /****************************************************************************
  * Name: tun_fd_transmit
@@ -937,6 +1043,12 @@ static void tun_dev_uninit(FAR struct tun_device_s *priv)
 
   tun_ifdown(&priv->dev);
 
+#ifdef CONFIG_IOB_NOTIFIER
+  /* Cancel any pending IOB-available notification */
+
+  tun_iob_notify_teardown(priv);
+#endif
+
   work_cancel_sync(TUNWORK, &priv->work);
 
   /* Remove the device from the OS */
@@ -1198,11 +1310,21 @@ static int tun_poll(FAR struct file *filep,
 
       eventset = 0;
 
-      /* If write buffer is empty notify App.  */
+      /* If the write buffer is empty the device can accept another packet,
+       * but tun_write() still needs a free IOB to hold it.  Only report
+       * POLLOUT when an IOB is actually available; otherwise arm an IOB
+       * notification so POLLOUT is raised once one is freed, instead of
+       * letting the caller busy-spin.
+       */
 
       if (priv->write_d_len == 0)
         {
-          eventset |= POLLOUT;
+#ifdef CONFIG_IOB_NOTIFIER
+          if (iob_navail(false) > 0 || tun_iob_notify_setup(priv))
+#endif
+            {
+              eventset |= POLLOUT;
+            }
         }
 
       /* The write buffer sometimes could be used for TX.
@@ -1219,6 +1341,9 @@ static int tun_poll(FAR struct file *filep,
   else
     {
       priv->poll_fds = NULL;
+#ifdef CONFIG_IOB_NOTIFIER
+      tun_iob_notify_teardown(priv);
+#endif
     }
 
 errout:
