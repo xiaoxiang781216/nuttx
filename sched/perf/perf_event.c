@@ -251,6 +251,15 @@ perf_inherit_event(FAR struct perf_event_s *parent_event,
   list_add_tail(&parent_event->child_list, &event->child_list);
   event->attach_state |= PERF_ATTACH_CHILD;
   event->ctx = child->perf_event_ctx;
+
+  /* Cache the parent's id in the child so the sampling hot path never
+   * dereferences parent_event: the fd-owned parent can be freed by
+   * perf_close() while this child is still sampling, and reading
+   * parent_event->id from the child's hrtimer callback after that would be a
+   * use-after-free.
+   */
+
+  event->id = parent_event->id;
   perf_buffer_set_output(event, parent_event);
 
   nxmutex_unlock(&parent_event->child_mutex);
@@ -499,7 +508,17 @@ void perf_child_detach(FAR struct perf_event_s *event)
       return;
     }
 
+  /* If the parent was already freed it orphans its children first (clears
+   * parent_event and PERF_ATTACH_CHILD under child_mutex in
+   * perf_free_event()); the check above normally catches that.  Guard the
+   * pointer as well so a NULL parent can never be dereferenced.
+   */
+
   event->attach_state &= ~PERF_ATTACH_CHILD;
+  if (parent_event == NULL)
+    {
+      return;
+    }
 
   nxmutex_lock(&parent_event->child_mutex);
 

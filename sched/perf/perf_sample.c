@@ -364,14 +364,17 @@ int perf_get_event_count(FAR void *arg)
 
 uint64_t perf_get_eventid(FAR struct perf_event_s *event)
 {
-  if (event->parent_event != NULL)
-    {
-      return event->parent_event->id;
-    }
-  else
-    {
-      return event->id;
-    }
+  /* Always return the event's own id.  For inherited child events this is
+   * seeded from the parent's id at inherit time (perf_inherit_event), so it
+   * matches what the parent would report without dereferencing parent_event.
+   * The parent (an fd-owned event) can be freed by perf_close() while an
+   * inherited child is still sampling in a live task; dereferencing
+   * parent_event from the child's hrtimer sampling callback after that free
+   * is a use-after-free.  Reading the cached id here keeps the sampling hot
+   * path free of any cross-event pointer chase.
+   */
+
+  return event->id;
 }
 
 void perf_sample_data_init(FAR struct perf_sample_data_s *data,
