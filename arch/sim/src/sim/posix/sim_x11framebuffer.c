@@ -654,7 +654,16 @@ int sim_x11update(void)
                          g_trans_framebuffer + g_offset);
     }
 
-  host_uninterruptible(XSync, g_display, 0);
+  /* Flush the framebuffer to the X server without a blocking round-trip.
+   * XSync flushes pending requests and then blocks waiting for the server
+   * to process them and reply.  Under heavy framebuffer update load the X
+   * server may fall behind; since sim_x11_work runs inside a non-preemptible
+   * section on the NuttX sim's single host thread, a blocking XSync freezes
+   * the whole system (including the console), observed as a busyloop hang.
+   * XFlush only pushes the request to the socket output buffer and returns.
+   */
+
+  host_uninterruptible(XFlush, g_display);
 
   return 0;
 }

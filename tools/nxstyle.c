@@ -461,6 +461,7 @@ static const char *g_white_content_list[] =
   "XCreateGC",
   "XSetErrorHandler",
   "XSync",
+  "XFlush",
   "XShmDetach",
   "XDestroyImage",
   "XUngrabButton",
