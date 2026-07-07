@@ -2631,7 +2631,7 @@ config STACK_COLORATION
 
 config STACKCHECK_MARGIN
 	int "Stack overflow check size (bytes)"
-	depends on DEBUG_ASSERTIONS
+	depends on DEBUG_ASSERTIONS && !SIM_ASAN
 	default -1
 	---help---
 		Specifies the number of bytes at the end of the stack to check for overflow.
