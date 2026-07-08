@@ -144,6 +144,7 @@ struct mtdlog_s
   uint32_t             erasesize;       /* Size of one erase block */
   uint8_t              erasestate;      /* The erase value */
   bool                 need_new_blkgrp; /* Deferred new blkgrp flag */
+  uint8_t              tmp_buf[];       /* Pre-allocated aligned I/O buffer */
 };
 
 struct mtdlog_user_s
@@ -320,7 +321,7 @@ static int mtdlog_write_block(FAR struct mtdlog_s *mtdlog,
   uint32_t offset;
   uint32_t tmp_buf_size = MTDLOG_ALIGN(mtdlog,
                                        sizeof(struct mtdlog_block_s));
-  uint8_t tmp_buf[tmp_buf_size];
+  FAR uint8_t *tmp_buf = mtdlog->tmp_buf;
 
   /* Some mtd devices do not require erasing before writing,
    * and thus do not have an erase interface.
@@ -420,7 +421,7 @@ static int mtdlog_write_entry(FAR struct mtdlog_s *mtdlog,
   uint32_t offset;
   uint32_t tmp_buf_size = MTDLOG_ALIGN(mtdlog,
                                        sizeof(struct mtdlog_entry_s));
-  uint8_t tmp_buf[tmp_buf_size];
+  FAR uint8_t *tmp_buf = mtdlog->tmp_buf;
 
   memset(tmp_buf, 0, tmp_buf_size);
   memcpy(tmp_buf, info, sizeof(struct mtdlog_entry_s));
@@ -469,7 +470,7 @@ static int mtdlog_write_data(FAR struct mtdlog_s *mtdlog,
   int ret;
   uint32_t remain;
   uint32_t tmp_buf_size = mtdlog->progsize;
-  uint8_t tmp_buf[tmp_buf_size];
+  FAR uint8_t *tmp_buf = mtdlog->tmp_buf;
 
   if (length >= mtdlog->progsize)
     {
@@ -1816,6 +1817,8 @@ int mtdlog_register(FAR const char *path, FAR struct mtd_dev_s *mtd)
   int ret;
   struct mtd_geometry_s geo;
   FAR struct mtdlog_s *mtdlog;
+  uint8_t erasestate;
+  uint32_t tmp_buf_size;
 
   if (mtd == NULL || path == NULL)
     {
@@ -1823,29 +1826,37 @@ int mtdlog_register(FAR const char *path, FAR struct mtd_dev_s *mtd)
       return -EINVAL;
     }
 
-  mtdlog = kmm_malloc(sizeof(struct mtdlog_s));
-  if (mtdlog == NULL)
-    {
-      ferr("ERROR: Failed to allocate memory\n");
-      return -ENOMEM;
-    }
-
   ret = MTD_IOCTL(mtd, MTDIOC_GEOMETRY,
                   (unsigned long)((uintptr_t)&geo));
   if (ret < 0)
     {
       ferr("ERROR: Failed to get geometry\n");
-      kmm_free(mtdlog);
       return ret;
     }
 
   ret = MTD_IOCTL(mtd, MTDIOC_ERASESTATE,
-                  (unsigned long)((uintptr_t)&mtdlog->erasestate));
+                  (unsigned long)((uintptr_t)&erasestate));
   if (ret < 0)
     {
       ferr("ERROR: Failed to get erase state\n");
-      kmm_free(mtdlog);
       return ret;
+    }
+
+  /* Compute the buffer size that covers all usage scenarios:
+   * 1. mtdlog_write_block: ALIGN_UP(sizeof(mtdlog_block_s), progsize)
+   * 2. mtdlog_write_entry: ALIGN_UP(sizeof(mtdlog_entry_s), progsize)
+   * 3. mtdlog_write_data:  progsize
+   * Since mtdlog_entry_s > mtdlog_block_s, and ALIGN_UP(x, p) >= p,
+   * the maximum is ALIGN_UP(sizeof(struct mtdlog_entry_s), progsize).
+   */
+
+  tmp_buf_size = ALIGN_UP(sizeof(struct mtdlog_entry_s), geo.blocksize);
+
+  mtdlog = kmm_malloc(sizeof(struct mtdlog_s) + tmp_buf_size);
+  if (mtdlog == NULL)
+    {
+      ferr("ERROR: Failed to allocate memory\n");
+      return -ENOMEM;
     }
 
   mtdlog->mtd = mtd;
@@ -1853,6 +1864,7 @@ int mtdlog_register(FAR const char *path, FAR struct mtd_dev_s *mtd)
   mtdlog->nblocks = geo.neraseblocks / CONFIG_MTDLOG_BLOCKSIZE_MULTIPLE;
   mtdlog->progsize = geo.blocksize;
   mtdlog->erasesize = geo.erasesize;
+  mtdlog->erasestate = erasestate;
   nxmutex_init(&mtdlog->lock);
 
   if (mtdlog->blocksize < MTDLOG_MIN_BLKSIZE)
