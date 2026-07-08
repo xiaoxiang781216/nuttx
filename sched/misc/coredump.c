@@ -126,7 +126,6 @@ struct coredump_context_s
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
   struct lib_mtdoutstream_s devstream;
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-  struct lib_filesistream_s devinstream;
   struct lib_fileoutstream_s devstream;
 #elif defined(CONFIG_BOARD_COREDUMP_NETPOLL)
   struct lib_netpolloutstream_s netpollstream;
@@ -265,40 +264,6 @@ static int elf_emit_hdr(FAR struct elf_dumpinfo_s *cinfo)
 
   return elf_emit(cinfo, &ehdr, sizeof(ehdr));
 }
-
-/****************************************************************************
- * Name: elf_exist_hdr
- *
- * Description:
- *   Determine whether there is an elf header in device.
- *
- ****************************************************************************/
-
-# if defined(CONFIG_BOARD_COREDUMP_MEMDEV) && \
-     !defined(CONFIG_BOARD_COREDUMP_OVERWRITE)
-static bool elf_exist_hdr(FAR struct lib_instream_s *instream)
-{
-  int ret;
-
-#  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  struct lzf_header_s hdr;
-# else
-  Elf_Ehdr hdr;
-#  endif
-
-  ret = lib_stream_gets(instream, &hdr, sizeof(hdr));
-  if (ret != sizeof(hdr))
-    {
-      return false;
-    }
-
-#  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  return memcmp(hdr.lzf_magic, "ZV", 2) == 0;
-#  else
-  return memcmp(hdr.e_ident, ELFMAG, EI_MAGIC_SIZE) == 0;
-#endif
-}
-#endif
 
 /****************************************************************************
  * Name: elf_get_ntcb
@@ -1079,16 +1044,6 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
     }
 # endif
 
-# if defined(CONFIG_BOARD_COREDUMP_MEMDEV) && \
-     !defined(CONFIG_BOARD_COREDUMP_OVERWRITE)
-  if (elf_exist_hdr((FAR struct lib_instream_s *)&g_coredump.devinstream))
-    {
-      _alert("Coredump memory device already exist:%s\n",
-             CONFIG_BOARD_COREDUMP_DEVPATH);
-      return;
-    }
-# endif
-
 # ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   lib_lzfoutstream(&g_coredump.lzfstream, stream);
   stream = &g_coredump.lzfstream;
@@ -1546,16 +1501,6 @@ int coredump_initialize(void)
   ret = lib_mtdoutstream_open(&g_coredump.devstream,
                               CONFIG_BOARD_COREDUMP_DEVPATH);
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-  ret = lib_filesistream_open(&g_coredump.devinstream,
-                              CONFIG_BOARD_COREDUMP_DEVPATH,
-                              O_RDONLY, 0666);
-  if (ret < 0)
-    {
-      _alert("%s Coredump instream could not be opened:%d\n",
-             CONFIG_BOARD_COREDUMP_DEVPATH, ret);
-      return ret;
-    }
-
   ret = lib_fileoutstream_open(&g_coredump.devstream,
                                CONFIG_BOARD_COREDUMP_DEVPATH,
                                O_WRONLY, 0666);
@@ -1576,9 +1521,6 @@ int coredump_initialize(void)
 #ifdef CONFIG_BOARD_COREDUMP_DEV
   if (ret < 0)
     {
-# ifdef CONFIG_BOARD_COREDUMP_MEMDEV
-      lib_filesistream_close(&g_coredump.devinstream);
-# endif
       _alert("%s Coredump device init failed:%d\n",
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
     }
