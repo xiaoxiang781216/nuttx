@@ -75,11 +75,21 @@ __attribute__((used, retain, visibility("default"),
               no_profile_instrument_function))
 const char *__asan_default_options(void)
 {
+  /* Use fast (frame-pointer) unwinding for the per-allocation stack
+   * trace captured by ASAN.  The slow libunwind path runs on every
+   * heap allocation and makes the malloc-heavy boot path (e.g. package
+   * manifest parsing) slow enough to trigger the monkey busy-loop
+   * threshold.  Fast unwinding still detects all ASAN violations; only
+   * the reported allocation stacks become frame-pointer based.  LSAN
+   * below keeps slow unwind so its exit-time leak scan can walk the
+   * coroutine (setjmp/longjmp) stacks.
+   */
+
   return "abort_on_error=1"
          " alloc_dealloc_mismatch=0"
          " allocator_frees_and_returns_null_on_realloc_zero=0"
          " check_initialization_order=1"
-         " fast_unwind_on_malloc=0"
+         " fast_unwind_on_malloc=1"
          " strict_init_order=1"
          " detect_stack_use_after_return=0";
 }
