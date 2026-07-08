@@ -84,6 +84,11 @@ ifeq ($(CONFIG_ARM_UNWINDER_EXIDX),y)
   CMN_CSRCS += arm_backtrace_unwind.c
 endif
 
+ifeq ($(CONFIG_ARM_UNWINDER_LIBUNWIND),y)
+  CMN_CSRCS += arm_backtrace_libunwind.c
+  CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libbuiltin$(DELIM)libunwind$(DELIM)libunwind$(DELIM)include
+endif
+
 ifeq ($(CONFIG_ARCH_FPU),y)
   CMN_CSRCS += arm_fpucmp.c
 endif

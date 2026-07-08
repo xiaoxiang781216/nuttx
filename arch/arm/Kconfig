@@ -1536,10 +1536,9 @@ config ARM_SEMIHOSTING_HOSTFS_CACHE_COHERENCE
 
 endif # ARM_SEMIHOSTING_HOSTFS
 
-if SCHED_BACKTRACE
-
 choice
 	prompt "Choose ARM unwinder"
+	depends on SCHED_BACKTRACE
 	default ARM_UNWINDER_EXIDX
 	---help---
 		This determines which method will be used for unwinding nuttx stack
@@ -1567,9 +1566,14 @@ config ARM_UNWINDER_EXIDX
 		the performance is not affected. Currently, this feature
 		only works with EABI compilers.
 
-endchoice # Choose ARM unwinder
+config ARM_UNWINDER_LIBUNWIND
+	bool "llvm-libunwind unwinder"
+	select LIB_LIBUNWIND
+	---help---
+		This option enables llvm-libunwind(based on .ARM.exidx) for
+		unwinding nuttx stack traces.
 
-endif # SCHED_BACKTRACE
+endchoice # Choose ARM unwinder
 
 config ARM_STACKCHECK
 	bool "Check for stack overflow on each function call"

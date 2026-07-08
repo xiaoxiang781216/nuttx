@@ -112,6 +112,12 @@ if(CONFIG_ARM_UNWINDER_EXIDX)
   list(APPEND SRCS arm_backtrace_unwind.c)
 endif()
 
+if(CONFIG_ARM_UNWINDER_LIBUNWIND)
+  list(APPEND SRCS arm_backtrace_libunwind.c)
+  target_include_directories(
+    arch PRIVATE ${NUTTX_DIR}/libs/libbuiltin/libunwind/libunwind/include)
+endif()
+
 if(CONFIG_ARCH_KERNEL_STACK)
   list(APPEND SRCS arm_addrenv_kstack.c)
 endif()
