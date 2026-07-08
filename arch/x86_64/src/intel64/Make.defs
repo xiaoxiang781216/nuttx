@@ -49,6 +49,11 @@ ifeq ($(CONFIG_X86_64_UNWINDER_FRAME_POINTER),y)
   CMN_CSRCS += intel64_backtrace_fp.c
 endif
 
+ifeq ($(CONFIG_X86_64_UNWINDER_LIBUNWIND),y)
+  CMN_CSRCS += intel64_backtrace_libunwind.c
+  CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libbuiltin$(DELIM)libunwind$(DELIM)libunwind$(DELIM)include
+endif
+
 ifeq ($(CONFIG_STACK_COLORATION),y)
   CMN_CSRCS += intel64_checkstack.c
 endif

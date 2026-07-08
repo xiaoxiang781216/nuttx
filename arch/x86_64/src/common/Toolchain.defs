@@ -321,3 +321,10 @@ LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)el
 CMODULEFLAGS += -fno-pic -mcmodel=large
 CELFFLAGS += -fno-pic -mcmodel=large
 CXXELFFLAGS += -fno-pic -mcmodel=large
+
+# Generate .eh_frame_hdr section for libunwind's binary search of FDEs
+
+ifeq ($(CONFIG_LIB_LIBUNWIND),y)
+  ARCHOPTIMIZATION += -funwind-tables -fasynchronous-unwind-tables
+  LDFLAGS += --eh-frame-hdr
+endif

@@ -360,3 +360,8 @@ if(CONFIG_ARCH_TOOLCHAIN_GNU AND NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
     endif()
   endif()
 endif()
+
+if(CONFIG_LIB_LIBUNWIND)
+  add_compile_options(-funwind-tables -fasynchronous-unwind-tables)
+  add_link_options(-Wl,--eh-frame-hdr)
+endif()

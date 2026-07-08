@@ -96,9 +96,9 @@ config ARCH_CHIP
 	default "goldfish"          if ARCH_CHIP_GOLDFISH_X86_64
 	default "intel64"           if ARCH_CHIP_INTEL64
 
-if SCHED_BACKTRACE
 choice
 	prompt "Choose x86_64 unwinder"
+	depends on SCHED_BACKTRACE
 	default X86_64_UNWINDER_FRAME_POINTER
 	---help---
 		This determines which method will be used for unwinding nuttx stack
@@ -111,8 +111,14 @@ config X86_64_UNWINDER_FRAME_POINTER
 		This option enables the frame pointer unwinder for unwinding
 		nuttx stack traces.
 
+config X86_64_UNWINDER_LIBUNWIND
+	bool "llvm-libunwind unwinder"
+	select LIB_LIBUNWIND
+	---help---
+		This option enables llvm-libunwind(based on .eh_frame) for
+		unwinding nuttx stack traces.
+
 endchoice # Choose x86_64 unwinder
-endif
 
 # CPU features
 

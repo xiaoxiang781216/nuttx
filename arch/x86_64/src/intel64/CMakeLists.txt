@@ -61,6 +61,12 @@ if(CONFIG_X86_64_UNWINDER_FRAME_POINTER)
   list(APPEND SRCS intel64_backtrace_fp.c)
 endif()
 
+if(CONFIG_X86_64_UNWINDER_LIBUNWIND)
+  list(APPEND SRCS intel64_backtrace_libunwind.c)
+  target_include_directories(
+    arch PRIVATE ${NUTTX_DIR}/libs/libbuiltin/libunwind/libunwind/include)
+endif()
+
 if(CONFIG_STACK_COLORATION)
   list(APPEND SRCS intel64_checkstack.c)
 endif()
