@@ -23,4 +23,8 @@ if(CONFIG_LIBC_DLFCN)
   target_sources(c PRIVATE lib_dlopen.c lib_dlclose.c lib_dlsym.c lib_dlerror.c
                            lib_dlsymtab.c)
 endif()
-target_sources(c PRIVATE lib_dlfind_object.c)
+target_sources(c PRIVATE lib_dlfind_object.c lib_dladdr.c)
+
+if(NOT MSVC)
+  target_sources(c PRIVATE lib_dl_iterate_phdr.c)
+endif()

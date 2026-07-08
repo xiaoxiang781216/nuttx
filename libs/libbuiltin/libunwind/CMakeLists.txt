@@ -46,6 +46,8 @@ if(CONFIG_LIB_LIBUNWIND)
   add_dependencies(apps_post unwind)
   add_dependencies(nuttx unwind)
   nuttx_add_library_internal(unwind)
+  target_link_options(nuttx PRIVATE -Wl,--whole-archive $<TARGET_FILE:unwind>
+                      -Wl,--no-whole-archive)
 
   target_include_directories(unwind PRIVATE ${UNWIND_INCDIR} ${UNWIND_SRCDIR})
   target_compile_definitions(unwind PRIVATE ${UNWIND_DEFS})

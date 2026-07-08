@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <elf.h>
+#include <sys/types.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -45,6 +46,25 @@
 #endif
 
 /****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+struct dl_phdr_info
+{
+  ElfW(Addr)        dlpi_addr;
+  const char       *dlpi_name;
+  const ElfW(Phdr) *dlpi_phdr;
+  ElfW(Half)        dlpi_phnum;
+
+  /* Raw .eh_frame for objects without .eh_frame_hdr (riscv-gcc) */
+
+  uintptr_t         dlpi_eh_frame;
+  size_t            dlpi_eh_frame_len;
+};
+
+typedef uintptr_t _Unwind_Ptr;
+
+/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -57,6 +77,13 @@ extern "C"
 #endif
 
 EXTERN Elf_Dyn _DYNAMIC[];
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+int dl_iterate_phdr(int (*callback)(struct dl_phdr_info *info,
+                    size_t size, void *data), void *data);
 
 #undef EXTERN
 #ifdef __cplusplus

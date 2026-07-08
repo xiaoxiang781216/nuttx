@@ -25,11 +25,15 @@ ifeq ($(CONFIG_LIBC_DLFCN),y)
 # Add the dlfcn.h files to the build
 
 CSRCS += lib_dlopen.c lib_dlclose.c lib_dlsym.c lib_dlerror.c lib_dlsymtab.c
-CSRCS += lib_dladdr.c
 
 endif
 
-CSRCS += lib_dlfind_object.c
+CSRCS += lib_dlfind_object.c lib_dladdr.c
+
+ifneq ($(CONFIG_HOST_WINDOWS),y)
+  CSRCS += lib_dl_iterate_phdr.c
+endif
+
 
 # Add the dlfcn.h directory to the build
 

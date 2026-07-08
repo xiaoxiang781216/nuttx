@@ -811,6 +811,12 @@ static const char *g_white_files[] =
   "_mcal.c",
   "_mcal.h",
 
+  /* Skip Mixed case
+   * nuttx/include/link.h:54:7: error: Mixed case identifier found
+   */
+
+  "link.h",
+
   NULL
 };
 

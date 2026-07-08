@@ -40,10 +40,3 @@ int _dl_find_object(FAR void *address, FAR struct dl_find_object *result)
 {
   return -1;
 }
-
-int dl_iterate_phdr(CODE int (*callback)(FAR struct dl_phdr_info *info,
-                                         size_t size, FAR void *data),
-                    FAR void *data)
-{
-  return 0;
-}
