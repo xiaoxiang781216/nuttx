@@ -40,7 +40,6 @@ set(SRCS
     lib_realpath.c
     lib_bsearch.c
     lib_rand.c
-    lib_rand48.c
     lib_reallocarray.c
     lib_qsort.c
     lib_srand.c
@@ -66,6 +65,10 @@ set(SRCS
 
 if(CONFIG_PSEUDOTERM)
   list(APPEND SRCS lib_ptsname.c lib_ptsnamer.c lib_unlockpt.c lib_openpty.c)
+endif()
+
+if(CONFIG_LIBC_RAND48)
+  list(APPEND SRCS lib_rand48.c)
 endif()
 
 target_sources(c PRIVATE ${SRCS})

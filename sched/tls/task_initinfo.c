@@ -159,6 +159,7 @@ int task_init_info(FAR struct task_group_s *group)
       strlcpy(info->ta_hostname, CONFIG_LIBC_HOSTNAME,
               sizeof(info->ta_hostname));
 #endif
+#ifdef CONFIG_LIBC_RAND48
       info->ta_seed48[0] = 0;
       info->ta_seed48[1] = 0;
       info->ta_seed48[2] = 0;
@@ -166,6 +167,7 @@ int task_init_info(FAR struct task_group_s *group)
       info->ta_seed48[4] = 0xdeec;
       info->ta_seed48[5] = 0x5;
       info->ta_seed48[6] = 0xb;
+#endif
     }
 
   return ret;

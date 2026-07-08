@@ -152,7 +152,9 @@ struct task_info_s
   struct group          ta_group;
   FAR char             *ta_group_buffer;
   FAR char             *ta_pass;
+#ifdef CONFIG_LIBC_RAND48
   unsigned short int    ta_seed48[7];
+#endif
   unsigned long         ta_randint1;
 #if (CONFIG_LIBC_RAND_ORDER > 1)
   unsigned long         ta_randint2;
