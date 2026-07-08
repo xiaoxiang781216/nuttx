@@ -218,6 +218,18 @@ struct lib_rawoutstream_s
   int                    fd;
 };
 
+struct lib_rawsistream_s
+{
+  struct lib_sistream_s  common;
+  int                    fd;
+};
+
+struct lib_rawsostream_s
+{
+  struct lib_sostream_s  common;
+  int                    fd;
+};
+
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 struct lib_filesistream_s
 {
@@ -231,18 +243,6 @@ struct lib_fileoutstream_s
   struct file            file;
 };
 #endif
-
-struct lib_rawsistream_s
-{
-  struct lib_sistream_s  common;
-  int                    fd;
-};
-
-struct lib_rawsostream_s
-{
-  struct lib_sostream_s  common;
-  int                    fd;
-};
 
 struct lib_bufferedoutstream_s
 {
@@ -327,6 +327,15 @@ struct lib_lzfoutstream_s
 #endif
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
+struct lib_blksistream_s
+{
+  struct lib_sistream_s  common;
+  FAR struct inode      *inode;
+  struct geometry        geo;
+  FAR unsigned char     *cache;
+  off_t                  sector;
+};
+
 struct lib_blkoutstream_s
 {
   struct lib_sostream_s  common;
@@ -745,25 +754,35 @@ void lib_lzfoutstream(FAR struct lib_lzfoutstream_s *stream,
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 int lib_blkoutstream_open(FAR struct lib_blkoutstream_s *stream,
                           FAR const char *name);
-#endif
+void lib_blkoutstream_close(FAR struct lib_blkoutstream_s *stream);
 
 /****************************************************************************
- * Name: lib_blkoutstream_close
+ * Name: lib_blksistream_open
  *
  * Description:
- *  close block driver stream backend
+ *   Open a seekable block device input stream.
  *
  * Input Parameters:
- *   stream  - User allocated, uninitialized instance of struct
- *                lib_blkoutstream_s to be initialized.
- *
- * Returned Value:
- *   None (User allocated instance initialized).
+ *   stream  - User allocated instance of struct lib_blksistream_s.
+ *   name    - Block device path (e.g., "/dev/virtblk2").
  *
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
-void lib_blkoutstream_close(FAR struct lib_blkoutstream_s *stream);
+int lib_blksistream_open(FAR struct lib_blksistream_s *stream,
+                         FAR const char *name);
+
+/****************************************************************************
+ * Name: lib_blksistream_close
+ *
+ * Description:
+ *   Close a block device input stream and release resources.
+ *
+ * Input Parameters:
+ *   stream  - Instance previously opened with lib_blksistream_open.
+ *
+ ****************************************************************************/
+
+void lib_blksistream_close(FAR struct lib_blksistream_s *stream);
 #endif
 
 /****************************************************************************

@@ -72,7 +72,7 @@ if(CONFIG_LIBC_LZF)
 endif()
 
 if(NOT CONFIG_DISABLE_MOUNTPOINT)
-  list(APPEND SRCS lib_blkoutstream.c)
+  list(APPEND SRCS lib_blkoutstream.c lib_blksistream.c)
 endif()
 
 target_sources(c PRIVATE ${SRCS})

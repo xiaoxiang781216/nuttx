@@ -57,7 +57,7 @@ CSRCS += lib_lzfcompress.c lib_lzfdecompress.c
 endif
 
 ifeq ($(CONFIG_DISABLE_MOUNTPOINT),)
-CSRCS += lib_blkoutstream.c
+CSRCS += lib_blkoutstream.c lib_blksistream.c
 endif
 
 # Add the stdio directory to the build

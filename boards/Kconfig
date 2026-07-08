@@ -4794,7 +4794,7 @@ config BOARD_COREDUMP_BLKDEV
 
 config BOARD_COREDUMP_MTDDEV
 	bool "Enable Core Dump to mtd device"
-	depends on COREDUMP
+	depends on COREDUMP && MTD && !DISABLE_MOUNTPOINT
 	---help---
 		Enable save coredump to mtd device when crash.
 
