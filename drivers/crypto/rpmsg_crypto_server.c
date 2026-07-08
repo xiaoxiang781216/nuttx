@@ -466,13 +466,6 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_endpoint *ept,
       return -ENOMEM;
     }
 
-  crde->crd_alg = virtio_crypto_get_cipher_alg(msg->data.header.algo);
-  if (crde->crd_alg < 0)
-    {
-      rsp->header.result = crde->crd_alg;
-      return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp));
-    }
-
   if (msg->data.header.opcode == VIRTIO_CRYPTO_CIPHER_ENCRYPT)
     {
       crde->crd_flags |= CRD_F_ENCRYPT;
