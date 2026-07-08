@@ -104,43 +104,46 @@ struct elf_dumpinfo_s
   int                         memsegs;
 };
 
-/****************************************************************************
- * Private Data
- ****************************************************************************/
+/* Per-CPU coredump context — all mutable per-cpu state in one struct */
 
+struct coredump_context_s
+{
 #ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-static DEFINE_PER_CPU_BSS_BMP(struct lib_lzfoutstream_s, g_lzfstream);
-#define g_lzfstream this_cpu_var_bmp(g_lzfstream)
+  struct lib_lzfoutstream_s lzfstream;
 #endif
 
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
-static DEFINE_PER_CPU_BSS_BMP(struct lib_syslogstream_s, g_syslogstream);
-#define g_syslogstream this_cpu_var_bmp(g_syslogstream)
+  struct lib_syslogstream_s syslogstream;
 #  ifdef CONFIG_BOARD_COREDUMP_BASE64STREAM
-static DEFINE_PER_CPU_BSS_BMP(struct lib_base64outstream_s, g_base64stream);
-#define g_base64stream this_cpu_var_bmp(g_base64stream)
+  struct lib_base64outstream_s base64stream;
 #  else
-static DEFINE_PER_CPU_BSS_BMP(struct lib_hexdumpstream_s, g_hexstream);
-#define g_hexstream this_cpu_var_bmp(g_hexstream)
+  struct lib_hexdumpstream_s hexstream;
 #  endif
 #endif
 
 #ifdef CONFIG_BOARD_COREDUMP_BLKDEV
-static DEFINE_PER_CPU_BSS_BMP(struct lib_blkoutstream_s, g_devstream);
-#define g_devstream this_cpu_var_bmp(g_devstream)
+  struct lib_blkoutstream_s devstream;
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-static DEFINE_PER_CPU_BSS_BMP(struct lib_mtdoutstream_s, g_devstream);
-#define g_devstream this_cpu_var_bmp(g_devstream)
+  struct lib_mtdoutstream_s devstream;
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-static DEFINE_PER_CPU_BSS_BMP(struct lib_filesistream_s, g_devinstream);
-#define g_devinstream this_cpu_var_bmp(g_devinstream)
-static DEFINE_PER_CPU_BSS_BMP(struct lib_fileoutstream_s, g_devstream);
-#define g_devstream this_cpu_var_bmp(g_devstream)
+  struct lib_filesistream_s devinstream;
+  struct lib_fileoutstream_s devstream;
 #elif defined(CONFIG_BOARD_COREDUMP_NETPOLL)
-static DEFINE_PER_CPU_BSS_BMP(struct lib_netpolloutstream_s,
-                              g_netpollstream);
-#define g_netpollstream this_cpu_var_bmp(g_netpollstream)
+  struct lib_netpolloutstream_s netpollstream;
 #endif
+
+  FAR const struct memory_region_s *regions;
+  mutex_t regions_lock;
+  bool stream_initialized;
+  bool enabled;
+};
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static DEFINE_PER_CPU_BSS_BMP(struct coredump_context_s, g_coredump);
+#define g_coredump this_cpu_var_bmp(g_coredump)
 
 #ifdef CONFIG_BOARD_MEMORY_RANGE
 static const struct memory_region_s g_memory_region[] =
@@ -148,19 +151,6 @@ static const struct memory_region_s g_memory_region[] =
     CONFIG_BOARD_MEMORY_RANGE
   };
 #endif
-static DEFINE_PER_CPU_BSS_BMP(const struct memory_region_s *, g_regions);
-#define g_regions this_cpu_var_bmp(g_regions)
-static DEFINE_PER_CPU_BMP(mutex_t, g_regions_lock) = NXMUTEX_INITIALIZER;
-#define g_regions_lock this_cpu_var_bmp(g_regions_lock)
-static DEFINE_PER_CPU_BSS_BMP(bool, g_stream_initialized);
-#define g_stream_initialized this_cpu_var_bmp(g_stream_initialized)
-
-/* Runtime switch controlling automatic coredump on crash/panic, exposed
- * via the procfs node "coredump/ctl" (write 1 to enable, 0 to disable).
- * Default enabled to preserve the existing behavior.
- */
-
-static bool g_coredump_enabled = true;
 
 /****************************************************************************
  * Private Functions
@@ -988,18 +978,18 @@ static int coredump_with_tcb(FAR const struct memory_region_s *regions,
 
 static void coredump_dump_netpoll(FAR struct tcb_s *tcb)
 {
-  FAR struct lib_netpolloutstream_s *netstream = &g_netpollstream;
+  FAR struct lib_netpolloutstream_s *netstream = &g_coredump.netpollstream;
   FAR struct lib_outstream_s *stream;
   int ret;
 
   stream = &netstream->common;
 
 #  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  lib_lzfoutstream(&g_lzfstream, stream);
-  stream = (FAR struct lib_outstream_s *)&g_lzfstream;
+  lib_lzfoutstream(&g_coredump.lzfstream, stream);
+  stream = (FAR struct lib_outstream_s *)&g_coredump.lzfstream;
 #  endif
 
-  ret = coredump_with_tcb(g_regions, stream, tcb);
+  ret = coredump_with_tcb(g_coredump.regions, stream, tcb);
   if (ret < 0)
     {
       _alert("Coredump fail %d\n", ret);
@@ -1032,15 +1022,15 @@ static void coredump_dump_syslog(FAR struct tcb_s *tcb)
 
   /* Initialize hex output stream */
 
-  lib_syslogstream(&g_syslogstream, LOG_EMERG);
-  stream = &g_syslogstream;
+  lib_syslogstream(&g_coredump.syslogstream, LOG_EMERG);
+  stream = &g_coredump.syslogstream;
 #ifdef CONFIG_BOARD_COREDUMP_BASE64STREAM
-  lib_base64outstream(&g_base64stream, stream);
-  stream = &g_base64stream;
+  lib_base64outstream(&g_coredump.base64stream, stream);
+  stream = &g_coredump.base64stream;
   streamname = "base64";
 #else
-  lib_hexdumpstream(&g_hexstream, stream);
-  stream = &g_hexstream;
+  lib_hexdumpstream(&g_coredump.hexstream, stream);
+  stream = &g_coredump.hexstream;
   streamname = "hex";
 #endif
 
@@ -1048,13 +1038,13 @@ static void coredump_dump_syslog(FAR struct tcb_s *tcb)
 
   /* Initialize LZF compression stream */
 
-  lib_lzfoutstream(&g_lzfstream, stream);
-  stream = &g_lzfstream;
+  lib_lzfoutstream(&g_coredump.lzfstream, stream);
+  stream = &g_coredump.lzfstream;
 #  endif
 
   /* Do core dump */
 
-  coredump_with_tcb(g_regions, stream, tcb);
+  coredump_with_tcb(g_coredump.regions, stream, tcb);
 
 #  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   _alert("Coredump finish (Compression Enabled). %s formatted\n",
@@ -1078,11 +1068,11 @@ static void coredump_dump_syslog(FAR struct tcb_s *tcb)
 #ifdef CONFIG_BOARD_COREDUMP_DEV
 static void coredump_dump_dev(FAR struct tcb_s *tcb)
 {
-  FAR void *stream = &g_devstream;
+  FAR void *stream = &g_coredump.devstream;
   int ret;
 
 # if defined(CONFIG_BOARD_COREDUMP_BLKDEV) || defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-  if (g_devstream.inode == NULL)
+  if (g_coredump.devstream.inode == NULL)
     {
       _alert("Coredump device not found\n");
       return;
@@ -1091,7 +1081,7 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
 
 # if defined(CONFIG_BOARD_COREDUMP_MEMDEV) && \
      !defined(CONFIG_BOARD_COREDUMP_OVERWRITE)
-  if (elf_exist_hdr((FAR struct lib_instream_s *)&g_devinstream))
+  if (elf_exist_hdr((FAR struct lib_instream_s *)&g_coredump.devinstream))
     {
       _alert("Coredump memory device already exist:%s\n",
              CONFIG_BOARD_COREDUMP_DEVPATH);
@@ -1100,11 +1090,11 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
 # endif
 
 # ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  lib_lzfoutstream(&g_lzfstream, stream);
-  stream = &g_lzfstream;
+  lib_lzfoutstream(&g_coredump.lzfstream, stream);
+  stream = &g_coredump.lzfstream;
 # endif
 
-  ret = coredump_with_tcb(g_regions, stream, tcb);
+  ret = coredump_with_tcb(g_coredump.regions, stream, tcb);
   if (ret < 0)
     {
       _alert("Coredump fail %d\n", ret);
@@ -1112,7 +1102,7 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
     }
 
   _alert("Coredump finish, write %"PRIuOFF" bytes to %s\n",
-         g_devstream.common.nput, CONFIG_BOARD_COREDUMP_DEVPATH);
+         g_coredump.devstream.common.nput, CONFIG_BOARD_COREDUMP_DEVPATH);
 }
 #endif
 
@@ -1127,12 +1117,13 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
 noinline_function
 static int coredump_initialize_memory_region(void)
 {
-#ifdef CONFIG_BOARD_MEMORY_RANGE
-  if (g_regions == NULL)
+  if (g_coredump.regions == NULL)
     {
-      g_regions = g_memory_region;
-    }
+      nxmutex_init(&g_coredump.regions_lock);
+#ifdef CONFIG_BOARD_MEMORY_RANGE
+      g_coredump.regions = g_memory_region;
 #endif
+    }
 
   return OK;
 }
@@ -1158,11 +1149,11 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
       return ret;
     }
 
-  nxmutex_lock(&g_regions_lock);
+  nxmutex_lock(&g_coredump.regions_lock);
 
-  if (g_regions != NULL)
+  if (g_coredump.regions != NULL)
     {
-      region = (FAR struct memory_region_s *)g_regions;
+      region = (FAR struct memory_region_s *)g_coredump.regions;
 
       while (region->start < region->end)
         {
@@ -1213,18 +1204,19 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
       goto out;
     }
 
-  if (g_regions != NULL)
+  if (g_coredump.regions != NULL)
     {
-      memcpy(region, g_regions, sizeof(struct memory_region_s) * count);
+      memcpy(region, g_coredump.regions,
+             sizeof(struct memory_region_s) * count);
     }
 
-  if (g_regions != NULL
+  if (g_coredump.regions != NULL
 #ifdef CONFIG_BOARD_MEMORY_RANGE
-    && g_regions != g_memory_region
+    && g_coredump.regions != g_memory_region
 #endif
     )
     {
-      lib_free((FAR void *)g_regions);
+      lib_free((FAR void *)g_coredump.regions);
     }
 
   region[count - 1].start = (uintptr_t)ptr;
@@ -1234,10 +1226,10 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
   region[count].end = 0;
   region[count].flags = 0;
 
-  g_regions = region;
+  g_coredump.regions = region;
 
 out:
-  nxmutex_unlock(&g_regions_lock);
+  nxmutex_unlock(&g_coredump.regions_lock);
   return ret;
 }
 
@@ -1254,15 +1246,15 @@ int coredump_remove_memory_region(FAR const void *ptr, size_t size)
   FAR struct memory_region_s *region;
   size_t i;
 
-  nxmutex_lock(&g_regions_lock);
+  nxmutex_lock(&g_coredump.regions_lock);
 
-  if (g_regions == NULL)
+  if (g_coredump.regions == NULL)
     {
-      nxmutex_unlock(&g_regions_lock);
+      nxmutex_unlock(&g_coredump.regions_lock);
       return -ENOENT;
     }
 
-  region = (FAR struct memory_region_s *)g_regions;
+  region = (FAR struct memory_region_s *)g_coredump.regions;
 
   for (i = 0; region[i].start < region[i].end; i++)
     {
@@ -1277,12 +1269,12 @@ int coredump_remove_memory_region(FAR const void *ptr, size_t size)
             }
           while (region[i++].start != 0);
 
-          nxmutex_unlock(&g_regions_lock);
+          nxmutex_unlock(&g_coredump.regions_lock);
           return 0;
         }
     }
 
-  nxmutex_unlock(&g_regions_lock);
+  nxmutex_unlock(&g_coredump.regions_lock);
   return -ENOENT;
 }
 
@@ -1539,6 +1531,8 @@ int coredump_initialize(void)
 {
   int ret = 0;
 
+  g_coredump.enabled = true;
+
   ret = coredump_initialize_memory_region();
   if (ret < 0)
     {
@@ -1546,13 +1540,13 @@ int coredump_initialize(void)
     }
 
 #ifdef CONFIG_BOARD_COREDUMP_BLKDEV
-  ret = lib_blkoutstream_open(&g_devstream,
+  ret = lib_blkoutstream_open(&g_coredump.devstream,
                               CONFIG_BOARD_COREDUMP_DEVPATH);
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-  ret = lib_mtdoutstream_open(&g_devstream,
+  ret = lib_mtdoutstream_open(&g_coredump.devstream,
                               CONFIG_BOARD_COREDUMP_DEVPATH);
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-  ret = lib_filesistream_open(&g_devinstream,
+  ret = lib_filesistream_open(&g_coredump.devinstream,
                               CONFIG_BOARD_COREDUMP_DEVPATH,
                               O_RDONLY, 0666);
   if (ret < 0)
@@ -1562,11 +1556,11 @@ int coredump_initialize(void)
       return ret;
     }
 
-  ret = lib_fileoutstream_open(&g_devstream,
+  ret = lib_fileoutstream_open(&g_coredump.devstream,
                                CONFIG_BOARD_COREDUMP_DEVPATH,
                                O_WRONLY, 0666);
 #elif defined(CONFIG_BOARD_COREDUMP_NETPOLL)
-  ret = lib_netpolloutstream_init(&g_netpollstream,
+  ret = lib_netpolloutstream_init(&g_coredump.netpollstream,
                                   CONFIG_BOARD_COREDUMP_NETPOLL_INTF,
                                   CONFIG_BOARD_COREDUMP_NETPOLL_PORT,
                                   CONFIG_BOARD_COREDUMP_NETPOLL_IPADDR,
@@ -1583,7 +1577,7 @@ int coredump_initialize(void)
   if (ret < 0)
     {
 # ifdef CONFIG_BOARD_COREDUMP_MEMDEV
-      lib_filesistream_close(&g_devinstream);
+      lib_filesistream_close(&g_coredump.devinstream);
 # endif
       _alert("%s Coredump device init failed:%d\n",
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
@@ -1591,10 +1585,10 @@ int coredump_initialize(void)
 
 #endif
 
-  g_stream_initialized = true;
+  g_coredump.stream_initialized = true;
 
 #ifdef CONFIG_FS_PROCFS_REGISTER
-  procfs_create_bool("coredump/ctl", 0644, &g_coredump_enabled);
+  procfs_create_bool("coredump/ctl", 0644, &g_coredump.enabled);
 #endif
 
 #if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
@@ -1617,20 +1611,20 @@ int coredump_initialize(void)
 
 void coredump_dump(FAR struct tcb_s *tcb)
 {
-  if (!g_stream_initialized)
+  if (!g_coredump.stream_initialized)
     {
       _alert("Coredump device is not initialized.\n");
       return;
     }
 
-  if (!g_coredump_enabled)
+  if (!g_coredump.enabled)
     {
       _alert("Coredump is disabled.\n");
       return;
     }
 
 #ifdef CONFIG_BOARD_COREDUMP_PRINT_REGIONS
-  coredump_print_memory_regions(g_regions);
+  coredump_print_memory_regions(g_coredump.regions);
 #endif
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
   coredump_dump_syslog(tcb);
