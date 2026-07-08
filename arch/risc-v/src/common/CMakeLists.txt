@@ -74,7 +74,13 @@ if(NOT CONFIG_BUILD_FLAT)
 endif()
 
 if(CONFIG_SCHED_BACKTRACE)
-  list(APPEND SRCS riscv_backtrace.c)
+  if(CONFIG_RISCV_UNWINDER_LIBUNWIND)
+    list(APPEND SRCS riscv_backtrace_libunwind.c)
+    target_include_directories(
+      arch PRIVATE ${NUTTX_DIR}/libs/libbuiltin/libunwind/libunwind/include)
+  else()
+    list(APPEND SRCS riscv_backtrace.c)
+  endif()
 endif()
 
 if(CONFIG_STACK_COLORATION)

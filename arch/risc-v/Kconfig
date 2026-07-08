@@ -987,4 +987,26 @@ endif
 if ARCH_CHIP_SG2000
 source "arch/risc-v/src/sg2000/Kconfig"
 endif
+
+choice
+	prompt "Choose RISC-V unwinder"
+	default RISCV_UNWINDER_FRAME_POINTER
+	depends on SCHED_BACKTRACE
+
+config RISCV_UNWINDER_FRAME_POINTER
+	bool "Frame pointer unwinder"
+	select FRAME_POINTER
+	---help---
+		This option enables the frame pointer based stack unwinder
+		for RISC-V.
+
+config RISCV_UNWINDER_LIBUNWIND
+	bool "llvm-libunwind unwinder"
+	select LIB_LIBUNWIND
+	---help---
+		This option enables llvm-libunwind(based on .eh_frame) for
+		unwinding nuttx stack traces.
+
+endchoice # Choose RISC-V unwinder
+
 endif # ARCH_RISCV

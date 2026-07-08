@@ -576,3 +576,13 @@ SHLDFLAGS = -shared -Bsymbolic -Bdynamic -G
 ifeq ($(CONFIG_SIM_M32),y)
   SHLDFLAGS += -melf_i386
 endif
+
+# Generate .eh_frame_hdr section for libunwind's binary search of FDEs
+# RISC-V GNU ld does not support --eh-frame-hdr, so only add for clang/lld
+
+ifeq ($(CONFIG_LIB_LIBUNWIND),y)
+  ARCHOPTIMIZATION += -funwind-tables -fasynchronous-unwind-tables
+  ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+    LDFLAGS += --eh-frame-hdr
+  endif
+endif

@@ -74,7 +74,12 @@ CMN_UASRCS += riscv_signal_handler.S
 endif
 
 ifeq ($(CONFIG_SCHED_BACKTRACE),y)
+ifeq ($(CONFIG_RISCV_UNWINDER_LIBUNWIND),y)
+CMN_CSRCS += riscv_backtrace_libunwind.c
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libbuiltin$(DELIM)libunwind$(DELIM)libunwind$(DELIM)include
+else
 CMN_CSRCS += riscv_backtrace.c
+endif
 endif
 
 ifeq ($(CONFIG_STACK_COLORATION),y)
