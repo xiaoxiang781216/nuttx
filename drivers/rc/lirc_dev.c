@@ -40,6 +40,7 @@
 #include <nuttx/circbuf.h>
 #include <nuttx/rc/lirc_dev.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -128,6 +129,9 @@ static int lirc_open(FAR struct file *filep)
   fh = kmm_zalloc(sizeof(*fh));
   if (!fh)
     {
+      rc_trace_diag(LOG_ERR, DIAG_IR_OPEN_FAIL,
+                    "DevPath:%s,Errno:%d",
+                    filep->f_inode->i_name, -ENOMEM);
       return -ENOMEM;
     }
 
@@ -153,6 +157,9 @@ static int lirc_open(FAR struct file *filep)
   ret = circbuf_init(&fh->buffer, NULL, lower->buffer_bytes);
   if (ret < 0)
     {
+      rc_trace_diag(LOG_ERR, DIAG_IR_OPEN_FAIL,
+                    "DevPath:%s,Errno:%d",
+                    filep->f_inode->i_name, ret);
       goto buffer_err;
     }
 
@@ -166,6 +173,9 @@ static int lirc_open(FAR struct file *filep)
       ret = lower->ops->open(lower);
       if (ret < 0)
         {
+          rc_trace_diag(LOG_ERR, DIAG_IR_OPEN_FAIL,
+                        "DevPath:%s,Errno:%d",
+                        filep->f_inode->i_name, ret);
           goto open_err;
         }
     }
@@ -582,6 +592,13 @@ static int lirc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         ret = -ENOTTY;
     }
 
+  if (ret < 0)
+    {
+      rc_trace_diag(LOG_WARNING, DIAG_IR_IOCTL_FAIL,
+                    "DevPath:%s,Cmd:0x%x,Errno:%d",
+                    filep->f_inode->i_name, cmd, ret);
+    }
+
   nxmutex_unlock(&upper->lock);
   return ret;
 }
@@ -651,6 +668,13 @@ static ssize_t lirc_write(FAR struct file *filep, FAR const char *buffer,
   else
     {
       ret = lirc_write_pulse(filep, buffer, buflen);
+    }
+
+  if (ret < 0)
+    {
+      rc_trace_diag(LOG_ERR, DIAG_IR_WRITE_FAIL,
+                    "DevPath:%s,SendMode:%d,Errno:%d",
+                    filep->f_inode->i_name, fh->send_mode, ret);
     }
 
   nxmutex_unlock(&upper->lock);
@@ -798,6 +822,8 @@ int lirc_register(FAR struct lirc_lowerhalf_s *lower, int devno)
   if (!upper)
     {
       snerr("ERROR: Allocation failed\n");
+      rc_trace_diag(LOG_ERR, DIAG_IR_REGISTER_FAIL,
+                    "DevNo:%d,Errno:%d", devno, -ENOMEM);
       return -ENOMEM;
     }
 

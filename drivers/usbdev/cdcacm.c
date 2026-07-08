@@ -50,6 +50,7 @@
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/cdcacm.h>
 #include <nuttx/usb/usbdev_trace.h>
+#include <nuttx/trace.h>
 
 #include "cdcacm.h"
 
@@ -396,6 +397,9 @@ static ssize_t cdcuart_sendbuf(FAR struct uart_dev_s *dev,
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_SUBMITFAIL),
                (uint16_t)-ret);
+      usb_trace_diag(LOG_ERR, DIAG_USB_SUBMIT_FAIL,
+                     "Dev:cdcacm,Ep:0x%02x,Dir:in,ReqLen:%zu,Errno:%d",
+                     ep->eplog, req->len, ret);
       return ret;
     }
 
@@ -428,6 +432,8 @@ static int cdcacm_sndpacket(FAR struct cdcacm_dev_s *priv)
   if (priv == NULL)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return -EINVAL;
     }
 #endif
@@ -457,6 +463,9 @@ static int cdcacm_sndpacket(FAR struct cdcacm_dev_s *priv)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_SUBMITFAIL),
                    (uint16_t)-ret);
+          usb_trace_diag(LOG_ERR, DIAG_USB_SUBMIT_FAIL,
+                         "Dev:cdcacm,Ep:0x%02x,Dir:in,ReqLen:%zu,Errno:%d",
+                         ep->eplog, req->len, ret);
           flags = spin_lock_irqsave_nopreempt(&priv->lock);
           dev->xmit.head = 0;
           dev->xmit.tail = 0;
@@ -625,6 +634,9 @@ static int cdcacm_requeue_rdrequest(FAR struct cdcacm_dev_s *priv,
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSUBMIT),
                               (uint16_t)-req->result);
+      usb_trace_diag(LOG_ERR, DIAG_USB_SUBMIT_FAIL,
+                     "Dev:cdcacm,Ep:0x%02x,Dir:out,ReqLen:%zu,Errno:%d",
+                     ep->eplog, req->len, ret);
     }
 
   return ret;
@@ -776,6 +788,8 @@ static int cdcacm_serialstate(FAR struct cdcacm_dev_s *priv)
   if (priv == NULL || priv->epintin == NULL)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return -EINVAL;
     }
 #endif
@@ -833,6 +847,9 @@ static int cdcacm_serialstate(FAR struct cdcacm_dev_s *priv)
   if (ret < 0)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_SUBMITFAIL), (uint16_t)-ret);
+      usb_trace_diag(LOG_ERR, DIAG_USB_SUBMIT_FAIL,
+                     "Dev:cdcacm,Ep:0x%02x,Dir:in,ReqLen:%zu,Errno:%d",
+                     ep->eplog, req->len, ret);
     }
 
 errout_with_flags:
@@ -930,6 +947,8 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   if (priv == NULL)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return -EINVAL;
     }
 #endif
@@ -939,6 +958,9 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
       /* Already configured -- Do nothing */
 
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_ALREADYCONFIGURED), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_CONFIG_FAIL,
+                     "Dev:cdcacm,Reason:already-configured,Config:%d",
+                     config);
       return 0;
     }
 
@@ -951,6 +973,9 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   if (config == CDCACM_CONFIGIDNONE)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_CONFIGNONE), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_CONFIG_FAIL,
+                     "Dev:cdcacm,Reason:deconfigure,Config:%d",
+                     config);
       return 0;
     }
 
@@ -959,6 +984,9 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   if (config != CDCACM_CONFIGID)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_CONFIGIDBAD), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_CONFIG_FAIL,
+                     "Dev:cdcacm,Reason:bad-configid,Config:%d",
+                     config);
       return -EINVAL;
     }
 
@@ -971,6 +999,9 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   if (ret < 0)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPINTINCONFIGFAIL), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_EP_CONFIG_FAIL,
+                     "Dev:cdcacm,EpType:%d,Dir:in,Ep:0x%02x,Errno:%d",
+                     USB_EP_ATTR_XFER_INT, priv->epintin->eplog, ret);
       goto errout;
     }
 
@@ -985,6 +1016,9 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   if (ret < 0)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPBULKINCONFIGFAIL), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_EP_CONFIG_FAIL,
+                     "Dev:cdcacm,EpType:%d,Dir:in,Ep:0x%02x,Errno:%d",
+                     USB_EP_ATTR_XFER_BULK, priv->epbulkin->eplog, ret);
       goto errout;
     }
 
@@ -998,6 +1032,9 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   if (ret < 0)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPBULKOUTCONFIGFAIL), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_EP_CONFIG_FAIL,
+                     "Dev:cdcacm,EpType:%d,Dir:out,Ep:0x%02x,Errno:%d",
+                     USB_EP_ATTR_XFER_BULK, priv->epbulkout->eplog, ret);
       goto errout;
     }
 
@@ -1015,6 +1052,9 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSUBMIT),
                    (uint16_t)-ret);
+          usb_trace_diag(LOG_ERR, DIAG_USB_SUBMIT_FAIL,
+                         "Dev:cdcacm,Ep:0x%02x,Dir:out,ReqLen:%zu,Errno:%d",
+                         priv->epbulkout->eplog, req->len, ret);
           goto errout;
         }
 
@@ -1053,6 +1093,9 @@ static void cdcacm_ep0incomplete(FAR struct usbdev_ep_s *ep,
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_REQRESULT),
                (uint16_t)-req->result);
+      usb_trace_diag(LOG_ERR, DIAG_USB_REQ_FAIL,
+                     "Dev:cdcacm,Func:%s,Ep:0x%02x,Result:%d",
+                     __func__, ep->eplog, req->result);
     }
 }
 
@@ -1078,6 +1121,8 @@ static void cdcacm_rdcomplete(FAR struct usbdev_ep_s *ep,
   if (!ep || !ep->priv || !req)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return;
     }
 #endif
@@ -1117,6 +1162,9 @@ static void cdcacm_rdcomplete(FAR struct usbdev_ep_s *ep,
     case -ESHUTDOWN: /* Disconnection */
       {
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSHUTDOWN), 0);
+        usb_trace_diag(LOG_ERR, DIAG_USB_REQ_FAIL,
+                       "Dev:cdcacm,Func:%s,Ep:0x%02x,Result:%d",
+                       __func__, ep->eplog, req->result);
         flags = spin_lock_irqsave(&priv->lock);
         if (priv->nrdq != 0)
           {
@@ -1131,6 +1179,9 @@ static void cdcacm_rdcomplete(FAR struct usbdev_ep_s *ep,
       {
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDUNEXPECTED),
                                 (uint16_t)-req->result);
+        usb_trace_diag(LOG_ERR, DIAG_USB_REQ_FAIL,
+                       "Dev:cdcacm,Func:%s,Ep:0x%02x,Result:%d",
+                       __func__, ep->eplog, req->result);
         cdcacm_requeue_rdrequest(priv, rdcontainer);
         break;
       }
@@ -1159,6 +1210,8 @@ static void cdcacm_wrcomplete(FAR struct usbdev_ep_s *ep,
   if (!ep || !ep->priv || !req || !req->priv)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return;
     }
 #endif
@@ -1196,6 +1249,9 @@ static void cdcacm_wrcomplete(FAR struct usbdev_ep_s *ep,
     case -ESHUTDOWN: /* Disconnection */
       {
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_WRSHUTDOWN), priv->nwrq);
+        usb_trace_diag(LOG_ERR, DIAG_USB_REQ_FAIL,
+                       "Dev:cdcacm,Func:%s,Ep:0x%02x,Result:%d",
+                       __func__, ep->eplog, req->result);
       }
       break;
 
@@ -1203,6 +1259,9 @@ static void cdcacm_wrcomplete(FAR struct usbdev_ep_s *ep,
       {
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_WRUNEXPECTED),
                  (uint16_t)-req->result);
+        usb_trace_diag(LOG_ERR, DIAG_USB_REQ_FAIL,
+                       "Dev:cdcacm,Func:%s,Ep:0x%02x,Result:%d",
+                       __func__, ep->eplog, req->result);
       }
       break;
     }
@@ -1254,6 +1313,11 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
   if (priv->ctrlreq == NULL)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_ALLOCCTRLREQ), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_REQ_ALLOC_FAIL,
+                     "Dev:cdcacm,EpType:%d,Dir:ctrl,Ep:0x%02x,"
+                     "ReqLen:%zu,Errno:%d",
+                     USB_EP_ATTR_XFER_CONTROL, dev->ep0->eplog,
+                     (size_t)CDCACM_MXDESCLEN, -ENOMEM);
       ret = -ENOMEM;
       goto errout;
     }
@@ -1275,6 +1339,10 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
   if (!priv->epintin)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPINTINALLOCFAIL), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_EP_ALLOC_FAIL,
+                     "Dev:cdcacm,EpType:%d,Dir:in,Ep:0x%02x,Errno:%d",
+                     USB_EP_ATTR_XFER_INT,
+                     CDCACM_MKEPINTIN(&priv->devinfo), -ENODEV);
       ret = -ENODEV;
       goto errout;
     }
@@ -1289,6 +1357,10 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
   if (!priv->epbulkin)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPBULKINALLOCFAIL), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_EP_ALLOC_FAIL,
+                     "Dev:cdcacm,EpType:%d,Dir:in,Ep:0x%02x,Errno:%d",
+                     USB_EP_ATTR_XFER_BULK,
+                     CDCACM_MKEPBULKIN(&priv->devinfo), -ENODEV);
       ret = -ENODEV;
       goto errout;
     }
@@ -1302,6 +1374,10 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
   if (!priv->epbulkout)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPBULKOUTALLOCFAIL), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_EP_ALLOC_FAIL,
+                     "Dev:cdcacm,EpType:%d,Dir:out,Ep:0x%02x,Errno:%d",
+                     USB_EP_ATTR_XFER_BULK,
+                     CDCACM_MKEPBULKOUT(&priv->devinfo), -ENODEV);
       ret = -ENODEV;
       goto errout;
     }
@@ -1349,6 +1425,11 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
       if (rdcontainer->req == NULL)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDALLOCREQ), -ENOMEM);
+          usb_trace_diag(LOG_ERR, DIAG_USB_REQ_ALLOC_FAIL,
+                         "Dev:cdcacm,EpType:%d,Dir:out,Ep:0x%02x,"
+                         "ReqLen:%zu,Errno:%d",
+                         USB_EP_ATTR_XFER_BULK,
+                         priv->epbulkout->eplog, reqlen, -ENOMEM);
           ret = -ENOMEM;
           goto errout;
         }
@@ -1408,6 +1489,11 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
       if (wrcontainer->req == NULL)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_WRALLOCREQ), -ENOMEM);
+          usb_trace_diag(LOG_ERR, DIAG_USB_REQ_ALLOC_FAIL,
+                         "Dev:cdcacm,EpType:%d,Dir:in,Ep:0x%02x,"
+                         "ReqLen:%zu,Errno:%d",
+                         USB_EP_ATTR_XFER_BULK,
+                         priv->epbulkin->eplog, reqlen, -ENOMEM);
           ret = -ENOMEM;
           goto errout;
         }
@@ -1476,6 +1562,8 @@ static void cdcacm_unbind(FAR struct usbdevclass_driver_s *driver,
   if (!driver || !dev)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return;
     }
 #endif
@@ -1488,6 +1576,8 @@ static void cdcacm_unbind(FAR struct usbdevclass_driver_s *driver,
   if (!priv)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EP0NOTBOUND), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_DEV_NOT_BOUND,
+                     "Dev:cdcacm,Func:%s", __func__);
       return;
     }
 #endif
@@ -1625,6 +1715,8 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
   if (!driver || !dev || !ctrl)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return -EINVAL;
     }
 #endif
@@ -1638,6 +1730,8 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
   if (!priv || !priv->ctrlreq)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EP0NOTBOUND), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_DEV_NOT_BOUND,
+                     "Dev:cdcacm,Func:%s", __func__);
       return -ENODEV;
     }
 #endif
@@ -1737,6 +1831,10 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
                 {
                   usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_GETUNKNOWNDESC),
                            value);
+                  usb_trace_diag(LOG_ERR, DIAG_USB_UNSUPPORTED_REQ,
+                                 "Dev:cdcacm,Type:0x%02x,"
+                                 "Req:0x%02x,value1:0x%02x",
+                                 ctrl->type, ctrl->req, ctrl->value[1]);
                 }
                 break;
               }
@@ -1811,6 +1909,10 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
         default:
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_UNSUPPORTEDSTDREQ),
                    ctrl->req);
+          usb_trace_diag(LOG_ERR, DIAG_USB_UNSUPPORTED_REQ,
+                         "Dev:cdcacm,Type:0x%02x,"
+                         "Req:0x%02x,value1:0x%02x",
+                         ctrl->type, ctrl->req, ctrl->value[1]);
           break;
         }
     }
@@ -1845,6 +1947,10 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
               {
                 usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_UNSUPPORTEDCLASSREQ),
                         ctrl->type);
+                usb_trace_diag(LOG_ERR, DIAG_USB_UNSUPPORTED_REQ,
+                               "Dev:cdcacm,Type:0x%02x,"
+                               "Req:0x%02x,value1:0x%02x",
+                               ctrl->type, ctrl->req, ctrl->value[1]);
               }
           }
           break;
@@ -1891,6 +1997,10 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
               {
                 usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_UNSUPPORTEDCLASSREQ),
                          ctrl->type);
+                usb_trace_diag(LOG_ERR, DIAG_USB_UNSUPPORTED_REQ,
+                               "Dev:cdcacm,Type:0x%02x,"
+                               "Req:0x%02x,value1:0x%02x",
+                               ctrl->type, ctrl->req, ctrl->value[1]);
               }
           }
           break;
@@ -1926,6 +2036,10 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
               {
                 usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_UNSUPPORTEDCLASSREQ),
                          ctrl->type);
+                usb_trace_diag(LOG_ERR, DIAG_USB_UNSUPPORTED_REQ,
+                               "Dev:cdcacm,Type:0x%02x,"
+                               "Req:0x%02x,value1:0x%02x",
+                               ctrl->type, ctrl->req, ctrl->value[1]);
               }
           }
           break;
@@ -1953,6 +2067,10 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
               {
                 usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_UNSUPPORTEDCLASSREQ),
                          ctrl->type);
+                usb_trace_diag(LOG_ERR, DIAG_USB_UNSUPPORTED_REQ,
+                               "Dev:cdcacm,Type:0x%02x,"
+                               "Req:0x%02x,value1:0x%02x",
+                               ctrl->type, ctrl->req, ctrl->value[1]);
               }
           }
           break;
@@ -1960,12 +2078,20 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
         default:
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_UNSUPPORTEDCLASSREQ),
                    ctrl->req);
+          usb_trace_diag(LOG_ERR, DIAG_USB_UNSUPPORTED_REQ,
+                         "Dev:cdcacm,Type:0x%02x,"
+                         "Req:0x%02x,value1:0x%02x",
+                         ctrl->type, ctrl->req, ctrl->value[1]);
           break;
         }
     }
   else
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_UNSUPPORTEDTYPE), ctrl->type);
+      usb_trace_diag(LOG_ERR, DIAG_USB_UNSUPPORTED_REQ,
+                     "Dev:cdcacm,Type:0x%02x,"
+                     "Req:0x%02x,value1:0x%02x",
+                     ctrl->type, ctrl->req, ctrl->value[1]);
     }
 
   /* Respond to the setup command if data was returned.  On an error return
@@ -1992,6 +2118,9 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
       if (ret < 0)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPRESPQ), (uint16_t)-ret);
+          usb_trace_diag(LOG_ERR, DIAG_USB_SUBMIT_FAIL,
+                         "Dev:cdcacm,Ep:0x%02x,Dir:ctrl,ReqLen:%zu,Errno:%d",
+                         dev->ep0->eplog, ctrlreq->len, ret);
           ctrlreq->result = OK;
           cdcacm_ep0incomplete(dev->ep0, ctrlreq);
         }
@@ -2024,6 +2153,8 @@ static void cdcacm_disconnect(FAR struct usbdevclass_driver_s *driver,
   if (!driver || !dev || !dev->ep0)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return;
     }
 #endif
@@ -2036,6 +2167,8 @@ static void cdcacm_disconnect(FAR struct usbdevclass_driver_s *driver,
   if (!priv)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EP0NOTBOUND), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_DEV_NOT_BOUND,
+                     "Dev:cdcacm,Func:%s", __func__);
       return;
     }
 #endif
@@ -2088,6 +2221,8 @@ static void cdcacm_suspend(FAR struct usbdevclass_driver_s *driver,
   if (!driver || !dev)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return;
     }
 #endif
@@ -2122,6 +2257,8 @@ static void cdcacm_resume(FAR struct usbdevclass_driver_s *driver,
   if (!driver || !dev)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return;
     }
 #endif
@@ -2165,6 +2302,8 @@ static int cdcuart_setup(FAR struct uart_dev_s *dev)
   if (!dev || !dev->priv)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return -EINVAL;
     }
 #endif
@@ -2178,6 +2317,9 @@ static int cdcuart_setup(FAR struct uart_dev_s *dev)
   if (priv->config == CDCACM_CONFIGIDNONE)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_SETUPNOTCONNECTED), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_CONFIG_FAIL,
+                     "Dev:cdcacm,Reason:not-configured,Config:%d",
+                     priv->config);
       return -ENOTCONN;
     }
 
@@ -2206,6 +2348,8 @@ static void cdcuart_shutdown(FAR struct uart_dev_s *dev)
   if (!dev || !dev->priv)
     {
        usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+       usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                      "Func:%s", __func__);
     }
 #endif
 }
@@ -2686,6 +2830,8 @@ static void cdcuart_rxint(FAR struct uart_dev_s *dev, bool enable)
   if (!dev || !dev->priv)
     {
        usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+       usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                      "Func:%s", __func__);
        return;
     }
 #endif
@@ -2773,6 +2919,8 @@ static bool cdcuart_rxflowcontrol(FAR struct uart_dev_s *dev,
   if (dev == NULL || dev->priv == NULL)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return false;
     }
 #endif
@@ -2912,6 +3060,8 @@ static void cdcuart_txint(FAR struct uart_dev_s *dev, bool enable)
   if (!dev || !dev->priv)
     {
        usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+       usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                      "Func:%s", __func__);
        return;
     }
 #endif
@@ -2958,6 +3108,8 @@ static bool cdcuart_txempty(FAR struct uart_dev_s *dev)
   if (!priv)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return true;
     }
 #endif
@@ -3070,6 +3222,9 @@ static void cdcuart_dmasend(FAR struct uart_dev_s *dev)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_SUBMITFAIL),
                (uint16_t)-ret);
+      usb_trace_diag(LOG_ERR, DIAG_USB_SUBMIT_FAIL,
+                     "Dev:cdcacm,Ep:0x%02x,Dir:in,ReqLen:%zu,Errno:%d",
+                     ep->eplog, req->len, ret);
     }
 }
 #endif
@@ -3285,6 +3440,9 @@ int cdcacm_classobject(int minor, FAR struct usbdev_devinfo_s *devinfo,
   if (!alloc)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_ALLOCDEVSTRUCT), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_MEM_ALLOC_FAIL,
+                     "Dev:cdcacm,What:classobj,Size:%zu,Errno:%d",
+                     sizeof(struct cdcacm_alloc_s), -ENOMEM);
       return -ENOMEM;
     }
 
@@ -3364,6 +3522,8 @@ int cdcacm_classobject(int minor, FAR struct usbdev_devinfo_s *devinfo,
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_CONSOLEREGISTER),
                    (uint16_t)-ret);
+          usb_trace_diag(LOG_ERR, DIAG_USB_REGISTER_FAIL,
+                         "Dev:cdcacm,DevName:/dev/console,Errno:%d", ret);
           goto errout_with_class;
         }
     }
@@ -3377,6 +3537,8 @@ int cdcacm_classobject(int minor, FAR struct usbdev_devinfo_s *devinfo,
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_UARTREGISTER),
                (uint16_t)-ret);
+      usb_trace_diag(LOG_ERR, DIAG_USB_REGISTER_FAIL,
+                     "Dev:cdcacm,DevName:%s,Errno:%d", devname, ret);
       goto errout_with_class;
     }
 
@@ -3460,6 +3622,9 @@ int cdcacm_initialize(int minor, FAR void **handle)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_DEVREGISTER),
                    (uint16_t)-ret);
+          usb_trace_diag(LOG_ERR, DIAG_USB_REGISTER_FAIL,
+                         "Dev:cdcacm,DevName:usbdev%d,Errno:%d",
+                         minor, ret);
         }
     }
 
@@ -3523,6 +3688,8 @@ void cdcacm_uninitialize(FAR struct usbdevclass_driver_s *classdev)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_UARTUNREGISTER),
                (uint16_t)-ret);
+      usb_trace_diag(LOG_ERR, DIAG_USB_UNREGISTER_FAIL,
+                     "Dev:cdcacm,DevName:%s,Errno:%d", devname, ret);
     }
 }
 

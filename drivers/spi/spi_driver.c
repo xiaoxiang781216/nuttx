@@ -38,6 +38,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/mutex.h>
 #include <nuttx/spi/spi_transfer.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -262,6 +263,13 @@ static int spidrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
+  if (ret < 0)
+    {
+      spi_trace_diag(LOG_WARNING, DIAG_SPI_IOCTL_FAIL,
+                     "DevPath:%s,Cmd:0x%x,Errno:%d",
+                     filep->f_inode->i_name, cmd, ret);
+    }
+
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   nxmutex_unlock(&priv->lock);
 #endif
@@ -364,6 +372,8 @@ int spi_register(FAR struct spi_dev_s *spi, int bus)
            * device.
            */
 
+          spi_trace_diag(LOG_ERR, DIAG_SPI_REGISTER_FAIL,
+                         "Bus:%d,Errno:%d", bus, ret);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
           nxmutex_destroy(&priv->lock);
 #endif
@@ -376,6 +386,8 @@ int spi_register(FAR struct spi_dev_s *spi, int bus)
       return ret;
     }
 
+  spi_trace_diag(LOG_ERR, DIAG_SPI_REGISTER_FAIL,
+                 "Bus:%d,Errno:%d", bus, -ENOMEM);
   return -ENOMEM;
 }
 

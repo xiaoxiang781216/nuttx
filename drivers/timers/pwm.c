@@ -43,6 +43,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/timers/pwm.h>
+#include <nuttx/trace.h>
 
 #ifdef CONFIG_PWM
 
@@ -155,6 +156,9 @@ static int pwm_open(FAR struct file *filep)
     {
       /* More than 255 opens; uint8_t overflows to zero */
 
+      pwm_trace_diag(LOG_WARNING, DIAG_PWM_OPEN_EMFILE,
+                     "DevPath:%s,Crefs:255",
+                     filep->f_inode->i_name);
       ret = -EMFILE;
       goto errout_with_lock;
     }
@@ -173,6 +177,9 @@ static int pwm_open(FAR struct file *filep)
       ret = lower->ops->setup(lower);
       if (ret < 0)
         {
+          pwm_trace_diag(LOG_ERR, DIAG_PWM_SETUP_FAIL,
+                         "DevPath:%s,Errno:%d",
+                         filep->f_inode->i_name, ret);
           goto errout_with_lock;
         }
     }
@@ -527,6 +534,13 @@ static int pwm_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
+  if (ret < 0)
+    {
+      pwm_trace_diag(LOG_WARNING, DIAG_PWM_IOCTL_FAIL,
+                     "DevPath:%s,Cmd:0x%x,Errno:%d",
+                     filep->f_inode->i_name, cmd, ret);
+    }
+
   nxmutex_unlock(&upper->lock);
   return ret;
 }
@@ -563,6 +577,7 @@ static int pwm_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 int pwm_register(FAR const char *path, FAR struct pwm_lowerhalf_s *dev)
 {
   FAR struct pwm_upperhalf_s *upper;
+  int ret;
 
   /* Allocate the upper-half data structure */
 
@@ -571,6 +586,8 @@ int pwm_register(FAR const char *path, FAR struct pwm_lowerhalf_s *dev)
   if (!upper)
     {
       pwmerr("Allocation failed\n");
+      pwm_trace_diag(LOG_ERR, DIAG_PWM_REGISTER_FAIL,
+                     "DevPath:%s,Errno:%d", path, -ENOMEM);
       return -ENOMEM;
     }
 
@@ -585,7 +602,16 @@ int pwm_register(FAR const char *path, FAR struct pwm_lowerhalf_s *dev)
   /* Register the PWM device */
 
   pwminfo("Registering %s\n", path);
-  return register_driver(path, &g_pwmops, 0666, upper);
+  ret = register_driver(path, &g_pwmops, 0666, upper);
+  if (ret < 0)
+    {
+      pwm_trace_diag(LOG_ERR, DIAG_PWM_REGISTER_FAIL,
+                     "DevPath:%s,Errno:%d", path, ret);
+      nxmutex_destroy(&upper->lock);
+      kmm_free(upper);
+    }
+
+  return ret;
 }
 
 #endif /* CONFIG_PWM */

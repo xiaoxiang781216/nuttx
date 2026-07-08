@@ -43,6 +43,7 @@
 #include <nuttx/motor/motor.h>
 
 #include <nuttx/irq.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Private Types
@@ -119,6 +120,9 @@ static int motor_open(FAR struct file *filep)
         {
           /* More than 255 opens; uint8_t overflows to zero */
 
+          motor_trace_diag(LOG_WARNING, DIAG_MOTOR_OPEN_EMFILE,
+                           "DevPath:%s",
+                           filep->f_inode->i_name);
           ret = -EMFILE;
         }
       else
@@ -138,13 +142,19 @@ static int motor_open(FAR struct file *filep)
 
                   upper->ocount = tmp;
                 }
+              else
+                {
+                  motor_trace_diag(LOG_ERR, DIAG_MOTOR_SETUP_FAIL,
+                                   "DevPath:%s,Errno:%d",
+                                   filep->f_inode->i_name, ret);
+                }
             }
         }
 
       nxmutex_unlock(&upper->closelock);
     }
 
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -511,6 +521,13 @@ static int motor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
     }
 
 errout:
+  if (ret < 0)
+    {
+      motor_trace_diag(LOG_ERR, DIAG_MOTOR_IOCTL_FAIL,
+                       "DevPath:%s,Cmd:0x%04x,Errno:%d",
+                       filep->f_inode->i_name, cmd, ret);
+    }
+
   return ret;
 }
 
@@ -574,6 +591,8 @@ int motor_register(FAR const char *path,
   if (!upper)
     {
       mtrerr("ERROR: Allocation failed\n");
+      motor_trace_diag(LOG_ERR, DIAG_MOTOR_REGISTER_FAIL,
+                       "DevPath:%s,Errno:%d", path, -ENOMEM);
       return -ENOMEM;
     }
 
@@ -592,6 +611,8 @@ int motor_register(FAR const char *path,
     {
       nxmutex_destroy(&upper->closelock);
       kmm_free(upper);
+      motor_trace_diag(LOG_ERR, DIAG_MOTOR_REGISTER_FAIL,
+                       "DevPath:%s,Errno:%d", path, ret);
     }
 
   return ret;

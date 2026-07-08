@@ -42,6 +42,8 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/wqueue.h>
 
+#include <nuttx/trace.h>
+
 #include "composite.h"
 #include "usbdev_fs.h"
 
@@ -263,6 +265,8 @@ static void usbdev_fs_rdcomplete(FAR struct usbdev_ep_s *ep,
   if (!ep || !ep->priv || !req)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return;
     }
 #endif
@@ -303,11 +307,19 @@ static void usbdev_fs_rdcomplete(FAR struct usbdev_ep_s *ep,
 
       case -ESHUTDOWN: /* Disconnection */
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSHUTDOWN), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_REQ_FAIL,
+                     "Dev:%s,Func:%s,Ep:0x%02x,Result:%d",
+                     fs_ep->dev->devinfo.name, __func__, ep->eplog,
+                     req->result);
       return;
 
       default: /* Some other error occurred */
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDUNEXPECTED),
                (uint16_t)-req->result);
+      usb_trace_diag(LOG_ERR, DIAG_USB_REQ_FAIL,
+                     "Dev:%s,Func:%s,Ep:0x%02x,Result:%d",
+                     fs_ep->dev->devinfo.name, __func__, ep->eplog,
+                     req->result);
       break;
     };
 
@@ -340,6 +352,8 @@ static void usbdev_fs_wrcomplete(FAR struct usbdev_ep_s *ep,
   if (!ep || !ep->priv || !req || !req->priv)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_INVALIDARG), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_INVALID_ARG,
+                     "Func:%s", __func__);
       return;
     }
 #endif
@@ -372,6 +386,10 @@ static void usbdev_fs_wrcomplete(FAR struct usbdev_ep_s *ep,
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_WRSHUTDOWN),
                    sq_count(&fs_ep->reqq));
+          usb_trace_diag(LOG_ERR, DIAG_USB_REQ_FAIL,
+                         "Dev:%s,Func:%s,Ep:0x%02x,Result:%d",
+                         fs_ep->dev->devinfo.name, __func__, ep->eplog,
+                         req->result);
         }
         break;
 
@@ -379,6 +397,10 @@ static void usbdev_fs_wrcomplete(FAR struct usbdev_ep_s *ep,
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_WRUNEXPECTED),
                    (uint16_t)-req->result);
+          usb_trace_diag(LOG_ERR, DIAG_USB_REQ_FAIL,
+                         "Dev:%s,Func:%s,Ep:0x%02x,Result:%d",
+                         fs_ep->dev->devinfo.name, __func__, ep->eplog,
+                         req->result);
         }
         break;
     }
@@ -814,6 +836,10 @@ static ssize_t usbdev_fs_write(FAR struct file *filep,
 
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_SUBMITFAIL),
                    (uint16_t)-ret);
+          usb_trace_diag(LOG_ERR, DIAG_USB_SUBMIT_FAIL,
+                         "Dev:%s,Ep:0x%02x,Dir:in,ReqLen:%zu,Errno:%d",
+                         fs_ep->dev->devinfo.name, fs_ep->ep->eplog,
+                         container->req->len, ret);
           PANIC();
           break;
         }
@@ -1023,6 +1049,12 @@ static int usbdev_fs_ep_bind(FAR struct usbdev_s *dev, uint8_t epno,
       if (fs_ep->ep == NULL)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPBULKINALLOCFAIL), 0);
+          usb_trace_diag(LOG_ERR, DIAG_USB_EP_ALLOC_FAIL,
+                         "Dev:%s,EpType:%d,Dir:%s,Ep:0x%02x,Errno:%d",
+                         fs_ep->dev->devinfo.name,
+                         epinfo->desc.attr & USB_EP_ATTR_XFERTYPE_MASK,
+                         USB_ISEPIN(epinfo->desc.addr) ? "in" : "out",
+                         epno, -ENODEV);
           return -ENODEV;
         }
     }
@@ -1072,6 +1104,11 @@ static int usbdev_fs_ep_bind(FAR struct usbdev_s *dev, uint8_t epno,
   if (!fs_ep->reqbuffer)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDALLOCREQ), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_MEM_ALLOC_FAIL,
+                     "Dev:%s,What:reqbuffer,Size:%zu,Errno:%d",
+                     fs_ep->dev->devinfo.name,
+                     sizeof(struct usbdev_fs_req_s) * epinfo->reqnum,
+                     -ENOMEM);
       return -ENOMEM;
     }
 
@@ -1082,6 +1119,11 @@ static int usbdev_fs_ep_bind(FAR struct usbdev_s *dev, uint8_t epno,
       if (!fs_ep->ctrlreqbuffer)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDALLOCREQ), 0);
+          usb_trace_diag(LOG_ERR, DIAG_USB_MEM_ALLOC_FAIL,
+                         "Dev:%s,What:ctrlreqbuffer,Size:%zu,Errno:%d",
+                         fs_ep->dev->devinfo.name,
+                         sizeof(struct usbdev_ctrlreq_s) * epinfo->reqnum,
+                         -ENOMEM);
           return -ENOMEM;
         }
     }
@@ -1095,6 +1137,13 @@ static int usbdev_fs_ep_bind(FAR struct usbdev_s *dev, uint8_t epno,
       if (container->req == NULL)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDALLOCREQ), -ENOMEM);
+          usb_trace_diag(LOG_ERR, DIAG_USB_REQ_ALLOC_FAIL,
+                         "Dev:%s,EpType:%d,Dir:%s,Ep:0x%02x,"
+                         "ReqLen:%zu,Errno:%d",
+                         fs_ep->dev->devinfo.name,
+                         epinfo->desc.attr & USB_EP_ATTR_XFERTYPE_MASK,
+                         USB_ISEPIN(epinfo->desc.addr) ? "in" : "out",
+                         epno, reqsize, -ENOMEM);
           return -ENOMEM;
         }
 
@@ -1247,6 +1296,9 @@ static void usbdev_fs_register_driver(FAR void *arg)
       if (ret < 0)
         {
           uerr("Failed to register driver:%s, ret:%d\n", devname, ret);
+          usb_trace_diag(LOG_ERR, DIAG_USB_REGISTER_FAIL,
+                         "Dev:%s,DevName:%s,Errno:%d",
+                         devinfo->name, devname, ret);
           while (i--)
             {
               snprintf(devname, sizeof(devname), "%s/ep%d",
@@ -1286,6 +1338,9 @@ static int usbdev_fs_classsetconfig(FAR struct usbdev_fs_dev_s *fs,
   if (config == COMPOSITE_CONFIGIDNONE)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_CONFIGNONE), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_CONFIG_FAIL,
+                     "Dev:%s,Reason:deconfigure,Config:%d",
+                     devinfo->name, config);
       return 0;
     }
 
@@ -1300,6 +1355,12 @@ static int usbdev_fs_classsetconfig(FAR struct usbdev_fs_dev_s *fs,
       if (ret < 0)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPBULKINCONFIGFAIL), 0);
+          usb_trace_diag(LOG_ERR, DIAG_USB_EP_CONFIG_FAIL,
+                         "Dev:%s,EpType:%d,Dir:%s,Ep:0x%02x,Errno:%d",
+                         devinfo->name,
+                         epdesc.epdesc.attr & USB_EP_ATTR_XFERTYPE_MASK,
+                         USB_ISEPIN(fs_ep->ep->eplog) ? "in" : "out",
+                         fs_ep->ep->eplog, ret);
           goto errout;
         }
 
@@ -1312,7 +1373,15 @@ static int usbdev_fs_classsetconfig(FAR struct usbdev_fs_dev_s *fs,
               FAR struct usbdev_fs_req_s *container;
               container = &fs_ep->reqbuffer[j];
               container->req->callback = usbdev_fs_rdcomplete;
-              usbdev_fs_submit_rdreq(fs_ep->ep, container);
+              ret = usbdev_fs_submit_rdreq(fs_ep->ep, container);
+              if (ret < 0)
+                {
+                  usb_trace_diag(LOG_ERR, DIAG_USB_SUBMIT_FAIL,
+                                 "Dev:%s,Ep:0x%02x,Dir:out,"
+                                 "ReqLen:%zu,Errno:%d",
+                                 devinfo->name, fs_ep->ep->eplog,
+                                 container->req->len, ret);
+                }
             }
         }
     }
@@ -1360,6 +1429,11 @@ static int usbdev_fs_classbind(FAR struct usbdevclass_driver_s *driver,
   if (fs->eps == NULL)
     {
       uerr("Failed to malloc fs eqs");
+      usb_trace_diag(LOG_ERR, DIAG_USB_MEM_ALLOC_FAIL,
+                     "Dev:%s,What:eps,Size:%zu,Errno:%d",
+                     devinfo->name,
+                     (devinfo->nendpoints + 1) *
+                     sizeof(struct usbdev_fs_ep_s), -ENOMEM);
       return -ENOMEM;
     }
 
@@ -1377,8 +1451,12 @@ static int usbdev_fs_classbind(FAR struct usbdevclass_driver_s *driver,
         }
     }
 
-  /* Initialize fs ep0 */
+  /* Initialize fs ep0 (control endpoint: set desc so diagnostics and the
+   * transfer-type checks see a valid control descriptor, not stack garbage)
+   */
 
+  ep0info.desc.addr = 0;
+  ep0info.desc.attr = USB_EP_ATTR_XFER_CONTROL;
   ep0info.fssize = fs->cdev->cfgdescsize;
 #ifdef CONFIG_USBDEV_DUALSPEED
   ep0info.hssize = fs->cdev->cfgdescsize;
@@ -1608,6 +1686,10 @@ int usbdev_fs_classobject(int minor,
   if (!alloc)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_ALLOCDEVSTRUCT), 0);
+      usb_trace_diag(LOG_ERR, DIAG_USB_MEM_ALLOC_FAIL,
+                     "Dev:%s,What:classobj,Size:%zu,Errno:%d",
+                     devinfo->name,
+                     sizeof(struct usbdev_fs_driver_s), -ENOMEM);
       return -ENOMEM;
     }
 

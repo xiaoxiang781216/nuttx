@@ -39,6 +39,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/ioexpander/gpio.h>
+#include <nuttx/trace.h>
 
 #ifdef CONFIG_DEV_GPIO
 
@@ -188,6 +189,9 @@ static ssize_t gpio_read(FAR struct file *filep, FAR char *buffer,
   ret = dev->gp_ops->go_read(dev, (FAR bool *)&buffer[0]);
   if (ret < 0)
     {
+      gpio_trace_diag(LOG_WARNING, DIAG_GPIO_READ_FAIL,
+                      "DevPath:%s,Errno:%d",
+                      filep->f_inode->i_name, ret);
       return ret;
     }
 
@@ -229,6 +233,9 @@ static ssize_t gpio_write(FAR struct file *filep, FAR const char *buffer,
   if (dev->gp_pintype != GPIO_OUTPUT_PIN &&
       dev->gp_pintype != GPIO_OUTPUT_PIN_OPENDRAIN)
     {
+      gpio_trace_diag(LOG_WARNING, DIAG_GPIO_WRITE_FAIL,
+                      "DevPath:%s,Errno:%d",
+                      filep->f_inode->i_name, -EACCES);
       return -EACCES;
     }
 
@@ -249,6 +256,9 @@ static ssize_t gpio_write(FAR struct file *filep, FAR const char *buffer,
         }
       else
         {
+          gpio_trace_diag(LOG_WARNING, DIAG_GPIO_WRITE_FAIL,
+                          "DevPath:%s,Errno:%d",
+                          filep->f_inode->i_name, -EINVAL);
           return -EINVAL;
         }
 
@@ -257,6 +267,9 @@ static ssize_t gpio_write(FAR struct file *filep, FAR const char *buffer,
       ret = dev->gp_ops->go_write(dev, val);
       if (ret < 0)
         {
+          gpio_trace_diag(LOG_WARNING, DIAG_GPIO_WRITE_FAIL,
+                          "DevPath:%s,Errno:%d",
+                          filep->f_inode->i_name, ret);
           return ret;
         }
 
@@ -336,9 +349,18 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             DEBUGASSERT(arg == 0ul || arg == 1ul);
             DEBUGASSERT(dev->gp_ops->go_write != NULL);
             ret = dev->gp_ops->go_write(dev, (bool)arg);
+            if (ret < 0)
+              {
+                gpio_trace_diag(LOG_WARNING, DIAG_GPIO_WRITE_FAIL,
+                                "DevPath:%s,Errno:%d",
+                                filep->f_inode->i_name, ret);
+              }
           }
         else
           {
+            gpio_trace_diag(LOG_WARNING, DIAG_GPIO_WRITE_FAIL,
+                            "DevPath:%s,Errno:%d",
+                            filep->f_inode->i_name, -EACCES);
             ret = -EACCES;
           }
         break;
@@ -359,6 +381,12 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           DEBUGASSERT(dev->gp_ops->go_read != NULL);
           ret = dev->gp_ops->go_read(dev, ptr);
           DEBUGASSERT(ret < 0 || *ptr == 0 || *ptr == 1);
+          if (ret < 0)
+            {
+              gpio_trace_diag(LOG_WARNING, DIAG_GPIO_READ_FAIL,
+                              "DevPath:%s,Errno:%d",
+                              filep->f_inode->i_name, ret);
+            }
         }
         break;
 
@@ -412,6 +440,11 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                 spin_unlock_irqrestore(&dev->lock, flags);
                 if (i == CONFIG_DEV_GPIO_NSIGNALS)
                   {
+                    gpio_trace_diag(LOG_WARNING, DIAG_GPIO_SIGNAL_FULL,
+                                    "DevPath:%s,PinType:%d,MaxSignals:%d",
+                                    filep->f_inode->i_name,
+                                    dev->gp_pintype,
+                                    CONFIG_DEV_GPIO_NSIGNALS);
                     ret = -EBUSY;
                     break;
                   }
@@ -435,9 +468,21 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                 DEBUGASSERT(dev->gp_ops->go_enable != NULL);
                 ret = dev->gp_ops->go_enable(dev, true);
               }
+
+            if (ret < 0)
+              {
+                atomic_sub(&dev->register_count, 1);
+                gpio_trace_diag(LOG_WARNING, DIAG_GPIO_REGISTER_FAIL,
+                                "DevPath:%s,PinType:%d,Errno:%d",
+                                filep->f_inode->i_name,
+                                dev->gp_pintype, ret);
+              }
           }
         else
           {
+            gpio_trace_diag(LOG_WARNING, DIAG_GPIO_REGISTER_NOIRQ,
+                            "DevPath:%s,PinType:%d",
+                            filep->f_inode->i_name, dev->gp_pintype);
             ret = -EACCES;
           }
         break;
@@ -509,9 +554,21 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                 DEBUGASSERT(dev->gp_ops->go_attach != NULL);
                 ret = dev->gp_ops->go_attach(dev, NULL);
               }
+
+            if (ret < 0)
+              {
+                gpio_trace_diag(LOG_WARNING, DIAG_GPIO_UNREGISTER_FAIL,
+                                "DevPath:%s,PinType:%d,Errno:%d",
+                                filep->f_inode->i_name,
+                                dev->gp_pintype, ret);
+              }
           }
         else
           {
+            gpio_trace_diag(LOG_WARNING, DIAG_GPIO_UNREGISTER_FAIL,
+                            "DevPath:%s,PinType:%d,Errno:%d",
+                            filep->f_inode->i_name,
+                            dev->gp_pintype, -EACCES);
             ret = -EACCES;
           }
         break;
@@ -529,6 +586,9 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           if (pintype >= GPIO_NPINTYPES)
             {
+              gpio_trace_diag(LOG_WARNING, DIAG_GPIO_SETPINTYPE_EINVAL,
+                              "DevPath:%s,ReqPinType:%d",
+                              filep->f_inode->i_name, (int)pintype);
               ret = -EINVAL;
               break;
             }
@@ -550,6 +610,10 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               ret = dev->gp_ops->go_enable(dev, false);
               if (ret < 0)
                 {
+                  gpio_trace_diag(LOG_WARNING, DIAG_GPIO_ENABLE_FAIL,
+                                  "DevPath:%s,PinType:%d,Errno:%d",
+                                  filep->f_inode->i_name,
+                                  dev->gp_pintype, ret);
                   break;
                 }
             }
@@ -560,6 +624,9 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           ret = dev->gp_ops->go_setpintype(dev, pintype);
           if (ret < 0)
             {
+              gpio_trace_diag(LOG_WARNING, DIAG_GPIO_SETPINTYPE_FAIL,
+                              "DevPath:%s,PinType:%d,Errno:%d",
+                              filep->f_inode->i_name, (int)pintype, ret);
               break;
             }
 
@@ -640,11 +707,26 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                       {
                         *ptr = val;
                       }
+                    else
+                      {
+                        gpio_trace_diag(LOG_WARNING, DIAG_GPIO_WRITE_FAIL,
+                                        "DevPath:%s,Errno:%d",
+                                        filep->f_inode->i_name, ret);
+                      }
+                  }
+                else
+                  {
+                    gpio_trace_diag(LOG_WARNING, DIAG_GPIO_READ_FAIL,
+                                    "DevPath:%s,Errno:%d",
+                                    filep->f_inode->i_name, ret);
                   }
               }
           }
         else
           {
+            gpio_trace_diag(LOG_WARNING, DIAG_GPIO_WRITE_FAIL,
+                            "DevPath:%s,Errno:%d",
+                            filep->f_inode->i_name, -EACCES);
             ret = -EACCES;
           }
         break;
@@ -652,6 +734,9 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       /* Unrecognized command */
 
       default:
+        gpio_trace_diag(LOG_WARNING, DIAG_GPIO_IOCTL_ENOTTY,
+                        "DevPath:%s,Cmd:0x%x",
+                        filep->f_inode->i_name, cmd);
         ret = -ENOTTY;
         break;
     }
@@ -829,6 +914,9 @@ int gpio_pin_register_byname(FAR struct gpio_dev_s *dev,
           ret = dev->gp_ops->go_enable(dev, false);
           if (ret < 0)
             {
+              gpio_trace_diag(LOG_WARNING, DIAG_GPIO_ENABLE_FAIL,
+                              "DevPath:%s,PinType:%d,Errno:%d",
+                              pinname, dev->gp_pintype, ret);
               return ret;
             }
         }

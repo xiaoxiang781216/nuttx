@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
@@ -38,6 +39,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/mutex.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -144,6 +146,9 @@ static int i2cdrvr_open(FAR struct file *filep)
       ret = I2C_SETUP(priv->i2c);
       if (ret < 0)
         {
+          i2c_trace_diag(LOG_ERR, DIAG_I2C_SETUP_FAIL,
+                         "DevPath:%s,Errno:%d",
+                         filep->f_inode->i_name, ret);
           goto out;
         }
     }
@@ -188,6 +193,9 @@ static int i2cdrvr_close(FAR struct file *filep)
       ret = I2C_SHUTDOWN(priv->i2c);
       if (ret < 0)
         {
+          i2c_trace_diag(LOG_ERR, DIAG_I2C_SHUTDOWN_FAIL,
+                         "DevPath:%s,Errno:%d",
+                         filep->f_inode->i_name, ret);
           goto out;
         }
     }
@@ -280,6 +288,18 @@ static int i2cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           /* Perform the transfer */
 
           ret = I2C_TRANSFER(priv->i2c, transfer->msgv, transfer->msgc);
+          if (ret < 0)
+            {
+              i2c_trace_diag(LOG_ERR, DIAG_I2C_TRANSFER_FAIL,
+                             "DevPath:%s,SlaveAddr:0x%02x,"
+                             "Frequency:%" PRIu32 ",MsgFlags:0x%02x,"
+                             "MsgCount:%zu,Errno:%d",
+                             filep->f_inode->i_name,
+                             transfer->msgv[0].addr,
+                             transfer->msgv[0].frequency,
+                             transfer->msgv[0].flags,
+                             transfer->msgc, ret);
+            }
         }
         break;
 
@@ -294,11 +314,20 @@ static int i2cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       case I2CIOC_RESET:
         {
           ret = I2C_RESET(priv->i2c);
+          if (ret < 0)
+            {
+              i2c_trace_diag(LOG_ERR, DIAG_I2C_RESET_FAIL,
+                             "DevPath:%s,Errno:%d",
+                             filep->f_inode->i_name, ret);
+            }
         }
         break;
 #endif
 
       default:
+        i2c_trace_diag(LOG_WARNING, DIAG_I2C_IOCTL_ENOTTY,
+                       "DevPath:%s,Cmd:0x%x",
+                       filep->f_inode->i_name, cmd);
         ret = -ENOTTY;
         break;
     }
@@ -408,6 +437,8 @@ int i2c_register(FAR struct i2c_master_s *i2c, int bus)
            * device.
            */
 
+          i2c_trace_diag(LOG_ERR, DIAG_I2C_REGISTER_FAIL,
+                         "Bus:%d,Errno:%d", bus, ret);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
           nxmutex_destroy(&priv->lock);
 #endif
@@ -420,6 +451,8 @@ int i2c_register(FAR struct i2c_master_s *i2c, int bus)
       return OK;
     }
 
+  i2c_trace_diag(LOG_ERR, DIAG_I2C_REGISTER_FAIL,
+                 "Bus:%d,Errno:%d", bus, -ENOMEM);
   return -ENOMEM;
 }
 

@@ -35,6 +35,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/i3c/master.h>
 #include <nuttx/i3c/i3c_driver.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -224,8 +225,8 @@ static int i3cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct i3c_transfer_s *transfer;
   FAR struct i3c_dev_desc *desc;
   bool obtain = false;
-  uint16_t manufid;
-  uint16_t partid;
+  uint16_t manufid = 0;
+  uint16_t partid = 0;
   int ret;
 
   DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
@@ -262,6 +263,11 @@ static int i3cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   if (!obtain)
     {
       nxmutex_unlock(&priv->lock);
+      i3c_trace_diag(LOG_ERR, DIAG_I3C_MASTER_NULL,
+                     "DevPath:%s,ReqManufId:0x%02x,ReqPartId:0x%02x,"
+                     "BusManufId:0x%02x,BusPartId:0x%02x",
+                     filep->f_inode->i_name, transfer->manufid,
+                     transfer->partid, manufid, partid);
       return -ENXIO;
     }
 
@@ -277,6 +283,15 @@ static int i3cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
         ret = i3c_device_do_priv_xfers(desc->dev, transfer->xfers,
                                        transfer->nxfers);
+        if (ret < 0)
+          {
+            i3c_trace_diag(LOG_ERR, DIAG_I3C_TRANSFER_FAIL,
+                           "DevPath:%s,ManufId:0x%02x,PartId:0x%02x,"
+                           "Nxfers:%zu,Errno:%d",
+                           filep->f_inode->i_name, transfer->manufid,
+                           transfer->partid, transfer->nxfers, ret);
+          }
+
         break;
       case I3CIOC_GET_DEVINFO:
 
@@ -287,6 +302,9 @@ static int i3cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         i3c_device_get_info(desc->dev, transfer->info);
         break;
       default:
+        i3c_trace_diag(LOG_WARNING, DIAG_I3C_IOCTL_ENOTTY,
+                       "DevPath:%s,Cmd:0x%x",
+                       filep->f_inode->i_name, cmd);
         ret = -ENOTTY;
         break;
     }
@@ -377,6 +395,8 @@ int i3c_register(FAR struct i3c_master_controller *master, int bus)
   priv = kmm_zalloc(sizeof(struct i3c_driver_s));
   if (priv == NULL)
     {
+      i3c_trace_diag(LOG_ERR, DIAG_I3C_REGISTER_FAIL,
+                     "Bus:%d,Errno:%d", bus, -ENOMEM);
       return -ENOMEM;
     }
 
@@ -395,6 +415,8 @@ int i3c_register(FAR struct i3c_master_controller *master, int bus)
 
       nxmutex_destroy(&priv->lock);
       kmm_free(priv);
+      i3c_trace_diag(LOG_ERR, DIAG_I3C_REGISTER_FAIL,
+                     "Bus:%d,Errno:%d", bus, ret);
     }
 
   /* Return the result of the registration */

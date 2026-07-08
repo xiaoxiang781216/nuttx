@@ -43,6 +43,7 @@
 #include <nuttx/analog/ioctl.h>
 #include <nuttx/random.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/trace.h>
 
 #include <nuttx/irq.h>
 
@@ -127,6 +128,9 @@ static int adc_open(FAR struct file *filep)
         {
           /* More than 255 opens; uint8_t overflows to zero */
 
+          analog_trace_diag(LOG_WARNING, DIAG_ADC_OPEN_EMFILE,
+                            "DevPath:%s",
+                            filep->f_inode->i_name);
           ret = -EMFILE;
         }
       else
@@ -154,6 +158,12 @@ static int adc_open(FAR struct file *filep)
                   /* Finally, Enable the ADC RX interrupt */
 
                   dev->ad_ops->ao_rxint(dev, true);
+                }
+              else
+                {
+                  analog_trace_diag(LOG_ERR, DIAG_ADC_SETUP_FAIL,
+                                    "DevPath:%s,Errno:%d",
+                                    filep->f_inode->i_name, ret);
                 }
             }
 
@@ -272,6 +282,8 @@ static ssize_t adc_read(FAR struct file *filep, FAR char *buffer,
 
           if (dev->ad_isovr)
             {
+              analog_trace_diag(LOG_WARNING, DIAG_ADC_OVERRUN,
+                                "DevPath:%s", filep->f_inode->i_name);
               dev->ad_isovr = false;
               ret = -EIO;
               goto return_with_irqdisabled;
@@ -444,6 +456,13 @@ static int adc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           ret = dev->ad_ops->ao_ioctl(dev, cmd, arg);
         }
         break;
+    }
+
+  if (ret < 0)
+    {
+      analog_trace_diag(LOG_WARNING, DIAG_ADC_IOCTL_FAIL,
+                        "DevPath:%s,Cmd:0x%x,Errno:%d",
+                        filep->f_inode->i_name, cmd, ret);
     }
 
   return ret;
@@ -770,6 +789,8 @@ int adc_register(FAR const char *path, FAR struct adc_dev_s *dev)
       fifo->af_channel = kmm_malloc(fifo->af_fifosize);
       if (fifo->af_channel == NULL)
         {
+          analog_trace_diag(LOG_ERR, DIAG_ADC_REGISTER_FAIL,
+                            "DevPath:%s,Errno:%d", path, -ENOMEM);
           return -ENOMEM;
         }
 
@@ -787,6 +808,8 @@ int adc_register(FAR const char *path, FAR struct adc_dev_s *dev)
               kmm_free(fifo->af_channel);
             }
 
+          analog_trace_diag(LOG_ERR, DIAG_ADC_REGISTER_FAIL,
+                            "DevPath:%s,Errno:%d", path, -ENOMEM);
           return -ENOMEM;
         }
 
@@ -798,6 +821,8 @@ int adc_register(FAR const char *path, FAR struct adc_dev_s *dev)
   ret = register_driver(path, &g_adc_fops, 0444, dev);
   if (ret < 0)
     {
+      analog_trace_diag(LOG_ERR, DIAG_ADC_REGISTER_FAIL,
+                        "DevPath:%s,Errno:%d", path, ret);
       if (alloc_channel)
         {
            kmm_free(fifo->af_channel);

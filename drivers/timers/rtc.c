@@ -39,6 +39,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/mutex.h>
 #include <nuttx/timers/rtc.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Private Types
@@ -752,6 +753,13 @@ static int rtc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
+  if (ret < 0)
+    {
+      rtc_trace_diag(LOG_WARNING, DIAG_RTC_IOCTL_FAIL,
+                     "DevPath:%s,Cmd:0x%x,Errno:%d",
+                     filep->f_inode->i_name, cmd, ret);
+    }
+
   nxmutex_unlock(&upper->lock);
   return ret;
 }
@@ -835,6 +843,8 @@ int rtc_initialize(int minor, FAR struct rtc_lowerhalf_s *lower)
 
   if (!upper)
     {
+      rtc_trace_diag(LOG_ERR, DIAG_RTC_REGISTER_FAIL,
+                     "Minor:%d,Errno:%d", minor, -ENOMEM);
       return -ENOMEM;
     }
 
@@ -859,6 +869,8 @@ int rtc_initialize(int minor, FAR struct rtc_lowerhalf_s *lower)
   ret = register_driver(devpath, &g_rtc_fops, 0666, upper);
   if (ret < 0)
     {
+      rtc_trace_diag(LOG_ERR, DIAG_RTC_REGISTER_FAIL,
+                     "Minor:%d,Errno:%d", minor, ret);
       nxmutex_destroy(&upper->lock);
       kmm_free(upper);
       return ret;

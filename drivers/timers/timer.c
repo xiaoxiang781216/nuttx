@@ -42,6 +42,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/mutex.h>
 #include <nuttx/timers/timer.h>
+#include <nuttx/trace.h>
 #include <sys/poll.h>
 
 #ifdef CONFIG_TIMER
@@ -163,6 +164,8 @@ static int timer_open(FAR struct file *filep)
     {
       /* More than 255 opens; uint8_t overflows to zero */
 
+      timer_trace_diag(LOG_WARNING, DIAG_TIMER_OPEN_EMFILE,
+                       "DevPath:%s", filep->f_inode->i_name);
       ret = -EMFILE;
       goto errout_with_lock;
     }
@@ -427,6 +430,13 @@ static int timer_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
+  if (ret < 0)
+    {
+      timer_trace_diag(LOG_WARNING, DIAG_TIMER_IOCTL_FAIL,
+                       "DevPath:%s,Cmd:0x%x,Errno:%d",
+                       filep->f_inode->i_name, cmd, ret);
+    }
+
   nxmutex_unlock(&upper->lock);
   return ret;
 }
@@ -514,6 +524,8 @@ FAR void *timer_register(FAR const char *path,
   if (!upper)
     {
       tmrerr("ERROR: Upper half allocation failed\n");
+      timer_trace_diag(LOG_ERR, DIAG_TIMER_REGISTER_FAIL,
+                       "DevPath:%s,Reason:nomem", path);
       goto errout;
     }
 
@@ -531,6 +543,8 @@ FAR void *timer_register(FAR const char *path,
   if (!upper->path)
     {
       tmrerr("ERROR: Path allocation failed\n");
+      timer_trace_diag(LOG_ERR, DIAG_TIMER_REGISTER_FAIL,
+                       "DevPath:%s,Reason:path_alloc", path);
       goto errout_with_upper;
     }
 
@@ -540,6 +554,8 @@ FAR void *timer_register(FAR const char *path,
   if (ret < 0)
     {
       tmrerr("ERROR: register_driver failed: %d\n", ret);
+      timer_trace_diag(LOG_ERR, DIAG_TIMER_REGISTER_FAIL,
+                       "DevPath:%s,Reason:register,Errno:%d", path, ret);
       goto errout_with_path;
     }
 
