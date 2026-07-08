@@ -549,4 +549,25 @@ if ARCH_CHIP_ZYNQ_MPSOC
 source "arch/arm64/src/zynq-mpsoc/Kconfig"
 endif
 
+choice
+	prompt "Choose ARM64 unwinder"
+	default ARM64_UNWINDER_FRAME_POINTER
+	depends on SCHED_BACKTRACE
+
+config ARM64_UNWINDER_FRAME_POINTER
+	bool "Frame pointer unwinder"
+	select FRAME_POINTER
+	---help---
+		This option enables the frame pointer based stack unwinder
+		for ARM64.
+
+config ARM64_UNWINDER_LIBUNWIND
+	bool "llvm-libunwind unwinder"
+	select LIB_LIBUNWIND
+	---help---
+		This option enables llvm-libunwind(based on .eh_frame) for
+		unwinding nuttx stack traces.
+
+endchoice # Choose ARM64 unwinder
+
 endif # ARCH_ARM64

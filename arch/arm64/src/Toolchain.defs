@@ -379,3 +379,10 @@ endif
 ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
   ARCHOPTIMIZATION += -mtp=tpidr_el0
 endif
+
+# Generate .eh_frame_hdr section for libunwind's binary search of FDEs
+
+ifeq ($(CONFIG_LIB_LIBUNWIND),y)
+  ARCHOPTIMIZATION += -funwind-tables -fasynchronous-unwind-tables
+  LDFLAGS += --eh-frame-hdr
+endif

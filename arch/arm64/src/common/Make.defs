@@ -140,7 +140,12 @@ CMN_CSRCS += arm64_checkstack.c
 endif
 
 ifeq ($(CONFIG_SCHED_BACKTRACE),y)
+ifeq ($(CONFIG_ARM64_UNWINDER_LIBUNWIND),y)
+CMN_CSRCS += arm64_backtrace_libunwind.c
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libbuiltin$(DELIM)libunwind$(DELIM)libunwind$(DELIM)include
+else
 CMN_CSRCS += arm64_backtrace.c
+endif
 endif
 
 ifeq ($(CONFIG_ARM64_SEMIHOSTING_HOSTFS),y)

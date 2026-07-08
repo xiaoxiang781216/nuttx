@@ -237,4 +237,9 @@ else()
   endfunction()
 endif()
 
+if(CONFIG_LIB_LIBUNWIND)
+  add_compile_options(-funwind-tables -fasynchronous-unwind-tables)
+  add_link_options(-Wl,--eh-frame-hdr)
+endif()
+
 set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)

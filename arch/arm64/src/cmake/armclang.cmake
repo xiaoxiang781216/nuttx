@@ -162,8 +162,9 @@ if(CONFIG_ARCH_INSTRUMENT_ALL)
   add_compile_options(-finstrument-functions)
 endif()
 
-if(CONFIG_ARM_UNWINDER_EXIDX)
+if(CONFIG_LIB_LIBUNWIND)
   add_compile_options(-funwind-tables -fasynchronous-unwind-tables)
+  add_link_options(-Wl,--eh-frame-hdr)
 endif()
 
 # Link Time Optimization

@@ -140,7 +140,13 @@ if(CONFIG_STACK_COLORATION)
 endif()
 
 if(CONFIG_SCHED_BACKTRACE)
-  list(APPEND SRCS arm64_backtrace.c)
+  if(CONFIG_ARM64_UNWINDER_LIBUNWIND)
+    list(APPEND SRCS arm64_backtrace_libunwind.c)
+    target_include_directories(
+      arch PRIVATE ${NUTTX_DIR}/libs/libbuiltin/libunwind/libunwind/include)
+  else()
+    list(APPEND SRCS arm64_backtrace.c)
+  endif()
 endif()
 
 if(CONFIG_ARM64_SEMIHOSTING_HOSTFS)
