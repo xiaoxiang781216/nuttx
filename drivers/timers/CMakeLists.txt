@@ -94,6 +94,10 @@ if(CONFIG_MCAL_PWM_DRIVER)
   list(APPEND SRCS pwm_mcal.c)
 endif()
 
+if(CONFIG_MCAL_WDG)
+  list(APPEND SRCS wdg_mcal.c)
+endif()
+
 if(CONFIG_PULSECOUNT)
   list(APPEND SRCS pulsecount.c)
 endif()

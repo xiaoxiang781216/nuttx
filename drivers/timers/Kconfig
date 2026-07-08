@@ -572,6 +572,14 @@ endif # !WATCHDOG_AUTOMONITOR_BY_CAPTURE && !WATCHDOG_AUTOMONITOR_BY_IDLE
 
 endif # WATCHDOG_AUTOMONITOR
 
+config MCAL_WDG
+	bool "AUTOSAR MCAL WDG Adaptation Layer"
+	---help---
+		Enables the AUTOSAR MCAL WDG adaptation layer that bridges
+		the NuttX watchdog upper-half driver to the AUTOSAR Wdg MCAL
+		module.  Board-level code provides per-instance mapping via
+		struct mcal_wdg_config_s.
+
 endif # WATCHDOG
 
 config TIMERS_CS2100CP
