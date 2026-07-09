@@ -30,6 +30,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/perf.h>
 #include <nuttx/sched.h>
+#include <nuttx/spinlock.h>
 
 #include <arch/barriers.h>
 #include <arch/irq.h>
@@ -68,6 +69,13 @@ struct pmu_hw_events_s
   struct perf_event_s *events[ARMV7PMU_MAX_HWEVENTS];
   unsigned long used_mask;
   int irq;
+
+  /* Serialize events[] access between the overflow IRQ handler and the
+   * add/del paths running in thread context on the same CPU.  Without it
+   * the IRQ handler can dereference an event that the del path is freeing.
+   */
+
+  spinlock_t lock;
 };
 
 struct armv7_pmu_s
@@ -378,11 +386,16 @@ static void armv7pmu_del(FAR struct perf_event_s *event, int flags)
   FAR struct armv7_pmu_s *armv7pmu = TO_ARMV7_PMU(event->pmu);
   FAR struct pmu_hw_events_s *hw_events = &armv7pmu->hw_events[this_cpu()];
   FAR struct hw_perf_event_s *hwc = &event->hw;
+  irqstate_t irqflags;
+
+  irqflags = spin_lock_irqsave(&hw_events->lock);
 
   armv7pmu_stop(event, PERF_EF_UPDATE);
   hw_events->events[hwc->idx] = NULL;
   armv7pmu->clear_event_idx(hw_events, event);
   hwc->idx = -1;
+
+  spin_unlock_irqrestore(&hw_events->lock, irqflags);
 }
 
 static int armv7pmu_add(FAR struct perf_event_s *event, int flags)
@@ -390,6 +403,7 @@ static int armv7pmu_add(FAR struct perf_event_s *event, int flags)
   FAR struct armv7_pmu_s *armv7pmu = TO_ARMV7_PMU(event->pmu);
   FAR struct pmu_hw_events_s *hw_events = &armv7pmu->hw_events[this_cpu()];
   FAR struct hw_perf_event_s *hwc = &event->hw;
+  irqstate_t irqflags;
   int idx;
 
   if (!test_bit(this_cpu(), &armv7pmu->supported_cpus))
@@ -397,9 +411,12 @@ static int armv7pmu_add(FAR struct perf_event_s *event, int flags)
       return -ENOENT;
     }
 
+  irqflags = spin_lock_irqsave(&hw_events->lock);
+
   idx = armv7pmu->get_event_idx(hw_events, event);
   if (idx < 0)
     {
+      spin_unlock_irqrestore(&hw_events->lock, irqflags);
       return idx;
     }
 
@@ -412,6 +429,8 @@ static int armv7pmu_add(FAR struct perf_event_s *event, int flags)
     {
       armv7pmu_start(event, PERF_EF_RELOAD);
     }
+
+  spin_unlock_irqrestore(&hw_events->lock, irqflags);
 
   return OK;
 }
@@ -682,6 +701,7 @@ static int armv7pmu_handle_irq(FAR struct armv7_pmu_s *cpu_pmu)
 {
   uint32_t flags;
   FAR struct pmu_hw_events_s *cpuc = &cpu_pmu->hw_events[this_cpu()];
+  irqstate_t irqflags;
   int idx;
 
   flags = armv7pmu_getreset_flags();
@@ -691,6 +711,12 @@ static int armv7pmu_handle_irq(FAR struct armv7_pmu_s *cpu_pmu)
     }
 
   armv7pmu_stop_hw(cpu_pmu);
+
+  /* Hold the per-CPU lock so the add/del paths cannot free an event or
+   * clear events[] while we are dereferencing it here.
+   */
+
+  irqflags = spin_lock_irqsave(&cpuc->lock);
 
   for (idx = 0; idx < cpu_pmu->num_events; idx++)
     {
@@ -716,6 +742,8 @@ static int armv7pmu_handle_irq(FAR struct armv7_pmu_s *cpu_pmu)
 
       armv7pmu_event_update_period(event);
     }
+
+  spin_unlock_irqrestore(&cpuc->lock, irqflags);
 
   armv7pmu_start_hw(cpu_pmu);
   return OK;
@@ -880,6 +908,7 @@ static int armv7pmu_common_init(FAR struct armv7_pmu_s *cpu_pmu,
       cpu_pmu->supported_cpus |= BIT(cpu);
       events = &cpu_pmu->hw_events[cpu];
       events->irq = ARMV7PMU_IRQ;
+      spin_lock_init(&events->lock);
     }
 
   return OK;
