@@ -81,7 +81,7 @@ static clock_t nxsched_cpu_scheduler(int cpu, clock_t ticks,
 #endif
 static clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
                                          bool noswitches);
-static void nxsched_timer_start(clock_t ticks, clock_t interval);
+static clock_t nxsched_process_event(clock_t ticks, bool noswitches);
 
 /****************************************************************************
  * Private Data
@@ -95,10 +95,13 @@ static void nxsched_timer_start(clock_t ticks, clock_t interval);
 static DEFINE_PER_CPU_BSS_BMP(clock_t, g_timer_tick);
 #define g_timer_tick this_cpu_var_bmp(g_timer_tick)
 
-/* Wdog timer for scheduler event. */
+/* HRTimer for scheduler event. */
 
-static DEFINE_PER_CPU_BSS_BMP(struct wdog_s, g_sched_event);
+static DEFINE_PER_CPU_BSS_BMP(hrtimer_t, g_sched_event);
 #define g_sched_event this_cpu_var_bmp(g_sched_event)
+
+static DEFINE_PER_CPU_BSS_BMP(bool, g_in_sched_expiration);
+#define g_in_sched_expiration this_cpu_var_bmp(g_in_sched_expiration)
 
 /****************************************************************************
  * Private Functions
@@ -116,10 +119,9 @@ int up_timer_gettick(FAR clock_t *ticks)
 }
 #endif
 
-static void nxsched_process_event(clock_t ticks, bool noswitches)
+static clock_t nxsched_process_event(clock_t ticks, bool noswitches)
 {
-  clock_t next;
-  clock_t elapsed;
+  clock_t elapsed = 0u;
 
   /* Ensure the g_timer_tick is monotonic. */
 
@@ -129,21 +131,27 @@ static void nxsched_process_event(clock_t ticks, bool noswitches)
 
       elapsed      = ticks - g_timer_tick;
       g_timer_tick = ticks;
-
-      /* Process the timer ticks and set up the next interval (or not) */
-
-      next = nxsched_process_scheduler(ticks, elapsed, noswitches);
-      nxsched_timer_start(ticks, next);
     }
+
+  /* Process the timer ticks and set up the next interval (or not) */
+
+  return nxsched_process_scheduler(ticks, elapsed, noswitches);
 }
 
-static void nxsched_wdog_expiration(wdparm_t arg)
+static uint64_t nxsched_hrtimer_expiration(const hrtimer_t *timer,
+                                           uint64_t expired)
 {
-  /* Since the g_wdexpired has updated in the nxsched_timer_expiration,
-   * here we do not need to get tick again.
-   */
+  clock_t    delay;
+  clock_t    now   = div_const(expired, NSEC_PER_TICK);
+  irqstate_t flags = enter_critical_section();
 
-  nxsched_process_event(g_wdexpired, false);
+  g_in_sched_expiration = true;
+  delay = nxsched_process_event(now, false);
+  g_in_sched_expiration = false;
+
+  leave_critical_section(flags);
+
+  return delay != CLOCK_MAX ? TICK2NSEC((uint64_t)delay) : 0u;
 }
 
 /****************************************************************************
@@ -317,17 +325,21 @@ clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
  *
  ****************************************************************************/
 
-static void nxsched_timer_start(clock_t ticks, clock_t interval)
+static inline_function
+void nxsched_timer_start(clock_t ticks, clock_t interval)
 {
   if (interval != CLOCK_MAX)
     {
-      DEBUGASSERT(interval <= UINT32_MAX);
-      wd_start_abstick(&g_sched_event, ticks + interval,
-                       nxsched_wdog_expiration, 0u);
+      DEBUGASSERT((uint64_t)interval <= UINT32_MAX &&
+                  (uint64_t)interval <= HRTIMER_MAX_DELAY /
+                                        NSEC_PER_TICK);
+      hrtimer_start(&g_sched_event, nxsched_hrtimer_expiration,
+                    TICK2NSEC((uint64_t)ticks + interval),
+                    HRTIMER_MODE_ABS);
     }
   else
     {
-      wd_cancel(&g_sched_event);
+      hrtimer_cancel(&g_sched_event);
     }
 }
 
@@ -372,8 +384,9 @@ void nxsched_process_timer(void)
 #  if CONFIG_RR_INTERVAL > 0
   /* Workaround for SCHED_RR, see the note. */
 
+  clock_t    now   = div_const(nsec, NSEC_PER_TICK);
   irqstate_t flags = enter_critical_section();
-  nxsched_process_event(div_const(nsec, (uint32_t)NSEC_PER_TICK), true);
+  nxsched_timer_start(now, nxsched_process_event(now, true));
   leave_critical_section(flags);
 #  endif
 }
@@ -387,7 +400,7 @@ void nxsched_process_timer(void)
  *
  *   - If the watchdog at the head of the expiration list changes (or if its
  *     delay changes.  This can occur as a consequence of the actions of
- *     wd_start() or wd_cancel().
+ *     hrtimer_start() or hrtimer_cancel().
  *   - When pre-emption is re-enabled.  A previous time slice may have
  *     expired while pre-emption was enabled and now needs to be executed.
  *
@@ -417,14 +430,16 @@ void nxsched_process_timer(void)
 
 void nxsched_reassess_timer(void)
 {
-  /* If we are in the wdog callback, there is no need to get tick again. */
+  clock_t next;
+  clock_t now;
 
-  if (!wd_in_callback())
+  up_timer_gettick(&now);
+  next = nxsched_process_event(now, true);
+
+  if (!g_in_sched_expiration)
     {
-      up_timer_gettick(&g_wdexpired);
+      nxsched_timer_start(now, next);
     }
-
-  nxsched_process_event(g_wdexpired, true);
 }
 
 /****************************************************************************
