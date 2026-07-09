@@ -1553,8 +1553,21 @@ skip_rtt:
             tcp_cc_update(conn, tcp);
 #endif
             flags               = TCP_CONNECTED;
+
+            /* If the segment that acknowledges our SYN also carries a
+             * SYN, this is a simultaneous open (crossed SYNs) and, per
+             * RFC 1122 Section 4.2.2.10, we must also acknowledge the
+             * peer's SYN.
+             */
+
+            if ((tcp->flags & TCP_SYN) != 0)
+              {
+                flags |= TCP_NEWDATA;
+              }
+
             ninfo("TCP state: TCP_ESTABLISHED\n");
 
+            dev->d_len          = 0;
             dev->d_sndlen       = 0;
             result              = tcp_callback(dev, conn, flags);
             tcp_appsend(dev, conn, result);
