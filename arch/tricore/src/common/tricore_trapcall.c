@@ -448,8 +448,8 @@ void tricore_trapcall(volatile void *trap)
       saved_lcx = tricore_mfcr(CPU_LCX);
 
       tricore_mtcr(CPU_FCX, tricore_addr2csa(istackbase));
-      tricore_mtcr(CPU_LCX, tricore_addr2csa(istackbase - XCPTCONTEXT_SIZE
-                                             + CONFIG_ARCH_INTERRUPTSTACK));
+      tricore_mtcr(CPU_LCX, tricore_addr2csa(istackbase - FCD_RESERVE_SIZE +
+                                             CONFIG_ARCH_INTERRUPTSTACK));
       UP_ISB();
     }
 

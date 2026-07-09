@@ -66,7 +66,7 @@
         tricore_mtcr(CPU_FCX, tricore_addr2csa(istackbase));             \
         tricore_mtcr(CPU_LCX, tricore_addr2csa(istackbase +              \
                                 CONFIG_ARCH_INTERRUPTSTACK -             \
-                                XCPTCONTEXT_SIZE));                      \
+                                FCD_RESERVE_SIZE));                      \
         UP_ISB();                                                        \
       }                                                                  \
                                                                          \

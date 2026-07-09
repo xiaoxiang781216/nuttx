@@ -172,7 +172,6 @@ void tricore_svcall(volatile void *trap)
   struct tcb_s *tcb = this_task();
   uintptr_t *plregs;
   uintptr_t *puregs;
-  uintptr_t *cpu_lcx;
   uint32_t cmd;
 
   /* DSYNC instruction should be executed immediately prior to the MFCR */
@@ -185,7 +184,7 @@ void tricore_svcall(volatile void *trap)
   /* set registers related to csa */
 
   tricore_mtcr(CPU_FCX, tricore_addr2csa(istackbase));
-  tricore_mtcr(CPU_LCX, tricore_addr2csa(istackbase - XCPTCONTEXT_SIZE +
+  tricore_mtcr(CPU_LCX, tricore_addr2csa(istackbase - FCD_RESERVE_SIZE +
                                          CONFIG_ARCH_INTERRUPTSTACK));
   UP_ISB();
 
@@ -508,14 +507,13 @@ void tricore_svcall(volatile void *trap)
         break;
     }
 
-  /* Reserve at least two csa for CPU_LCX */
+  /* Reserve CSAs for FCD depletion threshold */
 
-  cpu_lcx =
-    (uintptr_t *)((uint8_t *)tcb->stack_base_ptr + tcb->adj_stack_size) -
-    XCPTCONTEXT_REGS;
   tricore_mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs + TC_CONTEXT_REGS));
   tricore_mtcr(CPU_FCX, tricore_addr2csa(tcb->xcp.regs + XCPTCONTEXT_REGS));
-  tricore_mtcr(CPU_LCX, tricore_addr2csa(cpu_lcx));
+  tricore_mtcr(CPU_LCX, tricore_addr2csa((uintptr_t)tcb->stack_base_ptr +
+                                         tcb->adj_stack_size -
+                                         FCD_RESERVE_SIZE));
 
   /* Updata PPRS register */
 

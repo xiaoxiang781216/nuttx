@@ -106,6 +106,8 @@
 #define XCPTCONTEXT_REGS    (TC_CONTEXT_REGS * 2)
 #define XCPTCONTEXT_SIZE    (sizeof(void *) * XCPTCONTEXT_REGS)
 
+#define FCD_RESERVE_SIZE    (TC_CONTEXT_SIZE * 4)
+
 /* PSW: Program Status Word Register */
 
 #define PSW_CDE             (1 << 7) /* Bits 7: Call Depth Count Enable */
