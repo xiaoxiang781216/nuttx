@@ -205,7 +205,7 @@ static int pseudofile_close(FAR struct file *filep)
   return OK;
 }
 
-#ifndef CONFIG_PSEUDOFS_FILE_READONLY
+#if !defined(CONFIG_PSEUDOFS_FILE_READONLY) || defined(CONFIG_FS_FILEMAP)
 static int pseudofile_expand(FAR struct inode *node,
                              size_t size)
 {
