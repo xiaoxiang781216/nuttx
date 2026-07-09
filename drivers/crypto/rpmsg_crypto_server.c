@@ -579,6 +579,14 @@ rpmsg_crypto_process_mac(FAR struct rpmsg_endpoint *ept,
   crp->crp_sid = rcsdata->tid;
   crp->crp_desc = crda;
 
+  /* PBKDF2 is carried over the MAC service as a plain HMAC session plus a
+   * non-zero iteration count; the backend runs the PBKDF2 loop when
+   * crp_iter > 0 and a plain HMAC otherwise. The algorithm stays HMAC so
+   * that it matches the session created at newsession time.
+   */
+
+  crp->crp_iter = msg->data.op_flf.mac.hdr.iterations;
+
   if (result_len)
     {
       /* output result */
@@ -593,10 +601,28 @@ rpmsg_crypto_process_mac(FAR struct rpmsg_endpoint *ept,
       crda->crd_flags = 0;
       rsp->header = msg->header;
       rsp->data = msg->data;
-      crp->crp_buf = NULL;
-      crp->crp_ilen = 0;
       crp->crp_olen = result_len;
       crp->crp_mac = rsp->buf;
+
+      if (crp->crp_iter > 0)
+        {
+          /* PBKDF2 is a single-shot operation: the salt (input) and the
+           * derived-key output are carried in the same request, unlike
+           * plain HMAC which streams data over separate update/final
+           * messages. Feed the salt from this message rather than
+           * discarding it, so the backend derivation receives it.
+           */
+
+          crp->crp_ilen = msglen - sizeof(*msg);
+          crda->crd_len = crp->crp_ilen;
+          crp->crp_buf = msg->buf;
+        }
+      else
+        {
+          crp->crp_buf = NULL;
+          crp->crp_ilen = 0;
+        }
+
       return rpmsg_crypto_dispatch(rcsdata, ept, msg, rsp,
                                    sizeof(*rsp) + crp->crp_olen);
     }

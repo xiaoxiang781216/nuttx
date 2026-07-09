@@ -525,6 +525,12 @@ begin_packed_struct struct virtio_crypto_hash_data_flf_s
   /* hash result length */
 
   uint32_t hash_result_len;
+
+  /* PBKDF2 iteration count (0 for plain hash/mac). Fits within the spare
+   * room of the op_flf union padding, so the wire layout is unchanged.
+   */
+
+  uint32_t iterations;
 } end_packed_struct;
 
 begin_packed_struct struct virtio_crypto_hash_data_flf_stateless_s

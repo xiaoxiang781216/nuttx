@@ -421,6 +421,7 @@ static int rpmsg_crypto_fill_data_request(
       case VIRTIO_CRYPTO_SERVICE_MAC:
         header->opcode = VIRTIO_CRYPTO_MAC;
         data->op_flf.mac.hdr.src_data_len = crp->crp_ilen;
+        data->op_flf.mac.hdr.iterations = crp->crp_iter;
         break;
       case VIRTIO_CRYPTO_SERVICE_AEAD:
           header->opcode = crde->crd_flags & CRD_F_ENCRYPT ?
