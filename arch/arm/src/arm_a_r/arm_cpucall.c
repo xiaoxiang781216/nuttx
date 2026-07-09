@@ -94,7 +94,7 @@ int arm_smp_sched_handler(int irq, void *context, void *arg)
 
 int up_send_smp_sched(int cpu)
 {
-  arm_cpu_sgi(GIC_SMP_SCHED, (1 << cpu));
+  up_trigger_irq(GIC_SMP_SCHED, (1 << cpu));
 
   return OK;
 }
