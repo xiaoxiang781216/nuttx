@@ -1638,12 +1638,14 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
             axf = &auth_hash_hmac_md5_96;
             goto authcommon;
           case CRYPTO_SHA1_HMAC:
+          case CRYPTO_PBKDF2_HMAC_SHA1:
             axf = &auth_hash_hmac_sha1_96;
             goto authcommon;
           case CRYPTO_RIPEMD160_HMAC:
             axf = &auth_hash_hmac_ripemd_160_96;
             goto authcommon;
           case CRYPTO_SHA2_256_HMAC:
+          case CRYPTO_PBKDF2_HMAC_SHA256:
             axf = &auth_hash_hmac_sha2_256_128;
             goto authcommon;
           case CRYPTO_SHA2_384_HMAC:
@@ -1904,6 +1906,8 @@ int swcr_freesession(uint64_t tid)
           case CRYPTO_SHA2_256_HMAC:
           case CRYPTO_SHA2_384_HMAC:
           case CRYPTO_SHA2_512_HMAC:
+          case CRYPTO_PBKDF2_HMAC_SHA1:
+          case CRYPTO_PBKDF2_HMAC_SHA256:
             axf = swd->sw_axf;
 
             if (swd->sw_ictx)
@@ -2062,6 +2066,11 @@ int swcr_process(struct cryptop *crp)
 
             break;
 
+          case CRYPTO_PBKDF2_HMAC_SHA1:
+          case CRYPTO_PBKDF2_HMAC_SHA256:
+            swcr_pbkdf2(crp, crd, sw, crp->crp_buf);
+            break;
+
           case CRYPTO_MD5:
           case CRYPTO_POLY1305:
           case CRYPTO_RIPEMD160:
@@ -2103,6 +2112,83 @@ int swcr_process(struct cryptop *crp)
     }
 
 done:
+  return 0;
+}
+
+/* Compute one HMAC using the precomputed inner/outer pad contexts stored in
+ * the session (sw_ictx / sw_octx). PBKDF2 keeps the HMAC key (the password)
+ * constant across all iterations, so the pad contexts are set up once during
+ * newsession and only the per-iteration message is fed here.
+ */
+
+static void swcr_pbkdf2_hmac(FAR struct swcr_data *sw,
+                             FAR const uint8_t *msg, size_t msglen,
+                             FAR uint8_t *out)
+{
+  FAR const struct auth_hash *axf = sw->sw_axf;
+
+  /* inner = H((key ^ ipad) || msg) */
+
+  memcpy(&sw->sw_ctx, sw->sw_ictx, axf->ctxsize);
+  axf->update(&sw->sw_ctx, msg, msglen);
+  axf->final(out, &sw->sw_ctx);
+
+  /* out = H((key ^ opad) || inner) */
+
+  memcpy(&sw->sw_ctx, sw->sw_octx, axf->ctxsize);
+  axf->update(&sw->sw_ctx, out, axf->hashsize);
+  axf->final(out, &sw->sw_ctx);
+}
+
+int swcr_pbkdf2(FAR struct cryptop *crp,
+                FAR struct cryptodesc *crd,
+                FAR struct swcr_data *sw,
+                caddr_t buf)
+{
+  FAR const struct auth_hash *axf = sw->sw_axf;
+  uint8_t saltblk[HMAC_MAX_BLOCK_LEN + AALG_MAX_RESULT_LEN + 4];
+  uint8_t U[AALG_MAX_RESULT_LEN];
+  uint8_t T[AALG_MAX_RESULT_LEN];
+  size_t generated = 0;
+  uint32_t blocknum;
+  uint32_t i;
+  uint32_t j;
+
+  if (sw->sw_ictx == NULL || sw->sw_octx == NULL || crp->crp_iter < 1)
+    {
+      return -EINVAL;
+    }
+
+  if (crp->crp_ilen + 4 > (int)sizeof(saltblk))
+    {
+      return -EINVAL;
+    }
+
+  for (blocknum = 1; generated < crp->crp_olen; blocknum++)
+    {
+      /* U1 = HMAC(password, salt || INT_32_BE(blocknum)) */
+
+      memcpy(saltblk, crp->crp_buf, crp->crp_ilen);
+      *(FAR uint32_t *)(saltblk + crp->crp_ilen) = htobe32(blocknum);
+      swcr_pbkdf2_hmac(sw, saltblk, crp->crp_ilen + 4, U);
+      memcpy(T, U, axf->hashsize);
+
+      /* U2..Uc = HMAC(password, U(i-1)); T = U1 ^ U2 ^ ... ^ Uc */
+
+      for (i = 1; i < (uint32_t)crp->crp_iter; i++)
+        {
+          swcr_pbkdf2_hmac(sw, U, axf->hashsize, U);
+          for (j = 0; j < axf->hashsize; j++)
+            {
+              T[j] ^= U[j];
+            }
+        }
+
+      size_t tocopy = MIN(crp->crp_olen - generated, axf->hashsize);
+      memcpy((FAR uint8_t *)crp->crp_mac + generated, T, tocopy);
+      generated += tocopy;
+    }
+
   return 0;
 }
 
@@ -2975,6 +3061,8 @@ void swcr_init(void)
   algs[CRYPTO_CRC32] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_AES_CMAC] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_AES_128_CMAC] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_PBKDF2_HMAC_SHA1] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_PBKDF2_HMAC_SHA256] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_ESN] = CRYPTO_ALG_FLAG_SUPPORTED;
 
   crypto_register(swcr_id, algs, swcr_newsession,
