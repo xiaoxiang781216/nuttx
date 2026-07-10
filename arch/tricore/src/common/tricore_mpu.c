@@ -39,24 +39,12 @@
 
 static DEFINE_PER_CPU_BMP(unsigned int, g_mpu_data_region);
 static DEFINE_PER_CPU_BMP(unsigned int, g_mpu_code_region);
-static DEFINE_PER_CPU_BMP(unsigned int, g_mpu_set);
+static DEFINE_PER_CPU_BMP_INIT(unsigned int, g_mpu_set,
+                               (1 << MPU_KSET) | (1 << MPU_USET) |
+                               (1 << MPU_APP_SET));
 #define g_mpu_data_region this_cpu_var_bmp(g_mpu_data_region)
 #define g_mpu_code_region this_cpu_var_bmp(g_mpu_code_region)
 #define g_mpu_set         this_cpu_var_bmp(g_mpu_set)
-
-/****************************************************************************
- * Public Variables
- ****************************************************************************/
-
-#undef g_mpu_kset
-#undef g_mpu_uset
-#undef g_app_set
-DEFINE_PER_CPU_BSS_BMP(unsigned int, g_mpu_kset);
-DEFINE_PER_CPU_BSS_BMP(unsigned int, g_mpu_uset);
-DEFINE_PER_CPU_BSS_BMP(unsigned int, g_app_set);
-#define g_mpu_kset this_cpu_var_bmp(g_mpu_kset)
-#define g_mpu_uset this_cpu_var_bmp(g_mpu_uset)
-#define g_app_set  this_cpu_var_bmp(g_app_set)
 
 /****************************************************************************
  * Private Functions
@@ -931,7 +919,7 @@ void mpu_freeregion(unsigned int region, int flags)
 
 unsigned int mpu_alloc_set(void)
 {
-  unsigned int i = ffs(~g_mpu_set) - 1;
+  unsigned int i = ffs((~g_mpu_set) & ~((1u << MPU_BUILTIN_SETS) - 1)) - 1;
 
   /* There are not enough set to apply */
 
@@ -958,7 +946,7 @@ unsigned int mpu_alloc_set(void)
 
 void mpu_free_set(unsigned int set)
 {
-  DEBUGASSERT(set < CONFIG_ARCH_MPU_NSETS);
+  DEBUGASSERT(set >= MPU_BUILTIN_SETS && set < CONFIG_ARCH_MPU_NSETS);
   g_mpu_set &= ~(1 << set);
 }
 
@@ -1205,47 +1193,40 @@ unsigned int mpu_get_active_set(void)
 void mpu_initialize(const struct mpu_region_s *table, size_t count)
 {
   const struct mpu_region_s *conf;
-  unsigned int region;
-  size_t index;
+  unsigned int cpu = this_cpu();
+  unsigned int region = 0;
+  int set = 0;
+  int index;
 
   mpu_control(false);
-
-  g_mpu_kset = mpu_alloc_set();
-#ifdef CONFIG_BUILD_PROTECTED
-  g_mpu_uset = mpu_alloc_set();
-#endif
-  g_app_set = mpu_alloc_set();
-
-  /* For code background set execute enable */
-
-  mpu_modify_region(g_app_set, mpu_alloccoderegion(),
-                    0x0, 0xffffffff, REGION_TYPE_CODE | REGION_ATTR_XE);
 
   for (index = 0; index < count; index++)
     {
       conf = &table[index];
 
-      if ((conf->kflags & REGION_TYPE_MASK) == REGION_TYPE_CODE)
+      if (conf->cpuset & (1 << cpu))
         {
-          region = mpu_alloccoderegion();
-          mpu_modify_code_region(region, conf->base, conf->size);
-          mpu_modify_code_set(g_mpu_kset, region, conf->kflags);
-#ifdef CONFIG_BUILD_PROTECTED
-          mpu_modify_code_set(g_mpu_uset, region, conf->uflags);
-#endif
-        }
-      else
-        {
-          region = mpu_allocdataregion();
-          mpu_modify_data_region(region, conf->base, conf->size);
-          mpu_modify_data_set(g_mpu_kset, region, conf->kflags);
-    #ifdef CONFIG_BUILD_PROTECTED
-          mpu_modify_data_set(g_mpu_uset, region, conf->uflags);
-    #endif
+          /* Allocate new region based on type */
+
+          if ((conf->flags[0] & REGION_TYPE_MASK) == REGION_TYPE_CODE)
+            {
+              region = mpu_alloccoderegion();
+              mpu_modify_code_region(region, conf->base, conf->size);
+            }
+          else if((conf->flags[0] & REGION_TYPE_MASK) == REGION_TYPE_DATA)
+            {
+              region = mpu_allocdataregion();
+              mpu_modify_data_region(region, conf->base, conf->size);
+            }
+
+          /* Set permissions for each protection set */
+
+          for (set = 0; set < CONFIG_ARCH_MPU_NSETS; set++)
+            {
+              mpu_modify_region(set, region, 0, 0, conf->flags[set]);
+            }
         }
     }
-
-  mpu_set_active_set(g_mpu_kset);
 
   mpu_control(true);
 }

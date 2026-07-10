@@ -51,6 +51,11 @@
 #define REGION_ATTR_WO      REGION_ATTR_WE
 #define REGION_ATTR_RW      (REGION_ATTR_RE | REGION_ATTR_WE)
 
+#define MPU_KSET            0   /* kernel set */
+#define MPU_USET            1   /* user set */
+#define MPU_APP_SET         2   /* app set */
+#define MPU_BUILTIN_SETS    3   /* first allocatable set for mpu_alloc_set() */
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -58,21 +63,10 @@
 struct mpu_region_s
 {
   uintptr_t base;
-  size_t size;
-  int kflags;
-  int uflags;
+  size_t    size;
+  uint32_t  cpuset;
+  int       flags[CONFIG_ARCH_MPU_NSETS];
 };
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-DECLARE_PER_CPU_BMP(unsigned int, g_mpu_kset);
-DECLARE_PER_CPU_BMP(unsigned int, g_mpu_uset);
-DECLARE_PER_CPU_BMP(unsigned int, g_app_set);
-#define g_mpu_kset this_cpu_var_bmp(g_mpu_kset)
-#define g_mpu_uset this_cpu_var_bmp(g_mpu_uset)
-#define g_app_set  this_cpu_var_bmp(g_app_set)
 
 /****************************************************************************
  * Public Function Prototypes
