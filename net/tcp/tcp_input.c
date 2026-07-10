@@ -1444,6 +1444,7 @@ skip_rtt:
           if (TCP_SEQ_LT(seq, rcvseq))
             {
               uint32_t trimlen = TCP_SEQ_SUB(rcvseq, seq);
+              bool dupfin = (tcp->flags & TCP_FIN) != 0;
 
               if (tcp_trim_head(dev, tcp, trimlen))
                 {
@@ -1451,6 +1452,21 @@ skip_rtt:
                    * E.g. a retransmit which was not necessary.
                    * E.g. a keep-alive segment.
                    */
+
+                  /* RFC793, Section 3.9, Page 73: when that duplicate is a
+                   * retransmitted FIN in TIME_WAIT it is trimmed away here
+                   * and never reaches the TCP_TIME_WAIT case, so restart
+                   * the 2*MSL timeout (the ACK is sent below), else the
+                   * connection is released while the peer is still
+                   * retransmitting its FIN.
+                   */
+
+                  if (dupfin && (conn->tcpstateflags & TCP_STATE_MASK) ==
+                      TCP_TIME_WAIT)
+                    {
+                      tcp_start_timewait(conn, TCP_TIME_WAIT_TIMEOUT *
+                                         HSEC_PER_SEC);
+                    }
 
                   tcp_send(dev, conn, TCP_ACK, tcpiplen);
                   return;
