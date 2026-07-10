@@ -24,9 +24,11 @@
 
 #include <nuttx/config.h>
 
+#include <stdbool.h>
 #include <string.h>
 
-#include "tricore_internal.h"
+#include <arch/arch.h>
+#include <arch/irq.h>
 
 /****************************************************************************
  * Private Types
@@ -74,12 +76,9 @@ void tricore_fpuinit(void)
 
 bool up_fpucmp(const void *saveregs1, const void *saveregs2)
 {
-  const uintptr_t *regs1 = saveregs1;
-  const uintptr_t *regs2 = saveregs2;
-
   /* The FPU uses the general-purpose data registers, so
    * only the upper half needs to be compared.
    */
 
-  return memcmp(regs1, regs2, TC_CONTEXT_REGS * sizeof(uintptr_t)) == 0;
+  return memcmp(saveregs1, saveregs2, TC_CONTEXT_SIZE) == 0;
 }
