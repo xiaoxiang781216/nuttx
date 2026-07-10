@@ -1964,7 +1964,13 @@ skip_rtt:
         return;
 
       case TCP_CLOSING:
-        if ((flags & TCP_ACKDATA) != 0)
+        /* Derived from RFC793, Section 3.9, Page 75 Event Processing:
+         * leave CLOSING for TIME-WAIT only when our FIN is acknowledged
+         * (tx_unacked == 0), not merely on TCP_ACKDATA; a FIN/ACK not
+         * covering our FIN must be ignored, staying in CLOSING.
+         */
+
+        if ((flags & TCP_ACKDATA) != 0 && conn->tx_unacked == 0)
           {
             conn->tcpstateflags = TCP_TIME_WAIT;
             tcp_start_timewait(conn,
