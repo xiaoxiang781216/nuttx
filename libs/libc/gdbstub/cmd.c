@@ -186,8 +186,8 @@ void gdb_update_regcache(FAR struct gdb_state_s *state)
     {
       if (up_interrupt_context() && running_regs())
         {
-          up_copyusercontext(state->running_regs, running_regs(),
-                             XCPTCONTEXT_SIZE);
+          memcpy(state->running_regs, running_regs(),
+                 XCPTCONTEXT_SIZE);
         }
       else
         {
@@ -199,8 +199,8 @@ void gdb_update_regcache(FAR struct gdb_state_s *state)
       FAR struct tcb_s *tcb = nxsched_get_tcb(state->pid);
       if (tcb != NULL)
         {
-          up_copyusercontext(state->running_regs, tcb->xcp.regs,
-                             XCPTCONTEXT_SIZE);
+          memcpy(state->running_regs, tcb->xcp.regs,
+                 XCPTCONTEXT_SIZE);
           nxsched_put_tcb(tcb);
         }
       else

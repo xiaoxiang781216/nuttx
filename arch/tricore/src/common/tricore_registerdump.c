@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <debug.h>
-#include <assert.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
@@ -131,25 +130,4 @@ void up_dump_register(void *dumpregs)
   tricore_dump_lowcsa(regs + TC_CONTEXT_REGS);
 
   tricore_dump_trapctrl();
-}
-
-/****************************************************************************
- * Name: up_copyusercontext
- ****************************************************************************/
-
-void up_copyusercontext(FAR void *dest_, FAR void *src_, size_t count)
-{
-  uintptr_t *dest = (uintptr_t *)dest_;
-  uintptr_t *src = (uintptr_t *)src_;
-  uintptr_t pcxi;
-
-  DEBUGASSERT(count == XCPTCONTEXT_SIZE);
-
-  pcxi = src[REG_LPCXI];
-  memcpy(dest + TC_CONTEXT_REGS, src, TC_CONTEXT_SIZE);
-  (dest + TC_CONTEXT_REGS)[0] = tricore_addr2csa(dest)
-                                | (pcxi & ~FCX_FREE);
-  src = tricore_csa2addr(pcxi);
-
-  memcpy(dest, src, TC_CONTEXT_SIZE);
 }

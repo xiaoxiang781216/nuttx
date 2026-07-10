@@ -2909,16 +2909,6 @@ ssize_t up_show_cpuinfo(FAR char *buf, size_t buf_size, off_t file_off);
 int up_saveusercontext(FAR void *saveregs);
 
 /****************************************************************************
- * Name: up_copyusercontext
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_HAVE_COPYUSERCONTEXT
-void up_copyusercontext(FAR void *dest, FAR void *src, size_t count);
-#else
-#define up_copyusercontext(dest, src, count) memcpy(dest, src, count)
-#endif
-
-/****************************************************************************
  * Name: up_fpucmp
  *
  * Description:

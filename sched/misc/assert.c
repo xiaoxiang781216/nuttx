@@ -645,8 +645,8 @@ static void dump_deadlock(void)
 
 static noreturn_function int pause_cpu_handler(FAR void *arg)
 {
-  up_copyusercontext(this_cpu_var(g_last_regs), running_regs(),
-                     sizeof(last_regs_t));
+  memcpy(this_cpu_var(g_last_regs), running_regs(),
+         sizeof(last_regs_t));
   this_cpu_var_smp(g_cpu_paused) = true;
   up_flush_dcache_all();
   while (1);

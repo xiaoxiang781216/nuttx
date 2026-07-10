@@ -213,7 +213,6 @@ config ARCH_TRICORE
 	select ARCH_HAVE_CUSTOMOPT
 	select ARCH_HAVE_TCBINFO
 	select ARCH_HAVE_BACKTRACE
-	select ARCH_HAVE_COPYUSERCONTEXT
 	select ARCH_HAVE_FORK
 	select LIBC_ATOMIC_ARCH if !TRICORE_TOOLCHAIN_TASKING
 	---help---
@@ -1362,12 +1361,6 @@ config ARCH_STACKDUMP
 	select DEBUG_ALERT
 	---help---
 		Enable to do stack dumps after assertions
-
-config ARCH_HAVE_COPYUSERCONTEXT
-	bool "common copy of cpu regs"
-	default n
-	---help---
-		Supports context data copying with different architectures
 
 config ARCH_STACKDUMP_MAX_LENGTH
 	int "The maximum length for dump stack on assertions"
