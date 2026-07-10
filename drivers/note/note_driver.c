@@ -105,8 +105,8 @@
 #define note_do_wqueue(drv, event, worker, arg)                                 \
   ((drv)->ops->wqueue &&                                                     \
   ((drv)->ops->wqueue(drv, event, worker, arg), true))
-#define note_do_event(drv, tag, level, ip, event, buf, len)                          \
-  ((drv)->ops->event && ((drv)->ops->event(drv, tag, level, ip, event, buf, len), true))
+#define note_do_event(drv, event, tag, level, ip, buf, len)                          \
+  ((drv)->ops->event && ((drv)->ops->event(drv, event, tag, level, ip, buf, len), true))
 #define note_do_vprintf(drv, tag, level, ip, type, fmt, va)                                \
   ((drv)->ops->vprintf && ((drv)->ops->vprintf(drv, tag, level, ip, type, fmt, va), true))
 
@@ -2118,8 +2118,8 @@ void note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                            uint8_t level, uintptr_t ip, uint8_t event,
+size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t event,
+                            uint8_t tag, uint8_t level, uintptr_t ip,
                             FAR const void *buf, size_t len)
 {
   FAR struct tcb_s *tcb = running_task();
@@ -2127,7 +2127,7 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
   char data[NOTE_BUFFER_SIZE];
   unsigned int length = 0;
 
-  if (note_do_event(driver, tag, level, ip, event, buf, len))
+  if (note_do_event(driver, event, tag, level, ip, buf, len))
     {
       return length;
     }
@@ -2306,7 +2306,7 @@ void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   va_end(va);
 }
 
-void note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip, uint8_t event,
+void note_event_ip(uint8_t event, uint8_t tag, uint8_t level, uintptr_t ip,
                    FAR const void *buf, size_t len)
 {
   FAR struct note_driver_s **driver;
@@ -2322,7 +2322,7 @@ void note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip, uint8_t event,
               continue;
             }
 
-          note_driver_event_ip(*driver, tag, level, ip, event, buf, len);
+          note_driver_event_ip(*driver, event, tag, level, ip, buf, len);
         }
     }
 }

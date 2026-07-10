@@ -74,8 +74,8 @@ extern "C"
 #define NOTE_PRINTF_GET_TYPE(tag, index) (((tag) >> (index) * 2) & 0x03)
 #define NOTE_PRINTF_GET_COUNT(tag)       ((tag) >> NOTE_PRINTF_COUNT_SHIFT)
 
-#define sched_note_event(tag, level, event, buf, len) \
-        sched_note_event_ip(tag, level, up_getpc(), event, buf, len)
+#define sched_note_event(event, tag, level, buf, len) \
+        sched_note_event_ip(event, tag, level, up_getpc(), buf, len)
 #define sched_note_vprintf(tag, level, fmt, va) \
         sched_note_vprintf_ip(tag, level, up_getpc(), fmt, va)
 
@@ -83,15 +83,15 @@ extern "C"
         sched_note_printf_ip(tag, level, up_getpc(), fmt, ##__VA_ARGS__)
 
 #define sched_note_begin(tag) \
-        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_BEGIN, NULL, 0)
+        sched_note_event(NOTE_DUMP_BEGIN, tag, LOG_DEBUG, NULL, 0)
 #define sched_note_end(tag) \
-        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_END, NULL, 0)
+        sched_note_event(NOTE_DUMP_END, tag, LOG_DEBUG, NULL, 0)
 #define sched_note_beginex(tag, str) \
-        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_BEGIN, str, strlen(str))
+        sched_note_event(NOTE_DUMP_BEGIN, tag, LOG_DEBUG, str, strlen(str))
 #define sched_note_endex(tag, str) \
-        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_END, str, strlen(str))
+        sched_note_event(NOTE_DUMP_END, tag, LOG_DEBUG, str, strlen(str))
 #define sched_note_mark(tag, str) \
-        sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_MARK, str, strlen(str))
+        sched_note_event(NOTE_DUMP_MARK, tag, LOG_DEBUG, str, strlen(str))
 #define sched_note_mark_track(tag, track, name) \
         do \
           { \
@@ -114,7 +114,7 @@ extern "C"
                     _tlen = _max - _nlen; \
                   } \
               } \
-            sched_note_event((tag), LOG_DEBUG, NOTE_DUMP_MARK, \
+            sched_note_event(NOTE_DUMP_MARK, (tag), LOG_DEBUG, \
                              _buf, _nlen + _tlen); \
           } \
         while (0)
@@ -125,7 +125,7 @@ extern "C"
             struct note_counter_s counter; \
             counter.value = value_; \
             strlcpy(counter.name, name_, NAME_MAX); \
-            sched_note_event(tag, LOG_DEBUG, NOTE_DUMP_COUNTER, \
+            sched_note_event(NOTE_DUMP_COUNTER, tag, LOG_DEBUG, \
                              &counter, sizeof(counter)); \
           } \
         while (0)
@@ -135,7 +135,7 @@ extern "C"
           { \
             struct note_threadtime_s threadtime; \
             threadtime.elapsed = (_elapsed); \
-            sched_note_event(NXTAG_SCHED, LOG_DEBUG, NOTE_DUMP_THREADTIME, \
+            sched_note_event(NOTE_DUMP_THREADTIME, NXTAG_SCHED, LOG_DEBUG, \
                              &threadtime, sizeof(threadtime)); \
           } \
         while (0)
@@ -454,7 +454,7 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_DUMP) && defined(CONFIG_DRIVERS_NOTE)
-#  define sched_note_event_ip(t,l,i,e,b,n) note_event_ip(t,l,i,e,b,n)
+#  define sched_note_event_ip(e,t,l,i,b,n) note_event_ip(e,t,l,i,b,n)
 
 #  ifdef CONFIG_DRIVERS_NOTE_STRIP_FORMAT
 #    define sched_note_vprintf_ip(t,l,i,f,v) \
@@ -502,12 +502,12 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
 
 extern struct ratelimit_state_s g_note_ratelimit;
 
-#  define sched_note_event_ip_ratelimit(t,l,i,e,b,n) \
+#  define sched_note_event_ip_ratelimit(e,t,l,i,b,n) \
        do \
          { \
            if (!ratelimit_islimited(&g_note_ratelimit)) \
              { \
-               sched_note_event_ip(t,l,i,e,b,n); \
+               sched_note_event_ip(e,t,l,i,b,n); \
              } \
          } \
        while (0)
@@ -532,7 +532,7 @@ extern struct ratelimit_state_s g_note_ratelimit;
          } \
        while (0)
 
-#define sched_note_event_ip_ratelimited(tag, level, ip, event, buf, len) \
+#define sched_note_event_ip_ratelimited(event, tag, level, ip, buf, len) \
   do                                                                     \
     {                                                                    \
       static DEFINE_RATELIMIT_STATE(_rs,                                 \
@@ -540,7 +540,7 @@ extern struct ratelimit_state_s g_note_ratelimit;
         CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                            \
       if (!ratelimit_islimited(&_rs))                                    \
         {                                                                \
-          sched_note_event_ip(tag, level, ip, event, buf, len);          \
+          sched_note_event_ip(event, tag, level, ip, buf, len);          \
         }                                                                \
     }                                                                    \
   while (0)
@@ -597,20 +597,20 @@ extern struct ratelimit_state_s g_note_ratelimit;
                     _tlen = _max - _nlen; \
                   } \
               } \
-            sched_note_event((tag), LOG_INFO, (event), \
+            sched_note_event((event), (tag), LOG_INFO, \
                              _d, sizeof(struct note_async_s) + \
                              _nlen + _tlen); \
           } \
         while (0)
 
 #else
-#  define sched_note_event_ip(t,l,i,e,b,n)
+#  define sched_note_event_ip(e,t,l,i,b,n)
 #  define sched_note_vprintf_ip(t,l,i,f,v)
 #  define sched_note_printf_ip(t,l,i,f,...)
-#  define sched_note_event_ip_ratelimit(t,l,i,e,b,n)
+#  define sched_note_event_ip_ratelimit(e,t,l,i,b,n)
 #  define sched_note_vprintf_ip_ratelimit(t,l,i,f,v)
 #  define sched_note_printf_ip_ratelimit(t,l,i,f,...)
-#  define sched_note_event_ip_ratelimited(t,l,i,e,b,n)
+#  define sched_note_event_ip_ratelimited(e,t,l,i,b,n)
 #  define sched_note_vprintf_ip_ratelimited(t,l,i,f,va)
 #  define sched_note_printf_ip_ratelimited(t,l,i,f,...)
 #  define sched_note_async(t,e,r,n,c)

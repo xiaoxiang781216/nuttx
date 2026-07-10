@@ -227,9 +227,9 @@
 
 /* Per-driver dump convenience macros */
 
-#define note_driver_event(driver, tag, event, buf, len) \
-        note_driver_event_ip(driver, tag, 0, up_getpc(), \
-                             event, buf, len)
+#define note_driver_event(driver, event, tag, buf, len) \
+        note_driver_event_ip(driver, event, tag, 0, up_getpc(), \
+                             buf, len)
 #define note_driver_vprintf(driver, tag, fmt, va) \
         note_driver_vprintf_ip(driver, tag, 0, up_getpc(), \
                                0, fmt, va)
@@ -237,14 +237,14 @@
         note_driver_printf_ip(driver, tag, 0, up_getpc(), \
                               0, fmt, ##__VA_ARGS__)
 #define note_driver_begin(driver, tag) \
-        note_driver_event(driver, tag, NOTE_DUMP_BEGIN, NULL, 0)
+        note_driver_event(driver, NOTE_DUMP_BEGIN, tag, NULL, 0)
 #define note_driver_end(driver, tag) \
-        note_driver_event(driver, tag, NOTE_DUMP_END, NULL, 0)
+        note_driver_event(driver, NOTE_DUMP_END, tag, NULL, 0)
 #define note_driver_mark(driver, tag, buf) \
-        note_driver_event(driver, tag, NOTE_DUMP_MARK, \
+        note_driver_event(driver, NOTE_DUMP_MARK, tag, \
                           buf, strlen(buf))
 #define note_driver_binary(driver, tag, buf, len) \
-        note_driver_event(driver, tag, NOTE_DUMP_BINARY, \
+        note_driver_event(driver, NOTE_DUMP_BINARY, tag, \
                           buf, len)
 
 /* IOCTL Commands ***********************************************************/
@@ -443,8 +443,8 @@ struct note_driver_ops_s
                     size_t curused);
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-  CODE void (*event)(FAR struct note_driver_s *drv, uint8_t tag,
-                     uint8_t level, uintptr_t ip, uint8_t event,
+  CODE void (*event)(FAR struct note_driver_s *drv, uint8_t event,
+                     uint8_t tag, uint8_t level, uintptr_t ip,
                      FAR const void *buf, size_t len);
   CODE void (*vprintf)(FAR struct note_driver_s *drv, uint8_t tag,
                        uint8_t level, uintptr_t ip, uintptr_t type,
@@ -894,8 +894,8 @@ void note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 size_t note_driver_event_ip(FAR struct note_driver_s *driver,
-                            uint8_t tag, uint8_t level,
-                            uintptr_t ip, uint8_t event,
+                            uint8_t event, uint8_t tag, uint8_t level,
+                            uintptr_t ip,
                             FAR const void *buf, size_t len);
 void note_driver_vprintf_ip(FAR struct note_driver_s *driver,
                             uint8_t tag, uint8_t level,
@@ -912,7 +912,7 @@ void note_driver_printf_ip(FAR struct note_driver_s *driver,
  * Name: note_event_ip/vprintf_ip/printf_ip
  ****************************************************************************/
 
-void note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip, uint8_t event,
+void note_event_ip(uint8_t event, uint8_t tag, uint8_t level, uintptr_t ip,
                    FAR const void *buf, size_t len);
 void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
                      FAR const char *fmt, uintptr_t type,
