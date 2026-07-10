@@ -35,6 +35,10 @@
 #include "arm64_mpu.h"
 #include "arm64_mmu.h"
 
+#if defined(CONFIG_BMP) && defined(CONFIG_ARM64_PSCI)
+#  include "arm64_cpu_psci.h"
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -259,6 +263,22 @@ void arm64_boot_primary_c_routine(void)
 #  elif CONFIG_ARCH_ARM64_EXCEPTION_LEVEL < 3
   arm64_psci_init("smc");
 #  endif
+#endif
+
+#if defined(CONFIG_BMP) && defined(CONFIG_ARM64_PSCI)
+  /* BMP on a PSCI platform: the secondaries are held in reset.  Once the
+   * PSCI conduit, shared page tables and per-CPU data are ready, release
+   * each secondary into the shared image entry (__start); they spin on
+   * OSINIT until the primary reaches OSREADY.  Only the primary runs this
+   * routine, so no this_cpu() guard is needed.  SMP starts secondaries
+   * later via the scheduler; non-PSCI reset-release platforms self-release
+   * and never compile this.
+   */
+
+  for (int cpu = 1; cpu < CONFIG_NCPUS; cpu++)
+    {
+      psci_cpu_on(arm64_get_mpid(cpu), (uintptr_t)__start);
+    }
 #endif
 
   arm64_chip_boot();

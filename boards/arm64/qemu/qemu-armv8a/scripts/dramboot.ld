@@ -174,6 +174,39 @@ SECTIONS
   } :text
   _edata = .; /* End+1 of .data */
 
+#ifdef CONFIG_PERCPU_SECTION
+  /* Per-CPU sections for BMP (CONFIG_PERCPU_SECTION).  Core 0's percpu
+   * .data/.bss live here; arm64_boot_primary_c_routine() copies the init
+   * image (_sdata_percpu.._edata_percpu, loaded at _ldata_percpu) into each
+   * core's slot, spaced by _percpu_offset.  .percpu_reserved backs the other
+   * CONFIG_NCPUS-1 cores.  Mirrors boards/arm64/fvp-v8r .../dramboot.ld.
+   */
+
+  . = ALIGN(64);
+  _ldata_percpu = LOADADDR(.percpu_data);
+  .percpu_data : {             /* percpu Data */
+       _sdata_percpu = .;
+       *(.data..percpu)
+       . = ALIGN(8);
+       _edata_percpu = .;
+  } :text
+
+  .percpu_bss : {              /* percpu BSS */
+       _sbss_percpu = .;
+       *(.bss..percpu)
+       . = ALIGN(64);
+       _ebss_percpu = .;
+  } :text
+
+  _percpu_size = _ebss_percpu - _sdata_percpu;
+  _percpu_offset = _percpu_size;
+
+  .percpu_reserved : {         /* Reserved ram for percpu core-N */
+       . = . + _percpu_size * (CONFIG_NCPUS - 1);
+  } :text
+  . = ALIGN(4096);
+#endif
+
   .bss : {                     /* BSS */
        . = ALIGN(8);
        _sbss = .;

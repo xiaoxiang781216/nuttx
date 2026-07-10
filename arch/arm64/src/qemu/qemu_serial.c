@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
@@ -69,7 +70,16 @@ void arm64_earlyserialinit(void)
 void arm64_serialinit(void)
 {
 #ifdef CONFIG_UART_PL011
-  pl011_serialinit();
+  /* Only the primary CPU owns the physical PL011.  In a BMP configuration
+   * the secondary cores reach their console through rpmsg-uart (see the
+   * board layer's rpmsg_serialinit), so they must not touch the shared UART
+   * registers.  On a non-BMP build this_cpu() is always 0.
+   */
+
+  if (this_cpu() == 0)
+    {
+      pl011_serialinit();
+    }
 #endif
 }
 
