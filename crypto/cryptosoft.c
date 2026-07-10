@@ -1003,6 +1003,7 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
   int j;
   int blks;
   int ivlen;
+  int buflen;
 
   exf = sw->sw_exf;
   blks = exf->blocksize;
@@ -1052,19 +1053,20 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
   output = crp->crp_dst;
   while (i > 0)
     {
-      bcopy(buf, blk, exf->blocksize);
-      buf += exf->blocksize;
+      buflen = MIN(i, exf->blocksize);
+      bcopy(buf, blk, buflen);
+      buf += buflen;
       if (exf->reinit)
         {
           if (crd->crd_flags & CRD_F_ENCRYPT)
             {
               exf->encrypt((caddr_t)sw->sw_kschedule,
-                  blk);
+                  blk, buflen);
             }
           else
             {
               exf->decrypt((caddr_t)sw->sw_kschedule,
-                  blk);
+                  blk, buflen);
             }
         }
       else if (crd->crd_flags & CRD_F_ENCRYPT)
@@ -1074,7 +1076,7 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
           for (j = 0; j < blks; j++)
             blk[j] ^= ivp[j];
 
-          exf->encrypt((caddr_t)sw->sw_kschedule, blk);
+          exf->encrypt((caddr_t)sw->sw_kschedule, blk, buflen);
 
           /* Keep encrypted block for XOR'ng
            * with next block
@@ -1094,7 +1096,7 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
           nivp = (ivp == iv) ? iv2 : iv;
           bcopy(blk, nivp, blks);
 
-          exf->decrypt((caddr_t)sw->sw_kschedule, blk);
+          exf->decrypt((caddr_t)sw->sw_kschedule, blk, buflen);
 
           /* XOR with previous block */
 
@@ -1106,10 +1108,10 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
           ivp = nivp;
         }
 
-      bcopy(blk, output, exf->blocksize);
-      output += exf->blocksize;
+      bcopy(blk, output, buflen);
+      output += buflen;
 
-      i -= blks;
+      i -= buflen;
 
       /* Could be done... */
 
@@ -1124,6 +1126,19 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
       /* AES-CBC need update IV */
 
       bcopy(((FAR AES_CTX *)sw->sw_kschedule)->iv, crp->crp_iv, ivlen);
+    }
+  else if (crp->crp_iv && !exf->reinit)
+    {
+      /* Block-chaining modes without a reinit method track the running
+       * IV in ivp and write it back so a follow-up request can continue
+       * the chain. Ciphers that provide reinit (AES-XTS/CTR, ChaCha20,
+       * ...) keep their IV/counter state inside the key schedule, so ivp
+       * still points at the caller-supplied input IV here; copying it
+       * back is a no-op and must be skipped, otherwise a caller passing a
+       * read-only IV buffer would fault.
+       */
+
+      bcopy(ivp, crp->crp_iv, ivlen);
     }
 
   return 0; /* Done with encryption/decryption */
@@ -1294,7 +1309,7 @@ int swcr_authenc(FAR struct cryptop *crp)
         {
           /* SPI */
 
-          bcopy(buf + crda->crd_skip, blk, 4);
+          bcopy(aad + crda->crd_skip, blk, 4);
           iskip = 4; /* loop below will start with an offset of 4 */
 
           /* ESN */
@@ -1331,13 +1346,13 @@ int swcr_authenc(FAR struct cryptop *crp)
           bcopy(buf + i, blk, len);
           if (crde->crd_flags & CRD_F_ENCRYPT)
             {
-              exf->encrypt((caddr_t)swe->sw_kschedule, blk);
+              exf->encrypt((caddr_t)swe->sw_kschedule, blk, len);
               axf->update(&ctx, blk, len);
             }
           else
             {
               axf->update(&ctx, blk, len);
-              exf->decrypt((caddr_t)swe->sw_kschedule, blk);
+              exf->decrypt((caddr_t)swe->sw_kschedule, blk, len);
             }
 
           if (crp->crp_dst)
@@ -1584,6 +1599,9 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
             goto enccommon;
           case CRYPTO_AES_CFB_128:
             txf = &enc_xform_aes_cfb_128;
+            goto enccommon;
+          case CRYPTO_CHACHA20:
+            txf = &enc_xform_chacha20;
             goto enccommon;
           case CRYPTO_CHACHA20_POLY1305:
             txf = &enc_xform_chacha20_poly1305;
@@ -1891,6 +1909,7 @@ int swcr_freesession(uint64_t tid)
           case CRYPTO_AES_OFB:
           case CRYPTO_AES_CFB_8:
           case CRYPTO_AES_CFB_128:
+          case CRYPTO_CHACHA20:
           case CRYPTO_CHACHA20_POLY1305:
           case CRYPTO_NULL:
             txf = swd->sw_exf;
@@ -2031,6 +2050,7 @@ int swcr_process(struct cryptop *crp)
           case CRYPTO_AES_OFB:
           case CRYPTO_AES_CFB_8:
           case CRYPTO_AES_CFB_128:
+          case CRYPTO_CHACHA20:
             txf = sw->sw_exf;
 
             if (crp->crp_iv)
@@ -3106,6 +3126,7 @@ void swcr_init(void)
   algs[CRYPTO_AES_OFB] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_AES_CFB_8] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_AES_CFB_128] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_CHACHA20] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_CHACHA20_POLY1305] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_CHACHA20_POLY1305_MAC] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_MD5] = CRYPTO_ALG_FLAG_SUPPORTED;

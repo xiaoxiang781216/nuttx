@@ -86,7 +86,7 @@
 #define BLOWFISH_BLOCK_LEN    8
 #define CAST128_BLOCK_LEN     8
 #define RIJNDAEL128_BLOCK_LEN 16
-#define EALG_MAX_BLOCK_LEN    16
+#define EALG_MAX_BLOCK_LEN    64
 
 /* Keep this updated */
 
@@ -119,25 +119,26 @@
 #define CRYPTO_AES_OFB          23
 #define CRYPTO_AES_CFB_8        24
 #define CRYPTO_AES_CFB_128      25
-#define CRYPTO_CHACHA20_POLY1305 26
-#define CRYPTO_CHACHA20_POLY1305_MAC 27
-#define CRYPTO_MD5              28
-#define CRYPTO_POLY1305         29
-#define CRYPTO_RIPEMD160        30
-#define CRYPTO_SHA1             31
-#define CRYPTO_SHA2_224         32
-#define CRYPTO_SHA2_256         33
-#define CRYPTO_SHA2_384         34
-#define CRYPTO_SHA2_512         35
-#define CRYPTO_CRC8             36
-#define CRYPTO_CRC16            37
-#define CRYPTO_CRC32            38
-#define CRYPTO_AES_CMAC         39
-#define CRYPTO_AES_128_CMAC     40
-#define CRYPTO_ESN              41 /* Support for Extended Sequence Numbers */
-#define CRYPTO_PBKDF2_HMAC_SHA1 42
-#define CRYPTO_PBKDF2_HMAC_SHA256 43
-#define CRYPTO_ALGORITHM_MAX    43 /* Keep updated */
+#define CRYPTO_CHACHA20         26
+#define CRYPTO_CHACHA20_POLY1305 27
+#define CRYPTO_CHACHA20_POLY1305_MAC 28
+#define CRYPTO_MD5              29
+#define CRYPTO_POLY1305         30
+#define CRYPTO_RIPEMD160        31
+#define CRYPTO_SHA1             32
+#define CRYPTO_SHA2_224         33
+#define CRYPTO_SHA2_256         34
+#define CRYPTO_SHA2_384         35
+#define CRYPTO_SHA2_512         36
+#define CRYPTO_CRC8             37
+#define CRYPTO_CRC16            38
+#define CRYPTO_CRC32            39
+#define CRYPTO_AES_CMAC         40
+#define CRYPTO_AES_128_CMAC     41
+#define CRYPTO_ESN              42 /* Support for Extended Sequence Numbers */
+#define CRYPTO_PBKDF2_HMAC_SHA1 43
+#define CRYPTO_PBKDF2_HMAC_SHA256 44
+#define CRYPTO_ALGORITHM_MAX    44 /* Keep updated */
 
 /* Algorithm flags */
 
