@@ -176,14 +176,19 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
     {
       /* Allocate a timer instance to contain the watchdog */
 
-      if (atomic_add(&group->itimer_count, 1) >= TIMER_MAX)
+      if (timerid != &group->itimer &&
+          atomic_add(&group->itimer_count, 1) >= TIMER_MAX)
         {
           atomic_sub(&group->itimer_count, 1);
           set_errno(EAGAIN);
         }
       else if (!(ret = timer_allocate()))
         {
-          atomic_sub(&group->itimer_count, 1);
+          if (timerid != &group->itimer)
+            {
+              atomic_sub(&group->itimer_count, 1);
+            }
+
           set_errno(EAGAIN);
         }
       else

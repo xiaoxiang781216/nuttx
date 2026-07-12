@@ -111,10 +111,17 @@ void timer_release(FAR struct posix_timer_s *timer, FAR struct tcb_s *tcb)
 
   nxsig_cancel_notification(&timer->pt_work);
 
-  /* Release the timer structure */
+  /* Release the timer structure.  The internal interval timer backing
+   * setitimer()/alarm() (group->itimer) was not counted on creation, so
+   * do not decrement itimer_count for it here.
+   */
+
+  if ((timer_t)timer != tcb->group->itimer)
+    {
+      atomic_sub(&tcb->group->itimer_count, 1);
+    }
 
   timer_free(timer);
-  atomic_sub(&tcb->group->itimer_count, 1);
 }
 
 #endif /* CONFIG_DISABLE_POSIX_TIMERS */
