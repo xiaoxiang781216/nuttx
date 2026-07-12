@@ -85,9 +85,21 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
       rtcb = this_task();
       if (pid == 0 || pid == rtcb->pid)
         {
-          /* Return the priority if the calling task. */
+          /* Return the priority of the task.
+           *
+           * POSIX requires the nominal priority to be reported: the
+           * value set by the most recent set-priority or create call,
+           * not any temporary boost from priority inheritance or
+           * priority protection.  tcb->base_priority holds that nominal
+           * value (the boost paths only touch sched_priority) and only
+           * exists when priority inheritance support is enabled.
+           */
 
+#ifdef CONFIG_PRIORITY_INHERITANCE
+          param->sched_priority = rtcb->base_priority;
+#else
           param->sched_priority = rtcb->sched_priority;
+#endif
         }
 
       /* This PID is not for the calling task, we will have to look it up */
@@ -105,9 +117,21 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
             }
           else
             {
-              /* Return the priority of the task */
+              /* Return the priority of the task.
+               *
+               * POSIX requires the nominal priority to be reported: the
+               * value set by the most recent set-priority or create call,
+               * not any temporary boost from priority inheritance or
+               * priority protection.  tcb->base_priority holds that nominal
+               * value (the boost paths only touch sched_priority) and only
+               * exists when priority inheritance support is enabled.
+               */
 
+#ifdef CONFIG_PRIORITY_INHERITANCE
+              param->sched_priority = tcb->base_priority;
+#else
               param->sched_priority = tcb->sched_priority;
+#endif
 
 #ifdef CONFIG_SCHED_SPORADIC
               if ((atomic_read(&tcb->flags) & TCB_FLAG_POLICY_MASK) ==
