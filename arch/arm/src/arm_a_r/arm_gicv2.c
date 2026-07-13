@@ -546,6 +546,19 @@ void up_enable_irq(int irq)
     {
       uintptr_t regaddr;
 
+      /* Route this SPI to the calling CPU before enabling it.
+       * Essential for multi-core systems (SMP and BMP) where
+       * per-core device drivers register interrupts from their
+       * own CPU but all SPIs default to CPU0 at GIC reset.
+       * The call is a no-op on single-core systems.
+       *
+       * If a driver needs a custom affinity mask, it must call
+       * up_affinity_irq() AFTER up_enable_irq() — the implicit
+       * routing done here can then be overridden explicitly.
+       */
+
+      up_affinity_irq(irq, 1 << up_cpu_index());
+
       /* Write '1' to the corresponding bit in the distributor Interrupt
        * Set-Enable Register (ICDISER)
        */
