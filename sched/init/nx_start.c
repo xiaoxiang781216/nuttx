@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <sys/types.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,9 +45,11 @@
 #include <nuttx/pgalloc.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/trace.h>
+#include <nuttx/reboot_notifier.h>
 #include <nuttx/binfmt/binfmt.h>
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/init.h>
+#include <sys/boardctl.h>
 
 #ifdef CONFIG_PERF_EVENTS
 #  include <nuttx/perf.h>
@@ -233,6 +236,27 @@ static inline void set_initstate(uint8_t state)
   g_nx_initstate = state;
   UP_SEV();
 }
+
+#ifdef CONFIG_DIAG
+static int reboot_trace_callback(FAR struct notifier_block *nb,
+                                 unsigned long action, FAR void *data)
+{
+  /* DFX: report system reset event (961010011) */
+
+  sched_trace_diag(LOG_INFO, DIAG_SCHED_REBOOT,
+                   "Action:%s,UptimeMs:%ju",
+                   action == SYS_POWER_OFF ? "shutdown" :
+                   action == SYS_RESTART ? "reboot" :
+                   action == SYS_HALT ? "panic" : "unknown",
+                   (uintmax_t)TICK2MSEC(clock_systime_ticks()));
+  return 0;
+}
+
+static struct notifier_block g_reboot_trace_nb =
+{
+  .notifier_call = reboot_trace_callback,
+};
+#endif
 
 /****************************************************************************
  * Name: tasklist_table_initialize
@@ -760,6 +784,9 @@ void nx_start(void)
 #ifdef CONFIG_SMP
   int i;
 #endif
+#if defined(CONFIG_DIAG) && defined(CONFIG_BOARDCTL_RESET_CAUSE)
+  struct boardioc_reset_cause_s cause;
+#endif
 
   /* Boot up is complete */
 
@@ -830,6 +857,30 @@ void nx_start(void)
 
   set_initstate(OSINIT_IDLELOOP);
   sched_trace_mark("IDLELOOP");
+
+#ifdef CONFIG_DIAG
+  /* DFX: report system boot event with boot time and last reset cause
+   * (961010010)
+   */
+
+#  ifdef CONFIG_BOARDCTL_RESET_CAUSE
+  memset(&cause, 0, sizeof(cause));
+  board_reset_cause(&cause);
+  sched_trace_diag(LOG_INFO, DIAG_SCHED_BOOT,
+                   "Action:boot,BootTimeMs:%ju,"
+                   "ResetCause:%d,ResetFlag:%" PRIu32,
+                   (uintmax_t)TICK2MSEC(clock_systime_ticks()),
+                   cause.cause, cause.flag);
+#  else
+  sched_trace_diag(LOG_INFO, DIAG_SCHED_BOOT,
+                   "Action:boot,BootTimeMs:%ju",
+                   (uintmax_t)TICK2MSEC(clock_systime_ticks()));
+#  endif
+
+  /* Register reboot trace notifier for DFX reset event reporting */
+
+  register_reboot_notifier(&g_reboot_trace_nb);
+#endif
 
   /* Let other threads have access to the memory manager */
 
