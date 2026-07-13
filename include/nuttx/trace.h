@@ -27,6 +27,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <string.h>
+
+#include <nuttx/arch.h>
 #include <nuttx/sched_note.h>
 
 /****************************************************************************
@@ -41,10 +44,6 @@
 #  define trace_mark(tag, s) sched_note_mark(tag, s)
 #  define trace_printf(tag, fmt, ...) \
     sched_note_printf(tag, LOG_DEBUG, fmt, ##__VA_ARGS__)
-#  define trace_diag(tag, level, id, fmt, ...) \
-    sched_note_printf_ip(tag, level, id, fmt, ##__VA_ARGS__)
-#  define trace_diagv(tag, level, id, fmt, va) \
-    sched_note_vprintf_ip(tag, level, id, fmt, va)
 #  define trace_async_begin(tag, name, cookie) \
     sched_note_async_begin(tag, name, cookie)
 #  define trace_async_end(tag, name, cookie) \
@@ -60,12 +59,38 @@
 #  define trace_endex(tag, name)
 #  define trace_mark(tag, s)
 #  define trace_printf(...)
-#  define trace_diag(...)
-#  define trace_diagv(...)
 #  define trace_async_begin(tag, name, cookie)
 #  define trace_async_end(tag, name, cookie)
 #  define trace_async_begin_track(tag, track, name, cookie)
 #  define trace_async_end_track(tag, track, name, cookie)
+#endif
+
+#ifdef CONFIG_DIAG
+#  define trace_diag(tag, level, id, fmt, ...) \
+    sched_note_printf_ip(tag, level, id, fmt, ##__VA_ARGS__)
+#  define trace_diagv(tag, level, id, fmt, va) \
+    sched_note_vprintf_ip(tag, level, id, fmt, va)
+#else
+#  define trace_diag(tag, level, id, fmt, ...) \
+    do \
+      { \
+        if (0) \
+          { \
+            (void)(tag); (void)(id); \
+            syslog(level, fmt, ##__VA_ARGS__); \
+          } \
+      } \
+    while (0)
+#  define trace_diagv(tag, level, id, fmt, va) \
+    do \
+      { \
+        if (0) \
+          { \
+            (void)(tag); (void)(id); \
+            vsyslog(level, fmt, va); \
+          } \
+      } \
+    while (0)
 #endif
 
 #ifdef CONFIG_TRACE_ANALOG
@@ -76,8 +101,6 @@
 #  define analog_trace_mark(s) trace_mark(NXTAG_ANALOG, s)
 #  define analog_trace_printf(fmt, ...) \
     trace_printf(NXTAG_ANALOG, fmt, ##__VA_ARGS__)
-#  define analog_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_ANALOG, level, id, fmt, ##__VA_ARGS__)
 #  define analog_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_ANALOG, name, cookie)
 #  define analog_trace_async_end(name, cookie) \
@@ -93,7 +116,6 @@
 #  define analog_trace_endex(name)
 #  define analog_trace_mark(s)
 #  define analog_trace_printf(...)
-#  define analog_trace_diag(...)
 #  define analog_trace_async_begin(name, cookie)
 #  define analog_trace_async_end(name, cookie)
 #  define analog_trace_async_begin_track(track, name, cookie)
@@ -108,8 +130,6 @@
 #  define audio_trace_mark(s) trace_mark(NXTAG_AUDIO, s)
 #  define audio_trace_printf(fmt, ...) \
     trace_printf(NXTAG_AUDIO, fmt, ##__VA_ARGS__)
-#  define audio_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_AUDIO, level, id, fmt, ##__VA_ARGS__)
 #  define audio_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_AUDIO, name, cookie)
 #  define audio_trace_async_end(name, cookie) \
@@ -125,7 +145,6 @@
 #  define audio_trace_endex(name)
 #  define audio_trace_mark(s)
 #  define audio_trace_printf(...)
-#  define audio_trace_diag(...)
 #  define audio_trace_async_begin(name, cookie)
 #  define audio_trace_async_end(name, cookie)
 #  define audio_trace_async_begin_track(track, name, cookie)
@@ -140,8 +159,6 @@
 #  define battery_trace_mark(s) trace_mark(NXTAG_BATTERY, s)
 #  define battery_trace_printf(fmt, ...) \
     trace_printf(NXTAG_BATTERY, fmt, ##__VA_ARGS__)
-#  define battery_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_BATTERY, level, id, fmt, ##__VA_ARGS__)
 #  define battery_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_BATTERY, name, cookie)
 #  define battery_trace_async_end(name, cookie) \
@@ -157,7 +174,6 @@
 #  define battery_trace_endex(name)
 #  define battery_trace_mark(s)
 #  define battery_trace_printf(...)
-#  define battery_trace_diag(...)
 #  define battery_trace_async_begin(name, cookie)
 #  define battery_trace_async_end(name, cookie)
 #  define battery_trace_async_begin_track(track, name, cookie)
@@ -172,8 +188,6 @@
 #  define binfmt_trace_mark(s) trace_mark(NXTAG_BINFMT, s)
 #  define binfmt_trace_printf(fmt, ...) \
     trace_printf(NXTAG_BINFMT, fmt, ##__VA_ARGS__)
-#  define binfmt_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_BINFMT, level, id, fmt, ##__VA_ARGS__)
 #  define binfmt_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_BINFMT, name, cookie)
 #  define binfmt_trace_async_end(name, cookie) \
@@ -189,7 +203,6 @@
 #  define binfmt_trace_endex(name)
 #  define binfmt_trace_mark(s)
 #  define binfmt_trace_printf(...)
-#  define binfmt_trace_diag(...)
 #  define binfmt_trace_async_begin(name, cookie)
 #  define binfmt_trace_async_end(name, cookie)
 #  define binfmt_trace_async_begin_track(track, name, cookie)
@@ -204,8 +217,6 @@
 #  define can_trace_mark(s) trace_mark(NXTAG_CAN, s)
 #  define can_trace_printf(fmt, ...) \
     trace_printf(NXTAG_CAN, fmt, ##__VA_ARGS__)
-#  define can_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_CAN, level, id, fmt, ##__VA_ARGS__)
 #  define can_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_CAN, name, cookie)
 #  define can_trace_async_end(name, cookie) \
@@ -221,7 +232,6 @@
 #  define can_trace_endex(name)
 #  define can_trace_mark(s)
 #  define can_trace_printf(...)
-#  define can_trace_diag(...)
 #  define can_trace_async_begin(name, cookie)
 #  define can_trace_async_end(name, cookie)
 #  define can_trace_async_begin_track(track, name, cookie)
@@ -236,8 +246,6 @@
 #  define capture_trace_mark(s) trace_mark(NXTAG_CAPTURE, s)
 #  define capture_trace_printf(fmt, ...) \
     trace_printf(NXTAG_CAPTURE, fmt, ##__VA_ARGS__)
-#  define capture_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_CAPTURE, level, id, fmt, ##__VA_ARGS__)
 #  define capture_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_CAPTURE, name, cookie)
 #  define capture_trace_async_end(name, cookie) \
@@ -253,7 +261,6 @@
 #  define capture_trace_endex(name)
 #  define capture_trace_mark(s)
 #  define capture_trace_printf(...)
-#  define capture_trace_diag(...)
 #  define capture_trace_async_begin(name, cookie)
 #  define capture_trace_async_end(name, cookie)
 #  define capture_trace_async_begin_track(track, name, cookie)
@@ -268,8 +275,6 @@
 #  define contactless_trace_mark(s) trace_mark(NXTAG_CONTACTLESS, s)
 #  define contactless_trace_printf(fmt, ...) \
     trace_printf(NXTAG_CONTACTLESS, fmt, ##__VA_ARGS__)
-#  define contactless_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_CONTACTLESS, level, id, fmt, ##__VA_ARGS__)
 #  define contactless_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_CONTACTLESS, name, cookie)
 #  define contactless_trace_async_end(name, cookie) \
@@ -285,7 +290,6 @@
 #  define contactless_trace_endex(name)
 #  define contactless_trace_mark(s)
 #  define contactless_trace_printf(...)
-#  define contactless_trace_diag(...)
 #  define contactless_trace_async_begin(name, cookie)
 #  define contactless_trace_async_end(name, cookie)
 #  define contactless_trace_async_begin_track(track, name, cookie)
@@ -300,8 +304,6 @@
 #  define crypto_trace_mark(s) trace_mark(NXTAG_CRYPTO, s)
 #  define crypto_trace_printf(fmt, ...) \
     trace_printf(NXTAG_CRYPTO, fmt, ##__VA_ARGS__)
-#  define crypto_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_CRYPTO, level, id, fmt, ##__VA_ARGS__)
 #  define crypto_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_CRYPTO, name, cookie)
 #  define crypto_trace_async_end(name, cookie) \
@@ -317,7 +319,6 @@
 #  define crypto_trace_endex(name)
 #  define crypto_trace_mark(s)
 #  define crypto_trace_printf(...)
-#  define crypto_trace_diag(...)
 #  define crypto_trace_async_begin(name, cookie)
 #  define crypto_trace_async_end(name, cookie)
 #  define crypto_trace_async_begin_track(track, name, cookie)
@@ -332,8 +333,6 @@
 #  define dma_trace_mark(s) trace_mark(NXTAG_DMA, s)
 #  define dma_trace_printf(fmt, ...) \
     trace_printf(NXTAG_DMA, fmt, ##__VA_ARGS__)
-#  define dma_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_DMA, level, id, fmt, ##__VA_ARGS__)
 #  define dma_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_DMA, name, cookie)
 #  define dma_trace_async_end(name, cookie) \
@@ -349,7 +348,6 @@
 #  define dma_trace_endex(name)
 #  define dma_trace_mark(s)
 #  define dma_trace_printf(...)
-#  define dma_trace_diag(...)
 #  define dma_trace_async_begin(name, cookie)
 #  define dma_trace_async_end(name, cookie)
 #  define dma_trace_async_begin_track(track, name, cookie)
@@ -364,8 +362,6 @@
 #  define fs_trace_mark(s) trace_mark(NXTAG_FS, s)
 #  define fs_trace_printf(fmt, ...) \
     trace_printf(NXTAG_FS, fmt, ##__VA_ARGS__)
-#  define fs_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_FS, level, id, fmt, ##__VA_ARGS__)
 #  define fs_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_FS, name, cookie)
 #  define fs_trace_async_end(name, cookie) \
@@ -381,7 +377,6 @@
 #  define fs_trace_endex(name)
 #  define fs_trace_mark(s)
 #  define fs_trace_printf(...)
-#  define fs_trace_diag(...)
 #  define fs_trace_async_begin(name, cookie)
 #  define fs_trace_async_end(name, cookie)
 #  define fs_trace_async_begin_track(track, name, cookie)
@@ -396,8 +391,6 @@
 #  define gpio_trace_mark(s) trace_mark(NXTAG_GPIO, s)
 #  define gpio_trace_printf(fmt, ...) \
     trace_printf(NXTAG_GPIO, fmt, ##__VA_ARGS__)
-#  define gpio_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_GPIO, level, id, fmt, ##__VA_ARGS__)
 #  define gpio_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_GPIO, name, cookie)
 #  define gpio_trace_async_end(name, cookie) \
@@ -413,7 +406,6 @@
 #  define gpio_trace_endex(name)
 #  define gpio_trace_mark(s)
 #  define gpio_trace_printf(...)
-#  define gpio_trace_diag(...)
 #  define gpio_trace_async_begin(name, cookie)
 #  define gpio_trace_async_end(name, cookie)
 #  define gpio_trace_async_begin_track(track, name, cookie)
@@ -428,8 +420,6 @@
 #  define graphics_trace_mark(s) trace_mark(NXTAG_GRAPHICS, s)
 #  define graphics_trace_printf(fmt, ...) \
     trace_printf(NXTAG_GRAPHICS, fmt, ##__VA_ARGS__)
-#  define graphics_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_GRAPHICS, level, id, fmt, ##__VA_ARGS__)
 #  define graphics_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_GRAPHICS, name, cookie)
 #  define graphics_trace_async_end(name, cookie) \
@@ -445,7 +435,6 @@
 #  define graphics_trace_endex(name)
 #  define graphics_trace_mark(s)
 #  define graphics_trace_printf(...)
-#  define graphics_trace_diag(...)
 #  define graphics_trace_async_begin(name, cookie)
 #  define graphics_trace_async_end(name, cookie)
 #  define graphics_trace_async_begin_track(track, name, cookie)
@@ -460,8 +449,6 @@
 #  define hwtracing_trace_mark(s) trace_mark(NXTAG_HWTRACING, s)
 #  define hwtracing_trace_printf(fmt, ...) \
     trace_printf(NXTAG_HWTRACING, fmt, ##__VA_ARGS__)
-#  define hwtracing_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_HWTRACING, level, id, fmt, ##__VA_ARGS__)
 #  define hwtracing_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_HWTRACING, name, cookie)
 #  define hwtracing_trace_async_end(name, cookie) \
@@ -477,7 +464,6 @@
 #  define hwtracing_trace_endex(name)
 #  define hwtracing_trace_mark(s)
 #  define hwtracing_trace_printf(...)
-#  define hwtracing_trace_diag(...)
 #  define hwtracing_trace_async_begin(name, cookie)
 #  define hwtracing_trace_async_end(name, cookie)
 #  define hwtracing_trace_async_begin_track(track, name, cookie)
@@ -492,8 +478,6 @@
 #  define i2c_trace_mark(s) trace_mark(NXTAG_I2C, s)
 #  define i2c_trace_printf(fmt, ...) \
     trace_printf(NXTAG_I2C, fmt, ##__VA_ARGS__)
-#  define i2c_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_I2C, level, id, fmt, ##__VA_ARGS__)
 #  define i2c_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_I2C, name, cookie)
 #  define i2c_trace_async_end(name, cookie) \
@@ -509,7 +493,6 @@
 #  define i2c_trace_endex(name)
 #  define i2c_trace_mark(s)
 #  define i2c_trace_printf(...)
-#  define i2c_trace_diag(...)
 #  define i2c_trace_async_begin(name, cookie)
 #  define i2c_trace_async_end(name, cookie)
 #  define i2c_trace_async_begin_track(track, name, cookie)
@@ -524,8 +507,6 @@
 #  define i2s_trace_mark(s) trace_mark(NXTAG_I2S, s)
 #  define i2s_trace_printf(fmt, ...) \
     trace_printf(NXTAG_I2S, fmt, ##__VA_ARGS__)
-#  define i2s_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_I2S, level, id, fmt, ##__VA_ARGS__)
 #  define i2s_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_I2S, name, cookie)
 #  define i2s_trace_async_end(name, cookie) \
@@ -541,7 +522,6 @@
 #  define i2s_trace_endex(name)
 #  define i2s_trace_mark(s)
 #  define i2s_trace_printf(...)
-#  define i2s_trace_diag(...)
 #  define i2s_trace_async_begin(name, cookie)
 #  define i2s_trace_async_end(name, cookie)
 #  define i2s_trace_async_begin_track(track, name, cookie)
@@ -556,8 +536,6 @@
 #  define i3c_trace_mark(s) trace_mark(NXTAG_I3C, s)
 #  define i3c_trace_printf(fmt, ...) \
     trace_printf(NXTAG_I3C, fmt, ##__VA_ARGS__)
-#  define i3c_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_I3C, level, id, fmt, ##__VA_ARGS__)
 #  define i3c_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_I3C, name, cookie)
 #  define i3c_trace_async_end(name, cookie) \
@@ -573,13 +551,11 @@
 #  define i3c_trace_endex(name)
 #  define i3c_trace_mark(s)
 #  define i3c_trace_printf(...)
-#  define i3c_trace_diag(...)
 #  define i3c_trace_async_begin(name, cookie)
 #  define i3c_trace_async_end(name, cookie)
 #  define i3c_trace_async_begin_track(track, name, cookie)
 #  define i3c_trace_async_end_track(track, name, cookie)
 #endif
-
 #ifdef CONFIG_TRACE_INPUT
 #  define input_trace_begin() trace_begin(NXTAG_INPUT)
 #  define input_trace_end() trace_end(NXTAG_INPUT)
@@ -588,8 +564,6 @@
 #  define input_trace_mark(s) trace_mark(NXTAG_INPUT, s)
 #  define input_trace_printf(fmt, ...) \
     trace_printf(NXTAG_INPUT, fmt, ##__VA_ARGS__)
-#  define input_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_INPUT, level, id, fmt, ##__VA_ARGS__)
 #  define input_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_INPUT, name, cookie)
 #  define input_trace_async_end(name, cookie) \
@@ -605,13 +579,11 @@
 #  define input_trace_endex(name)
 #  define input_trace_mark(s)
 #  define input_trace_printf(...)
-#  define input_trace_diag(...)
 #  define input_trace_async_begin(name, cookie)
 #  define input_trace_async_end(name, cookie)
 #  define input_trace_async_begin_track(track, name, cookie)
 #  define input_trace_async_end_track(track, name, cookie)
 #endif
-
 #ifdef CONFIG_TRACE_IPC
 #  define ipc_trace_begin() trace_begin(NXTAG_IPC)
 #  define ipc_trace_end() trace_end(NXTAG_IPC)
@@ -620,8 +592,6 @@
 #  define ipc_trace_mark(s) trace_mark(NXTAG_IPC, s)
 #  define ipc_trace_printf(fmt, ...) \
     trace_printf(NXTAG_IPC, fmt, ##__VA_ARGS__)
-#  define ipc_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_IPC, level, id, fmt, ##__VA_ARGS__)
 #  define ipc_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_IPC, name, cookie)
 #  define ipc_trace_async_end(name, cookie) \
@@ -637,13 +607,11 @@
 #  define ipc_trace_endex(name)
 #  define ipc_trace_mark(s)
 #  define ipc_trace_printf(...)
-#  define ipc_trace_diag(...)
 #  define ipc_trace_async_begin(name, cookie)
 #  define ipc_trace_async_end(name, cookie)
 #  define ipc_trace_async_begin_track(track, name, cookie)
 #  define ipc_trace_async_end_track(track, name, cookie)
 #endif
-
 #ifdef CONFIG_TRACE_IRQ
 #  define irq_trace_begin() trace_begin(NXTAG_IRQ)
 #  define irq_trace_end() trace_end(NXTAG_IRQ)
@@ -652,8 +620,6 @@
 #  define irq_trace_mark(s) trace_mark(NXTAG_IRQ, s)
 #  define irq_trace_printf(fmt, ...) \
     trace_printf(NXTAG_IRQ, fmt, ##__VA_ARGS__)
-#  define irq_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_IRQ, level, id, fmt, ##__VA_ARGS__)
 #  define irq_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_IRQ, name, cookie)
 #  define irq_trace_async_end(name, cookie) \
@@ -669,13 +635,11 @@
 #  define irq_trace_endex(name)
 #  define irq_trace_mark(s)
 #  define irq_trace_printf(...)
-#  define irq_trace_diag(...)
 #  define irq_trace_async_begin(name, cookie)
 #  define irq_trace_async_end(name, cookie)
 #  define irq_trace_async_begin_track(track, name, cookie)
 #  define irq_trace_async_end_track(track, name, cookie)
 #endif
-
 #ifdef CONFIG_TRACE_LCD
 #  define lcd_trace_begin() trace_begin(NXTAG_LCD)
 #  define lcd_trace_end() trace_end(NXTAG_LCD)
@@ -684,8 +648,6 @@
 #  define lcd_trace_mark(s) trace_mark(NXTAG_LCD, s)
 #  define lcd_trace_printf(fmt, ...) \
     trace_printf(NXTAG_LCD, fmt, ##__VA_ARGS__)
-#  define lcd_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_LCD, level, id, fmt, ##__VA_ARGS__)
 #  define lcd_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_LCD, name, cookie)
 #  define lcd_trace_async_end(name, cookie) \
@@ -701,13 +663,11 @@
 #  define lcd_trace_endex(name)
 #  define lcd_trace_mark(s)
 #  define lcd_trace_printf(...)
-#  define lcd_trace_diag(...)
 #  define lcd_trace_async_begin(name, cookie)
 #  define lcd_trace_async_end(name, cookie)
 #  define lcd_trace_async_begin_track(track, name, cookie)
 #  define lcd_trace_async_end_track(track, name, cookie)
 #endif
-
 #ifdef CONFIG_TRACE_LEDS
 #  define leds_trace_begin() trace_begin(NXTAG_LEDS)
 #  define leds_trace_end() trace_end(NXTAG_LEDS)
@@ -716,8 +676,6 @@
 #  define leds_trace_mark(s) trace_mark(NXTAG_LEDS, s)
 #  define leds_trace_printf(fmt, ...) \
     trace_printf(NXTAG_LEDS, fmt, ##__VA_ARGS__)
-#  define leds_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_LEDS, level, id, fmt, ##__VA_ARGS__)
 #  define leds_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_LEDS, name, cookie)
 #  define leds_trace_async_end(name, cookie) \
@@ -733,13 +691,11 @@
 #  define leds_trace_endex(name)
 #  define leds_trace_mark(s)
 #  define leds_trace_printf(...)
-#  define leds_trace_diag(...)
 #  define leds_trace_async_begin(name, cookie)
 #  define leds_trace_async_end(name, cookie)
 #  define leds_trace_async_begin_track(track, name, cookie)
 #  define leds_trace_async_end_track(track, name, cookie)
 #endif
-
 #ifdef CONFIG_TRACE_LIB
 #  define lib_trace_begin() trace_begin(NXTAG_LIB)
 #  define lib_trace_end() trace_end(NXTAG_LIB)
@@ -748,8 +704,6 @@
 #  define lib_trace_mark(s) trace_mark(NXTAG_LIB, s)
 #  define lib_trace_printf(fmt, ...) \
     trace_printf(NXTAG_LIB, fmt, ##__VA_ARGS__)
-#  define lib_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_LIB, level, id, fmt, ##__VA_ARGS__)
 #  define lib_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_LIB, name, cookie)
 #  define lib_trace_async_end(name, cookie) \
@@ -765,13 +719,11 @@
 #  define lib_trace_endex(name)
 #  define lib_trace_mark(s)
 #  define lib_trace_printf(...)
-#  define lib_trace_diag(...)
 #  define lib_trace_async_begin(name, cookie)
 #  define lib_trace_async_end(name, cookie)
 #  define lib_trace_async_begin_track(track, name, cookie)
 #  define lib_trace_async_end_track(track, name, cookie)
 #endif
-
 #ifdef CONFIG_TRACE_MEMCARD
 #  define memcard_trace_begin() trace_begin(NXTAG_MEMCARD)
 #  define memcard_trace_end() trace_end(NXTAG_MEMCARD)
@@ -780,8 +732,6 @@
 #  define memcard_trace_mark(s) trace_mark(NXTAG_MEMCARD, s)
 #  define memcard_trace_printf(fmt, ...) \
     trace_printf(NXTAG_MEMCARD, fmt, ##__VA_ARGS__)
-#  define memcard_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_MEMCARD, level, id, fmt, ##__VA_ARGS__)
 #  define memcard_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_MEMCARD, name, cookie)
 #  define memcard_trace_async_end(name, cookie) \
@@ -797,13 +747,11 @@
 #  define memcard_trace_endex(name)
 #  define memcard_trace_mark(s)
 #  define memcard_trace_printf(...)
-#  define memcard_trace_diag(...)
 #  define memcard_trace_async_begin(name, cookie)
 #  define memcard_trace_async_end(name, cookie)
 #  define memcard_trace_async_begin_track(track, name, cookie)
 #  define memcard_trace_async_end_track(track, name, cookie)
 #endif
-
 #ifdef CONFIG_TRACE_MM
 #  define mm_trace_begin() trace_begin(NXTAG_MM)
 #  define mm_trace_end() trace_end(NXTAG_MM)
@@ -812,8 +760,6 @@
 #  define mm_trace_mark(s) trace_mark(NXTAG_MM, s)
 #  define mm_trace_printf(fmt, ...) \
     trace_printf(NXTAG_MM, fmt, ##__VA_ARGS__)
-#  define mm_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_MM, level, id, fmt, ##__VA_ARGS__)
 #  define mm_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_MM, name, cookie)
 #  define mm_trace_async_end(name, cookie) \
@@ -829,7 +775,6 @@
 #  define mm_trace_endex(name)
 #  define mm_trace_mark(s)
 #  define mm_trace_printf(...)
-#  define mm_trace_diag(...)
 #  define mm_trace_async_begin(name, cookie)
 #  define mm_trace_async_end(name, cookie)
 #  define mm_trace_async_begin_track(track, name, cookie)
@@ -844,8 +789,6 @@
 #  define motor_trace_mark(s) trace_mark(NXTAG_MOTOR, s)
 #  define motor_trace_printf(fmt, ...) \
     trace_printf(NXTAG_MOTOR, fmt, ##__VA_ARGS__)
-#  define motor_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_MOTOR, level, id, fmt, ##__VA_ARGS__)
 #  define motor_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_MOTOR, name, cookie)
 #  define motor_trace_async_end(name, cookie) \
@@ -861,7 +804,6 @@
 #  define motor_trace_endex(name)
 #  define motor_trace_mark(s)
 #  define motor_trace_printf(...)
-#  define motor_trace_diag(...)
 #  define motor_trace_async_begin(name, cookie)
 #  define motor_trace_async_end(name, cookie)
 #  define motor_trace_async_begin_track(track, name, cookie)
@@ -876,8 +818,6 @@
 #  define net_trace_mark(s) trace_mark(NXTAG_NET, s)
 #  define net_trace_printf(fmt, ...) \
     trace_printf(NXTAG_NET, fmt, ##__VA_ARGS__)
-#  define net_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_NET, level, id, fmt, ##__VA_ARGS__)
 #  define net_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_NET, name, cookie)
 #  define net_trace_async_end(name, cookie) \
@@ -893,7 +833,6 @@
 #  define net_trace_endex(name)
 #  define net_trace_mark(s)
 #  define net_trace_printf(...)
-#  define net_trace_diag(...)
 #  define net_trace_async_begin(name, cookie)
 #  define net_trace_async_end(name, cookie)
 #  define net_trace_async_begin_track(track, name, cookie)
@@ -908,8 +847,6 @@
 #  define paging_trace_mark(s) trace_mark(NXTAG_PAGING, s)
 #  define paging_trace_printf(fmt, ...) \
     trace_printf(NXTAG_PAGING, fmt, ##__VA_ARGS__)
-#  define paging_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_PAGING, level, id, fmt, ##__VA_ARGS__)
 #  define paging_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_PAGING, name, cookie)
 #  define paging_trace_async_end(name, cookie) \
@@ -925,7 +862,6 @@
 #  define paging_trace_endex(name)
 #  define paging_trace_mark(s)
 #  define paging_trace_printf(...)
-#  define paging_trace_diag(...)
 #  define paging_trace_async_begin(name, cookie)
 #  define paging_trace_async_end(name, cookie)
 #  define paging_trace_async_begin_track(track, name, cookie)
@@ -940,8 +876,6 @@
 #  define pci_trace_mark(s) trace_mark(NXTAG_PCI, s)
 #  define pci_trace_printf(fmt, ...) \
     trace_printf(NXTAG_PCI, fmt, ##__VA_ARGS__)
-#  define pci_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_PCI, level, id, fmt, ##__VA_ARGS__)
 #  define pci_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_PCI, name, cookie)
 #  define pci_trace_async_end(name, cookie) \
@@ -957,7 +891,6 @@
 #  define pci_trace_endex(name)
 #  define pci_trace_mark(s)
 #  define pci_trace_printf(...)
-#  define pci_trace_diag(...)
 #  define pci_trace_async_begin(name, cookie)
 #  define pci_trace_async_end(name, cookie)
 #  define pci_trace_async_begin_track(track, name, cookie)
@@ -972,8 +905,6 @@
 #  define power_trace_mark(s) trace_mark(NXTAG_POWER, s)
 #  define power_trace_printf(fmt, ...) \
     trace_printf(NXTAG_POWER, fmt, ##__VA_ARGS__)
-#  define power_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_POWER, level, id, fmt, ##__VA_ARGS__)
 #  define power_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_POWER, name, cookie)
 #  define power_trace_async_end(name, cookie) \
@@ -989,7 +920,6 @@
 #  define power_trace_endex(name)
 #  define power_trace_mark(s)
 #  define power_trace_printf(...)
-#  define power_trace_diag(...)
 #  define power_trace_async_begin(name, cookie)
 #  define power_trace_async_end(name, cookie)
 #  define power_trace_async_begin_track(track, name, cookie)
@@ -1004,8 +934,6 @@
 #  define ptp_trace_mark(s) trace_mark(NXTAG_PTP, s)
 #  define ptp_trace_printf(fmt, ...) \
     trace_printf(NXTAG_PTP, fmt, ##__VA_ARGS__)
-#  define ptp_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_PTP, level, id, fmt, ##__VA_ARGS__)
 #  define ptp_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_PTP, name, cookie)
 #  define ptp_trace_async_end(name, cookie) \
@@ -1021,7 +949,6 @@
 #  define ptp_trace_endex(name)
 #  define ptp_trace_mark(s)
 #  define ptp_trace_printf(...)
-#  define ptp_trace_diag(...)
 #  define ptp_trace_async_begin(name, cookie)
 #  define ptp_trace_async_end(name, cookie)
 #  define ptp_trace_async_begin_track(track, name, cookie)
@@ -1036,8 +963,6 @@
 #  define pwm_trace_mark(s) trace_mark(NXTAG_PWM, s)
 #  define pwm_trace_printf(fmt, ...) \
     trace_printf(NXTAG_PWM, fmt, ##__VA_ARGS__)
-#  define pwm_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_PWM, level, id, fmt, ##__VA_ARGS__)
 #  define pwm_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_PWM, name, cookie)
 #  define pwm_trace_async_end(name, cookie) \
@@ -1053,7 +978,6 @@
 #  define pwm_trace_endex(name)
 #  define pwm_trace_mark(s)
 #  define pwm_trace_printf(...)
-#  define pwm_trace_diag(...)
 #  define pwm_trace_async_begin(name, cookie)
 #  define pwm_trace_async_end(name, cookie)
 #  define pwm_trace_async_begin_track(track, name, cookie)
@@ -1068,8 +992,6 @@
 #  define rc_trace_mark(s) trace_mark(NXTAG_RC, s)
 #  define rc_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RC, fmt, ##__VA_ARGS__)
-#  define rc_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_RC, level, id, fmt, ##__VA_ARGS__)
 #  define rc_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_RC, name, cookie)
 #  define rc_trace_async_end(name, cookie) \
@@ -1085,7 +1007,6 @@
 #  define rc_trace_endex(name)
 #  define rc_trace_mark(s)
 #  define rc_trace_printf(...)
-#  define rc_trace_diag(...)
 #  define rc_trace_async_begin(name, cookie)
 #  define rc_trace_async_end(name, cookie)
 #  define rc_trace_async_begin_track(track, name, cookie)
@@ -1100,8 +1021,6 @@
 #  define regmap_trace_mark(s) trace_mark(NXTAG_REGMAP, s)
 #  define regmap_trace_printf(fmt, ...) \
     trace_printf(NXTAG_REGMAP, fmt, ##__VA_ARGS__)
-#  define regmap_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_REGMAP, level, id, fmt, ##__VA_ARGS__)
 #  define regmap_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_REGMAP, name, cookie)
 #  define regmap_trace_async_end(name, cookie) \
@@ -1117,7 +1036,6 @@
 #  define regmap_trace_endex(name)
 #  define regmap_trace_mark(s)
 #  define regmap_trace_printf(...)
-#  define regmap_trace_diag(...)
 #  define regmap_trace_async_begin(name, cookie)
 #  define regmap_trace_async_end(name, cookie)
 #  define regmap_trace_async_begin_track(track, name, cookie)
@@ -1132,8 +1050,6 @@
 #  define reset_trace_mark(s) trace_mark(NXTAG_RESET, s)
 #  define reset_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RESET, fmt, ##__VA_ARGS__)
-#  define reset_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_RESET, level, id, fmt, ##__VA_ARGS__)
 #  define reset_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_RESET, name, cookie)
 #  define reset_trace_async_end(name, cookie) \
@@ -1149,7 +1065,6 @@
 #  define reset_trace_endex(name)
 #  define reset_trace_mark(s)
 #  define reset_trace_printf(...)
-#  define reset_trace_diag(...)
 #  define reset_trace_async_begin(name, cookie)
 #  define reset_trace_async_end(name, cookie)
 #  define reset_trace_async_begin_track(track, name, cookie)
@@ -1164,8 +1079,6 @@
 #  define rmt_trace_mark(s) trace_mark(NXTAG_RMT, s)
 #  define rmt_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RMT, fmt, ##__VA_ARGS__)
-#  define rmt_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_RMT, level, id, fmt, ##__VA_ARGS__)
 #  define rmt_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_RMT, name, cookie)
 #  define rmt_trace_async_end(name, cookie) \
@@ -1181,7 +1094,6 @@
 #  define rmt_trace_endex(name)
 #  define rmt_trace_mark(s)
 #  define rmt_trace_printf(...)
-#  define rmt_trace_diag(...)
 #  define rmt_trace_async_begin(name, cookie)
 #  define rmt_trace_async_end(name, cookie)
 #  define rmt_trace_async_begin_track(track, name, cookie)
@@ -1196,8 +1108,6 @@
 #  define rpmsg_trace_mark(s) trace_mark(NXTAG_RPMSG, s)
 #  define rpmsg_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RPMSG, fmt, ##__VA_ARGS__)
-#  define rpmsg_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_RPMSG, level, id, fmt, ##__VA_ARGS__)
 #  define rpmsg_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_RPMSG, name, cookie)
 #  define rpmsg_trace_async_end(name, cookie) \
@@ -1213,7 +1123,6 @@
 #  define rpmsg_trace_endex(name)
 #  define rpmsg_trace_mark(s)
 #  define rpmsg_trace_printf(...)
-#  define rpmsg_trace_diag(...)
 #  define rpmsg_trace_async_begin(name, cookie)
 #  define rpmsg_trace_async_end(name, cookie)
 #  define rpmsg_trace_async_begin_track(track, name, cookie)
@@ -1228,8 +1137,6 @@
 #  define rptun_trace_mark(s) trace_mark(NXTAG_RPTUN, s)
 #  define rptun_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RPTUN, fmt, ##__VA_ARGS__)
-#  define rptun_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_RPTUN, level, id, fmt, ##__VA_ARGS__)
 #  define rptun_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_RPTUN, name, cookie)
 #  define rptun_trace_async_end(name, cookie) \
@@ -1245,7 +1152,6 @@
 #  define rptun_trace_endex(name)
 #  define rptun_trace_mark(s)
 #  define rptun_trace_printf(...)
-#  define rptun_trace_diag(...)
 #  define rptun_trace_async_begin(name, cookie)
 #  define rptun_trace_async_end(name, cookie)
 #  define rptun_trace_async_begin_track(track, name, cookie)
@@ -1260,8 +1166,6 @@
 #  define rtc_trace_mark(s) trace_mark(NXTAG_RTC, s)
 #  define rtc_trace_printf(fmt, ...) \
     trace_printf(NXTAG_RTC, fmt, ##__VA_ARGS__)
-#  define rtc_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_RTC, level, id, fmt, ##__VA_ARGS__)
 #  define rtc_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_RTC, name, cookie)
 #  define rtc_trace_async_end(name, cookie) \
@@ -1277,7 +1181,6 @@
 #  define rtc_trace_endex(name)
 #  define rtc_trace_mark(s)
 #  define rtc_trace_printf(...)
-#  define rtc_trace_diag(...)
 #  define rtc_trace_async_begin(name, cookie)
 #  define rtc_trace_async_end(name, cookie)
 #  define rtc_trace_async_begin_track(track, name, cookie)
@@ -1292,8 +1195,6 @@
 #  define safety_trace_mark(s) trace_mark(NXTAG_SAFETY, s)
 #  define safety_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SAFETY, fmt, ##__VA_ARGS__)
-#  define safety_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_SAFETY, level, id, fmt, ##__VA_ARGS__)
 #  define safety_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_SAFETY, name, cookie)
 #  define safety_trace_async_end(name, cookie) \
@@ -1309,7 +1210,6 @@
 #  define safety_trace_endex(name)
 #  define safety_trace_mark(s)
 #  define safety_trace_printf(...)
-#  define safety_trace_diag(...)
 #  define safety_trace_async_begin(name, cookie)
 #  define safety_trace_async_end(name, cookie)
 #  define safety_trace_async_begin_track(track, name, cookie)
@@ -1324,8 +1224,6 @@
 #  define sched_trace_mark(s) trace_mark(NXTAG_SCHED, s)
 #  define sched_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SCHED, fmt, ##__VA_ARGS__)
-#  define sched_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_SCHED, level, id, fmt, ##__VA_ARGS__)
 #  define sched_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_SCHED, name, cookie)
 #  define sched_trace_async_end(name, cookie) \
@@ -1341,7 +1239,6 @@
 #  define sched_trace_endex(name)
 #  define sched_trace_mark(s)
 #  define sched_trace_printf(...)
-#  define sched_trace_diag(...)
 #  define sched_trace_async_begin(name, cookie)
 #  define sched_trace_async_end(name, cookie)
 #  define sched_trace_async_begin_track(track, name, cookie)
@@ -1349,35 +1246,31 @@
 #endif
 
 #ifdef CONFIG_TRACE_SENSORS
-#  define sensors_trace_begin() trace_begin(NXTAG_SENSORS)
-#  define sensors_trace_end() trace_end(NXTAG_SENSORS)
-#  define sensors_trace_beginex(name) trace_beginex(NXTAG_SENSORS, name)
-#  define sensors_trace_endex(name) trace_endex(NXTAG_SENSORS, name)
-#  define sensors_trace_mark(s) trace_mark(NXTAG_SENSORS, s)
-#  define sensors_trace_printf(fmt, ...) \
+#  define sensor_trace_begin() trace_begin(NXTAG_SENSORS)
+#  define sensor_trace_end() trace_end(NXTAG_SENSORS)
+#  define sensor_trace_beginex(name) trace_beginex(NXTAG_SENSORS, name)
+#  define sensor_trace_endex(name) trace_endex(NXTAG_SENSORS, name)
+#  define sensor_trace_mark(s) trace_mark(NXTAG_SENSORS, s)
+#  define sensor_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SENSORS, fmt, ##__VA_ARGS__)
-#  define sensors_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_SENSORS, level, id, fmt, ##__VA_ARGS__)
-#  define sensors_trace_async_begin(name, cookie) \
+#  define sensor_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_SENSORS, name, cookie)
-#  define sensors_trace_async_end(name, cookie) \
+#  define sensor_trace_async_end(name, cookie) \
     trace_async_end(NXTAG_SENSORS, name, cookie)
-#  define sensors_trace_async_begin_track(track, name, cookie) \
+#  define sensor_trace_async_begin_track(track, name, cookie) \
     trace_async_begin_track(NXTAG_SENSORS, track, name, cookie)
-#  define sensors_trace_async_end_track(track, name, cookie) \
+#  define sensor_trace_async_end_track(track, name, cookie) \
     trace_async_end_track(NXTAG_SENSORS, track, name, cookie)
 #else
-#  define sensors_trace_begin()
-#  define sensors_trace_end()
-#  define sensors_trace_beginex(name)
-#  define sensors_trace_endex(name)
-#  define sensors_trace_mark(s)
-#  define sensors_trace_printf(...)
-#  define sensors_trace_diag(...)
-#  define sensors_trace_async_begin(name, cookie)
-#  define sensors_trace_async_end(name, cookie)
-#  define sensors_trace_async_begin_track(track, name, cookie)
-#  define sensors_trace_async_end_track(track, name, cookie)
+#  define sensor_trace_end()
+#  define sensor_trace_beginex(name)
+#  define sensor_trace_endex(name)
+#  define sensor_trace_mark(s)
+#  define sensor_trace_printf(...)
+#  define sensor_trace_async_begin(name, cookie)
+#  define sensor_trace_async_end(name, cookie)
+#  define sensor_trace_async_begin_track(track, name, cookie)
+#  define sensor_trace_async_end_track(track, name, cookie)
 #endif
 
 #ifdef CONFIG_TRACE_SPI
@@ -1388,8 +1281,6 @@
 #  define spi_trace_mark(s) trace_mark(NXTAG_SPI, s)
 #  define spi_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SPI, fmt, ##__VA_ARGS__)
-#  define spi_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_SPI, level, id, fmt, ##__VA_ARGS__)
 #  define spi_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_SPI, name, cookie)
 #  define spi_trace_async_end(name, cookie) \
@@ -1405,7 +1296,6 @@
 #  define spi_trace_endex(name)
 #  define spi_trace_mark(s)
 #  define spi_trace_printf(...)
-#  define spi_trace_diag(...)
 #  define spi_trace_async_begin(name, cookie)
 #  define spi_trace_async_end(name, cookie)
 #  define spi_trace_async_begin_track(track, name, cookie)
@@ -1420,8 +1310,6 @@
 #  define stepper_trace_mark(s) trace_mark(NXTAG_STEPPER, s)
 #  define stepper_trace_printf(fmt, ...) \
     trace_printf(NXTAG_STEPPER, fmt, ##__VA_ARGS__)
-#  define stepper_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_STEPPER, level, id, fmt, ##__VA_ARGS__)
 #  define stepper_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_STEPPER, name, cookie)
 #  define stepper_trace_async_end(name, cookie) \
@@ -1437,7 +1325,6 @@
 #  define stepper_trace_endex(name)
 #  define stepper_trace_mark(s)
 #  define stepper_trace_printf(...)
-#  define stepper_trace_diag(...)
 #  define stepper_trace_async_begin(name, cookie)
 #  define stepper_trace_async_end(name, cookie)
 #  define stepper_trace_async_begin_track(track, name, cookie)
@@ -1452,8 +1339,6 @@
 #  define syscall_trace_mark(s) trace_mark(NXTAG_SYSCALL, s)
 #  define syscall_trace_printf(fmt, ...) \
     trace_printf(NXTAG_SYSCALL, fmt, ##__VA_ARGS__)
-#  define syscall_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_SYSCALL, level, id, fmt, ##__VA_ARGS__)
 #  define syscall_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_SYSCALL, name, cookie)
 #  define syscall_trace_async_end(name, cookie) \
@@ -1469,7 +1354,6 @@
 #  define syscall_trace_endex(name)
 #  define syscall_trace_mark(s)
 #  define syscall_trace_printf(...)
-#  define syscall_trace_diag(...)
 #  define syscall_trace_async_begin(name, cookie)
 #  define syscall_trace_async_end(name, cookie)
 #  define syscall_trace_async_begin_track(track, name, cookie)
@@ -1484,8 +1368,6 @@
 #  define thermal_trace_mark(s) trace_mark(NXTAG_THERMAL, s)
 #  define thermal_trace_printf(fmt, ...) \
     trace_printf(NXTAG_THERMAL, fmt, ##__VA_ARGS__)
-#  define thermal_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_THERMAL, level, id, fmt, ##__VA_ARGS__)
 #  define thermal_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_THERMAL, name, cookie)
 #  define thermal_trace_async_end(name, cookie) \
@@ -1501,7 +1383,6 @@
 #  define thermal_trace_endex(name)
 #  define thermal_trace_mark(s)
 #  define thermal_trace_printf(...)
-#  define thermal_trace_diag(...)
 #  define thermal_trace_async_begin(name, cookie)
 #  define thermal_trace_async_end(name, cookie)
 #  define thermal_trace_async_begin_track(track, name, cookie)
@@ -1516,8 +1397,6 @@
 #  define timer_trace_mark(s) trace_mark(NXTAG_TIMER, s)
 #  define timer_trace_printf(fmt, ...) \
     trace_printf(NXTAG_TIMER, fmt, ##__VA_ARGS__)
-#  define timer_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_TIMER, level, id, fmt, ##__VA_ARGS__)
 #  define timer_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_TIMER, name, cookie)
 #  define timer_trace_async_end(name, cookie) \
@@ -1533,7 +1412,6 @@
 #  define timer_trace_endex(name)
 #  define timer_trace_mark(s)
 #  define timer_trace_printf(...)
-#  define timer_trace_diag(...)
 #  define timer_trace_async_begin(name, cookie)
 #  define timer_trace_async_end(name, cookie)
 #  define timer_trace_async_begin_track(track, name, cookie)
@@ -1548,8 +1426,6 @@
 #  define usb_trace_mark(s) trace_mark(NXTAG_USB, s)
 #  define usb_trace_printf(fmt, ...) \
     trace_printf(NXTAG_USB, fmt, ##__VA_ARGS__)
-#  define usb_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_USB, level, id, fmt, ##__VA_ARGS__)
 #  define usb_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_USB, name, cookie)
 #  define usb_trace_async_end(name, cookie) \
@@ -1565,7 +1441,6 @@
 #  define usb_trace_endex(name)
 #  define usb_trace_mark(s)
 #  define usb_trace_printf(...)
-#  define usb_trace_diag(...)
 #  define usb_trace_async_begin(name, cookie)
 #  define usb_trace_async_end(name, cookie)
 #  define usb_trace_async_begin_track(track, name, cookie)
@@ -1580,8 +1455,6 @@
 #  define vhost_trace_mark(s) trace_mark(NXTAG_VHOST, s)
 #  define vhost_trace_printf(fmt, ...) \
     trace_printf(NXTAG_VHOST, fmt, ##__VA_ARGS__)
-#  define vhost_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_VHOST, level, id, fmt, ##__VA_ARGS__)
 #  define vhost_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_VHOST, name, cookie)
 #  define vhost_trace_async_end(name, cookie) \
@@ -1597,7 +1470,6 @@
 #  define vhost_trace_endex(name)
 #  define vhost_trace_mark(s)
 #  define vhost_trace_printf(...)
-#  define vhost_trace_diag(...)
 #  define vhost_trace_async_begin(name, cookie)
 #  define vhost_trace_async_end(name, cookie)
 #  define vhost_trace_async_begin_track(track, name, cookie)
@@ -1612,8 +1484,6 @@
 #  define video_trace_mark(s) trace_mark(NXTAG_VIDEO, s)
 #  define video_trace_printf(fmt, ...) \
     trace_printf(NXTAG_VIDEO, fmt, ##__VA_ARGS__)
-#  define video_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_VIDEO, level, id, fmt, ##__VA_ARGS__)
 #  define video_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_VIDEO, name, cookie)
 #  define video_trace_async_end(name, cookie) \
@@ -1629,7 +1499,6 @@
 #  define video_trace_endex(name)
 #  define video_trace_mark(s)
 #  define video_trace_printf(...)
-#  define video_trace_diag(...)
 #  define video_trace_async_begin(name, cookie)
 #  define video_trace_async_end(name, cookie)
 #  define video_trace_async_begin_track(track, name, cookie)
@@ -1644,8 +1513,6 @@
 #  define virtio_trace_mark(s) trace_mark(NXTAG_VIRTIO, s)
 #  define virtio_trace_printf(fmt, ...) \
     trace_printf(NXTAG_VIRTIO, fmt, ##__VA_ARGS__)
-#  define virtio_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_VIRTIO, level, id, fmt, ##__VA_ARGS__)
 #  define virtio_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_VIRTIO, name, cookie)
 #  define virtio_trace_async_end(name, cookie) \
@@ -1661,7 +1528,6 @@
 #  define virtio_trace_endex(name)
 #  define virtio_trace_mark(s)
 #  define virtio_trace_printf(...)
-#  define virtio_trace_diag(...)
 #  define virtio_trace_async_begin(name, cookie)
 #  define virtio_trace_async_end(name, cookie)
 #  define virtio_trace_async_begin_track(track, name, cookie)
@@ -1676,8 +1542,6 @@
 #  define watchdog_trace_mark(s) trace_mark(NXTAG_WATCHDOG, s)
 #  define watchdog_trace_printf(fmt, ...) \
     trace_printf(NXTAG_WATCHDOG, fmt, ##__VA_ARGS__)
-#  define watchdog_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_WATCHDOG, level, id, fmt, ##__VA_ARGS__)
 #  define watchdog_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_WATCHDOG, name, cookie)
 #  define watchdog_trace_async_end(name, cookie) \
@@ -1693,7 +1557,6 @@
 #  define watchdog_trace_endex(name)
 #  define watchdog_trace_mark(s)
 #  define watchdog_trace_printf(...)
-#  define watchdog_trace_diag(...)
 #  define watchdog_trace_async_begin(name, cookie)
 #  define watchdog_trace_async_end(name, cookie)
 #  define watchdog_trace_async_begin_track(track, name, cookie)
@@ -1708,8 +1571,6 @@
 #  define wireless_trace_mark(s) trace_mark(NXTAG_WIRELESS, s)
 #  define wireless_trace_printf(fmt, ...) \
     trace_printf(NXTAG_WIRELESS, fmt, ##__VA_ARGS__)
-#  define wireless_trace_diag(level, id, fmt, ...) \
-    trace_diag(NXTAG_WIRELESS, level, id, fmt, ##__VA_ARGS__)
 #  define wireless_trace_async_begin(name, cookie) \
     trace_async_begin(NXTAG_WIRELESS, name, cookie)
 #  define wireless_trace_async_end(name, cookie) \
@@ -1725,16 +1586,177 @@
 #  define wireless_trace_endex(name)
 #  define wireless_trace_mark(s)
 #  define wireless_trace_printf(...)
-#  define wireless_trace_diag(...)
 #  define wireless_trace_async_begin(name, cookie)
 #  define wireless_trace_async_end(name, cookie)
 #  define wireless_trace_async_begin_track(track, name, cookie)
 #  define wireless_trace_async_end_track(track, name, cookie)
 #endif
-/* Diagnostic IDs */
 
-#define DIAG_MM_ALLOC_FAIL       0
-#define DIAG_MM_FREE_FAIL        1
+/* xxx_trace_diag — per-module DFX fault reporting wrappers.
+ * Controlled solely by CONFIG_DIAG via the underlying trace_diag macro.
+ */
+
+#define analog_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_ANALOG, level, id, fmt, ##__VA_ARGS__)
+#define audio_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_AUDIO, level, id, fmt, ##__VA_ARGS__)
+#define battery_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_BATTERY, level, id, fmt, ##__VA_ARGS__)
+#define binfmt_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_BINFMT, level, id, fmt, ##__VA_ARGS__)
+#define can_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_CAN, level, id, fmt, ##__VA_ARGS__)
+#define capture_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_CAPTURE, level, id, fmt, ##__VA_ARGS__)
+#define contactless_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_CONTACTLESS, level, id, fmt, ##__VA_ARGS__)
+#define crypto_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_CRYPTO, level, id, fmt, ##__VA_ARGS__)
+#define dma_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_DMA, level, id, fmt, ##__VA_ARGS__)
+#define fs_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_FS, level, id, fmt, ##__VA_ARGS__)
+#define gpio_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_GPIO, level, id, fmt, ##__VA_ARGS__)
+#define graphics_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_GRAPHICS, level, id, fmt, ##__VA_ARGS__)
+#define hwtracing_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_HWTRACING, level, id, fmt, ##__VA_ARGS__)
+#define i2c_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_I2C, level, id, fmt, ##__VA_ARGS__)
+#define i2s_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_I2S, level, id, fmt, ##__VA_ARGS__)
+#define i3c_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_I3C, level, id, fmt, ##__VA_ARGS__)
+#define input_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_INPUT, level, id, fmt, ##__VA_ARGS__)
+#define ipc_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_IPC, level, id, fmt, ##__VA_ARGS__)
+#define irq_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_IRQ, level, id, fmt, ##__VA_ARGS__)
+#define lcd_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_LCD, level, id, fmt, ##__VA_ARGS__)
+#define leds_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_LEDS, level, id, fmt, ##__VA_ARGS__)
+#define lib_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_LIB, level, id, fmt, ##__VA_ARGS__)
+#define memcard_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_MEMCARD, level, id, fmt, ##__VA_ARGS__)
+#define mm_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_MM, level, id, fmt, ##__VA_ARGS__)
+#define motor_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_MOTOR, level, id, fmt, ##__VA_ARGS__)
+#define net_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_NET, level, id, fmt, ##__VA_ARGS__)
+#define paging_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_PAGING, level, id, fmt, ##__VA_ARGS__)
+#define pci_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_PCI, level, id, fmt, ##__VA_ARGS__)
+#define power_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_POWER, level, id, fmt, ##__VA_ARGS__)
+#define ptp_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_PTP, level, id, fmt, ##__VA_ARGS__)
+#define pwm_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_PWM, level, id, fmt, ##__VA_ARGS__)
+#define rc_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_RC, level, id, fmt, ##__VA_ARGS__)
+#define regmap_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_REGMAP, level, id, fmt, ##__VA_ARGS__)
+#define reset_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_RESET, level, id, fmt, ##__VA_ARGS__)
+#define rmt_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_RMT, level, id, fmt, ##__VA_ARGS__)
+#define rpmsg_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_RPMSG, level, id, fmt, ##__VA_ARGS__)
+#define rptun_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_RPTUN, level, id, fmt, ##__VA_ARGS__)
+#define rtc_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_RTC, level, id, fmt, ##__VA_ARGS__)
+#define safety_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_SAFETY, level, id, fmt, ##__VA_ARGS__)
+#define sched_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_SCHED, level, id, fmt, ##__VA_ARGS__)
+#define sensor_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_SENSORS, level, id, fmt, ##__VA_ARGS__)
+#define spi_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_SPI, level, id, fmt, ##__VA_ARGS__)
+#define stepper_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_STEPPER, level, id, fmt, ##__VA_ARGS__)
+#define syscall_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_SYSCALL, level, id, fmt, ##__VA_ARGS__)
+#define thermal_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_THERMAL, level, id, fmt, ##__VA_ARGS__)
+#define timer_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_TIMER, level, id, fmt, ##__VA_ARGS__)
+#define usb_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_USB, level, id, fmt, ##__VA_ARGS__)
+#define vhost_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_VHOST, level, id, fmt, ##__VA_ARGS__)
+#define video_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_VIDEO, level, id, fmt, ##__VA_ARGS__)
+#define virtio_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_VIRTIO, level, id, fmt, ##__VA_ARGS__)
+#define watchdog_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_WATCHDOG, level, id, fmt, ##__VA_ARGS__)
+#define wireless_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_WIRELESS, level, id, fmt, ##__VA_ARGS__)
+
+/* Helper: capture backtrace into buffer, no-op if unsupported.
+ * The buffer is cleared before capturing so that unused slots are
+ * guaranteed to be NULL instead of holding stale stack data.
+ */
+
+#if defined(CONFIG_ARCH_HAVE_BACKTRACE) && defined(CONFIG_DIAG)
+#  define DIAG_BACKTRACE(tcb, buf, size) \
+     do \
+       { \
+         memset(buf, 0, sizeof(buf)); \
+         up_backtrace(tcb, buf, size, 0); \
+       } \
+     while (0)
+#else
+#  define DIAG_BACKTRACE(tcb, buf, size) do {} while (0)
+#endif
+
+/* Diagnostic IDs – cross-feature base */
+
+#define DIAG_SYSTEM_BASE                 961010000
+
+/* System module fault code bases (within DIAG_SYSTEM_BASE) */
+
+#define DIAG_SYSTEM_SCHED_BASE           (DIAG_SYSTEM_BASE + 0)       /* 961010000 */
+#define DIAG_SCHED_ASSERT                (DIAG_SYSTEM_SCHED_BASE + 0) /* 961010000 */
+#define DIAG_SCHED_HOLDER_PANIC          (DIAG_SYSTEM_SCHED_BASE + 4) /* 961010004 */
+#define DIAG_SCHED_WQUEUE_TIMEOUT        (DIAG_SYSTEM_SCHED_BASE + 5) /* 961010005 */
+#define DIAG_SCHED_WDOG_TIMEOUT          (DIAG_SYSTEM_SCHED_BASE + 6) /* 961010006 */
+#define DIAG_SCHED_THREAD_TIMEOUT        (DIAG_SYSTEM_SCHED_BASE + 7)  /* 961010007 */
+#define DIAG_SCHED_BOOT                  (DIAG_SYSTEM_SCHED_BASE + 10) /* 961010010 */
+#define DIAG_SCHED_REBOOT                (DIAG_SYSTEM_SCHED_BASE + 11) /* 961010011 */
+
+#define DIAG_SYSTEM_MM_BASE              (DIAG_SYSTEM_BASE + 100)     /* 961010100 */
+#define DIAG_MM_ALLOC_FAIL               (DIAG_SYSTEM_MM_BASE + 0)    /* 961010100 */
+#define DIAG_MM_FREE_FAIL                (DIAG_SYSTEM_MM_BASE + 1)    /* 961010101 */
+#define DIAG_MM_STACK_OVERFLOW           (DIAG_SYSTEM_MM_BASE + 2)    /* 961010102 */
+
+#define DIAG_SYSTEM_IRQ_BASE             (DIAG_SYSTEM_BASE + 200)     /* 961010200 */
+#define DIAG_IRQ_HANDLER_TIMEOUT         (DIAG_SYSTEM_IRQ_BASE + 1)   /* 961010201 */
+
+#define DIAG_SYSTEM_IPC_BASE             (DIAG_SYSTEM_BASE + 300)     /* 961010300 */
+#define DIAG_SYSTEM_RPMSG_BASE           (DIAG_SYSTEM_BASE + 400)     /* 961010400 */
+#define DIAG_SYSTEM_BINDER_BASE          (DIAG_SYSTEM_BASE + 500)     /* 961010500 */
+#define DIAG_SYSTEM_SENSOR_BASE          (DIAG_SYSTEM_BASE + 600)     /* 961010600 */
+#define DIAG_SYSTEM_PM_BASE              (DIAG_SYSTEM_BASE + 700)     /* 961010700 */
+
+#define DIAG_SYSTEM_TEE_BASE             (DIAG_SYSTEM_BASE + 800)     /* 961010800 */
+
+#define DIAG_SYSTEM_OTA_BASE             (DIAG_SYSTEM_BASE + 900)     /* 961010900 */
+
+#define DIAG_SYSTEM_WATCHDOG_BASE        (DIAG_SYSTEM_BASE + 1000)    /* 961011000 */
+
+#define DIAG_SYSTEM_FS_BASE              (DIAG_SYSTEM_BASE + 1100)    /* 961011100 */
+#define DIAG_FS_MOUNT_FAIL               (DIAG_SYSTEM_FS_BASE + 0)    /* 961011100 */
+
+#define DIAG_SYSTEM_DRIVER_BASE          (DIAG_SYSTEM_BASE + 1400)    /* 961011400 */
 
 /* Network module diagnostic IDs */
 

@@ -2953,6 +2953,17 @@ config TRACE_WIRELESS
 
 endif #TRACE
 
+config DIAG
+	bool "Enable DFX diagnostic fault reporting"
+	default n
+	depends on SCHED_INSTRUMENTATION_DUMP
+	---help---
+		If this option is enabled, DFX fault reporting trace points
+		(trace_diag) will be compiled in. This is independent of the
+		TRACE option which controls performance tracing (begin/end/mark).
+		DIAG reports fault events such as malloc failure, assert, IRQ
+		timeout, etc. to the note subsystem for upstream collection.
+
 config ARCH_HAVE_CUSTOMOPT
 	bool
 	default n
