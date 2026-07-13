@@ -361,6 +361,15 @@ struct lib_mtdsostream_s
   struct mtd_geometry_s  geo;
   FAR unsigned char     *cache;
 };
+
+struct lib_mtdsistream_s
+{
+  struct lib_sistream_s  common;
+  FAR struct inode      *inode;
+  struct mtd_geometry_s  geo;
+  FAR unsigned char     *cache;
+  off_t                  eblock;
+};
 #endif
 
 struct va_format
@@ -863,6 +872,34 @@ int lib_mtdsostream_open(FAR struct lib_mtdsostream_s *stream,
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
 void lib_mtdsostream_close(FAR struct lib_mtdsostream_s *stream);
+
+/****************************************************************************
+ * Name: lib_mtdsistream_open
+ *
+ * Description:
+ *   Open a seekable MTD device input stream.
+ *
+ * Input Parameters:
+ *   stream  - User allocated instance of struct lib_mtdsistream_s.
+ *   name    - MTD device path (e.g., "/dev/mtd0").
+ *
+ ****************************************************************************/
+
+int lib_mtdsistream_open(FAR struct lib_mtdsistream_s *stream,
+                         FAR const char *name);
+
+/****************************************************************************
+ * Name: lib_mtdsistream_close
+ *
+ * Description:
+ *   Close an MTD device input stream and release resources.
+ *
+ * Input Parameters:
+ *   stream  - Instance previously opened with lib_mtdsistream_open.
+ *
+ ****************************************************************************/
+
+void lib_mtdsistream_close(FAR struct lib_mtdsistream_s *stream);
 #endif
 
 /****************************************************************************
