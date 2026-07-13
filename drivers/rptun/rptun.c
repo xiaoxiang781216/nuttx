@@ -969,20 +969,6 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
         }
     }
 
-  if (RPTUN_STATUS_CHECK(status, RPTUN_STATUS_PAUSE))
-    {
-      int timeout = CONFIG_RPTUN_STATUS_TIMEOUT_MS;
-
-      /* Wait for the crashing core to finish printing its log */
-
-      while (timeout-- > 0 &&
-             (!RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC)))
-        {
-          status = rptun_get_peer_status(priv);
-          up_udelay(1000);
-        }
-    }
-
   if (RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC))
     {
       char msg[32];
