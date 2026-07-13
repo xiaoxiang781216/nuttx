@@ -43,10 +43,6 @@
  ****************************************************************************/
 
 #define HW_OP_UNSUPPORTED          0xFFFF
-#define C(_x)                      CONCATENATE(PERF_COUNT_HW_CACHE_, _x)
-
-#define PERF_MAP_ALL_UNSUPPORTED                              \
-        [0 ... PERF_COUNT_HW_MAX - 1] = HW_OP_UNSUPPORTED
 
 #define RISCV_PMU_MAX_HWEVENTS     32
 
@@ -136,9 +132,16 @@ static struct pmu_ops_s g_riscvpmu_ops =
 
 static const unsigned int g_riscv_perf_map[PERF_COUNT_HW_MAX] =
 {
-  PERF_MAP_ALL_UNSUPPORTED,
-  [PERF_COUNT_HW_CPU_CYCLES]    = RISCV_PMU_EVT_CPU_CYCLES,
-  [PERF_COUNT_HW_INSTRUCTIONS]  = RISCV_PMU_EVT_INST_RETIRED,
+  [PERF_COUNT_HW_CPU_CYCLES]              = RISCV_PMU_EVT_CPU_CYCLES,
+  [PERF_COUNT_HW_INSTRUCTIONS]            = RISCV_PMU_EVT_INST_RETIRED,
+  [PERF_COUNT_HW_CACHE_REFERENCES]        = HW_OP_UNSUPPORTED,
+  [PERF_COUNT_HW_CACHE_MISSES]            = HW_OP_UNSUPPORTED,
+  [PERF_COUNT_HW_BRANCH_INSTRUCTIONS]     = HW_OP_UNSUPPORTED,
+  [PERF_COUNT_HW_BRANCH_MISSES]           = HW_OP_UNSUPPORTED,
+  [PERF_COUNT_HW_BUS_CYCLES]              = HW_OP_UNSUPPORTED,
+  [PERF_COUNT_HW_STALLED_CYCLES_FRONTEND] = HW_OP_UNSUPPORTED,
+  [PERF_COUNT_HW_STALLED_CYCLES_BACKEND]  = HW_OP_UNSUPPORTED,
+  [PERF_COUNT_HW_REF_CPU_CYCLES]          = HW_OP_UNSUPPORTED,
 };
 
 /****************************************************************************

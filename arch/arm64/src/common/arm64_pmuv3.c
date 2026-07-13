@@ -51,14 +51,30 @@
 #define CACHE_OP_UNSUPPORTED          0xFFFF
 #define C(_x)                         PERF_COUNT_HW_CACHE_##_x
 
-#define PERF_MAP_ALL_UNSUPPORTED                                   \
-        [0 ... PERF_COUNT_HW_MAX - 1] = HW_OP_UNSUPPORTED
+/* A single [op][result] pair.  Each entry is written exactly once so that
+ * clang does not report -Winitializer-overrides, and the opening brace is
+ * placed on its own line to satisfy nxstyle.
+ *
+ * CACHE_RESULT(access, miss)      one op with both result columns
+ * CACHE_RESULT_UNSUPPORTED        one op with no supported events
+ *
+ * Cache ids with no supported events at all use CACHE_OPS_ALL_UNSUPPORTED.
+ */
 
-#define PERF_CACHE_MAP_ALL_UNSUPPORTED                             \
-        [0 ... C(MAX) - 1] = {                                     \
-          [0 ... C(OP_MAX) - 1] = {                                \
-            [0 ... C(RESULT_MAX) - 1] = CACHE_OP_UNSUPPORTED,      \
-          },                                                       \
+#define CACHE_RESULT(access, miss) \
+        {                          \
+          [C(RESULT_ACCESS)] = (access), \
+          [C(RESULT_MISS)]   = (miss)    \
+        }
+
+#define CACHE_RESULT_UNSUPPORTED \
+        CACHE_RESULT(CACHE_OP_UNSUPPORTED, CACHE_OP_UNSUPPORTED)
+
+#define CACHE_OPS_ALL_UNSUPPORTED    \
+        {                            \
+          [C(OP_READ)]     = CACHE_RESULT_UNSUPPORTED, \
+          [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED, \
+          [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED, \
         }
 
 #define to_arm64_pmu(p) (container_of(p, struct arm64_pmu_s, pmu))
@@ -168,54 +184,68 @@ static struct pmu_ops_s g_arm64pmu_ops =
 
 static const unsigned int pmuv3_perf_map[PERF_COUNT_HW_MAX] =
 {
-  PERF_MAP_ALL_UNSUPPORTED,
   [PERF_COUNT_HW_CPU_CYCLES]       = PMUV3_PERFCTR_CPU_CYCLES,
   [PERF_COUNT_HW_INSTRUCTIONS]     = PMUV3_PERFCTR_INST_RETIRED,
   [PERF_COUNT_HW_CACHE_REFERENCES] = PMUV3_PERFCTR_L1D_CACHE,
   [PERF_COUNT_HW_CACHE_MISSES]     = PMUV3_PERFCTR_L1D_CACHE_REFILL,
+  [PERF_COUNT_HW_BRANCH_INSTRUCTIONS]
+                                   = HW_OP_UNSUPPORTED,
   [PERF_COUNT_HW_BRANCH_MISSES]    = PMUV3_PERFCTR_BR_MIS_PRED,
   [PERF_COUNT_HW_BUS_CYCLES]       = PMUV3_PERFCTR_BUS_CYCLES,
   [PERF_COUNT_HW_STALLED_CYCLES_FRONTEND]
                                    = PMUV3_PERFCTR_STALL_FRONTEND,
   [PERF_COUNT_HW_STALLED_CYCLES_BACKEND]
                                    = PMUV3_PERFCTR_STALL_BACKEND,
+  [PERF_COUNT_HW_REF_CPU_CYCLES]   = HW_OP_UNSUPPORTED,
 };
 
 static const unsigned int pmuv3_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
                                   [PERF_COUNT_HW_CACHE_OP_MAX]
                                   [PERF_COUNT_HW_CACHE_RESULT_MAX] =
 {
-  PERF_CACHE_MAP_ALL_UNSUPPORTED,
-
-  [C(L1D)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_L1D_CACHE,
-  [C(L1D)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_L1D_CACHE_REFILL,
-
-  [C(L1I)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_L1I_CACHE,
-  [C(L1I)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_L1I_CACHE_REFILL,
-
-  [C(DTLB)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_L1D_TLB_REFILL,
-  [C(DTLB)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_L1D_TLB,
-
-  [C(ITLB)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_L1I_TLB_REFILL,
-  [C(ITLB)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_L1I_TLB,
-
-  [C(LL)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_LL_CACHE_MISS_RD,
-  [C(LL)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_LL_CACHE_RD,
-
-  [C(BPU)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_BR_PRED,
-  [C(BPU)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_BR_MIS_PRED,
+  [C(L1D)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_L1D_CACHE,
+                                      PMUV3_PERFCTR_L1D_CACHE_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(L1I)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_L1I_CACHE,
+                                      PMUV3_PERFCTR_L1I_CACHE_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(LL)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_LL_CACHE_RD,
+                                      PMUV3_PERFCTR_LL_CACHE_MISS_RD),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(DTLB)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_L1D_TLB,
+                                      PMUV3_PERFCTR_L1D_TLB_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(ITLB)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_L1I_TLB,
+                                      PMUV3_PERFCTR_L1I_TLB_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(BPU)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_BR_PRED,
+                                      PMUV3_PERFCTR_BR_MIS_PRED),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(NODE)] = CACHE_OPS_ALL_UNSUPPORTED,
 };
 
 #ifdef CONFIG_ARCH_CORTEX_R82
@@ -223,77 +253,98 @@ static const unsigned armr82_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
                                            [PERF_COUNT_HW_CACHE_OP_MAX]
                                            [PERF_COUNT_HW_CACHE_RESULT_MAX] =
 {
-  PERF_CACHE_MAP_ALL_UNSUPPORTED,
-
-  [C(L1D)][C(OP_PREFETCH)][C(RESULT_MISS)]
-                          = ARMR82_IMPDEF_L1D_CACHE_REFILL_PREFETCH,
-
-  [C(NODE)][C(OP_READ)][C(RESULT_ACCESS)]
-                          = PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_RD,
-  [C(NODE)][C(OP_WRITE)][C(RESULT_ACCESS)]
-                          = PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_WR,
+  [C(L1D)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] =
+        CACHE_RESULT(CACHE_OP_UNSUPPORTED,
+                     ARMR82_IMPDEF_L1D_CACHE_REFILL_PREFETCH),
+    },
+  [C(NODE)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_RD,
+                                      CACHE_OP_UNSUPPORTED),
+      [C(OP_WRITE)]    = CACHE_RESULT(PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_WR,
+                                      CACHE_OP_UNSUPPORTED),
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
 };
 #endif
 
 #ifdef CONFIG_ARCH_CORTEX_A53
 static const unsigned int arma53_perf_map[PERF_COUNT_HW_MAX] =
 {
-  PERF_MAP_ALL_UNSUPPORTED,
   [PERF_COUNT_HW_CPU_CYCLES]       = PMUV3_PERFCTR_CPU_CYCLES,
   [PERF_COUNT_HW_INSTRUCTIONS]     = PMUV3_PERFCTR_INST_RETIRED,
   [PERF_COUNT_HW_CACHE_REFERENCES] = PMUV3_PERFCTR_L1D_CACHE,
   [PERF_COUNT_HW_CACHE_MISSES]     = PMUV3_PERFCTR_L1D_CACHE_REFILL,
+  [PERF_COUNT_HW_BRANCH_INSTRUCTIONS]
+                                   = HW_OP_UNSUPPORTED,
   [PERF_COUNT_HW_BRANCH_MISSES]    = PMUV3_PERFCTR_BR_MIS_PRED,
   [PERF_COUNT_HW_BUS_CYCLES]       = PMUV3_PERFCTR_BUS_CYCLES,
   [PERF_COUNT_HW_STALLED_CYCLES_FRONTEND]
                                    = PMUV3_PERFCTR_STALL_FRONTEND,
   [PERF_COUNT_HW_STALLED_CYCLES_BACKEND]
                                    = PMUV3_PERFCTR_STALL_BACKEND,
+  [PERF_COUNT_HW_REF_CPU_CYCLES]   = HW_OP_UNSUPPORTED,
 };
 
 static const unsigned arma53_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
                                            [PERF_COUNT_HW_CACHE_OP_MAX]
                                            [PERF_COUNT_HW_CACHE_RESULT_MAX] =
 {
-  PERF_CACHE_MAP_ALL_UNSUPPORTED,
-
-  [C(L1D)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_L1D_CACHE,
-  [C(L1D)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_L1D_CACHE_REFILL,
-
-  [C(L1I)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_L1I_CACHE,
-  [C(L1I)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_L1I_CACHE_REFILL,
-
-  [C(DTLB)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_L1D_TLB_REFILL,
-  [C(DTLB)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_L1D_TLB,
-
-  [C(ITLB)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_L1I_TLB_REFILL,
-  [C(ITLB)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_L1I_TLB,
-
-  [C(LL)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_LL_CACHE_MISS_RD,
-  [C(LL)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_LL_CACHE_RD,
-
-  [C(BPU)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_PERFCTR_BR_PRED,
-  [C(BPU)][C(OP_READ)][C(RESULT_MISS)]
-                      = PMUV3_PERFCTR_BR_MIS_PRED,
-
-  [C(L1D)][C(OP_PREFETCH)][C(RESULT_MISS)]
-                      = ARMA53_IMPDEF_PERFCTR_PREF_LINEFILL,
-
-  [C(NODE)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_RD,
-  [C(NODE)][C(OP_WRITE)][C(RESULT_ACCESS)]
-                      = PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_WR,
+  [C(L1D)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_L1D_CACHE,
+                                      PMUV3_PERFCTR_L1D_CACHE_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT(CACHE_OP_UNSUPPORTED,
+                                      ARMA53_IMPDEF_PERFCTR_PREF_LINEFILL),
+    },
+  [C(L1I)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_L1I_CACHE,
+                                      PMUV3_PERFCTR_L1I_CACHE_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(LL)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_LL_CACHE_RD,
+                                      PMUV3_PERFCTR_LL_CACHE_MISS_RD),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(DTLB)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_L1D_TLB,
+                                      PMUV3_PERFCTR_L1D_TLB_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(ITLB)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_L1I_TLB,
+                                      PMUV3_PERFCTR_L1I_TLB_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(BPU)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_PERFCTR_BR_PRED,
+                                      PMUV3_PERFCTR_BR_MIS_PRED),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(NODE)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_RD,
+                                      CACHE_OP_UNSUPPORTED),
+      [C(OP_WRITE)]    = CACHE_RESULT(PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_WR,
+                                      CACHE_OP_UNSUPPORTED),
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
 };
 #endif
 

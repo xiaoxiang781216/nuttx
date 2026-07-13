@@ -48,14 +48,30 @@
 #define CACHE_OP_UNSUPPORTED       0xFFFF
 #define C(_x)                      CONCATENATE(PERF_COUNT_HW_CACHE_, _x)
 
-#define PERF_MAP_ALL_UNSUPPORTED                              \
-        [0 ... PERF_COUNT_HW_MAX - 1] = HW_OP_UNSUPPORTED
+/* A single [op][result] pair.  Each entry is written exactly once so that
+ * clang does not report -Winitializer-overrides, and the opening brace is
+ * placed on its own line to satisfy nxstyle.
+ *
+ * CACHE_RESULT(access, miss)      one op with both result columns
+ * CACHE_RESULT_UNSUPPORTED        one op with no supported events
+ *
+ * Cache ids with no supported events at all use CACHE_OPS_ALL_UNSUPPORTED.
+ */
 
-#define PERF_CACHE_MAP_ALL_UNSUPPORTED                        \
-        [0 ... C(MAX) - 1] = {                                \
-          [0 ... C(OP_MAX) - 1] = {                           \
-            [0 ... C(RESULT_MAX) - 1] = CACHE_OP_UNSUPPORTED, \
-          },                                                  \
+#define CACHE_RESULT(access, miss) \
+        {                          \
+          [C(RESULT_ACCESS)] = (access), \
+          [C(RESULT_MISS)]   = (miss)    \
+        }
+
+#define CACHE_RESULT_UNSUPPORTED \
+        CACHE_RESULT(CACHE_OP_UNSUPPORTED, CACHE_OP_UNSUPPORTED)
+
+#define CACHE_OPS_ALL_UNSUPPORTED    \
+        {                            \
+          [C(OP_READ)]     = CACHE_RESULT_UNSUPPORTED, \
+          [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED, \
+          [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED, \
         }
 
 #define TO_ARMV7_PMU(p) (container_of(p, struct armv7_pmu_s, pmu))
@@ -135,7 +151,6 @@ static struct pmu_ops_s g_armv7pmu_ops =
 
 static const unsigned int g_armv7_perf_map[PERF_COUNT_HW_MAX] =
 {
-  PERF_MAP_ALL_UNSUPPORTED,
   [PERF_COUNT_HW_CPU_CYCLES]       = ARMV7_PERFCTR_CPU_CYCLES,
   [PERF_COUNT_HW_INSTRUCTIONS]     = ARMV7_PERFCTR_INSTR_EXECUTED,
   [PERF_COUNT_HW_CACHE_REFERENCES] = ARMV7_PERFCTR_L1_DCACHE_ACCESS,
@@ -144,6 +159,11 @@ static const unsigned int g_armv7_perf_map[PERF_COUNT_HW_MAX] =
                                    = ARMV7_PERFCTR_PC_WRITE,
   [PERF_COUNT_HW_BRANCH_MISSES]    = ARMV7_PERFCTR_PC_BRANCH_MIS_PRED,
   [PERF_COUNT_HW_BUS_CYCLES]       = ARMV7_PERFCTR_BUS_CYCLES,
+  [PERF_COUNT_HW_STALLED_CYCLES_FRONTEND]
+                                   = HW_OP_UNSUPPORTED,
+  [PERF_COUNT_HW_STALLED_CYCLES_BACKEND]
+                                   = HW_OP_UNSUPPORTED,
+  [PERF_COUNT_HW_REF_CPU_CYCLES]   = HW_OP_UNSUPPORTED,
 };
 
 static const unsigned int
@@ -151,38 +171,47 @@ g_armv7_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
                       [PERF_COUNT_HW_CACHE_OP_MAX]
                       [PERF_COUNT_HW_CACHE_RESULT_MAX] =
 {
-  PERF_CACHE_MAP_ALL_UNSUPPORTED,
-
-  [C(L1D)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = ARMV7_PERFCTR_L1_DCACHE_ACCESS,
-  [C(L1D)][C(OP_READ)][C(RESULT_MISS)]
-                      = ARMV7_PERFCTR_L1_DCACHE_REFILL,
-  [C(L1D)][C(OP_WRITE)][C(RESULT_ACCESS)]
-                      = ARMV7_PERFCTR_L1_DCACHE_ACCESS,
-  [C(L1D)][C(OP_WRITE)][C(RESULT_MISS)]
-                      = ARMV7_PERFCTR_L1_DCACHE_REFILL,
-
-  [C(L1I)][C(OP_READ)][C(RESULT_MISS)]
-                      = ARMV7_PERFCTR_L1_ICACHE_REFILL,
-
-  [C(DTLB)][C(OP_READ)][C(RESULT_MISS)]
-                      = ARMV7_PERFCTR_DTLB_REFILL,
-  [C(DTLB)][C(OP_WRITE)][C(RESULT_MISS)]
-                      = ARMV7_PERFCTR_DTLB_REFILL,
-
-  [C(ITLB)][C(OP_READ)][C(RESULT_MISS)]
-                      = ARMV7_PERFCTR_ITLB_REFILL,
-  [C(ITLB)][C(OP_WRITE)][C(RESULT_MISS)]
-                      = ARMV7_PERFCTR_ITLB_REFILL,
-
-  [C(BPU)][C(OP_READ)][C(RESULT_ACCESS)]
-                      = ARMV7_PERFCTR_PC_BRANCH_PRED,
-  [C(BPU)][C(OP_READ)][C(RESULT_MISS)]
-                      = ARMV7_PERFCTR_PC_BRANCH_MIS_PRED,
-  [C(BPU)][C(OP_WRITE)][C(RESULT_ACCESS)]
-                      = ARMV7_PERFCTR_PC_BRANCH_PRED,
-  [C(BPU)][C(OP_WRITE)][C(RESULT_MISS)]
-                      = ARMV7_PERFCTR_PC_BRANCH_MIS_PRED,
+  [C(L1D)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(ARMV7_PERFCTR_L1_DCACHE_ACCESS,
+                                      ARMV7_PERFCTR_L1_DCACHE_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT(ARMV7_PERFCTR_L1_DCACHE_ACCESS,
+                                      ARMV7_PERFCTR_L1_DCACHE_REFILL),
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(L1I)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(CACHE_OP_UNSUPPORTED,
+                                      ARMV7_PERFCTR_L1_ICACHE_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT_UNSUPPORTED,
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(LL)] = CACHE_OPS_ALL_UNSUPPORTED,
+  [C(DTLB)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(CACHE_OP_UNSUPPORTED,
+                                      ARMV7_PERFCTR_DTLB_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT(CACHE_OP_UNSUPPORTED,
+                                      ARMV7_PERFCTR_DTLB_REFILL),
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(ITLB)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(CACHE_OP_UNSUPPORTED,
+                                      ARMV7_PERFCTR_ITLB_REFILL),
+      [C(OP_WRITE)]    = CACHE_RESULT(CACHE_OP_UNSUPPORTED,
+                                      ARMV7_PERFCTR_ITLB_REFILL),
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(BPU)] =
+    {
+      [C(OP_READ)]     = CACHE_RESULT(ARMV7_PERFCTR_PC_BRANCH_PRED,
+                                      ARMV7_PERFCTR_PC_BRANCH_MIS_PRED),
+      [C(OP_WRITE)]    = CACHE_RESULT(ARMV7_PERFCTR_PC_BRANCH_PRED,
+                                      ARMV7_PERFCTR_PC_BRANCH_MIS_PRED),
+      [C(OP_PREFETCH)] = CACHE_RESULT_UNSUPPORTED,
+    },
+  [C(NODE)] = CACHE_OPS_ALL_UNSUPPORTED,
 };
 
 /****************************************************************************
