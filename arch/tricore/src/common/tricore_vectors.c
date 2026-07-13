@@ -26,6 +26,7 @@
 
 #include <assert.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/macro.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/percpu.h>
@@ -33,6 +34,7 @@
 #include <arch/irq.h>
 #include <arch/barriers.h>
 
+#include "tricore_internal.h"
 #include "tricore_vectors.h"
 
 /****************************************************************************
@@ -40,28 +42,34 @@
  ****************************************************************************/
 
 #if defined(__TASKING__)
-#define TRICORE_TRAP_CALLTSR(serviceRoutine)                \
+#define TRICORE_TRAP_CALLTSR(serviceroutine, tclass)        \
 {                                                           \
   __asm__(".align 32\n\t");                                 \
   __asm__("svlcx\n\t");                                     \
   __asm__("mov d4, d15\n\t");                               \
-  __asm__("ji %0\n\t" : : "a" (serviceRoutine));            \
-  __asm__("rfe");                                           \
+  __asm__("mov d5, %0\n\t" :: "i" (tclass));                \
+  __asm__("movh.a a2, #@his("#serviceroutine ")\n\t");      \
+  __asm__("lea a2, [a2]@los("#serviceroutine ")\n\t");      \
+  __asm__("ji a2\n\t");                                     \
 }
 
-#define TRICORE_TRAP_CALLCSATSR(serviceRoutine)             \
+#define TRICORE_TRAP_CALLCSATSR(serviceroutine, tclass)     \
 {                                                           \
   __asm__(".align 32\n\t");                                 \
   __asm__("jeq d15, #4, tricore_fcutrap_entry\n\t");        \
   __asm__("svlcx\n\t");                                     \
   __asm__("mov d4, d15\n\t");                               \
-  __asm__("ji %0\n\t" : : "a" (serviceRoutine));            \
-  __asm__("rfe");                                           \
+  __asm__("mov d5, %0\n\t" :: "i" (tclass));                \
+  __asm__("movh.a a2, #@his("#serviceroutine ")\n\t");      \
+  __asm__("lea a2, [a2]@los("#serviceroutine ")\n\t");      \
+  __asm__("ji a2\n\t");                                     \
 }
+
 #define TRICORE_TRAP_TSRHOOK(trap, handler)                 \
 {                                                           \
   __asm__("mov.aa a4, %0" :: "a"(trap) : "a4");             \
   __asm__("jli %0" :: "a"(handler));                        \
+  __asm__("rslcx\n\trfe");                                  \
 }
 
 #define TRICORE_INT_CALL_SCHEDISR(handler)                  \
@@ -69,8 +77,7 @@
   __asm__(".align 32\n\t");                                 \
   __asm__("svlcx\n\t");                                     \
   __asm__("jli %0\n\t" :: "a"(handler));                    \
-  __asm__("rslcx\n\t");                                     \
-  __asm__("rfe");                                           \
+  __asm__("rslcx\n\trfe");                                  \
 }
 
 #define TRICORE_INT_CALL_DIRECTISR(handler)                 \
@@ -88,29 +95,34 @@
   );
 
 #else
-#define TRICORE_TRAP_CALLTSR(serviceRoutine)                \
+#define TRICORE_TRAP_CALLTSR(serviceroutine, tclass)        \
 {                                                           \
   __asm__(".align 5\n\t");                                  \
   __asm__("svlcx\n\t");                                     \
   __asm__("mov %d4, %d15\n\t");                             \
-  __asm__("ji %0\n\t" : : "a" (serviceRoutine));            \
-  __asm__("rfe");                                           \
+  __asm__("mov %%d5, %0\n\t" :: "i" (tclass));              \
+  __asm__("movh.a %a2, hi:"#serviceroutine "\n\t");         \
+  __asm__("lea %a2, [%a2]lo:"#serviceroutine "\n\t");       \
+  __asm__("ji %a2\n\t");                                    \
 }
 
-#define TRICORE_TRAP_CALLCSATSR(serviceRoutine)             \
+#define TRICORE_TRAP_CALLCSATSR(serviceroutine, tclass)     \
 {                                                           \
   __asm__(".align 5\n\t");                                  \
   __asm__("jeq %d15, 4, tricore_fcutrap_entry\n\t");        \
   __asm__("svlcx\n\t");                                     \
   __asm__("mov %d4, %d15\n\t");                             \
-  __asm__("ji %0\n\t" : : "a" (serviceRoutine));            \
-  __asm__("rfe");                                           \
+  __asm__("mov %%d5, %0\n\t" :: "i" (tclass));              \
+  __asm__("movh.a %a2, hi:"#serviceroutine "\n\t");         \
+  __asm__("lea %a2, [%a2]lo:"#serviceroutine "\n\t");       \
+  __asm__("ji %a2\n\t");                                    \
 }
 
 #define TRICORE_TRAP_TSRHOOK(trap, handler)                 \
 {                                                           \
   __asm__("mov.aa %%a4, %0" :: "a"(trap) : "a4");           \
   __asm__("jli %0" :: "a"(handler));                        \
+  __asm__("rslcx\n\trfe");                                  \
 }
 
 #define TRICORE_INT_CALL_SCHEDISR(handler)                  \
@@ -118,8 +130,7 @@
   __asm__(".align 5\n\t");                                  \
   __asm__("svlcx\n\t");                                     \
   __asm__("jli %0\n\t" :: "a"(handler));                    \
-  __asm__("rslcx\n\t");                                     \
-  __asm__("rfe");                                           \
+  __asm__("rslcx\n\trfe");                                  \
 }
 
 #define TRICORE_INT_CALL_DIRECTISR(handler)                 \
@@ -137,7 +148,6 @@
   );
 #endif
 
-#define TRICORE_TRAP_RET()      __asm__("rslcx\n\trfe")
 #define TRICORE_FCU_CSA_MINNUM  20
 
 /****************************************************************************
@@ -154,81 +164,37 @@ DEFINE_PER_CPU_BSS(size_t, g_fcu_csa_num);
  * Private Functions
  ****************************************************************************/
 
-noinstrument_function inline_function
-static void tricore_trap_class(uint32_t tin, uint8_t tclass, void *handler)
+noinstrument_function
+static void tricore_trap_class(struct tricore_trap_s *trap, uintptr_t tpc,
+                               uint8_t tclass, uint8_t tin)
+{
+  trap->taddr  = tpc;
+  trap->tclass = tclass;
+  trap->tid    = tin;
+  trap->tcpu   = up_cpu_index();
+
+  trap->tpstr  = tricore_mfcr(CPU_PSTR);
+  trap->tdstr  = tricore_mfcr(CPU_DSTR);
+  trap->tdatr  = tricore_mfcr(CPU_DATR);
+  trap->tdeadd = tricore_mfcr(CPU_DEADD);
+}
+
+used_code noinstrument_function
+static void tricore_trap_trapcall(uint8_t tin, uint8_t tclass)
 {
   struct tricore_trap_s trap;
 
-  trap.tAddr  = (uintptr_t)__getA11();
-  trap.tClass = tclass;
-  trap.tId    = tin;
-  trap.tCpu   = up_cpu_index();
-
-  TRICORE_TRAP_TSRHOOK(&trap, handler);
+  tricore_trap_class(&trap, (uintptr_t)__getA11(), tclass, tin);
+  TRICORE_TRAP_TSRHOOK(&trap, tricore_trapcall);
 }
 
-noinstrument_function
-static void tricore_trap_memory_management(uint32_t tin)
+used_code noinstrument_function
+static void tricore_trap_svcall(uint8_t tin, uint8_t tclass)
 {
-  tricore_trap_class(tin, TRICORE_TRAP_CLASS_MMU,
-                     (void *)tricore_trapcall);
-  TRICORE_TRAP_RET();
-}
+  struct tricore_trap_s trap;
 
-noinstrument_function
-static void tricore_trap_internal_protection(uint32_t tin)
-{
-  tricore_trap_class(tin, TRICORE_TRAP_CLASS_INTPROT,
-                     (void *)tricore_trapcall);
-  TRICORE_TRAP_RET();
-}
-
-noinstrument_function
-static void tricore_trap_instruction(uint32_t tin)
-{
-  tricore_trap_class(tin, TRICORE_TRAP_CLASS_INSTERR,
-                     (void *)tricore_trapcall);
-  TRICORE_TRAP_RET();
-}
-
-noinstrument_function
-static void tricore_trap_context_management(uint32_t tin)
-{
-  tricore_trap_class(tin, TRICORE_TRAP_CLASS_CTXMGMT,
-                     (void *)tricore_trapcall);
-  TRICORE_TRAP_RET();
-}
-
-noinstrument_function
-static void tricore_trap_bus(uint32_t tin)
-{
-  tricore_trap_class(tin, TRICORE_TRAP_CLASS_BUS,
-                     (void *)tricore_trapcall);
-  TRICORE_TRAP_RET();
-}
-
-noinstrument_function
-static void tricore_trap_assertion(uint32_t tin)
-{
-  tricore_trap_class(tin, TRICORE_TRAP_CLASS_ASSERT,
-                     (void *)tricore_trapcall);
-  TRICORE_TRAP_RET();
-}
-
-noinstrument_function
-static void tricore_trap_system_call(uint32_t tin)
-{
-  tricore_trap_class(tin, TRICORE_TRAP_CLASS_SYSCALL,
-                     (void *)tricore_svcall);
-  TRICORE_TRAP_RET();
-}
-
-noinstrument_function
-static void tricore_trap_non_maskable_interrupt(uint32_t tin)
-{
-  tricore_trap_class(tin, TRICORE_TRAP_CLASS_NMI,
-                     (void *)tricore_trapcall);
-  TRICORE_TRAP_RET();
+  tricore_trap_class(&trap, (uintptr_t)__getA11(), tclass, tin);
+  TRICORE_TRAP_TSRHOOK(&trap, tricore_svcall);
 }
 
 /****************************************************************************
@@ -251,7 +217,7 @@ static void tricore_trap_non_maskable_interrupt(uint32_t tin)
  ****************************************************************************/
 
 used_code noinstrument_function
-static void tricore_fcutrap_recover(uint32_t tin)
+static void tricore_fcutrap_recover(uint8_t tin, uint8_t tclass)
 {
   uintptr_t *csa_iter;
   uintptr_t csa;
@@ -278,7 +244,7 @@ static void tricore_fcutrap_recover(uint32_t tin)
   tricore_mtcr(CPU_FCX, csa + 2);
   UP_ISB();
 
-  tricore_trap_context_management(tin);
+  tricore_trap_trapcall(tin, tclass);
 }
 
 /****************************************************************************
@@ -302,16 +268,19 @@ static void tricore_fcutrap_entry(void)
     "stucx   [a4]0\n\t"
     "stlcx   [a4]64\n\t"
     "mov     d4, d15\n\t"
+    "mov     d5, %0\n\t"
     "j       tricore_fcutrap_recover\n\t"
 #else
-    "movh.a  %a4, hi:g_fcu_csa_base\n\t"
-    "lea     %a4, [%a4]lo:g_fcu_csa_base\n\t"
-    "ld.a    %a4, [%a4]0\n\t"
-    "stucx   [%a4]0\n\t"
-    "stlcx   [%a4]64\n\t"
-    "mov     %d4, %d15\n\t"
+    "movh.a  %%a4, hi:g_fcu_csa_base\n\t"
+    "lea     %%a4, [%%a4]lo:g_fcu_csa_base\n\t"
+    "ld.a    %%a4, [%%a4]0\n\t"
+    "stucx   [%%a4]0\n\t"
+    "stlcx   [%%a4]64\n\t"
+    "mov     %%d4, %%d15\n\t"
+    "mov     %%d5, %0\n\t"
     "j       tricore_fcutrap_recover\n\t"
 #endif
+    :: "i"(TRICORE_TRAP_CLASS_CTXMGMT)
   );
 }
 
@@ -348,14 +317,14 @@ noinstrument_function locate_code(".traptab")
 #endif
 void tricore_traptab(void)
 {
-  TRICORE_TRAP_CALLTSR(tricore_trap_memory_management)
-  TRICORE_TRAP_CALLTSR(tricore_trap_internal_protection)
-  TRICORE_TRAP_CALLTSR(tricore_trap_instruction)
-  TRICORE_TRAP_CALLCSATSR(tricore_trap_context_management)
-  TRICORE_TRAP_CALLTSR(tricore_trap_bus)
-  TRICORE_TRAP_CALLTSR(tricore_trap_assertion)
-  TRICORE_TRAP_CALLTSR(tricore_trap_system_call)
-  TRICORE_TRAP_CALLTSR(tricore_trap_non_maskable_interrupt)
+  TRICORE_TRAP_CALLTSR(tricore_trap_trapcall, TRICORE_TRAP_CLASS_MMU)
+  TRICORE_TRAP_CALLTSR(tricore_trap_trapcall, TRICORE_TRAP_CLASS_INTPROT)
+  TRICORE_TRAP_CALLTSR(tricore_trap_trapcall, TRICORE_TRAP_CLASS_INSTERR)
+  TRICORE_TRAP_CALLCSATSR(tricore_trap_trapcall, TRICORE_TRAP_CLASS_CTXMGMT)
+  TRICORE_TRAP_CALLTSR(tricore_trap_trapcall, TRICORE_TRAP_CLASS_BUS)
+  TRICORE_TRAP_CALLTSR(tricore_trap_trapcall, TRICORE_TRAP_CLASS_ASSERT)
+  TRICORE_TRAP_CALLTSR(tricore_trap_svcall, TRICORE_TRAP_CLASS_SYSCALL)
+  TRICORE_TRAP_CALLTSR(tricore_trap_trapcall, TRICORE_TRAP_CLASS_NMI)
 }
 
 /****************************************************************************
@@ -383,10 +352,8 @@ noinstrument_function locate_code(".inttable")
 #endif
 void tricore_inttab(void)
 {
+  TRICORE_INT_CALL_SCHEDISR(tricore_irq_sched)
 #ifdef CONFIG_ARCH_IRQPRIO
-  TRICORE_INT_CALL_SCHEDISR(tricore_irq_sched)
   TRICORE_INT_CALL_DIRECTISR(tricore_irq_direct)
-#else
-  TRICORE_INT_CALL_SCHEDISR(tricore_irq_sched)
 #endif
 }
