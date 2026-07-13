@@ -69,7 +69,6 @@
 void nx_pthread_exit(FAR void *exit_value)
 {
   FAR struct tcb_s *tcb = this_task();
-  irqstate_t flags;
   sigset_t set;
   int status;
 
@@ -131,13 +130,7 @@ void nx_pthread_exit(FAR void *exit_value)
   timer_deleteall(tcb);
 #endif
 
-  flags = enter_critical_section();
-
   nxtask_exithook(tcb, status);
-
-  /* Enable interrupts to reduce irq latency */
-
-  leave_critical_section(flags);
 
   /* Leave the task group.  Perhaps discarding any un-reaped child
    * status (no zombies here!)

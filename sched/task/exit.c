@@ -57,7 +57,6 @@
 void _exit(int status)
 {
   FAR struct tcb_s *tcb = this_task();
-  irqstate_t flags;
 
   /* Only the lower 8-bits of status are used */
 
@@ -112,13 +111,7 @@ void _exit(int status)
   timer_deleteall(tcb);
 #endif
 
-  flags = enter_critical_section();
-
   nxtask_exithook(tcb, status);
-
-  /* Enable interrupts to reduce irq latency */
-
-  leave_critical_section(flags);
 
   /* Leave the task group.  Perhaps discarding any un-reaped child
    * status (no zombies here!)

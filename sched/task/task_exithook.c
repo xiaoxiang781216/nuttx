@@ -434,6 +434,7 @@ static inline void nxtask_exitwakeup(FAR struct tcb_s *tcb, int status)
 
 void nxtask_exithook(FAR struct tcb_s *tcb, int status)
 {
+  irqstate_t flags = enter_critical_section();
 #ifdef CONFIG_SCHED_DUMP_LEAK
   struct mm_memdump_s dump =
   {
@@ -495,4 +496,6 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
       umm_memdump(&dump);
     }
 #endif
+
+  leave_critical_section(flags);
 }

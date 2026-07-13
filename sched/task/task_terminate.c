@@ -66,6 +66,39 @@ static int terminate_handler(FAR void *cookie)
 }
 #endif
 
+static inline_function int remove_running_task(FAR struct tcb_s *dtcb)
+{
+  int             ret = 0;
+  irqstate_t    flags = enter_critical_section();
+  tstate_t task_state = dtcb->task_state;
+
+#ifdef CONFIG_SMP
+  if (task_state == TSTATE_TASK_RUNNING &&
+      dtcb->cpu != this_cpu())
+    {
+      atomic_t tcb_flags = atomic_or(&dtcb->flags, TCB_FLAG_CPU_LOCKED);
+
+      ret = nxsched_cpu_call_single(dtcb->cpu, terminate_handler,
+                                    (FAR void *)(uintptr_t)dtcb);
+
+      if (ret >= 0)
+        {
+          atomic_set(&dtcb->flags, tcb_flags);
+          dtcb->task_state = task_state;
+        }
+    }
+  else
+#endif
+    {
+      nxsched_remove_readytorun(dtcb);
+      dtcb->task_state = task_state;
+    }
+
+  leave_critical_section(flags);
+
+  return ret;
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -107,8 +140,6 @@ static int terminate_handler(FAR void *cookie)
 int nxtask_terminate(pid_t pid)
 {
   FAR struct tcb_s *dtcb;
-  tstate_t task_state;
-  irqstate_t flags;
   int ret = OK;
 
   /* Find for the TCB associated with matching PID */
@@ -119,7 +150,7 @@ int nxtask_terminate(pid_t pid)
       ret = -ESRCH;
     }
   else if (atomic_or(&dtcb->flags, TCB_FLAG_EXIT_PROCESSING) &
-                           TCB_FLAG_EXIT_PROCESSING)
+           TCB_FLAG_EXIT_PROCESSING)
     {
       nxsched_put_tcb(dtcb);
       ret = -ESRCH;
@@ -135,53 +166,15 @@ int nxtask_terminate(pid_t pid)
 
       nxsched_put_tcb(dtcb);
 
-      flags = enter_critical_section();
-
       /* Remove dtcb from tasklist, let remove_readtorun() do the job */
 
-      task_state = dtcb->task_state;
-#ifdef CONFIG_SMP
-      if (task_state == TSTATE_TASK_RUNNING &&
-          dtcb->cpu != this_cpu())
-        {
-          atomic_t tcb_flags;
-
-          tcb_flags = atomic_or(&dtcb->flags, TCB_FLAG_CPU_LOCKED);
-
-          ret = nxsched_cpu_call_single(dtcb->cpu, terminate_handler,
-                                        (FAR void *)(uintptr_t)dtcb);
-
-          if (ret < 0)
-            {
-              /* Already terminate */
-
-              leave_critical_section(flags);
-            }
-          else
-            {
-              atomic_set(&dtcb->flags, tcb_flags);
-            }
-        }
-      else
-#endif
-        {
-          nxsched_remove_readytorun(dtcb);
-        }
+      ret = remove_running_task(dtcb);
 
       if (ret >= 0)
         {
-          dtcb->task_state = task_state;
-
-          /* Perform common task termination logic.  We need to do
-           * this as early as possible so that higher level clean-up logic
-           * can run in a healthy tasking environment.
-           *
-           * I suppose EXIT_SUCCESS is an appropriate return value???
-           */
+          /* Perform common task termination logic. */
 
           nxtask_exithook(dtcb, EXIT_SUCCESS);
-
-          leave_critical_section(flags);
 
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
           /* Release any timers that the task might hold.  We do this
