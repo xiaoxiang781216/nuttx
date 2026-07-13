@@ -1819,7 +1819,7 @@ static inline_function pid_t nxsched_getpid(void)
    */
 
   rtcb = this_task();
-  if (rtcb->group != NULL)
+  if (rtcb != NULL && rtcb->group != NULL)
     {
       /* Yes.. Return the Process ID */
 
