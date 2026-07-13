@@ -36,6 +36,7 @@
 #include <nuttx/pci/pci_ivshmem.h>
 #include <nuttx/rptun/rptun.h>
 #include <nuttx/rptun/rptun_ivshmem.h>
+#include <nuttx/virtio/virtio-can.h>
 #include <nuttx/virtio/virtio-config.h>
 #include <nuttx/virtio/virtio-rpmb.h>
 #include <nuttx/virtio/virtio-spi.h>
@@ -95,13 +96,20 @@
 #  define RPTUN_IVSHMEM_RPMB      0
 #endif
 
+#ifdef CONFIG_DRIVERS_VHOST_CAN
+#  define RPTUN_IVSHMEM_CAN       1
+#else
+#  define RPTUN_IVSHMEM_CAN       0
+#endif
+
 #define RPTUN_IVSHMEM_VIRTIO_NUM  (RPTUN_IVSHMEM_RNG + \
                                    RPTUN_IVSHMEM_RPMSG + \
                                    RPTUN_IVSHMEM_VSOCK + \
                                    RPTUN_IVSHMEM_NET + \
                                    RPTUN_IVSHMEM_I2C + \
                                    RPTUN_IVSHMEM_SPI + \
-                                   RPTUN_IVSHMEM_RPMB)
+                                   RPTUN_IVSHMEM_RPMB + \
+                                   RPTUN_IVSHMEM_CAN)
 #define RPTUN_IVSHMEM_RSC_NUM     (2 * RPTUN_IVSHMEM_VIRTIO_NUM)
 
 /****************************************************************************
@@ -162,6 +170,15 @@ struct aligned_data(8) rptun_ivshmem_rsc_s
   struct vhost_rpmb_config_s   rpmb_config;
   struct fw_rsc_carveout       rpmb_carveout;
   char                         rpmb_shm[RPTUN_IVSHMEM_SHMEM_SIZE];
+#endif
+#if RPTUN_IVSHMEM_CAN
+  struct fw_rsc_vdev           can;
+  struct fw_rsc_vdev_vring     can_vring0;
+  struct fw_rsc_vdev_vring     can_vring1;
+  struct fw_rsc_vdev_vring     can_vring2;
+  struct vhost_can_config_s    can_config;
+  struct fw_rsc_carveout       can_carveout;
+  char                         can_shm[RPTUN_IVSHMEM_SHMEM_SIZE];
 #endif
 };
 
@@ -272,6 +289,10 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
 #if RPTUN_IVSHMEM_RPMB
       offsetof(struct rptun_ivshmem_rsc_s, rpmb),
       offsetof(struct rptun_ivshmem_rsc_s, rpmb_carveout),
+#endif
+#if RPTUN_IVSHMEM_CAN
+      offsetof(struct rptun_ivshmem_rsc_s, can),
+      offsetof(struct rptun_ivshmem_rsc_s, can_carveout),
 #endif
     },
 
@@ -535,6 +556,56 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
                offsetof(struct rptun_ivshmem_rsc_s, rpmb_shm)),
     },
 #endif
+#if RPTUN_IVSHMEM_CAN
+  .can =
+    {
+      .type          = RSC_VDEV,
+      .id            = VIRTIO_ID_CAN,
+      .notifyid      = RSC_NOTIFY_ID_ANY,
+      .dfeatures     = (1 << VIRTIO_CAN_F_CAN_CLASSIC) |
+                       (1 << VIRTIO_CAN_F_CAN_FD) |
+                       (1 << VIRTIO_CAN_F_RTR_FRAMES),
+      .config_len    = sizeof(struct vhost_can_config_s),
+      .num_of_vrings = 3,
+      .reserved      =
+        {
+          VIRTIO_DEV_DRIVER, 0
+        },
+    },
+  .can_vring0 =
+    {
+      .align    = 16,
+      .num      = 32,
+      .notifyid = RSC_NOTIFY_ID_ANY,
+      .da       = FW_RSC_U32_ADDR_ANY,
+    },
+  .can_vring1 =
+    {
+      .align    = 16,
+      .num      = 32,
+      .notifyid = RSC_NOTIFY_ID_ANY,
+      .da       = FW_RSC_U32_ADDR_ANY,
+    },
+  .can_vring2 =
+    {
+      .align    = 16,
+      .num      = 32,
+      .notifyid = RSC_NOTIFY_ID_ANY,
+      .da       = FW_RSC_U32_ADDR_ANY,
+    },
+  .can_config =
+    {
+      .ifname = "vcan0",
+    },
+  .can_carveout =
+    {
+      .type = RSC_CARVEOUT,
+      .da   = offsetof(struct rptun_ivshmem_rsc_s, can_shm) +
+              offsetof(struct rptun_ivshmem_mem_s, rsc_table),
+      .pa   = (uint32_t)METAL_BAD_PHYS,
+      .len  = sizeof(g_rsc_table.can_shm),
+    },
+#endif
 };
 
 /****************************************************************************
@@ -614,6 +685,10 @@ rptun_ivshmem_get_resource(FAR struct rptun_dev_s *dev)
 #endif
 #ifdef CONFIG_DRIVERS_VHOST_RPMB
           snprintf((FAR char *)rsc->rpmb_carveout.name, RPROC_MAX_NAME_LEN,
+                   "vdev%dbuffer", i++);
+#endif
+#ifdef CONFIG_DRIVERS_VHOST_CAN
+          snprintf((FAR char *)rsc->can_carveout.name, RPROC_MAX_NAME_LEN,
                    "vdev%dbuffer", i++);
 #endif
           UNUSED(rsc);

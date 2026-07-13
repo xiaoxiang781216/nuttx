@@ -37,6 +37,7 @@
 #include <nuttx/vhost/vhost.h>
 
 #include "vhost-blk.h"
+#include "vhost-can.h"
 #include "vhost-i2c.h"
 #include "vhost-rng.h"
 #include "vhost-rpmsg.h"
@@ -612,6 +613,14 @@ void vhost_register_drivers(void)
   if (ret < 0)
     {
       vhosterr("vhost_register_blk_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_VHOST_CAN
+  ret = vhost_register_can_driver();
+  if (ret < 0)
+    {
+      vhosterr("vhost_register_can_driver failed, ret=%d\n", ret);
     }
 #endif
 

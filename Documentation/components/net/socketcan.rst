@@ -100,3 +100,13 @@ side that owns the bus bridges a local SocketCAN interface with
 
 The remote bus follows the client interface: bringing the client up or down
 brings the far interface up or down with it.
+
+VirtIO CAN
+==========
+
+Shares a CAN controller over VirtIO, using the OASIS VirtIO CAN device
+(id 36) defined in ``include/nuttx/virtio/virtio-can.h``.
+
+``CONFIG_DRIVERS_VHOST_CAN`` enables the device side, which bridges the
+virtqueues to the local SocketCAN interface named by ``ifname`` in the
+device config, ``struct vhost_can_config_s``.

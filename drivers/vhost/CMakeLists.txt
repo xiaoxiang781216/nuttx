@@ -29,6 +29,10 @@ if(CONFIG_DRIVERS_VHOST_BLK)
   list(APPEND SRCS vhost-blk.c)
 endif()
 
+if(CONFIG_DRIVERS_VHOST_CAN)
+  list(APPEND SRCS vhost-can.c)
+endif()
+
 if(CONFIG_DRIVERS_VHOST_I2C)
   list(APPEND SRCS vhost-i2c.c)
 endif()
