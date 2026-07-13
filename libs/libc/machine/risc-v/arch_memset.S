@@ -39,7 +39,7 @@ ARCH_LIBCFUN(memset):
 	mv	t0, a0
 
 	li	t1, 2*SZREG
-	bleu	a2, t1, .Lbyte_fill
+	bleu	a2, t1, .Lbyte_tail
 
 	andi	a1, a1, 0xff
 	slli	t1, a1, 8
