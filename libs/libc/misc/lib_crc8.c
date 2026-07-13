@@ -30,6 +30,18 @@
 #include <nuttx/crc8.h>
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* POLY 0xB2 == ((uint8_t) 0x14D) ^ 0xFF, applied bit by bit instead of the
+ * lookup table (see the table generator comment below).
+ */
+
+#ifdef CONFIG_LIBC_CRC8_SLOW
+#  define LIBC_CRC8_POLY 0xb2u
+#endif
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -68,6 +80,37 @@
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_CRC8_SLOW
+uint8_t crc8part(FAR const uint8_t *src, size_t len, uint8_t crc8val)
+{
+  size_t i;
+
+  /* Reproduce the pre/post ^0xff processing of the shared crc8table()
+   * helper so the bitwise result is byte-for-byte identical to the
+   * table-based implementation.
+   */
+
+  crc8val ^= 0xffu;
+  for (i = 0u; i < len; i++)
+    {
+      size_t j;
+      crc8val ^= src[i];
+      for (j = 0u; j < 8; j++)
+        {
+          if (crc8val & 1u)
+            {
+              crc8val = (uint8_t)((crc8val >> 1) ^ LIBC_CRC8_POLY);
+            }
+          else
+            {
+              crc8val = (uint8_t)(crc8val >> 1);
+            }
+        }
+    }
+
+  return crc8val ^ 0xffu;
+}
+#else
 uint8_t crc8part(FAR const uint8_t *src, size_t len, uint8_t crc8val)
 {
   static const uint8_t g_crc8_tab[256] =
@@ -108,6 +151,7 @@ uint8_t crc8part(FAR const uint8_t *src, size_t len, uint8_t crc8val)
 
   return crc8table(g_crc8_tab, src, len, crc8val);
 }
+#endif /* CONFIG_LIBC_CRC8_SLOW */
 
 /****************************************************************************
  * Name: crc8

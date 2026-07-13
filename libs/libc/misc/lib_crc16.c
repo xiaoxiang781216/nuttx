@@ -44,6 +44,18 @@
 #include <nuttx/crc16.h>
 
 /************************************************************************************************
+ * Pre-processor Definitions
+ ************************************************************************************************/
+
+/* CCITT polynomial 0x1021, applied MSB-first bit by bit instead of the
+ * lookup table.
+ */
+
+#ifdef CONFIG_LIBC_CRC16_SLOW
+#  define LIBC_CRC16_POLY 0x1021u
+#endif
+
+/************************************************************************************************
  * Private Data
  ************************************************************************************************/
 
@@ -59,6 +71,31 @@
  *
  ************************************************************************************************/
 
+#ifdef CONFIG_LIBC_CRC16_SLOW
+uint16_t crc16part(FAR const uint8_t *src, size_t len, uint16_t crc16val)
+{
+  size_t i;
+
+  for (i = 0u; i < len; i++)
+    {
+      size_t j;
+      crc16val ^= (uint16_t)((uint16_t)src[i] << 8);
+      for (j = 0u; j < 8; j++)
+        {
+          if (crc16val & 0x8000u)
+            {
+              crc16val = (uint16_t)((crc16val << 1) ^ LIBC_CRC16_POLY);
+            }
+          else
+            {
+              crc16val = (uint16_t)(crc16val << 1);
+            }
+        }
+    }
+
+  return crc16val;
+}
+#else
 uint16_t crc16part(FAR const uint8_t *src, size_t len, uint16_t crc16val)
 {
   size_t i;
@@ -106,6 +143,7 @@ uint16_t crc16part(FAR const uint8_t *src, size_t len, uint16_t crc16val)
 
   return crc16val;
 }
+#endif /* CONFIG_LIBC_CRC16_SLOW */
 
 /************************************************************************************************
  * Name: crc16

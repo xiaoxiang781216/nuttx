@@ -17,6 +17,27 @@ config LIBC_CRC32_SLOW
 	---help---
 		Optional disable the CRC32 lookup table to decrease rodata usage.
 
+config LIBC_CRC16_SLOW
+	bool "CRC16 not use table to decrease rodata size"
+	default n
+	---help---
+		Optional disable the CRC16 lookup table (512 bytes of rodata) and
+		compute the CRC16 bit by bit instead.  This trades speed (about 8x
+		slower) for a smaller footprint.  The result is byte-for-byte
+		identical to the table-based implementation.  Default: n (keep the
+		faster table-based implementation).
+
+config LIBC_CRC8_SLOW
+	bool "CRC8 not use table to decrease rodata size"
+	default n
+	---help---
+		Optional disable the CRC8 lookup table (256 bytes of rodata) and
+		compute the CRC8 bit by bit instead.  This trades speed (about 8x
+		slower) for a smaller footprint.  The result is byte-for-byte
+		identical to the table-based implementation, so previously stored
+		checksums remain valid.  Default: n (keep the faster table-based
+		implementation).
+
 config LIBC_KBDCODEC
 	bool "Keyboard CODEC"
 	default n
