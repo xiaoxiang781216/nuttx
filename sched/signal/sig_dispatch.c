@@ -450,10 +450,7 @@ static void nxsig_wakeup_task(FAR struct tcb_s *stcb,
 
   sigemptyset(&stcb->sigwaitmask);
 
-  if (WDOG_ISACTIVE(&stcb->waitdog))
-    {
-      wd_cancel(&stcb->waitdog);
-    }
+  tcb_timer_cancel(stcb);
 
   /* Remove the task from waiting list */
 

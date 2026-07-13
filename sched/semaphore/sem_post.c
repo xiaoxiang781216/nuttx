@@ -220,7 +220,7 @@ int nxsem_post_slow(FAR sem_t *sem)
 
               /* Stop the watchdog timer */
 
-              wd_cancel(&stcb->waitdog);
+              tcb_timer_cancel(stcb);
 
               /* Indicate that the wait is over. */
 

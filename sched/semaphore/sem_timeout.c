@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/nuttx.h>
 
 #include <errno.h>
 
@@ -58,27 +59,22 @@
  *
  ****************************************************************************/
 
-void nxsem_timeout(wdparm_t arg)
+uint64_t nxsem_timeout(FAR const hrtimer_t *timer, uint64_t expired)
 {
-  FAR struct tcb_s *wtcb = (FAR struct tcb_s *)(uintptr_t)arg;
-  irqstate_t flags;
-
-  /* Disable interrupts to avoid race conditions */
-
-  flags = enter_critical_section();
+  FAR struct tcb_s *wtcb  = container_of(timer, struct tcb_s, waittimer);
+  irqstate_t        flags = enter_critical_section();
 
   /* It is also possible that an interrupt/context switch beat us to the
    * punch and already changed the task's state.
    */
 
-  if (wtcb->task_state == TSTATE_WAIT_SEM)
+  if (expired == timer->expired && wtcb->task_state == TSTATE_WAIT_SEM)
     {
       /* Cancel the semaphore wait */
 
       nxsem_wait_irq(wtcb, ETIMEDOUT);
     }
 
-  /* Interrupts may now be enabled. */
-
   leave_critical_section(flags);
+  return 0;
 }

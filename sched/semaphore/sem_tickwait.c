@@ -84,7 +84,9 @@ int nxsem_tickwait_slow(FAR sem_t *sem, clock_t delay)
 
       flags = enter_critical_section();
 
-      wd_start(&rtcb->waitdog, delay, nxsem_timeout, (uintptr_t)rtcb);
+      /* Start the timer */
+
+      tcb_timer_start(rtcb, delay, nxsem_timeout);
 
       /* Now perform the blocking wait */
 
@@ -94,9 +96,9 @@ int nxsem_tickwait_slow(FAR sem_t *sem, clock_t delay)
 
       leave_critical_section(flags);
 
-      /* Stop the watchdog timer */
+      /* Stop the timer */
 
-      wd_cancel(&rtcb->waitdog);
+      tcb_timer_cancel(rtcb);
     }
 
   return ret;

@@ -34,6 +34,7 @@
 #include <sched.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/clock.h>
 #include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
@@ -126,6 +127,49 @@ void restore_critical_section(uint16_t count);
 #    define restore_critical_section(count)
 #  endif
 #endif
+
+#define tcb_timer_start(tcb, delay, func) \
+  do \
+    { \
+      DEBUGASSERT((uint64_t)delay <= HRTIMER_MAX_DELAY / NSEC_PER_TICK); \
+      hrtimer_start(&(tcb)->waittimer, func, TICK2NSEC((uint64_t)(delay)), \
+                    HRTIMER_MODE_REL); \
+    } \
+  while(0)
+
+#define tcb_timer_start_absnsec(tcb, absnsec, func) \
+  hrtimer_start(&(tcb)->waittimer, func, absnsec, HRTIMER_MODE_ABS)
+
+#define tcb_timer_start_abstime(tcb, clockid, abstime, func) \
+  do \
+    { \
+      if ((clockid) == CLOCK_REALTIME) \
+        { \
+          struct timespec ts; \
+          clock_realtime2abstime(abstime, &ts); \
+          tcb_timer_start_absnsec(tcb, clock_time2nsec(&ts), func); \
+        } \
+      else \
+        { \
+          DEBUGASSERT((abstime)->tv_sec >= 0 && \
+                      (uint64_t)(abstime)->tv_sec <= \
+                      HRTIMER_MAX_DELAY / NSEC_PER_SEC - 1u); \
+          tcb_timer_start_absnsec(tcb, clock_time2nsec(abstime), func); \
+        } \
+    } \
+  while(0)
+
+/* The tcb_timer_cancel assumes the 64-bit nanoseconds never wraparound. */
+
+#define tcb_timer_cancel(tcb) \
+  do \
+    { \
+      hrtimer_cancel(&(tcb)->waittimer); \
+      (tcb)->waittimer.expired = 0u; \
+    } \
+  while (0)
+
+#define tcb_timer_cancel_sync(tcb) hrtimer_cancel_sync(&(tcb)->waittimer)
 
 /****************************************************************************
  * Public Type Definitions

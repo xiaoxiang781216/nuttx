@@ -745,7 +745,7 @@ struct tcb_s
   FAR spinlock_debug_t *wait_spinlock;
 #endif
 
-  struct wdog_s waitdog;                 /* All timed waits use this timer  */
+  struct hrtimer_s waittimer;            /* High-res timer for timed waits. */
 
   /* Stack-Related Fields ***************************************************/
 

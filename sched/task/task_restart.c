@@ -101,6 +101,10 @@ static int restart_handler(FAR void *cookie)
 
 static void nxtask_reset_task(FAR struct tcb_s *tcb, bool remove)
 {
+  /* The task is being restarted. Cancel in pending timeout events. */
+
+  tcb_timer_cancel(tcb);
+
   /* Try to recover from any bad states */
 
   nxtask_recover(tcb);

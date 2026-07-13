@@ -29,7 +29,6 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/wdog.h>
 #include <nuttx/sched.h>
 
 #include "semaphore/semaphore.h"
@@ -69,10 +68,6 @@ void nxtask_recover(FAR struct tcb_s *tcb)
 
   pthread_mutex_inconsistent(nxsched_get_tls(tcb));
 #endif
-
-  /* The task is being deleted.  Cancel in pending timeout events. */
-
-  wd_cancel(&tcb->waitdog);
 
   /* If the thread holds semaphore counts or is waiting for a semaphore
    *  count, then release the counts.

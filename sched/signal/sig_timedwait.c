@@ -26,6 +26,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
+#include <nuttx/nuttx.h>
 
 #include <stdint.h>
 #include <string.h>
@@ -75,11 +76,8 @@
  *
  ****************************************************************************/
 
-static void nxsig_timeout(wdparm_t arg)
+static inline_function void nxsig_timeout_handler(FAR struct tcb_s *wtcb)
 {
-  FAR struct tcb_s *wtcb = (FAR struct tcb_s *)(uintptr_t)arg;
-  irqstate_t flags;
-
   /* We must be in a critical section in order to call up_switch_context()
    * below.  If we are running on a single CPU architecture,  And there is
    * no irq nested support, then we know interrupts a disabled an there is
@@ -91,43 +89,50 @@ static void nxsig_timeout(wdparm_t arg)
    * TCB that we are manipulating.
    */
 
-  flags = enter_critical_section();
+  FAR struct tcb_s *rtcb = this_task();
+
+  if (wtcb->sigunbinfo != NULL)
+    {
+      wtcb->sigunbinfo->si_signo           = SIG_WAIT_TIMEOUT;
+      wtcb->sigunbinfo->si_code            = SI_TIMER;
+      wtcb->sigunbinfo->si_errno           = ETIMEDOUT;
+      wtcb->sigunbinfo->si_value.sival_int = 0;
+#ifdef CONFIG_SCHED_HAVE_PARENT
+      wtcb->sigunbinfo->si_pid             = 0;  /* Not applicable */
+      wtcb->sigunbinfo->si_status          = OK;
+#endif
+    }
+
+  /* Remove the task from waiting list */
+
+  dq_rem((FAR dq_entry_t *)wtcb, list_waitingforsignal());
+
+  /* Add the task to ready-to-run task list, and
+   * perform the context switch if one is needed
+   */
+
+  if (nxsched_add_readytorun(wtcb))
+    {
+      nxsched_switch(this_task(), rtcb);
+    }
+}
+
+static uint64_t nxsig_timeout(FAR const hrtimer_t *timer, uint64_t expired)
+{
+  FAR struct tcb_s *wtcb  = container_of(timer, struct tcb_s, waittimer);
+  irqstate_t        flags = enter_critical_section();
 
   /* There may be a race condition -- make sure the task is
    * still waiting for a signal
    */
 
-  if (wtcb->task_state == TSTATE_WAIT_SIG)
+  if (expired == timer->expired && wtcb->task_state == TSTATE_WAIT_SIG)
     {
-      FAR struct tcb_s *rtcb = this_task();
-
-      if (wtcb->sigunbinfo != NULL)
-        {
-          wtcb->sigunbinfo->si_signo           = SIG_WAIT_TIMEOUT;
-          wtcb->sigunbinfo->si_code            = SI_TIMER;
-          wtcb->sigunbinfo->si_errno           = ETIMEDOUT;
-          wtcb->sigunbinfo->si_value.sival_int = 0;
-#ifdef CONFIG_SCHED_HAVE_PARENT
-          wtcb->sigunbinfo->si_pid             = 0;  /* Not applicable */
-          wtcb->sigunbinfo->si_status          = OK;
-#endif
-        }
-
-      /* Remove the task from waiting list */
-
-      dq_rem((FAR dq_entry_t *)wtcb, list_waitingforsignal());
-
-      /* Add the task to ready-to-run task list, and
-       * perform the context switch if one is needed
-       */
-
-      if (nxsched_add_readytorun(wtcb))
-        {
-          nxsched_switch(this_task(), rtcb);
-        }
+      nxsig_timeout_handler(wtcb);
     }
 
   leave_critical_section(flags);
+  return 0;
 }
 
 /****************************************************************************
@@ -252,8 +257,8 @@ int nxsig_clockwait(int clockid, int flags,
 {
   FAR struct tcb_s *rtcb = this_task();
   irqstate_t iflags;
-  clock_t expect = 0u;
-  clock_t stop   = 0u;
+  uint64_t expect = 0u;
+  uint64_t stop   = 0u;
   int ret = OK;
 
   if (rqtp && (!clock_timespec_validate(rqtp) ||
@@ -301,23 +306,16 @@ int nxsig_clockwait(int clockid, int flags,
 
       if (rqtp)
         {
-          /* Start the watchdog timer */
+          /* Start the timer */
 
           if ((flags & TIMER_ABSTIME) == 0)
             {
-              expect = clock_delay2abstick(clock_time2ticks(rqtp));
-              wd_start_abstick(&rtcb->waitdog, expect,
-                               nxsig_timeout, (uintptr_t)rtcb);
-            }
-          else if (clockid == CLOCK_REALTIME)
-            {
-              wd_start_realtime(&rtcb->waitdog, rqtp,
-                                nxsig_timeout, (uintptr_t)rtcb);
+              expect = clock_time2nsec(rqtp) + clock_systime_nsec();
+              tcb_timer_start_absnsec(rtcb, expect, nxsig_timeout);
             }
           else
             {
-              wd_start_abstime(&rtcb->waitdog, rqtp,
-                               nxsig_timeout, (uintptr_t)rtcb);
+              tcb_timer_start_abstime(rtcb, clockid, rqtp, nxsig_timeout);
             }
         }
 
@@ -348,19 +346,19 @@ int nxsig_clockwait(int clockid, int flags,
 
       ret = rtcb->errcode != OK ? -rtcb->errcode : OK;
 
-      /* We no longer need the watchdog */
+      leave_critical_section(iflags);
+
+      /* We no longer need the timer */
 
       if (rqtp)
         {
-          wd_cancel(&rtcb->waitdog);
-          stop = clock_systime_ticks();
-        }
+          tcb_timer_cancel(rtcb);
+          stop = clock_systime_nsec();
 
-      leave_critical_section(iflags);
-
-      if (rqtp && rmtp && expect)
-        {
-          clock_ticks2time(rmtp, expect > stop ? expect - stop : 0u);
+          if (rmtp && expect)
+            {
+              clock_nsec2time(rmtp, expect > stop ? expect - stop : 0u);
+            }
         }
     }
 

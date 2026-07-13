@@ -507,8 +507,8 @@ bool clock_timespec_validate(FAR const struct timespec *ts)
  *
  ****************************************************************************/
 
-int clock_realtime2absticks(FAR const struct timespec *reltime,
-                            FAR clock_t *absticks);
+int clock_realtime2abstime(FAR const struct timespec *reltime,
+                           FAR struct timespec *ts);
 
 /****************************************************************************
  * Name: clock_compare

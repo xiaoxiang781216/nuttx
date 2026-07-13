@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/nuttx.h>
 
 #include <sys/types.h>
 #include <stdbool.h>
@@ -39,6 +40,7 @@
 #include <nuttx/mqueue.h>
 #include <nuttx/cancelpt.h>
 
+#include "sched/sched.h"
 #include "mqueue/mqueue.h"
 
 /****************************************************************************
@@ -105,6 +107,206 @@ static int nxmq_verify_receive(FAR struct file *mq,
 #endif
 
 /****************************************************************************
+ * Name: nxmq_rcvtimeout
+ *
+ * Description:
+ *   This function is called if the timeout elapses before the message queue
+ *   becomes non-empty.
+ *
+ * Input Parameters:
+ *   arg - the argument provided when the timeout was configured.
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *
+ ****************************************************************************/
+
+static uint64_t nxmq_rcvtimeout(FAR const hrtimer_t *timer, uint64_t expired)
+{
+  FAR struct tcb_s *wtcb  = container_of(timer, struct tcb_s, waittimer);
+  irqstate_t        flags = enter_critical_section();
+
+  /* It is also possible that an interrupt/context switch beat us to the
+   * punch and already changed the task's state.
+   */
+
+  if (expired == timer->expired &&
+      wtcb->task_state == TSTATE_WAIT_MQNOTEMPTY)
+    {
+      /* Restart with task with a timeout error */
+
+      nxmq_wait_irq(wtcb, ETIMEDOUT);
+    }
+
+  leave_critical_section(flags);
+  return 0;
+}
+
+/****************************************************************************
+ * Name: nxmq_wait_receive
+ *
+ * Description:
+ *   This is internal, common logic shared by both [nx]mq_receive and
+ *   [nx]mq_timedreceive.  This function waits for a message to be received
+ *   on the specified message queue, removes the message from the queue, and
+ *   returns it.
+ *
+ * Input Parameters:
+ *   msgq   - Message queue descriptor
+ *   rcvmsg - The caller-provided location in which to return the newly
+ *            received message.
+ *   abstime - If non-NULL, this is the absolute time to wait until a
+ *             message is received.
+ *
+ * Returned Value:
+ *   On success, zero (OK) is returned.  A negated errno value is returned
+ *   on any failure.
+ *
+ * Assumptions:
+ * - The caller has provided all validity checking of the input parameters
+ *   using nxmq_verify_receive.
+ * - Interrupts should be disabled throughout this call.  This is necessary
+ *   because messages can be sent from interrupt level processing.
+ * - The caller is responsible for starting and cancelling the receive
+ *   timeout timer.
+ *
+ ****************************************************************************/
+
+static inline_function int
+nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
+                  FAR struct mqueue_msg_s **rcvmsg)
+{
+  FAR struct mqueue_msg_s *newmsg;
+  FAR struct tcb_s *rtcb = this_task();
+
+#ifdef CONFIG_CANCELLATION_POINTS
+  /* nxmq_wait_receive() is not a cancellation point, but it may be called
+   * from mq_receive() or mq_timedreceive() which are cancellation point.
+   */
+
+  if (check_cancellation_point())
+    {
+      /* If there is a pending cancellation, then do not perform
+       * the wait.  Exit now with ECANCELED.
+       */
+
+      return -ECANCELED;
+    }
+#endif
+
+  /* Get the message from the head of the queue */
+
+  while ((newmsg = (FAR struct mqueue_msg_s *)
+                   list_remove_head(&msgq->msglist)) == NULL)
+    {
+      msgq->cmn.nwaitnotempty++;
+
+      /* Initialize the 'errcode" used to communication wake-up error
+       * conditions.
+       */
+
+      rtcb->waitobj = msgq;
+      rtcb->errcode = OK;
+
+      /* Remove the tcb task from the running list. */
+
+      nxsched_remove_self(rtcb);
+
+      /* Add the task to the specified blocked task list */
+
+      rtcb->task_state = TSTATE_WAIT_MQNOTEMPTY;
+      nxsched_add_prioritized(rtcb, MQ_WNELIST(msgq->cmn));
+
+      /* Now, perform the context switch */
+
+      nxsched_switch(this_task(), rtcb);
+
+      /* When we resume at this point, either (1) the message queue
+       * is no longer empty, or (2) the wait has been interrupted by
+       * a signal.  We can detect the latter case be examining the
+       * errno value (should be either EINTR or ETIMEDOUT).
+       */
+
+      if (rtcb->errcode != OK)
+        {
+          break;
+        }
+    }
+
+  *rcvmsg = newmsg;
+  return -rtcb->errcode;
+}
+
+/****************************************************************************
+ * Name: nxmq_notify_receive
+ *
+ * Description:
+ *   This is internal, common logic shared by both [nx]mq_receive and
+ *   [nx]mq_timedreceive.
+ *   This function notifies any tasks that are waiting for the message queue
+ *   to become non-empty. This function is called after a message is
+ *   received from the message queue.
+ *
+ * Input Parameters:
+ *   msgq    - Message queue descriptor
+ *
+ * Returned Value:
+ *   Returns the length of the received message.  This function does not
+ *   fail.
+ *
+ * Assumptions:
+ * - Pre-emption should be disabled throughout this call.
+ *
+ ****************************************************************************/
+
+static inline_function void
+nxmq_notify_receive(FAR struct mqueue_inode_s *msgq)
+{
+  FAR struct tcb_s *btcb;
+
+  /* Check if any tasks are waiting for the MQ not full event. */
+
+  if (msgq->cmn.nwaitnotfull > 0)
+    {
+      FAR struct tcb_s *rtcb = this_task();
+
+      /* Find the highest priority task that is waiting for
+       * this queue to be not-full in waitfornotfull list.
+       * This must be performed in a critical section because
+       * messages can be sent from interrupt handlers.
+       */
+
+      btcb = (FAR struct tcb_s *)dq_remfirst(MQ_WNFLIST(msgq->cmn));
+
+      /* If one was found, unblock it.  NOTE:  There is a race
+       * condition here:  the queue might be full again by the
+       * time the task is unblocked
+       */
+
+      DEBUGASSERT(btcb != NULL);
+
+      tcb_timer_cancel(btcb);
+
+      msgq->cmn.nwaitnotfull--;
+
+      /* Indicate that the wait is over. */
+
+      btcb->waitobj = NULL;
+
+      /* Add the task to ready-to-run task list and
+       * perform the context switch if one is needed
+       */
+
+      if (nxsched_add_readytorun(btcb))
+        {
+          nxsched_switch(this_task(), rtcb);
+        }
+    }
+}
+
+/****************************************************************************
  * Name: file_mq_timedreceive_internal
  *
  * Description:
@@ -142,6 +344,7 @@ ssize_t file_mq_timedreceive_internal(FAR struct file *mq, FAR char *msg,
 {
   FAR struct mqueue_inode_s *msgq;
   FAR struct mqueue_msg_s *mqmsg;
+  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
   ssize_t ret = 0;
 
@@ -192,7 +395,20 @@ ssize_t file_mq_timedreceive_internal(FAR struct file *mq, FAR char *msg,
 
       /* Wait & get the message from the message queue */
 
-      ret = nxmq_wait_receive(msgq, &mqmsg, abstime, ticks);
+      if (abstime)
+        {
+          tcb_timer_start_abstime(rtcb, CLOCK_REALTIME, abstime,
+                                  nxmq_rcvtimeout);
+        }
+      else if (ticks >= 0)
+        {
+          tcb_timer_start(rtcb, ticks, nxmq_rcvtimeout);
+        }
+
+      ret = nxmq_wait_receive(msgq, &mqmsg);
+
+      tcb_timer_cancel(rtcb);
+
       if (ret < 0)
         {
           leave_critical_section(flags);

@@ -252,10 +252,7 @@ ssize_t msgrcv(int msqid, FAR void *msgp, size_t msgsz, long msgtyp,
 
       DEBUGASSERT(btcb != NULL);
 
-      if (WDOG_ISACTIVE(&btcb->waitdog))
-        {
-          wd_cancel(&btcb->waitdog);
-        }
+      tcb_timer_cancel(btcb);
 
       msgq->cmn.nwaitnotfull--;
 

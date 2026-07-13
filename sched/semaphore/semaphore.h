@@ -65,7 +65,7 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode);
 
 /* Handle semaphore timer expiration */
 
-void nxsem_timeout(wdparm_t arg);
+uint64_t nxsem_timeout(FAR const hrtimer_t *timer, uint64_t expired);
 
 /* Recover semaphore resources with a task or thread is destroyed */
 

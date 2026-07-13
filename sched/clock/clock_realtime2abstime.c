@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/clock/clock_realtime2absticks.c
+ * sched/clock/clock_realtime2abstime.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -36,7 +36,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: clock_realtime2absticks
+ * Name: clock_realtime2abstime
  *
  * Description:
  *   Convert real time to monotonic ticks.
@@ -54,18 +54,19 @@
  *
  ****************************************************************************/
 
-int clock_realtime2absticks(FAR const struct timespec *reltime,
-                            FAR clock_t *absticks)
+int clock_realtime2abstime(FAR const struct timespec *realtime,
+                           FAR struct timespec *ts)
 {
-#ifndef CONFIG_CLOCK_TIMEKEEPING
-  struct timespec mono;
+#ifdef CONFIG_CLOCK_TIMEKEEPING
+  struct timespec now;
 
-  clock_timespec_subtract(reltime, &g_basetime, &mono);
+  nxclock_gettime(CLOCK_REALTIME, &now);
+  clock_timespec_subtract(realtime, &now, ts);
 
-  *absticks = clock_time2ticks(&mono);
-
-  return OK;
+  clock_systime_timespec(&now);
+  clock_timespec_add(ts, &now, ts);
 #else
-  return -ENOSYS;
+  clock_timespec_subtract(realtime, &g_basetime, ts);
 #endif
+  return OK;
 }

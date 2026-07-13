@@ -46,7 +46,7 @@
  ****************************************************************************/
 
 int nxsem_clockwait_slow(FAR sem_t *sem, clockid_t clockid,
-                    FAR const struct timespec *abstime)
+                         FAR const struct timespec *abstime)
 {
   FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
@@ -67,16 +67,7 @@ int nxsem_clockwait_slow(FAR sem_t *sem, clockid_t clockid,
     {
       flags = enter_critical_section();
 
-      if (clockid == CLOCK_REALTIME)
-        {
-          wd_start_realtime(&rtcb->waitdog, abstime,
-                            nxsem_timeout, (uintptr_t)rtcb);
-        }
-      else
-        {
-          wd_start_abstime(&rtcb->waitdog, abstime,
-                            nxsem_timeout, (uintptr_t)rtcb);
-        }
+      tcb_timer_start_abstime(rtcb, clockid, abstime, nxsem_timeout);
 
       /* Now perform the blocking wait.  If nxsem_wait() fails, the
        * negated errno value will be returned below.
@@ -86,9 +77,9 @@ int nxsem_clockwait_slow(FAR sem_t *sem, clockid_t clockid,
 
       leave_critical_section(flags);
 
-      /* Stop the watchdog timer */
+      /* Stop the timer */
 
-      wd_cancel(&rtcb->waitdog);
+      tcb_timer_cancel(rtcb);
     }
 
   return ret;

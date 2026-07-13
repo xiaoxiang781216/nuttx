@@ -456,6 +456,10 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
   timer_deleteall(tcb);
 #endif
 
+  /* The task is being deleted. Cancel in pending timeout events. */
+
+  tcb_timer_cancel_sync(tcb);
+
   flags = enter_critical_section();
 
   /* Under certain conditions, nxtask_exithook() can be called multiple
