@@ -452,6 +452,18 @@ config ARCH_RV_ISA_ZIHINTPAUSE
 		instruction as a hint in spin-wait loops to reduce power
 		consumption and release hardware resources.
 
+config ARCH_RV_ISA_ZIHINTNTL
+	bool "Zihintntl non-temporal locality hint extension"
+	default n
+	---help---
+		Enable RISC-V Zihintntl extension. Provides the ntl.* (ntl.p1,
+		ntl.pall, ntl.s1, ntl.all) non-temporal locality hints, emitted
+		before a memory access to indicate the access has no temporal
+		locality at the given (or all) cache level. Used by the
+		non-temporal memcpy/memset variants (RISCV_MEMCPY_NT /
+		RISCV_MEMSET_NT) to avoid polluting caches with bulk streaming
+		data. On hardware without Zihintntl the hints decode as no-ops.
+
 config ARCH_RV_ISA_V
 	bool
 	default n
