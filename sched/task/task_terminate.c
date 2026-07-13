@@ -176,27 +176,6 @@ int nxtask_terminate(pid_t pid)
 
           nxtask_exithook(dtcb, EXIT_SUCCESS);
 
-#ifndef CONFIG_DISABLE_POSIX_TIMERS
-          /* Release any timers that the task might hold.  We do this
-           * before release the PID because it may still be trying to
-           * deliver signals.
-           */
-
-          timer_deleteall(dtcb);
-#endif
-
-          /* Leave the task group.  Perhaps discarding any un-reaped child
-           * status (no zombies here!)
-           */
-
-          group_leave(dtcb);
-
-          /* Release the task's PID sequence should align with
-           * nx_pthread_exit, with in critical_section and after exit hook.
-           */
-
-          nxsched_release_pid(pid);
-
           /* Since all tasks pass through this function as the final step
            * in their exit sequence, this is an appropriate place to inform
            * any instrumentation layer that the task no longer exists.

@@ -47,6 +47,7 @@
 #include "group/group.h"
 #include "signal/signal.h"
 #include "task/task.h"
+#include "timer/timer.h"
 
 /****************************************************************************
  * Private Functions
@@ -434,7 +435,7 @@ static inline void nxtask_exitwakeup(FAR struct tcb_s *tcb, int status)
 
 void nxtask_exithook(FAR struct tcb_s *tcb, int status)
 {
-  irqstate_t flags = enter_critical_section();
+  irqstate_t flags;
 #ifdef CONFIG_SCHED_DUMP_LEAK
   struct mm_memdump_s dump =
   {
@@ -445,6 +446,17 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
 #  endif
   };
 #endif
+
+#ifndef CONFIG_DISABLE_POSIX_TIMERS
+  /* Release any timers that the task might hold.  We do this
+   * before release the PID because it may still be trying to
+   * deliver signals.
+   */
+
+  timer_deleteall(tcb);
+#endif
+
+  flags = enter_critical_section();
 
   /* Under certain conditions, nxtask_exithook() can be called multiple
    * times.  A bit in the TCB was set the first time this function was
@@ -498,4 +510,16 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
 #endif
 
   leave_critical_section(flags);
+
+  /* Leave the task group.  Perhaps discarding any un-reaped child
+   * status (no zombies here!)
+   */
+
+  group_leave(tcb);
+
+  /* Release the task's PID sequence should align with
+   * nx_pthread_exit, with in critical_section and after exit hook.
+   */
+
+  nxsched_release_pid(tcb->pid);
 }

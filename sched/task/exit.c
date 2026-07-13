@@ -37,7 +37,6 @@
 #include "task/task.h"
 #include "group/group.h"
 #include "sched/sched.h"
-#include "timer/timer.h"
 
 /****************************************************************************
  * Public Functions
@@ -102,29 +101,7 @@ void _exit(int status)
         }
     }
 
-#ifndef CONFIG_DISABLE_POSIX_TIMERS
-  /* Release any timers that the task might hold.  We do this
-   * before release the PID because it may still be trying to
-   * deliver signals.
-   */
-
-  timer_deleteall(tcb);
-#endif
-
   nxtask_exithook(tcb, status);
-
-  /* Leave the task group.  Perhaps discarding any un-reaped child
-   * status (no zombies here!)
-   */
-
-  group_leave(tcb);
-
-  /* In nxtask_exithook, nxmutex_lock is used, and nxmutex_lock depends
-   * on nxsched_get_tcb. Therefore, we move nxsched_release_pid
-   * to this position.
-   */
-
-  nxsched_release_pid(tcb->pid);
 
   enter_critical_section();
 
