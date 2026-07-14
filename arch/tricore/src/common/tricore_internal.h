@@ -206,7 +206,7 @@ void tricore_sigdeliver(void);
 uintptr_t *tricore_alloc_csa(struct tcb_s *tcb, uintptr_t pc, uintptr_t sp,
                              uintptr_t psw, bool irqsave);
 void tricore_reclaim_csa(uintptr_t pcxi);
-void tricore_region_csainit(void *regionbase, ssize_t nbytes);
+void tricore_region_csainit(void *regionbase, size_t nbytes);
 
 /* Low level serial output **************************************************/
 

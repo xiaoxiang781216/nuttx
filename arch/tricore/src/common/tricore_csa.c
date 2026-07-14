@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/tls.h>
 #include <nuttx/spinlock.h>
 #include <arch/barriers.h>
@@ -112,28 +113,20 @@ void tricore_reclaim_csa(uintptr_t pcxi)
  * Name: tricore_region_csainit
  ****************************************************************************/
 
-void tricore_region_csainit(void *regionbase, ssize_t nbytes)
+void tricore_region_csainit(void *regionbase, size_t nbytes)
 {
-  uintptr_t *curcsa_ptr;
-  uintptr_t *nextcsa_ptr;
-  uintptr_t  regionend;
-  size_t     nwords;
+  uintptr_t *cur;
+  uintptr_t *next;
+  uintptr_t *end;
 
-  if (nbytes > 0)
+  cur = (uintptr_t *)ALIGN_UP((uintptr_t)regionbase, TC_CONTEXT_SIZE);
+  end = (uintptr_t *)ALIGN_DOWN((uintptr_t)regionbase + nbytes,
+                                TC_CONTEXT_SIZE);
+
+  for (next = cur + TC_CONTEXT_REGS; next < end;
+       next += TC_CONTEXT_REGS)
     {
-      regionend = (uintptr_t)regionbase + nbytes;
-      curcsa_ptr = (uintptr_t *)STACK_ALIGN_UP((uintptr_t)regionbase);
-      regionend = STACK_ALIGN_DOWN(regionend);
-      nwords = (regionend - (uintptr_t)curcsa_ptr) >> 2;
-
-      nextcsa_ptr = curcsa_ptr;
-      while (nwords-- > 0)
-        {
-          if (TC_CONTEXT_ALIGNED(++nextcsa_ptr))
-            {
-              curcsa_ptr[0] = tricore_addr2csa(nextcsa_ptr);
-              curcsa_ptr = nextcsa_ptr;
-            }
-        }
+      cur[REG_UPCXI] = tricore_addr2csa(next);
+      cur = next;
     }
 }
