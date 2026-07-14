@@ -36,6 +36,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/lib/lib.h>
 #include <nuttx/mutex.h>
 #include <nuttx/reboot_notifier.h>
 
@@ -759,8 +760,8 @@ static int fatfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 static int fatfs_stat_i(FAR struct fatfs_mountpt_s *fs,
                         FAR const char *path, FAR struct stat *buf)
 {
+  FAR FILINFO *fno;
   struct tm gm;
-  FILINFO fno;
   int ret;
 
   memset(buf, 0, sizeof(struct stat));
@@ -771,13 +772,20 @@ static int fatfs_stat_i(FAR struct fatfs_mountpt_s *fs,
       return OK;
     }
 
-  ret = fatfs_convert_result(f_stat(path, &fno));
+  fno = lib_get_tempbuffer(sizeof(FILINFO));
+  if (fno == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  ret = fatfs_convert_result(f_stat(path, fno));
   if (ret < 0)
     {
+      lib_put_tempbuffer(fno);
       return ret;
     }
 
-  if (fno.fattrib & AM_DIR)
+  if (fno->fattrib & AM_DIR)
     {
       buf->st_mode |= S_IFDIR;
     }
@@ -786,15 +794,15 @@ static int fatfs_stat_i(FAR struct fatfs_mountpt_s *fs,
       buf->st_mode |= S_IFREG;
     }
 
-  buf->st_size  = fno.fsize;
+  buf->st_size  = fno->fsize;
 
   memset(&gm, 0, sizeof(gm));
-  gm.tm_year      = 80 + (fno.fdate >> 9);
-  gm.tm_mon       = ((fno.fdate >> 5) & 0xf) - 1;
-  gm.tm_mday      = fno.fdate & 0x1f;
-  gm.tm_hour      = fno.ftime >> 11;
-  gm.tm_min       = (fno.ftime >> 5) & 0x3f;
-  gm.tm_sec       = (fno.ftime & 0x1f) << 1;
+  gm.tm_year      = 80 + (fno->fdate >> 9);
+  gm.tm_mon       = ((fno->fdate >> 5) & 0xf) - 1;
+  gm.tm_mday      = fno->fdate & 0x1f;
+  gm.tm_hour      = fno->ftime >> 11;
+  gm.tm_min       = (fno->ftime >> 5) & 0x3f;
+  gm.tm_sec       = (fno->ftime & 0x1f) << 1;
   buf->st_mtime   = timegm(&gm);
   buf->st_atime   = buf->st_mtime;
   buf->st_ctime   = buf->st_mtime;
@@ -802,6 +810,7 @@ static int fatfs_stat_i(FAR struct fatfs_mountpt_s *fs,
   buf->st_blocks  = (buf->st_size + buf->st_blksize - 1) /
                      buf->st_blksize;
 
+  lib_put_tempbuffer(fno);
   return ret;
 }
 
