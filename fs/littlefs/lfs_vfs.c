@@ -66,6 +66,7 @@ struct littlefs_dir_s
 struct littlefs_file_s
 {
   struct lfs_file       file;
+  char                  relpath[1];
 };
 
 /* This structure represents the overall mountpoint state. An instance of
@@ -321,6 +322,7 @@ static int littlefs_open(FAR struct file *filep, FAR const char *relpath,
   FAR struct littlefs_mountpt_s *fs;
   FAR struct littlefs_file_s *priv;
   FAR struct inode *inode;
+  size_t len;
   int ret;
 
   /* Get the mountpoint inode reference from the file structure and the
@@ -330,13 +332,18 @@ static int littlefs_open(FAR struct file *filep, FAR const char *relpath,
   inode = filep->f_inode;
   fs    = inode->i_private;
 
-  /* Allocate memory for the open file */
+  /* Allocate memory for the open file, with room for the relative path
+   * stored inline after the fixed part (flexible array member).
+   */
 
-  priv = fs_heap_malloc(sizeof(*priv));
+  len  = strlen(relpath);
+  priv = fs_heap_malloc(sizeof(*priv) + len);
   if (priv == NULL)
     {
       return -ENOMEM;
     }
+
+  memcpy(priv->relpath, relpath, len + 1);
 
   /* Lock */
 
@@ -626,10 +633,7 @@ static int littlefs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                   path[len++] = '/';
                 }
 
-              ret = littlefs_convert_result(lfs_file_path(&fs->lfs,
-                                                          &priv->file,
-                                                          path + len,
-                                                          PATH_MAX - len));
+              strlcpy(path + len, priv->relpath, PATH_MAX - len);
             }
         }
         break;
@@ -743,10 +747,12 @@ static int littlefs_dup(FAR const struct file *oldp, FAR struct file *newp)
     {
       FAR struct littlefs_file_s *oldpriv = oldp->f_priv;
       FAR struct littlefs_file_s *newpriv;
+      size_t len;
 
       /* Allocate a new file structure for deep copy */
 
-      newpriv = fs_heap_zalloc(sizeof(struct littlefs_file_s));
+      len = strlen(oldpriv->relpath);
+      newpriv = fs_heap_zalloc(sizeof(struct littlefs_file_s) + len);
       if (newpriv == NULL)
         {
           return -ENOMEM;
@@ -761,7 +767,7 @@ static int littlefs_dup(FAR const struct file *oldp, FAR struct file *newp)
 
       /* Deep copy: duplicate all fields from the old file structure */
 
-      memcpy(newpriv, oldpriv, sizeof(struct littlefs_file_s));
+      memcpy(newpriv, oldpriv, sizeof(struct littlefs_file_s) + len);
 
       /* O_DIRECT two-way handling:
        *
