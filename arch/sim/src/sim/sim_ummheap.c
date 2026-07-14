@@ -40,6 +40,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/trace.h>
 
 #include "sim_internal.h"
 
@@ -459,6 +460,8 @@ static void *reallocate(void *oldmem, size_t alignment, size_t size)
 
       if (new_alloc_addr == NULL)
         {
+          mm_trace_diag(LOG_EMERG, DIAG_MM_ALLOC_FAIL,
+                        "Size:%zu", size);
           return NULL;
         }
 
@@ -492,6 +495,8 @@ static void *reallocate(void *oldmem, size_t alignment, size_t size)
   new_alloc_addr = host_realloc(old_alloc_addr, aligned_size);
   if (new_alloc_addr == NULL)
     {
+      mm_trace_diag(LOG_EMERG, DIAG_MM_ALLOC_FAIL,
+                    "Size:%zu", size);
       update_stats(g_mmheap, oldmem, old_size, true);
       return NULL;
     }

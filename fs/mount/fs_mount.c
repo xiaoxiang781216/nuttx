@@ -35,9 +35,11 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/atomic.h>
+#include <nuttx/trace.h>
 
 #include "driver/driver.h"
 #include "inode/inode.h"
+#include "mount/mount.h"
 #include "vfs/vfs.h"
 
 /****************************************************************************
@@ -568,6 +570,11 @@ errout_with_inode:
 #endif
 
 errout:
+  fs_trace_diag(LOG_EMERG, DIAG_FS_MOUNT_FAIL,
+                "Operation:mount,ErrorCode:%d,"
+                "FsType:%s,SourcePath:%s,TargetPath:%s",
+                -ret, filesystemtype ? filesystemtype : "",
+                source ? source : "", target ? target : "");
   return ret;
 
 #else

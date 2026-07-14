@@ -33,8 +33,10 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/atomic.h>
+#include <nuttx/trace.h>
 
 #include "inode/inode.h"
+#include "mount/mount.h"
 #include "vfs/vfs.h"
 
 /****************************************************************************
@@ -212,6 +214,10 @@ errout_with_search:
   RELEASE_SEARCH(&desc);
 
 errout:
+  fs_trace_diag(LOG_EMERG, DIAG_FS_MOUNT_FAIL,
+                "Operation:umount,ErrorCode:%d,"
+                "FsType:,SourcePath:,TargetPath:%s",
+                -ret, target ? target : "");
   return ret;
 }
 

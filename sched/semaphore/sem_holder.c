@@ -28,10 +28,12 @@
 
 #include <sched.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <debug.h>
 
 #include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
+#include <nuttx/trace.h>
 
 #include "sched/sched.h"
 #include "semaphore/semaphore.h"
@@ -100,6 +102,10 @@ nxsem_allocholder(FAR sem_t *sem, FAR struct tcb_s *htcb)
   else
     {
       serr("ERROR: Insufficient pre-allocated holders\n");
+      sched_trace_diag(LOG_EMERG, DIAG_SCHED_HOLDER_PANIC,
+                       "TaskName:%s,SemCount:%" PRId32,
+                       get_task_name(htcb),
+                       sem->val.semcount);
       PANIC();
     }
 

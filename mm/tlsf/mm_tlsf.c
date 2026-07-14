@@ -429,8 +429,15 @@ __jumpfunc__ static void forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 
   if (tlsf_block_is_free(mem))
     {
+#ifdef CONFIG_DIAG
+      FAR void *bt[8];
+      DIAG_BACKTRACE(NULL, bt, nitems(bt));
       mm_trace_diag(LOG_EMERG, DIAG_MM_FREE_FAIL,
-                     "address:%p, reason:double-free", mem);
+                    "Address:%p,Reason:double-free,"
+                    "Backtrace:%p %p %p %p %p %p %p %p",
+                    mem, bt[0], bt[1], bt[2], bt[3],
+                    bt[4], bt[5], bt[6], bt[7]);
+#endif
       DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
       DEBUGPANIC();
       return;
@@ -1588,6 +1595,11 @@ __jumpfunc__ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       return mm_malloc(heap, size);
     }
 #endif
+
+  else if (MM_INTERNAL_HEAP(heap))
+    {
+      mm_trace_diag(LOG_EMERG, DIAG_MM_ALLOC_FAIL, "Size:%zu", size);
+    }
 
   return ret;
 }

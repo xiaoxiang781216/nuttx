@@ -29,6 +29,8 @@
 #include <assert.h>
 #include <debug.h>
 #include <execinfo.h>
+#include <string.h>
+#include <sys/param.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
@@ -144,8 +146,15 @@ __jumpfunc__ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 
   if (!MM_NODE_IS_ALLOC(node))
     {
+#ifdef CONFIG_DIAG
+      FAR void *bt[8];
+      DIAG_BACKTRACE(NULL, bt, nitems(bt));
       mm_trace_diag(LOG_EMERG, DIAG_MM_FREE_FAIL,
-                     "address:%p, reason:double-free", mem);
+                    "Address:%p,Reason:double-free,"
+                    "Backtrace:%p %p %p %p %p %p %p %p",
+                    mem, bt[0], bt[1], bt[2], bt[3],
+                    bt[4], bt[5], bt[6], bt[7]);
+#endif
       kasan_bypass(bypass);
       DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
       DEBUGPANIC();

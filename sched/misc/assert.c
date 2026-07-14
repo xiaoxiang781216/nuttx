@@ -26,6 +26,8 @@
 
 #include <nuttx/config.h>
 
+#include <sys/param.h>
+
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <nuttx/cache.h>
@@ -963,6 +965,9 @@ void _assert(FAR const char *filename, int linenum,
 {
   const bool os_ready = OSINIT_OS_READY();
   FAR struct tcb_s *rtcb = running_task();
+#ifdef CONFIG_DIAG
+  FAR void *bt[8];
+#endif
   struct panic_notifier_s notifier_data;
   irqstate_t flags = 0; /* Suppress GCC warning */
 
@@ -1034,6 +1039,18 @@ void _assert(FAR const char *filename, int linenum,
         {
           pause_all_cpu();
         }
+#endif
+
+#ifdef CONFIG_DIAG
+      DIAG_BACKTRACE(rtcb, bt, nitems(bt));
+      sched_trace_diag(LOG_EMERG, DIAG_SCHED_ASSERT,
+                       "FileName:%s,LineNum:%d,"
+                       "TaskName:%s,PC:%p,"
+                       "Backtrace:%p %p %p %p %p %p %p %p",
+                       filename ? filename : "", linenum,
+                       get_task_name(rtcb), up_getpc(),
+                       bt[0], bt[1], bt[2], bt[3],
+                       bt[4], bt[5], bt[6], bt[7]);
 #endif
     }
 

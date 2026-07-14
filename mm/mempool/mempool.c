@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <syslog.h>
+#include <sys/param.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/kasan.h>
@@ -37,6 +38,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/sched.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -703,6 +705,19 @@ FAR void *mempool_allocate_throttled(FAR struct mempool_s *pool,
       memset(blk, MM_ALLOC_MAGIC, pool->blocksize);
 #endif
     }
+#ifdef CONFIG_DIAG
+  else
+    {
+      FAR void *bt[8];
+      DIAG_BACKTRACE(NULL, bt, nitems(bt));
+      mm_trace_diag(LOG_ERR, DIAG_MM_ALLOC_FAIL,
+                    "Pool:%p,BlockSize:%zu,Total:%zu,Alloc:%zu,"
+                    "Backtrace:%p %p %p %p %p %p %p %p",
+                    pool, pool->blocksize, pool->ntotal, pool->nalloc,
+                    bt[0], bt[1], bt[2], bt[3],
+                    bt[4], bt[5], bt[6], bt[7]);
+    }
+#endif
 
   return blk;
 }
@@ -770,7 +785,20 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 
   /* Check double free or out of out of bounds */
 
-  DEBUGASSERT(record->magic == MEMPOOL_MAGIC_ALLOC);
+  if (record->magic != MEMPOOL_MAGIC_ALLOC)
+    {
+#ifdef CONFIG_DIAG
+      FAR void *bt[8];
+      DIAG_BACKTRACE(NULL, bt, nitems(bt));
+      mm_trace_diag(LOG_EMERG, DIAG_MM_FREE_FAIL,
+                    "Address:%p,Reason:double-free,"
+                    "Backtrace:%p %p %p %p %p %p %p %p",
+                    blk, bt[0], bt[1], bt[2], bt[3],
+                    bt[4], bt[5], bt[6], bt[7]);
+#endif
+      DEBUGPANIC();
+      return;
+    }
 
   mempool_record(pool, record, MEMPOOL_MAGIC_FREE);
 #endif
