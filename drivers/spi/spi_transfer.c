@@ -64,7 +64,11 @@ int spi_transfer(FAR struct spi_dev_s *spi, FAR struct spi_sequence_s *seq)
 
   DEBUGASSERT(spi != NULL && seq != NULL && seq->trans != NULL);
 
-  if (spi->ops->exchangeseqs)
+  /* Lower-half exchangeseqs implementations de-select at the end of the
+   * sequence, so a sequence that keeps CS must use the generic loop.
+   */
+
+  if (spi->ops->exchangeseqs && !seq->keepcs)
     {
       /* -ENOTSUP means: not handled, use the generic loop below */
 
@@ -108,6 +112,8 @@ int spi_transfer(FAR struct spi_dev_s *spi, FAR struct spi_sequence_s *seq)
 
   for (i = 0, trans = seq->trans; i < (int)seq->ntrans; i++, trans++)
     {
+      bool deselect = trans->deselect;
+
       /* Establish the fixed SPI attributes for unique to this transaction */
 
 #ifdef CONFIG_SPI_HWFEATURES
@@ -117,6 +123,19 @@ int spi_transfer(FAR struct spi_dev_s *spi, FAR struct spi_sequence_s *seq)
           spierr("ERROR: SPI_HWFEATURES failed: %d\n", ret);
           break;
         }
+
+#  ifdef CONFIG_SPI_CS_CONTROL
+      /* The CS forcing features override the per-transfer deselect */
+
+      if ((trans->hwfeat & HWFEAT_FORCE_CS_INACTIVE_AFTER_TRANSFER) != 0)
+        {
+          deselect = true;
+        }
+      else if ((trans->hwfeat & HWFEAT_FORCE_CS_ACTIVE_AFTER_TRANSFER) != 0)
+        {
+          deselect = false;
+        }
+#  endif
 #endif
 
 #ifdef CONFIG_SPI_CMDDATA
@@ -134,11 +153,17 @@ int spi_transfer(FAR struct spi_dev_s *spi, FAR struct spi_sequence_s *seq)
 
       /* Perform the transfer */
 
-      SPI_EXCHANGE(spi, trans->txbuffer, trans->rxbuffer, trans->nwords);
+      ret = SPI_EXCHANGE(spi, trans->txbuffer, trans->rxbuffer,
+                         trans->nwords);
+      if (ret < 0)
+        {
+          spierr("ERROR: SPI_EXCHANGE failed: %d\n", ret);
+          break;
+        }
 
       /* Possibly de-select the SPI device after the transfer */
 
-      if (trans->deselect)
+      if (deselect)
         {
           SPI_SELECT(spi, seq->dev, false);
         }
@@ -151,7 +176,15 @@ int spi_transfer(FAR struct spi_dev_s *spi, FAR struct spi_sequence_s *seq)
         }
     }
 
-  SPI_SELECT(spi, seq->dev, false);
+  /* De-select unless the sequence keeps CS asserted for a follow-up
+   * sequence; an aborted sequence always de-selects.
+   */
+
+  if (!seq->keepcs || ret < 0)
+    {
+      SPI_SELECT(spi, seq->dev, false);
+    }
+
   SPI_LOCK(spi, false);
   return ret;
 }
