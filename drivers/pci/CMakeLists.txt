@@ -52,6 +52,10 @@ if(CONFIG_PCI)
     list(APPEND SRCS pci_ep_test.c)
   endif()
 
+  if(CONFIG_PCI_SDHCI)
+    list(APPEND SRCS pci_sdhci.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
 
 endif() # CONFIG_PCI

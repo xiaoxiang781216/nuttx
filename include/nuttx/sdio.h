@@ -1068,6 +1068,27 @@ int sdio_io_rw_extended(FAR struct sdio_dev_s *dev, bool write,
                         bool inc_addr, FAR uint8_t *buf,
                         unsigned int blocklen, unsigned int nblocks);
 
+/****************************************************************************
+ * Name: sdhci_initialize
+ *
+ * Description:
+ *   Create and initialize an SDHCI device instance.  This is the public
+ *   entry point called by the board-level glue layer (e.g. PCI probe).
+ *
+ * Input Parameters:
+ *   base - MMIO base address of the SDHCI controller
+ *   irq  - Interrupt number for the SDHCI controller
+ *
+ * Returned Value:
+ *   Pointer to sdio_dev_s on success, NULL on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_MMCSD_SDHCI
+FAR struct sdio_dev_s *sdhci_initialize(uintptr_t base, int irq);
+void sdhci_uninitialize(FAR struct sdio_dev_s *dev);
+#endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 #define EXTERN extern "C"

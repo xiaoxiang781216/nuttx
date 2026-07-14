@@ -192,4 +192,16 @@ config MMCSD_CHECK_READY_STATUS_WITHOUT_SLEEP
 
 endif
 
+config MMCSD_SDHCI
+	bool "Standard SDHCI lower-half driver"
+	default n
+	select ARCH_HAVE_SDIO
+	select MMCSD_SDIO
+	select SDIO_BLOCKSETUP
+	---help---
+		Enable the generic SDHCI lower-half driver that conforms to the
+		SD Host Controller Standard Specification.  This driver operates
+		standard SDHCI registers and is suitable for QEMU sdhci-pci and
+		other controllers that implement the standard register map.
+
 endif # MMCSD

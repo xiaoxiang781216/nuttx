@@ -116,6 +116,16 @@ int pci_register_drivers(void)
     }
 #endif
 
+  /* Initialization SDHCI host controller driver */
+
+#ifdef CONFIG_PCI_SDHCI
+  ret = pci_register_sdhci_driver();
+  if (ret < 0)
+    {
+      pcierr("pci_register_sdhci_driver failed, ret=%d\n", ret);
+    }
+#endif
+
   /* Initialization virtio pci driver */
 
 #ifdef CONFIG_DRIVERS_VIRTIO_PCI

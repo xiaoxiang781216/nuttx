@@ -155,4 +155,16 @@ int pci_register_qemu_test_driver(void);
 int pci_register_qemu_edu_driver(void);
 #endif
 
+/****************************************************************************
+ * Name: pci_register_sdhci_driver
+ *
+ * Description:
+ *   Register SDHCI host controller pci driver
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PCI_SDHCI
+int pci_register_sdhci_driver(void);
+#endif
+
 #endif /* __DRIVERS_PCI_PCI_DRIVERS_H */

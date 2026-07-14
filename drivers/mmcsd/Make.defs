@@ -28,6 +28,10 @@ ifeq ($(CONFIG_MMCSD_SDIO),y)
 CSRCS += mmcsd_sdio.c sdio.c
 endif
 
+ifeq ($(CONFIG_MMCSD_SDHCI),y)
+CSRCS += mmcsd_sdhci.c
+endif
+
 ifeq ($(CONFIG_MMCSD_SPI),y)
 CSRCS += mmcsd_spi.c mmcsd_debug.c
 endif

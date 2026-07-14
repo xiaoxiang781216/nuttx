@@ -29,6 +29,10 @@ if(CONFIG_MMCSD)
     list(APPEND SRCS mmcsd_sdio.c)
   endif()
 
+  if(CONFIG_MMCSD_SDHCI)
+    list(APPEND SRCS mmcsd_sdhci.c)
+  endif()
+
   if(CONFIG_MMCSD_SPI)
     list(APPEND SRCS mmcsd_spi.c mmcsd_debug.c)
   endif()

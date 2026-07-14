@@ -121,6 +121,16 @@ config PCI_EP_TEST
 	---help---
 		pci endpoint test driver
 
+config PCI_SDHCI
+	bool "PCI SDHCI host controller driver"
+	default n
+	depends on MMCSD_SDHCI
+	---help---
+		PCI glue layer for standard SDHCI host controllers.  Probes
+		PCI SDHCI devices (class 0x0805) and registers them with the
+		NuttX SDIO/MMC subsystem.  Enables bus mastering for future
+		DMA support.
+
 endif # PCI
 
 menuconfig PCI_ENDPOINT
