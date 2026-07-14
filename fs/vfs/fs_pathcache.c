@@ -605,7 +605,23 @@ int pathcache_close(FAR struct file *filep, FAR const char *path)
   FAR char *abspath;
   int ret = OK;
 
-  DEBUGASSERT(filep != NULL && path != NULL);
+  DEBUGASSERT(filep != NULL);
+
+  /* The path is obtained by the caller via F_GETPATH and may be NULL.
+   * This is an expected, benign condition rather than a fatal error, e.g.:
+   *   - the file was unlinked before being closed, so its directory entry
+   *     no longer resolves to a path (its cache entry, if any, was already
+   *     invalidated at unlink time);
+   *   - the underlying file system failed to reconstruct the path, or the
+   *     temporary path buffer could not be allocated.
+   * In all cases there is no valid key to look the cache up with, so simply
+   * skip the cache cleanup instead of asserting and crashing the kernel.
+   */
+
+  if (path == NULL)
+    {
+      return OK;
+    }
 
   /* Read-only files never touched the cache during close, and their
    * entry is still valid, so there is nothing to do.
