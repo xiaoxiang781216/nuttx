@@ -33,6 +33,7 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/random.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/trace.h>
 #include <nuttx/tls.h>
 
 #if defined(CONFIG_SCHED_IRQMONITOR) && defined(CONFIG_PM)
@@ -113,9 +114,13 @@
                  if (CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0 && \
                      elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ) \
                    { \
-                     CRITMONITOR_PANIC("IRQ %d(%p), execute time too long " \
-                                       "%ju\n", irq, vector, \
-                                       (uintmax_t)elapsed); \
+                     CRITMONITOR_PANIC(NXTAG_IRQ, \
+                                       DIAG_IRQ_HANDLER_TIMEOUT, \
+                                       "Type:IRQ,Irq:%d,Handler:%p," \
+                                       "Elapsed:%ju,Threshold:%ju", \
+                                       irq, vector, (uintmax_t)elapsed, \
+                                       (uintmax_t) \
+                                       CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ); \
                    } \
                } \
              else \

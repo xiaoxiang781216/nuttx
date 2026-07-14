@@ -38,6 +38,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/tls.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -97,15 +98,22 @@
 #endif
 
 #ifdef CONFIG_SCHED_CRITMONITOR_MAXTIME_PANIC
-#  define CRITMONITOR_PANIC(fmt, ...) \
+#  define CRITMONITOR_PANIC(tag, id, fmt, ...) \
           do \
             { \
               _alert(fmt, ##__VA_ARGS__); \
+              trace_diag(tag, LOG_EMERG, id, fmt, ##__VA_ARGS__); \
               PANIC(); \
             } \
           while(0)
 #else
-#  define CRITMONITOR_PANIC(fmt, ...) _alert(fmt, ##__VA_ARGS__)
+#  define CRITMONITOR_PANIC(tag, id, fmt, ...) \
+          do \
+            { \
+              _alert(fmt, ##__VA_ARGS__); \
+              trace_diag(tag, LOG_EMERG, id, fmt, ##__VA_ARGS__); \
+            } \
+          while(0)
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \

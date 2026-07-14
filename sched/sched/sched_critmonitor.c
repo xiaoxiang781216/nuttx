@@ -25,12 +25,16 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/arch.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/trace.h>
 
 #include <sys/types.h>
+#include <sys/param.h>
 #include <sched.h>
 #include <assert.h>
 #include <debug.h>
+#include <string.h>
 #include <time.h>
 
 #include "sched/sched.h"
@@ -46,8 +50,13 @@
          if (pid > 0 && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION) \
            { \
-             CRITMONITOR_PANIC("PID %d hold sched lock too long %ju\n", \
-                               pid, (uintmax_t)elapsed); \
+             CRITMONITOR_PANIC(NXTAG_SCHED, \
+                               DIAG_SCHED_PREEMPTION_TIMEOUT, \
+                               "Type:PREEMPTION,Pid:%d," \
+                               "Elapsed:%ju,Threshold:%ju", \
+                               pid, (uintmax_t)elapsed, \
+                               (uintmax_t) \
+                               CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION); \
            } \
        } \
      while (0)
@@ -62,8 +71,13 @@
          if (pid > 0 && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE) \
            { \
-             CRITMONITOR_PANIC("PID %d disable interrupt too long " \
-                               "%ju\n", pid, (uintmax_t)elapsed); \
+             CRITMONITOR_PANIC(NXTAG_SCHED, \
+                               DIAG_SCHED_IRQDISABLE_TIMEOUT, \
+                               "Type:IRQDISABLE,Pid:%d," \
+                               "Elapsed:%ju,Threshold:%ju", \
+                               pid, (uintmax_t)elapsed, \
+                               (uintmax_t) \
+                               CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE); \
            } \
        } \
      while (0)
@@ -78,9 +92,13 @@
          if (pid > 0 && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT) \
            { \
-             CRITMONITOR_PANIC("PID %d wait for critical section or spin" \
-                               "lock too long %ju\n", \
-                               pid, (uintmax_t)elapsed); \
+             CRITMONITOR_PANIC(NXTAG_SCHED, \
+                               DIAG_SCHED_BUSYWAIT_TIMEOUT, \
+                               "Type:BUSYWAIT,Pid:%d," \
+                               "Elapsed:%ju,Threshold:%ju", \
+                               pid, (uintmax_t)elapsed, \
+                               (uintmax_t) \
+                               CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT); \
            } \
        } \
      while (0)
@@ -89,19 +107,33 @@
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD > 0
-#  define CHECK_THREAD(pid, elapsed) \
+#  define CHECK_THREAD(tcb, elapsed) \
      do \
        { \
-         if (pid > 0 && \
+         if (!is_idle_task(tcb) && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD) \
            { \
-             CRITMONITOR_PANIC("PID %d execute too long %ju\n", \
-                               pid, (uintmax_t)elapsed); \
+             FAR void *_bt[8]; \
+             DIAG_BACKTRACE(tcb, _bt, nitems(_bt)); \
+             CRITMONITOR_PANIC(NXTAG_SCHED, \
+                               DIAG_SCHED_THREAD_TIMEOUT, \
+                               "Type:THREAD,Pid:%d,Name:%s," \
+                               "Elapsed:%ju,Threshold:%ju," \
+                               "Backtrace:%p %p %p %p" \
+                               " %p %p %p %p", \
+                               (tcb)->pid, get_task_name(tcb), \
+                               (uintmax_t)elapsed, \
+                               (uintmax_t) \
+                               CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD, \
+                               _bt[0], _bt[1], \
+                               _bt[2], _bt[3], \
+                               _bt[4], _bt[5], \
+                               _bt[6], _bt[7]); \
            } \
        } \
      while (0)
 #else
-#  define CHECK_THREAD(pid, elapsed)
+#  define CHECK_THREAD(tcb, elapsed)
 #endif
 
 /****************************************************************************
@@ -424,7 +456,7 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
   if (elapsed > tcb->run_max)
     {
       tcb->run_max = elapsed;
-      CHECK_THREAD(tcb->pid, elapsed);
+      CHECK_THREAD(tcb, elapsed);
     }
 #endif
 
@@ -542,7 +574,7 @@ void nxsched_update_critmon(FAR struct tcb_s *tcb)
       if (elapsed > tcb->run_max)
         {
           tcb->run_max = elapsed;
-          CHECK_THREAD(tcb->pid, elapsed);
+          CHECK_THREAD(tcb, elapsed);
         }
     }
 

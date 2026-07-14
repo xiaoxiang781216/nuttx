@@ -1105,9 +1105,14 @@ config SCHED_CRITMONITOR_MAXTIME_WQUEUE
 	int "WORK queue max execution time"
 	default -1
 	---help---
-		Worker execution time should be smaller than
+		Worker execution time (wall-clock, including any preemption
+		while the callback runs) should be smaller than
 		SCHED_CRITMONITOR_MAXTIME_WQUEUE, or system will give a warning.
-		For debugging system latency, 0 means disabled.
+		This is a stall/deadlock detector for the callback itself, not
+		a pure CPU-time measurement, and applies to HPWORK, LPWORK, and
+		any custom work queue created via work_queue_create().  For
+		debugging system latency, 0 means disabled, -1 means not
+		configured (feature off).
 
 config SCHED_CRITMONITOR_MAXTIME_PREEMPTION
 	int "Pre-emption (sched_lock) max holding time"

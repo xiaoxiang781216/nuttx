@@ -26,6 +26,7 @@
 
 #include <sys/types.h>
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/param.h>
@@ -39,6 +40,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/trace.h>
 
 #include "sched/sched.h"
 #include "wdog/wdog.h"
@@ -64,9 +66,14 @@
          sched_note_wdog_leave(func, (FAR void *)arg); \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG) \
            { \
-             CRITMONITOR_PANIC("WDOG %p, %s IRQ, execute too long %ju\n", \
-                               func, up_interrupt_context() ? \
-                               "IN" : "NOT", (uintmax_t)elapsed); \
+             CRITMONITOR_PANIC(NXTAG_SCHED, \
+                               DIAG_SCHED_WDOG_TIMEOUT, \
+                               "Type:WDOG,Func:%p,Arg:%" PRIuPTR ",InIrq:%d," \
+                               "Duration:%ju,Expired:%ju", \
+                               func, arg, up_interrupt_context(), \
+                               (uintmax_t)elapsed, \
+                               (uintmax_t) \
+                               CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG); \
            } \
        } \
      while (0)

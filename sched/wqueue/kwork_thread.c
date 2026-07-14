@@ -43,6 +43,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/tls.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/trace.h>
 
 #include "sched/sched.h"
 #include "wqueue/wqueue.h"
@@ -68,8 +69,19 @@
          elapsed = perf_gettime() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
            { \
-             CRITMONITOR_PANIC("WORKER %p execute too long %ju\n", \
-                               worker, (uintmax_t)elapsed); \
+             FAR struct tcb_s *wtcb = this_task(); \
+             CRITMONITOR_PANIC(NXTAG_SCHED, \
+                               DIAG_SCHED_WQUEUE_TIMEOUT, \
+                               "Type:WQUEUE,Pid:%d,Name:%s," \
+                               "State:%d,Waitobj:%p," \
+                               "Elapsed:%ju,Threshold:%ju", \
+                               wtcb->pid, \
+                               get_task_name(wtcb), \
+                               wtcb->task_state, \
+                               wtcb->waitobj, \
+                               (uintmax_t)elapsed, \
+                               (uintmax_t) \
+                               CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE); \
            } \
        } \
      while (0)
