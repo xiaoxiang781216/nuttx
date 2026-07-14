@@ -111,6 +111,17 @@ int mkdir(const char *pathname, mode_t mode)
               errcode = -ret;
               goto errout_with_inode;
             }
+
+#ifdef CONFIG_FS_PATHCACHE
+          if (INODE_IS_PATHCACHE(inode))
+            {
+              /* A new sub-directory was added; invalidate the parent
+               * directory's cached listing.
+               */
+
+              pathcache_remove_parent(pathname, false);
+            }
+#endif
         }
       else
         {

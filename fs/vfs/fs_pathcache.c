@@ -28,6 +28,8 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdbool.h>
+#include <string.h>
 
 #include <nuttx/nuttx.h>
 #include <nuttx/lib/lib.h>
@@ -288,6 +290,16 @@ int pathcache_open(FAR struct file *filep, FAR const char *relpath,
           goto errout_with_pathbuffer;
         }
 
+      /* If the file was opened with O_CREAT, a new entry may have been
+       * added to the parent directory.  Invalidate the parent's cached
+       * listing so a later opendir re-fetches the real (updated) state.
+       */
+
+      if (oflags & O_CREAT)
+        {
+          pathcache_remove_parent(abspath, false);
+        }
+
       /* File opened successfully. Now try to create a cache entry.
        * Only cache files opened in read-only mode here.
        * If caching fails for any reason, we still return success because
@@ -474,28 +486,42 @@ errout_with_file:
 }
 
 /****************************************************************************
- * Name: pathcache_remove
+ * Name: pathcache_remove_parent
  *
  * Description:
- *   Remove a cache entry by path.
+ *   Invalidate the cached directory listing of the PARENT directory of
+ *   'path', resolving the absolute path only once.  Any operation that
+ *   changes the contents of a directory (create/unlink/mkdir/rmdir/rename)
+ *   must call this: a cached opendir snapshot freezes the directory's entry
+ *   count, so a later opendir that hits the cache would dup a stale snapshot
+ *   and readdir() would miss the newly added (or still report the removed)
+ *   entries.
+ *
+ *   When 'drop_self' is true the entry's own cache entry is dropped as well.
+ *   Deletion operations (unlink/rmdir, rename source and the overwritten
+ *   rename target) pass true; addition operations (create/mkdir, rename
+ *   destination) pass false so a freshly cached entry is left untouched.
  *
  * Input Parameters:
- *   path - Path to remove
+ *   path      - Path of the entry that was added to / removed from its
+ *               parent directory
+ *   drop_self - Whether to also drop the entry's own cache entry
  *
  * Returned Value:
  *   OK on success; a negated errno value on failure
  *
  ****************************************************************************/
 
-int pathcache_remove(FAR const char *path)
+int pathcache_remove_parent(FAR const char *path, bool drop_self)
 {
   FAR char *pathbuffer;
   FAR char *abspath;
+  FAR char *slash;
   int ret = OK;
 
   DEBUGASSERT(path != NULL);
 
-  /* Get the canonical absolute path for removing cache entry */
+  /* Get the canonical absolute path for locating the cache entry */
 
   pathbuffer = lib_get_tempbuffer(PATH_MAX);
   if (pathbuffer == NULL)
@@ -510,7 +536,38 @@ int pathcache_remove(FAR const char *path)
       goto errout_with_pathbuffer;
     }
 
-  /* Remove the cache entry */
+  /* Drop the entry's own cache entry when it is being removed */
+
+  if (drop_self)
+    {
+      lru_cache_remove(&g_pathcache, abspath);
+    }
+
+  /* Strip the last path component to obtain the parent directory.
+   * e.g. "/misc/dt/newfile.txt" -> "/misc/dt".  Keep the leading "/"
+   * when the parent is the root directory.
+   */
+
+  slash = strrchr(abspath, '/');
+  if (slash == NULL)
+    {
+      /* No slash: not an absolute path we can reason about; nothing to do */
+
+      goto errout_with_pathbuffer;
+    }
+
+  if (slash == abspath)
+    {
+      /* Parent is the root directory itself */
+
+      abspath[1] = '\0';
+    }
+  else
+    {
+      *slash = '\0';
+    }
+
+  /* Invalidate the parent directory's cached listing */
 
   lru_cache_remove(&g_pathcache, abspath);
 

@@ -116,7 +116,12 @@ int rmdir(FAR const char *pathname)
 #ifdef CONFIG_FS_PATHCACHE
           if (INODE_IS_PATHCACHE(inode))
             {
-              pathcache_remove(pathname);
+              /* Remove the directory's own cache entry and invalidate its
+               * parent directory's cached listing (an entry was removed
+               * from the parent).
+               */
+
+              pathcache_remove_parent(pathname, true);
             }
 #endif
         }

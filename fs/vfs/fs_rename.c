@@ -506,9 +506,15 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
 #ifdef CONFIG_FS_PATHCACHE
                   if (INODE_IS_PATHCACHE(oldinode))
                     {
-                      /* Remove cached entry for the directory just removed */
+                      /* The pre-existing target directory was just removed:
+                       * drop its own cache entry and invalidate its parent
+                       * directory's cached listing (an entry was removed).
+                       * This must happen here, not only after a successful
+                       * rename, because the removal already changed the
+                       * parent even if the rename below fails.
+                       */
 
-                      pathcache_remove(newpath);
+                      pathcache_remove_parent(newpath, true);
                     }
 #endif
                 }
@@ -538,9 +544,14 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
                   ret = oldinode->u.i_mops->unlink(oldinode, newrelpath);
                   if (ret >= 0 && INODE_IS_PATHCACHE(oldinode))
                     {
-                      /* Remove cached entry for this file */
+                      /* The pre-existing target file was just removed: drop
+                       * its own cache entry and invalidate its parent
+                       * directory's cached listing (an entry was removed).
+                       * Done here rather than only after a successful rename
+                       * because the removal already changed the parent.
+                       */
 
-                      pathcache_remove(newpath);
+                      pathcache_remove_parent(newpath, true);
                     }
 #else
                   oldinode->u.i_mops->unlink(oldinode, newrelpath);
@@ -570,9 +581,14 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
 #ifdef CONFIG_FS_PATHCACHE
   if (ret >= 0 && INODE_IS_PATHCACHE(oldinode))
     {
-      /* Rename will change the cache key */
+      /* Rename changes the cache key of the moved entry, and changes the
+       * contents of both the source and destination parent directories
+       * (an entry leaves the old parent and appears in the new parent).
+       * Invalidate the entry itself plus both parent directory listings.
+       */
 
-      pathcache_remove(oldpath);
+      pathcache_remove_parent(oldpath, true);
+      pathcache_remove_parent(newpath, false);
     }
 #endif
 

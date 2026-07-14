@@ -130,7 +130,7 @@ int pathcache_open(FAR struct file *filep, FAR const char *relpath,
 int pathcache_opendir(FAR struct inode *inode, FAR const char *relpath,
                       FAR struct fs_dirent_s **dir, FAR const char *path);
 int pathcache_close(FAR struct file *filep, FAR const char *path);
-int pathcache_remove(FAR const char *path);
+int pathcache_remove_parent(FAR const char *path, bool drop_self);
 void pathcache_umount(FAR struct inode *mountpt);
 #endif /* CONFIG_FS_PATHCACHE */
 

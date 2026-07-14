@@ -103,9 +103,12 @@ int nx_unlink(FAR const char *pathname)
 #ifdef CONFIG_FS_PATHCACHE
           if (INODE_IS_PATHCACHE(inode))
             {
-              /* Remove cached entry for this file */
+              /* Remove the file's own cache entry and invalidate its
+               * parent directory's cached listing (its contents changed
+               * as an entry was removed).
+               */
 
-              pathcache_remove(pathname);
+              pathcache_remove_parent(pathname, true);
             }
 #endif
         }
