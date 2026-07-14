@@ -138,9 +138,13 @@ void pkt_free(FAR struct pkt_conn_s *conn)
 
   pkt_conn_list_lock();
 
-  /* Remove the connection from the active list */
+  /* Unlink first so pkt_dev_in() cannot dispatch to this conn any more,
+   * then release the read-ahead queue.  Any IOB that pkt_datahandler()
+   * queued between the unlink and the free is still caught here.
+   */
 
   dq_rem(&conn->sconn.s_node, &g_active_pkt_connections);
+  iob_free_queue(&conn->readahead);
 
   /* Use conn_uninit to release all connection resources */
 

@@ -190,7 +190,8 @@ FAR struct pkt_conn_s *pkt_alloc(void);
  *
  * Description:
  *   Free a packet socket connection structure that is no longer in use.
- *   This should be done by the implementation of close().
+ *   This should be done by the implementation of close().  Also releases
+ *   any remaining read-ahead IOBs.
  *
  ****************************************************************************/
 
