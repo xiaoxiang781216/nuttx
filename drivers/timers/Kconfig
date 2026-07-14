@@ -171,6 +171,17 @@ config TIMER_WDOG
 	---help---
 		This option allows the timer implementation to be based on the
 		watchdog (wdog) driver interface.
+
+config MCAL_GPT
+	bool "AUTOSAR MCAL GPT Adaptation Layer"
+	default n
+	depends on TIMER
+	---help---
+		Enables the AUTOSAR MCAL GPT adaptation layer that bridges
+		the NuttX timer upper-half driver to the AUTOSAR Gpt MCAL
+		module.  Board-level code provides per-channel mapping via
+		struct mcal_gpt_config_s.
+
 endif # TIMER
 
 config ONESHOT

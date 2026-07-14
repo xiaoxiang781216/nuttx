@@ -139,6 +139,12 @@ ifeq ($(CONFIG_MCAL_PWM_DRIVER),y)
   TMRVPATH = :timers
 endif
 
+ifeq ($(CONFIG_MCAL_GPT),y)
+  CSRCS += gpt_mcal.c
+  TMRDEPPATH = --dep-path timers
+  TMRVPATH = :timers
+endif
+
 ifeq ($(CONFIG_MCAL_WDG),y)
   CSRCS += wdg_mcal.c
   TMRDEPPATH = --dep-path timers
