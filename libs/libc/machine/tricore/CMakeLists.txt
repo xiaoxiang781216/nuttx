@@ -24,10 +24,6 @@ set(SRCS)
 
 list(APPEND SRCS arch_elf.c)
 
-if(CONFIG_ARCH_SETJMP_H)
-  list(APPEND SRCS arch_setjmp.c)
-endif()
-
 if(CONFIG_ARCH_TOOLCHAIN_TASKING)
   list(APPEND SRCS tricore_cxx_initialize.c)
 endif()
@@ -36,6 +32,10 @@ if(CONFIG_TRICORE_TOOLCHAIN_TASKING)
   set(TRICORE_SUBDIR tasking)
 else()
   set(TRICORE_SUBDIR gnu)
+endif()
+
+if(CONFIG_ARCH_SETJMP_H)
+  list(APPEND SRCS ${TRICORE_SUBDIR}/arch_setjmp.${ASMEXT})
 endif()
 
 if(CONFIG_LIBC_ARCH_MEMCPY)

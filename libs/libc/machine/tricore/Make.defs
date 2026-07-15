@@ -22,10 +22,6 @@
 
 CSRCS += arch_elf.c
 
-ifeq ($(CONFIG_ARCH_SETJMP_H),y)
-CSRCS += arch_setjmp.c
-endif
-
 ifeq ($(CONFIG_TRICORE_TOOLCHAIN_TASKING),y)
 CSRCS += tricore_cxx_initialize.c
 TRICORE_SUBDIR = tasking
@@ -40,6 +36,10 @@ AFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)machine$(DELI
 # not depend on the board's ambient platform flags.
 
 AFLAGS += -Wa,-mtc18
+
+ifeq ($(CONFIG_ARCH_SETJMP_H),y)
+ASRCS += arch_setjmp.$(ASMEXT)
+endif
 
 ifeq ($(CONFIG_LIBC_ARCH_MEMCPY),y)
 ASRCS += arch_memcpy.$(ASMEXT)
