@@ -951,10 +951,10 @@ static void mmcsd_decode_csd(FAR struct mmcsd_state_s *priv, uint32_t csd[4])
   finfo("  FILE_FORMAT: %d ECC: %d (MMC) CRC: %d\n",
         decoded.fileformat, decoded.mmcecc, decoded.crc);
 
-  finfo("Capacity: %luKb, Block size: %db, nblocks: %d wrprotect: %d\n",
-        (unsigned long)MMCSD_CAPACITY(priv->part[0].nblocks,
-                                      priv->blockshift),
-        priv->blocksize, priv->part[0].nblocks, priv->wrprotect);
+  finfo("Capacity: %ju Kb, Block size: %db, nblocks: %ju wrprotect: %d\n",
+        (uintmax_t)MMCSD_CAPACITY(priv->part[0].nblocks, priv->blockshift),
+        priv->blocksize, (uintmax_t)priv->part[0].nblocks,
+        priv->wrprotect);
 #endif
 }
 
@@ -1020,7 +1020,7 @@ static void mmcsd_decode_cid(FAR struct mmcsd_state_s *priv, uint32_t cid[4])
   decoded.mdt    = (cid[3] >> 8) & 0xff;
   decoded.crc    = (cid[3] >> 1) & 0x7f;
 
-  finfo("mid: %02x cbx: %01x oid: %01x pnm: %s prv: %d psn: %08x mdt: %02x\
+  finfo("mid: %02x cbx: %01x oid: %01x pnm: %s prv: %d psn: %08lx mdt: %02x\
          crc: %02x\n", decoded.mid, decoded.cbx, decoded.oid, decoded.pnm,
          decoded.prv, (unsigned long)decoded.psn, decoded.mdt, decoded.crc);
 }
