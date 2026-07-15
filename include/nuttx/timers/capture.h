@@ -31,24 +31,52 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/signal.h>
 
-#include <nuttx/signal.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 /* IOCTL Commands ***********************************************************/
 
-#define CAPIOC_DUTYCYCLE  _CAPIOC(1)
-#define CAPIOC_FREQUENCE  _CAPIOC(2)
-#define CAPIOC_EDGES      _CAPIOC(3)
-#define CAPIOC_ALL        _CAPIOC(4)
-#define CAPIOC_REGISTER   _CAPIOC(5)
-#define CAPIOC_UNREGISTER _CAPIOC(6)
+#define CAPIOC_DUTYCYCLE         _CAPIOC(1)
+#define CAPIOC_FREQUENCE         _CAPIOC(2)
+#define CAPIOC_EDGES             _CAPIOC(3)
+#define CAPIOC_ALL               _CAPIOC(4)
+#define CAPIOC_REGISTER          _CAPIOC(5)
+#define CAPIOC_UNREGISTER        _CAPIOC(6)
+
+/* Edge polarity control */
+
+#define CAPIOC_SET_EDGE          _CAPIOC(7)
+
+/* Capture start/stop */
+
+#define CAPIOC_START_CAPTURE     _CAPIOC(8)
+#define CAPIOC_STOP_CAPTURE      _CAPIOC(9)
+
+/* State query */
+
+#define CAPIOC_GET_INPUT_STATE   _CAPIOC(10)
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
+/* Activation edge type */
+
+enum cap_edge_e
+{
+  CAP_EDGE_RISING  = 0,
+  CAP_EDGE_FALLING = 1,
+  CAP_EDGE_BOTH    = 2,
+};
+
+/* Input state */
+
+enum cap_input_state_e
+{
+  CAP_STATE_IDLE   = 0,
+  CAP_STATE_ACTIVE = 1,
+};
 
 struct cap_all_s
 {
@@ -127,6 +155,24 @@ struct cap_ops_s
 
   CODE int (*unbind)(FAR struct cap_lowerhalf_s *lower);
 #endif
+
+  /* Start capture on a channel */
+
+  CODE int (*start_capture)(FAR struct cap_lowerhalf_s *lower);
+
+  /* Stop capture on a channel */
+
+  CODE int (*stop_capture)(FAR struct cap_lowerhalf_s *lower);
+
+  /* Read current input pin state (ACTIVE/IDLE) */
+
+  CODE int (*get_input_state)(FAR struct cap_lowerhalf_s *lower,
+                              FAR uint8_t *state);
+
+  /* Generic ioctl pass-through for vendor-specific extensions */
+
+  CODE int (*ioctl)(FAR struct cap_lowerhalf_s *lower,
+                    int cmd, unsigned long arg);
 };
 
 /* This structure provides the publicly visible representation of the
