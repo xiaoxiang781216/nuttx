@@ -173,6 +173,11 @@ else ifeq ($(CONFIG_LTO_FULL),y)
   ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
     LDFLAGS += --lto
   endif
+else ifeq ($(CONFIG_LTO_FAT),y)
+  ARCHOPTIMIZATION += -flto -ffat-lto-objects
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
+    ARCHOPTIMIZATION += -fuse-linker-plugin
+  endif
 endif
 
 # Thread pointer access method
@@ -342,7 +347,7 @@ else
   OBJCOPY = $(CROSSDEV)objcopy
   OBJDUMP = $(CROSSDEV)objdump
 
-  ifeq ($(CONFIG_LTO_FULL),y)
+  ifneq ($(CONFIG_LTO_FULL)$(CONFIG_LTO_FAT),)
     ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
       LD := $(CROSSDEV)gcc
       AR := $(CROSSDEV)gcc-ar rcs
@@ -654,7 +659,7 @@ endif
 
 LDELFFLAGS += -e __start -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)elf$(DELIM)gnu-elf.ld)
 
-ifneq ($(CONFIG_BINFMT_ELF_RELOCATABLE)$(CONFIG_LTO_FULL),)
+ifneq ($(CONFIG_BINFMT_ELF_RELOCATABLE)$(CONFIG_LTO_FULL)$(CONFIG_LTO_FAT),)
   # Lto not support in relocatable elf
 
   CMODULEFLAGS += -fno-lto

@@ -87,6 +87,14 @@ add_compile_options(${SIM_NO_HOST_OPTIONS})
 
 set(NO_LTO "-fno-lto")
 
+if(CONFIG_LTO_THIN)
+  add_compile_options(-flto=thin)
+elseif(CONFIG_LTO_FULL)
+  add_compile_options(-flto)
+elseif(CONFIG_LTO_FAT)
+  add_compile_options(-flto -ffat-lto-objects)
+endif()
+
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
   # Generate .debug_macro section for GDB macro support (Clang only) Use DWARF

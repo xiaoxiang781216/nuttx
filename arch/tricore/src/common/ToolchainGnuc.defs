@@ -117,6 +117,9 @@ ifeq ($(CONFIG_LTO_THIN),y)
 else ifeq ($(CONFIG_LTO_FULL),y)
   ARCHOPTIMIZATION += -flto
   ARCHOPTIMIZATION += -fuse-linker-plugin
+else ifeq ($(CONFIG_LTO_FAT),y)
+  ARCHOPTIMIZATION += -flto -ffat-lto-objects
+  ARCHOPTIMIZATION += -fuse-linker-plugin
 endif
 
 # Default toolchain

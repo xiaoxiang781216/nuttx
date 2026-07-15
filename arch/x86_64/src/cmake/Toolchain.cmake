@@ -83,6 +83,40 @@ set(CMAKE_ASM_ARCHIVE_FINISH ${CMAKE_RANLIB_COMMAND})
 
 set(NO_LTO "-fno-lto")
 
+if(CONFIG_LTO_THIN)
+  add_compile_options(-flto=thin)
+elseif(CONFIG_LTO_FULL)
+  add_compile_options(-flto)
+  if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
+    add_compile_options(-fuse-linker-plugin)
+    add_compile_options(-fno-builtin)
+    set(CMAKE_LINKER ${CROSSDEV}gcc)
+    set(CMAKE_LD ${CROSSDEV}gcc)
+    set(CMAKE_AR ${CROSSDEV}gcc-ar)
+    set(CMAKE_NM ${CROSSDEV}gcc-nm)
+    set(CMAKE_RANLIB ${CROSSDEV}gcc-ranlib)
+  endif()
+elseif(CONFIG_LTO_FAT)
+  add_compile_options(-flto -ffat-lto-objects)
+  if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
+    add_compile_options(-fuse-linker-plugin)
+    add_compile_options(-fno-builtin)
+    set(CMAKE_LINKER ${CROSSDEV}gcc)
+    set(CMAKE_LD ${CROSSDEV}gcc)
+    set(CMAKE_AR ${CROSSDEV}gcc-ar)
+    set(CMAKE_NM ${CROSSDEV}gcc-nm)
+    set(CMAKE_RANLIB ${CROSSDEV}gcc-ranlib)
+  endif()
+endif()
+
+# Suppress GCC LTO false positive: cross-module inlining into union-overlaid
+# buffers triggers spurious -Wstringop-overflow (GCC bug 105329 et al.) Only
+# affects lto1 link phase, not per-file compilation.
+
+if(NOT CONFIG_LTO_NONE AND NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
+  add_link_options(-Wno-error=stringop-overflow)
+endif()
+
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
   # Generate .debug_macro section for GDB macro support (Clang only) Use DWARF

@@ -58,6 +58,18 @@ NM = $(CROSSDEV)nm
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
 
+# Link Time Optimization
+
+ifeq ($(CONFIG_LTO_THIN),y)
+  ARCHOPTIMIZATION += -flto=thin
+else ifeq ($(CONFIG_LTO_FULL),y)
+  ARCHOPTIMIZATION += -flto
+  ARCHOPTIMIZATION += -fuse-linker-plugin
+else ifeq ($(CONFIG_LTO_FAT),y)
+  ARCHOPTIMIZATION += -flto -ffat-lto-objects
+  ARCHOPTIMIZATION += -fuse-linker-plugin
+endif
+
 ifeq ($(CONFIG_MM_KASAN_INSTRUMENT_ALL),y)
   ARCHOPTIMIZATION += -fsanitize=kernel-address
   KASAN_PARAM += asan-stack=0

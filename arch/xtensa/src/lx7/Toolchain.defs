@@ -47,6 +47,8 @@ ifeq ($(CONFIG_LTO_THIN),y)
   ARCHOPTIMIZATION += -flto=thin
 else ifeq ($(CONFIG_LTO_FULL),y)
   ARCHOPTIMIZATION += -flto
+else ifeq ($(CONFIG_LTO_FAT),y)
+  ARCHOPTIMIZATION += -flto -ffat-lto-objects
 endif
 
 ARCHCPUFLAGS = -mlongcalls

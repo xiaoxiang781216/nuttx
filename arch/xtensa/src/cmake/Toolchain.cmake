@@ -82,6 +82,8 @@ if(CONFIG_LTO_THIN)
   add_compile_options(-flto=thin)
 elseif(CONFIG_LTO_FULL)
   add_compile_options(-flto)
+elseif(CONFIG_LTO_FAT)
+  add_compile_options(-flto -ffat-lto-objects)
 endif()
 
 add_compile_options(-mlongcalls)

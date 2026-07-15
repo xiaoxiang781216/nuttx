@@ -3042,6 +3042,20 @@ config LTO_THIN
 		https://clang.llvm.org/docs/ThinLTO.html
 
 		If unsure, say Y.
+
+config LTO_FAT
+	bool "GNU Full LTO with fat objects (EXPERIMENTAL)"
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Same as LTO_FULL, but additionally compiles with
+		-ffat-lto-objects so that every .o embeds both real machine code
+		and the GIMPLE bytecode. The final image still benefits from full
+		LTO, while the pre-link .o files carry real code sections, which
+		makes per-object/per-module size analysis possible (plain
+		LTO_FULL leaves the .text of each .o empty).
+
+		This increases object size and compile time compared to LTO_FULL.
+		If unsure, select LTO_NONE.
 endchoice
 
 config DEBUG_OPT_UNUSED_SECTIONS
