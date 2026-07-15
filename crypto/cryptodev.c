@@ -94,6 +94,8 @@ struct csession
 struct fcrypt
 {
   TAILQ_HEAD(csessionlist, csession) csessions;
+  TAILQ_HEAD(cryptopinflight, cryptop) crp_inflight;
+  TAILQ_HEAD(cryptkopinflight, cryptkop) crpk_inflight;
   TAILQ_HEAD(cryptoplist, cryptop) crp_ret;
   TAILQ_HEAD(cryptkoplist, cryptkop) crpk_ret;
   atomic_t refcount;
@@ -140,10 +142,13 @@ static int csefree(FAR struct csession *);
 static int cryptodev_op(FAR struct fcrypt *,
                         FAR struct csession *,
                         FAR struct crypt_op *);
+static int cryptodev_cancel(FAR struct fcrypt *, uint32_t);
 static int cryptodevop_cb(FAR struct cryptop *);
 static int cryptodev_getopstatus(FAR struct fcrypt *,
                                  FAR struct crypt_op *);
 static int cryptodev_key(FAR struct fcrypt *, FAR struct crypt_kop *);
+static int cryptodevkey_cancel(FAR struct fcrypt *,
+                               FAR struct crypt_kop *);
 static int cryptodevkey_cb(FAR struct cryptkop *);
 static int cryptodev_getkeystatus(FAR struct fcrypt *,
                                   FAR struct crypt_kop *);
@@ -251,6 +256,7 @@ MEMPOOL_DEFINE(g_cryptkop_pool, sizeof(struct cryptkop),
 #define cryptkop_free(p)                                            \
     do                                                              \
       {                                                             \
+        cryptkop_free_params((p));                                  \
         if ((p)->krp_flags & CRYPTO_F_REL)                          \
           {                                                         \
             cryptkop_pool_release((p));                             \
@@ -266,6 +272,26 @@ MEMPOOL_DEFINE(g_cryptkop_pool, sizeof(struct cryptkop),
  * Private Functions
  ****************************************************************************/
 
+static void cryptkop_free_params(FAR struct cryptkop *krp)
+{
+  int i;
+
+  if (krp->krp_flags & CRYPTO_F_REL)
+    {
+      return;
+    }
+
+  for (i = 0; i < CRK_MAXPARAM; i++)
+    {
+      if (krp->krp_param[i].crp_p)
+        {
+          explicit_bzero(krp->krp_param[i].crp_p,
+                         (krp->krp_param[i].crp_nbits + 7) / 8);
+          kmm_free(krp->krp_param[i].crp_p);
+        }
+    }
+}
+
 static FAR struct fcrypt *fcrypt_get(FAR struct fcrypt *fcr)
 {
   atomic_add(&fcr->refcount, 1);
@@ -277,7 +303,6 @@ static void fcrypt_put(FAR struct fcrypt *fcr)
   FAR struct csession *cse;
   FAR struct cryptop *crp;
   FAR struct cryptkop *krp;
-  int i;
 
   if (atomic_sub(&fcr->refcount, 1) != 1)
     {
@@ -299,21 +324,36 @@ static void fcrypt_put(FAR struct fcrypt *fcr)
   while ((krp = TAILQ_FIRST(&fcr->crpk_ret)))
     {
       TAILQ_REMOVE(&fcr->crpk_ret, krp, krp_next);
-      if (!(krp->krp_flags & CRYPTO_F_REL))
-        {
-          for (i = 0; i < CRK_MAXPARAM; i++)
-            {
-              if (krp->krp_param[i].crp_p)
-                {
-                  kmm_free(krp->krp_param[i].crp_p);
-                }
-            }
-        }
-
       cryptkop_free(krp);
     }
 
   kmm_free(fcr);
+}
+
+static void cryptodevkey_cancel_dispatch(uint32_t reqid, u_int op)
+{
+  struct cryptkop krp;
+
+  memset(&krp, 0, sizeof(krp));
+  krp.krp_op = op;
+  krp.krp_flags = CRYPTO_F_CANCEL;
+  krp.krp_reqid = reqid;
+  crypto_kinvoke(&krp);
+}
+
+static void cryptodev_cancel_dispatch(uint64_t sid, uint32_t reqid)
+{
+  struct cryptop crp;
+  struct cryptodesc crd;
+
+  memset(&crp, 0, sizeof(crp));
+  memset(&crd, 0, sizeof(crd));
+
+  crp.crp_sid = sid;
+  crp.crp_reqid = reqid;
+  crp.crp_flags = CRYPTO_F_CANCEL;
+  crp.crp_desc = &crd;
+  crypto_invoke(&crp);
 }
 
 /* ARGSUSED */
@@ -343,6 +383,7 @@ static int cryptof_ioctl(FAR struct file *filep,
   FAR struct csession *cse;
   FAR struct session_op *sop;
   FAR struct crypt_op *cop;
+  FAR struct crypt_kop *kop;
   bool txform = false;
   bool thash = false;
   uint64_t sid;
@@ -477,6 +518,12 @@ static int cryptof_ioctl(FAR struct file *filep,
         break;
       case CIOCCRYPT:
         cop = (FAR struct crypt_op *)arg;
+        if (cop->flags & COP_FLAG_CANCEL)
+          {
+            error = cryptodev_cancel(fcr, cop->reqid);
+            break;
+          }
+
         cse = csefind(fcr, cop->ses);
         if (cse == NULL)
           {
@@ -490,7 +537,14 @@ static int cryptof_ioctl(FAR struct file *filep,
                                      (FAR struct crypt_op *)arg);
         break;
       case CIOCKEY:
-        error = cryptodev_key(fcr, (FAR struct crypt_kop *)arg);
+        kop = (FAR struct crypt_kop *)arg;
+        if (kop->crk_flags & CRYPTO_F_CANCEL)
+          {
+            error = cryptodevkey_cancel(fcr, kop);
+            break;
+          }
+
+        error = cryptodev_key(fcr, kop);
         break;
       case CIOCKEYRET:
         error = cryptodev_getkeystatus(fcr, (FAR struct crypt_kop *)arg);
@@ -513,6 +567,7 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
   struct cryptop crp;
   struct cryptodesc crda;
   struct cryptodesc crde;
+  irqstate_t iflags;
   int error = OK;
   uint32_t hid;
 
@@ -556,10 +611,15 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
 
       scrp->crp_reqid    = cop->reqid;
       scrp->crp_olen     = cop->olen;
+      scrp->crp_sid      = cse->sid;
       scrp->crp_opaque   = fcrypt_get(fcr);
       scrp->crp_callback = cryptodevop_cb;
       crp.crp_opaque     = scrp;
       crp.crp_flags      = CRYPTO_F_CBIMM;
+
+      iflags = spin_lock_irqsave(&fcr->lock);
+      TAILQ_INSERT_TAIL(&fcr->crp_inflight, scrp, crp_next);
+      spin_unlock_irqrestore(&fcr->lock, iflags);
     }
 
   if (cse->thash)
@@ -678,15 +738,69 @@ static int cryptodev_op(FAR struct fcrypt *fcr,
 
   if (error && scrp)
     {
-      if (cop->flags & COP_FLAG_CBIMM)
-        {
-          fcrypt_put(fcr);
-        }
+      /* Submission failed: the callback will not run, so clean up here. */
 
+      iflags = spin_lock_irqsave(&fcr->lock);
+      TAILQ_REMOVE(&fcr->crp_inflight, scrp, crp_next);
+      spin_unlock_irqrestore(&fcr->lock, iflags);
+
+      fcrypt_put(fcr);
       cryptop_free(scrp);
     }
 
   return error;
+}
+
+/****************************************************************************
+ * Name: cryptodev_cancel
+ *
+ * Description:
+ *   Cancel a pending symmetric async operation identified by reqid.
+ *
+ *   - If the op is still in-flight, flag it so its completion callback
+ *     discards the result when it arrives (the backend still owns the
+ *     cryptop, so it cannot be freed here).
+ *   - If the result already reached the completion queue, remove and free.
+ *   - Otherwise there is no such op: return -ENOENT.
+ *
+ ****************************************************************************/
+
+static int cryptodev_cancel(FAR struct fcrypt *fcr, uint32_t reqid)
+{
+  FAR struct cryptop *crp;
+  irqstate_t flags;
+  uint64_t sid;
+
+  flags = spin_lock_irqsave(&fcr->lock);
+
+  /* Still in-flight: flag it; the completion callback drops the result. */
+
+  TAILQ_FOREACH(crp, &fcr->crp_inflight, crp_next)
+    {
+      if (crp->crp_reqid == reqid)
+        {
+          sid = crp->crp_sid;
+          crp->crp_flags |= CRYPTO_F_CANCEL;
+          spin_unlock_irqrestore(&fcr->lock, flags);
+
+          cryptodev_cancel_dispatch(sid, reqid);
+          return OK;
+        }
+    }
+
+  TAILQ_FOREACH(crp, &fcr->crp_ret, crp_next)
+    {
+      if (crp->crp_reqid == reqid)
+        {
+          TAILQ_REMOVE(&fcr->crp_ret, crp, crp_next);
+          spin_unlock_irqrestore(&fcr->lock, flags);
+          cryptop_free(crp);
+          return OK;
+        }
+    }
+
+  spin_unlock_irqrestore(&fcr->lock, flags);
+  return -ENOENT;
 }
 
 static int cryptodevop_cb(FAR struct cryptop *crp)
@@ -696,6 +810,18 @@ static int cryptodevop_cb(FAR struct cryptop *crp)
   irqstate_t flags;
 
   flags = spin_lock_irqsave(&fcr->lock);
+  TAILQ_REMOVE(&fcr->crp_inflight, crp, crp_next);
+
+  /* Discard the result if a concurrent cancel flagged this op. */
+
+  if (crp->crp_flags & CRYPTO_F_CANCEL)
+    {
+      spin_unlock_irqrestore(&fcr->lock, flags);
+      cryptop_free(crp);
+      fcrypt_put(fcr);
+      return OK;
+    }
+
   TAILQ_INSERT_TAIL(&fcr->crp_ret, crp, crp_next);
   fds = fcr->fds;
   spin_unlock_irqrestore(&fcr->lock, flags);
@@ -761,6 +887,7 @@ static int cryptodev_getopstatus(FAR struct fcrypt *fcr,
 static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
 {
   FAR struct cryptkop *krp = NULL;
+  irqstate_t iflags;
   int error = -EINVAL;
   int in;
   int out;
@@ -964,6 +1091,17 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
       return -ENOMEM;
     }
 
+  for (i = 0; i < CRK_MAXPARAM; i++)
+    {
+      krp->krp_param[i].crp_nbits = kop->crk_param[i].crp_nbits;
+      if (kop->crk_param[i].crp_nbits > 65536)
+        {
+          /* XXX how big do we need to support? */
+
+          goto fail;
+        }
+    }
+
   krp->krp_op = kop->crk_op;
   krp->krp_iparams = kop->crk_iparams;
   krp->krp_oparams = kop->crk_oparams;
@@ -980,17 +1118,10 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
       krp->krp_fcr = fcr;
       krp->krp_callback = cryptodevkey_cb;
       fcrypt_get(fcr);
-    }
 
-  for (i = 0; i < CRK_MAXPARAM; i++)
-    {
-      krp->krp_param[i].crp_nbits = kop->crk_param[i].crp_nbits;
-      if (kop->crk_param[i].crp_nbits > 65536)
-        {
-          /* XXX how big do we need to support? */
-
-          goto fail;
-        }
+      iflags = spin_lock_irqsave(&fcr->lock);
+      TAILQ_INSERT_TAIL(&fcr->crpk_inflight, krp, krp_next);
+      spin_unlock_irqrestore(&fcr->lock, iflags);
     }
 
   for (i = 0; i < krp->krp_iparams + krp->krp_oparams; i++)
@@ -1020,6 +1151,13 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
   error = crypto_kinvoke(krp);
   if (error || krp->krp_status)
     {
+      if (krp->krp_flags & CRYPTO_F_CBIMM)
+        {
+          iflags = spin_lock_irqsave(&fcr->lock);
+          TAILQ_REMOVE(&fcr->crpk_inflight, krp, krp_next);
+          spin_unlock_irqrestore(&fcr->lock, iflags);
+        }
+
       goto fail;
     }
 
@@ -1055,23 +1193,61 @@ fail:
         }
 
       kop->crk_status = krp->krp_status;
-      if (!(krp->krp_flags & CRYPTO_F_REL))
-        {
-          for (i = 0; i < CRK_MAXPARAM; i++)
-            {
-              if (krp->krp_param[i].crp_p)
-                {
-                  explicit_bzero(krp->krp_param[i].crp_p,
-                      (krp->krp_param[i].crp_nbits + 7) / 8);
-                  kmm_free(krp->krp_param[i].crp_p);
-                }
-            }
-        }
-
       cryptkop_free(krp);
     }
 
   return error;
+}
+
+/****************************************************************************
+ * Name: cryptodevkey_cancel
+ *
+ * Description:
+ *   Cancel a pending asymmetric (key) async operation identified by reqid.
+ *
+ *   - If the op is still in-flight, flag it so its completion callback
+ *     discards the result, and forward the cancel to the backend so it can
+ *     drop a still-queued operation before it consumes hardware.
+ *   - If the result already reached the completion queue, remove and free.
+ *   - Otherwise there is no such op: return -ENOENT.
+ *
+ ****************************************************************************/
+
+static int cryptodevkey_cancel(FAR struct fcrypt *fcr,
+                               FAR struct crypt_kop *kop)
+{
+  FAR struct cryptkop *krp;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&fcr->lock);
+
+  /* Still in-flight: flag it; the completion callback drops the result. */
+
+  TAILQ_FOREACH(krp, &fcr->crpk_inflight, krp_next)
+    {
+      if (krp->krp_reqid == kop->crk_reqid)
+        {
+          krp->krp_flags |= CRYPTO_F_CANCEL;
+          spin_unlock_irqrestore(&fcr->lock, flags);
+
+          cryptodevkey_cancel_dispatch(kop->crk_reqid, kop->crk_op);
+          return OK;
+        }
+    }
+
+  TAILQ_FOREACH(krp, &fcr->crpk_ret, krp_next)
+    {
+      if (krp->krp_reqid == kop->crk_reqid)
+        {
+          TAILQ_REMOVE(&fcr->crpk_ret, krp, krp_next);
+          spin_unlock_irqrestore(&fcr->lock, flags);
+          cryptkop_free(krp);
+          return OK;
+        }
+    }
+
+  spin_unlock_irqrestore(&fcr->lock, flags);
+  return -ENOENT;
 }
 
 static int cryptodevkey_cb(FAR struct cryptkop *krp)
@@ -1081,6 +1257,18 @@ static int cryptodevkey_cb(FAR struct cryptkop *krp)
   irqstate_t flags;
 
   flags = spin_lock_irqsave(&fcr->lock);
+  TAILQ_REMOVE(&fcr->crpk_inflight, krp, krp_next);
+
+  /* Discard the result if a concurrent cancel flagged this op. */
+
+  if (krp->krp_flags & CRYPTO_F_CANCEL)
+    {
+      spin_unlock_irqrestore(&fcr->lock, flags);
+      cryptkop_free(krp);
+      fcrypt_put(fcr);
+      return OK;
+    }
+
   TAILQ_INSERT_TAIL(&fcr->crpk_ret, krp, krp_next);
   fds = fcr->fds;
   spin_unlock_irqrestore(&fcr->lock, flags);
@@ -1143,16 +1331,6 @@ static int cryptodev_getkeystatus(struct fcrypt *fcr, struct crypt_kop *ret)
 
           ret->crk_param[i].crp_nbits = krp->krp_param[i].crp_nbits;
           memcpy(ret->crk_param[i].crp_p, krp->krp_param[i].crp_p, size);
-        }
-
-      for (i = 0; i < CRK_MAXPARAM; i++)
-        {
-          if (krp->krp_param[i].crp_p)
-            {
-              explicit_bzero(krp->krp_param[i].crp_p,
-                  (krp->krp_param[i].crp_nbits + 7) / 8);
-              kmm_free(krp->krp_param[i].crp_p);
-            }
         }
     }
 
@@ -1257,6 +1435,8 @@ static int cryptof_open(FAR struct file *filep)
     }
 
   TAILQ_INIT(&fcrd->csessions);
+  TAILQ_INIT(&fcrd->crp_inflight);
+  TAILQ_INIT(&fcrd->crpk_inflight);
   TAILQ_INIT(&fcrd->crp_ret);
   TAILQ_INIT(&fcrd->crpk_ret);
   atomic_set(&fcrd->refcount, 1);
@@ -1357,6 +1537,8 @@ static int cryptoioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
 
         TAILQ_INIT(&fcr->csessions);
+        TAILQ_INIT(&fcr->crp_inflight);
+        TAILQ_INIT(&fcr->crpk_inflight);
         TAILQ_INIT(&fcr->crp_ret);
         TAILQ_INIT(&fcr->crpk_ret);
         atomic_set(&fcr->refcount, 1);

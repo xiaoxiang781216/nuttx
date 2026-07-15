@@ -452,6 +452,7 @@ struct crypt_op
 #define COP_FLAG_REL    (1 << 3) /* Output written in-place to user buffer;
                                   * no kernel copy on completion.
                                   */
+#define COP_FLAG_CANCEL (1 << 4) /* Cancel a pending async op by reqid. */
 
   uint16_t flags;
   unsigned len;
