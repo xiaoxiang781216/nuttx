@@ -1351,8 +1351,8 @@
 #  define farcall_function              __attribute__((long_call))
 #  define pure_function
 #  define const_function
-#  define predict_true(x) (x)
-#  define predict_false(x) (x)
+#  define predict_true(x)               (_Pragma("assume_if true") (x) _Pragma("assume_if restore"))
+#  define predict_false(x)              (_Pragma("assume_if false") (x) _Pragma("assume_if restore"))
 #  define is_constexpr(x)  (0)
 #  define compiler_assume(x)
 #  define aligned_data(n)               __attribute__((aligned(n)))
