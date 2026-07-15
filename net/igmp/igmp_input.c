@@ -173,6 +173,13 @@ void igmp_input(struct net_driver_s *dev)
          *   receivers.
          */
 
+        /* The group address lies in the IGMP header where it is stored as
+         * an unaligned uint16_t[2] in network order.  Convert it to an
+         * in_addr_t before it is used in any comparison.
+         */
+
+        grpaddr = net_ip4addr_conv32(igmp->grpaddr);
+
         /* Check if the query was sent to all systems */
 
         if (net_ipv4addr_cmp(destipaddr, g_ipv4_allsystems))
@@ -194,7 +201,7 @@ void igmp_input(struct net_driver_s *dev)
              *    Query."
              */
 
-            if (net_ipv4addr_cmp(igmp->grpaddr, INADDR_ANY) != 0)
+            if (net_ipv4addr_cmp(grpaddr, INADDR_ANY))
               {
                 FAR struct igmp_group_s *member;
 
@@ -229,7 +236,7 @@ void igmp_input(struct net_driver_s *dev)
                       }
                   }
               }
-            else /* if (net_ipv4addr_cmp(igmp->grpaddr, INADDR_ANY) == 0) */
+            else /* if (!net_ipv4addr_cmp(grpaddr, INADDR_ANY)) */
               {
                 ninfo("Group-specific multicast query\n");
 
@@ -239,8 +246,7 @@ void igmp_input(struct net_driver_s *dev)
 
                 IGMP_STATINCR(g_netstats.igmp.ucast_query);
 
-                grpaddr = net_ip4addr_conv32(igmp->grpaddr);
-                group   = igmp_grpallocfind(dev, &grpaddr);
+                group = igmp_grpallocfind(dev, &grpaddr);
 
                 if (group != NULL)
                   {
@@ -258,7 +264,7 @@ void igmp_input(struct net_driver_s *dev)
 
         /* Not sent to all systems -- Unicast query */
 
-        else if (net_ipv4addr_cmp(igmp->grpaddr, INADDR_ANY) == 0)
+        else if (!net_ipv4addr_cmp(grpaddr, INADDR_ANY))
           {
             ninfo("Unicast query\n");
             IGMP_STATINCR(g_netstats.igmp.ucast_query);
