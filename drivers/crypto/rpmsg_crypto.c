@@ -172,13 +172,15 @@ rpmsg_crypto_get_tx_payload_buffer(FAR struct rpmsg_crypto_s *priv,
 static int rpmsg_crypto_send_recv(FAR struct rpmsg_crypto_s *priv,
                                   FAR struct rpmsg_crypto_session_s *session,
                                   FAR struct rpmsg_crypto_header_s *msg,
-                                  uint32_t command, int len, bool waiting)
+                                  uint32_t command, uint32_t reqid,
+                                  int len, bool waiting)
 {
   int ret;
 
   msg->command = command;
   msg->result  = -ENXIO;
   msg->cookie  = (uintptr_t)session;
+  msg->reqid   = reqid;
 
   ret = rpmsg_send_nocopy(&priv->ept, msg, len);
   if (ret < 0)
@@ -190,6 +192,52 @@ static int rpmsg_crypto_send_recv(FAR struct rpmsg_crypto_s *priv,
   if (waiting && rpmsg_wait(&priv->ept, &session->sem) >= 0)
     {
       ret = session->result;
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: rpmsg_crypto_cancel
+ *
+ * Description:
+ *   Send a fire-and-forget cancel for an in-flight op. It needs no session
+ *   and expects no response, so it does not take a session slot or wait: it
+ *   just grabs a tx buffer and sends. A symmetric cancel carries the session
+ *   (tid) for sid-based routing on the server; an asymmetric cancel carries
+ *   the op. Matched by the reqid in the header; backends that cannot abort
+ *   ignore it.
+ *
+ ****************************************************************************/
+
+static int rpmsg_crypto_cancel(FAR struct rpmsg_crypto_s *rdev,
+                               uint32_t reqid, uint64_t tid, uint32_t op)
+{
+  FAR struct rpmsg_crypto_cancel_s *msg;
+  uint32_t space;
+  int ret;
+
+  if (rdev == NULL)
+    {
+      return -EINVAL;
+    }
+
+  msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
+  if (msg == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  memset(msg, 0, sizeof(*msg));
+  msg->header.command = RPMSG_CRYPTO_CANCEL;
+  msg->header.reqid   = reqid;
+  msg->header.tid     = tid;
+  msg->op             = op;
+
+  ret = rpmsg_send_nocopy(&rdev->ept, msg, sizeof(*msg));
+  if (ret < 0)
+    {
+      rpmsg_release_tx_buffer(&rdev->ept, msg);
     }
 
   return ret;
@@ -366,7 +414,7 @@ static int rpmsg_crypto_newsession(FAR uint32_t *sid,
     }
 
   ret = rpmsg_crypto_send_recv(rdev, &rdev->sessions[*sid],
-                               &msg->header, RPMSG_CRYPTO_NEWSESSION,
+                               &msg->header, RPMSG_CRYPTO_NEWSESSION, 0,
                                len, true);
   if (ret < 0)
     {
@@ -505,7 +553,7 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
       data_size = MIN(data_size, remaining);
       memcpy(buf, crp->crp_buf + offset, data_size);
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                                   RPMSG_CRYPTO_PROCESS,
+                                   RPMSG_CRYPTO_PROCESS, crp->crp_reqid,
                                    header_size + data_size, !async);
       if (ret < 0)
         {
@@ -570,7 +618,7 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
         }
 
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                                   RPMSG_CRYPTO_PROCESS,
+                                   RPMSG_CRYPTO_PROCESS, crp->crp_reqid,
                                    sizeof(*msg) + data_size,
                                    remaining == 0 &&
                                    !(flags & CRD_F_UPDATE) && !async);
@@ -653,7 +701,7 @@ rpmsg_crypto_process_aead_update_aad(
       /* Send packet without waiting - AAD produces no output */
 
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                                   RPMSG_CRYPTO_PROCESS,
+                                   RPMSG_CRYPTO_PROCESS, crp->crp_reqid,
                                    len, false);
       if (ret < 0)
         {
@@ -715,7 +763,8 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
       msg->data.op_flf.aead.src_data_len = datalen;
 
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                                   RPMSG_CRYPTO_PROCESS, len, !async);
+                                   RPMSG_CRYPTO_PROCESS, crp->crp_reqid,
+                                   len, !async);
       if (ret < 0)
         {
           rpmsgerr("Rpmsg Crypto AEAD update failed, ret=%d\n", ret);
@@ -763,7 +812,7 @@ rpmsg_crypto_process_aead_final(FAR struct rpmsg_crypto_s *rdev,
   /* Both encrypt and decrypt receive tag from server */
 
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                               RPMSG_CRYPTO_PROCESS,
+                               RPMSG_CRYPTO_PROCESS, crp->crp_reqid,
                                sizeof(*msg), !async);
   if (ret < 0)
     {
@@ -829,6 +878,13 @@ static int rpmsg_crypto_process(FAR struct cryptop *crp)
     }
 
   session = &rdev->sessions[sid];
+
+  if (crp->crp_flags & CRYPTO_F_CANCEL)
+    {
+      return rpmsg_crypto_cancel(rdev, crp->crp_reqid,
+                                 session->tid, 0);
+    }
+
   ret = rpmsg_crypto_fill_data_request(crp, &info);
   if (ret < 0)
     {
@@ -906,7 +962,7 @@ static int rpmsg_crypto_freesession(uint64_t tid)
   msg->ctrl.header.opcode = VIRTIO_CRYPTO_CIPHER_DESTROY_SESSION;
   msg->header.tid = session->tid;
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                               RPMSG_CRYPTO_FREESESSION,
+                               RPMSG_CRYPTO_FREESESSION, 0,
                                sizeof(*msg), true);
   if (ret < 0)
     {
@@ -1091,7 +1147,7 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   session->data = krp;
 
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                               RPMSG_CRYPTO_KPROCESS,
+                               RPMSG_CRYPTO_KPROCESS, krp->krp_reqid,
                                sizeof(*msg) + data_len,
                                !(krp->krp_flags & CRYPTO_F_CBIMM));
   if (ret < 0)
@@ -1245,7 +1301,7 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
   session->data = krp;
 
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                               RPMSG_CRYPTO_KPROCESS,
+                               RPMSG_CRYPTO_KPROCESS, krp->krp_reqid,
                                sizeof(*msg) + data_len,
                                !(krp->krp_flags & CRYPTO_F_CBIMM));
   if (ret < 0)
@@ -1403,6 +1459,13 @@ static int rpmsg_crypto_ecdh_process(FAR struct cryptkop *krp)
 
 static int rpmsg_crypto_kprocess(FAR struct cryptkop *krp)
 {
+  if (krp->krp_flags & CRYPTO_F_CANCEL)
+    {
+      return rpmsg_crypto_cancel(
+        crypto_driver_get_priv(krp->krp_hid),
+        krp->krp_reqid, 0, krp->krp_op);
+    }
+
   switch (virtio_crypto_asym_get_alg(krp->krp_op))
     {
       case VIRTIO_CRYPTO_AKCIPHER_RSA:
@@ -1425,6 +1488,13 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
   uint32_t space;
   uint32_t sid;
   int ret;
+
+  if (krp->krp_flags & CRYPTO_F_CANCEL)
+    {
+      return rpmsg_crypto_cancel(
+        crypto_driver_get_priv(krp->krp_hid),
+        krp->krp_reqid, 0, krp->krp_op);
+    }
 
   rdev = (FAR struct rpmsg_crypto_s *)crypto_driver_get_priv(krp->krp_hid);
   if (rdev == NULL)
@@ -1493,7 +1563,7 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
   session->data = krp;
 
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                               RPMSG_CRYPTO_KEYPROCESS,
+                               RPMSG_CRYPTO_KEYPROCESS, krp->krp_reqid,
                                sizeof(*msg) + data_len,
                                !(krp->krp_flags & CRYPTO_F_CBIMM));
   if (ret < 0)

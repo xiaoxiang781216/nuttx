@@ -125,6 +125,9 @@ static int rpmsg_crypto_kprocess_handler(FAR struct rpmsg_endpoint *ept,
 static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
                                            FAR void *data, size_t len,
                                            uint32_t src, FAR void *priv);
+static int rpmsg_crypto_cancel_handler(FAR struct rpmsg_endpoint *ept,
+                                       FAR void *data, size_t len,
+                                       uint32_t src, FAR void *priv);
 
 /* Async completion callbacks */
 
@@ -149,6 +152,7 @@ static const rpmsg_ept_cb g_rpmsg_crypto_handler[] =
   [RPMSG_CRYPTO_FREESESSION] = rpmsg_crypto_freesession_handler,
   [RPMSG_CRYPTO_KPROCESS]    = rpmsg_crypto_kprocess_handler,
   [RPMSG_CRYPTO_KEYPROCESS]  = rpmsg_crypto_keyprocess_handler,
+  [RPMSG_CRYPTO_CANCEL]      = rpmsg_crypto_cancel_handler,
 };
 
 /****************************************************************************
@@ -476,6 +480,7 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_endpoint *ept,
     }
 
   crp->crp_sid = rcsdata->tid;
+  crp->crp_reqid = msg->header.reqid;
   crp->crp_desc = crde;
 
   if (ivlen)
@@ -521,6 +526,7 @@ rpmsg_crypto_process_hash(FAR struct rpmsg_endpoint *ept,
     }
 
   crp->crp_sid = rcsdata->tid;
+  crp->crp_reqid = msg->header.reqid;
   crp->crp_desc = crda;
 
   if (result_len)
@@ -577,6 +583,7 @@ rpmsg_crypto_process_mac(FAR struct rpmsg_endpoint *ept,
     }
 
   crp->crp_sid = rcsdata->tid;
+  crp->crp_reqid = msg->header.reqid;
   crp->crp_desc = crda;
 
   /* PBKDF2 is carried over the MAC service as a plain HMAC session plus a
@@ -832,6 +839,7 @@ rpmsg_crypto_process_aead(FAR struct rpmsg_endpoint *ept,
   flags = msg->data.header.flag;
 
   rcsdata->crp.crp_sid = rcsdata->tid;
+  rcsdata->crp.crp_reqid = msg->header.reqid;
   rcsdata->crp.crp_desc = crda;
   crda->crd_next = crde;
 
@@ -1119,6 +1127,7 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   /* padding processing data */
 
   krp->krp_flags = msg->data.header.flag;
+  krp->krp_reqid = msg->header.reqid;
   dp = &krp->krp_param[6];
   switch (msg->data.header.opcode)
     {
@@ -1255,6 +1264,7 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
 
   krp = &rcsdata->krp;
   krp->krp_flags = msg->data.header.flag;
+  krp->krp_reqid = msg->header.reqid;
   switch (msg->data.header.opcode)
     {
       case VIRTIO_CRYPTO_AKCIPHER_SIGN:
@@ -1585,6 +1595,7 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
   memset(&krp, 0, sizeof(krp));
   krp.krp_op = msg->data.cmd;
   krp.krp_flags = msg->data.flag;
+  krp.krp_reqid = msg->header.reqid;
   switch (msg->data.cmd)
     {
       case CRK_ALLOCATE_KEY:
@@ -1634,6 +1645,54 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
     }
 
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + rsp->data.dst_data_len);
+}
+
+/****************************************************************************
+ * Name: rpmsg_crypto_cancel_handler
+ *
+ * Description:
+ *   Forward a cancel to the backend so a still-queued operation can be
+ *   dropped before it consumes hardware. A symmetric cancel carries the
+ *   session (header.tid), so it is dispatched via crypto_invoke using the
+ *   backend sid held in the session's rcsdata; an asymmetric cancel carries
+ *   no session and is routed by op via crypto_kinvoke. Both are matched by
+ *   reqid; backends that cannot abort ignore it. Fire-and-forget.
+ *
+ ****************************************************************************/
+
+static int rpmsg_crypto_cancel_handler(FAR struct rpmsg_endpoint *ept,
+                                       FAR void *data, size_t len,
+                                       uint32_t src, FAR void *priv)
+{
+  FAR struct rpmsg_crypto_cancel_s *msg = data;
+  FAR struct rpmsg_crypto_server_data_s *rcsdata =
+    (FAR struct rpmsg_crypto_server_data_s *)(uintptr_t)msg->header.tid;
+  struct cryptodesc crd;
+  struct cryptop crp;
+  struct cryptkop krp;
+
+  if (msg->header.tid != 0)
+    {
+      memset(&crp, 0, sizeof(crp));
+      memset(&crd, 0, sizeof(crd));
+      crp.crp_sid = rcsdata->tid;
+      crp.crp_reqid = msg->header.reqid;
+      crp.crp_flags = CRYPTO_F_CANCEL;
+      crp.crp_desc = &crd;
+
+      crypto_invoke(&crp);
+    }
+  else
+    {
+      memset(&krp, 0, sizeof(krp));
+      krp.krp_op = msg->op;
+      krp.krp_flags = CRYPTO_F_CANCEL;
+      krp.krp_reqid = msg->header.reqid;
+
+      crypto_kinvoke(&krp);
+    }
+
+  return OK;
 }
 
 /****************************************************************************

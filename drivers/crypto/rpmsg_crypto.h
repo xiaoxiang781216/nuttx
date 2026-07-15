@@ -41,6 +41,7 @@
 #define RPMSG_CRYPTO_FREESESSION     2
 #define RPMSG_CRYPTO_KPROCESS        3
 #define RPMSG_CRYPTO_KEYPROCESS      4
+#define RPMSG_CRYPTO_CANCEL          5
 
 /****************************************************************************
  * Public Types
@@ -52,6 +53,7 @@ begin_packed_struct struct rpmsg_crypto_header_s
   int32_t  result;
   uint64_t tid;
   uint64_t cookie;
+  uint32_t reqid;
 } end_packed_struct;
 
 begin_packed_struct struct rpmsg_crypto_newsession_s
@@ -83,6 +85,12 @@ begin_packed_struct struct rpmsg_crypto_keyprocess_s
   struct rpmsg_crypto_header_s header;
   struct virtio_key_op_req_s data;
   char buf[];
+} end_packed_struct;
+
+begin_packed_struct struct rpmsg_crypto_cancel_s
+{
+  struct rpmsg_crypto_header_s header;
+  uint32_t op;
 } end_packed_struct;
 
 #endif /* __DRIVERS_CRYPTO_RPMSG_CRYPTO_H */
