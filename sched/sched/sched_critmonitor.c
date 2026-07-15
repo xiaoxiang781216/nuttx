@@ -527,6 +527,7 @@ void nxsched_resume_critmon(FAR struct tcb_s *tcb)
 
 void nxsched_update_critmon(FAR struct tcb_s *tcb)
 {
+  irqstate_t flags = enter_critical_section();
   clock_t current = perf_gettime();
   clock_t elapsed = current - tcb->run_start;
 
@@ -545,4 +546,6 @@ void nxsched_update_critmon(FAR struct tcb_s *tcb)
           CHECK_THREAD(tcb->pid, elapsed);
         }
     }
+
+  leave_critical_section(flags);
 }
