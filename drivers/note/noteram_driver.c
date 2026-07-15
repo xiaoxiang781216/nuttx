@@ -679,6 +679,15 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
             {
               UP_WFE();
             }
+
+          /* ring_is_ready() is a plain read; pair it with a read
+           * barrier here.  The winner publishes the ring indices via
+           * atomic_set_release(&magic, READY) in ring_init_magic(), so
+           * this UP_RMB() guarantees those stores are visible before we
+           * touch the ring below.
+           */
+
+          UP_RMB();
         }
     }
 
