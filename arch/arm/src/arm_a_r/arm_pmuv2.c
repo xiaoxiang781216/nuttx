@@ -149,6 +149,15 @@ static struct pmu_ops_s g_armv7pmu_ops =
   .event_read  = armv7pmu_read,
 };
 
+/* The single, statically allocated PMU instance.  There is exactly one PMU
+ * device for the system, so it needs no dynamic allocation.
+ */
+
+static struct armv7_pmu_s g_armv7_pmu_dev =
+{
+  .pmu.ops = &g_armv7pmu_ops,
+};
+
 static const unsigned int g_armv7_perf_map[PERF_COUNT_HW_MAX] =
 {
   [PERF_COUNT_HW_CPU_CYCLES]       = ARMV7_PERFCTR_CPU_CYCLES,
@@ -552,29 +561,40 @@ static int armv7pmu_request_irqs(FAR struct armv7_pmu_s *armv7pmu)
   return armv7pmu_request_irq(hw_events->irq, armv7pmu);
 }
 
-static FAR struct armv7_pmu_s *armv7pmu_alloc(void)
-{
-  FAR struct armv7_pmu_s *armv7pmu;
-
-  armv7pmu = kmm_zalloc(sizeof(struct armv7_pmu_s));
-  if (!armv7pmu)
-    {
-      return NULL;
-    }
-
-  armv7pmu->pmu.ops = &g_armv7pmu_ops;
-  return armv7pmu;
-}
-
-static void armv7pmu_free(FAR struct armv7_pmu_s *armv7pmu)
-{
-  kmm_free(armv7pmu);
-}
-
 static int armv7pmu_register(FAR struct armv7_pmu_s *armv7pmu)
 {
   return perf_pmu_register(&armv7pmu->pmu, armv7pmu->name);
 }
+
+#if defined(CONFIG_ARCH_PERF_EVENTS)
+
+/****************************************************************************
+ * Name: armv7pmu_cycle_reserve
+ *
+ * Description:
+ *   Reserve the dedicated cycle counter index in EVERY CPU's perf
+ *   allocation bitmap (used_mask), so armv7pmu_get_event_idx() never hands
+ *   the cycle counter to a cpu-cycles event.  This prevents perf from
+ *   "stealing" the counter out from under the resident cycle time source
+ *   (up_perf_gettime), which reads the same PMU cycle counter (CCNT).
+ *
+ *   The reservation is a pure per-CPU memory update done once at init, so no
+ *   locking against concurrent access is required.
+ *
+ ****************************************************************************/
+
+static void armv7pmu_cycle_reserve(FAR struct armv7_pmu_s *armv7pmu)
+{
+  int cpu;
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+    {
+      set_bit(ARMV7_IDX_CYCLE_COUNTER,
+              &armv7pmu->hw_events[cpu].used_mask);
+    }
+}
+
+#endif
 
 static inline void armv7pmu_pmcr_write(uint32_t val)
 {
@@ -949,39 +969,38 @@ static int armv7pmu_common_init(FAR struct armv7_pmu_s *cpu_pmu,
 
 int arm_pmu_initialize(void)
 {
-  FAR struct armv7_pmu_s *armv7pmu;
+  FAR struct armv7_pmu_s *armv7pmu = &g_armv7_pmu_dev;
   int ret;
-
-  armv7pmu = armv7pmu_alloc();
-  if (!armv7pmu)
-    {
-      printf("ERROR: alloc armv7 pmu failed\n");
-      return -ENOMEM;
-    }
 
   ret = armv7pmu_common_init(armv7pmu, "arm,armv7-pmu");
   if (ret < 0)
     {
       printf("ERROR: armv7 pmu init failed: %d\n", ret);
-      goto out_free;
+      return ret;
     }
 
   ret = armv7pmu_request_irqs(armv7pmu);
   if (ret < 0)
     {
-      goto out_free;
+      return ret;
     }
 
   ret = armv7pmu_register(armv7pmu);
   if (ret < 0)
     {
       printf("ERROR: failed to register armv7 pmu: %d\n", ret);
-      goto out_free;
+      return ret;
     }
 
-  return OK;
+#if defined(CONFIG_ARCH_PERF_EVENTS)
+  /* Reserve the cycle counter in every CPU's allocation bitmap so the perf
+   * framework never hands it to a cpu-cycles event.  up_perf_gettime reads
+   * the same PMU cycle counter (CCNT), so it must not be stolen out from
+   * under the resident cycle time source.
+   */
 
-out_free:
-  armv7pmu_free(armv7pmu);
-  return ret;
+  armv7pmu_cycle_reserve(armv7pmu);
+#endif
+
+  return OK;
 }

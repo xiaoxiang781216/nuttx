@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/kmalloc.h>
 #include <nuttx/perf.h>
 
 #include <arm64_pmuv3.h>
@@ -180,6 +179,15 @@ static struct pmu_ops_s g_arm64pmu_ops =
   .event_start  = arm64pmu_start,
   .event_stop   = arm64pmu_stop,
   .event_read   = arm64pmu_read,
+};
+
+/* The single, statically allocated PMU instance.  There is exactly one PMU
+ * device for the system, so it needs no dynamic allocation.
+ */
+
+static struct arm64_pmu_s g_arm64_pmu_dev =
+{
+  .pmu.ops = &g_arm64pmu_ops,
 };
 
 static const unsigned int pmuv3_perf_map[PERF_COUNT_HW_MAX] =
@@ -699,26 +707,6 @@ static int arm64pmu_request_irqs(FAR struct arm64_pmu_s *arm64pmu)
   return err;
 }
 
-static FAR struct arm64_pmu_s *arm64pmu_alloc(void)
-{
-  FAR struct arm64_pmu_s *arm64pmu;
-
-  arm64pmu = kmm_zalloc(sizeof(struct arm64_pmu_s));
-  if (!arm64pmu)
-    {
-      return NULL;
-    }
-
-  arm64pmu->pmu.ops = &g_arm64pmu_ops;
-
-  return arm64pmu;
-}
-
-static void arm64pmu_free(FAR struct arm64_pmu_s *arm64pmu)
-{
-  kmm_free(arm64pmu);
-}
-
 static int arm64pmu_register(FAR struct arm64_pmu_s *arm64pmu)
 {
   return perf_pmu_register(&arm64pmu->pmu, arm64pmu->name);
@@ -1186,41 +1174,79 @@ static int pmuv3_pmu_init(FAR struct arm64_pmu_s *cpu_pmu)
  * Public Functions
  ****************************************************************************/
 
+#if defined(CONFIG_ARCH_PERF_EVENTS) && !defined(CONFIG_ARCH_CLUSTER_PMU)
+
+/****************************************************************************
+ * Name: arm64_pmu_cycle_reserve
+ *
+ * Description:
+ *   Reserve the dedicated cycle counter index in EVERY CPU's perf
+ *   allocation bitmap (used_mask), so the perf framework's
+ *   pmuv3_get_event_idx() never hands the cycle counter to a cpu-cycles
+ *   event.  This is what prevents perf from "stealing" the counter out from
+ *   under the resident cycle time source (up_perf_gettime).
+ *
+ *   Only needed when up_perf_gettime reads the core PMU's PMCCNTR_EL0
+ *   (CONFIG_ARCH_PERF_EVENTS without CONFIG_ARCH_CLUSTER_PMU).  With a
+ *   cluster PMU, up_perf_gettime reads the separate CLUSTERPMCCNTR_EL1 that
+ *   the perf framework never touches, so no reservation is required.
+ *
+ *   The reservation is a pure per-CPU memory update, so CPU0 does it for all
+ *   CPUs in one shot from arm64_pmu_initialize().  It runs before any
+ *   secondary CPU has booted and before any perf event exists, so no locking
+ *   against concurrent access is required.
+ *
+ *   Enabling/programming the cycle counter hardware register (PMCCNTR) is a
+ *   per-CPU operation handled elsewhere (up_perf_init on each CPU); this
+ *   function only claims the allocation slot.
+ *
+ ****************************************************************************/
+
+static void arm64_pmu_cycle_reserve(void)
+{
+  int cpu;
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+    {
+      test_and_set_bit(PMU_IDX_CYCLE_COUNTER,
+                       &g_arm64_pmu_dev.hw_events[cpu].used_mask);
+    }
+}
+
+#endif /* CONFIG_ARCH_PERF_EVENTS && !CONFIG_ARCH_CLUSTER_PMU */
+
 int arm64_pmu_initialize(void)
 {
-  FAR struct arm64_pmu_s *arm64pmu;
-  int ret = OK;
-
-  arm64pmu = arm64pmu_alloc();
-  if (!arm64pmu)
-    {
-      _err("ERROR: alloc arm_pmu failed!\n");
-      return -ENOMEM;
-    }
+  FAR struct arm64_pmu_s *arm64pmu = &g_arm64_pmu_dev;
+  int ret;
 
   ret = pmuv3_pmu_init(arm64pmu);
   if (ret)
     {
       _err("ERROR: init func failed!\n");
-      goto out_free;
+      return ret;
     }
 
   ret = arm64pmu_request_irqs(arm64pmu);
   if (ret)
     {
-      goto out_free;
+      return ret;
     }
 
   ret = arm64pmu_register(arm64pmu);
   if (ret)
     {
       _err("ERROR: failed to register PMU devices!\n");
-      goto out_free;
+      return ret;
     }
 
-  return OK;
+#if defined(CONFIG_ARCH_PERF_EVENTS) && !defined(CONFIG_ARCH_CLUSTER_PMU)
+  /* Reserve the cycle counter in every CPU's allocation bitmap so the perf
+   * framework never hands it to a cpu-cycles event.
+   */
 
-out_free:
-  arm64pmu_free(arm64pmu);
-  return ret;
+  arm64_pmu_cycle_reserve();
+#endif
+
+  return OK;
 }

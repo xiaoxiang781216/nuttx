@@ -128,6 +128,15 @@ static struct pmu_ops_s g_riscvpmu_ops =
   .event_read  = riscvpmu_event_read,
 };
 
+/* The single, statically allocated PMU instance.  There is exactly one PMU
+ * device for the system, so it needs no dynamic allocation.
+ */
+
+static struct riscv_pmu_s g_riscv_pmu_dev =
+{
+  .pmu.ops = &g_riscvpmu_ops,
+};
+
 /* Map generic perf HW events to RISC-V PMU event codes */
 
 static const unsigned int g_riscv_perf_map[PERF_COUNT_HW_MAX] =
@@ -520,20 +529,42 @@ static void riscvpmu_reset(FAR struct riscv_pmu_s *cpu_pmu)
  * Public Functions
  ****************************************************************************/
 
+#if defined(CONFIG_ARCH_PERF_EVENTS)
+
+/****************************************************************************
+ * Name: riscvpmu_cycle_reserve
+ *
+ * Description:
+ *   Reserve the dedicated cycle counter index in EVERY CPU's perf
+ *   allocation bitmap (used_mask), so riscvpmu_get_event_idx() never hands
+ *   the cycle counter to a cpu-cycles event.  This prevents perf from
+ *   "stealing" the mcycle counter out from under the resident cycle time
+ *   source (up_perf_gettime via riscv_perf_cycle.c, which reads mcycle).
+ *
+ *   The reservation is a pure per-CPU memory update done once at init, so no
+ *   locking against concurrent access is required.
+ *
+ ****************************************************************************/
+
+static void riscvpmu_cycle_reserve(FAR struct riscv_pmu_s *riscvpmu)
+{
+  int cpu;
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+    {
+      set_bit(RISCV_IDX_CYCLE_COUNTER,
+              &riscvpmu->hw_events[cpu].used_mask);
+    }
+}
+
+#endif
+
 int riscv_pmu_initialize(void)
 {
-  FAR struct riscv_pmu_s *riscvpmu;
+  FAR struct riscv_pmu_s *riscvpmu = &g_riscv_pmu_dev;
   int cpu;
   int ret;
 
-  riscvpmu = kmm_zalloc(sizeof(struct riscv_pmu_s));
-  if (!riscvpmu)
-    {
-      _err("ERROR: alloc riscv pmu failed\n");
-      return -ENOMEM;
-    }
-
-  riscvpmu->pmu.ops = &g_riscvpmu_ops;
   riscvpmu->name = "riscv,pmu";
 
   /* RISC-V base ISA guarantees mcycle and minstret.
@@ -562,9 +593,18 @@ int riscv_pmu_initialize(void)
   if (ret < 0)
     {
       _err("ERROR: failed to register riscv pmu: %d\n", ret);
-      kmm_free(riscvpmu);
       return ret;
     }
+
+#if defined(CONFIG_ARCH_PERF_EVENTS)
+  /* Reserve the cycle counter in every CPU's allocation bitmap so the perf
+   * framework never hands it to a cpu-cycles event.  up_perf_gettime reads
+   * the same mcycle counter, so it must not be stolen out from under the
+   * resident cycle time source.
+   */
+
+  riscvpmu_cycle_reserve(riscvpmu);
+#endif
 
   return OK;
 }
