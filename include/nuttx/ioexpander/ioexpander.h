@@ -189,6 +189,26 @@
 
 #define IOEXP_READBUF(dev,pin,valptr) ((dev)->ops->ioe_readbuf(dev,pin,valptr))
 
+/****************************************************************************
+ * Name: IOEXP_TOGGLE
+ *
+ * Description:
+ *   Atomically toggle a pin and return the new level. Optional.
+ *   If the lower half does not support this, -ENOTSUP is returned.
+ *
+ * Input Parameters:
+ *   dev    - Device-specific state data
+ *   pin    - The index of the pin to toggle
+ *   valptr - Pointer to a buffer where the new level is stored.
+ *
+ * Returned Value:
+ *   0 on success, else a negative error code
+ *
+ ****************************************************************************/
+
+#define IOEXP_TOGGLE(dev,pin,valptr) \
+  ((dev)->ops->ioe_toggle ? (dev)->ops->ioe_toggle(dev,pin,valptr) : -ENOTSUP)
+
 #ifdef CONFIG_IOEXPANDER_MULTIPIN
 
 /****************************************************************************
@@ -358,6 +378,8 @@ struct ioexpander_ops_s
                                ioe_callback_t callback, FAR void *arg);
   CODE int (*ioe_detach)(FAR struct ioexpander_dev_s *dev, FAR void *handle);
 #endif
+  CODE int (*ioe_toggle)(FAR struct ioexpander_dev_s *dev, uint8_t pin,
+                         FAR bool *value);
 };
 
 struct ioexpander_dev_s
