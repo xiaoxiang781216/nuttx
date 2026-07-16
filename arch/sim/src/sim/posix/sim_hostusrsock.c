@@ -29,6 +29,7 @@
 #include <sys/param.h>
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -38,6 +39,7 @@
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/un.h>
 
 #include "sim_internal.h"
 #include "sim_hostusrsock.h"
@@ -91,26 +93,93 @@ static void host_usrsock_set_fd(int fd, fd_set *fds)
     }
 }
 
-static void sockaddr_to_native(const struct nuttx_sockaddr *addr,
-                               const nuttx_socklen_t addrlen,
-                               struct sockaddr *naddr,
-                               socklen_t *naddrlen)
+static int sockaddr_to_native(const struct nuttx_sockaddr *addr,
+                              nuttx_socklen_t addrlen,
+                              struct sockaddr_storage *naddr,
+                              socklen_t *naddrlen)
 {
-  naddr->sa_family = addr->sa_family;
-  memcpy(naddr->sa_data, addr->sa_data, sizeof(naddr->sa_data));
+  if (addr == NULL || naddr == NULL || naddrlen == NULL)
+    {
+      return -EINVAL;
+    }
 
+  memset(naddr, 0, sizeof(*naddr));
+
+  if (addr->sa_family == NUTTX_AF_LOCAL)
+    {
+      const struct nuttx_sockaddr_un *un =
+        (const struct nuttx_sockaddr_un *)addr;
+      struct sockaddr_un *native = (struct sockaddr_un *)naddr;
+      size_t pathlen;
+
+      if (addrlen < offsetof(struct nuttx_sockaddr_un, sun_path) + 1)
+        {
+          return -EINVAL;
+        }
+
+      pathlen = strnlen(un->sun_path, sizeof(un->sun_path));
+      if (pathlen >= sizeof(native->sun_path))
+        {
+          return -ENAMETOOLONG;
+        }
+
+      native->sun_family = AF_UNIX;
+      memcpy(native->sun_path, un->sun_path, pathlen + 1);
+      *naddrlen = offsetof(struct sockaddr_un, sun_path) + pathlen + 1;
+
+      return 0;
+    }
+
+  if (addrlen > sizeof(*naddr))
+    {
+      return -ENOSPC;
+    }
+
+  memcpy(naddr, addr, addrlen);
   *naddrlen = addrlen;
+
+  return 0;
 }
 
-static void sockaddr_to_nuttx(const struct sockaddr *naddr,
-                              const socklen_t naddrlen,
-                              struct nuttx_sockaddr *addr,
-                              nuttx_socklen_t *addrlen)
+static int sockaddr_to_nuttx(const struct sockaddr_storage *naddr,
+                             socklen_t naddrlen,
+                             struct nuttx_sockaddr *addr,
+                             nuttx_socklen_t *addrlen)
 {
-  addr->sa_family = naddr->sa_family;
-  memcpy(addr->sa_data, naddr->sa_data, sizeof(addr->sa_data));
+  if (naddr == NULL || addr == NULL || addrlen == NULL)
+    {
+      return -EINVAL;
+    }
 
+  if (naddr->ss_family == AF_UNIX)
+    {
+      const struct sockaddr_un *native = (const struct sockaddr_un *)naddr;
+      struct nuttx_sockaddr_un *un = (struct nuttx_sockaddr_un *)addr;
+      size_t pathlen;
+
+      if (*addrlen < sizeof(*un))
+        {
+          return -ENOSPC;
+        }
+
+      memset(un, 0, sizeof(*un));
+      pathlen = strnlen(native->sun_path, sizeof(native->sun_path));
+      un->sun_family = NUTTX_AF_LOCAL;
+      memcpy(un->sun_path, native->sun_path, pathlen);
+      *addrlen = offsetof(struct nuttx_sockaddr_un, sun_path) + pathlen + 1;
+
+      return 0;
+    }
+
+  if (*addrlen < naddrlen)
+    {
+      return -ENOSPC;
+    }
+
+  memcpy(addr, naddr, naddrlen);
   *addrlen = naddrlen;
+
+  return 0;
 }
 
 static void sock_nonblock(int socket, int enable)
@@ -265,33 +334,68 @@ static int host_usrsock_sockopt(int sockfd, int level, int optname,
 int host_usrsock_socket(int domain, int type, int protocol)
 {
   int opt = 1;
+  int sockflags = 0;
   int ret;
 
-  if (domain == NUTTX_PF_INET)
+  switch (domain)
     {
-      domain = PF_INET;
-    }
-  else
-    {
-      return -EINVAL;
+      case NUTTX_PF_INET:
+        domain = PF_INET;
+        break;
+
+#ifdef CONFIG_NET_IPv6
+      case NUTTX_PF_INET6:
+        domain = PF_INET6;
+        break;
+#endif
+
+      case NUTTX_PF_LOCAL:
+        domain = PF_UNIX;
+        break;
+
+      default:
+        return -EINVAL;
     }
 
-  if (type == NUTTX_SOCK_STREAM)
+  switch (type & NUTTX_SOCK_TYPE_MASK)
     {
-      type = SOCK_STREAM;
+      case NUTTX_SOCK_STREAM:
+        sockflags = SOCK_STREAM;
+        break;
+
+      case NUTTX_SOCK_DGRAM:
+        sockflags = SOCK_DGRAM;
+        break;
+
+      case NUTTX_SOCK_RAW:
+        sockflags = SOCK_RAW;
+        break;
+
+      case NUTTX_SOCK_SEQPACKET:
+#ifdef SOCK_SEQPACKET
+        sockflags = SOCK_SEQPACKET;
+        break;
+#else
+        return -EPROTONOSUPPORT;
+#endif
+
+      default:
+        return -EINVAL;
     }
-  else if (type == NUTTX_SOCK_DGRAM)
+
+#ifdef SOCK_CLOEXEC
+  if ((type & NUTTX_SOCK_CLOEXEC) != 0)
     {
-      type = SOCK_DGRAM;
+      sockflags |= SOCK_CLOEXEC;
     }
-  else if (type == NUTTX_SOCK_RAW)
+#endif
+
+#ifdef SOCK_NONBLOCK
+  if ((type & NUTTX_SOCK_NONBLOCK) != 0)
     {
-      type = SOCK_RAW;
+      sockflags |= SOCK_NONBLOCK;
     }
-  else
-    {
-      return -EINVAL;
-    }
+#endif
 
   if (protocol == NUTTX_IPPROTO_IP)
     {
@@ -349,17 +453,27 @@ int host_usrsock_connect(int sockfd,
                          const struct nuttx_sockaddr *addr,
                          nuttx_socklen_t addrlen)
 {
-  struct sockaddr naddr;
+  struct sockaddr_storage naddr;
   socklen_t naddrlen;
   int ret;
 
-  sockaddr_to_native(addr, addrlen, &naddr, &naddrlen);
-
-  sock_nonblock(sockfd, false);
-  ret = host_uninterruptible(connect, sockfd, &naddr, naddrlen);
-  sock_nonblock(sockfd, true);
+  ret = sockaddr_to_native(addr, addrlen, &naddr, &naddrlen);
   if (ret < 0)
     {
+      return ret;
+    }
+
+  ret = host_uninterruptible(connect, sockfd, (struct sockaddr *)&naddr,
+                             naddrlen);
+  if (ret < 0)
+    {
+      if (errno == EINPROGRESS || errno == EALREADY || errno == EWOULDBLOCK)
+        {
+          host_usrsock_set_fd(sockfd, &g_active_write_fds);
+          host_usrsock_set_fd(sockfd, &g_active_read_fds);
+          return -EINPROGRESS;
+        }
+
       return -errno;
     }
 
@@ -373,15 +487,20 @@ ssize_t host_usrsock_sendto(int sockfd, const void *buf,
                             const struct nuttx_sockaddr *dest_addr,
                             nuttx_socklen_t addrlen)
 {
-  struct sockaddr naddr;
+  struct sockaddr_storage naddr;
   socklen_t naddrlen;
   int ret;
 
   if (dest_addr && addrlen >= sizeof(*dest_addr))
     {
-      sockaddr_to_native(dest_addr, addrlen, &naddr, &naddrlen);
+      ret = sockaddr_to_native(dest_addr, addrlen, &naddr, &naddrlen);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
       ret = host_uninterruptible(sendto, sockfd, buf, len, flags,
-                               &naddr, naddrlen);
+                                 (struct sockaddr *)&naddr, naddrlen);
     }
   else
     {
@@ -407,15 +526,14 @@ ssize_t host_usrsock_recvfrom(int sockfd, void *buf, size_t len, int flags,
                               struct nuttx_sockaddr *src_addr,
                               nuttx_socklen_t *addrlen)
 {
-  struct sockaddr naddr;
-  socklen_t naddrlen;
+  struct sockaddr_storage naddr;
+  socklen_t naddrlen = sizeof(naddr);
   int ret;
 
-  if (src_addr && addrlen && *addrlen >= sizeof(*src_addr))
+  if (src_addr && addrlen)
     {
-      sockaddr_to_native(src_addr, *addrlen, &naddr, &naddrlen);
       ret = host_uninterruptible(recvfrom, sockfd, buf, len, flags,
-                               &naddr, &naddrlen);
+                                 (struct sockaddr *)&naddr, &naddrlen);
     }
   else
     {
@@ -433,7 +551,7 @@ ssize_t host_usrsock_recvfrom(int sockfd, void *buf, size_t len, int flags,
       return -errno;
     }
 
-  if (src_addr && addrlen && *addrlen >= sizeof(*src_addr))
+  if (src_addr && addrlen)
     {
       sockaddr_to_nuttx(&naddr, naddrlen, src_addr, addrlen);
     }
@@ -461,19 +579,20 @@ int host_usrsock_getsockname(int sockfd,
                              struct nuttx_sockaddr *addr,
                              nuttx_socklen_t *addrlen)
 {
-  socklen_t naddrlen = sizeof(struct sockaddr);
-  struct sockaddr naddr;
+  socklen_t naddrlen = sizeof(struct sockaddr_storage);
+  struct sockaddr_storage naddr;
   int ret;
 
-  ret = host_uninterruptible(getsockname, sockfd, &naddr, &naddrlen);
+  ret = host_uninterruptible(getsockname, sockfd, (struct sockaddr *)&naddr,
+                             &naddrlen);
   if (ret < 0)
     {
       return -errno;
     }
 
-  if (addr && addrlen && *addrlen >= sizeof(*addr))
+  if (addr && addrlen)
     {
-      sockaddr_to_nuttx(&naddr, naddrlen, addr, addrlen);
+      ret = sockaddr_to_nuttx(&naddr, naddrlen, addr, addrlen);
     }
 
   return ret;
@@ -483,19 +602,20 @@ int host_usrsock_getpeername(int sockfd,
                              struct nuttx_sockaddr *addr,
                              nuttx_socklen_t *addrlen)
 {
-  socklen_t naddrlen = sizeof(struct sockaddr);
-  struct sockaddr naddr;
+  socklen_t naddrlen = sizeof(struct sockaddr_storage);
+  struct sockaddr_storage naddr;
   int ret;
 
-  ret = host_uninterruptible(getpeername, sockfd, &naddr, &naddrlen);
+  ret = host_uninterruptible(getpeername, sockfd, (struct sockaddr *)&naddr,
+                             &naddrlen);
   if (ret < 0)
     {
       return -errno;
     }
 
-  if (addr && addrlen && *addrlen >= sizeof(*addr))
+  if (addr && addrlen)
     {
-      sockaddr_to_nuttx(&naddr, naddrlen, addr, addrlen);
+      ret = sockaddr_to_nuttx(&naddr, naddrlen, addr, addrlen);
     }
 
   return ret;
@@ -505,14 +625,18 @@ int host_usrsock_bind(int sockfd,
                       const struct nuttx_sockaddr *addr,
                       nuttx_socklen_t addrlen)
 {
-  struct sockaddr naddr;
+  struct sockaddr_storage naddr;
   socklen_t naddrlen;
+  int ret;
 
-  sockaddr_to_native(addr, addrlen, &naddr, &naddrlen);
+  ret = sockaddr_to_native(addr, addrlen, &naddr, &naddrlen);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
-  return host_uninterruptible(bind, sockfd,
-                              &naddr, naddrlen) < 0
-                              ? -errno : 0;
+  return host_uninterruptible(bind, sockfd, (struct sockaddr *)&naddr,
+                              naddrlen) < 0 ? -errno : 0;
 }
 
 int host_usrsock_listen(int sockfd, int backlog)
@@ -533,17 +657,18 @@ int host_usrsock_listen(int sockfd, int backlog)
 int host_usrsock_accept(int sockfd, struct nuttx_sockaddr *addr,
                         nuttx_socklen_t *addrlen)
 {
-  socklen_t naddrlen = sizeof(socklen_t);
-  struct sockaddr naddr;
+  socklen_t naddrlen = sizeof(struct sockaddr_storage);
+  struct sockaddr_storage naddr;
   int ret;
 
-  ret = host_uninterruptible(accept, sockfd, &naddr, &naddrlen);
+  ret = host_uninterruptible(accept, sockfd, (struct sockaddr *)&naddr,
+                             &naddrlen);
   if (ret < 0)
     {
       return -errno;
     }
 
-  if (addr && addrlen && *addrlen >= sizeof(*addr))
+  if (addr && addrlen)
     {
       sockaddr_to_nuttx(&naddr, naddrlen, addr, addrlen);
     }
@@ -589,7 +714,7 @@ void host_usrsock_loop(void)
   int ret;
   int i;
 
-  if (g_active_maxfd <= 0)
+  if (g_active_maxfd < 0)
     {
       return;
     }

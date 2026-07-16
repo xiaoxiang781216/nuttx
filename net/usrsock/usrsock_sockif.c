@@ -120,10 +120,13 @@ static int usrsock_sockif_setup(FAR struct socket *psock)
 #ifdef CONFIG_NET_USRSOCK_PKT
       psock->s_domain != PF_PACKET &&
 #endif
+#ifndef CONFIG_NET_LOCAL
+      psock->s_domain != PF_LOCAL &&
+#endif
       psock->s_domain != PF_NETLINK)
     {
-      return -ENOTSUP; /* Only ipv4, ipv6 and netlink support the offload */
-    };
+      return -ENOTSUP; /* Only supported families can use usrsock offload */
+    }
 
   /* Let the user socket logic handle the setup...
    *
