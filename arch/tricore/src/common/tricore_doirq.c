@@ -111,6 +111,8 @@ static DEFINE_PER_CPU_BSS_BMP(struct csa_info, g_switchcsa);
  * Public Functions
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_IRQPRIO
+
 /****************************************************************************
  * Name: tricore_irq_direct
  *
@@ -127,9 +129,7 @@ TRICORE_INTERRUPT_DEFINE(tricore_irq_direct)
   Ifx_CPU_ICR icr;
   int irq;
 
-#ifdef CONFIG_ARCH_IRQPRIO
   up_irq_enable();
-#endif
 
   icr.U = tricore_mfcr(CPU_ICR);
   irq = tricore_srpn_to_irq(icr.B.CCPN);
@@ -145,18 +145,21 @@ TRICORE_INTERRUPT_DEFINE(tricore_irq_direct)
     }
 }
 
+#endif /* CONFIG_ARCH_IRQPRIO */
+
 /****************************************************************************
  * Name: tricore_irq_sched
  *
  * Description:
- *   GPSR interrupt entry point for context switch (analogous to arm_doirq).
- *   This is triggered by tricore_taskswitch_irq when tricore_irq_direct
- *   detects that a context switch is needed. It also handles the
- *   systimer oneshot callback.
+ *   Context-switch interrupt entry. Two dispatch schemes share this entry
+ *   with different roles, selected by CONFIG_ARCH_IRQPRIO.
  *
- *   Because the GPSR SRPN is the lowest priority, this only executes
- *   after all normal interrupts have completed, guaranteeing safe
- *   context switch without race conditions.
+ *   CONFIG_ARCH_IRQPRIO=y (Hardware-managed, Full BIV table):
+ *     SRPN 1 -> tricore_irq_sched (lowest priority, task switch only),
+ *     SRPN 2~MAX -> tricore_irq_direct (fast dispatch, nestable).
+ *   CONFIG_ARCH_IRQPRIO=n (Software-managed, One-entry BIV table):
+ *     All IRQs vector to the SRPN 255 entry, tricore_irq_sched does
+ *     dispatch and task switch. No nesting support. Saves BIV flash (~8KB).
  *
  ****************************************************************************/
 
@@ -165,6 +168,10 @@ TRICORE_INTERRUPT_DEFINE(tricore_irq_sched)
   struct tcb_s **running_task = &g_running_task;
   struct tcb_s *tcb;
   uintptr_t *regs;
+#ifndef CONFIG_ARCH_IRQPRIO
+  Ifx_CPU_ICR icr;
+  int irq;
+#endif
 
 #ifdef CONFIG_ARCH_IRQPRIO
   up_irq_enable();
@@ -177,6 +184,13 @@ TRICORE_INTERRUPT_DEFINE(tricore_irq_sched)
     }
 
   board_autoled_on(LED_INIRQ);
+
+#ifndef CONFIG_ARCH_IRQPRIO
+  icr.U = tricore_mfcr(CPU_ICR);
+  irq = tricore_srpn_to_irq(icr.B.CCPN);
+  tricore_ack_irq(irq);
+  irq_dispatch(irq, regs);
+#endif
 
   tcb = this_task();
 

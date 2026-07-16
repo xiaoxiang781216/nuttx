@@ -40,56 +40,101 @@
  ****************************************************************************/
 
 #if defined(__TASKING__)
-#define TRICORE_TRAP_CALLTSR(serviceRoutine)         \
-{                                                    \
-  __asm__(".align 32\n\t");                          \
-  __asm__("svlcx\n\t");                              \
-  __asm__("mov d4, d15\n\t");                        \
-  __asm__("ji %0\n\t" : : "a" (serviceRoutine));     \
-  __asm__("rfe");                                    \
+#define TRICORE_TRAP_CALLTSR(serviceRoutine)                \
+{                                                           \
+  __asm__(".align 32\n\t");                                 \
+  __asm__("svlcx\n\t");                                     \
+  __asm__("mov d4, d15\n\t");                               \
+  __asm__("ji %0\n\t" : : "a" (serviceRoutine));            \
+  __asm__("rfe");                                           \
 }
 
-#define TRICORE_TRAP_CALLCSATSR(serviceRoutine)      \
-{                                                    \
-  __asm__(".align 32\n\t");                          \
-  __asm__("jeq d15, #4, tricore_fcutrap_entry\n\t"); \
-  __asm__("svlcx\n\t");                              \
-  __asm__("mov d4, d15\n\t");                        \
-  __asm__("ji %0\n\t" : : "a" (serviceRoutine));     \
-  __asm__("rfe");                                    \
+#define TRICORE_TRAP_CALLCSATSR(serviceRoutine)             \
+{                                                           \
+  __asm__(".align 32\n\t");                                 \
+  __asm__("jeq d15, #4, tricore_fcutrap_entry\n\t");        \
+  __asm__("svlcx\n\t");                                     \
+  __asm__("mov d4, d15\n\t");                               \
+  __asm__("ji %0\n\t" : : "a" (serviceRoutine));            \
+  __asm__("rfe");                                           \
+}
+#define TRICORE_TRAP_TSRHOOK(trap, handler)                 \
+{                                                           \
+  __asm__("mov.aa a4, %0" :: "a"(trap) : "a4");             \
+  __asm__("jli %0" :: "a"(handler));                        \
 }
 
-#define TRICORE_TRAP_TSRHOOK(trap, handler)          \
-{                                                    \
-  __asm__("mov.aa a4, %0" :: "a"(trap) : "a4");      \
-  __asm__("jli %0" :: "a"(handler));                 \
+#define TRICORE_INT_CALL_SCHEDISR(handler)                  \
+{                                                           \
+  __asm__(".align 32\n\t");                                 \
+  __asm__("svlcx\n\t");                                     \
+  __asm__("jli %0\n\t" :: "a"(handler));                    \
+  __asm__("rslcx\n\t");                                     \
+  __asm__("rfe");                                           \
 }
+
+#define TRICORE_INT_CALL_DIRECTISR(handler)                 \
+  __asm__                                                   \
+  (                                                         \
+    ".DUP " STRINGIFY(TRICORE_IRQ_MAX_PRIORITY - 1) "\n\t"  \
+    ".align 32\n\t"                                         \
+    "svlcx\n\t"                                             \
+    "movh.a a15,#@his(" #handler ")\n\t"                    \
+    "lea a15,[a15]@los(" #handler ")\n\t"                   \
+    "jli a15\n\t"                                           \
+    "rslcx\n\t"                                             \
+    "rfe\n\t"                                               \
+    ".ENDM\n"                                               \
+  );
 
 #else
-#define TRICORE_TRAP_CALLTSR(serviceRoutine)         \
-{                                                    \
-  __asm__(".align 5\n\t");                           \
-  __asm__("svlcx\n\t");                              \
-  __asm__("mov %d4, %d15\n\t");                      \
-  __asm__("ji %0\n\t" : : "a" (serviceRoutine));     \
-  __asm__("rfe");                                    \
+#define TRICORE_TRAP_CALLTSR(serviceRoutine)                \
+{                                                           \
+  __asm__(".align 5\n\t");                                  \
+  __asm__("svlcx\n\t");                                     \
+  __asm__("mov %d4, %d15\n\t");                             \
+  __asm__("ji %0\n\t" : : "a" (serviceRoutine));            \
+  __asm__("rfe");                                           \
 }
 
-#define TRICORE_TRAP_CALLCSATSR(serviceRoutine)      \
-{                                                    \
-  __asm__(".align 5\n\t");                           \
-  __asm__("jeq %d15, 4, tricore_fcutrap_entry\n\t"); \
-  __asm__("svlcx\n\t");                              \
-  __asm__("mov %d4, %d15\n\t");                      \
-  __asm__("ji %0\n\t" : : "a" (serviceRoutine));     \
-  __asm__("rfe");                                    \
+#define TRICORE_TRAP_CALLCSATSR(serviceRoutine)             \
+{                                                           \
+  __asm__(".align 5\n\t");                                  \
+  __asm__("jeq %d15, 4, tricore_fcutrap_entry\n\t");        \
+  __asm__("svlcx\n\t");                                     \
+  __asm__("mov %d4, %d15\n\t");                             \
+  __asm__("ji %0\n\t" : : "a" (serviceRoutine));            \
+  __asm__("rfe");                                           \
 }
 
-#define TRICORE_TRAP_TSRHOOK(trap, handler)          \
-{                                                    \
-  __asm__("mov.aa %%a4, %0" :: "a"(trap) : "a4");    \
-  __asm__("jli %0" :: "a"(handler));                 \
+#define TRICORE_TRAP_TSRHOOK(trap, handler)                 \
+{                                                           \
+  __asm__("mov.aa %%a4, %0" :: "a"(trap) : "a4");           \
+  __asm__("jli %0" :: "a"(handler));                        \
 }
+
+#define TRICORE_INT_CALL_SCHEDISR(handler)                  \
+{                                                           \
+  __asm__(".align 5\n\t");                                  \
+  __asm__("svlcx\n\t");                                     \
+  __asm__("jli %0\n\t" :: "a"(handler));                    \
+  __asm__("rslcx\n\t");                                     \
+  __asm__("rfe");                                           \
+}
+
+#define TRICORE_INT_CALL_DIRECTISR(handler)                 \
+  __asm__                                                   \
+  (                                                         \
+    ".rept " STRINGIFY(TRICORE_IRQ_MAX_PRIORITY - 1) "\n\t" \
+    ".align 5\n\t"                                          \
+    "svlcx\n\t"                                             \
+    "movh.a %a15, hi:" #handler "\n\t"                      \
+    "lea %a15, [%a15]lo:" #handler "\n\t"                   \
+    "jli %a15\n\t"                                          \
+    "rslcx\n\t"                                             \
+    "rfe\n\t"                                               \
+    ".endr\n"                                               \
+  );
 #endif
 
 #define TRICORE_TRAP_RET()      __asm__("rslcx\n\trfe")
@@ -289,7 +334,11 @@ void tricore_fcu_register_pool(void *base, size_t num)
 }
 
 /****************************************************************************
- * TriCore TRAP Vector Table (BTV)
+ * Name: tricore_traptab
+ *
+ * Description:
+ *   Trap vector table for tricore arch.
+ *
  ****************************************************************************/
 
 #if defined(__TASKING__)
@@ -310,72 +359,34 @@ void tricore_traptab(void)
 }
 
 /****************************************************************************
- * TriCore Interrupt Vector Table (BIV)
+ * Name: tricore_inttab
  *
- * Unlike ARM/RISC-V which store function pointers, TriCore's interrupt
- * vector table contains executable code directly. Each entry is a 32-byte
- * (0x20) aligned slot holding a small code sequence that saves context
- * and jumps to the actual handler.
+ * Description:
+ *   TriCore interrupt vector table (BIV). Unlike ARM/RISC-V which store
+ *   function pointers, TriCore's table contains executable code directly.
+ *   Each entry is a 32-byte (0x20) aligned slot holding a small code
+ *   sequence that saves context and jumps to the handler.
  *
- * Entry layout (SRPN = Service Request Priority Number):
- *   SRPN 1 (lowest priority)  -> tricore_irq_sched (context switch)
- *   SRPN 2 ~ MAX (all others) -> tricore_irq_direct (fast dispatch)
+ *   CONFIG_ARCH_IRQPRIO=y (Hardware-managed, Full BIV table):
+ *     SRPN 1 -> tricore_irq_sched (lowest priority, task switch only),
+ *     SRPN 2~MAX -> tricore_irq_direct (fast dispatch, nestable).
+ *   CONFIG_ARCH_IRQPRIO=n (Software-managed, One-entry BIV table):
+ *     Only the SRPN 255 entry exists, all IRQs vector to
+ *     tricore_irq_sched. No nesting support. Saves BIV flash (~8KB).
  *
  ****************************************************************************/
 
-#ifdef CONFIG_TRICORE_TOOLCHAIN_TASKING
-
-__asm__ (
-    ".sdecl '.text.inttable',code,protect\n\t"
-    ".sect  '.text.inttable'\n\t"
-    ".extern tricore_irq_sched\n\t"
-    ".extern tricore_irq_direct\n\t"
-    ".align 32\n\t"
-
-    "svlcx\n\t"
-    "movh.a a15,#@his(tricore_irq_sched)\n\t"
-    "lea    a15,[a15]@los(tricore_irq_sched)\n\t"
-    "jli     a15\n\t"
-    "rslcx\n\t"
-    "rfe\n"
-    ".align 32\n\t"
-
-    ".DUP " STRINGIFY(TRICORE_IRQ_MAX_PRIORITY - 1) "\n\t"
-    "svlcx\n\t"
-    "movh.a a15,#@his(tricore_irq_direct)\n\t"
-    "lea    a15,[a15]@los(tricore_irq_direct)\n\t"
-    "jli     a15\n\t"
-    "rslcx\n\t"
-    "rfe\n"
-    ".align 32\n\t"
-    ".ENDM\n"
-);
-
-#else /* GCC */
-
-__asm__ (
-    ".pushsection .inttable,\"ax\",@progbits\n\t"
-    ".align 5\n\t"
-
-    "svlcx\n\t"
-    "movh.a %a15, hi:tricore_irq_sched\n\t"
-    "lea    %a15, [%a15]lo:tricore_irq_sched\n\t"
-    "jli    %a15\n\t"
-    "rslcx\n\t"
-    "rfe\n\t"
-    ".align 5\n"
-
-    ".rept " STRINGIFY(TRICORE_IRQ_MAX_PRIORITY - 1) "\n\t"
-    "svlcx\n\t"
-    "movh.a %a15, hi:tricore_irq_direct\n\t"
-    "lea    %a15, [%a15]lo:tricore_irq_direct\n\t"
-    "jli    %a15\n\t"
-    "rslcx\n\t"
-    "rfe\n\t"
-    ".align 5\n"
-    ".endr\n"
-
-    ".popsection\n"
-);
-
+#if defined(__TASKING__)
+noinstrument_function locate_code(".text.inttable")
+#else
+noinstrument_function locate_code(".inttable")
 #endif
+void tricore_inttab(void)
+{
+#ifdef CONFIG_ARCH_IRQPRIO
+  TRICORE_INT_CALL_SCHEDISR(tricore_irq_sched)
+  TRICORE_INT_CALL_DIRECTISR(tricore_irq_direct)
+#else
+  TRICORE_INT_CALL_SCHEDISR(tricore_irq_sched)
+#endif
+}
