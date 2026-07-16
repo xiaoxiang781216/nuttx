@@ -30,6 +30,11 @@ AFLAGS += -D_LIBUNWIND_IS_NATIVE_ONLY -DNDEBUG
 CFLAGS += -Wno-undef -fno-sanitize=all
 CXXFLAGS += -Wno-undef -fno-sanitize=all -fno-exceptions -fno-rtti
 
+# GCC false positive -Wmaybe-uninitialized in DwarfParser.hpp
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),)
+CXXFLAGS += -Wno-maybe-uninitialized
+endif
+
 # Core engine: unw_* API (unw_init_local, unw_step, unw_get_reg)
 
 CPPSRCS += $(UNWIND_SRCDIR)/libunwind.cpp

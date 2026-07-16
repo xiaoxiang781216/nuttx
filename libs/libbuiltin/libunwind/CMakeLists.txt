@@ -40,6 +40,10 @@ if(CONFIG_LIB_LIBUNWIND)
 
   set(UNWIND_DEFS _LIBUNWIND_IS_NATIVE_ONLY NDEBUG)
   set(UNWIND_OPTS -Wno-undef -fno-sanitize=all)
+  # GCC false positive -Wmaybe-uninitialized in DwarfParser.hpp
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    list(APPEND UNWIND_OPTS -Wno-maybe-uninitialized)
+  endif()
   set(UNWIND_CXX_FLAGS "-fno-exceptions -fno-rtti")
 
   if(CONFIG_ELF AND CONFIG_CXX_EXCEPTION_UNWINDER_LIBUNWIND)
