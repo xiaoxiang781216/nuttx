@@ -46,6 +46,10 @@ set(CMAKE_AR ${CROSSDEV}gcc-ar)
 set(CMAKE_NM ${CROSSDEV}gcc-nm)
 set(CMAKE_RANLIB ${CROSSDEV}gcc-ranlib)
 
+set(ASMEXT
+    S
+    CACHE INTERNAL "")
+
 # override the ARCHIVE command
 
 set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")

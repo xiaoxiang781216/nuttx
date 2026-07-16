@@ -47,6 +47,7 @@ AR                = artc -r
 NM                = nm
 OBJCOPY           = objcopy
 OBJDUMP           = elfdump
+ASMEXT            = asm
 
 ARCHOPTIMIZATION += --lsl-core=vtc
 LDFLAGS          += --lsl-core=vtc

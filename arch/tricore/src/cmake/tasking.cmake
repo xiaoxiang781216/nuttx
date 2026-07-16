@@ -42,6 +42,10 @@ set(CMAKE_AR artc)
 set(CMAKE_NM nm)
 set(CMAKE_RANLIB ranlib)
 
+set(ASMEXT
+    asm
+    CACHE INTERNAL "")
+
 if(CONFIG_OUTPUT_STRIP_PATHS)
   # TASKING cctc has no -fmacro-prefix-map. Convert absolute source paths to
   # relative paths by cd-ing to code root before compilation, so __FILE__ embeds

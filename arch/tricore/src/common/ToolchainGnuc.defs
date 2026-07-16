@@ -130,6 +130,7 @@ AR      = $(CROSSDEV)tricore-elf-gcc-ar rcs
 NM      = $(CROSSDEV)tricore-elf-gcc-nm
 OBJCOPY = $(CROSSDEV)tricore-elf-objcopy
 OBJDUMP = $(CROSSDEV)tricore-elf-objdump
+ASMEXT  = S
 
 ARCHOPTIMIZATION += -fno-builtin
 
