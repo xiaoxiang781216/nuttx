@@ -116,6 +116,10 @@ struct rpmsg_port_uart_s
   uint8_t                         rx_dbg_buf[RPMSG_PORT_UART_DBG_BUFLEN];
   int                             rx_dbg_idx;
   nxevent_t                       event;
+
+  /* Serialize connect handshake between tx startup and rx conn processing */
+
+  mutex_t                         conn_lock;
   struct notifier_block           nb;       /* Reboot notifier block */
   pid_t                           tx_tid;
   uint8_t                         tx_staywake;
@@ -487,6 +491,7 @@ static void
 rpmsg_port_uart_process_rx_conn(FAR struct rpmsg_port_uart_s *rpuart,
                                 uint8_t ch)
 {
+  nxmutex_lock(&rpuart->conn_lock);
   if (ch == RPMSG_PORT_UART_CONNREQ)
     {
       rpmsgvbs("Connect Request Command 0x%lx\n", rpuart->event.events);
@@ -509,6 +514,8 @@ rpmsg_port_uart_process_rx_conn(FAR struct rpmsg_port_uart_s *rpuart,
           rpmsg_port_register(&rpuart->port, rpuart->localcpu);
         }
     }
+
+  nxmutex_unlock(&rpuart->conn_lock);
 }
 
 /****************************************************************************
@@ -822,6 +829,16 @@ static int rpmsg_port_uart_tx_thread(int argc, FAR char *argv[])
   rpuart->tx_tid = gettid();
 
   rpmsg_port_uart_staywake(rpuart);
+
+  /* Serialize the initial connect handshake against the rx thread.
+   * Reading EVT_CONNED and sending CONNREQ here must be atomic with
+   * rpmsg_port_uart_process_rx_conn() setting EVT_CONNED and replying
+   * CONNACK. Otherwise a stale "not connected" read can emit a CONNREQ
+   * after a CONNACK has already gone out for the same handshake, making
+   * the peer see ACK-then-REQ and register twice.
+   */
+
+  nxmutex_lock(&rpuart->conn_lock);
   if (!rpmsg_port_uart_check(rpuart, RPMSG_PORT_UART_EVT_CONNED))
     {
       rpmsgvbs("Not Connected, Send Conn Req\n");
@@ -831,6 +848,8 @@ static int rpmsg_port_uart_tx_thread(int argc, FAR char *argv[])
     {
       rpmsgvbs("Connected, no need Send Conn Req\n");
     }
+
+  nxmutex_unlock(&rpuart->conn_lock);
 
   for (; ; )
     {
@@ -911,6 +930,7 @@ int rpmsg_port_uart_initialize(FAR const struct rpmsg_port_config_s *cfg,
   rpuart->rx_state = RPMSG_PORT_UART_RX_WAIT_START;
   rpuart->tx_staywake = RPMSG_PORT_UART_STAYWAKE1;
   nxevent_init(&rpuart->event, 0);
+  nxmutex_init(&rpuart->conn_lock);
 
   /* Hardware initialize */
 
@@ -984,6 +1004,7 @@ err_rx_thread:
 err_rpmsg_port:
   file_close(&rpuart->file);
 err_file:
+  nxmutex_destroy(&rpuart->conn_lock);
   nxevent_destroy(&rpuart->event);
   kmm_free(rpuart);
   return ret;
