@@ -3142,7 +3142,7 @@ static int mmcsd_mmcinitialize(FAR struct mmcsd_state_s *priv)
    * and BUS width but it has to be done in data-transfer mode.
    */
 
-  if (IS_BLOCK(priv->type))
+  if (IS_MMC(priv->type))
     {
       finfo("Card supports eMMC spec 4.0 (or greater). Reading ext_csd.\n");
       ret = mmcsd_read_extcsd(priv, extcsd);
