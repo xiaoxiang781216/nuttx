@@ -341,6 +341,12 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
   while (entry != NULL && buflen > 0)
     {
       entry->refs++;
+      if (entry->heap == NULL)
+        {
+          entry = meminfo_release_entry_locked(entry);
+          continue;
+        }
+
       spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
 
       /* Get heap information (without holding lock) */
@@ -713,6 +719,12 @@ dump:
   while (entry != NULL)
     {
       entry->refs++;
+      if (entry->heap == NULL)
+        {
+          entry = meminfo_release_entry_locked(entry);
+          continue;
+        }
+
       spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
 
       /* Dump heap (without holding lock) */
@@ -831,6 +843,7 @@ void procfs_unregister_meminfo(FAR struct procfs_meminfo_entry_s *entry)
    */
 
   flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
+  entry->heap = NULL;
   meminfo_release_entry_locked(entry);
   spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
 }
