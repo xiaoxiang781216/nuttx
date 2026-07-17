@@ -175,11 +175,12 @@ int netpoll_udp_init(FAR struct netpoll_s *np,
  *   pktq - packet queue to send
  *
  * Returned Value:
- *   On success or partial transmit, returns the cumulative wire-byte count
- *   (sum of pkt->io_pktlen) of packets actually handed to the lower-half
- *   transmit().  On a transmit() failure midway through the queue, the
- *   already-transmitted prefix is reported and the remaining tail is
- *   freed.  A negative errno is only returned when no packet was
+ *   On success or partial transmit, returns the cumulative payload byte
+ *   count (per packet: io_pktlen minus the header bytes counted in
+ *   io_pktlen, i.e. hdrlen - llhdrlen) of packets actually handed to the
+ *   lower-half transmit().  On a transmit() failure midway through the
+ *   queue, the already-transmitted prefix is reported and the remaining
+ *   tail is freed.  A negative errno is only returned when no packet was
  *   transmitted at all (e.g. -ENODEV when the device is not running, or
  *   the first transmit() call failed).  The caller never has to free
  *   pktq; ownership is consumed on every path.
@@ -195,6 +196,7 @@ ssize_t netpoll_udp_queue_send(FAR struct netpoll_s *np,
 {
   FAR struct netdev_lowerhalf_s *lower = np->lower;
   FAR netpkt_t                  *pkt;
+  size_t                         rsvlen;
   ssize_t                        ret = 0;
 
   /* Don't send data if device is not ready */
@@ -204,6 +206,8 @@ ssize_t netpoll_udp_queue_send(FAR struct netpoll_s *np,
       iob_free_queue(pktq);
       return -ENODEV;
     }
+
+  rsvlen = np->hdrlen - NET_LL_HDRLEN(&lower->netdev);
 
   while ((pkt = iob_remove_queue(pktq)) != NULL)
     {
@@ -233,7 +237,7 @@ ssize_t netpoll_udp_queue_send(FAR struct netpoll_s *np,
         }
 
       NETDEV_TXDONE(&lower->netdev);
-      ret += pktlen - np->hdrlen;
+      ret += pktlen - rsvlen;
     }
 
   return ret;

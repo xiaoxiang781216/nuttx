@@ -102,9 +102,11 @@ FAR netpkt_t *netpoll_pkt_alloc(FAR struct netpoll_s *np)
  * Name: netpoll_queue_get_payload_size
  *
  * Description:
- *   Return the total payload byte count (Sum of io_pktlen - np->hdrlen)
- *   of a netpoll packet queue, matching what netpoll_*_queue_send()
- *   reports as sent.
+ *   Return the total payload byte count of a netpoll packet queue,
+ *   matching what netpoll_*_queue_send() reports as sent.  Only the
+ *   header bytes actually counted in io_pktlen are subtracted per entry
+ *   (hdrlen minus the llhdrlen that lives in guard space); for CAN the
+ *   llhdrlen is 0 so this equals hdrlen.
  *
  * Input Parameters:
  *   np   - pointer to netpoll data
@@ -118,8 +120,16 @@ FAR netpkt_t *netpoll_pkt_alloc(FAR struct netpoll_s *np)
 size_t netpoll_queue_get_payload_size(FAR struct netpoll_s *np,
                                       FAR netpkt_queue_t *pktq)
 {
-  return iob_get_queue_size(pktq) -
-         iob_get_queue_entry_count(pktq) * np->hdrlen;
+  unsigned int count = iob_get_queue_entry_count(pktq);
+  size_t rsvlen;
+
+  if (count == 0)
+    {
+      return 0;
+    }
+
+  rsvlen = np->hdrlen - NET_LL_HDRLEN(&np->lower->netdev);
+  return iob_get_queue_size(pktq) - count * rsvlen;
 }
 
 /****************************************************************************

@@ -97,9 +97,11 @@ FAR netpkt_t *netpoll_pkt_alloc(FAR struct netpoll_s *np);
  * Name: netpoll_queue_get_payload_size
  *
  * Description:
- *   Return the total payload byte count (Sum of io_pktlen - np->hdrlen)
- *   of a netpoll packet queue, matching what netpoll_*_queue_send()
- *   reports as sent.
+ *   Return the total payload byte count of a netpoll packet queue,
+ *   matching what netpoll_*_queue_send() reports as sent.  Only the
+ *   header bytes actually counted in io_pktlen are subtracted per entry
+ *   (hdrlen minus the llhdrlen that lives in guard space; for CAN the
+ *   llhdrlen is 0 so this equals hdrlen).
  *
  * Input Parameters:
  *   np   - pointer to netpoll data
@@ -215,13 +217,14 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf,
  *
  * Returned Value:
  *   On success or partial transmit, returns the cumulative payload byte
- *   count (per packet: io_pktlen - np->hdrlen) of packets actually handed
- *   to the lower-half transmit().  On a transmit() failure midway
- *   through the queue, the already-transmitted prefix is reported and
- *   the remaining tail is freed.  A negative errno is only returned
- *   when no packet was transmitted at all (e.g. -ENODEV when the device
- *   is not running).  The caller never has to free pktq; ownership is
- *   consumed on every path.
+ *   count (per packet: io_pktlen minus the header bytes counted in
+ *   io_pktlen, i.e. hdrlen - llhdrlen) of packets actually handed to the
+ *   lower-half transmit().  On a transmit() failure midway through the
+ *   queue, the already-transmitted prefix is reported and the remaining
+ *   tail is freed.  A negative errno is only returned when no packet was
+ *   transmitted at all (e.g. -ENODEV when the device is not running).
+ *   The caller never has to free pktq; ownership is consumed on every
+ *   path.
  *
  * Assumption:
  *   Packets in queue are ready to send. All packet headers are complete,
