@@ -1484,6 +1484,7 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
   FAR const struct enc_xform *txf;
   FAR uint8_t *key = (FAR uint8_t *)cri->cri_key;
   int keylen = cri->cri_klen / 8;
+  uint8_t hmackey[HMAC_MAX_BLOCK_LEN];
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
   FAR struct swkey_context_s *ctx = swkey_get_context();
   uint8_t keybuf[128];
@@ -1705,36 +1706,40 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
 #endif
               }
 
-            if (keylen / 8 > axf->keysize)
+            if (keylen / 8 > axf->keysize || keylen > axf->blocksize)
               {
                 swcr_freesession(i);
                 return -EINVAL;
               }
 
+            /* Work on a local copy of the key so the caller's key
+             * buffer (which may be read-only) is never modified by the
+             * HMAC ipad/opad XOR operations.
+             */
+
+            bcopy(key, hmackey, keylen);
+
             for (k = 0; k < keylen; k++)
               {
-                key[k] ^= HMAC_IPAD_VAL;
+                hmackey[k] ^= HMAC_IPAD_VAL;
               }
 
             axf->init((*swd)->sw_ictx);
-            axf->update((*swd)->sw_ictx, key, keylen);
+            axf->update((*swd)->sw_ictx, hmackey, keylen);
             axf->update((*swd)->sw_ictx, hmac_ipad_buffer,
                         axf->blocksize - keylen);
 
             for (k = 0; k < keylen; k++)
               {
-                key[k] ^= (HMAC_IPAD_VAL ^ HMAC_OPAD_VAL);
+                hmackey[k] ^= (HMAC_IPAD_VAL ^ HMAC_OPAD_VAL);
               }
 
             axf->init((*swd)->sw_octx);
-            axf->update((*swd)->sw_octx, key, keylen);
+            axf->update((*swd)->sw_octx, hmackey, keylen);
             axf->update((*swd)->sw_octx, hmac_opad_buffer,
                         axf->blocksize - keylen);
 
-            for (k = 0; k < keylen; k++)
-              {
-                key[k] ^= HMAC_OPAD_VAL;
-              }
+            explicit_bzero(hmackey, keylen);
 
             (*swd)->sw_axf = axf;
             bcopy((*swd)->sw_ictx, &(*swd)->sw_ctx, axf->ctxsize);
