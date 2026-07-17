@@ -437,6 +437,28 @@ DECLARE_PER_CPU_BMP(struct perf_s, g_perf);
    (ts1)->tv_nsec - (ts2)->tv_nsec)
 
 /****************************************************************************
+ * Name: clock_timespec_validate
+ *
+ * Description:
+ *   Validate that a timespec has legal values.
+ *
+ * Input Parameters:
+ *   ts - Pointer to the timespec to validate.
+ *
+ * Returned Value:
+ *   true if the timespec is valid, false otherwise.
+ *
+ ****************************************************************************/
+
+static inline_function
+bool clock_timespec_validate(FAR const struct timespec *ts)
+{
+  DEBUGASSERT(ts);
+  return ts->tv_sec >= 0 && ts->tv_nsec >= 0 &&
+         ts->tv_nsec < NSEC_PER_SEC;
+}
+
+/****************************************************************************
  * Name: clock_abstime2ticks
  *
  * Description:

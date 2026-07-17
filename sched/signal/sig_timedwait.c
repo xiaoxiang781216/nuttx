@@ -256,7 +256,7 @@ int nxsig_clockwait(int clockid, int flags,
   clock_t stop   = 0u;
   int ret = OK;
 
-  if (rqtp && (rqtp->tv_nsec < 0 || rqtp->tv_nsec >= 1000000000 ||
+  if (rqtp && (!clock_timespec_validate(rqtp) ||
                rqtp->tv_sec >= TICK2SEC(WDOG_MAX_DELAY)))
     {
       ret = -EINVAL;

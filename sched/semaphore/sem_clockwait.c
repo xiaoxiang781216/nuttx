@@ -63,7 +63,7 @@ int nxsem_clockwait_slow(FAR sem_t *sem, clockid_t clockid,
    * enabled while we are blocked waiting for the semaphore.
    */
 
-  if (abstime->tv_nsec >= 0 && abstime->tv_nsec < 1000000000)
+  if (clock_timespec_validate(abstime))
     {
       flags = enter_critical_section();
 

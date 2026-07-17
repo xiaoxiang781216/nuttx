@@ -44,28 +44,6 @@
  * Private Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: timer_timespec_validate
- *
- * Description:
- *   Validate that a timespec has legal values.
- *
- * Input Parameters:
- *   ts - Pointer to the timespec to validate.
- *
- * Returned Value:
- *   true if the timespec is valid, false otherwise.
- *
- ****************************************************************************/
-
-static inline_function bool
-timer_timespec_validate(FAR const struct timespec *ts)
-{
-  DEBUGASSERT(ts);
-  return ts->tv_sec >= 0 && ts->tv_nsec >= 0 &&
-         ts->tv_nsec < NSEC_PER_SEC;
-}
-
 static inline_function bool
 timer_delay_validate(FAR const struct timespec *ts)
 {
@@ -245,8 +223,8 @@ int timer_settime(timer_t timerid, int flags,
   /* Some sanity checks */
 
   if (timer != NULL && value != NULL &&
-      timer_timespec_validate(&value->it_interval) &&
-      timer_timespec_validate(&value->it_value) &&
+      clock_timespec_validate(&value->it_interval) &&
+      clock_timespec_validate(&value->it_value) &&
       timer_delay_validate(&value->it_interval))
     {
       ret = OK;
