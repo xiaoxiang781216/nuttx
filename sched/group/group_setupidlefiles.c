@@ -66,8 +66,6 @@ int group_setupidlefiles(void)
   int fd = -1;
 #endif
 
-  sched_trace_begin();
-
   /* Open stdin, dup to get stdout and stderr. This should always
    * be the first file opened and, hence, should always get file
    * descriptor 0.
@@ -107,7 +105,6 @@ int group_setupidlefiles(void)
           serr("ERROR: Failed to open stdin: %d\n", fd);
         }
 
-      sched_trace_end();
       ret = -ENFILE;
     }
 #else
@@ -121,6 +118,5 @@ int group_setupidlefiles(void)
 #  warning file descriptors 0-2 are not opened
 #endif /* defined(CONFIG_DEV_CONSOLE) || defined(CONFIG_DEV_NULL) */
 
-  sched_trace_end();
   return ret;
 }

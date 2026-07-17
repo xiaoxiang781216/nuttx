@@ -78,8 +78,6 @@ void irq_initialize(void)
 {
   int i;
 
-  sched_trace_begin();
-
   /* Point all interrupt vectors to the unexpected interrupt */
 
   for (i = 0; i < TAB_SIZE; i++)
@@ -103,6 +101,4 @@ void irq_initialize(void)
   up_debugpoint_add(DEBUGPOINT_WATCHPOINT_RW, 0, 0,
                     zero_addr_handler, NULL);
 #endif
-
-  sched_trace_end();
 }

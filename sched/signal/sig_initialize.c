@@ -174,8 +174,6 @@ void nxsig_initialize(void)
 {
   FAR void *sigpool = &g_sigpool;
 
-  sched_trace_begin();
-
   /* Initialize free lists */
 
   sq_init(&g_sigfreeaction);
@@ -195,5 +193,4 @@ void nxsig_initialize(void)
   sigpool = nxsig_init_pendingsignalblock(&g_sigpendingirqsignal, sigpool,
                                           CONFIG_SIG_PREALLOC_IRQ_ACTIONS,
                                           SIG_ALLOC_IRQ);
-  sched_trace_end();
 }

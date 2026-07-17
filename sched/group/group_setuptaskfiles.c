@@ -69,7 +69,6 @@ int group_setuptaskfiles(FAR struct tcb_s *tcb,
   FAR struct tcb_s *rtcb = this_task();
 #endif
 
-  sched_trace_begin();
   DEBUGASSERT(group);
 #ifndef CONFIG_DISABLE_PTHREAD
   DEBUGASSERT((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) !=
@@ -97,6 +96,5 @@ int group_setuptaskfiles(FAR struct tcb_s *tcb,
     }
 #endif
 
-  sched_trace_end();
   return ret;
 }

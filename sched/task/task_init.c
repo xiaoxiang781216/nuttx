@@ -223,8 +223,6 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
 #endif
   int ret = OK;
 
-  sched_trace_begin();
-
 #ifndef CONFIG_DISABLE_PTHREAD
   /* Only tasks and kernel threads can be initialized in this way */
 
@@ -276,7 +274,6 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
         }
     }
 
-  sched_trace_end();
   return ret;
 }
 

@@ -129,8 +129,6 @@ void drivers_early_initialize(void)
 
 void drivers_initialize(void)
 {
-  sched_trace_begin();
-
   /* Register devices */
 
 #ifdef CONFIG_UART_GSMMUX_TTYGSM
@@ -382,6 +380,4 @@ void drivers_initialize(void)
 #ifdef CONFIG_DMABUF_HEAPS
   dmabuf_system_heap_create();
 #endif
-
-  sched_trace_end();
 }

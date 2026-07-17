@@ -578,7 +578,6 @@ static void tasklist_initialize(void)
   /* Task lists are initialized */
 
   set_initstate(OSINIT_TASKLISTS);
-  sched_trace_mark("TASKLISTS");
 }
 
 /****************************************************************************
@@ -669,7 +668,6 @@ static void memory_initialize(void)
   /* The memory manager is available */
 
   set_initstate(OSINIT_MEMORY);
-  sched_trace_mark("MEMORY");
 }
 
 /****************************************************************************
@@ -748,15 +746,12 @@ static void hardware_initialize(void)
    * that cannot wait until board_late_initialize.
    */
 
-  sched_trace_begin();
   board_early_initialize();
-  sched_trace_end();
 #endif
 
   /* Hardware resources are now available */
 
   set_initstate(OSINIT_HARDWARE);
-  sched_trace_mark("HARDWARE");
 }
 
 /****************************************************************************
@@ -791,7 +786,6 @@ void nx_start(void)
   /* Boot up is complete */
 
   set_initstate(OSINIT_BOOT);
-  sched_trace_begin();
   sinfo("Entry\n");
 
   /* Head of ready-to-run/assigned task lists valid */
@@ -847,7 +841,6 @@ void nx_start(void)
   /* The OS is fully initialized and we are beginning multi-tasking */
 
   set_initstate(OSINIT_OSREADY);
-  sched_trace_mark("OSREADY");
 
   /* Create initial tasks and bring-up the system */
 
@@ -856,7 +849,6 @@ void nx_start(void)
   /* Enter to idleloop */
 
   set_initstate(OSINIT_IDLELOOP);
-  sched_trace_mark("IDLELOOP");
 
 #ifdef CONFIG_DIAG
   /* DFX: report system boot event with boot time and last reset cause
@@ -884,7 +876,6 @@ void nx_start(void)
 
   /* Let other threads have access to the memory manager */
 
-  sched_trace_end();
   sched_unlock();
 
   /* The IDLE Loop **********************************************************/

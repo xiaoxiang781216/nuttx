@@ -97,8 +97,6 @@ void timer_initialize(void)
 #  define g_prealloctimers this_cpu_var_bmp(g_prealloctimers)
 #endif
 
-  sched_trace_begin();
-
 #if CONFIG_PREALLOC_TIMERS > 0
   int i;
 
@@ -111,8 +109,6 @@ void timer_initialize(void)
       g_freetimers = &g_prealloctimers[i];
     }
 #endif
-
-  sched_trace_end();
 }
 
 /****************************************************************************

@@ -315,9 +315,7 @@ static inline void nx_start_application(void)
    * configured.
    */
 
-  sched_trace_begin();
   board_late_initialize();
-  sched_trace_end();
 #endif
 
 #ifndef CONFIG_BOARD_CRASHDUMP_NONE
@@ -491,8 +489,6 @@ void nx_bringup(void)
   struct userspace_init_s init;
 #endif
 
-  sched_trace_begin();
-
 #ifdef CONFIG_BUILD_PROTECTED
   memset(&init, 0, sizeof(init));
   up_allocate_heap(&init.us_heapaddr, &init.us_heapsize);
@@ -548,6 +544,4 @@ void nx_bringup(void)
    */
 
 #endif
-
-  sched_trace_end();
 }

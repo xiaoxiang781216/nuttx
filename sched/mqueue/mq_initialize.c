@@ -176,8 +176,6 @@ void nxmq_initialize(void)
 {
   FAR void *msg = &g_msgpool;
 
-  sched_trace_begin();
-
   /* Initialize a block of messages for general use */
 
 #ifndef CONFIG_DISABLE_MQUEUE
@@ -201,6 +199,4 @@ void nxmq_initialize(void)
 
   msg = sysv_msgblockinit(&g_msgfreelist, msg, CONFIG_PREALLOC_MQ_MSGS);
 #endif
-
-  sched_trace_end();
 }

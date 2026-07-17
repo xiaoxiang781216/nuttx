@@ -230,8 +230,6 @@ static void clock_inittime(FAR const struct timespec *tp)
 
 void clock_initialize(void)
 {
-  sched_trace_begin();
-
 #if !defined(CONFIG_SUPPRESS_INTERRUPTS) && \
     !defined(CONFIG_SUPPRESS_TIMER_INTS) && \
     !defined(CONFIG_SYSTEMTICK_EXTCLK)
@@ -264,8 +262,6 @@ void clock_initialize(void)
 #ifdef CONFIG_PERF_OVERFLOW_CORRECTION
   perf_setup();
 #endif
-
-  sched_trace_end();
 }
 
 /****************************************************************************
