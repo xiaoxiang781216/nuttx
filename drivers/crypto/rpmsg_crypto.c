@@ -1439,7 +1439,7 @@ static int rpmsg_crypto_ecdh_process(FAR struct cryptkop *krp)
   session->data = krp;
 
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
-                               RPMSG_CRYPTO_KPROCESS,
+                               RPMSG_CRYPTO_KPROCESS, krp->krp_reqid,
                                sizeof(*msg) + data_len,
                                !(krp->krp_flags & CRYPTO_F_CBIMM));
   if (ret < 0)

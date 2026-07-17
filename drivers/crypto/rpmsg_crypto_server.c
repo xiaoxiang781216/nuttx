@@ -1452,6 +1452,7 @@ rpmsg_crypto_kprocess_ecdh(FAR struct rpmsg_endpoint *ept,
 
   krp = &rcsdata->krp;
   krp->krp_flags = msg->data.header.flag;
+  krp->krp_reqid = msg->header.reqid;
   switch (msg->data.header.opcode)
     {
       case VIRTIO_CRYPTO_AKCIPHER_GENKEY:
