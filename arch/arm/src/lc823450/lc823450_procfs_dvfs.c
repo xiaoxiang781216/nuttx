@@ -97,7 +97,7 @@ static const struct procfs_operations dvfs_procfsoperations =
   dvfs_stat       /* stat */
 };
 
-static const struct procfs_entry_s g_procfs_dvfs =
+static struct procfs_entry_s g_procfs_dvfs =
 {
   "dvfs",
   &dvfs_procfsoperations

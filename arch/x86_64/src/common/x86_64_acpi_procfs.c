@@ -112,7 +112,7 @@ static const char *g_acpi_files[] =
 };
 
 #if defined(CONFIG_FS_PROCFS_REGISTER)
-static const struct procfs_entry_s g_acpi_procfs =
+static struct procfs_entry_s g_acpi_procfs =
 {
   "acpi",
   &g_acpi_operations,
@@ -120,7 +120,7 @@ static const struct procfs_entry_s g_acpi_procfs =
   0444
 };
 
-static const struct procfs_entry_s g_acpi_file_procfs =
+static struct procfs_entry_s g_acpi_file_procfs =
 {
   "acpi/**",
   &g_acpi_operations,

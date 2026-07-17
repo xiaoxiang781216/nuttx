@@ -101,7 +101,7 @@ static const struct procfs_operations g_rpmsg_procfs_ops =
   rpmsg_procfs_write,  /* write */
 };
 
-static const struct procfs_entry_s g_rpmsg_procfs_root =
+static struct procfs_entry_s g_rpmsg_procfs_root =
 {
   "rpmsg", &g_rpmsg_procfs_ops, PROCFS_FILE_TYPE
 };

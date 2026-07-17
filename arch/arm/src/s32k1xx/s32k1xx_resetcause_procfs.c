@@ -96,7 +96,7 @@ const struct procfs_operations s32k1xx_resetcause_procfs_ops =
   s32k1xx_resetcause_procfs_stat,  /* stat */
 };
 
-static const struct procfs_entry_s g_s32k1xx_resetcause_procfs =
+static struct procfs_entry_s g_s32k1xx_resetcause_procfs =
 {
   "resetcause", &s32k1xx_resetcause_procfs_ops
 };

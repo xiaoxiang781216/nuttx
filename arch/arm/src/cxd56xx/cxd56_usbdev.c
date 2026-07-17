@@ -627,7 +627,7 @@ const struct procfs_operations cxd56_usbdev_operations =
 };
 
 #  ifdef CONFIG_FS_PROCFS_REGISTER
-static const struct procfs_entry_s g_procfs_usbdev =
+static struct procfs_entry_s g_procfs_usbdev =
 {
   "usbdev",
   &cxd56_usbdev_operations

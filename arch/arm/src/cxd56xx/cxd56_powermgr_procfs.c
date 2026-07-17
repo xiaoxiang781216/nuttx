@@ -120,12 +120,12 @@ const struct procfs_operations cxd56_powermgr_procfs_operations =
   cxd56_powermgr_procfs_stat       /* stat */
 };
 
-static const struct procfs_entry_s g_powermgr_procfs1 =
+static struct procfs_entry_s g_powermgr_procfs1 =
 {
   "pm**", &cxd56_powermgr_procfs_operations
 };
 
-static const struct procfs_entry_s g_powermgr_procfs2 =
+static struct procfs_entry_s g_powermgr_procfs2 =
 {
   "pm/" , &cxd56_powermgr_procfs_operations
 };

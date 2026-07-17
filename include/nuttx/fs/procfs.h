@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/queue.h>
 #include <nuttx/mm/mm.h>
 
 /****************************************************************************
@@ -98,7 +99,7 @@ struct procfs_entry_s
   FAR const struct procfs_operations *ops;
   uint8_t type;
   mode_t mode;
-  FAR void *priv;
+  struct dq_entry_s node;
 };
 
 /* Specifies the common elements for an open file in the procfs
@@ -298,7 +299,8 @@ void procfs_sprintf(FAR char *buf, size_t size, FAR off_t *offset,
  ****************************************************************************/
 
 #ifdef CONFIG_FS_PROCFS_REGISTER
-int procfs_register(FAR const struct procfs_entry_s *entry);
+int procfs_register(FAR struct procfs_entry_s *entry);
+void procfs_unregister(FAR struct procfs_entry_s *entry);
 #endif
 
 /****************************************************************************

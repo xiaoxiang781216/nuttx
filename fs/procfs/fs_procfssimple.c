@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <debug.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/kmalloc.h>
 
@@ -119,6 +120,12 @@ static const struct procfs_operations g_simple_operations =
 static int proc_simple_open(FAR struct file *filep, FAR const char *relpath,
                             int oflags, mode_t mode)
 {
+  FAR struct procfs_entry_s *entry =
+    (FAR struct procfs_entry_s *)filep->f_priv;
+  FAR struct simple_file_s *file =
+    container_of(entry, struct simple_file_s, entry);
+
+  filep->f_priv = file;
   return OK;
 }
 
@@ -147,11 +154,6 @@ static ssize_t proc_simple_read(FAR struct file *filep, FAR char *buffer,
       return -EINVAL;
     }
 
-  if (buffer[0] == '\n')
-    {
-      return 0;
-    }
-
   entry = (FAR struct simple_file_s *)filep->f_priv;
   DEBUGASSERT(entry != NULL);
 
@@ -173,11 +175,6 @@ static ssize_t proc_simple_write(FAR struct file *filep,
   if (buffer == NULL || buflen == 0)
     {
       return -EINVAL;
-    }
-
-  if (buffer[0] == '\n')
-    {
-      return 0;
     }
 
   entry = (FAR struct simple_file_s *)filep->f_priv;
@@ -234,7 +231,6 @@ procfs_create_var(FAR const char *path, mode_t mode, FAR void *value,
   file->entry.type = PROCFS_FILE_TYPE;
   file->entry.mode = mode;
   file->entry.ops = &g_simple_operations;
-  file->entry.priv = file;
 
   ret = procfs_register(&file->entry);
   if (ret < 0)

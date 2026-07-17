@@ -110,7 +110,7 @@ static const struct procfs_operations arm64_fpu_procfs_operations =
   arm64_fpu_procfs_stat   /* stat */
 };
 
-static const struct procfs_entry_s g_procfs_arm64_fpu =
+static struct procfs_entry_s g_procfs_arm64_fpu =
 {
   "fpu",
   &arm64_fpu_procfs_operations

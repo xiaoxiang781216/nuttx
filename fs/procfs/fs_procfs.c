@@ -106,11 +106,7 @@ extern const struct procfs_operations g_smartfs_procfs_operations;
 
 /* Table of all known / pre-registered procfs handlers / participants. */
 
-#ifdef CONFIG_FS_PROCFS_REGISTER
-static const struct procfs_entry_s g_base_entries[] =
-#else
 static const struct procfs_entry_s g_procfs_entries[] =
-#endif
 {
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
   { "[0-9]*/**",    &g_proc_operations,     PROCFS_UNKOWN_TYPE, 0    },
@@ -231,17 +227,12 @@ static const struct procfs_entry_s g_procfs_entries[] =
 };
 
 #ifdef CONFIG_FS_PROCFS_REGISTER
-static const uint8_t g_base_entrycount = sizeof(g_base_entries) /
-                                         sizeof(struct procfs_entry_s);
+static DEFINE_PER_CPU_BSS_BMP(struct dq_queue_s, g_procfs_dynentries);
+#define g_procfs_dynentries this_cpu_var_bmp(g_procfs_dynentries)
+#endif
 
-static DEFINE_PER_CPU_BSS_BMP(FAR struct procfs_entry_s *, g_procfs_entries);
-#  define g_procfs_entries this_cpu_var_bmp(g_procfs_entries)
-static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_procfs_entrycount);
-#  define g_procfs_entrycount this_cpu_var_bmp(g_procfs_entrycount)
-#else
 static const uint8_t g_procfs_entrycount = sizeof(g_procfs_entries) /
                                            sizeof(struct procfs_entry_s);
-#endif
 
 /****************************************************************************
  * Private Function Prototypes
@@ -284,12 +275,6 @@ static int     procfs_statfs(FAR struct inode *mountpt,
 
 static int     procfs_stat(FAR struct inode *mountpt,
                  FAR const char *relpath, FAR struct stat *buf);
-
-/* Initialization */
-
-#ifdef CONFIG_FS_PROCFS_REGISTER
-static int     procfs_initialize(void);
-#endif
 
 /****************************************************************************
  * Public Data
@@ -474,12 +459,7 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
           DEBUGASSERT(g_procfs_entries[x].ops &&
                       g_procfs_entries[x].ops->open);
 
-          /* Bind debug entry to file.  Debug entries directly reference
-           * target variables, so we reuse the same entry for all opens.
-           */
-
-          filep->f_priv = g_procfs_entries[x].priv;
-
+          filep->f_priv = (FAR void *)&g_procfs_entries[x];
           ret = g_procfs_entries[x].ops->open(filep, relpath, oflags, mode);
           if (ret == OK)
             {
@@ -491,6 +471,31 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
             }
         }
     }
+
+#ifdef CONFIG_FS_PROCFS_REGISTER
+  if (ret == -ENOENT)
+    {
+      FAR struct procfs_entry_s *entry;
+
+      dq_for_every_entry(&g_procfs_dynentries, entry,
+                          struct procfs_entry_s, node)
+        {
+          if (fnmatch(entry->pathpattern, relpath, 0) == 0)
+            {
+              filep->f_priv = entry;
+              ret = entry->ops->open(filep, relpath, oflags, mode);
+              if (ret == OK)
+                {
+                  DEBUGASSERT(filep->f_priv);
+
+                  ((FAR struct procfs_file_s *)filep->f_priv)->procfsentry =
+                                        entry;
+                  break;
+                }
+            }
+        }
+    }
+#endif
 
   return ret;
 }
@@ -777,8 +782,7 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
                * derived from struct procfs_dir_priv_s as dir.
                */
 
-              DEBUGASSERT(g_procfs_entries[x].ops != NULL &&
-                          g_procfs_entries[x].ops->opendir != NULL);
+              DEBUGASSERT(g_procfs_entries[x].ops->opendir != NULL);
 
               ret = g_procfs_entries[x].ops->opendir(relpath, dir);
               if (ret == OK)
@@ -833,6 +837,33 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
       if (x == g_procfs_entrycount)
         {
+#ifdef CONFIG_FS_PROCFS_REGISTER
+          FAR struct procfs_entry_s *entry;
+
+          dq_for_every_entry(&g_procfs_dynentries, entry,
+                             struct procfs_entry_s, node)
+            {
+              if (fnmatch(entry->pathpattern, relpath, 0) == 0)
+                {
+                  DEBUGASSERT(entry->ops->opendir != NULL);
+                  ret = entry->ops->opendir(relpath, dir);
+                  if (ret == OK)
+                    {
+                      FAR struct procfs_dir_priv_s *dirpriv;
+
+                      DEBUGASSERT(*dir);
+
+                      /* Set the procfs_entry handler */
+
+                      dirpriv = (FAR struct procfs_dir_priv_s *)(*dir);
+                      dirpriv->procfsentry = entry;
+                    }
+
+                  return ret;
+                }
+            }
+
+#endif
           return -ENOENT;
         }
     }
@@ -1137,12 +1168,6 @@ static int procfs_rewinddir(FAR struct inode *mountpt,
 static int procfs_bind(FAR struct inode *blkdriver, FAR const void *data,
                        FAR void **handle)
 {
-#ifdef CONFIG_FS_PROCFS_REGISTER
-  /* Make sure that we are properly initialized */
-
-  procfs_initialize();
-#endif
-
   return OK;
 }
 
@@ -1265,6 +1290,34 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
               break;
             }
         }
+
+#ifdef CONFIG_FS_PROCFS_REGISTER
+      if (ret == -ENOENT)
+        {
+          FAR struct procfs_entry_s *entry;
+
+          dq_for_every_entry(&g_procfs_dynentries, entry,
+                             struct procfs_entry_s, node)
+            {
+              if (fnmatch(entry->pathpattern, relpath, 0) == 0)
+                {
+                  if (entry->mode != 0)
+                    {
+                      buf->st_mode = entry->mode;
+                      buf->st_mode |= entry->type ==
+                          PROCFS_DIR_TYPE ? S_IFDIR : S_IFREG;
+                      ret = OK;
+                    }
+                  else if (entry->ops && entry->ops->stat)
+                    {
+                      return entry->ops->stat(relpath, buf);
+                    }
+
+                  break;
+                }
+            }
+        }
+#endif
     }
 
   return ret;
@@ -1272,55 +1325,9 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
 #ifdef CONFIG_FS_PROCFS_REGISTER
 
-static int procfs_compare_entry(const void *a, const void *b)
-{
-  FAR const struct procfs_entry_s *entry1 = a;
-  FAR const struct procfs_entry_s *entry2 = b;
-
-  return strcmp(entry1->pathpattern, entry2->pathpattern);
-}
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: procfs_initialize
- *
- * Description:
- *   Configure the initial set of entries in the procfs file system.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure
- *
- ****************************************************************************/
-
-int procfs_initialize(void)
-{
-  /* Are we already initialized? */
-
-  if (g_procfs_entries == NULL)
-    {
-      /* No.. allocate a modifiable list of entries */
-
-      g_procfs_entries = (FAR struct procfs_entry_s *)
-        fs_heap_malloc(sizeof(g_base_entries));
-      if (g_procfs_entries == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      /* And copy the fixed entries into the allocated array */
-
-      memcpy(g_procfs_entries, g_base_entries, sizeof(g_base_entries));
-      g_procfs_entrycount = g_base_entrycount;
-    }
-
-  return OK;
-}
 
 /****************************************************************************
  * Name: procfs_register
@@ -1340,50 +1347,46 @@ int procfs_initialize(void)
  *
  ****************************************************************************/
 
-int procfs_register(FAR const struct procfs_entry_s *entry)
+int procfs_register(FAR struct procfs_entry_s *entry)
 {
-  FAR struct procfs_entry_s *newtable;
-  unsigned int newcount;
-  size_t newsize;
-  int ret = -ENOMEM;
+  FAR struct procfs_entry_s *e;
 
-  /* Make sure that we are properly initialized */
-
-  procfs_initialize();
-
-  /* realloc the table of procfs entries.
-   *
-   * REVISIT:  This reallocation may free memory previously used for the
-   * procfs entry table.  If that table were actively in use, then that
-   * could cause procfs logic to use a stale memory pointer!  We avoid that
-   * problem by requiring that the procfs file be unmounted when the new
-   * entry is added.  That requirement, however, is not enforced explicitly.
-   *
-   * Locking the scheduler as done below is insufficient.  As would be just
-   * marking the entries as volatile.
-   */
-
-  newcount = g_procfs_entrycount + 1;
-  newsize  = newcount * sizeof(struct procfs_entry_s);
-
-  newtable = (FAR struct procfs_entry_s *)
-    fs_heap_realloc(g_procfs_entries, newsize);
-  if (newtable != NULL)
+  if (entry == NULL || entry->ops == NULL)
     {
-      /* Copy the new entry at the end of the reallocated table */
-
-      memcpy(&newtable[g_procfs_entrycount], entry,
-             sizeof(struct procfs_entry_s));
-
-      /* Instantiate the reallocated table */
-
-      g_procfs_entries    = newtable;
-      g_procfs_entrycount = newcount;
-      qsort(newtable, newcount, sizeof(struct procfs_entry_s),
-            procfs_compare_entry);
-      ret = OK;
+      return -EINVAL;
     }
 
-  return ret;
+  /* Insert sorted by pathpattern */
+
+  dq_for_every_entry(&g_procfs_dynentries, e,
+                      struct procfs_entry_s, node)
+    {
+      if (strcmp(entry->pathpattern, e->pathpattern) < 0)
+        {
+          dq_addbefore(&e->node, &entry->node, &g_procfs_dynentries);
+          return OK;
+        }
+    }
+
+  dq_addlast(&entry->node, &g_procfs_dynentries);
+  return OK;
+}
+
+/****************************************************************************
+ * Name: procfs_unregister
+ *
+ * Description:
+ *   Invalidate a previously registered procfs entry by setting its ops
+ *   to NULL. The entry slot remains in the table but will be skipped
+ *   during directory enumeration.
+ *
+ ****************************************************************************/
+
+void procfs_unregister(FAR struct procfs_entry_s *entry)
+{
+  if (entry != NULL)
+    {
+      dq_rem(&entry->node, &g_procfs_dynentries);
+    }
 }
 #endif

@@ -97,7 +97,7 @@ static const struct procfs_operations g_trustzone_monitor_ops =
   trustzone_monitor_stat,   /* stat */
 };
 
-static const struct procfs_entry_s g_trustzone_monitor_entry =
+static struct procfs_entry_s g_trustzone_monitor_entry =
 {
   "trustzone",
   &g_trustzone_monitor_ops,
