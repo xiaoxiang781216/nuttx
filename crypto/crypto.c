@@ -109,6 +109,12 @@ int crypto_newsession(FAR uint64_t *sid,
               continue;
             }
 
+          if (cri->cri_cap != 0 &&
+              (cpc->cc_flags & cri->cri_cap) != cri->cri_cap)
+            {
+              continue;
+            }
+
 #ifndef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_CRYPTO
           if (cpc->cc_flags & CRYPTOCAP_F_SOFTWARE)
             {
@@ -519,6 +525,12 @@ int crypto_kinvoke(FAR struct cryptkop *krp)
   nxmutex_lock(&g_crypto_lock);
   for (hid = 0; hid < crypto_drivers_num; hid++)
     {
+      if (krp->krp_cap != 0 &&
+          (crypto_drivers[hid].cc_flags & krp->krp_cap) != krp->krp_cap)
+        {
+          continue;
+        }
+
 #ifndef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_CRYPTO
       if ((crypto_drivers[hid].cc_flags & CRYPTOCAP_F_SOFTWARE))
         {

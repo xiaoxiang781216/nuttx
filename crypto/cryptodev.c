@@ -459,6 +459,7 @@ static int cryptof_ioctl(FAR struct file *filep,
             crie.cri_alg = sop->cipher;
             crie.cri_klen = sop->keylen * 8;
             crie.cri_op = sop->op;
+            crie.cri_cap = sop->cap;
             if (sop->flags & SOP_F_KEYID)
               {
                 crie.cri_flags |= CRD_F_KEYID;
@@ -476,6 +477,7 @@ static int cryptof_ioctl(FAR struct file *filep,
             cria.cri_alg = sop->mac;
             cria.cri_sid = -1;
             cria.cri_klen = sop->mackeylen * 8;
+            cria.cri_cap = sop->cap;
             if (sop->flags & SOP_F_KEYID)
               {
                 cria.cri_flags |= CRD_F_KEYID;
@@ -1112,6 +1114,7 @@ static int cryptodev_key(FAR struct fcrypt *fcr, FAR struct crypt_kop *kop)
   krp->krp_status = 0;
   krp->krp_flags = kop->crk_flags;
   krp->krp_reqid = kop->crk_reqid;
+  krp->krp_cap = kop->crk_cap;
 
   if (krp->krp_flags & CRYPTO_F_CBIMM)
     {

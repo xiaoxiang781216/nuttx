@@ -153,6 +153,7 @@ struct cryptoini
   int cri_sid;
   int cri_op;
   int cri_flags;
+  uint32_t cri_cap;  /* Desired driver capability (CRYPTOCAP_F_*), 0 = any */
   caddr_t cri_key;   /* key to use */
   union
   {
@@ -292,6 +293,7 @@ struct crypt_kop
   u_int crk_flags;
   struct crparam crk_param[CRK_MAXPARAM];
   uint32_t crk_reqid;
+  uint32_t crk_cap;    /* Desired driver capability (CRYPTOCAP_F_*), 0 = any */
   FAR void *crk_arg;   /* callback parameter */
 };
 
@@ -372,6 +374,7 @@ struct cryptkop
   FAR struct fcrypt *krp_fcr;
   u_int krp_flags;     /* same as cryptop */
   uint32_t krp_reqid;  /* distinguish tasks in asynchronous calling */
+  uint32_t krp_cap;    /* Desired driver capability (CRYPTOCAP_F_*), 0 = any */
   FAR void *krp_opaque;
 };
 
@@ -423,6 +426,7 @@ struct session_op
 
 #define SOP_F_KEYID  0x100
 
+  uint32_t cap;       /* Desired driver capability (CRYPTOCAP_F_*), 0 = any */
   uint32_t ses;       /* returns: session # */
 };
 
