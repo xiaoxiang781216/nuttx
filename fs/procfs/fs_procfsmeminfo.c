@@ -768,18 +768,23 @@ procfs_register_meminfo(FAR const char *name, FAR struct mm_heap_s *heap,
 {
   FAR struct procfs_meminfo_entry_s *entry;
   irqstate_t flags;
+  size_t namelen;
 
-  /* Allocate entry from kernel heap */
+  /* Allocate entry + name string in a single block */
 
-  entry = kmm_zalloc(sizeof(struct procfs_meminfo_entry_s));
+  namelen = strlen(name) + 1;
+  entry = kmm_zalloc(sizeof(struct procfs_meminfo_entry_s) + namelen);
   if (entry == NULL)
     {
       return NULL;
     }
 
-  /* Initialize the entry with refs = 1 (for the linked list reference) */
+  /* Initialize the entry with refs = 1 (for the linked list reference).
+   * Name string is stored immediately after the entry struct,
+   * preventing use-after-free if the caller frees the original.
+   */
 
-  entry->name      = name;
+  entry->name      = memcpy(entry + 1, name, namelen);
   entry->heap      = heap;
   entry->mallinfo  = mallinfo_handler;
   entry->memdump   = memdump_handler;
