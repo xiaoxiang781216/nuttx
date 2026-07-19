@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include <sys/param.h>
 
@@ -242,7 +243,8 @@ static ssize_t mmcsd_read_cid(FAR struct file *filep, FAR char *buffer,
 
   offset = filep->f_pos;
 
-  linesize = snprintf(mmcsdfile->line, MMCSD_LINELEN, "%08lx%08lx%08lx%08lx",
+  linesize = snprintf(mmcsdfile->line, MMCSD_LINELEN,
+                      "%08" PRIx32 "%08" PRIx32 "%08" PRIx32 "%08" PRIx32,
                       priv->cid[0], priv->cid[1],
                       priv->cid[2], priv->cid[3]);
   totalsize = procfs_memcpy(mmcsdfile->line, linesize, buffer,
@@ -271,8 +273,10 @@ static ssize_t mmcsd_read_csd(FAR struct file *filep, FAR char *buffer,
 
   offset = filep->f_pos;
 
-  linesize = snprintf(mmcsdfile->line, MMCSD_LINELEN, "%08lx%08lx%08lx%08lx",
-                     priv->csd[0], priv->csd[1], priv->csd[2], priv->csd[3]);
+  linesize = snprintf(mmcsdfile->line, MMCSD_LINELEN,
+                      "%08" PRIx32 "%08" PRIx32 "%08" PRIx32 "%08" PRIx32,
+                      priv->csd[0], priv->csd[1],
+                      priv->csd[2], priv->csd[3]);
   totalsize = procfs_memcpy(mmcsdfile->line, linesize, buffer,
                            buflen, &offset);
   filep->f_pos += totalsize;
