@@ -64,6 +64,7 @@
 #include <nuttx/trace.h>
 
 #include "devif/devif.h"
+#include "netdev/netdev.h"
 #include "utils/utils.h"
 #include "tcp/tcp.h"
 
@@ -1817,6 +1818,37 @@ skip_rtt:
             /* Provide the packet to the application */
 
             result = tcp_callback(dev, conn, flags);
+
+#ifdef CONFIG_NET_TCP_WRITE_BUFFERS
+            /* RFC793, Section 3.9, Page 74: an ACK that reopens the window
+             * should piggyback pending TX rather than be sent alone.  The
+             * RX is now consumed (d_len == 0), so re-arm TCP polling to let
+             * the write queue fill the outgoing segment.
+             */
+
+            if ((flags & TCP_NEWDATA) != 0 && dev->d_len == 0 &&
+                dev->d_sndlen == 0 && !sq_empty(&conn->write_q) &&
+                conn->snd_wnd > 0)
+              {
+                netdev_txnotify_defer(conn->dev, TCP_POLL, true);
+
+#ifdef CONFIG_NET_TCP_DELAYED_ACK
+                /* Defer the standalone ACK so it rides on the queued data;
+                 * the delayed-ACK timer bounds the wait.  Nothing needs to
+                 * be sent now (d_len == 0), so return directly.
+                 */
+
+                if ((result & TCP_SNDACK) != 0 &&
+                    (result & TCP_CONN_EVENTS) == 0 &&
+                    conn->rx_unackseg == 0)
+                  {
+                    conn->rx_unackseg = 1;
+                    tcp_update_delaytimer(conn, 1);
+                    return;
+                  }
+#endif
+              }
+#endif
 
             /* Send the response, ACKing the data or not, as appropriate */
 
