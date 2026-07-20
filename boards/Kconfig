@@ -4999,6 +4999,13 @@ config BOARDCTL_RESET_CAUSE
 		Architecture specific logic must provide the board_reset_cause()
 		interface.
 
+config MCAL_BOARDCTL
+	bool "Enable MCAL board reset and reset cause driver"
+	default n
+	---help---
+		When enabled, board_reset() and board_reset_cause() will use the
+		MCAL Mcu_PerformReset() and Mcu_GetResetReason() APIs.
+
 config BOARDCTL_UNIQUEID
 	bool "Return board unique ID"
 	default n

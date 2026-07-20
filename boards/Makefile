@@ -37,6 +37,10 @@ ifeq ($(CONFIG_BOARDCTL),y)
 CONFIG_CSRCS += boardctl.c
 endif
 
+ifeq ($(CONFIG_MCAL_BOARDCTL),y)
+CONFIG_CSRCS += boardctl_mcal.c
+endif
+
 ASRCS = $(CONFIG_ASRCS)
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 

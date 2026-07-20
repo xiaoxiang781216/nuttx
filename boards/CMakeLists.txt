@@ -41,6 +41,10 @@ if(CONFIG_BOARDCTL)
   target_sources(board PRIVATE boardctl.c)
 endif()
 
+if(CONFIG_MCAL_BOARDCTL)
+  target_sources(board PRIVATE boardctl_mcal.c)
+endif()
+
 # obtain include directories exported by libarch
 target_include_directories(board
                            PRIVATE $<TARGET_PROPERTY:arch,INCLUDE_DIRECTORIES>)
