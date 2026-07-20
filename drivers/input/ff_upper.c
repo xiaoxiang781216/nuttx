@@ -31,6 +31,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/irq.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -276,6 +277,8 @@ static int ff_upload(FAR struct ff_upperhalf_s *upper,
 
       if (id >= upper->max_effects)
         {
+          input_trace_diag(LOG_WARNING, DIAG_FF_UPLOAD_NOSLOT,
+                           "MaxEffects:%d", upper->max_effects);
           return -ENOSPC;
         }
 
@@ -288,12 +291,16 @@ static int ff_upload(FAR struct ff_upperhalf_s *upper,
       ret = ff_check_effect_access(upper, id, filep);
       if (ret < 0)
         {
+          input_trace_diag(LOG_WARNING, DIAG_FF_UPLOAD_NOACCESS,
+                           "EffectId:%d,Errno:%d", id, ret);
           return ret;
         }
 
       old = &upper->effects[id].data;
       if (!ff_check_effects_compatible(effect, old))
         {
+          input_trace_diag(LOG_WARNING, DIAG_FF_UPLOAD_INCOMPAT,
+                           "EffectId:%d,Type:%u", id, effect->type);
           return -EINVAL;
         }
     }
@@ -301,6 +308,9 @@ static int ff_upload(FAR struct ff_upperhalf_s *upper,
   ret = lower->upload(lower, effect, old);
   if (ret < 0)
     {
+      input_trace_diag(LOG_ERR, DIAG_FF_UPLOAD_FAIL,
+                       "EffectId:%d,Type:%u,Errno:%d",
+                       effect->id, effect->type, ret);
       return ret;
     }
 
@@ -437,6 +447,12 @@ static int ff_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
+  if (ret < 0)
+    {
+      input_trace_diag(LOG_WARNING, DIAG_FF_IOCTL_FAIL,
+                       "Cmd:0x%x,Errno:%d", cmd, ret);
+    }
+
   nxmutex_unlock(&upper->lock);
   return ret;
 }
@@ -492,6 +508,12 @@ int ff_event(FAR struct ff_lowerhalf_s *lower, uint32_t code, int value)
           if (ff_check_effect_access(lower->priv, code, NULL) == 0)
             {
               ret = lower->playback(lower, code, value);
+              if (ret < 0)
+                {
+                  input_trace_diag(LOG_ERR, DIAG_FF_PLAYBACK_FAIL,
+                                   "EffectId:%d,Value:%d,Errno:%d",
+                                   (int)code, value, ret);
+                }
             }
         }
         break;
@@ -533,6 +555,8 @@ int ff_register(FAR struct ff_lowerhalf_s *lower, FAR const char *path,
                      sizeof(struct ff_effect_s) * max_effects);
   if (upper == NULL)
     {
+      input_trace_diag(LOG_ERR, DIAG_FF_REGISTER_FAIL,
+                       "DevPath:%s,Errno:%d", path, -ENOMEM);
       return -ENOMEM;
     }
 
@@ -545,6 +569,8 @@ int ff_register(FAR struct ff_lowerhalf_s *lower, FAR const char *path,
   ret = register_driver(path, &g_ff_fops, 0666, upper);
   if (ret < 0)
     {
+      input_trace_diag(LOG_ERR, DIAG_FF_REGISTER_FAIL,
+                       "DevPath:%s,Errno:%d", path, ret);
       nxmutex_destroy(&upper->lock);
       kmm_free(upper);
     }

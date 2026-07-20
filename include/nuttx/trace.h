@@ -2000,6 +2000,25 @@
 #define DIAG_I3C_IOCTL_ENOTTY            (DIAG_SYSTEM_DRIVER_BASE + 112) /* 961011512 */
 #define DIAG_I3C_TRANSFER_FAIL           (DIAG_SYSTEM_DRIVER_BASE + 113) /* 961011513 */
 
+/* Diagnostic sub-IDs for Force Feedback (Vibrator) subsystem
+ * Range: DIAG_SYSTEM_DRIVER_BASE + 120 ~ +139 (961011520-961011539)
+ */
+
+/* Kernel driver framework (ff_upper.c) */
+
+#define DIAG_FF_REGISTER_FAIL            (DIAG_SYSTEM_DRIVER_BASE + 120) /* 961011520 */
+#define DIAG_FF_UPLOAD_FAIL              (DIAG_SYSTEM_DRIVER_BASE + 121) /* 961011521 */
+#define DIAG_FF_UPLOAD_NOSLOT            (DIAG_SYSTEM_DRIVER_BASE + 122) /* 961011522 */
+#define DIAG_FF_UPLOAD_NOACCESS          (DIAG_SYSTEM_DRIVER_BASE + 123) /* 961011523 */
+#define DIAG_FF_UPLOAD_INCOMPAT          (DIAG_SYSTEM_DRIVER_BASE + 124) /* 961011524 */
+#define DIAG_FF_PLAYBACK_FAIL            (DIAG_SYSTEM_DRIVER_BASE + 125) /* 961011525 */
+#define DIAG_FF_IOCTL_FAIL               (DIAG_SYSTEM_DRIVER_BASE + 126) /* 961011526 */
+
+/* Vibrator service (vibrator_server.c) */
+
+#define DIAG_FF_OPEN_FAIL                (DIAG_SYSTEM_DRIVER_BASE + 127) /* 961011527 */
+#define DIAG_FF_SETGAIN_FAIL             (DIAG_SYSTEM_DRIVER_BASE + 128) /* 961011528 */
+
 /* Network module diagnostic IDs */
 
 #define DIAG_NET_BASE                    961030000
