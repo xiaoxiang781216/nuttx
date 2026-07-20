@@ -54,6 +54,8 @@
 #define TEE_ERROR_TIMEOUT              0xFFFF3001
 
 #define TEE_ORIGIN_COMMS               0x00000002
+#define TEE_ORIGIN_TEE                 0x00000003
+#define TEE_ORIGIN_TRUSTED_APP         0x00000004
 
 #define OPTEE_SERVER_PATH              "optee"
 #define OPTEE_MAX_PARAM_NUM            6

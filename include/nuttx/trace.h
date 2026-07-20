@@ -1360,6 +1360,35 @@
 #  define syscall_trace_async_end_track(track, name, cookie)
 #endif
 
+#ifdef CONFIG_TRACE_TEE
+#  define tee_trace_begin() trace_begin(NXTAG_TEE)
+#  define tee_trace_end() trace_end(NXTAG_TEE)
+#  define tee_trace_beginex(name) trace_beginex(NXTAG_TEE, name)
+#  define tee_trace_endex(name) trace_endex(NXTAG_TEE, name)
+#  define tee_trace_mark(s) trace_mark(NXTAG_TEE, s)
+#  define tee_trace_printf(fmt, ...) \
+    trace_printf(NXTAG_TEE, fmt, ##__VA_ARGS__)
+#  define tee_trace_async_begin(name, cookie) \
+    trace_async_begin(NXTAG_TEE, name, cookie)
+#  define tee_trace_async_end(name, cookie) \
+    trace_async_end(NXTAG_TEE, name, cookie)
+#  define tee_trace_async_begin_track(track, name, cookie) \
+    trace_async_begin_track(NXTAG_TEE, track, name, cookie)
+#  define tee_trace_async_end_track(track, name, cookie) \
+    trace_async_end_track(NXTAG_TEE, track, name, cookie)
+#else
+#  define tee_trace_begin()
+#  define tee_trace_end()
+#  define tee_trace_beginex(name)
+#  define tee_trace_endex(name)
+#  define tee_trace_mark(s)
+#  define tee_trace_printf(...)
+#  define tee_trace_async_begin(name, cookie)
+#  define tee_trace_async_end(name, cookie)
+#  define tee_trace_async_begin_track(track, name, cookie)
+#  define tee_trace_async_end_track(track, name, cookie)
+#endif
+
 #ifdef CONFIG_TRACE_THERMAL
 #  define thermal_trace_begin() trace_begin(NXTAG_THERMAL)
 #  define thermal_trace_end() trace_end(NXTAG_THERMAL)
@@ -1684,6 +1713,8 @@
     trace_diag(NXTAG_STEPPER, level, id, fmt, ##__VA_ARGS__)
 #define syscall_trace_diag(level, id, fmt, ...) \
     trace_diag(NXTAG_SYSCALL, level, id, fmt, ##__VA_ARGS__)
+#define tee_trace_diag(level, id, fmt, ...) \
+    trace_diag(NXTAG_TEE, level, id, fmt, ##__VA_ARGS__)
 #define thermal_trace_diag(level, id, fmt, ...) \
     trace_diag(NXTAG_THERMAL, level, id, fmt, ##__VA_ARGS__)
 #define timer_trace_diag(level, id, fmt, ...) \
@@ -1748,6 +1779,39 @@
 #define DIAG_SYSTEM_PM_BASE              (DIAG_SYSTEM_BASE + 700)     /* 961010700 */
 
 #define DIAG_SYSTEM_TEE_BASE             (DIAG_SYSTEM_BASE + 800)     /* 961010800 */
+
+#define DIAG_TEE_TRANSPORT_FAIL          (DIAG_SYSTEM_TEE_BASE + 0)   /* 961010800 */
+#define DIAG_TEE_TRANSPORT_HANG          (DIAG_SYSTEM_TEE_BASE + 1)   /* 961010801 */
+#define DIAG_TEE_RPC_HANG                (DIAG_SYSTEM_TEE_BASE + 2)   /* 961010802 */
+#define DIAG_TEE_SUPPLICANT_HANG         (DIAG_SYSTEM_TEE_BASE + 3)   /* 961010803 */
+#define DIAG_TEE_SHM_FAIL                (DIAG_SYSTEM_TEE_BASE + 4)   /* 961010804 */
+#define DIAG_TEE_OPTEED_HANG             (DIAG_SYSTEM_TEE_BASE + 5)   /* 961010805 */
+#define DIAG_TEE_THREAD_FAIL             (DIAG_SYSTEM_TEE_BASE + 6)   /* 961010806 */
+#define DIAG_TEE_COMM_BREAK              (DIAG_SYSTEM_TEE_BASE + 7)   /* 961010807 */
+#define DIAG_TEE_COMPAT_PANIC            (DIAG_SYSTEM_TEE_BASE + 8)   /* 961010808 */
+#define DIAG_TEE_STORAGE_FAIL            (DIAG_SYSTEM_TEE_BASE + 9)   /* 961010809 */
+#define DIAG_TEE_RPMB_FAIL               (DIAG_SYSTEM_TEE_BASE + 10)  /* 961010810 */
+#define DIAG_TEE_TA_INIT_FAIL            (DIAG_SYSTEM_TEE_BASE + 11)  /* 961010811 */
+#define DIAG_TEE_TA_ENTRY_ERR            (DIAG_SYSTEM_TEE_BASE + 12)  /* 961010812 */
+#define DIAG_TEE_TA_PANIC                (DIAG_SYSTEM_TEE_BASE + 13)  /* 961010813 */
+
+/* DIAG_TEE_TRANSPORT_FAIL (961010800) ErrorCode definitions.
+ * Strictly the open/connect phase: socket creation and connect.
+ */
+
+#define DIAG_TEE_OPEN_ERR_SOCKET         1  /* psock_socket failed */
+#define DIAG_TEE_OPEN_ERR_CONNECT        2  /* psock_connect failed */
+
+/* DIAG_TEE_TRANSPORT_HANG (961010801) ErrorCode definitions.
+ * All call-phase transport failures. SEND is an immediate error; PEER_RESET
+ * means opteed is gone (EOF/ECONNRESET/EPIPE/ENOTCONN); TIMEOUT (elapsed ~=
+ * configured timeout) is the real "call does not return" signature.
+ */
+
+#define DIAG_TEE_CALL_ERR_SEND           1  /* sendmsg returned error */
+#define DIAG_TEE_CALL_ERR_PEER_RESET     2  /* peer closed / link down */
+#define DIAG_TEE_CALL_ERR_RECV           3  /* other recv error */
+#define DIAG_TEE_CALL_ERR_TIMEOUT        4  /* recv timed out (call hang) */
 
 #define DIAG_SYSTEM_OTA_BASE             (DIAG_SYSTEM_BASE + 900)     /* 961010900 */
 

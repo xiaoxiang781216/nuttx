@@ -27,6 +27,8 @@
 #include <nuttx/arch.h>
 #include <nuttx/net/net.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/trace.h>
+#include <errno.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -68,7 +70,13 @@ static int optee_socket_recv(FAR struct socket *psock, FAR void *msg,
       ssize_t n = psock_recv(psock, msg, size, 0);
       if (n <= 0)
         {
-          return n < 0 ? n : -EIO;
+          /* n == 0: peer performed an orderly shutdown (EOF). This is the
+           * signature of the opteed process exiting/crashing; map it to
+           * -ECONNRESET so the caller can treat "peer gone" uniformly with
+           * the link-down case, instead of a generic -EIO.
+           */
+
+          return n < 0 ? n : -ECONNRESET;
         }
 
       size -= n;
@@ -151,6 +159,9 @@ int optee_transport_open(FAR struct optee_priv_data **priv_)
 #endif
   if (ret < 0)
     {
+      tee_trace_diag(LOG_ERR, DIAG_TEE_TRANSPORT_FAIL,
+                     "phase:%s,errCode:%d,errno:%d",
+                     "socket", DIAG_TEE_OPEN_ERR_SOCKET, -ret);
       kmm_free(priv);
       return ret;
     }
@@ -196,6 +207,9 @@ int optee_transport_open(FAR struct optee_priv_data **priv_)
                       sizeof(addr));
   if (ret < 0)
     {
+      tee_trace_diag(LOG_EMERG, DIAG_TEE_TRANSPORT_FAIL,
+                     "Phase:connect,DevicePath:%s,Errno:%d",
+                     OPTEE_SERVER_PATH, -ret);
       psock_close(&priv->socket);
       kmm_free(priv);
       return ret;
@@ -271,12 +285,16 @@ int optee_transport_call(FAR struct optee_priv_data *priv_,
   ret = psock_sendmsg(&priv->socket, &msghdr, 0);
   if (ret < 0)
     {
+      tee_trace_diag(LOG_EMERG, DIAG_TEE_COMM_BREAK,
+                     "Errno:%d,Direction:send", -ret);
       return ret;
     }
 
   ret = optee_socket_recv(&priv->socket, arg, arg_size);
   if (ret < 0)
     {
+      tee_trace_diag(LOG_EMERG, DIAG_TEE_COMM_BREAK,
+                     "Errno:%d,Direction:recv", -ret);
       return ret;
     }
 

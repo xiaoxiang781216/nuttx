@@ -33,6 +33,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/lib/math32.h>
+#include <nuttx/trace.h>
 #include <sys/mman.h>
 #include <sys/param.h>
 
@@ -565,6 +566,9 @@ static int optee_open(FAR struct file *filep)
   ret = optee_transport_open(&priv);
   if (ret < 0)
     {
+      tee_trace_diag(LOG_ERR, DIAG_TEE_TRANSPORT_FAIL,
+                     "phase:%s,devicePath:%s,errno:%d",
+                     "open", "/dev/tee0", -ret);
       return ret;
     }
 
@@ -837,6 +841,15 @@ static int optee_ioctl_open_session(FAR struct optee_priv_data *priv,
   arg->ret = msg->ret;
   arg->ret_origin = msg->ret_origin;
 
+  if (arg->ret != TEE_SUCCESS)
+    {
+      tee_trace_diag(LOG_EMERG, DIAG_TEE_TA_INIT_FAIL,
+                       "Uuid:%08" PRIx32 "-%04" PRIx16 "-%04" PRIx16
+                       ",Errno:%" PRIu32, *(FAR uint32_t *)arg->uuid,
+                       *(FAR uint16_t *)(arg->uuid + 4),
+                       *(FAR uint16_t *)(arg->uuid + 6), arg->ret);
+    }
+
 errout_with_msg:
   optee_msg_free(priv, msg);
   return ret;
@@ -913,6 +926,13 @@ static int optee_ioctl_invoke(FAR struct optee_priv_data *priv,
   arg->ret = msg->ret;
   arg->ret_origin = msg->ret_origin;
 
+  if (arg->ret != TEE_SUCCESS)
+    {
+      tee_trace_diag(LOG_EMERG, DIAG_TEE_TA_ENTRY_ERR,
+                       "Cmd:%" PRIu32 ",ReturnCode:%" PRIu32,
+                       arg->func, arg->ret);
+    }
+
 errout_with_msg:
   optee_msg_free(priv, msg);
   return ret;
@@ -983,6 +1003,8 @@ optee_ioctl_shm_alloc(FAR struct optee_priv_data *priv,
   ret = optee_shm_alloc(priv, NULL, data->size, TEE_SHM_USER_MAP, &shm);
   if (ret < 0)
     {
+      tee_trace_diag(LOG_EMERG, DIAG_TEE_SHM_FAIL,
+                     "RequestSize:%" PRIu64 ",HeapFree:0", data->size);
       return ret;
     }
 
@@ -1434,6 +1456,10 @@ int optee_shm_alloc(FAR struct optee_priv_data *priv, FAR void *addr,
   shm = kmm_zalloc(sizeof(struct optee_shm));
   if (shm == NULL)
     {
+      struct mallinfo info = kmm_mallinfo();
+      tee_trace_diag(LOG_ERR, DIAG_TEE_SHM_FAIL,
+                     "requestSize:%zu,heapFree:%u",
+                     size, info.fordblks);
       return ret;
     }
 

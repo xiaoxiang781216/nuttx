@@ -337,5 +337,6 @@ void optee_rpc_handle_cmd(FAR struct optee_priv_data *priv,
 #else
         arg->ret = TEE_ERROR_NOT_SUPPORTED;
 #endif
+        break;
     }
 }

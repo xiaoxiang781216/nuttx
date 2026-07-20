@@ -2919,6 +2919,10 @@ config TRACE_SYSCALL
 	bool "Enable tracepoints in syscall"
 	default n
 
+config TRACE_TEE
+	bool "Enable tracepoints in tee"
+	default n
+
 config TRACE_THERMAL
 	bool "Enable tracepoints in thermal"
 	default n

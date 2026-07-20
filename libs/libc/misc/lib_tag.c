@@ -87,6 +87,7 @@ static FAR const char *const g_nxtag_names[] =
   "spi",
   "stepper",
   "syscall",
+  "tee",
   "thermal",
   "timer",
   "usb",

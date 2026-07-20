@@ -29,6 +29,9 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 #include <nuttx/idr.h>
+#include <nuttx/trace.h>
+
+#include <inttypes.h>
 #include <string.h>
 
 #include "optee.h"
@@ -569,6 +572,29 @@ void optee_supplicant_cmd(FAR struct optee_priv_data *priv,
   arg->ret = optee_supplicant_request(arg->cmd, arg->num_params, params);
   if (arg->ret != TEE_SUCCESS)
     {
+      /* The supplicant services RPMB and secure-storage (FS) RPCs in
+       * userspace. A failure here means the operation the secure world
+       * delegated to REE failed; record it by command kind so the two
+       * distinct fault tree nodes (RPMB vs. secure storage) can be told
+       * apart in the diagnostic stream.
+       */
+
+      switch (arg->cmd)
+        {
+          case OPTEE_MSG_RPC_CMD_FS:
+            tee_trace_diag(LOG_ERR, DIAG_TEE_STORAGE_FAIL,
+                           "ret:%" PRIu32, arg->ret);
+            break;
+
+          case OPTEE_MSG_RPC_CMD_RPMB:
+            tee_trace_diag(LOG_ERR, DIAG_TEE_RPMB_FAIL,
+                           "ret:%" PRIu32, arg->ret);
+            break;
+
+          default:
+            break;
+        }
+
       goto out;
     }
 
