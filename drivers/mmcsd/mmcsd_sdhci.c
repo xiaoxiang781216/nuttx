@@ -46,6 +46,7 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/cache.h>
 #include <nuttx/clock.h>
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
@@ -108,7 +109,7 @@ struct sdhci_dev_s
   FAR void          *cbarg;           /* Registered callback argument */
   struct work_s      cbwork;          /* Callback work queue structure */
 
-  /* Interrupt-mode PIO data transfer support.
+  /* Data transfer support (PIO and SDMA)
    * A union is used so that the send path can preserve the const
    * qualifier of the caller's buffer, while the receive path uses
    * a mutable pointer.  Both members alias the same storage and
@@ -117,11 +118,14 @@ struct sdhci_dev_s
 
   union
   {
-    FAR uint32_t       *rx;          /* Receive buffer (ISR writes to it) */
-    FAR const uint32_t *tx;          /* Send buffer (ISR reads from it) */
+    FAR uint32_t       *rx;          /* Receive buffer */
+    FAR const uint32_t *tx;          /* Send buffer */
   } buffer;
   size_t             remaining;      /* Number of bytes remaining */
   uint32_t           xfrints;        /* Interrupt enables for data transfer */
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+  bool               dma_active;     /* true: current transfer uses SDMA */
+#endif
 };
 
 /****************************************************************************
@@ -202,6 +206,13 @@ static void sdhci_callbackenable(FAR struct sdio_dev_s *dev,
 #if defined(CONFIG_SCHED_WORKQUEUE) && defined(CONFIG_SCHED_HPWORK)
 static int  sdhci_registercallback(FAR struct sdio_dev_s *dev,
                                    worker_t callback, FAR void *arg);
+#endif
+
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+static int  sdhci_dmarecvsetup(FAR struct sdio_dev_s *dev,
+                               FAR uint8_t *buffer, size_t buflen);
+static int  sdhci_dmasendsetup(FAR struct sdio_dev_s *dev,
+                               FAR const uint8_t *buffer, size_t buflen);
 #endif
 
 static void sdhci_gotextcsd(FAR struct sdio_dev_s *dev,
@@ -417,6 +428,9 @@ static void sdhci_endtransfer(FAR struct sdhci_dev_s *priv,
               (uint16_t)SDHCI_XFRERR_INTS);
 
   priv->remaining = 0;
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+  priv->dma_active = false;
+#endif
 
   /* Wake waiting thread if transfer done event is expected */
 
@@ -526,6 +540,9 @@ static void sdhci_reset(FAR struct sdio_dev_s *dev)
   priv->buffer.rx  = NULL;
   priv->remaining  = 0;
   priv->xfrints    = 0;
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+  priv->dma_active = false;
+#endif
 
   wd_cancel(&priv->waitwdog);
 
@@ -577,12 +594,17 @@ static sdio_capset_t sdhci_capabilities(FAR struct sdio_dev_s *dev)
   caps = ((uint64_t)sdhci_get32(priv, SDHCI_CAPABILITIES_OFFSET + 4) << 32) |
          sdhci_get32(priv, SDHCI_CAPABILITIES_OFFSET);
 
-  /* Bit 22 (SDMA) or Bit 19 (ADMA2) -> SDIO_CAPS_DMASUPPORTED */
+  /* Bit 22 (SDMA) or Bit 19 (ADMA2) -> SDIO_CAPS_DMASUPPORTED
+   * Only report DMA support when the driver SDMA implementation is
+   * compiled in (CONFIG_MMCSD_SDHCI_SDMA).
+   */
 
-  if ((caps & (SDHCI_CAPABILITIES_SDMA | SDHCI_CAPABILITIES_ADMA2)) != 0)
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+  if ((caps & SDHCI_CAPABILITIES_SDMA) != 0)
     {
       capset |= SDIO_CAPS_DMASUPPORTED;
     }
+#endif
 
   /* Bit 21 (High Speed) -> SDIO_CAPS_MMC_HS_MODE */
 
@@ -932,6 +954,15 @@ static int sdhci_sendcmd(FAR struct sdio_dev_s *dev, uint32_t cmd,
               transfer_mode |= SDHCI_TRANSFER_MODE_AUTO_CMD12;
             }
         }
+
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+      /* Enable SDMA if dmarecvsetup/dmasendsetup armed the transfer */
+
+      if (priv->dma_active)
+        {
+          transfer_mode |= SDHCI_TRANSFER_MODE_DMA_EN;
+        }
+#endif
     }
 
   /* Configure response type bits */
@@ -1131,8 +1162,99 @@ static int sdhci_cancel(FAR struct sdio_dev_s *dev)
     }
 
   priv->remaining = 0;
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+  priv->dma_active = false;
+#endif
   return OK;
 }
+
+/****************************************************************************
+ * Name: sdhci_dmarecvsetup
+ *
+ * Description:
+ *   Setup SDMA for a read data transfer.  The controller will autonomously
+ *   move data from the card to the buffer at the SDMA System Address.
+ *   Upon return, DMA is armed and waiting for the command to trigger it.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+static int sdhci_dmarecvsetup(FAR struct sdio_dev_s *dev,
+                              FAR uint8_t *buffer, size_t nbytes)
+{
+  FAR struct sdhci_dev_s *priv = (FAR struct sdhci_dev_s *)dev;
+  uint16_t saved_blkcnt;
+
+  DEBUGASSERT(priv != NULL && buffer != NULL && nbytes > 0);
+
+  /* Invalidate D-cache over the buffer range so the CPU reads
+   * DMA-written data instead of stale cache lines.
+   */
+
+  up_invalidate_dcache((uintptr_t)buffer, (uintptr_t)buffer + nbytes);
+
+  /* Write the SDMA System Address register. */
+
+  saved_blkcnt = sdhci_get16(priv, SDHCI_BLOCK_COUNT_OFFSET);
+  sdhci_put16(priv, SDHCI_BLOCK_COUNT_OFFSET, 0);
+  sdhci_put32(priv, SDHCI_DMA_ADDRESS_OFFSET, (uint32_t)(uintptr_t)buffer);
+  sdhci_put16(priv, SDHCI_BLOCK_COUNT_OFFSET, saved_blkcnt);
+
+  priv->dma_active = true;
+
+  /* Enable DMA and Transfer Complete interrupts.  The DMA interrupt
+   * fires at SDMA boundary crossings (for multi-block transfers);
+   * TC fires when the entire transfer is done.
+   */
+
+  sdhci_configxfrints(priv, SDHCI_INT_DMA |
+                            SDHCI_INT_TRANSFER_COMPLETE |
+                            SDHCI_INT_ERROR);
+  return OK;
+}
+
+/****************************************************************************
+ * Name: sdhci_dmasendsetup
+ *
+ * Description:
+ *   Setup SDMA for a write data transfer.  The controller will
+ *   autonomously move data from the buffer to the card.
+ *
+ ****************************************************************************/
+
+static int sdhci_dmasendsetup(FAR struct sdio_dev_s *dev,
+                              FAR const uint8_t *buffer, size_t nbytes)
+{
+  FAR struct sdhci_dev_s *priv = (FAR struct sdhci_dev_s *)dev;
+  uint16_t saved_blkcnt;
+
+  DEBUGASSERT(priv != NULL && buffer != NULL && nbytes > 0);
+
+  /* Clean (flush) D-cache over the buffer range so the DMA engine
+   * reads fresh data from memory instead of stale cache lines.
+   */
+
+  up_clean_dcache((uintptr_t)buffer, (uintptr_t)buffer + nbytes);
+
+  /* Write the SDMA address.  Temporarily clear BLKCNT to avoid
+   * premature transfer trigger (see sdhci_dmarecvsetup for details).
+   */
+
+  saved_blkcnt = sdhci_get16(priv, SDHCI_BLOCK_COUNT_OFFSET);
+  sdhci_put16(priv, SDHCI_BLOCK_COUNT_OFFSET, 0);
+  sdhci_put32(priv, SDHCI_DMA_ADDRESS_OFFSET, (uint32_t)(uintptr_t)buffer);
+  sdhci_put16(priv, SDHCI_BLOCK_COUNT_OFFSET, saved_blkcnt);
+
+  priv->dma_active = true;
+
+  /* Enable DMA and Transfer Complete interrupts */
+
+  sdhci_configxfrints(priv, SDHCI_INT_DMA |
+                            SDHCI_INT_TRANSFER_COMPLETE |
+                            SDHCI_INT_ERROR);
+  return OK;
+}
+#endif /* CONFIG_MMCSD_SDHCI_SDMA */
 
 /****************************************************************************
  * Name: sdhci_waitresponse
@@ -1591,7 +1713,8 @@ static int sdhci_interrupt(int irq, FAR void *context, FAR void *arg)
 
   clr_mask |= normal_status & (SDHCI_INT_READ_READY |
                                SDHCI_INT_WRITE_READY |
-                               SDHCI_INT_TRANSFER_COMPLETE);
+                               SDHCI_INT_TRANSFER_COMPLETE |
+                               SDHCI_INT_DMA);
 
   sdhci_put16(priv, SDHCI_INT_STATUS_OFFSET, clr_mask);
 
@@ -1686,6 +1809,20 @@ static int sdhci_interrupt(int irq, FAR void *context, FAR void *arg)
               sdhci_put32(priv, SDHCI_BUFFER_DATA_PORT_OFFSET, data);
             }
         }
+
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+      /* SDMA boundary crossing: the controller has updated the SDMA
+       * System Address register to the current position.  Re-writing
+       * the register acknowledges the interrupt and lets the controller
+       * continue the transfer.
+       */
+
+      if ((pending & SDHCI_INT_DMA) != 0)
+        {
+          uint32_t addr = sdhci_get32(priv, SDHCI_DMA_ADDRESS_OFFSET);
+          sdhci_put32(priv, SDHCI_DMA_ADDRESS_OFFSET, addr);
+        }
+#endif
 
       /* Per specification Section 2.2.18, Transfer Complete has higher
        * priority than Data Timeout Error.  If both are set, command
@@ -1812,6 +1949,10 @@ FAR struct sdio_dev_s *sdhci_initialize(uintptr_t base, int irq)
       .registercallback = sdhci_registercallback,
 #endif
       .gotextcsd        = sdhci_gotextcsd,
+#ifdef CONFIG_MMCSD_SDHCI_SDMA
+      .dmarecvsetup     = sdhci_dmarecvsetup,
+      .dmasendsetup     = sdhci_dmasendsetup,
+#endif
     };
 
   priv->base    = base;

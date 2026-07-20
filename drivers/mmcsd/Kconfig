@@ -204,4 +204,16 @@ config MMCSD_SDHCI
 		standard SDHCI registers and is suitable for QEMU sdhci-pci and
 		other controllers that implement the standard register map.
 
+config MMCSD_SDHCI_SDMA
+	bool "SDHCI SDMA data transfer"
+	default n
+	depends on MMCSD_SDHCI
+	select SDIO_DMA
+	---help---
+		Use SDMA (Single Operation DMA) for data transfer instead of
+		PIO.  The controller moves data between the card and system
+		memory autonomously; the CPU only handles DMA boundary and
+		transfer-complete interrupts.  When disabled, PIO mode is
+		used with BRR/BWR interrupts for byte-level data movement.
+
 endif # MMCSD
