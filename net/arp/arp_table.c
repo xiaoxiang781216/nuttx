@@ -49,6 +49,7 @@
 
 #include <sys/ioctl.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <debug.h>
 #include <assert.h>
@@ -380,10 +381,10 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
       dev != NULL && ipaddr == dev->d_draddr)
     {
       net_trace_diag(LOG_ERR, DIAG_NET_CONN_STATE_ABNORM,
-                     "ErrorCode:%d,ErrorDetail:gw=%08x/"
+                     "ErrorCode:%d,ErrorDetail:gw=%08" PRIx32 "/"
                      "old=%02x%02x%02x%02x%02x%02x/"
                      "new=%02x%02x%02x%02x%02x%02x,"
-                     "InterfaceInfo:%s/%04x/%u/%08x,"
+                     "InterfaceInfo:%s/%04" PRIx32 "/%u/%08" PRIx32 ","
                      "InterfaceList:,"
                      "RouteList:",
                      DIAG_NET_ERR_GW_MAC_CHANGED, ipaddr,

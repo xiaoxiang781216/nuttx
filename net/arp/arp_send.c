@@ -28,6 +28,7 @@
 
 #include <unistd.h>
 #include <string.h>
+#include <inttypes.h>
 #include <debug.h>
 
 #include <netinet/in.h>
@@ -469,8 +470,8 @@ timeout:
   if (ret == -ETIMEDOUT)
     {
       net_trace_diag(LOG_ERR, DIAG_NET_CONN_STATE_ABNORM,
-                     "ErrorCode:%d,ErrorDetail:target=%08x,"
-                     "InterfaceInfo:%s/%04x/%u/%08x,"
+                     "ErrorCode:%d,ErrorDetail:target=%08" PRIx32 ","
+                     "InterfaceInfo:%s/%04" PRIx32 "/%u/%08" PRIx32 ","
                      "InterfaceList:,"
                      "RouteList:",
                      DIAG_NET_ERR_ARP_UNREACHABLE, ipaddr,

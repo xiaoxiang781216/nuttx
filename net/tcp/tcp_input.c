@@ -1360,12 +1360,17 @@ found:
             {
               if (!ratelimit_islimited(&g_tcp_latency_rl))
                 {
+                  FAR void *laddr = net_ip_binding_laddr(&conn->u, domain);
+                  char ipstr[INET6_ADDRSTRLEN];
+
+                  inet_ntop(domain, laddr, ipstr, sizeof(ipstr));
                   net_trace_diag(LOG_ERR, DIAG_NET_TCP_LATENCY_HIGH,
-                                 "Latency:%u,InterfaceInfo:%s/%04x/%u/%08x"
+                                 "Latency:%u,InterfaceInfo:%s/"
+                                 "%04" PRIx32 "/%u/%s"
                                  ",Suppressed:%u",
                                  conn->rto * 500,
                                  dev->d_ifname, dev->d_flags,
-                                 dev->d_lltype, dev->d_ipaddr,
+                                 dev->d_lltype, ipstr,
                                  ratelimit_missed(&g_tcp_latency_rl));
                 }
             }
