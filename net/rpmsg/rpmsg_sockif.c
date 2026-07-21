@@ -1608,7 +1608,9 @@ static int rpmsg_socket_ioctl(FAR struct socket *psock,
 static int rpmsg_socket_shutdown(FAR struct socket *psock, int how)
 {
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
-  struct rpmsg_socket_shutdown_s msg;
+  FAR struct rpmsg_socket_shutdown_s *msg;
+  uint32_t len = sizeof(*msg);
+  irqstate_t flags;
   int ret;
 
   if (!conn->ept.rdev || atomic_read(&conn->unbind))
@@ -1618,14 +1620,40 @@ static int rpmsg_socket_shutdown(FAR struct socket *psock, int how)
 
   conn->how |= how;
 
-  msg.cmd = RPMSG_SOCKET_CMD_SHUTDOWN;
-  msg.how = how;
+  /* Reserve the tx buffer without holding recvlock, since it may block
+   * waiting for a free vring buffer.
+   */
 
-  ret = rpmsg_send(&conn->ept, &msg, sizeof(msg));
-  if (ret < 0)
-      return ret;
+  msg = rpmsg_get_tx_payload_buffer(&conn->ept, &len, true);
+  if (msg == NULL)
+    {
+      return -ENOMEM;
+    }
 
-  return OK;
+  DEBUGASSERT(len >= sizeof(*msg));
+  flags = spin_lock_irqsave(&conn->recvlock);
+
+  /* The peer endpoint may have been destroyed while reserving the buffer.
+   * Check it is still ready and not unbound before sending, so we never
+   * send on a dead endpoint (and spin 15s on dest_addr == ANY).
+   */
+
+  if (!is_rpmsg_ept_ready(&conn->ept) || atomic_read(&conn->unbind))
+    {
+      spin_unlock_irqrestore(&conn->recvlock, flags);
+      rpmsg_release_tx_buffer(&conn->ept, msg);
+      return -ENOTCONN;
+    }
+
+  msg->cmd = RPMSG_SOCKET_CMD_SHUTDOWN;
+  msg->how = how;
+  ret = rpmsg_send_offchannel_nocopy(&conn->ept, conn->ept.addr,
+                                     conn->ept.dest_addr, msg,
+                                     sizeof(*msg));
+
+  spin_unlock_irqrestore(&conn->recvlock, flags);
+
+  return ret < 0 ? ret : OK;
 }
 
 static int rpmsg_socket_munmap(FAR struct task_group_s *group,
