@@ -781,8 +781,7 @@ static int sensor_open(FAR struct file *filep)
   user = kmm_zalloc(sizeof(struct sensor_user_s));
   if (user == NULL)
     {
-      ret = -ENOMEM;
-      goto errout_with_lock;
+      return -ENOMEM;
     }
 
   /* The lower ops have upper lock protection, so no additional locking
@@ -853,9 +852,12 @@ static int sensor_open(FAR struct file *filep)
   sensor_pollnotify(upper, POLLPRI, SENSOR_ROLE_WR);
 
   filep->f_priv = user;
-  goto errout_with_lock;
+
+  nxrmutex_unlock(&upper->lock);
+  return OK;
 
 errout_with_open:
+  nxrmutex_unlock(&upper->lock);
   if (lower->ops->close)
     {
       lower->ops->close(lower, filep);
@@ -863,8 +865,6 @@ errout_with_open:
 
 errout_with_user:
   kmm_free(user);
-errout_with_lock:
-  nxrmutex_unlock(&upper->lock);
   return ret;
 }
 
