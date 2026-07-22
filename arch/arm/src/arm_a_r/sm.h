@@ -290,17 +290,17 @@ void arm_vectorfiq_entry(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
  *   world.  Decodes ctx->sec.r0 (the SMC function ID) to service the
  *   TEE-side world-switch protocol:
  *
- *   - ARM_SMCCC_NUTTX_TEE_IDLE: TEE has no ready tasks.  If a non-secure
- *     context was preempted by a secure interrupt (ns_preempted set),
- *     resume it (return SM_EXIT_TO_NON_SECURE).  Otherwise return 0 in
- *     ctx->sec.r0 and stay in the secure world (SM_EXIT_TO_SECURE) so the
- *     TEE can WFI.
+ *   - ARM_SMCCC_NUTTX_TEE_IDLE: TEE has no ready tasks.  The TEE does not
+ *     sleep itself — it unconditionally switches to the non-secure world
+ *     (SM_EXIT_TO_NON_SECURE), resuming the REE at its interruption point.
+ *     The REE is the sleeper.
  *
  *   - ARM_SMCCC_NUTTX_FOREIGN_INTR: TEE detected a foreign (non-secure)
  *     interrupt pending while running and cooperatively yields the CPU to
- *     the non-secure world (SM_EXIT_TO_NON_SECURE).  The interrupt is not
- *     acked by the TEE; it will be handled by REE's own vector once the
- *     non-secure world resumes.
+ *     the non-secure world (SM_EXIT_TO_NON_SECURE).  It marks the TEE
+ *     preempted (s_preempted) so REE_IDLE resumes it later.  The interrupt
+ *     is not acked by the TEE; it will be handled by REE's own vector once
+ *     the non-secure world resumes.
  *
  * Input Parameters:
  *   None.  The per-CPU secure/non-secure contexts are the typed globals
@@ -315,17 +315,18 @@ void arm_vectorfiq_entry(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3,
 uint32_t arm_sm_from_sec(void);
 
 /****************************************************************************
- * Name: arm_sm_get_ns_preempted / arm_sm_set_ns_preempted
+ * Name: arm_sm_get_s_preempted / arm_sm_set_s_preempted
  *
  * Description:
- *   Accessors for the ns_preempted flag.  The flag records that a
- *   non-secure (REE) context was preempted by a secure interrupt while it
- *   was executing, so the monitor must resume that exact context (rather
- *   than leaving the REE parked) once the TEE goes idle.
+ *   Accessors for the s_preempted flag.  The flag records that a secure
+ *   (TEE) context was preempted by a foreign interrupt (or cooperatively
+ *   yielded via FOREIGN_INTR) while it was executing, so the monitor must
+ *   resume that exact context (rather than leaving the TEE parked) once
+ *   the REE goes idle.
  *
  ****************************************************************************/
 
-bool arm_sm_get_ns_preempted(void);
-void arm_sm_set_ns_preempted(bool preempted);
+bool arm_sm_get_s_preempted(void);
+void arm_sm_set_s_preempted(bool preempted);
 
 #endif /* __ARCH_ARM_SRC_ARM_A_R_SM_H */

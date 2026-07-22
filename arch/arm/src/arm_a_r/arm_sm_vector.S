@@ -525,10 +525,11 @@ arm_sm_vectorfiq:
 	add	r0, sp, #(SM_CTX_SIZE + SM_CPU_CTX_R8)
 	stm	r0, {r8-r12}
 
-	/* Mark REE as preempted so ARM_SMCCC_NUTTX_TEE_IDLE resumes it. */
-
-	mov	r0, #1
-	bl	arm_sm_set_ns_preempted
+	/* A secure FIQ (Group 0) preempted the REE; switch to the TEE to
+	 * handle it.  No preemption flag is needed for this direction: the
+	 * TEE is not the sleeper, so once it goes idle ARM_SMCCC_NUTTX_TEE_IDLE
+	 * unconditionally switches back to this saved REE context.
+	 */
 
 	/* Restore secure context and resume the TEE at its real PC (also
 	 * restores ctx->sec.vfp under CONFIG_ARCH_FPU).

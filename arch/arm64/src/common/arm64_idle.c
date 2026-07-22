@@ -55,55 +55,55 @@ void up_idle(void)
   nxsched_process_timer();
 #elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
 
-  /* Secure OS idle.
+  /* Secure OS idle: no tasks ready, yield CPU to REE unconditionally.
+   * REE will WFI. When a G1S fires, EL3 preempts REE and returns here.
+   * When a NS interrupt fires, EL3 switches to REE and REE_IDLE will
+   * resume us later.
    *
    * Every entry calls ARM_SMCCC_NUTTX_TEE_IDLE:
    *   - First call: EL3 registers interrupt handlers and boots REE.
-   *   - Subsequent calls: EL3 checks if REE was preempted by G1S.
-   *     If so, resumes REE. Otherwise returns 0 and TEE does WFI.
+   *   - Subsequent calls: EL3 unconditionally switches to REE (TEE has
+   *     no ready tasks and does not sleep itself; REE is the sleeper).
    *
    * TEE runs again when:
-   *   1. Secure timer fires from REE -> EL3 does world switch ->
-   *      TEE resumes here (after SMC/WFI) -> pending G1S IRQ
-   *      fires through normal S-EL1 vector table -> threads run ->
-   *      all done -> back here -> ARM_SMCCC_NUTTX_TEE_IDLE -> resume REE
-   *   2. TEE was preempted by NS interrupt -> REE idle sends
-   *      ARM_SMCCC_NUTTX_REE_IDLE -> EL3 switches to TEE -> TEE
-   *      continues -> eventually idle -> ARM_SMCCC_NUTTX_TEE_IDLE here
+   *   1. A G1S fires while REE runs -> EL3 does world switch -> TEE
+   *      resumes here -> pending G1S IRQ fires through normal S-EL1
+   *      vector table -> threads run -> all done -> back here ->
+   *      ARM_SMCCC_NUTTX_TEE_IDLE -> yield to REE again
+   *   2. TEE was preempted by a NS interrupt -> REE handles it, then
+   *      idles -> ARM_SMCCC_NUTTX_REE_IDLE -> EL3 sees s_preempted and
+   *      switches back to TEE -> TEE continues from its interruption
+   *      point
    */
 
   struct arm_smccc_res res;
 
-  /* TEE idle: on first call, EL3 registers interrupt handlers
-   * and switches to REE. On subsequent calls, checks if REE
-   * was preempted by G1S and resumes it, or returns for WFI.
+  arm_smccc_smc(ARM_SMCCC_NUTTX_TEE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
+
+#elif defined(CONFIG_ARCH_TRUSTZONE_NONSECURE)
+
+  /* REE idle.
    *
-   * Disable IRQs to prevent a lost-wakeup race: if a G1S IRQ
-   * were taken between SMC return and WFI, its handler could
-   * wake tasks but WFI would still sleep. With IRQs masked,
-   * the pending interrupt keeps WFI from blocking.
+   * Every entry calls ARM_SMCCC_NUTTX_REE_IDLE:
+   *   - EL3 checks if TEE was preempted by a NS interrupt.  If so,
+   *     resumes TEE.  Otherwise returns 0 and REE does WFI.
+   *
+   * Disable IRQs to prevent a lost-wakeup race: if a NS IRQ were taken
+   * between SMC return and WFI, its handler could wake tasks but WFI
+   * would still sleep.  With IRQs masked, the pending interrupt keeps
+   * WFI from blocking.
    */
+
+  struct arm_smccc_res res;
 
   irqstate_t flags = irq_save();
 
-  arm_smccc_smc(ARM_SMCCC_NUTTX_TEE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
+  arm_smccc_smc(ARM_SMCCC_NUTTX_REE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
 
   asm("dsb sy");
   asm("wfi");
 
   irq_restore(flags);
-
-#elif defined(CONFIG_ARCH_TRUSTZONE_NONSECURE)
-
-  /* REE idle: no tasks ready, yield CPU to TEE unconditionally.
-   * TEE will WFI. When a NS interrupt fires, EL3 preempts TEE
-   * and returns here. When a G1S fires, EL3 switches to TEE
-   * and TEE_IDLE will resume us later.
-   */
-
-  struct arm_smccc_res res;
-
-  arm_smccc_smc(ARM_SMCCC_NUTTX_REE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
 #else
 
   /* Sleep until an interrupt occurs to save power */

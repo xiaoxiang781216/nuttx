@@ -129,30 +129,31 @@ void up_idle(void)
 #endif
 
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-  struct arm_smccc_res res;
 
-  irqstate_t flags = irq_save();
-
-  arm_smccc_smc(ARM_SMCCC_NUTTX_TEE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
-
-  asm("dsb sy");
-  asm("wfi");
-  irq_restore(flags);
-#elif defined(CONFIG_ARCH_TRUSTZONE_NONSECURE)
-
-  /* REE idle: no tasks ready, yield CPU to TEE unconditionally.
-   * The TEE will WFI.  When a foreign (non-secure) interrupt fires while
-   * the TEE runs, the monitor (or EL3) preempts the TEE and returns here.
-   * When a secure interrupt fires while the REE runs, the monitor switches
-   * to the TEE, which resumes us later via the TEE_IDLE handshake.
+  /* TEE idle: no tasks ready, yield CPU to REE unconditionally.
+   * The REE will WFI.  When a secure interrupt fires while the REE runs,
+   * the monitor (or EL3) preempts the REE and returns here.  When a
+   * foreign (non-secure) interrupt fires while the TEE runs, the monitor
+   * switches to the REE, which resumes us later via the REE_IDLE
+   * handshake.
    *
    * This path is shared by the in-image ARMv7-A monitor (GICv2) and the
-   * external AArch64 EL3 monitor (GICv3): both use the same REE_IDLE SMC.
+   * external AArch64 EL3 monitor (GICv3): both use the same TEE_IDLE SMC.
    */
 
   struct arm_smccc_res res;
 
+  arm_smccc_smc(ARM_SMCCC_NUTTX_TEE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
+#elif defined(CONFIG_ARCH_TRUSTZONE_NONSECURE)
+  struct arm_smccc_res res;
+
+  irqstate_t flags = irq_save();
+
   arm_smccc_smc(ARM_SMCCC_NUTTX_REE_IDLE, 0, 0, 0, 0, 0, 0, 0, &res);
+
+  asm("dsb sy");
+  asm("wfi");
+  irq_restore(flags);
 #elif defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
   /* If the system is idle and there are no timer interrupts, then process
    * "fake" timer interrupts. Hopefully, something will wake up.

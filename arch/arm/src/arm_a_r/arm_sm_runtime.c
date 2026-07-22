@@ -67,12 +67,14 @@
  * non-secure per-world contexts (the sec/nsec members); the per-CPU
  * preemption flag follows the contexts.  The C code reaches every member
  * directly as a typed global (g_monitor.sec / g_monitor.nsec /
- * g_monitor.ns_preempted).
+ * g_monitor.s_preempted).
  *
- * Flag g_monitor.ns_preempted: a non-secure (REE) context was preempted by
- * a secure interrupt (FIQ, Group 0) while it was running.  The monitor must
- * resume that exact context once the TEE goes idle, instead of leaving the
- * REE parked.  Set by arm_sm_vectorfiq, cleared by the TEE_IDLE handler.
+ * Flag g_monitor.s_preempted: a secure (TEE) context was preempted by a
+ * foreign interrupt (IRQ, Group 1) while it was running, or the TEE
+ * cooperatively yielded via ARM_SMCCC_NUTTX_FOREIGN_INTR.  The monitor
+ * must resume that exact context once the REE goes idle, instead of
+ * leaving the TEE parked.  Set by arm_sm_vectorirq and the FOREIGN_INTR
+ * handler, cleared by the REE_IDLE handler.
  *
  * The monitor SP is initialised to the top of g_monitor.sec (see
  * arm_sm_init), so the srsdb/push in the .S entry path lands directly
@@ -80,7 +82,7 @@
  * stack[].  The .S path is purely SP-relative (it never references the
  * g_monitor symbol) and only requires that stack[] sits immediately below
  * sec and that nsec immediately follows sec, which the layout below
- * guarantees; ns_preempted follows nsec, clear of that machinery.
+ * guarantees; s_preempted follows nsec, clear of that machinery.
  */
 
 struct arm_sm_monitor
@@ -89,7 +91,7 @@ struct arm_sm_monitor
                         aligned_data(MONITOR_STACK_ALIGNMENT);
   struct arm_sm_ctx     sec;
   struct arm_sm_ctx     nsec;
-  bool                  ns_preempted;
+  bool                  s_preempted;
 };
 
 /****************************************************************************
@@ -286,21 +288,32 @@ uint32_t arm_sm_from_nsec(void)
   FAR struct arm_smccc_res *args = (FAR struct arm_smccc_res *)nsec_r0;
 
   /* Handle ARM_SMCCC_NUTTX_REE_IDLE: the non-secure world (REE) has no
-   * ready tasks and yields the CPU back to the secure world (TEE).
-   * Save the non-secure banked registers, restore the secure banked
-   * registers, and resume the TEE at its real interruption point.  Do
-   * NOT overwrite sec->mon_lr: it still holds the PC where the TEE
-   * last parked (e.g. the WFI in up_idle, or the FOREIGN_INTR yield
-   * point in arm_decodeirq).
+   * ready tasks.  If the secure world (TEE) was preempted by a foreign
+   * interrupt (or cooperatively yielded via FOREIGN_INTR), resume it at
+   * its real interruption point.  Otherwise return 0 and stay in the REE
+   * so it can WFI (the REE is the sleeper).  Do NOT overwrite
+   * sec->mon_lr: it still holds the PC where the TEE last parked.
    */
 
   if (args->a0 == ARM_SMCCC_NUTTX_REE_IDLE)
     {
-      /* arm_sm_save/restore_ctx also swap the VFP register file
+      /* No preempted TEE context: return 0 to the REE so it can WFI. */
+
+      if (!g_monitor.s_preempted)
+        {
+          nsec->r0 = 0;
+          return SM_EXIT_TO_NON_SECURE;
+        }
+
+      /* A secure context was preempted while it was running.  Now that
+       * the REE is idle, resume it.
+       *
+       * arm_sm_save/restore_ctx also swap the VFP register file
        * (*->vfp) under CONFIG_ARCH_FPU: save the REE's live VFP, restore
        * the TEE's saved VFP.
        */
 
+      g_monitor.s_preempted = false;
       arm_sm_save_ctx(nsec);
       arm_sm_restore_ctx(sec);
       return SM_EXIT_TO_SECURE;
@@ -480,28 +493,24 @@ uint32_t arm_sm_from_sec(void)
           return SM_EXIT_TO_NON_SECURE;
         }
 
-      /* The TEE has no ready tasks.  If no non-secure context was
-       * preempted, tell the TEE to WFI by returning 0 and staying in
-       * the secure world.
+      /* The TEE has no ready tasks.  It does not sleep itself — fall
+       * through to switch to the REE (the REE is the sleeper).  This
+       * returns the REE to its interruption point.
+       */
+    }
+  else if (args->a0 == ARM_SMCCC_NUTTX_FOREIGN_INTR)
+    {
+      /* The TEE detected a foreign (non-secure) interrupt pending while
+       * it was running and cooperatively yields the CPU to the REE.
+       * Mark it preempted so REE_IDLE resumes it later.
        */
 
-      if (!g_monitor.ns_preempted)
-        {
-          sec->r0 = 0;
-          return SM_EXIT_TO_SECURE;
-        }
-
-      /* A non-secure context was preempted by a secure interrupt while
-       * it was running.  Now that the TEE is idle, resume it.
-       */
-
-      g_monitor.ns_preempted = false;
+      g_monitor.s_preempted = true;
     }
 
-  /* ARM_SMCCC_NUTTX_TEE_IDLE (with a preempted REE) or
-   * ARM_SMCCC_NUTTX_FOREIGN_INTR: switch to the non-secure world and
-   * resume the saved REE context at its real interruption point.  Do NOT
-   * overwrite nsec->mon_lr.
+  /* ARM_SMCCC_NUTTX_TEE_IDLE or ARM_SMCCC_NUTTX_FOREIGN_INTR: switch to
+   * the non-secure world and resume the saved REE context at its real
+   * interruption point.  Do NOT overwrite nsec->mon_lr.
    */
 
   /* arm_sm_save/restore_ctx also swap the VFP register file under
@@ -516,19 +525,19 @@ uint32_t arm_sm_from_sec(void)
 }
 
 /****************************************************************************
- * Name: arm_sm_get_ns_preempted / arm_sm_set_ns_preempted
+ * Name: arm_sm_get_s_preempted / arm_sm_set_s_preempted
  *
  * Description:
- *   Accessors for the ns_preempted flag.
+ *   Accessors for the s_preempted flag.
  *
  ****************************************************************************/
 
-bool arm_sm_get_ns_preempted(void)
+bool arm_sm_get_s_preempted(void)
 {
-  return g_monitor.ns_preempted;
+  return g_monitor.s_preempted;
 }
 
-void arm_sm_set_ns_preempted(bool preempted)
+void arm_sm_set_s_preempted(bool preempted)
 {
-  g_monitor.ns_preempted = preempted;
+  g_monitor.s_preempted = preempted;
 }
