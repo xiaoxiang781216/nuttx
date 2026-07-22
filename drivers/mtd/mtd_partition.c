@@ -837,8 +837,8 @@ FAR struct mtd_dev_s *mtd_partition(FAR struct mtd_dev_s *mtd,
   part->child.read    = mtd->read ? part_read : NULL;
   part->child.ioctl   = part_ioctl;
 #ifdef CONFIG_FTL_BBM
-  part->child.isbad   = part_isbad;
-  part->child.markbad = part_markbad;
+  part->child.isbad   = mtd->isbad ? part_isbad : NULL;
+  part->child.markbad = mtd->markbad ? part_markbad : NULL;
 #endif
 #ifdef CONFIG_MTD_BYTE_WRITE
   part->child.write   = mtd->write ? part_write : NULL;
