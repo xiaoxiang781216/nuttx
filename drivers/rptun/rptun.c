@@ -1630,11 +1630,6 @@ static int rptun_notifier(FAR struct notifier_block *block,
       rptun_ioctl_foreach(NULL, RPTUNIOC_RESET,
                           (unsigned long)RPTUN_STATUS_PAUSE);
     }
-  else if (action == PANIC_KERNEL)
-    {
-      rptun_ioctl_foreach(NULL, RPTUNIOC_RESET,
-                          (unsigned long)RPTUN_STATUS_PAUSE);
-    }
 #ifdef CONFIG_RPTUN_AUTO_RESET_IN_PANIC_NOTIFIER
   else if (action == PANIC_KERNEL_FINAL)
     {
