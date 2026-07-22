@@ -199,19 +199,6 @@ static inline void tricore_color_intstack(void)
 #  define tricore_color_intstack()
 #endif
 
-/****************************************************************************
- * Name: tricore_gettos
- *
- * Description:
- *   Get current cpu tos
- *
- ****************************************************************************/
-
-static inline_function IfxSrc_Tos tricore_gettos(int cpu_idx)
-{
-  return tricore_tos[cpu_idx];
-}
-
 #ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
 /****************************************************************************
  * Name: tricore_gpsrinitialize
@@ -235,10 +222,10 @@ static inline_function void tricore_gpsrinitialize(void)
   for (i = 0; i < CONFIG_NCPUS; i++)
     {
 #ifdef CONFIG_ARCH_CHIP_TC3XX
-      IfxSrc_init(src, tricore_gettos(cpu_idx),
+      IfxSrc_init(src, tricore_tos[cpu_idx],
                   tricore_irq_to_srpn(TRICORE_SRC2IRQ(src)));
 #else
-      IfxSrc_init(src, tricore_gettos(cpu_idx),
+      IfxSrc_init(src, tricore_tos[cpu_idx],
                   tricore_irq_to_srpn(TRICORE_SRC2IRQ(src)),
                   IfxSrc_VmId_none);
 #endif
@@ -250,7 +237,7 @@ static inline_function void tricore_gpsrinitialize(void)
 
 #ifdef CONFIG_HAVE_SECURITY_CORE
   src = &SRC_GPSR6_SR0 + cpu_idx;
-  IfxSrc_init(src, tricore_gettos(cpu_idx),
+  IfxSrc_init(src, tricore_tos[cpu_idx],
               tricore_irq_to_srpn(TRICORE_SRC2IRQ(src)),
               IfxSrc_VmId_none);
 #endif
@@ -280,9 +267,9 @@ static inline_function void tricore_cpucallinitialize(void)
   irq = TRICORE_SRC2IRQ(src);
 
 #ifdef CONFIG_ARCH_CHIP_TC3XX
-  IfxSrc_init(src, tricore_gettos(cpu), tricore_irq_to_srpn(irq));
+  IfxSrc_init(src, tricore_tos[cpu], tricore_irq_to_srpn(irq));
 #else
-  IfxSrc_init(src, tricore_gettos(cpu), tricore_irq_to_srpn(irq),
+  IfxSrc_init(src, tricore_tos[cpu], tricore_irq_to_srpn(irq),
               IfxSrc_VmId_none);
 #endif
 
@@ -367,9 +354,9 @@ void up_enable_irq(int irq)
   volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
 
 #ifdef CONFIG_ARCH_CHIP_TC3XX
-  IfxSrc_init(src, tricore_gettos(up_cpu_index()), tricore_irq_to_srpn(irq));
+  IfxSrc_init(src, tricore_tos[up_cpu_index()], tricore_irq_to_srpn(irq));
 #else
-  IfxSrc_init(src, tricore_gettos(up_cpu_index()), tricore_irq_to_srpn(irq),
+  IfxSrc_init(src, tricore_tos[up_cpu_index()], tricore_irq_to_srpn(irq),
               IfxSrc_VmId_none);
 #endif
   IfxSrc_enable(src);
@@ -473,9 +460,9 @@ void up_affinity_irq(int irq, cpu_set_t cpuset)
         {
           IfxSrc_deinit(src);
 #ifdef CONFIG_ARCH_CHIP_TC3XX
-          IfxSrc_init(src, tricore_gettos(cpu), tricore_irq_to_srpn(irq));
+          IfxSrc_init(src, tricore_tos[cpu], tricore_irq_to_srpn(irq));
 #else
-          IfxSrc_init(src, tricore_gettos(cpu), tricore_irq_to_srpn(irq),
+          IfxSrc_init(src, tricore_tos[cpu], tricore_irq_to_srpn(irq),
                       IfxSrc_VmId_none);
 #endif
           if (enabled)

@@ -42,8 +42,7 @@
  ****************************************************************************/
 
 nosanitize_address
-static inline_function int backtrace(uintptr_t *reg, void **buffer,
-                                     int size, int *skip)
+static int backtrace(uintptr_t *reg, void **buffer, int size, int *skip)
 {
   int i = 0;
   uintptr_t *csa = reg;

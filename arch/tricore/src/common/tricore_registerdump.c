@@ -41,7 +41,7 @@
  * Name: tricore_dump_upcsa
  ****************************************************************************/
 
-static inline_function void tricore_dump_upcsa(volatile uint32_t *regs)
+static void tricore_dump_upcsa(volatile uint32_t *regs)
 {
   _alert("UPCXI:%-13.8" PRIX32 "PSW:%-15.8" PRIX32
          "SP:%-16.8" PRIX32 "A11:%-15.8" PRIX32 "\n",
@@ -61,7 +61,7 @@ static inline_function void tricore_dump_upcsa(volatile uint32_t *regs)
  * Name: tricore_dump_lowcsa
  ****************************************************************************/
 
-static inline_function void tricore_dump_lowcsa(volatile uint32_t *regs)
+static void tricore_dump_lowcsa(volatile uint32_t *regs)
 {
   _alert("LPCXI:%-13.8" PRIX32 "PC:%-16.8" PRIX32
          "A2:%-16.8" PRIX32 "A3:%-16.8" PRIX32 "\n",
@@ -82,7 +82,7 @@ static inline_function void tricore_dump_lowcsa(volatile uint32_t *regs)
  * Name: tricore_dump_trapctrl
  ****************************************************************************/
 
-static inline_function void tricore_dump_trapctrl(void)
+static void tricore_dump_trapctrl(void)
 {
   _alert("PSTR:%-14.8" PRIX32 "DSTR:%-14.8" PRIX32
          "DATR:%-14.8" PRIX32 "DEADD:%-13.8" PRIX32 "\n\n",
