@@ -181,14 +181,14 @@ static DEFINE_PER_CPU_BSS(unsigned int, g_note_disabled_irq_nest);
 
 #if defined(CONFIG_DRIVERS_NOTESTREAM) && defined(CONFIG_DRIVERS_NOTEBUF)
 
-/* Buffer defined independently so it can be placed in a specific section */
-
-static
-#ifdef DRIVERS_NOTEBUF_SECTION
+typedef char notebuf_blob_t[CONFIG_DRIVERS_NOTEBUF_BUFSIZE];
+static DEFINE_PER_CPU_BSS_BMP(notebuf_blob_t, g_notebuf_blob)
+#  ifdef DRIVERS_NOTEBUF_SECTION
 locate_data(CONFIG_DRIVERS_NOTEBUF_SECTION)
-#endif
-RING_DEFINE_BMP(g_notestream_ring, CONFIG_DRIVERS_NOTEBUF_BUFSIZE);
-#define g_notestream_ring this_cpu_var_bmp(g_notestream_ring)
+#  endif
+aligned_data(RING_BLOB_ALIGN);
+
+#  define g_notebuf_blob this_cpu_var_bmp(g_notebuf_blob)
 
 static DEFINE_PER_CPU_BMP(struct notebuf_driver_s, g_notebufstream) =
 {
@@ -212,7 +212,6 @@ static DEFINE_PER_CPU_BMP(struct notebuf_driver_s, g_notebufstream) =
     &g_notebuf_ops,
   },
   (FAR struct note_driver_s *)&g_notestream,
-  (FAR struct ring_s *)&g_notestream_ring,
 #  ifdef CONFIG_DRIVERS_NOTESTREAM_IRQSAFE
   true,
 #  endif
@@ -543,9 +542,9 @@ static int note_reboot_handler(FAR struct notifier_block *nb,
   return 0;
 }
 
-#ifdef CONFIG_BMP
 static void note_drivers_initialize(void)
 {
+#ifdef CONFIG_BMP
   int i = 0;
 
   if (g_note_drivers[0] == NULL)
@@ -575,18 +574,19 @@ static void note_drivers_initialize(void)
 #  ifdef CONFIG_DRIVERS_NOTESTREAM
 #    ifdef CONFIG_DRIVERS_NOTEBUF
       g_notebufstream.lower = (FAR struct note_driver_s *)&g_notestream;
-      g_notebufstream.ring =
-          ring_mpmc_init(&g_notestream_ring, CONFIG_DRIVERS_NOTEBUF_BUFSIZE);
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notebufstream;
 #    else
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notestream;
 #    endif
 #  endif
     }
-}
-#else
-#  define note_drivers_initialize()
 #endif
+
+#if defined(CONFIG_DRIVERS_NOTESTREAM) && defined(CONFIG_DRIVERS_NOTEBUF)
+  ring_mpmc_init(&g_notebufstream.ring, &g_notebuf_blob,
+                 sizeof(g_notebuf_blob));
+#endif
+}
 
 /****************************************************************************
  * Name: note_driver_fs_register

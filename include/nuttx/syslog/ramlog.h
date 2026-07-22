@@ -109,11 +109,11 @@ extern "C"
  *
  * Input Parameters:
  *   devpath - The full path to the registered driver
- *   buffer  - A pointer to the RAM buffer, whose total size must be at
- *             least sizeof(struct ring_s).  The buffer is used
- *             as a ring_s descriptor followed by the data area.
- *   buflen  - The size of the data area (circular buffer), must be < 2^23.
- *             The ring_s header is NOT included in this value.
+ *   buffer  - A pointer to the RAM blob, laid out as a ring_blob_s header
+ *             followed by the data area.
+ *   buflen  - The total blob size in bytes, header included.  It must
+ *             exceed sizeof(struct ring_blob_s), and the resulting data
+ *             capacity must be < 2^23.
  *
  ****************************************************************************/
 

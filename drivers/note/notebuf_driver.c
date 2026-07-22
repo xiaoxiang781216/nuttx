@@ -62,8 +62,8 @@ static void notebuf_flush(FAR void *arg)
   size_t dropped = 0;
 #endif
 
-  ring_mpmc_dequeue_start(buf->ring,
-                          ring_count(buf->ring), 1, &rb);
+  ring_mpmc_dequeue_start(&buf->ring,
+                          ring_count(&buf->ring), 1, &rb);
   if (rb.len1 > 0)
     {
 #ifdef CONFIG_DRIVERS_NOTE_STATS
@@ -84,7 +84,7 @@ static void notebuf_flush(FAR void *arg)
 #endif
     }
 
-  ring_mpmc_dequeue_finish(buf->ring, &rb);
+  ring_mpmc_dequeue_finish(&buf->ring, &rb);
 
 #ifdef CONFIG_DRIVERS_NOTE_STATS
   if (dropped > 0)
@@ -117,17 +117,6 @@ static ssize_t notebuf_add(FAR struct note_driver_s *drv,
   FAR struct note_driver_s *lower = buf->lower;
   ssize_t written = 0;
 
-#ifdef DRIVERS_NOTEBUF_SECTION
-  /* Custom linker sections may be NOLOAD (e.g. standbyram), where
-   * static initializers are ineffective. Lazy-init ensures the ring
-   * is usable regardless of section type. use ring_mpmc_init for
-   * CAS-serialized cross-core init and warm-restart recovery on
-   * NOLOAD section if the ring is already initialized.
-   */
-
-  ring_mpmc_init(buf->ring, CONFIG_DRIVERS_NOTEBUF_BUFSIZE);
-#endif
-
   if (notebuf_irqsafe(buf))
     {
       notebuf_flush(buf);
@@ -148,24 +137,24 @@ static ssize_t notebuf_add(FAR struct note_driver_s *drv,
     }
 
 #ifdef CONFIG_DRIVERS_NOTEBUF_NOOVERWRITE
-  written += ring_mpmc_enqueue(buf->ring, note, len);
+  written += ring_mpmc_enqueue(&buf->ring, note, len);
 #else
 #  ifdef CONFIG_DRIVERS_NOTE_STATS
-  uint32_t discard = ring_mpmc_overwrite(buf->ring, note, len);
+  uint32_t discard = ring_mpmc_overwrite(&buf->ring, note, len);
 
   if (discard != 0)
     {
       atomic_add_relaxed(&buf->driver.stats.drop_bytes, discard);
     }
 #  else
-  ring_mpmc_overwrite(buf->ring, note, len);
+  ring_mpmc_overwrite(&buf->ring, note, len);
 #  endif
-  written += MIN(len, ring_capacity(buf->ring));
+  written += MIN(len, ring_capacity(&buf->ring));
 #endif
 
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
-  if (ring_space(buf->ring) * 100 <=
-      ring_capacity(buf->ring) * CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK)
+  if (ring_space(&buf->ring) * 100 <=
+      ring_capacity(&buf->ring) * CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK)
     {
       work_queue(NOTEBUF_HPWORK, &buf->work,
                  notebuf_flush, buf, 0);
@@ -195,9 +184,9 @@ static int notebuf_ioctl(FAR struct file *filep, int cmd,
     {
       case NOTE_CLEAR:
 #ifdef CONFIG_DRIVERS_NOTE_STATS
-        atomic_add(&driver->stats.drop_bytes, ring_reset(buf->ring));
+        atomic_add(&driver->stats.drop_bytes, ring_reset(&buf->ring));
 #else
-        ring_reset(buf->ring);
+        ring_reset(&buf->ring);
 #endif
         return OK;
 

@@ -87,7 +87,7 @@ struct ramlog_user_s
 
 struct ramlog_dev_s
 {
-  FAR struct ring_s       *rl_ring;        /* The ring buffer */
+  struct ring_s            rl_ring;        /* The ring buffer */
   spinlock_t               rl_lock;        /* The lock for ramlog */
   dq_queue_t               rl_queue;       /* The dq of ramlog_user_s */
   struct ratelimit_state_s rl_ratelimit;   /* The ratelimit for ramlog */
@@ -148,23 +148,20 @@ static const struct file_operations g_ramlogfops =
  * for warm-restart persistence.
  */
 
-static
+static char g_ramlog_blob[CONFIG_RAMLOG_BUFSIZE]
 #ifdef RAMLOG_BUFFER_SECTION
 locate_data(CONFIG_RAMLOG_BUFFER_SECTION)
-RING_DECLARE(g_ramlog_ring, char, CONFIG_RAMLOG_BUFSIZE);
-#else
-RING_DEFINE(g_ramlog_ring, char, CONFIG_RAMLOG_BUFSIZE);
 #endif
+aligned_data(RING_BLOB_ALIGN);
 
-/* This is the device structure for the console or syslogging function.  It
- * must be statically initialized because the RAMLOG ramlog_putc function
- * could be called before the driver initialization logic executes.
+/* This is the device structure for the console or syslogging function.  The
+ * ring handle is embedded and the buffer is bound lazily in ramlog_addbuf();
+ * the fields are all zero-init (ramlog_dev_s carries no function pointers),
+ * so a BSS instance is safe even though ramlog_putc can run before the
+ * driver registration logic executes.
  */
 
-static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_ramlog_dev) =
-{
-  .rl_ring = &g_ramlog_ring.base,
-};
+static DEFINE_PER_CPU_BSS_BMP(struct ramlog_dev_s, g_ramlog_dev);
 #  define g_ramlog_dev this_cpu_var_bmp(g_ramlog_dev)
 #endif
 
@@ -213,8 +210,8 @@ static inline_function bool ramlog_is_blocking(FAR struct file *filep)
 
 static void ramlog_dump(void)
 {
-  FAR struct ring_s *r = g_ramlog_dev.rl_ring;
-  struct ring_buf_s rb;
+  FAR struct ring_s *r = &g_ramlog_dev.rl_ring;
+  struct ring_buf_s buf;
 
   if (!ring_is_ready(r))
     {
@@ -223,25 +220,25 @@ static void ramlog_dump(void)
 
   up_puts("\r\n========== RAMLOG DUMP BEGIN ==========\r\n");
 
-  ring_mpmc_dequeue_start(r, UINT32_MAX, 1, &rb);
+  ring_mpmc_dequeue_start(r, UINT32_MAX, 1, &buf);
 
 #if CONFIG_RAMLOG_DUMP_ON_PANIC_SIZE > 0
-  if (rb.cnt > CONFIG_RAMLOG_DUMP_ON_PANIC_SIZE)
+  if (buf.cnt > CONFIG_RAMLOG_DUMP_ON_PANIC_SIZE)
     {
       up_puts("[TRUNCATED]\r\n");
     }
 #endif
 
-  if (rb.cnt == 0)
+  if (buf.cnt == 0)
     {
       up_puts("[EMPTY]\r\n");
     }
   else
     {
-      up_nputs(rb.ptr1, rb.len1);
-      if (rb.len2 > 0)
+      up_nputs(buf.ptr1, buf.len1);
+      if (buf.len2 > 0)
         {
-          up_nputs(rb.ptr2, rb.len2);
+          up_nputs(buf.ptr2, buf.len2);
         }
     }
 
@@ -301,7 +298,7 @@ static void ramlog_timeout_handler(wdparm_t arg)
 {
   FAR struct ramlog_dev_s *dev = (FAR struct ramlog_dev_s *)arg;
 
-  if (ring_count(dev->rl_ring) > 0)
+  if (ring_count(&dev->rl_ring) > 0)
     {
       ramlog_pollnotify(dev, POLLIN);
     }
@@ -320,7 +317,7 @@ static inline_function
 uint32_t ramlog_unread(FAR struct ramlog_dev_s *priv,
                        FAR struct ramlog_user_s *upriv)
 {
-  return ring_mpmc_peek(priv->rl_ring, NULL, UINT32_MAX, &upriv->rl_read);
+  return ring_mpmc_peek(&priv->rl_ring, NULL, UINT32_MAX, &upriv->rl_read);
 }
 
 /****************************************************************************
@@ -371,7 +368,7 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv,
 static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
                              FAR const char *buffer, size_t len)
 {
-  FAR struct ring_s *r = priv->rl_ring;
+  FAR struct ring_s *r = &priv->rl_ring;
   size_t written = 0;
 
   /* Initialize the ring if it has not been initialized yet. */
@@ -379,7 +376,7 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 #ifdef CONFIG_RAMLOG_SYSLOG
   if (priv == &g_ramlog_dev)
     {
-      ring_mpmc_init(r, CONFIG_RAMLOG_BUFSIZE);
+      ring_mpmc_init(r, g_ramlog_blob, sizeof(g_ramlog_blob));
     }
 #endif
 
@@ -440,7 +437,7 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
   FAR struct inode *inode = filep->f_inode;
   FAR struct ramlog_dev_s *priv = inode->i_private;
   FAR struct ramlog_user_s *upriv = filep->f_priv;
-  FAR struct ring_s *r = priv->rl_ring;
+  FAR struct ring_s *r = &priv->rl_ring;
 #ifdef CONFIG_RAMLOG_NOOVERWRITE
   FAR dq_entry_t *entry;
   irqstate_t flags;
@@ -538,11 +535,11 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
           }
         else
           {
-            *(FAR unsigned int *)arg = ring_capacity(priv->rl_ring);
+            *(FAR unsigned int *)arg = ring_capacity(&priv->rl_ring);
           }
         break;
       case SYSLOGIOC_CLEAR:
-        ring_mpmc_skip(priv->rl_ring, ring_count(priv->rl_ring));
+        ring_mpmc_skip(&priv->rl_ring, ring_count(&priv->rl_ring));
         break;
 
       case SYSLOGIOC_SETRATELIMIT:
@@ -626,7 +623,7 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
         }
 
 #ifdef CONFIG_RAMLOG_NOOVERWRITE
-      if (ring_space(priv->rl_ring) > 0)
+      if (ring_space(&priv->rl_ring) > 0)
 #endif
         {
           eventset |= POLLOUT;
@@ -667,6 +664,17 @@ static int ramlog_file_open(FAR struct file *filep)
   FAR struct ramlog_user_s *upriv;
   irqstate_t flags;
 
+  /* The syslog instance binds its blob lazily in ramlog_addbuf(), but the
+   * device node is registered before that, so a reader can get here first.
+   */
+
+#ifdef CONFIG_RAMLOG_SYSLOG
+  if (priv == &g_ramlog_dev)
+    {
+      ring_mpmc_init(&priv->rl_ring, g_ramlog_blob, sizeof(g_ramlog_blob));
+    }
+#endif
+
   upriv = kmm_zalloc(sizeof(struct ramlog_user_s));
   if (upriv == NULL)
     {
@@ -675,7 +683,7 @@ static int ramlog_file_open(FAR struct file *filep)
 
   upriv->rl_threashold = CONFIG_RAMLOG_POLLTHRESHOLD;
   upriv->rl_read = RING_IDX_OLDEST;
-  ring_mpmc_peek(priv->rl_ring, NULL, UINT32_MAX, &upriv->rl_read);
+  ring_mpmc_peek(&priv->rl_ring, NULL, UINT32_MAX, &upriv->rl_read);
 
   nxsem_init(&upriv->rl_readsem, 0, 0);
 
@@ -722,31 +730,24 @@ static int ramlog_file_close(FAR struct file *filep)
 int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
 {
   FAR struct ramlog_dev_s *priv;
-  int ret = -ENOMEM;
+  int ret;
 
   /* Allocate a RAM logging device structure */
 
   priv = kmm_zalloc(sizeof(struct ramlog_dev_s));
-  if (priv != NULL)
+  if (priv == NULL)
     {
-      /* Initialize the non-zero values in the RAM logging device structure */
+      return -ENOMEM;
+    }
 
-      priv->rl_ring = ring_mpmc_init(buffer, buflen);
-      if (priv->rl_ring == NULL)
-        {
-          kmm_free(priv);
-          return -EINVAL;
-        }
+  ring_mpmc_init(&priv->rl_ring, buffer, buflen);
 
-      spin_lock_init(&priv->rl_lock);
+  spin_lock_init(&priv->rl_lock);
 
-      /* Register the character driver */
-
-      ret = register_driver(devpath, &g_ramlogfops, 0666, priv);
-      if (ret < 0)
-        {
-          kmm_free(priv);
-        }
+  ret = register_driver(devpath, &g_ramlogfops, 0666, priv);
+  if (ret < 0)
+    {
+      kmm_free(priv);
     }
 
   return ret;

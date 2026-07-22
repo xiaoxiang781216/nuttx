@@ -60,7 +60,6 @@
 struct noteram_driver_s
 {
   struct note_driver_s driver;
-  FAR struct ring_s *ring;
   atomic_t overwrite;
   atomic_t count_ref;       /* Reference count, init 1 at creation */
   bool dynamic;             /* true if dynamically allocated */
@@ -71,6 +70,7 @@ struct noteram_driver_s
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
   struct wdog_s wdog;
 #endif
+  struct ring_s ring;
 };
 
 /* The structure to hold the context data of trace dump */
@@ -106,13 +106,11 @@ static void noteram_timeout_handler(wdparm_t arg);
  * Private Data
  ****************************************************************************/
 
-static
+static char g_noteram_blob[CONFIG_DRIVERS_NOTERAM_BUFSIZE]
 #ifdef DRIVERS_NOTERAM_SECTION
 locate_data(CONFIG_DRIVERS_NOTERAM_SECTION)
-RING_DECLARE(g_noteram_ring, char, CONFIG_DRIVERS_NOTERAM_BUFSIZE);
-#else
-RING_DEFINE(g_noteram_ring, char, CONFIG_DRIVERS_NOTERAM_BUFSIZE);
 #endif
+aligned_data(RING_BLOB_ALIGN);
 
 static const struct note_driver_ops_s g_noteram_ops =
 {
@@ -150,7 +148,6 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
 #endif
     &g_noteram_ops
   },
-  &g_noteram_ring.base,
 #ifdef CONFIG_DRIVERS_NOTERAM_DEFAULT_NOOVERWRITE
   NOTE_MODE_OVERWRITE_DISABLE,
 #else
@@ -171,7 +168,7 @@ static void noteram_free(FAR struct noteram_driver_s *drv)
 {
   if (drv->dynamic)
     {
-      ring_free(drv->ring);
+      kmm_free(drv->ring.blob);
     }
 
   if (drv != &g_noteram_driver)
@@ -211,14 +208,14 @@ static int noteram_deinitialize_by_name(FAR const char *name)
 static uint32_t noteram_unread_length(FAR struct noteram_driver_s *drv,
                                       uint32_t read)
 {
-  return ring_mpmc_peek(drv->ring, NULL, ring_capacity(drv->ring), &read);
+  return ring_mpmc_peek(&drv->ring, NULL, ring_capacity(&drv->ring), &read);
 }
 
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
 static inline_function
 void noteram_timeout_reset(FAR struct noteram_driver_s *drv)
 {
-  if (dq_empty(&drv->poll_list) || ring_count(drv->ring) == 0)
+  if (dq_empty(&drv->poll_list) || ring_count(&drv->ring) == 0)
     {
       wd_cancel(&drv->wdog);
     }
@@ -276,6 +273,11 @@ static int noteram_open(FAR struct file *filep)
                                      filep->f_inode->i_private;
   FAR struct noteram_dump_context_s *ctx;
 
+  if (drv == &g_noteram_driver)
+    {
+      ring_mpmc_init(&drv->ring, g_noteram_blob, sizeof(g_noteram_blob));
+    }
+
   atomic_add(&drv->count_ref, 1);
 
   ctx = kmm_zalloc(sizeof(*ctx));
@@ -294,9 +296,9 @@ static int noteram_open(FAR struct file *filep)
 
   filep->f_priv = ctx;
 #ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
-  note_dump_stream(&ctx->stream, drv->ring, false);
+  note_dump_stream(&ctx->stream, &drv->ring, false);
 #else
-  note_dump_stream(&ctx->stream, drv->ring, true);
+  note_dump_stream(&ctx->stream, &drv->ring, true);
 #endif
   return OK;
 }
@@ -372,9 +374,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
 #ifdef CONFIG_DRIVERS_NOTE_STATS
           atomic_add_relaxed(&drv->driver.stats.drop_bytes,
-                             ring_reset(drv->ring));
+                             ring_reset(&drv->ring));
 #else
-          ring_reset(drv->ring);
+          ring_reset(&drv->ring);
 #endif
           atomic_cmpxchg(&drv->overwrite, &expect,
                          NOTE_MODE_OVERWRITE_DISABLE);
@@ -510,7 +512,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            *(FAR unsigned int *)arg = ring_capacity(drv->ring);
+            *(FAR unsigned int *)arg = ring_capacity(&drv->ring);
             ret = OK;
           }
         break;
@@ -661,12 +663,10 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
   irqstate_t flags;
   size_t added;
 
-#ifdef DRIVERS_NOTERAM_SECTION
   if (drv == &g_noteram_driver)
     {
-      ring_init(drv->ring, CONFIG_DRIVERS_NOTERAM_BUFSIZE);
+      ring_mpmc_init(&drv->ring, g_noteram_blob, sizeof(g_noteram_blob));
     }
-#endif
 
   if (ratelimit_islimited(&drv->ratelimit))
     {
@@ -679,7 +679,7 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
         return -ENOSPC;
 
       case NOTE_MODE_OVERWRITE_DISABLE:
-        added = ring_mpmc_enqueue(drv->ring, note, notelen);
+        added = ring_mpmc_enqueue(&drv->ring, note, notelen);
         if (added < notelen)
           {
             atomic_set(&drv->overwrite, NOTE_MODE_OVERWRITE_OVERFLOW);
@@ -689,16 +689,16 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
       default:
         {
 #ifdef CONFIG_DRIVERS_NOTE_STATS
-          uint32_t evicted = ring_mpmc_overwrite(drv->ring, note, notelen);
+          uint32_t evicted = ring_mpmc_overwrite(&drv->ring, note, notelen);
 
           if (evicted != 0)
             {
               atomic_add_relaxed(&drv->driver.stats.drop_bytes, evicted);
             }
 #else
-          ring_mpmc_overwrite(drv->ring, note, notelen);
+          ring_mpmc_overwrite(&drv->ring, note, notelen);
 #endif
-          added = MIN(notelen, ring_capacity(drv->ring));
+          added = MIN(notelen, ring_capacity(&drv->ring));
         }
         break;
     }
@@ -734,16 +734,23 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
 }
 
 /****************************************************************************
- * Name: noteram_initialize_with_ring
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: noteram_initialize_with_buffer
  *
  * Description:
- *   Allocate and register a noteram driver around an already initialized
- *   ring buffer.  This is the shared implementation used by both
- *   noteram_initialize() and noteram_initialize_with_buffer().
+ *   Allocate a noteram driver plus its ring handle, initialize the ring in
+ *   place over the caller-supplied blob, and register it.  The blob is
+ *   treated as caller-owned (outlives the driver, not freed on deinit).
+ *   noteram_initialize() reuses this and flips drv->dynamic to true so its
+ *   self-allocated blob is freed on deinit.
  *
  * Input Parameters:
  *  devname: The name of the Noteram device
- *  ring: An already initialized ring buffer used by the noteram driver
+ *  buffer: The blob (header + data) the ring operates on
+ *  bufsize: The total blob size in bytes (header + data)
  *  overwrite: The overwrite mode
  *  regnote: If register the note driver
  *
@@ -752,10 +759,10 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
  *
  ****************************************************************************/
 
-static FAR struct note_driver_s *
-noteram_initialize_with_ring(FAR const char *devname,
-                             FAR struct ring_s *ring,
-                             bool overwrite, bool regnote)
+FAR struct note_driver_s *
+noteram_initialize_with_buffer(FAR const char *devname,
+                               FAR void *buffer, size_t bufsize,
+                               bool overwrite, bool regnote)
 {
   FAR struct noteram_driver_s *drv;
   size_t len = 0;
@@ -795,7 +802,8 @@ noteram_initialize_with_ring(FAR const char *devname,
 #endif
 
   drv->driver.ops = &g_noteram_ops;
-  drv->ring = ring;
+
+  ring_mpmc_init(&drv->ring, buffer, bufsize);
 
   atomic_set(&drv->overwrite, overwrite);
   dq_init(&drv->poll_list);
@@ -814,19 +822,17 @@ noteram_initialize_with_ring(FAR const char *devname,
 }
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
  * Name: noteram_initialize
  *
  * Description:
  *   Register a serial driver at /dev/note/ram that can be used by an
- *   application to read data from the circular note buffer.
+ *   application to read data from the circular note buffer.  The shm buffer
+ *   is allocated here on the driver's behalf and freed on deinit.
  *
  * Input Parameters:
  *  devname: The name of the Noteram device
- *  bufsize: The size of the circular buffer
+ *  bufsize: The total blob size in bytes (header + data), same meaning as
+ *           in noteram_initialize_with_buffer
  *  overwrite: The overwrite mode
  *  regnote: If register the note driver
  *
@@ -840,57 +846,25 @@ noteram_initialize(FAR const char *devname, size_t bufsize,
                    bool overwrite, bool regnote)
 {
   FAR struct note_driver_s *drv;
-  FAR struct ring_s *ring;
+  FAR void *buffer;
 
-  ring = ring_alloc(bufsize, sizeof(char));
-  if (ring == NULL)
+  buffer = kmm_memalign(RING_BLOB_ALIGN, bufsize);
+  if (buffer == NULL)
     {
       return NULL;
     }
 
-  drv = noteram_initialize_with_ring(devname, ring, overwrite, regnote);
+  drv = noteram_initialize_with_buffer(devname, buffer, bufsize,
+                                       overwrite, regnote);
   if (drv == NULL)
     {
-      ring_free(ring);
+      kmm_free(buffer);
+      return NULL;
     }
-  else
-    {
-      FAR struct noteram_driver_s *noteram_drv;
 
-      noteram_drv = container_of(drv, struct noteram_driver_s, driver);
-      noteram_drv->dynamic = true;
-    }
+  container_of(drv, struct noteram_driver_s, driver)->dynamic = true;
 
   return drv;
-}
-
-/****************************************************************************
- * Name: noteram_initialize_with_buffer
- *
- * Description:
- *   Register a serial driver at /dev/note/ram that can be used by an
- *   application to read data from the circular note buffer.
- *
- * Input Parameters:
- *  devname: The name of the Noteram device
- *  buffer: The buffer to use by the noteram driver
- *  bufsize: The size of the circular buffer
- *  overwrite: The overwrite mode
- *  regnote: If register the note driver
- *
- * Returned Value:
- *   Zero on succress. A negated errno value is returned on a failure.
- *
- ****************************************************************************/
-
-FAR struct note_driver_s *
-noteram_initialize_with_buffer(FAR const char *devname,
-                               FAR void *buffer, size_t bufsize,
-                               bool overwrite, bool regnote)
-{
-  return noteram_initialize_with_ring(devname,
-                                      ring_mpmc_init(buffer, bufsize),
-                                      overwrite, regnote);
 }
 
 /****************************************************************************

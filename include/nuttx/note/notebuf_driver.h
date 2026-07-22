@@ -42,7 +42,7 @@ struct notebuf_driver_s
 {
   struct note_driver_s driver;
   FAR struct note_driver_s *lower;
-  FAR struct ring_s *ring;
+  struct ring_s ring;
 #if CONFIG_DRIVERS_NOTEBUF_FLUSH_WATERMARK > 0
   bool irqsafe;
 #endif

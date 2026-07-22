@@ -45,7 +45,7 @@
 struct notesnap_s
 {
   struct note_driver_s  driver;
-  FAR struct ring_s   * ring;
+  struct ring_s         ring;
   struct notifier_block nb;
 };
 
@@ -61,8 +61,15 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
  * Private Data
  ****************************************************************************/
 
-static RING_DEFINE_BMP(g_notesnap_buffer, CONFIG_DRIVERS_NOTESNAP_BUFSIZE);
-#define g_notesnap_buffer this_cpu_var_bmp(g_notesnap_buffer)
+/* Per-CPU byte blob.  A bare array whose base is the struct ring_blob_s
+ * header; cache-line aligned so the header's prod/cons regions land on
+ * separate lines.
+ */
+
+typedef char notesnap_blob_t[CONFIG_DRIVERS_NOTESNAP_BUFSIZE];
+static DEFINE_PER_CPU_BSS_BMP(notesnap_blob_t, g_notesnap_blob)
+aligned_data(RING_BLOB_ALIGN);
+#define g_notesnap_blob this_cpu_var_bmp(g_notesnap_blob)
 
 static const struct note_driver_ops_s g_notesnap_ops =
 {
@@ -95,7 +102,6 @@ DEFINE_PER_CPU_BMP(struct notesnap_s, g_notesnap) =
 #endif
     &g_notesnap_ops
   },
-  &g_notesnap_buffer.base,
 };
 #define g_notesnap this_cpu_var_bmp(g_notesnap)
 
@@ -119,14 +125,24 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
 {
   FAR struct notesnap_s *snap = (FAR struct notesnap_s *)drv;
 
+  /* Only the static per-CPU instance needs the lazy seeding: a dynamic one
+   * got its blob (and geometry) bound at registration.
+   */
+
+  if (snap == &g_notesnap)
+    {
+      ring_mpmc_init(&snap->ring, &g_notesnap_blob,
+                     sizeof(g_notesnap_blob));
+    }
+
   /* ring_mpmc_overwrite is CAS-based and reentrancy-safe, so no lock is
    * needed even if an interrupt preempts a task-context add on the same
    * CPU.  Cast to uint8_t * so the ring macro derives an element size of
    * one; the dump path resyncs past any fragment a wrap may leave behind.
    */
 
-  ring_mpmc_overwrite(snap->ring, (FAR const uint8_t *)note, notelen);
-  return MIN(notelen, ring_capacity(snap->ring));
+  ring_mpmc_overwrite(&snap->ring, (FAR const uint8_t *)note, notelen);
+  return MIN(notelen, ring_capacity(&snap->ring));
 }
 
 #ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
@@ -138,7 +154,7 @@ static int notesnap_notifier(FAR struct notifier_block *nb,
   char buf[NOTE_BUFFER_SIZE];
   ssize_t n;
 
-  if (action != PANIC_KERNEL)
+  if (action != PANIC_KERNEL || !ring_is_ready(&snap->ring))
     {
       return 0;
     }
@@ -149,7 +165,7 @@ static int notesnap_notifier(FAR struct notifier_block *nb,
    * fills the buffer with as many whole notes as fit.
    */
 
-  note_dump_stream(&stream, snap->ring, false);
+  note_dump_stream(&stream, &snap->ring, false);
 
   while ((n = lib_stream_gets(&stream, buf, sizeof(buf))) > 0)
     {
@@ -202,6 +218,7 @@ FAR struct note_driver_s *
 notesnap_initialize(FAR const char *devname, size_t bufsize)
 {
   FAR struct notesnap_s *snap;
+  FAR void *buffer;
   size_t len;
 
   if (devname == NULL || bufsize == 0)
@@ -217,12 +234,17 @@ notesnap_initialize(FAR const char *devname, size_t bufsize)
     }
 
   memcpy(snap + 1, devname, len);
-  snap->ring = ring_alloc(bufsize, 1);
-  if (snap->ring == NULL)
+
+  /* Allocate the buffer separately; the ring handle itself is embedded. */
+
+  buffer = kmm_memalign(RING_BLOB_ALIGN, bufsize);
+  if (buffer == NULL)
     {
       kmm_free(snap);
       return NULL;
     }
+
+  ring_mpmc_init(&snap->ring, buffer, bufsize);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   snap->driver.name = (FAR const char *)(snap + 1);
@@ -275,6 +297,6 @@ void notesnap_deinitialize(FAR struct note_driver_s *drv)
   panic_notifier_chain_unregister(&snap->nb);
 #endif
 
-  ring_free(snap->ring);
+  kmm_free(snap->ring.blob);
   kmm_free(snap);
 }
