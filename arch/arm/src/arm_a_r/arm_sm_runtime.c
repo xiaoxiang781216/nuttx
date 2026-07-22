@@ -65,9 +65,9 @@
 /* Per-CPU secure-monitor storage.  The monitor-mode C dispatcher stack
  * (the stack[] member) sits at the base, immediately below the secure and
  * non-secure per-world contexts (the sec/nsec members); the per-CPU
- * preemption flag and panic notifier follow the contexts.  The C code
- * reaches every member directly as a typed global (g_monitor.sec /
- * g_monitor.nsec / g_monitor.ns_preempted / g_monitor.nb).
+ * preemption flag follows the contexts.  The C code reaches every member
+ * directly as a typed global (g_monitor.sec / g_monitor.nsec /
+ * g_monitor.ns_preempted).
  *
  * Flag g_monitor.ns_preempted: a non-secure (REE) context was preempted by
  * a secure interrupt (FIQ, Group 0) while it was running.  The monitor must
@@ -80,7 +80,7 @@
  * stack[].  The .S path is purely SP-relative (it never references the
  * g_monitor symbol) and only requires that stack[] sits immediately below
  * sec and that nsec immediately follows sec, which the layout below
- * guarantees; ns_preempted and nb follow nsec, clear of that machinery.
+ * guarantees; ns_preempted follows nsec, clear of that machinery.
  */
 
 struct arm_sm_monitor
@@ -90,7 +90,6 @@ struct arm_sm_monitor
   struct arm_sm_ctx     sec;
   struct arm_sm_ctx     nsec;
   bool                  ns_preempted;
-  struct notifier_block nb;
 };
 
 /****************************************************************************
@@ -100,10 +99,6 @@ struct arm_sm_monitor
 static DEFINE_PER_CPU_BSS(struct arm_sm_monitor, g_monitor)
 locate_data(".monitor_stack") aligned_data(MONITOR_STACK_ALIGNMENT);
 #define g_monitor this_cpu_var(g_monitor)
-
-static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
-                                     unsigned long action,
-                                     FAR void *data);
 
 /****************************************************************************
  * Public Data
@@ -179,38 +174,6 @@ static void arm_psci_server_poweroff(void)
   *data = (1 << SECURE_GPIO_POWEROFF);
 }
 #endif
-
-/****************************************************************************
- * Name: arm_secure_panic_notifier
- *
- * Description:
- *   Panic notifier callback to switch secure world to nonsecure world.
- *
- ****************************************************************************/
-
-static int arm_secure_panic_notifier(FAR struct notifier_block *nb,
-                                     unsigned long action,
-                                     FAR void *data)
-{
-  UNUSED(nb);
-  UNUSED(data);
-
-  if (action == SYS_HALT)
-    {
-      /* Switch the secure world to the non-secure world so the REE can
-       * take over on a secure-side panic.  Issue the world-switch SMC
-       * directly (same as arm_decodeirq): the monitor services
-       * ARM_SMCCC_NUTTX_FOREIGN_INTR by unconditionally switching to and
-       * resuming the non-secure context.
-       */
-
-      struct arm_smccc_res res;
-
-      arm_smccc_smc(ARM_SMCCC_NUTTX_FOREIGN_INTR, 0, 0, 0, 0, 0, 0, 0, &res);
-    }
-
-  return 0;
-}
 
 /****************************************************************************
  * Public Functions
@@ -568,25 +531,4 @@ bool arm_sm_get_ns_preempted(void)
 void arm_sm_set_ns_preempted(bool preempted)
 {
   g_monitor.ns_preempted = preempted;
-}
-
-/****************************************************************************
- * Name: arm_panic_switch_nsec_register
- *
- * Description:
- *   This function is used to register a panic notifier to handle system
- *   crash events. When triggered, it switches the system to the non-secure
- *   world by executing an SMC (Secure Monitor Call) instruction.
- *
- * Input Parameters:
- *   None
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void arm_panic_switch_nsec_register(void)
-{
-  g_monitor.nb.notifier_call = arm_secure_panic_notifier;
-  register_reboot_notifier(&g_monitor.nb);
 }

@@ -107,6 +107,7 @@ ifneq ($(CONFIG_ARM_HAVE_EL3_MONITOR),y)
   CMN_CSRCS += arm_sm_runtime.c
   CMN_ASRCS += arm_sm_vector.S
 endif
+  CMN_CSRCS += arm_panic_switch_nsec.c
 endif
 
 ifneq ($(CONFIG_ARM_PSCI)$(CONFIG_ARCH_TRUSTZONE_NONSECURE)$(CONFIG_ARCH_TRUSTZONE_SECURE),)

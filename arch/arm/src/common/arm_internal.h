@@ -497,7 +497,7 @@ int arm_gen_nonsecurefault(int irq, uint32_t *regs);
 # define arm_gen_nonsecurefault(i, r)  (0)
 #endif
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARM_HAVE_EL3_MONITOR)
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
 void arm_panic_switch_nsec_register(void);
 #else
 # define arm_panic_switch_nsec_register()
