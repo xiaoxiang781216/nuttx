@@ -1081,7 +1081,14 @@ static void sim_usbdev_work(void *arg)
               recv_data = host_usbdev_epread(epcnt, &data_len);
               if (recv_data)
                 {
-                  sim_usbdev_epread(privep->ep.eplog, recv_data, data_len);
+                  int ret;
+                  ret = sim_usbdev_epread(privep->ep.eplog,
+                                          recv_data, data_len);
+                  if (ret == -ENOENT)
+                    {
+                      break;
+                    }
+
                   host_usbdev_epread_end(epcnt);
                   do_loop = true;
                 }
