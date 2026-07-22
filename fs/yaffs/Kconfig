@@ -19,6 +19,15 @@ config FS_YAFFS_RESERVED_BLOCKS
 		Number of good blocks blocks reserved for garbage collection etc.
 		Needs to be at least 2, but 5 would be a more typical number.
 
+config FS_YAFFS_QUOTA_MB
+	int "YAFFS logical usable size limit (MB, 0=unlimited)"
+	default 0
+	---help---
+		Cap the logically usable space to this many MB on a physically
+		larger partition. Existing data anywhere on the partition is
+		never moved or erased; only new allocation and df reporting are
+		capped. 0 disables the cap.
+
 config FS_YAFFS_CHUNK_CACHE
 	int "YAFFS Chunk cache is used for short read/write operations"
 	default 20

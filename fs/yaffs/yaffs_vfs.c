@@ -39,6 +39,7 @@
 #include <nuttx/mutex.h>
 
 #include <sys/mount.h>
+#include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 
@@ -912,6 +913,9 @@ static int yaffs_vfs_statfs(FAR struct inode *mountpt,
                             FAR struct statfs *buf)
 {
   FAR struct yaffs_mountpt_s *fs;
+  FAR struct yaffs_param *param;
+  off_t quota_blocks;
+  off_t blocks;
   off_t size;
 
   fs = (FAR struct yaffs_mountpt_s *)(mountpt->i_private);
@@ -923,10 +927,32 @@ static int yaffs_vfs_statfs(FAR struct inode *mountpt,
 
   /* Return something for the file system description */
 
+  param = &fs->dev->param;
+
   buf->f_type    = YAFFS_SUPER_MAGIC;
   buf->f_namelen = YAFFS_MAX_NAME_LENGTH;
   buf->f_bsize   = fs->geo.erasesize;
-  buf->f_blocks  = fs->geo.neraseblocks - CONFIG_FS_YAFFS_RESERVED_BLOCKS;
+
+  /* Physical usable total, in erase blocks, less what the core holds
+   * back for garbage collection.
+   */
+
+  blocks = (off_t)fs->geo.neraseblocks - param->n_reserved_blocks;
+
+  /* Logical soft quota: report the capped total when one is configured.
+   * df free (f_bfree) is derived from size, which yaffs_get_n_free_chunks
+   * has already clamped to the same budget. The total stays bounded by the
+   * physical usable size, so a misconfigured quota (>= partition size)
+   * cannot make df advertise more space than the flash can hold.
+   */
+
+  if (param->quota_bytes > 0)
+    {
+      quota_blocks = param->quota_bytes / fs->geo.erasesize;
+      blocks = MIN(quota_blocks, blocks);
+    }
+
+  buf->f_blocks  = blocks;
   buf->f_bfree   = size / fs->geo.erasesize;
   buf->f_bavail  = buf->f_bfree;
 
@@ -1451,6 +1477,7 @@ static int yaffs_vfs_bind(FAR struct inode *driver, FAR const void *data,
   p->use_nand_ecc = 1;
   p->inband_tags = 1;
   p->n_reserved_blocks = CONFIG_FS_YAFFS_RESERVED_BLOCKS;
+  p->quota_bytes = (loff_t)CONFIG_FS_YAFFS_QUOTA_MB << 20;
   p->n_caches = CONFIG_FS_YAFFS_CHUNK_CACHE;
   p->refresh_period = CONFIG_FS_YAFFS_REFRESH_PERIOD;
 #ifdef CONFIG_FS_YAFFS_CACHE_BYPASS_ALIGNED
