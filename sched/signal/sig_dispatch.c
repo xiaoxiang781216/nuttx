@@ -742,13 +742,14 @@ int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
 
   /* Did we locate the group? */
 
-  if (group && !(atomic_read(&group->tg_flags) & GROUP_FLAG_EXITING))
+  if (group)
     {
       if (thread)
         {
-          /* Before the notification, we should validate the tid and
-           * and make sure that the notified thread is in same process
-           * with the current thread.
+          /* Thread-directed signal (tkill/pthread_kill).  Do not check
+           * GROUP_FLAG_EXITING here because intra-process signal delivery
+           * must work during process exit -- group_kill_children sends
+           * SIGTERM to child threads via tkill after setting the flag.
            */
 
           if (group == this_task()->group)
@@ -756,10 +757,10 @@ int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
               ret = nxsig_tcbdispatch(stcb, info, false);
             }
         }
-      else
+      else if (!(atomic_read(&group->tg_flags) & GROUP_FLAG_EXITING))
         {
-          /* Yes.. call group_signal() to send the signal to the correct
-           * group member.
+          /* Process-directed signal (kill/sigqueue).  Block delivery to
+           * a group that is in the process of exiting.
            */
 
           ret = group_signal(group, info);
