@@ -81,7 +81,7 @@
 #if !defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
   .macro  cpuindex, index
   mrc  p15, 0, \index, c0, c0, 5  /* Read the MPIDR */
-  and  \index, \index, #3         /* Bits 0-1=CPU ID */
+  and  \index, \index, #7         /* Bits 0-2=CPU ID */
   .endm
 #endif
 
@@ -97,7 +97,7 @@
 #if !defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
   .macro  setirqstack, tmp1, tmp2
   mrc  p15, 0, \tmp1, c0, c0, 5  /* tmp1=MPIDR */
-  and  \tmp1, \tmp1, #3          /* Bits 0-1=CPU ID */
+  and  \tmp1, \tmp1, #7          /* Bits 0-2=CPU ID */
   ldr  \tmp2, =g_irqstack_top    /* tmp2=Array of IRQ stack pointers */
   lsls \tmp1, \tmp1, #2          /* tmp1=Array byte offset */
   add  \tmp2, \tmp2, \tmp1       /* tmp2=Offset address into array */
@@ -117,7 +117,7 @@
 #if !defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
   .macro  setfiqstack, tmp1, tmp2
   mrc  p15, 0, \tmp1, c0, c0, 5  /* tmp1=MPIDR */
-  and  \tmp1, \tmp1, #3          /* Bits 0-1=CPU ID */
+  and  \tmp1, \tmp1, #7          /* Bits 0-2=CPU ID */
   ldr  \tmp2, =g_fiqstack_top    /* tmp2=Array of FIQ stack pointers */
   lsls \tmp1, \tmp1, #2          /* tmp1=Array byte offset */
   add  \tmp2, \tmp2, \tmp1       /* tmp2=Offset address into array */
