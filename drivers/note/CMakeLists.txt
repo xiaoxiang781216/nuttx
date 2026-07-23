@@ -66,6 +66,9 @@ if(CONFIG_DRIVERS_NOTERPMSG_SERVER)
 endif()
 
 if(CONFIG_DRIVERS_NOTERPMSG)
+  if(NOT "${CONFIG_DRIVERS_NOTERPMSG_SECTION}" STREQUAL "")
+    target_compile_definitions(drivers PRIVATE -DDRIVERS_NOTERPMSG_SECTION)
+  endif()
   list(APPEND SRCS noterpmsg_driver.c)
 endif()
 

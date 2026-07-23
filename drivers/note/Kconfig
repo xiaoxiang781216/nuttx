@@ -410,6 +410,14 @@ config DRIVERS_NOTERPMSG_BUFSIZE
 	---help---
 		The size of the client buffer (in bytes)
 
+config DRIVERS_NOTERPMSG_SECTION
+	string "Note RPMSG buffer section"
+	default ""
+	---help---
+		Place the noterpmsg buffer in a specific linker section.
+		Leave empty to use default placement.
+		Example: ".standbyram_errlog_cs"
+
 config DRIVERS_NOTERPMSG_SERVER_NAME
 	string "The name of Note Rpmsg Server"
 	default "ap"

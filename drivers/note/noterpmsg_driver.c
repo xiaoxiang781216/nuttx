@@ -74,7 +74,11 @@ static int noterpmsg_ioctl(FAR struct file *filep, int cmd,
 
 typedef uint8_t noterpmsg_buffer_t[CONFIG_DRIVERS_NOTERPMSG_BUFSIZE];
 
-static DEFINE_PER_CPU_BSS_BMP(noterpmsg_buffer_t, g_noterpmsg_buffer);
+static
+#ifdef DRIVERS_NOTERPMSG_SECTION
+locate_data(CONFIG_DRIVERS_NOTERPMSG_SECTION)
+#endif
+DEFINE_PER_CPU_BSS_BMP(noterpmsg_buffer_t, g_noterpmsg_buffer);
 #define g_noterpmsg_buffer this_cpu_var_bmp(g_noterpmsg_buffer)
 
 static const struct note_driver_ops_s g_noterpmsg_ops =
