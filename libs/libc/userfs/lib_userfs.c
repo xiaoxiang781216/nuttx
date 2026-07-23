@@ -1061,6 +1061,92 @@ userfs_syncfs_dispatch(FAR struct userfs_info_s *info, size_t reqlen)
   return nsent < 0 ? nsent : OK;
 }
 
+static inline int
+userfs_getlk_dispatch(FAR struct userfs_info_s *info, size_t reqlen)
+{
+  FAR struct userfs_flock_request_s *req;
+  FAR struct userfs_flock_response_s *resp;
+  struct flock lock;
+  ssize_t nsent;
+  int ret;
+
+  /* Verify the request size */
+
+  if (reqlen != sizeof(*req))
+    {
+      return -EINVAL;
+    }
+
+  /* Copy the lock out first: the request and response overlap */
+
+  req  = (FAR struct userfs_flock_request_s *)info->iobuffer;
+  resp = (FAR struct userfs_flock_response_s *)info->iobuffer;
+
+  memcpy(&lock, &req->lock, sizeof(lock));
+  if (info->userops->getlk != NULL)
+    {
+      ret = info->userops->getlk(info->volinfo, req->openinfo, &lock);
+    }
+  else
+    {
+      ret = -ENOSYS;
+    }
+
+  /* Send the response */
+
+  resp->resp = USERFS_RESP_GETLK;
+  resp->ret  = ret;
+  memcpy(&resp->lock, &lock, sizeof(resp->lock));
+  nsent      = sendto(info->sockfd, resp,
+                      sizeof(*resp),
+                      0, (FAR struct sockaddr *)&info->client,
+                      sizeof(info->client));
+  return nsent < 0 ? nsent : OK;
+}
+
+static inline int
+userfs_setlk_dispatch(FAR struct userfs_info_s *info, size_t reqlen)
+{
+  FAR struct userfs_flock_request_s *req;
+  FAR struct userfs_flock_response_s *resp;
+  struct flock lock;
+  ssize_t nsent;
+  int ret;
+
+  /* Verify the request size */
+
+  if (reqlen != sizeof(*req))
+    {
+      return -EINVAL;
+    }
+
+  /* Copy the lock out first: the request and response overlap */
+
+  req  = (FAR struct userfs_flock_request_s *)info->iobuffer;
+  resp = (FAR struct userfs_flock_response_s *)info->iobuffer;
+
+  memcpy(&lock, &req->lock, sizeof(lock));
+  if (info->userops->setlk != NULL)
+    {
+      ret = info->userops->setlk(info->volinfo, req->openinfo, &lock);
+    }
+  else
+    {
+      ret = -ENOSYS;
+    }
+
+  /* Send the response */
+
+  resp->resp = USERFS_RESP_SETLK;
+  resp->ret  = ret;
+  memcpy(&resp->lock, &lock, sizeof(resp->lock));
+  nsent      = sendto(info->sockfd, resp,
+                      sizeof(*resp),
+                      0, (FAR struct sockaddr *)&info->client,
+                      sizeof(info->client));
+  return nsent < 0 ? nsent : OK;
+}
+
 #ifdef CONFIG_FS_LINKS
 static inline int
 userfs_link_dispatch(FAR struct userfs_info_s *info, size_t reqlen)
@@ -1283,6 +1369,49 @@ userfs_lstat_dispatch(FAR struct userfs_info_s *info, size_t reqlen)
   return nsent < 0 ? nsent : OK;
 }
 #endif /* CONFIG_FS_LINKS */
+
+#ifdef CONFIG_FS_NOTIFY
+static inline int
+userfs_notify_dispatch(FAR struct userfs_info_s *info, size_t reqlen)
+{
+  FAR struct userfs_notify_request_s *req;
+  FAR struct userfs_notify_response_s *resp;
+  ssize_t nsent;
+  int ret;
+
+  /* Verify the request size */
+
+  if (reqlen < SIZEOF_USERFS_NOTIFY_REQUEST_S(1))
+    {
+      return -EINVAL;
+    }
+
+  /* Dispatch before touching the response: the two overlap */
+
+  req  = (FAR struct userfs_notify_request_s *)info->iobuffer;
+  resp = (FAR struct userfs_notify_response_s *)info->iobuffer;
+
+  if (info->userops->notify != NULL)
+    {
+      ret = info->userops->notify(info->volinfo, req->wd, req->relpath,
+                                  req->action, req->mask);
+    }
+  else
+    {
+      ret = -ENOSYS;
+    }
+
+  /* Send the response */
+
+  resp->resp = USERFS_RESP_NOTIFY;
+  resp->ret  = ret;
+  nsent      = sendto(info->sockfd, resp,
+                      sizeof(*resp),
+                      0, (FAR struct sockaddr *)&info->client,
+                      sizeof(info->client));
+  return nsent < 0 ? nsent : OK;
+}
+#endif /* CONFIG_FS_NOTIFY */
 
 /****************************************************************************
  * Public Functions
@@ -1526,6 +1655,14 @@ int userfs_run(FAR const char *mountpt,
             ret = userfs_syncfs_dispatch(info, nread);
             break;
 
+          case USERFS_REQ_GETLK:
+            ret = userfs_getlk_dispatch(info, nread);
+            break;
+
+          case USERFS_REQ_SETLK:
+            ret = userfs_setlk_dispatch(info, nread);
+            break;
+
 #ifdef CONFIG_FS_LINKS
           case USERFS_REQ_LINK:
             ret = userfs_link_dispatch(info, nread);
@@ -1541,6 +1678,12 @@ int userfs_run(FAR const char *mountpt,
 
           case USERFS_REQ_LSTAT:
             ret = userfs_lstat_dispatch(info, nread);
+            break;
+#endif
+
+#ifdef CONFIG_FS_NOTIFY
+          case USERFS_REQ_NOTIFY:
+            ret = userfs_notify_dispatch(info, nread);
             break;
 #endif
 
