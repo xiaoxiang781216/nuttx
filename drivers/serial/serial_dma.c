@@ -354,7 +354,14 @@ void uart_recvchars_done(FAR uart_dev_t *dev)
 
   if (signo != 0)
     {
-      nxsig_tgkill(-1, dev->pid, signo);
+      /* Pass dev->pid as the group id so the tty-generated signal
+       * is dispatched group-wide and reaches the foreground task
+       * even when the RX DMA path runs from a different task
+       * context (e.g. the hpwork thread), which is not in the same
+       * task group as the foreground task.
+       */
+
+      nxsig_tgkill(dev->pid, dev->pid, signo);
     }
 #endif
 }
