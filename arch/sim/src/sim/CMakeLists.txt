@@ -167,6 +167,11 @@ if(CONFIG_SIM_VIDEO_DECODER)
   list(APPEND SRCS sim_openh264dec.c)
 endif()
 
+if(CONFIG_SIM_JPEG_DECODER)
+  list(APPEND SRCS sim_jpeg_decoder.c)
+  list(APPEND SRCS sim_jpegdec.c)
+endif()
+
 if(CONFIG_SIM_VIDEO_ENCODER)
   list(APPEND SRCS sim_encoder.c)
   list(APPEND SRCS sim_x264encoder.c)
