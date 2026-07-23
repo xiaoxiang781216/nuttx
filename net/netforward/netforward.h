@@ -262,20 +262,21 @@ void netfwd_dropstats(FAR struct forward_s *fwd);
  *   forwarded to another device depending routing table information.
  *
  * Input Parameters:
- *   dev   - The device on which the packet was received and which contains
- *           the can packet.
+ *   dev - The device on which the packet was received and which contains
+ *         the can packet.
  *
  *   On input:
  *   - dev->d_buf holds the received packet.
  *   - dev->d_len holds the length of the received packet
  *
  * Returned Value:
- *   Always return Zero to let the packet be continue received by can_input;
+ *   true  - The frame should be delivered to local listeners by can_input.
+ *   false - The frame is route-only (or filtered) and must not be received.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_NET_CANFORWARD
-int can_forward(FAR struct net_driver_s *dev);
+bool can_forward(FAR struct net_driver_s *dev);
 #endif
 
 /****************************************************************************

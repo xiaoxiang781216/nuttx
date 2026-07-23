@@ -160,6 +160,7 @@ enum
 #define CGW_FLAGS_CAN_FD         0x08
 #define CGW_FLAGS_CAN_DISABLED   0x10  /* rule is disabled */
 #define CGW_FLAGS_CAN_ASYNC      0x20  /* rule uses async forwarding */
+#define CGW_FLAGS_CAN_NO_RECV    0x40  /* do NOT deliver locally */
 
 /* length of checksum operation parameters.
  * idx = index in CAN frame data[]

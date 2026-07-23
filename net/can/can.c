@@ -646,9 +646,17 @@ static int can_in(FAR struct net_driver_s *dev)
   int ret;
 
 #ifdef CONFIG_NET_CANFORWARD
-  /* Forward the packet if needed. */
+  /* Forward the packet if needed.  can_forward() also returns whether the
+   * frame should still be delivered to local listeners.  Route-only frames
+   * are not received here.  Unmatched frames are delivered locally (native
+   * CAN RX legacy behavior); ACF-injected frames are pre-filtered before
+   * reaching can_input(), so unmatched ACF frames never get here.
+   */
 
-  can_forward(dev);
+  if (!can_forward(dev))
+    {
+      return OK;
+    }
 #endif
 
   /* Do we have upper listener on the dev. */

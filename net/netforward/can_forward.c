@@ -451,12 +451,26 @@ static inline_function int can_forward_filter(FAR struct can_filter *filter,
  *
  * Description:
  *   Traverse all rules in a single hash bucket and forward matching frames.
+ *   For each matching rule the local-delivery intent is accumulated into
+ *   *recv (logical OR across all matches) and *matched is set to true.
+ *
+ *   Local-delivery intent per matching rule:
+ *     - without CGW_FLAGS_CAN_NO_RECV: deliver locally (legacy default).
+ *     - with CGW_FLAGS_CAN_NO_RECV: no local delivery (route-only).
+ *
+ * Input Parameters:
+ *   dev     - The source device on which the frame was received.
+ *   bucket  - The hash bucket to traverse.
+ *   id      - CAN msg ID.
+ *   recv    - Accumulates the local-delivery decision (OR across matches).
+ *   matched - Set to true if at least one rule matched.
  *
  ****************************************************************************/
 
 static inline_function void
 can_forward_match_bucket(FAR struct net_driver_s *dev,
-                         FAR hash_head_t *bucket, canid_t id)
+                         FAR hash_head_t *bucket, canid_t id,
+                         FAR bool *recv, FAR bool *matched)
 {
   FAR struct cangw_rule_s *fwdrule;
 
@@ -476,13 +490,12 @@ can_forward_match_bucket(FAR struct net_driver_s *dev,
        * union, so the filter check above is valid for all gateway types.
        */
 
+      *matched = true;
+
       switch (fwdrule->gwtype)
         {
           case CGW_TYPE_CAN_CAN:
             can_dev_forward(dev, fwdrule);
-#ifdef CONFIG_NET_STATISTICS
-            g_netstats.cangw.recv++;
-#endif
             break;
 
 #ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
@@ -507,14 +520,27 @@ can_forward_match_bucket(FAR struct net_driver_s *dev,
               dev->d_len = saved_len;
             }
 
-#ifdef CONFIG_NET_STATISTICS
-            g_netstats.cangw.recv++;
-#endif
             break;
 #endif
           default:
-            break;
+
+            /* Unknown gateway type: neither forward nor deliver locally. */
+
+            continue;
         }
+
+      /* A CAN_CAN or ETH1722 rule matched.  Deliver locally unless the rule
+       * is marked route-only, and count it as received.
+       */
+
+      if (!(fwdrule->flags & CGW_FLAGS_CAN_NO_RECV))
+        {
+          *recv = true;
+        }
+
+#ifdef CONFIG_NET_STATISTICS
+      g_netstats.cangw.recv++;
+#endif
     }
 }
 
@@ -795,13 +821,12 @@ int modify_cangw_rule(FAR struct net_driver_s *dev,
  *   - dev->d_len holds the length of the received packet.
  *
  * Returned Value:
- *   Zero is returned if the packet was successfully forwarded or no rule
- *   matched;  A negated errno value is returned if forwarding is disabled
- *   on the source device.
+ *   true  - The frame should be delivered to local listeners by can_input.
+ *   false - The frame is route-only (or filtered) and must not be received.
  *
  ****************************************************************************/
 
-int can_forward(FAR struct net_driver_s *dev)
+bool can_forward(FAR struct net_driver_s *dev)
 {
 #ifdef CONFIG_NET_CAN_CANFD
   FAR struct canfd_frame *frame
@@ -810,6 +835,8 @@ int can_forward(FAR struct net_driver_s *dev)
   FAR struct can_frame *frame = (FAR struct can_frame *)IOB_DATA(dev->d_iob);
 #endif
   unsigned int bucket;
+  bool recv = false;
+  bool matched = false;
 
   /* Check if source device supports IP forwarding capability */
 
@@ -817,21 +844,32 @@ int can_forward(FAR struct net_driver_s *dev)
     {
       nwarn("WARNING: CAN forwarding disabled on source device %s\n",
             dev->d_ifname);
-      return -EOPNOTSUPP;
+
+      /* Forwarding disabled on this device: skip the gateway path entirely
+       * and deliver locally, keeping NOSRC_FORWARD purely a "no routing"
+       * switch without overriding the receive decision.
+       */
+
+      return true;
     }
 
   if (dev->d_iob->io_conn != NULL || (frame->can_id & CAN_ERR_FLAG) != 0)
     {
-      /* Do not forward transmit confirmation frames & error frames */
+      /* Do not forward transmit confirmation frames & error frames, but
+       * they must still be delivered to local listeners.
+       */
 
-      return OK;
+      return true;
     }
 
-  /* No rules configured, nothing to forward */
+  /* No rules configured: native CAN RX delivers locally by default.  ACF
+   * frames are pre-filtered by can_forward_match() before reaching here,
+   * so an unmatched ACF frame is never injected into this path.
+   */
 
   if (dev->d_cangw_rules == NULL)
     {
-      return OK;
+      return true;
     }
 
   /* Step 1: Look up the exact-match hash bucket for this frame's ID.
@@ -840,13 +878,18 @@ int can_forward(FAR struct net_driver_s *dev)
    */
 
   bucket = HASH(frame->can_id, CONFIG_NET_CANFORWARD_HASH_BITS);
-  can_forward_match_bucket(dev, &dev->d_cangw_rules[bucket], frame->can_id);
+  can_forward_match_bucket(dev, &dev->d_cangw_rules[bucket], frame->can_id,
+                           &recv, &matched);
 
   /* Step 2: Traverse the wildcard bucket (partial-mask/INV rules) */
 
   can_forward_match_bucket(dev,
     &dev->d_cangw_rules[NET_CANFORWARD_WILDCARD_BUCKET],
-    frame->can_id);
+    frame->can_id, &recv, &matched);
 
-  return OK;
+  /* When at least one rule matched, honor the aggregated receive decision;
+   * otherwise deliver locally (native CAN RX legacy behavior).
+   */
+
+  return matched ? recv : true;
 }
