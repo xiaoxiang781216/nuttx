@@ -674,6 +674,9 @@ static int ramlog_file_open(FAR struct file *filep)
     }
 
   upriv->rl_threashold = CONFIG_RAMLOG_POLLTHRESHOLD;
+  upriv->rl_read = RING_IDX_OLDEST;
+  ring_mpmc_peek(priv->rl_ring, NULL, UINT32_MAX, &upriv->rl_read);
+
   nxsem_init(&upriv->rl_readsem, 0, 0);
 
   flags = spin_lock_irqsave(&priv->rl_lock);
