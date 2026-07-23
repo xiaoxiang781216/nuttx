@@ -34,10 +34,19 @@
 
 #include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/queue.h>
 
 #include "local/local.h"
 #include "utils/utils.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef CONFIG_NET_LOCAL_MAX_CONNS
+#  define CONFIG_NET_LOCAL_MAX_CONNS 0
+#endif
 
 /****************************************************************************
  * Public Data
@@ -52,7 +61,13 @@ DEFINE_PER_CPU_BMP(mutex_t, g_local_lock) = NXMUTEX_INITIALIZER;
  * Private Data
  ****************************************************************************/
 
-/* A list of all allocated packet socket connections */
+/* The pool of pre-allocated local socket connections */
+
+MEMPOOL_DEFINE(g_local_conn_pool, sizeof(struct local_conn_s),
+               CONFIG_NET_LOCAL_PREALLOC_CONNS,
+               CONFIG_NET_LOCAL_MAX_CONNS, CONFIG_NET_LOCAL_ALLOC_CONNS);
+
+/* A list of all allocated local socket connections */
 
 static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_local_connections);
 #define g_local_connections this_cpu_var_bmp(g_local_connections)
@@ -155,13 +170,13 @@ FAR struct local_conn_s *local_peerconn(FAR struct local_conn_s *conn)
 FAR struct local_conn_s *local_alloc(void)
 {
   FAR struct local_conn_s *conn =
-    kmm_zalloc(sizeof(struct local_conn_s));
+    mempool_zallocate(&g_local_conn_pool, 0);
 
   if (conn != NULL)
     {
-      /* Initialize non-zero elements the new connection structure.
-       * Since the memory was allocated with kmm_zalloc(), it is not
-       * necessary to zerio-ize any structure elements.
+      /* Initialize non-zero elements of the new connection structure.
+       * Since the memory was allocated with mempool_zallocate(), it is not
+       * necessary to zero any structure elements.
        */
 
       conn->lc_crefs = 1;
@@ -371,9 +386,9 @@ void local_free(FAR struct local_conn_s *conn)
 
   conn_uninit(&conn->lc_conn);
 
-  /* And free the connection structure */
+  /* And release the connection structure */
 
-  kmm_free(conn);
+  mempool_release(&g_local_conn_pool, conn);
 }
 
 /****************************************************************************
