@@ -962,8 +962,15 @@ static int littlefs_fchstat(FAR const struct file *filep,
       attr.at_gid = buf->st_gid;
     }
 
-  attr.at_ctim = 1000000000ull * buf->st_ctim.tv_sec +
-                 buf->st_ctim.tv_nsec;
+  /* The VFS layer sets CH_STAT_CTIME (with st_ctim holding the current time)
+   * whenever any metadata field changes, so just honor the flag here.
+   */
+
+  if ((CH_STAT_CTIME & flags) == CH_STAT_CTIME)
+    {
+      attr.at_ctim = 1000000000ull * buf->st_ctim.tv_sec +
+                     buf->st_ctim.tv_nsec;
+    }
 
   if ((CH_STAT_ATIME & flags) == CH_STAT_ATIME)
     {
@@ -1951,8 +1958,15 @@ static int littlefs_chstat(FAR struct inode *mountpt,
       attr.at_gid = buf->st_gid;
     }
 
-  attr.at_ctim = 1000000000ull * buf->st_ctim.tv_sec +
-                 buf->st_ctim.tv_nsec;
+  /* The VFS layer sets CH_STAT_CTIME (with st_ctim holding the current time)
+   * whenever any metadata field changes, so just honor the flag here.
+   */
+
+  if ((CH_STAT_CTIME & flags) == CH_STAT_CTIME)
+    {
+      attr.at_ctim = 1000000000ull * buf->st_ctim.tv_sec +
+                     buf->st_ctim.tv_nsec;
+    }
 
   if ((CH_STAT_ATIME & flags) == CH_STAT_ATIME)
     {

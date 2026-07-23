@@ -2279,9 +2279,14 @@ static int tmpfs_chstat_common(FAR struct tmpfs_object_s *to,
       to->to_mtime.tv_nsec = 0;
     }
 
-  if (flags & (CH_STAT_MODE | CH_STAT_ATIME | CH_STAT_MTIME))
+  /* The VFS layer sets CH_STAT_CTIME (with st_ctim holding the current time)
+   * whenever any metadata field changes, so just honor the flag here.
+   */
+
+  if (flags & CH_STAT_CTIME)
     {
-      tmpfs_update_ctime(to);
+      to->to_ctime.tv_sec  = buf->st_ctim.tv_sec;
+      to->to_ctime.tv_nsec = buf->st_ctim.tv_nsec;
     }
 
   return OK;

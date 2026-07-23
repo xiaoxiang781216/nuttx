@@ -164,6 +164,20 @@ static int chstat(FAR const char *path,
         }
     }
 
+  /* Changing any metadata (mode, owner, group, atime or mtime) is a status
+   * change, so bump ctime. buf->st_ctim already holds the current time (set
+   * above), so a filesystem only honors the CH_STAT_CTIME flag. Doing this
+   * in the common layer avoids each filesystem re-implementing the POSIX
+   * rule. It runs after the UTIME_OMIT handling so a no-op utimens (both
+   * fields omitted) does not spuriously bump ctime.
+   */
+
+  if (flags & (CH_STAT_MODE | CH_STAT_UID | CH_STAT_GID |
+               CH_STAT_ATIME | CH_STAT_MTIME))
+    {
+      flags |= CH_STAT_CTIME;
+    }
+
   /* Perform the chstat operation */
 
   ret = chstat_recursive(path, buf, flags, resolve);
