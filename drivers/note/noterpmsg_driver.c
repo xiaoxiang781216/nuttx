@@ -40,6 +40,12 @@
 
 #define NOTE_RPMSG_WORK_DELAY MSEC2TICK(CONFIG_DRIVERS_NOTERPMSG_WORK_DELAY)
 
+/* Short window (microseconds) granted to the server core to consume the
+ * vring after a synchronous flush on reboot.
+ */
+
+#define NOTE_RPMSG_FLUSH_DELAY_US (10 * 1000)
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -62,6 +68,7 @@ struct noterpmsg_driver_s
 static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
                              FAR const void *note, size_t notelen,
                              bool noswitches);
+static void noterpmsg_flush(FAR struct note_driver_s *driver);
 static int noterpmsg_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg);
 
@@ -81,6 +88,7 @@ DEFINE_PER_CPU_BSS_BMP(noterpmsg_buffer_t, g_noterpmsg_buffer);
 static const struct note_driver_ops_s g_noterpmsg_ops =
 {
   .add = noterpmsg_add,
+  .flush = noterpmsg_flush,
   .ioctl = noterpmsg_ioctl,
 };
 
@@ -235,6 +243,23 @@ static void noterpmsg_work(FAR void *priv)
       work_queue(HPWORK, &drv->work, noterpmsg_work, drv,
                  NOTE_RPMSG_WORK_DELAY);
     }
+}
+
+static void noterpmsg_flush(FAR struct note_driver_s *driver)
+{
+  FAR struct noterpmsg_driver_s *drv =
+    (FAR struct noterpmsg_driver_s *)driver;
+
+  /* On reboot the server core is still alive (it powers down last), so
+   * synchronously drain the local buffer into the vring and give the
+   * server a short window to consume it. This flushes notes that would
+   * otherwise be lost with the pending delayed work. Not an ack
+   * handshake: on a busy peer some notes may still drop, but reboot is
+   * never blocked indefinitely.
+   */
+
+  noterpmsg_transfer(drv, false);
+  up_udelay(NOTE_RPMSG_FLUSH_DELAY_US);
 }
 
 static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
