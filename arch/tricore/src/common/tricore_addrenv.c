@@ -78,6 +78,11 @@ static int addrenv_select_region(unsigned int *heap_region,
 {
   struct mpu_region_s conf;
 
+  if (addrenv == NULL)
+    {
+      return -EINVAL;
+    }
+
   if (*heap_region == 0)
     {
       *heap_region = mpu_allocdataregion();
@@ -86,11 +91,6 @@ static int addrenv_select_region(unsigned int *heap_region,
   if (*text_region == 0)
     {
       *text_region = mpu_allocdataregion();
-    }
-
-  if (addrenv == NULL)
-    {
-      return -EINVAL;
     }
 
   if (addrenv->heap && (
@@ -110,7 +110,7 @@ static int addrenv_select_region(unsigned int *heap_region,
                         conf.base, conf.size, conf.flags[MPU_KSET]);
 #ifdef CONFIG_BUILD_PROTECTED
       mpu_modify_region(MPU_USET, *heap_region,
-                        conf.base, conf.size, conf.flags[MPU_USET]);
+                        0, 0, conf.flags[MPU_USET]);
 #endif
       mpu_control(true);
     }
@@ -123,7 +123,6 @@ static int addrenv_select_region(unsigned int *heap_region,
       conf.base = (uintptr_t)addrenv->data;
       conf.size = addrenv->datasize;
       conf.flags[MPU_KSET] = REGION_TYPE_DATA | REGION_ATTR_RW;
-      conf.flags[MPU_USET] = REGION_TYPE_DATA | REGION_ATTR_RW;
       mpu_control(false);
       mpu_modify_region(MPU_KSET, *heap_region,
                         conf.base, conf.size, conf.flags[MPU_KSET]);
@@ -131,7 +130,7 @@ static int addrenv_select_region(unsigned int *heap_region,
       /* Read and write for data */
 
       mpu_modify_region(mpu_set, *heap_region,
-                        conf.base, conf.size, conf.flags[MPU_KSET]);
+                        0, 0, conf.flags[MPU_KSET]);
       conf.base = (uintptr_t)addrenv->text;
       conf.size = addrenv->textsize;
       conf.flags[MPU_KSET] = REGION_TYPE_DATA | REGION_ATTR_RO;
@@ -573,7 +572,7 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
   if (tcb->addrenv_curr && tcb->addrenv_curr->addrenv.data)
     {
       mpu_modify_region(MPU_APP_SET, g_addrenv_stack_region,
-                        conf.base, conf.size, conf.flags[MPU_KSET]);
+                        0, 0, conf.flags[MPU_KSET]);
     }
 
   return OK;
@@ -607,7 +606,6 @@ int up_addrenv_kstackswitch(struct tcb_s *tcb)
   conf.size = (uintptr_t)tcb->stack_base_ptr + tcb->adj_stack_size -
               (uintptr_t)tcb->stack_alloc_ptr;
   conf.flags[MPU_KSET] = REGION_TYPE_DATA | REGION_ATTR_RW;
-  conf.flags[MPU_USET] = REGION_TYPE_DATA | REGION_ATTR_RO;
 
   if (g_addrenv_stack_region == 0)
     {

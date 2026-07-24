@@ -152,9 +152,7 @@ typedef struct arch_addrenv_s arch_addrenv_t;
 do \
   { \
     irqstate_t _flags = up_irq_save(); \
-    mpu_control(false); \
     mpu_set_active_set(MPU_KSET); \
-    mpu_control(true); \
     up_irq_restore(_flags); \
   } \
 while (0);
@@ -177,9 +175,7 @@ do \
       { \
         unsigned int set_ = \
           tcb_->group->tg_addrenv_own->addrenv.mpu_set; \
-        mpu_control(false); \
         mpu_set_active_set(set_ ? set_ : MPU_APP_SET); \
-        mpu_control(true); \
       } \
     up_irq_restore(_flags); \
   } \
