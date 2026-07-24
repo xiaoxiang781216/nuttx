@@ -55,10 +55,6 @@
 
 #define INTC_EN(n) (CXD56_INTC_BASE + 0x10 + (((n) >> 5) << 2))
 
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-#  define INTSTACK_ALLOC (CPU_SETSIZE * INTSTACK_SIZE)
-#endif
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -67,41 +63,6 @@
 static volatile int8_t g_cpu_for_irq[CXD56_IRQ_NIRQS];
 extern void up_send_irqreq(int idx, int irq, int cpu);
 #endif
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-/* In the SMP configuration, we will need custom interrupt stacks.
- * These definitions provide the aligned stack allocations.
- */
-
-#ifdef ARCH_INTERRUPTSTACK_SECTION
-static uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3]
-  locate_data(ARCH_INTERRUPTSTACK_SECTION);
-#else
-static uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3];
-#endif
-
-/* These definitions provide the "top" of the push-down stacks. */
-
-const uint32_t g_cpu_intstack_top[CPU_SETSIZE] =
-{
-  (uint32_t)g_intstack_alloc + INTSTACK_SIZE,
-#if CPU_SETSIZE > 1
-  (uint32_t)g_intstack_alloc + (2 * INTSTACK_SIZE),
-#if CPU_SETSIZE > 2
-  (uint32_t)g_intstack_alloc + (3 * INTSTACK_SIZE),
-#if CPU_SETSIZE > 3
-  (uint32_t)g_intstack_alloc + (4 * INTSTACK_SIZE),
-#if CPU_SETSIZE > 4
-  (uint32_t)g_intstack_alloc + (5 * INTSTACK_SIZE),
-#if CPU_SETSIZE > 5
-  (uint32_t)g_intstack_alloc + (6 * INTSTACK_SIZE),
-#endif /* CPU_SETSIZE > 5 */
-#endif /* CPU_SETSIZE > 4 */
-#endif /* CPU_SETSIZE > 3 */
-#endif /* CPU_SETSIZE > 2 */
-#endif /* CPU_SETSIZE > 1 */
-};
-#endif /* defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7 */
 
 /****************************************************************************
  * Private Data
@@ -561,21 +522,5 @@ int up_prioritize_irq(int irq, int priority)
 
   cxd56_dumpnvic("prioritize", irq);
   return OK;
-}
-#endif
-
-/****************************************************************************
- * Name: up_get_intstackbase
- *
- * Description:
- *   Return a pointer to the "alloc" the correct interrupt stack allocation
- *   for the current CPU.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t up_get_intstackbase(int cpu)
-{
-  return g_cpu_intstack_top[cpu] - INTSTACK_SIZE;
 }
 #endif

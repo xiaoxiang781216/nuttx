@@ -65,36 +65,9 @@
 #define NVIC_ENA_OFFSET    (0)
 #define NVIC_CLRENA_OFFSET (NVIC_IRQ0_31_CLEAR - NVIC_IRQ0_31_ENABLE)
 
-/* Size of the interrupt stack allocation */
-
-#define INTSTACK_ALLOC (CPU_SETSIZE * INTSTACK_SIZE)
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-/* In the SMP configuration, we will need two custom interrupt stacks.
- * These definitions provide the aligned stack allocations.
- */
-
-#ifdef ARCH_INTERRUPTSTACK_SECTION
-uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3]
-  locate_data(ARCH_INTERRUPTSTACK_SECTION);
-#else
-uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3];
-#endif
-
-/* These definitions provide the "top" of the push-down stacks. */
-
-const uint32_t g_cpu_intstack_top[CPU_SETSIZE] =
-{
-  (uint32_t)g_intstack_alloc + INTSTACK_SIZE,
-#if CPU_SETSIZE > 1
-  (uint32_t)g_intstack_alloc + (2 * INTSTACK_SIZE),
-#endif /* CPU_SETSIZE > 1 */
-};
-#endif
 
 /****************************************************************************
  * Private Data
@@ -820,19 +793,3 @@ int lc823450_irq_register(int irq, struct lc823450_irq_ops *ops)
   return OK;
 }
 #endif /* CONFIG_LC823450_VIRQ */
-
-/****************************************************************************
- * Name: up_get_intstackbase
- *
- * Description:
- *   Return a pointer to the "alloc" the correct interrupt stack allocation
- *   for the current CPU.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t up_get_intstackbase(int cpu)
-{
-  return g_cpu_intstack_top[cpu] - INTSTACK_SIZE;
-}
-#endif

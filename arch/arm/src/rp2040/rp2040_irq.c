@@ -46,10 +46,6 @@
   (NVIC_SYSH_PRIORITY_DEFAULT << 24 | NVIC_SYSH_PRIORITY_DEFAULT << 16 | \
    NVIC_SYSH_PRIORITY_DEFAULT << 8  | NVIC_SYSH_PRIORITY_DEFAULT)
 
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-#  define INTSTACK_ALLOC (CPU_SETSIZE * INTSTACK_SIZE)
-#endif
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -57,29 +53,6 @@
 #ifdef CONFIG_SMP
 extern void rp2040_send_irqreq(int irqreq);
 #endif
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-/* In the SMP configuration, we will need custom interrupt stacks.
- * These definitions provide the aligned stack allocations.
- */
-
-#ifdef ARCH_INTERRUPTSTACK_SECTION
-static uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3]
-  locate_data(ARCH_INTERRUPTSTACK_SECTION);
-#else
-static uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3];
-#endif
-
-/* These definitions provide the "top" of the push-down stacks. */
-
-const uint32_t g_cpu_intstack_top[CPU_SETSIZE] =
-{
-  (uint32_t)g_intstack_alloc + INTSTACK_SIZE,
-#if CPU_SETSIZE > 1
-  (uint32_t)g_intstack_alloc + (2 * INTSTACK_SIZE),
-#endif /* CPU_SETSIZE > 1 */
-};
-#endif /* defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7 */
 
 /****************************************************************************
  * Private Functions
@@ -440,21 +413,5 @@ int up_prioritize_irq(int irq, int priority)
 
   rp2040_dumpnvic("prioritize", irq);
   return OK;
-}
-#endif
-
-/****************************************************************************
- * Name: up_get_intstackbase
- *
- * Description:
- *   Return a pointer to the "alloc" the correct interrupt stack allocation
- *   for the current CPU.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t up_get_intstackbase(int cpu)
-{
-  return g_cpu_intstack_top[cpu] - INTSTACK_SIZE;
 }
 #endif

@@ -44,47 +44,18 @@
  ****************************************************************************/
 
 #if !defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-/* In the SMP configuration, we will need custom IRQ and FIQ stacks.
+/* In the SMP configuration, we will need custom FIQ stacks.
  * These definitions provide the aligned stack allocations.
  */
 
 #ifdef ARCH_INTERRUPTSTACK_SECTION
-static uint64_t g_irqstack_alloc[INTSTACK_ALLOC >> 3]
-  locate_data(ARCH_INTERRUPTSTACK_SECTION);
 static uint64_t g_fiqstack_alloc[INTSTACK_ALLOC >> 3]
   locate_data(ARCH_INTERRUPTSTACK_SECTION);
 #else
-static uint64_t g_irqstack_alloc[INTSTACK_ALLOC >> 3];
 static uint64_t g_fiqstack_alloc[INTSTACK_ALLOC >> 3];
 #endif
 
-/* These are arrays that point to the top of each interrupt stack */
-
-uintptr_t g_irqstack_top[CONFIG_NCPUS] =
-{
-  (uintptr_t)g_irqstack_alloc + INTSTACK_SIZE,
-#if CONFIG_NCPUS > 1
-  (uintptr_t)g_irqstack_alloc + (2 * INTSTACK_SIZE),
-#endif
-#if CONFIG_NCPUS > 2
-  (uintptr_t)g_irqstack_alloc + (3 * INTSTACK_SIZE),
-#endif
-#if CONFIG_NCPUS > 3
-  (uintptr_t)g_irqstack_alloc + (4 * INTSTACK_SIZE),
-#endif
-#if CONFIG_NCPUS > 4
-  (uintptr_t)g_irqstack_alloc + (5 * INTSTACK_SIZE),
-#endif
-#if CONFIG_NCPUS > 5
-  (uintptr_t)g_irqstack_alloc + (6 * INTSTACK_SIZE),
-#endif
-#if CONFIG_NCPUS > 6
-  (uintptr_t)g_irqstack_alloc + (7 * INTSTACK_SIZE),
-#endif
-#if CONFIG_NCPUS > 7
-  (uintptr_t)g_irqstack_alloc + (8 * INTSTACK_SIZE),
-#endif
-};
+/* Array that points to the top of each FIQ interrupt stack */
 
 uintptr_t g_fiqstack_top[CONFIG_NCPUS] =
 {
@@ -165,19 +136,3 @@ void up_irqinitialize(void)
   up_irq_enable();
 #endif
 }
-
-/****************************************************************************
- * Name: up_get_intstackbase
- *
- * Description:
- *   Return a pointer to the "alloc" the correct interrupt stack allocation
- *   for the current CPU.
- *
- ****************************************************************************/
-
-#if !defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t up_get_intstackbase(int cpu)
-{
-  return g_irqstack_top[cpu] - INTSTACK_SIZE;
-}
-#endif

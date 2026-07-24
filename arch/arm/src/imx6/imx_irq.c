@@ -45,35 +45,18 @@
  ****************************************************************************/
 
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-/* In the SMP configuration, we will need custom IRQ and FIQ stacks.
+/* In the SMP configuration, we will need custom FIQ stacks.
  * These definitions provide the aligned stack allocations.
  */
 
 #ifdef ARCH_INTERRUPTSTACK_SECTION
-uint64_t g_irqstack_alloc[INTSTACK_ALLOC >> 3]
-  locate_data(ARCH_INTERRUPTSTACK_SECTION);
 uint64_t g_fiqstack_alloc[INTSTACK_ALLOC >> 3]
   locate_data(ARCH_INTERRUPTSTACK_SECTION);
 #else
-uint64_t g_irqstack_alloc[INTSTACK_ALLOC >> 3];
 uint64_t g_fiqstack_alloc[INTSTACK_ALLOC >> 3];
 #endif
 
-/* These are arrays that point to the top of each interrupt stack */
-
-uintptr_t g_irqstack_top[CPU_SETSIZE] =
-{
-  (uintptr_t)g_irqstack_alloc + INTSTACK_SIZE,
-#if CPU_SETSIZE > 1
-  (uintptr_t)g_irqstack_alloc + (2 * INTSTACK_SIZE),
-#endif
-#if CPU_SETSIZE > 2
-  (uintptr_t)g_irqstack_alloc + (3 * INTSTACK_SIZE),
-#endif
-#if CPU_SETSIZE > 3
-  (uintptr_t)g_irqstack_alloc + (4 * INTSTACK_SIZE)
-#endif
-};
+/* Array that points to the top of each FIQ interrupt stack */
 
 uintptr_t g_fiqstack_top[CPU_SETSIZE] =
 {
@@ -162,19 +145,3 @@ void up_irqinitialize(void)
   up_irq_enable();
 #endif
 }
-
-/****************************************************************************
- * Name: up_get_intstackbase
- *
- * Description:
- *   Return a pointer to the "alloc" the correct interrupt stack allocation
- *   for the current CPU.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t up_get_intstackbase(int cpu)
-{
-  return g_irqstack_top[cpu] - INTSTACK_SIZE;
-}
-#endif

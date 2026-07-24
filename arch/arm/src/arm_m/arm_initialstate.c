@@ -42,7 +42,7 @@
  * Public Data
  ****************************************************************************/
 
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 #  ifdef ARCH_INTERRUPTSTACK_SECTION
 uint8_t aligned_data(STACKFRAME_ALIGN) g_intstackalloc[INTSTACK_SIZE]
   locate_data(ARCH_INTERRUPTSTACK_SECTION);

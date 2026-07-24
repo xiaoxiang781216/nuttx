@@ -96,12 +96,12 @@
 
 #if !defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
   .macro  setirqstack, tmp1, tmp2
-  mrc  p15, 0, \tmp1, c0, c0, 5  /* tmp1=MPIDR */
-  and  \tmp1, \tmp1, #7          /* Bits 0-2=CPU ID */
-  ldr  \tmp2, =g_irqstack_top    /* tmp2=Array of IRQ stack pointers */
-  lsls \tmp1, \tmp1, #2          /* tmp1=Array byte offset */
-  add  \tmp2, \tmp2, \tmp1       /* tmp2=Offset address into array */
-  ldr  sp, [\tmp2, #0]           /* sp=Address in stack allocation */
+  mrc  p15, 0, \tmp1, c0, c0, 5    /* tmp1=MPIDR */
+  and  \tmp1, \tmp1, #7            /* Bits 0-2=CPU ID */
+  ldr  \tmp2, =g_cpu_intstack_top  /* tmp2=Array of IRQ stack pointers */
+  lsls \tmp1, \tmp1, #2            /* tmp1=Array byte offset */
+  add  \tmp2, \tmp2, \tmp1         /* tmp2=Offset address into array */
+  ldr  sp, [\tmp2, #0]             /* sp=Address in stack allocation */
   .endm
 #endif
 
