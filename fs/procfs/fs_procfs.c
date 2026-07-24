@@ -355,6 +355,7 @@ struct procfs_level1_s
   uint8_t subdirlen;                 /* Length of the subdir search */
   uint16_t firstindex;               /* Index of 1st entry matching this subdir */
   FAR const char *lastread;          /* Pointer to last static dir read */
+  FAR const char *prefix;            /* Subdir prefix for dynamic matching */
 };
 
 /****************************************************************************
@@ -695,6 +696,35 @@ static int procfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 }
 
 /****************************************************************************
+ * Name: procfs_alloc_level1
+ *
+ * Description:
+ *   Allocate and initialize a level1 directory entry for subdirectory
+ *   enumeration.  Used by both the static and dynamic opendir paths.
+ *
+ ****************************************************************************/
+
+static FAR struct procfs_level1_s *procfs_alloc_level1(uint16_t firstindex,
+                                                       uint8_t subdirlen)
+{
+  FAR struct procfs_level1_s *level1;
+
+  level1 = (FAR struct procfs_level1_s *)
+     fs_heap_zalloc(sizeof(struct procfs_level1_s));
+  if (level1)
+    {
+      level1->base.level = 1;
+      level1->base.index = firstindex;
+      level1->firstindex = firstindex;
+      level1->subdirlen = subdirlen;
+      level1->lastread = "";
+      level1->lastlen = 0;
+    }
+
+  return level1;
+}
+
+/****************************************************************************
  * Name: procfs_opendir
  *
  * Description:
@@ -807,28 +837,11 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
             {
               FAR struct procfs_level1_s *level1;
 
-              /* Doing an intermediate directory search */
-
-              /* The path refers to the top level directory.  Allocate
-               * the level1 dirent structure.
-               */
-
-              level1 = (FAR struct procfs_level1_s *)
-                 fs_heap_zalloc(sizeof(struct procfs_level1_s));
+              level1 = procfs_alloc_level1(x, len);
               if (!level1)
                 {
-                  ferr("ERROR: Failed to allocate the level0 directory "
-                       "structure\n");
                   return -ENOMEM;
                 }
-
-              level1->base.level = 1;
-              level1->base.index = x;
-              level1->firstindex = x;
-              level1->subdirlen = len;
-              level1->lastread = "";
-              level1->lastlen = 0;
-              level1->base.procfsentry = NULL;
 
               *dir = (FAR struct fs_dirent_s *)level1;
               break;
@@ -860,6 +873,24 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
                     }
 
                   return ret;
+                }
+
+              /* Test for a sub-string match */
+
+              else if (strncmp(entry->pathpattern, relpath, len) == 0 &&
+                       entry->pathpattern[len] == '/')
+                {
+                  FAR struct procfs_level1_s *level1;
+
+                  level1 = procfs_alloc_level1(g_procfs_entrycount, len);
+                  if (!level1)
+                    {
+                      return -ENOMEM;
+                    }
+
+                  level1->prefix = entry->pathpattern;
+                  *dir = (FAR struct fs_dirent_s *)level1;
+                  return OK;
                 }
             }
 
@@ -912,7 +943,7 @@ static int procfs_readdir(FAR struct inode *mountpt,
                           FAR struct fs_dirent_s *dir,
                           FAR struct dirent *entry)
 {
-  FAR const struct procfs_entry_s *pentry = NULL;
+  FAR struct procfs_entry_s *pentry = NULL;
   FAR struct procfs_dir_priv_s *priv;
   FAR struct procfs_level0_s *level0;
   FAR const char *name = NULL;
@@ -944,7 +975,8 @@ static int procfs_readdir(FAR struct inode *mountpt,
 
           while (index < g_procfs_entrycount)
             {
-              pentry = &g_procfs_entries[index];
+              pentry = (FAR struct procfs_entry_s *)
+                       &g_procfs_entries[index];
               name = pentry->pathpattern;
 
               while (*name != '/' && *name != '\0')
@@ -1024,6 +1056,52 @@ static int procfs_readdir(FAR struct inode *mountpt,
               priv->index = priv->nentries + index;
               ret = OK;
             }
+#ifdef CONFIG_FS_PROCFS_REGISTER
+          else
+            {
+              /* Static entries exhausted.  Enumerate unique first-level
+               * names from dynamically registered entries.
+               *
+               * Use index as the node position counter (starting from
+               * nentries + g_procfs_entrycount).  Walk the list, skip
+               * nodes before priv->index (already reported), skip
+               * first-level-name duplicates, return the first new entry.
+               */
+
+              index = priv->nentries + g_procfs_entrycount;
+
+              dq_for_every_entry(&g_procfs_dynentries, pentry,
+                                 struct procfs_entry_s, node)
+                {
+                  size_t seglen;
+
+                  if (index < priv->index)
+                    {
+                      index++;
+                      continue;
+                    }
+
+                  name = pentry->pathpattern;
+                  seglen = strcspn(name, "/");
+
+                  if (level0->lastlen == seglen &&
+                      strncmp(name, level0->lastread, seglen) == 0)
+                    {
+                      index++;
+                      continue;
+                    }
+
+                  level0->lastlen = seglen;
+                  level0->lastread = name;
+                  strlcpy(entry->d_name, name, seglen + 1);
+                  entry->d_type = name[seglen] == '/' ?
+                      DTYPE_DIRECTORY : DTYPE_FILE;
+                  priv->index = index + 1;
+                  ret = OK;
+                  break;
+                }
+            }
+#endif
         }
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
       else
@@ -1113,6 +1191,58 @@ static int procfs_readdir(FAR struct inode *mountpt,
               break;
             }
         }
+
+#ifdef CONFIG_FS_PROCFS_REGISTER
+      /* If static entries didn't match, enumerate dynamic entries
+       * that share the same subdirectory prefix.
+       *
+       * Use index as the node position counter (starting from
+       * g_procfs_entrycount).  Walk the list, skip nodes before
+       * base.index, skip duplicates, return the first new entry.
+       */
+
+      if (ret != OK)
+        {
+          index = g_procfs_entrycount;
+
+          dq_for_every_entry(&g_procfs_dynentries, pentry,
+                             struct procfs_entry_s, node)
+            {
+              if (level1->prefix != NULL &&
+                  (strncmp(pentry->pathpattern, level1->prefix,
+                           level1->subdirlen) != 0 ||
+                   pentry->pathpattern[level1->subdirlen] != '/'))
+                {
+                  index++;
+                  continue;
+                }
+
+              if (index < level1->base.index)
+                {
+                  index++;
+                  continue;
+                }
+
+              name = &pentry->pathpattern[level1->subdirlen + 1];
+
+              if (level1->lastlen &&
+                  strncmp(name, level1->lastread, level1->lastlen) == 0)
+                {
+                  index++;
+                  continue;
+                }
+
+              level1->lastlen = strcspn(name, "/");
+              level1->lastread = name;
+              strlcpy(entry->d_name, name, level1->lastlen + 1);
+              entry->d_type = name[level1->lastlen] == '/' ?
+                  DTYPE_DIRECTORY : DTYPE_FILE;
+              level1->base.index = index + 1;
+              ret = OK;
+              break;
+            }
+        }
+#endif
     }
   else
     {
@@ -1313,6 +1443,17 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
                       return entry->ops->stat(relpath, buf);
                     }
 
+                  break;
+                }
+
+              /* Test for an internal subdirectory stat */
+
+              else if (strncmp(entry->pathpattern, relpath, len) == 0 &&
+                       entry->pathpattern[len] == '/')
+                {
+                  buf->st_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR;
+                  buf->st_mode |= S_IXOTH | S_IXGRP | S_IXUSR;
+                  ret = OK;
                   break;
                 }
             }
