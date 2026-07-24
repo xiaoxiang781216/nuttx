@@ -26,7 +26,9 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
 #include <nuttx/percpu.h>
+#include <arch/barriers.h>
 #include <sys/types.h>
 
 #include <IfxCpu.h>
@@ -370,11 +372,13 @@ unsigned int mpu_get_active_set(void);
 
 static inline void mpu_set_active_set(unsigned int set)
 {
-  Ifx_CPU_PSW psw_value;
-  psw_value.U = tricore_mfcr(CPU_PSW);
-  psw_value.B.PRS2 = set >> 2;  /* bit[2] */
-  psw_value.B.PRS = set & 0x03; /* bit[1:0] */
-  tricore_mtcr(CPU_PSW, psw_value.U);
+  uint32_t psw_value;
+
+  psw_value = tricore_mfcr(CPU_PSW);
+  psw_value &= ~((3 << 12) | (1 << 15));
+  psw_value |= (set >> 2) << 15;
+  psw_value |= (set & 3) << 12;
+  tricore_mtcr(CPU_PSW, psw_value);
 
   UP_ISB();
 }
