@@ -322,6 +322,51 @@ static int note_clock_notify(FAR struct notifier_block *nb,
 }
 #endif
 
+/****************************************************************************
+ * Name: note_do_add
+ *
+ * Description:
+ *   Dispatch a formatted note to a backend's add() and update cumulative
+ *   statistics based on the ssize-style return contract:
+ *
+ *     ret <= 0         : full drop, drop_bytes += notelen
+ *     0 < ret < notelen: partial accept, bytes += ret,
+ *                        drop_bytes += notelen - ret, notes += 1
+ *     ret == notelen   : full accept, bytes += notelen, notes += 1
+ *
+ *   Stats accounting is centralized here so backends only have to honor
+ *   the return contract.  Counters are updated with relaxed atomics so
+ *   the producer fast path stays lock-free.
+ *
+ ****************************************************************************/
+
+static inline_function ssize_t note_do_add(FAR struct note_driver_s *drv,
+                                           FAR const void *note,
+                                           size_t notelen,
+                                           bool noswitches)
+{
+  ssize_t written = drv->ops->add(drv, note, notelen, noswitches);
+
+#ifdef CONFIG_DRIVERS_NOTE_STATS
+  if (written <= 0)
+    {
+      atomic_add_relaxed(&drv->stats.drop_bytes, notelen);
+    }
+  else
+    {
+      atomic_add_relaxed(&drv->stats.notes, 1);
+      atomic_add_relaxed(&drv->stats.bytes, written);
+      if (written < notelen)
+        {
+          atomic_add_relaxed(&drv->stats.drop_bytes,
+                             notelen - written);
+        }
+    }
+#endif
+
+  return written;
+}
+
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 /****************************************************************************
  * Name: note_update_filter
