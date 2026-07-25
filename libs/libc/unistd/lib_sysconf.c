@@ -277,6 +277,12 @@ long sysconf(int name)
       case _SC_AIO_LISTIO_MAX:
         return AIO_LISTIO_MAX;
 
+      case _SC_ARG_MAX:
+        return ARG_MAX;
+
+      case _SC_VERSION:
+        return _POSIX_VERSION;
+
       case _SC_MQ_PRIO_MAX:
         return MQ_PRIO_MAX;
 
