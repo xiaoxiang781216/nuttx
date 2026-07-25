@@ -1428,13 +1428,13 @@ static int netdev_upper_ifup(FAR struct net_driver_s *dev)
 static int netdev_upper_ifdown(FAR struct net_driver_s *dev)
 {
   FAR struct netdev_upperhalf_s *upper = dev->d_private;
+  unsigned int count;
 
-  /* Drain the TX queue before tearing down the interface, and drop any
-   * pending completion so that the next ifup starts clean.
+  /* Release the device lock, held by netdev_ioctl(), while waiting for
+   * the worker: it blocks on the same lock.  A no-op when not held.
    */
 
-  iob_free_queue(&dev->d_txq);
-  atomic_set(&upper->txdone, 0);
+  nxrmutex_breaklock(&dev->d_lock, &count);
 
   switch (upper->lower->rxtype)
     {
@@ -1446,6 +1446,15 @@ static int netdev_upper_ifdown(FAR struct net_driver_s *dev)
         netdev_upper_exit_thread(upper);
         break;
     }
+
+  nxrmutex_restorelock(&dev->d_lock, count);
+
+  /* Drain after the teardown: the worker may queue while unlocked.  Drop
+   * any pending completion so that the next ifup starts clean.
+   */
+
+  iob_free_queue(&dev->d_txq);
+  atomic_set(&upper->txdone, 0);
 
   if (upper->lower->ops->ifdown)
     {
