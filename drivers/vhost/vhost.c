@@ -40,6 +40,7 @@
 #include "vhost-i2c.h"
 #include "vhost-rng.h"
 #include "vhost-rpmsg.h"
+#include "vhost-rpmb.h"
 #include "vhost-serial.h"
 #include "vhost-net.h"
 #include "vhost-spi.h"
@@ -659,6 +660,14 @@ void vhost_register_drivers(void)
   if (ret < 0)
     {
       vhosterr("vhost_register_net_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_VHOST_RPMB
+  ret = vhost_register_rpmb_driver();
+  if (ret < 0)
+    {
+      vhosterr("vhost_register_rpmb_driver failed, ret=%d\n", ret);
     }
 #endif
 

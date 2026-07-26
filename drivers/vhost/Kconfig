@@ -86,3 +86,20 @@ config DRIVERS_VHOST_SERIAL_STACKSIZE
 	default DEFAULT_TASK_STACKSIZE
 
 endif
+
+config DRIVERS_VHOST_RPMB
+	bool "Virtual Host Rpmb Device Support"
+	default n
+	select DRIVERS_VHOST
+
+if DRIVERS_VHOST_RPMB
+
+config DRIVERS_VHOST_RPMB_PRIORITY
+	int "vhost rpmb thread priority"
+	default 224
+
+config DRIVERS_VHOST_RPMB_STACKSIZE
+	int "vhost rpmb stack size"
+	default DEFAULT_TASK_STACKSIZE
+
+endif

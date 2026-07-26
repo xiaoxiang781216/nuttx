@@ -35,6 +35,7 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/mmcsd.h>
 #include <nuttx/virtio/virtio.h>
+#include <nuttx/virtio/virtio-rpmb.h>
 
 #include "virtio-rpmb.h"
 
@@ -42,7 +43,15 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define VIRTIO_RPMB_DEVNAME "/dev/rpmb"
+#define VIRTIO_RPMB_DEVNAME          "/dev/rpmb"
+
+/* RPMB EXT_CSD opcode (eMMC standard command 8) */
+
+#define VIRTIO_RPMB_EXT_CSD          8
+
+/* Maximum number of commands in a multi-command request */
+
+#define VIRTIO_RPMB_MMC_IOC_MAX_CMDS 3
 
 /****************************************************************************
  * Private Types
@@ -165,28 +174,139 @@ static int virtio_rpmb_transact(FAR struct virtio_rpmb_priv_s *priv,
 }
 
 /****************************************************************************
- * Name: virtio_blk_ioctl
+ * Name: virtio_rpmb_ext_csd
+ *
+ * Description:
+ *   Synthesize an EXT_CSD response from the virtio config space. The AP-side
+ *   vhost-rpmb fills capacity/max_wr_cnt from the real eMMC EXT_CSD, so no
+ *   raw eMMC command needs to be relayed through the virtqueue.
+ *
+ *   Only the two offsets the TEE actually reads are populated; the rest of
+ *   the buffer is zeroed.
+ *
+ ****************************************************************************/
+
+static int virtio_rpmb_ext_csd(FAR struct virtio_device *vdev,
+                               FAR struct mmc_ioc_cmd *ioc)
+{
+  FAR uint8_t *ext_csd = (FAR uint8_t *)(uintptr_t)ioc->data_ptr;
+  size_t len = ioc->blksz * ioc->blocks;
+  struct virtio_rpmb_config_s cfg;
+
+  if (ext_csd == NULL || len < VIRTIO_RPMB_EXT_CSD_SIZE)
+    {
+      return -EINVAL;
+    }
+
+  virtio_read_config(vdev, 0, &cfg, sizeof(cfg));
+
+  memset(ext_csd, 0, VIRTIO_RPMB_EXT_CSD_SIZE);
+  ext_csd[VIRTIO_RPMB_EXT_CSD_RPMB_SIZE] = cfg.capacity;
+  ext_csd[VIRTIO_RPMB_EXT_CSD_REL_WR_SEC_C] = cfg.max_wr_cnt;
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: virtio_rpmb_multi_cmd
+ *
+ * Description:
+ *   Relay an RPMB frame sequence to the device side. Each command becomes
+ *   one virtqueue buffer: the leading commands are request frames (out),
+ *   the last one is the response frame (in).
+ *
+ ****************************************************************************/
+
+static int virtio_rpmb_multi_cmd(FAR struct virtio_rpmb_priv_s *priv,
+                                 FAR struct mmc_ioc_multi_cmd *mioc)
+{
+  FAR struct virtio_device *vdev = priv->vdev;
+  int ncmds = mioc->num_of_cmds;
+  struct virtqueue_buf vb[VIRTIO_RPMB_MMC_IOC_MAX_CMDS];
+  int ret;
+  int i;
+
+  /* At least one request frame and one response frame are required. */
+
+  if (ncmds < 2 || ncmds > VIRTIO_RPMB_MMC_IOC_MAX_CMDS)
+    {
+      return -EINVAL;
+    }
+
+  /* Map each buffer into device visible memory. On MMIO/PCI this returns
+   * the original address (zero copy); on rptun it bounces through the
+   * carveout shared memory.
+   */
+
+  for (i = 0; i < ncmds; i++)
+    {
+      vb[i].len = mioc->cmds[i].blocks * mioc->cmds[i].blksz;
+
+      ret = virtio_map_buf(vdev,
+                           (FAR void *)(uintptr_t)mioc->cmds[i].data_ptr,
+                           vb[i].len,
+                           i < ncmds - 1 ? VIRTIO_DMA_TO_DEVICE :
+                           VIRTIO_DMA_FROM_DEVICE,
+                           &vb[i].buf);
+      if (ret < 0)
+        {
+          vrterr("virtio_map_buf failed, i=%d ret=%d\n", i, ret);
+          goto out_unmap;
+        }
+    }
+
+  ret = virtio_rpmb_transact(priv, vb, ncmds - 1, 1);
+
+  /* Unmap in reverse order. Unmapping an in buffer copies the data written
+   * by the device back to the original buffer.
+   */
+
+out_unmap:
+  while (--i >= 0)
+    {
+      virtio_unmap_buf(vdev,
+                       (FAR void *)(uintptr_t)mioc->cmds[i].data_ptr,
+                       vb[i].len,
+                       i < ncmds - 1 ? VIRTIO_DMA_TO_DEVICE :
+                       VIRTIO_DMA_FROM_DEVICE,
+                       vb[i].buf);
+    }
+
+  return ret < 0 ? ret : 0;
+}
+
+/****************************************************************************
+ * Name: virtio_rpmb_ioctl
  ****************************************************************************/
 
 static int virtio_rpmb_ioctl(FAR struct file *filep, int cmd,
                              unsigned long arg)
 {
   FAR struct virtio_rpmb_priv_s *priv;
-  FAR struct mmc_ioc_multi_cmd *mioc = (FAR struct mmc_ioc_multi_cmd *)arg;
-  struct virtqueue_buf vb[mioc->num_of_cmds];
-  int ret;
-  int i;
 
   priv = (FAR struct virtio_rpmb_priv_s *)filep->f_inode->i_private;
 
-  for (i = 0; i < mioc->num_of_cmds; i++)
+  switch (cmd)
     {
-      vb[i].buf = (FAR void *)mioc->cmds[i].data_ptr;
-      vb[i].len = mioc->cmds[i].blocks * mioc->cmds[i].blksz;
-    }
+      case MMC_IOC_CMD:
+        {
+          FAR struct mmc_ioc_cmd *ioc = (FAR struct mmc_ioc_cmd *)arg;
 
-  ret = virtio_rpmb_transact(priv, vb, mioc->num_of_cmds - 1, 1);
-  return ret < 0 ? ret : 0;
+          if (ioc->opcode != VIRTIO_RPMB_EXT_CSD)
+            {
+              return -ENOTTY;
+            }
+
+          return virtio_rpmb_ext_csd(priv->vdev, ioc);
+        }
+
+      case MMC_IOC_MULTI_CMD:
+        return virtio_rpmb_multi_cmd(priv,
+                                     (FAR struct mmc_ioc_multi_cmd *)arg);
+
+      default:
+        return -ENOTTY;
+    }
 }
 
 static int virtio_rpmb_init(FAR struct virtio_rpmb_priv_s *priv,
