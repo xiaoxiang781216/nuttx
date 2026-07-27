@@ -121,7 +121,7 @@ struct irq_file_s
 
 /* irq_foreach() callback function */
 
-static int     irq_callback(int irq, FAR struct irq_info_s *info,
+static int     irq_callback(int ndx, FAR struct irq_info_s *info,
                  FAR void *arg);
 
 /* File system methods */
@@ -159,7 +159,7 @@ const struct procfs_operations g_irq_operations =
  * Name: irq_callback
  ****************************************************************************/
 
-static int irq_callback(int irq, FAR struct irq_info_s *info,
+static int irq_callback(int ndx, FAR struct irq_info_s *info,
                         FAR void *arg)
 {
   FAR struct irq_file_s *irqfile = (FAR struct irq_file_s *)arg;
@@ -210,12 +210,12 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
 
   /* Get the interrupt frequency and reset the counters */
 
-  irq_monitor_get_freq(irq, true, &intpart, &fracpart);
+  irq_monitor_get_freq(NDX_TO_IRQ(ndx), true, &intpart, &fracpart);
   perf_convert(copy.time, &delta);
 
   /* Output information about this interrupt */
 
-  linesize = snprintf(irqfile->line, IRQ_LINELEN, IRQ_FMT, irq,
+  linesize = snprintf(irqfile->line, IRQ_LINELEN, IRQ_FMT, NDX_TO_IRQ(ndx),
                       (unsigned long)((uintptr_t)copy.handler),
                       (unsigned long)((uintptr_t)copy.arg),
                       count, intpart, fracpart,
@@ -307,7 +307,7 @@ static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
   FAR struct irq_file_s *irqfile;
   size_t linesize;
   size_t copysize;
-  int irq;
+  int ndx;
   int ret;
 
   finfo("buffer=%p buflen=%zu\n", buffer, buflen);
@@ -345,12 +345,12 @@ static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
    * specific IRQ index across multiple read() calls.
    */
 
-  for (irq = filep->f_pos; irq < TAB_SIZE; irq++)
+  for (ndx = filep->f_pos; ndx < TAB_SIZE; ndx++)
     {
-      if (g_irqvector[irq].handler != NULL &&
-          g_irqvector[irq].handler != irq_unexpected_isr)
+      if (g_irqvector[ndx].handler != NULL &&
+          g_irqvector[ndx].handler != irq_unexpected_isr)
         {
-          ret = irq_callback(irq, &g_irqvector[irq], irqfile);
+          ret = irq_callback(ndx, &g_irqvector[ndx], irqfile);
           if (ret != 0)
             {
               break;
@@ -360,7 +360,7 @@ static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
 
   /* Update f_pos to the current IRQ index for the next read() call */
 
-  filep->f_pos = irq;
+  filep->f_pos = ndx;
   return irqfile->ncopied;
 }
 
