@@ -110,10 +110,9 @@ static ssize_t mtdsistream_gets(FAR struct lib_sistream_s *self,
   size_t blocksize = stream->geo.blocksize;
   off_t devsize = stream->geo.neraseblocks * stream->geo.erasesize;
   FAR unsigned char *ptr = buf;
-  size_t remain = len;
   ssize_t ret;
 
-  while (remain > 0)
+  while (len > 0)
     {
       off_t block = self->nget / blocksize;
       off_t offset = self->nget % blocksize;
@@ -125,50 +124,53 @@ static ssize_t mtdsistream_gets(FAR struct lib_sistream_s *self,
 
       if (offset > 0)
         {
-          size_t copyout = offset + remain > blocksize ?
-                           blocksize - offset : remain;
+          size_t copyout = offset + len > blocksize ?
+                           blocksize - offset : len;
 
           ret = mtdsistream_refill(stream, block);
           if (ret < 0)
             {
-              return len - remain > 0 ? len - remain : ret;
+              return ptr - (FAR unsigned char *)buf > 0 ?
+                     ptr - (FAR unsigned char *)buf : ret;
             }
 
           memcpy(ptr, stream->cache + offset, copyout);
           ptr        += copyout;
           self->nget += copyout;
-          remain     -= copyout;
+          len        -= copyout;
         }
-      else if (remain < blocksize)
+      else if (len < blocksize)
         {
           ret = mtdsistream_refill(stream, block);
           if (ret < 0)
             {
-              return len - remain > 0 ? len - remain : ret;
+              return ptr - (FAR unsigned char *)buf > 0 ?
+                     ptr - (FAR unsigned char *)buf : ret;
             }
 
-          memcpy(ptr, stream->cache, remain);
-          self->nget += remain;
-          remain      = 0;
+          memcpy(ptr, stream->cache, len);
+          self->nget += len;
+          len         = 0;
         }
       else
         {
-          size_t nblock = remain / blocksize;
+          size_t nblock = len / blocksize;
           size_t copyout = nblock * blocksize;
 
           ret = MTD_BREAD(mtd, block, nblock, ptr);
           if (ret < 0)
             {
-              return len - remain > 0 ? len - remain : ret;
+              return ptr - (FAR unsigned char *)buf > 0 ?
+                     ptr - (FAR unsigned char *)buf : ret;
             }
 
           ptr        += copyout;
           self->nget += copyout;
-          remain     -= copyout;
+          len        -= copyout;
         }
     }
 
-  return len - remain;
+  return ptr - (FAR unsigned char *)buf;
 }
 
 /****************************************************************************
@@ -177,7 +179,7 @@ static ssize_t mtdsistream_gets(FAR struct lib_sistream_s *self,
 
 static int mtdsistream_getc(FAR struct lib_sistream_s *self)
 {
-  unsigned char ch;
+  unsigned char ch = 0;
   return mtdsistream_gets(self, &ch, 1) == 1 ? ch : EOF;
 }
 
