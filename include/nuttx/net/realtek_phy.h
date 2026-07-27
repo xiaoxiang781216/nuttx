@@ -58,6 +58,10 @@ extern "C"
 int rtl8221b_register(void);
 #endif
 
+#ifdef CONFIG_NET_PHY_REALTEK_RTL9000B
+int rtl9000b_register(void);
+#endif
+
 #undef EXTERN
 #ifdef __cplusplus
 }
