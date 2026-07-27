@@ -44,6 +44,10 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 
+#ifdef CONFIG_NET_PHYLIB
+#  include <nuttx/net/phy.h>
+#endif
+
 #include "netdev_drivers.h"
 
 /****************************************************************************
@@ -1561,7 +1565,18 @@ static int netdev_upper_ioctl(FAR struct net_driver_s *dev, int cmd,
   FAR struct netdev_lowerhalf_s *lower = upper->lower;
   int ret = -ENOTTY;
 
-  #ifdef CONFIG_NETDEV_ETHTOOL_IOCTL
+#ifdef CONFIG_NET_PHYLIB
+  if (lower->phydev != NULL)
+    {
+      ret = phy_ioctl(lower->phydev, cmd, arg);
+      if (ret != -ENOTTY)
+        {
+          return ret;
+        }
+    }
+#endif
+
+#ifdef CONFIG_NETDEV_ETHTOOL_IOCTL
   if (cmd == SIOCETHTOOL && lower->eth_ops)
     {
       return netdev_upper_ethtool_ioctl(dev, arg);

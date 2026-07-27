@@ -114,6 +114,7 @@ enum netdev_rx_e
 struct netdev_ops_s;
 struct wireless_ops_s;
 struct ethtool_ops_s;
+struct phy_device_s;
 
 struct netdev_lowerhalf_s
 {
@@ -144,6 +145,10 @@ struct netdev_lowerhalf_s
    * Fields that lowerhalf should never touch (used by upper half):
    *   d_ifup, d_ifdown, d_txavail, d_addmac, d_rmmac, d_ioctl, d_private
    */
+
+#ifdef CONFIG_NET_PHYLIB
+  FAR struct phy_device_s *phydev;
+#endif
 
   struct net_driver_s netdev;
 };
@@ -271,6 +276,14 @@ struct ethtool_ops_s
                           FAR struct ethtool_gstrings *strs);
   CODE int (*get_ethtool_stats)(FAR struct netdev_lowerhalf_s *dev,
                                 FAR struct ethtool_stats *stats);
+
+#ifdef CONFIG_NET_PHYLIB
+  CODE int (*get_link_settings)(FAR struct netdev_lowerhalf_s *dev,
+                                FAR struct ethtool_link_settings *cmd);
+  CODE int (*set_link_settings)(FAR struct netdev_lowerhalf_s *dev,
+                                FAR const struct
+                                ethtool_link_settings *cmd);
+#endif
 };
 #endif
 
