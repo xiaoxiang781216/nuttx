@@ -185,7 +185,7 @@ static inline void udp_readahead(struct udp_recvfrom_s *pstate)
     {
       int recvlen;
       int offset = 0;
-      uint16_t datalen;
+      uint16_t datalen = 0;
       uint8_t src_addr_size;
       uint8_t ifindex;
 #ifdef CONFIG_NET_IPv6
