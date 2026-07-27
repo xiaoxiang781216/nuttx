@@ -1777,6 +1777,33 @@
 
 #define DIAG_SYSTEM_IPC_BASE             (DIAG_SYSTEM_BASE + 300)     /* 961010300 */
 #define DIAG_SYSTEM_RPMSG_BASE           (DIAG_SYSTEM_BASE + 400)     /* 961010400 */
+
+/* Rpmsg fault codes (within DIAG_SYSTEM_RPMSG_BASE).  The IDs are grouped by
+ * the module that reports them, each module owning a decade (10 IDs) so a
+ * new fault code can be added within its module without disturbing the
+ * others: DIAG_RPMSG_* framework at +0, DIAG_RPTUN_* at +10, and
+ * DIAG_RPMSG_VIRTIO_* transport at +20.  Failures in the same category share
+ * a single ID and are distinguished by the "Stage:"/"Reason:" field in the
+ * DFX log string, so adding a new failure step needs no new fault code.
+ */
+
+/* Rpmsg framework (BASE + 0..9) */
+
+#define DIAG_RPMSG_RECURSIVE_LIMIT       (DIAG_SYSTEM_RPMSG_BASE + 0)   /* 961010400 */
+#define DIAG_RPMSG_REGISTER_FAIL         (DIAG_SYSTEM_RPMSG_BASE + 1)   /* 961010401 */
+
+/* Rptun (BASE + 10..19) */
+
+#define DIAG_RPTUN_INIT_FAIL             (DIAG_SYSTEM_RPMSG_BASE + 10)  /* 961010410 */
+#define DIAG_RPTUN_PEER_NOT_READY        (DIAG_SYSTEM_RPMSG_BASE + 11)  /* 961010411 */
+#define DIAG_RPTUN_REMOTE_PANIC          (DIAG_SYSTEM_RPMSG_BASE + 12)  /* 961010412 */
+
+/* Rpmsg virtio transport (BASE + 20..29) */
+
+#define DIAG_RPMSG_VIRTIO_INIT_FAIL      (DIAG_SYSTEM_RPMSG_BASE + 20)  /* 961010420 */
+#define DIAG_RPMSG_VIRTIO_TX_FAIL        (DIAG_SYSTEM_RPMSG_BASE + 21)  /* 961010421 */
+#define DIAG_RPMSG_VIRTIO_LOST_IRQ       (DIAG_SYSTEM_RPMSG_BASE + 22)  /* 961010422 */
+
 #define DIAG_SYSTEM_BINDER_BASE          (DIAG_SYSTEM_BASE + 500)     /* 961010500 */
 #define DIAG_SYSTEM_SENSOR_BASE          (DIAG_SYSTEM_BASE + 600)     /* 961010600 */
 #define DIAG_SYSTEM_PM_BASE              (DIAG_SYSTEM_BASE + 700)     /* 961010700 */
