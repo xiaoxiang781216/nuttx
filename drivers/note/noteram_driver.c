@@ -109,10 +109,10 @@ static void noteram_timeout_handler(wdparm_t arg);
 static
 #ifdef DRIVERS_NOTERAM_SECTION
 locate_data(CONFIG_DRIVERS_NOTERAM_SECTION)
-#endif
 RING_DECLARE(g_noteram_ring, char, CONFIG_DRIVERS_NOTERAM_BUFSIZE);
-
-static atomic_t g_noteram_init;
+#else
+RING_DEFINE(g_noteram_ring, char, CONFIG_DRIVERS_NOTERAM_BUFSIZE);
+#endif
 
 static const struct note_driver_ops_s g_noteram_ops =
 {
@@ -661,35 +661,12 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
   irqstate_t flags;
   size_t added;
 
+#ifdef DRIVERS_NOTERAM_SECTION
   if (drv == &g_noteram_driver)
     {
-      int expected = 0;
-
-      if (atomic_cmpxchg(&g_noteram_init, &expected, 1))
-        {
-          ring_mpmc_init(drv->ring, CONFIG_DRIVERS_NOTERAM_BUFSIZE);
-        }
-      else
-        {
-          /* Do not re-enter ring_mpmc_init(); just wait for the ring to be
-           * ready so the metadata/index stores are visible to us.
-           */
-
-          while (!ring_is_ready(drv->ring))
-            {
-              UP_WFE();
-            }
-
-          /* ring_is_ready() is a plain read; pair it with a read
-           * barrier here.  The winner publishes the ring indices via
-           * atomic_set_release(&magic, READY) in ring_init_magic(), so
-           * this UP_RMB() guarantees those stores are visible before we
-           * touch the ring below.
-           */
-
-          UP_RMB();
-        }
+      ring_init(drv->ring, CONFIG_DRIVERS_NOTERAM_BUFSIZE);
     }
+#endif
 
   if (ratelimit_islimited(&drv->ratelimit))
     {
