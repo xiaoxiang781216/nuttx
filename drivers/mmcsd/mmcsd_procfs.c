@@ -122,11 +122,11 @@ static const struct procfs_operations g_mmcsd_operations =
   mmcsd_stat        /* stat */
 };
 
-static const struct procfs_entry_s g_mmcsd_procfs1 =
+static struct procfs_entry_s g_mmcsd_procfs1 =
 {
   "mmcsd", &g_mmcsd_operations, PROCFS_DIR_TYPE
 };
-static const struct procfs_entry_s g_mmcsd_procfs2 =
+static struct procfs_entry_s g_mmcsd_procfs2 =
 {
   "mmcsd/**", &g_mmcsd_operations, PROCFS_UNKOWN_TYPE
 };
