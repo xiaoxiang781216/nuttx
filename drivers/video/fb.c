@@ -84,6 +84,11 @@ struct fb_paninfo_s
   FAR char *fbmem[FB_MAX_BUFCOUNT]; /* Buffer address array */
   struct wdog_s wdog;               /* VSync offset timer */
   FAR struct fb_chardev_s *dev;
+  uint32_t last_yoffset;            /* yoffset of the buffer scanned out,
+                                     * recorded when the frame is removed
+                                     * from the queue, returned by
+                                     * FBIOGET_PLANEINFO / FBIOGET_OVERLAYINFO.
+                                     */
 };
 
 /* This structure defines one framebuffer device.  Note that which is
@@ -143,6 +148,10 @@ static int     fb_get_panelinfo(FAR struct fb_chardev_s *fb,
 static int     fb_get_planeinfo(FAR struct fb_chardev_s *fb,
                                 FAR struct fb_planeinfo_s *pinfo,
                                 uint8_t display);
+#ifdef CONFIG_FB_OVERLAY
+static int     fb_get_overlayinfo(FAR struct fb_chardev_s *fb,
+                                  FAR struct fb_overlayinfo_s *oinfo);
+#endif
 #ifdef CONFIG_FB_SYNC
 static int     fb_sem_wait(FAR struct fb_chardev_s *fb,
                            FAR struct fb_priv_s *priv,
@@ -812,8 +821,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               break;
             }
 
-          ret = fb->vtable->getoverlayinfo(fb->vtable,
-                                           oinfo->overlay, oinfo);
+          ret = fb_get_overlayinfo(fb, oinfo);
         }
         break;
 
@@ -1408,6 +1416,7 @@ static int fb_get_planeinfo(FAR struct fb_chardev_s *fb,
                             FAR struct fb_planeinfo_s *pinfo,
                             uint8_t display)
 {
+  irqstate_t flags;
   int ret;
 
   DEBUGASSERT(fb->vtable != NULL);
@@ -1424,8 +1433,49 @@ static int fb_get_planeinfo(FAR struct fb_chardev_s *fb,
       return ret;
     }
 
+  /* Report the yoffset recorded at the last pan, i.e. the buffer currently
+   * submitted for scanout, rather than whatever the lower-half hook left.
+   */
+
+  flags = spin_lock_irqsave(&fb->lock);
+  pinfo->yoffset = fb_get_paninfo(fb, FB_NO_OVERLAY)->last_yoffset;
+  spin_unlock_irqrestore(&fb->lock, flags);
+
   return OK;
 }
+
+#ifdef CONFIG_FB_OVERLAY
+/****************************************************************************
+ * Name: fb_get_overlayinfo
+ ****************************************************************************/
+
+static int fb_get_overlayinfo(FAR struct fb_chardev_s *fb,
+                              FAR struct fb_overlayinfo_s *oinfo)
+{
+  irqstate_t flags;
+  int ret;
+
+  DEBUGASSERT(fb->vtable != NULL);
+  DEBUGASSERT(fb->vtable->getoverlayinfo != NULL);
+
+  ret = fb->vtable->getoverlayinfo(fb->vtable, oinfo->overlay, oinfo);
+  if (ret < 0)
+    {
+      gerr("ERROR: getoverlayinfo() failed: %d\n", ret);
+      return ret;
+    }
+
+  /* Report the yoffset recorded at the last pan, i.e. the buffer currently
+   * submitted for scanout, rather than whatever the lower-half hook left.
+   */
+
+  flags = spin_lock_irqsave(&fb->lock);
+  oinfo->yoffset = fb_get_paninfo(fb, oinfo->overlay)->last_yoffset;
+  spin_unlock_irqrestore(&fb->lock, flags);
+
+  return OK;
+}
+#endif
 
 /****************************************************************************
  * Name: fb_do_pollnotify
@@ -1686,6 +1736,7 @@ int fb_remove_paninfo(FAR struct fb_vtable_s *vtable, int overlay)
 {
   FAR struct circbuf_s *panbuf;
   FAR struct fb_chardev_s *fb;
+  union fb_paninfo_u info;
   irqstate_t flags;
   ssize_t ret;
   bool full;
@@ -1708,10 +1759,27 @@ int fb_remove_paninfo(FAR struct fb_vtable_s *vtable, int overlay)
 
   full = (circbuf_space(panbuf) == 0);
 
-  /* Attempt to take a frame from the pan info. */
+  /* Take the frame being removed, i.e. the one just scanned out, and record
+   * its yoffset so that FBIOGET_PLANEINFO / FBIOGET_OVERLAYINFO can report
+   * the buffer currently on screen.
+   */
 
-  ret = circbuf_skip(panbuf, sizeof(union fb_paninfo_u));
+  ret = circbuf_read(panbuf, &info, sizeof(union fb_paninfo_u));
   DEBUGASSERT(ret <= 0 || ret == sizeof(union fb_paninfo_u));
+
+  if (ret == sizeof(union fb_paninfo_u))
+    {
+      uint32_t yoffset = info.planeinfo.yoffset;
+
+#ifdef CONFIG_FB_OVERLAY
+      if (overlay != FB_NO_OVERLAY)
+        {
+          yoffset = info.overlayinfo.yoffset;
+        }
+#endif
+
+      fb_get_paninfo(fb, overlay)->last_yoffset = yoffset;
+    }
 
   /* Re-enable interrupts */
 
