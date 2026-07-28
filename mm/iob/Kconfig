@@ -564,5 +564,33 @@ config IOB_EXTRA_HEADS
 		entirely (the head pool is not built and these helpers are not
 		compiled in).
 
+config IOB_DUMP_MAX_ENTRIES
+	int "Maximum IOBs printed per dump"
+	default 0
+	range 0 65535
+	depends on DEBUG_FEATURES
+	---help---
+		Upper bound on the number of IOBs printed in a single
+		iob_dump_all() dump.  Additional IOBs beyond this cap are counted
+		(and the total reported in the summary line) but not printed
+		individually, so the log volume stays bounded.
+
+		The default and maximum are both CONFIG_IOB_NBUFFERS (the number
+		of level-1 preallocated I/O buffers), which is the largest number
+		of IOBs that can be outstanding from that pool, so the default
+		prints every IOB.  Set to 0 to print only the pool summary
+		counters and suppress per-IOB output entirely.
+
+config IOB_DUMP_INTERVAL
+	int "Minimum seconds between IOB dumps"
+	default 60
+	range 10 86400
+	depends on DEBUG_FEATURES
+	---help---
+		Rate-limit window, in seconds, for iob_dump_all().  At most one
+		dump is emitted per this many seconds regardless of how many
+		times it is called, so a storm of allocation-shortage events does
+		not flood the log.
+
 endif # MM_IOB
 endmenu # Common I/O buffer support

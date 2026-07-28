@@ -36,8 +36,25 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/mm/mempool.h>
+#include <nuttx/ratelimit.h>
 
 #include "iob.h"
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+#ifdef CONFIG_DEBUG_FEATURES
+/* Rate-limit state: at most one shortage dump (burst = 1) per
+ * CONFIG_IOB_DUMP_INTERVAL seconds.  The ratelimit facility handles the
+ * locking internally (spinlock in kernel/flat builds, mutex otherwise) so a
+ * concurrent burst of shortage events still collapses to a single dump per
+ * interval, and the first event always emits because the accounting window
+ * starts empty.
+ */
+
+static DEFINE_RATELIMIT_STATE(g_iob_dump_rl, CONFIG_IOB_DUMP_INTERVAL, 1);
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -62,6 +79,25 @@ static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
     {
       return NULL;
     }
+
+#ifdef CONFIG_DEBUG_FEATURES
+  /* Detect starvation BEFORE attempting the allocation.  A non-throttled
+   * blocking caller (timeout != 0) sleeps inside mempool_allocate_throttled
+   * when the pool is exhausted and only returns once a buffer is freed, so a
+   * "dump on final failure" approach would never emit anything while the
+   * system is starved.  mempool_navail_throttled() is a cheap, side-effect
+   * free spinlock read of (ntotal - nalloc); when it reports zero the
+   * pending request is guaranteed to either fail (try path) or block
+   * (wait path), so this is the right moment to emit the diagnostic dump.
+   */
+
+  if (mempool_navail_throttled(mempool, throttled) == 0 &&
+      !ratelimit_islimited(&g_iob_dump_rl))
+    {
+      iob_dump_all("IOB shortage: no free node for size=%zu throttled=%d, "
+                   "dumping pool state\n", size, throttled);
+    }
+#endif
 
   if (timeout == 0)
     {

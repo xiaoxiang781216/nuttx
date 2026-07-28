@@ -1403,6 +1403,31 @@ void iob_foreach(iob_foreach_cb_t callback, FAR void *arg);
 int iob_pool_info(int poolidx, FAR struct mempoolinfo_s *info);
 
 /****************************************************************************
+ * Name: iob_dump_all
+ *
+ * Description:
+ *   Emit a syslog dump of every IOB pool's usage counters followed by every
+ *   currently-allocated IOB (pointer, packet length and, when
+ *   CONFIG_DEBUG_IOB is enabled, the owner string).  The variadic arguments
+ *   form a printf-style header line describing why the dump was requested.
+ *
+ *   Intended to help diagnose IOB leaks and starvation.  The number of IOBs
+ *   printed is capped by CONFIG_IOB_DUMP_MAX_ENTRIES to bound log volume.
+ *   Rate limiting, if desired, is the caller's responsibility.
+ *
+ * Input Parameters:
+ *   fmt - printf-style format for the dump header line, followed by its
+ *         arguments.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DEBUG_FEATURES
+void iob_dump_all(FAR const char *fmt, ...) printf_like(1, 2);
+#else
+#  define iob_dump_all(...)
+#endif
+
+/****************************************************************************
  * Name: iob_dump
  *
  * Description:
