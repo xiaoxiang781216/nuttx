@@ -31,6 +31,7 @@
 
 #include <nuttx/compiler.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mempool.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -89,5 +90,28 @@ int       fs_large_asprintf(FAR char **strp, FAR const char *fmt, ...)
 #  define fs_heap_strndup           fs_large_strndup
 #  define fs_heap_asprintf          fs_large_asprintf
 # endif /* CONFIG_FS_HEAPLARGE_ONLY */
+
+/****************************************************************************
+ * Name: fs_heap_alloc_callback/fs_heap_free_callback
+ *
+ * Description:
+ *   Common mempool callbacks that allocate/free from fs_heap.
+ *   Used by file and socket mempools for dynamic expansion.
+ *
+ ****************************************************************************/
+
+static inline FAR void *fs_heap_alloc_callback(FAR struct mempool_s *pool,
+                                               size_t size)
+{
+  UNUSED(pool);
+  return fs_heap_malloc(size);
+}
+
+static inline void fs_heap_free_callback(FAR struct mempool_s *pool,
+                                         FAR void *addr)
+{
+  UNUSED(pool);
+  fs_heap_free(addr);
+}
 
 #endif /* __FS_FS_HEAP_H */

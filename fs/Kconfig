@@ -114,6 +114,52 @@ config SENDFILE_BUFSIZE
 	---help---
 		Size of the I/O buffer to allocate in sendfile().  Default: 512b
 
+config FS_PREALLOC_FILES
+	int "Preallocated file objects"
+	default 0
+	---help---
+		Number of preallocated file objects.
+		When set to >0, file objects are allocated from a dedicated
+		mempool. Set to 0 to allocate directly from fs_heap (default).
+
+config FS_ALLOC_FILES
+	int "Dynamic file objects allocation"
+	default 0
+	---help---
+		Dynamic allocation batch size for file objects.
+		When set to 0 all dynamic allocations are disabled.
+
+config FS_MAX_FILES
+	int "Maximum number of file objects"
+	default 0
+	depends on FS_ALLOC_FILES > 0
+	---help---
+		Maximum number of file objects that can be allocated.
+		0 means no limit.
+
+config FS_PREALLOC_SOCKETS
+	int "Preallocated socket objects"
+	default 0
+	---help---
+		Number of preallocated socket objects.
+		When set to >0, socket objects are allocated from a dedicated
+		mempool. Set to 0 to allocate directly from fs_heap (default).
+
+config FS_ALLOC_SOCKETS
+	int "Dynamic socket objects allocation"
+	default 0
+	---help---
+		Dynamic allocation batch size for socket objects.
+		When set to 0 all dynamic allocations are disabled.
+
+config FS_MAX_SOCKETS
+	int "Maximum number of socket objects"
+	default 0
+	depends on FS_ALLOC_SOCKETS > 0
+	---help---
+		Maximum number of socket objects that can be allocated.
+		0 means no limit.
+
 config FS_HEAPSIZE
 	int "Independent heap bytes"
 	default 0

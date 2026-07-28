@@ -43,6 +43,9 @@
 static DEFINE_PER_CPU_BSS_BMP(ino_t, g_ino);
 #define g_ino this_cpu_var_bmp(g_ino)
 
+static DEFINE_PER_CPU_BSS_BMP(struct inode, g_root_inode_storage);
+#define g_root_inode_storage this_cpu_var_bmp(g_root_inode_storage)
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -77,7 +80,33 @@ static inline void inode_namecpy(FAR char *dest, FAR const char *src)
 }
 
 /****************************************************************************
+ * Name: inode_init
+ *
+ * Description:
+ *   Initialize an inode with the given mode. This helper is shared between
+ *   inode_alloc() and inode_root_reserve() to avoid code duplication.
+ *
+ ****************************************************************************/
+
+static void inode_init(FAR struct inode *inode, mode_t mode)
+{
+  inode->i_ino   = g_ino++;
+  atomic_set(&inode->i_crefs, 1);
+  inode->i_mode  = mode;
+#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
+  clock_gettime(CLOCK_REALTIME, &inode->i_atime);
+  inode->i_mtime = inode->i_atime;
+  inode->i_ctime = inode->i_atime;
+#endif
+  inode->u.i_ops = &g_dir_fileops;
+}
+
+/****************************************************************************
  * Name: inode_alloc
+ *
+ * Description:
+ *   Allocate a new inode with the given name and mode from fs_heap.
+ *
  ****************************************************************************/
 
 static FAR struct inode *inode_alloc(FAR const char *name, mode_t mode)
@@ -89,15 +118,7 @@ static FAR struct inode *inode_alloc(FAR const char *name, mode_t mode)
   inode   = fs_heap_zalloc(FSNODE_SIZE(namelen));
   if (inode)
     {
-      inode->i_ino   = g_ino++;
-      atomic_set(&inode->i_crefs, 1);
-      inode->i_mode  = mode;
-#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
-      clock_gettime(CLOCK_REALTIME, &inode->i_atime);
-      inode->i_mtime = inode->i_atime;
-      inode->i_ctime = inode->i_atime;
-#endif
-      inode->u.i_ops = &g_dir_fileops;
+      inode_init(inode, mode);
       inode_namecpy(inode->i_name, name);
     }
 
@@ -148,7 +169,8 @@ static void inode_insert(FAR struct inode *inode,
 
 void inode_root_reserve(void)
 {
-  g_root_inode = inode_alloc("", 0777);
+  inode_init(&g_root_inode_storage, 0777);
+  g_root_inode = &g_root_inode_storage;
 }
 
 /****************************************************************************

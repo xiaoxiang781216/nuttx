@@ -38,6 +38,7 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mutex.h>
@@ -759,6 +760,35 @@ int fdlist_copy(FAR struct fdlist *plist, FAR struct fdlist *clist,
  *
  ****************************************************************************/
 
+#if CONFIG_FS_PREALLOC_FILES > 0 || CONFIG_FS_ALLOC_FILES > 0
+
+#  ifndef CONFIG_FS_MAX_FILES
+#    define CONFIG_FS_MAX_FILES 0 /* 0 means no limit */
+#  endif
+
+MEMPOOL_DEFINE_WITH_ALLOC(g_file_mempool, sizeof(struct file),
+                          CONFIG_FS_PREALLOC_FILES, CONFIG_FS_MAX_FILES,
+                          CONFIG_FS_ALLOC_FILES,
+                          fs_heap_alloc_callback, fs_heap_free_callback);
+
+FAR struct file *file_allocate(void)
+{
+  return mempool_zallocate(&g_file_mempool, 0);
+}
+
+/****************************************************************************
+ * Name: file_deallocate
+ *
+ * Description:
+ *   Free a file instance.
+ *
+ ****************************************************************************/
+
+void file_deallocate(FAR struct file *filep)
+{
+  mempool_release(&g_file_mempool, filep);
+}
+#else
 FAR struct file *file_allocate(void)
 {
   return fs_heap_zalloc(sizeof(struct file));
@@ -776,6 +806,7 @@ void file_deallocate(FAR struct file *filep)
 {
   fs_heap_free(filep);
 }
+#endif
 
 /****************************************************************************
  * Name: file_get2
@@ -868,7 +899,7 @@ int file_put(FAR struct file *filep)
           ferr("ERROR: fs putfilep file_close() failed: %d\n", ret);
         }
 
-      fs_heap_free(filep);
+      file_deallocate(filep);
       return ret;
     }
 
