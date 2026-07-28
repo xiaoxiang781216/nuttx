@@ -756,10 +756,14 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   flags = spin_lock_irqsave(&server->recvlock);
   if (server->pending >= server->backlog)
     {
+      char namebuf[RPMSG_NAME_SIZE];
+
       /* Reject the connection */
 
-      nerr("Server %s reject the connection, Max listen %d\n",
-           server->ept.name, server->backlog);
+      rpmsg_socket_format_name(new, namebuf);
+      nerr("Server %s:%s (ept:%s) reject the connection, Max listen %d\n",
+           new->rpaddr.rp_cpu, new->rpaddr.rp_name, namebuf,
+           server->backlog);
       spin_unlock_irqrestore(&server->recvlock, flags);
       rpmsg_socket_free(new);
       return;
