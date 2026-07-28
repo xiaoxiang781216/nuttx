@@ -45,6 +45,7 @@
 
 #include "netdev/netdev.h"
 #include "inet/inet.h"
+#include "utils/utils.h"
 #include "ipfrag.h"
 
 /****************************************************************************
