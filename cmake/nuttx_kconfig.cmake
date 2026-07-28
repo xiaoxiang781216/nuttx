@@ -171,8 +171,16 @@ function(nuttx_generate_kconfig)
 endfunction()
 
 function(nuttx_olddefconfig)
+  # Optional first argument: the top-level Kconfig to parse, defaults to the
+  # layered aggregate root
+  if(ARGC GREATER 0 AND NOT "${ARGV0}" STREQUAL "")
+    set(TOPKCONFIG "${ARGV0}")
+  else()
+    nuttx_kconfig_top(TOPKCONFIG)
+  endif()
+
   execute_process(
-    COMMAND olddefconfig
+    COMMAND olddefconfig "${TOPKCONFIG}"
     ERROR_VARIABLE KCONFIG_ERROR
     OUTPUT_VARIABLE KCONFIG_OUTPUT
     RESULT_VARIABLE KCONFIG_STATUS
@@ -189,9 +197,12 @@ function(nuttx_olddefconfig)
     )
   endif()
 
-  # save the orig compressed formatted defconfig at the very beginning
-  execute_process(COMMAND savedefconfig --out ${CMAKE_BINARY_DIR}/defconfig.tmp
-                  WORKING_DIRECTORY ${NUTTX_DIR})
+  # save the orig compressed formatted defconfig at the very beginning. NOTE:
+  # savedefconfig takes the top-level Kconfig via --kconfig (not a positional
+  # arg like olddefconfig).
+  execute_process(
+    COMMAND savedefconfig --kconfig "${TOPKCONFIG}" --out
+            ${CMAKE_BINARY_DIR}/defconfig.tmp WORKING_DIRECTORY ${NUTTX_DIR})
 
   execute_process(
     COMMAND
@@ -203,9 +214,14 @@ function(nuttx_olddefconfig)
 endfunction()
 
 function(nuttx_setconfig)
+  # setconfig rewrites the whole .config, recomputing every invisible symbol
+  # from its defaults, so it must parse the same top-level Kconfig that expanded
+  # .config
+  nuttx_kconfig_top(TOPKCONFIG)
+
   set(ENV{KCONFIG_CONFIG} ${CMAKE_BINARY_DIR}/.config)
   execute_process(
-    COMMAND setconfig ${ARGN} --kconfig ${NUTTX_DIR}/Kconfig
+    COMMAND setconfig ${ARGN} --kconfig "${TOPKCONFIG}"
     ERROR_VARIABLE KCONFIG_ERROR
     OUTPUT_VARIABLE KCONFIG_OUTPUT
     RESULT_VARIABLE KCONFIG_STATUS

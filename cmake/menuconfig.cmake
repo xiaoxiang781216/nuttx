@@ -28,6 +28,10 @@ set(KCONFIG_ENV
     "APPSDIR=${NUTTX_APPS_DIR}" "DRIVERS_PLATFORM_DIR=dummy"
     "APPSBINDIR=${NUTTX_APPS_BINDIR}" "BINDIR=${CMAKE_BINARY_DIR}")
 
+# Top-level Kconfig: the layered aggregate root when present
+
+nuttx_kconfig_top(KCONFIG_TOP)
+
 # Use qconfig instead of menuconfig since PowerShell not support curses
 # redirection
 
@@ -39,7 +43,7 @@ endif()
 
 add_custom_target(
   menuconfig
-  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} ${MENUCONFIG}
+  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} ${MENUCONFIG} ${KCONFIG_TOP}
   COMMAND ${CMAKE_COMMAND} -E remove -f
           ${CMAKE_BINARY_DIR}/include/nuttx/config.h # invalidate existing
                                                      # config
@@ -51,7 +55,7 @@ add_custom_target(
 
 add_custom_target(
   qconfig
-  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} guiconfig
+  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} guiconfig ${KCONFIG_TOP}
   COMMAND ${CMAKE_COMMAND} -E remove -f
           ${CMAKE_BINARY_DIR}/include/nuttx/config.h # invalidate existing
                                                      # config
@@ -64,7 +68,7 @@ add_custom_target(
   resetconfig
   COMMAND ${CMAKE_COMMAND} -E copy ${NUTTX_DEFCONFIG}
           ${CMAKE_BINARY_DIR}/.config
-  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} olddefconfig
+  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} olddefconfig ${KCONFIG_TOP}
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/.config
           ${CMAKE_BINARY_DIR}/.config.orig
   COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_PARENT_LIST_FILE}
@@ -79,9 +83,9 @@ add_custom_target(
   COMMAND ${CMAKE_COMMAND} -E remove -f ${CMAKE_BINARY_DIR}/.config
   COMMAND ${CMAKE_COMMAND} -E copy ${NUTTX_DEFCONFIG}
           ${CMAKE_BINARY_DIR}/.config
-  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} olddefconfig
-  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} savedefconfig --out
-          ${CMAKE_BINARY_DIR}/defconfig.tmp
+  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} olddefconfig ${KCONFIG_TOP}
+  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} savedefconfig --kconfig
+          ${KCONFIG_TOP} --out ${CMAKE_BINARY_DIR}/defconfig.tmp
   COMMAND ${CMAKE_COMMAND} -P ${NUTTX_DIR}/cmake/savedefconfig.cmake
           ${CMAKE_BINARY_DIR}/.config ${CMAKE_BINARY_DIR}/defconfig.tmp
   WORKING_DIRECTORY ${NUTTX_DIR})
@@ -89,8 +93,8 @@ add_custom_target(
 # utility target to replace defconfig to board's defconfig
 add_custom_target(
   savedefconfig
-  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} savedefconfig --out
-          ${CMAKE_BINARY_DIR}/defconfig.tmp
+  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} savedefconfig --kconfig
+          ${KCONFIG_TOP} --out ${CMAKE_BINARY_DIR}/defconfig.tmp
   COMMAND ${CMAKE_COMMAND} -P ${NUTTX_DIR}/cmake/savedefconfig.cmake
           ${CMAKE_BINARY_DIR}/.config ${CMAKE_BINARY_DIR}/defconfig.tmp
   COMMAND

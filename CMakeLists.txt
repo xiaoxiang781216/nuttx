@@ -182,6 +182,10 @@ if(NOT EXISTS "${NUTTX_DEFCONFIG}")
   message(FATAL_ERROR "No config file found at ${NUTTX_DEFCONFIG}")
 endif()
 
+# Directory of the selected board defconfig Captured here BEFORE
+# nuttx_process_config may rewrite NUTTX_DEFCONFIG
+get_filename_component(NUTTX_BOARD_DEFCONFIG_DIR "${NUTTX_DEFCONFIG}" DIRECTORY)
+
 # Process initial defconfig ###################################################
 
 # Process initial defconfig to recursively expand #include in it
@@ -245,12 +249,15 @@ include(nuttx_sethost)
 include(nuttx_parse_function_args)
 include(nuttx_add_subdirectory)
 include(nuttx_create_symlink)
+include(nuttx_aggregate_kconfig)
 
 # Add apps/ to the build (if present)
+#
+# This early pass generates the apps Kconfig It runs on every configure because
+# the CONFIG_* variables are not exported yet, so applications guarded by
+# if(CONFIG_...) are skipped.
 
-if(NOT EXISTS ${NUTTX_APPS_BINDIR}/Kconfig)
-  add_subdirectory(${NUTTX_APPS_DIR} preapps)
-endif()
+add_subdirectory(${NUTTX_APPS_DIR} preapps)
 
 nuttx_export_kconfig(${NUTTX_DEFCONFIG})
 
@@ -342,11 +349,40 @@ if(NOT EXISTS ${NUTTX_APPS_BINDIR}/platform/board/Kconfig)
   file(TOUCH ${NUTTX_APPS_BINDIR}/platform/board/Kconfig)
 endif()
 
+# Layered Kconfig.defaults: (re)generate the aggregate root Kconfig
+
+nuttx_generate_kconfig_aggregate()
+nuttx_aggregate_kconfig_signature(NUTTX_AGGREGATE_KCONFIG_SIG)
+
+# Adopt the current signature for a build directory that predates it, rather
+# than re-expanding an already working .config
+
+if(EXISTS ${CMAKE_BINARY_DIR}/.config
+   AND NOT DEFINED CACHE{NUTTX_AGGREGATE_KCONFIG_SIG_SAVED})
+  set(NUTTX_AGGREGATE_KCONFIG_SIG_SAVED
+      ${NUTTX_AGGREGATE_KCONFIG_SIG}
+      CACHE INTERNAL "Saved Kconfig.defaults layer signature" FORCE)
+endif()
+
 # Copy board defconfig into main directory and expand TODO: do also for changes
 # in board/config (by comparing stored defconfig to specified one)
+#
+# A changed Kconfig.defaults layer also forces a re-expansion: an expanded
+# .config holds a user value for every symbol, so a new default cannot propagate
+# into it, and re-running olddefconfig in place would only update the invisible
+# symbols and leave a half-updated configuration.
 
-if(NOT EXISTS ${CMAKE_BINARY_DIR}/.config OR NOT "${NUTTX_DEFCONFIG}" STREQUAL
-                                             "${NUTTX_DEFCONFIG_SAVED}")
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/.config
+   OR NOT "${NUTTX_DEFCONFIG}" STREQUAL "${NUTTX_DEFCONFIG_SAVED}"
+   OR NOT "${NUTTX_AGGREGATE_KCONFIG_SIG}" STREQUAL
+      "${NUTTX_AGGREGATE_KCONFIG_SIG_SAVED}")
+
+  if(EXISTS ${CMAKE_BINARY_DIR}/.config AND "${NUTTX_DEFCONFIG}" STREQUAL
+                                            "${NUTTX_DEFCONFIG_SAVED}")
+    message(
+      STATUS "Kconfig.defaults layers changed: re-expanding .config from "
+             "${NUTTX_DEFCONFIG} (local .config modifications are discarded)")
+  endif()
 
   message(STATUS "Initializing NuttX")
   configure_file(${NUTTX_DEFCONFIG} defconfig COPYONLY)
@@ -371,6 +407,11 @@ if(NOT EXISTS ${CMAKE_BINARY_DIR}/.config OR NOT "${NUTTX_DEFCONFIG}" STREQUAL
   set(NUTTX_DEFCONFIG_SAVED
       ${NUTTX_DEFCONFIG}
       CACHE INTERNAL "Saved defconfig path" FORCE)
+
+  # Layer set/content that produced this .config
+  set(NUTTX_AGGREGATE_KCONFIG_SIG_SAVED
+      ${NUTTX_AGGREGATE_KCONFIG_SIG}
+      CACHE INTERNAL "Saved Kconfig.defaults layer signature" FORCE)
 
   # Print configuration choices
   message(STATUS "  CMake:  ${CMAKE_VERSION}")
