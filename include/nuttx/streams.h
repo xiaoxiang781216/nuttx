@@ -348,7 +348,7 @@ struct lib_blkoutstream_s
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
 struct lib_mtdoutstream_s
 {
-  struct lib_outstream_s common;
+  struct lib_sostream_s  common;
   FAR struct inode      *inode;
   struct mtd_geometry_s  geo;
   FAR unsigned char     *cache;

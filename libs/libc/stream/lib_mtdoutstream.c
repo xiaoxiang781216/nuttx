@@ -104,7 +104,7 @@ static ssize_t mtdoutstream_bwrite(FAR struct lib_mtdoutstream_s *stream,
  * Name: mtdoutstream_flush
  ****************************************************************************/
 
-static int mtdoutstream_flush(FAR struct lib_outstream_s *self)
+static int mtdoutstream_flush(FAR struct lib_sostream_s *self)
 {
   FAR struct lib_mtdoutstream_s *stream =
     (FAR struct lib_mtdoutstream_s *)self;
@@ -132,7 +132,7 @@ static int mtdoutstream_flush(FAR struct lib_outstream_s *self)
  * Name: mtdoutstream_puts
  ****************************************************************************/
 
-static ssize_t mtdoutstream_puts(FAR struct lib_outstream_s *self,
+static ssize_t mtdoutstream_puts(FAR struct lib_sostream_s *self,
                                  FAR const void *buf, size_t len)
 {
   FAR struct lib_mtdoutstream_s *stream =
@@ -238,10 +238,56 @@ static ssize_t mtdoutstream_puts(FAR struct lib_outstream_s *self,
  * Name: mtdoutstream_putc
  ****************************************************************************/
 
-static void mtdoutstream_putc(FAR struct lib_outstream_s *self, int ch)
+static void mtdoutstream_putc(FAR struct lib_sostream_s *self, int ch)
 {
   char tmp = ch;
   mtdoutstream_puts(self, &tmp, 1);
+}
+
+/****************************************************************************
+ * Name: mtdoutstream_seek
+ *
+ * Description:
+ *  Seek to a position in the MTD output stream.
+ *
+ ****************************************************************************/
+
+static off_t mtdoutstream_seek(FAR struct lib_sostream_s *self,
+                               off_t offset, int whence)
+{
+  FAR struct lib_mtdoutstream_s *stream =
+    (FAR struct lib_mtdoutstream_s *)self;
+  off_t streamsize = (off_t)stream->geo.erasesize *
+                     stream->geo.neraseblocks;
+
+  switch (whence)
+    {
+      case SEEK_SET:
+        break;
+      case SEEK_CUR:
+        offset += self->nput;
+        break;
+      case SEEK_END:
+        offset += streamsize;
+        break;
+      default:
+        return -ENOTSUP;
+    }
+
+  if (offset < 0 || offset > streamsize)
+    {
+      return -EINVAL;
+    }
+
+  /* Flush any cached partial block before seeking */
+
+  if (self->nput % stream->geo.blocksize)
+    {
+      mtdoutstream_flush(self);
+    }
+
+  self->nput = offset;
+  return offset;
 }
 
 /****************************************************************************
@@ -345,6 +391,7 @@ int lib_mtdoutstream_open(FAR struct lib_mtdoutstream_s *stream,
   stream->inode        = node;
   stream->common.putc  = mtdoutstream_putc;
   stream->common.puts  = mtdoutstream_puts;
+  stream->common.seek  = mtdoutstream_seek;
   stream->common.flush = mtdoutstream_flush;
 
   return OK;
