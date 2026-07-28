@@ -24,6 +24,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <sched.h>
+
 #include <nuttx/kmalloc.h>
 #include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/sched_note.h>
@@ -123,6 +125,15 @@ static void noterpmsg_ns_bind(FAR struct rpmsg_device *rdev,
 
 int noterpmsg_server_init(void)
 {
+#ifdef CONFIG_DRIVERS_NOTERPMSG_SERVER_CPUID
+  if (sched_getcpu() != CONFIG_DRIVERS_NOTERPMSG_SERVER_CPUID)
+    {
+      /* Only allow to init on the specified rpmsg server CPU */
+
+      return OK;
+    }
+#endif
+
   return rpmsg_register_callback(NULL,
                                  NULL,
                                  NULL,

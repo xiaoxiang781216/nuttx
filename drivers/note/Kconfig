@@ -379,6 +379,16 @@ config DRIVERS_NOTERPMSG_SERVER
 	---help---
 		Use rpmsg to receive message from remote proc.
 
+config DRIVERS_NOTERPMSG_SERVER_CPUID
+	int "The cpuid on which the NOTE RPMSG server runs"
+	depends on DRIVERS_NOTERPMSG_SERVER && BMP
+	---help---
+		In BMP mode all CPUs share the same firmware image, so
+		noterpmsg_server_init() would otherwise register the RPMSG
+		server channel on every CPU. Set this to the cpuid of the note
+		aggregation core to only initialize the server there. Leave
+		unset to keep the legacy behavior (init on every CPU).
+
 config DRIVERS_NOTERPMSG
 	bool "Note to RPMSG"
 	select DRIVERS_NOTE
