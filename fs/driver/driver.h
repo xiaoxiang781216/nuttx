@@ -73,7 +73,7 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
+#ifdef CONFIG_FS_BLOCK_DRIVER
 int register_partition_with_inode(FAR const char *partition,
                                   mode_t mode, FAR struct inode *parent,
                                   off_t firstsector, off_t nsectors);
@@ -98,7 +98,7 @@ int register_partition_with_inode(FAR const char *partition,
  *
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
+#if defined(CONFIG_BCH) && defined(CONFIG_FS_BLOCK_DRIVER)
 int block_proxy(FAR struct file *filep, FAR const char *blkdev, int oflags);
 #endif
 

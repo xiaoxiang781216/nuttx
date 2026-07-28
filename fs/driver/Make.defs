@@ -23,31 +23,32 @@
 CSRCS += fs_registerdriver.c fs_unregisterdriver.c
 CSRCS += fs_registerpipedriver.c fs_unregisterpipedriver.c
 
-# Don't built-in block driver support if there are no mountpoints
-
-ifneq ($(CONFIG_DISABLE_MOUNTPOINT),y)
+ifeq ($(CONFIG_FS_BLOCK_DRIVER),y)
 CSRCS += fs_registerblockdriver.c fs_unregisterblockdriver.c
 CSRCS += fs_findblockdriver.c fs_openblockdriver.c fs_closeblockdriver.c
-CSRCS += fs_blockpartition.c fs_findmtddriver.c fs_closemtddriver.c
-CSRCS += fs_blockmerge.c
+CSRCS += fs_blockpartition.c fs_blockmerge.c
 
+ifeq ($(CONFIG_BCH),y)
+CSRCS += fs_blockproxy.c
+endif # CONFIG_BCH
+endif # CONFIG_FS_BLOCK_DRIVER
+
+# MTD driver inode helpers are independent of the block driver inode helpers.
+# Only fs_mtdproxy.c needs a block driver (see its own gate below); the rest of
+# the MTD helpers are gated solely by CONFIG_MTD.
 
 ifeq ($(CONFIG_MTD),y)
 CSRCS += fs_registermtddriver.c fs_unregistermtddriver.c
+CSRCS += fs_findmtddriver.c fs_closemtddriver.c
+
 ifeq ($(CONFIG_FS_MTD_PROXY),y)
 CSRCS += fs_mtdproxy.c
 endif
+
 ifeq ($(CONFIG_MTD_PARTITION),y)
 CSRCS += fs_mtdpartition.c
 endif
-endif
-
-ifeq ($(CONFIG_BCH),y)
-ifneq ($(CONFIG_DISABLE_PSEUDOFS_OPERATIONS),y)
-CSRCS += fs_blockproxy.c
-endif
-endif # CONFIG_BCH
-endif # CONFIG_DISABLE_MOUNTPOINT
+endif # CONFIG_MTD
 
 # Include driver build support
 

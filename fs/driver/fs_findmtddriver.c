@@ -36,8 +36,6 @@
 
 #include "inode/inode.h"
 
-#ifdef CONFIG_MTD
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -108,12 +106,3 @@ errout_with_search:
   RELEASE_SEARCH(&desc);
   return ret;
 }
-
-#else
-
-int find_mtddriver(FAR const char *pathname, FAR struct inode **ppinode)
-{
-  return -ENODEV;
-}
-
-#endif /* CONFIG_MTD */

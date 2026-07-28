@@ -51,7 +51,6 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MTD
 int close_mtddriver(FAR struct inode *pinode)
 {
   /* Sanity checks */
@@ -65,9 +64,3 @@ int close_mtddriver(FAR struct inode *pinode)
 
   return OK;
 }
-#else
-int close_mtddriver(FAR struct inode *pinode)
-{
-  return -ENODEV;
-}
-#endif /* CONFIG_MTD */

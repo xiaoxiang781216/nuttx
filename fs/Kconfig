@@ -9,6 +9,10 @@ config DISABLE_MOUNTPOINT
 	bool "Disable support for mount points"
 	default n
 
+config FS_BLOCK_DRIVER
+	bool "Block driver inode helpers"
+	default !DISABLE_MOUNTPOINT
+
 config FS_LARGEFILE
 	bool "Large File Support"
 	default n
@@ -196,13 +200,15 @@ endif
 config FS_MTD_PROXY
 	bool "Auto-create FTL block device when mounting MTD"
 	default y
-	depends on MTD
+	depends on MTD && FS_BLOCK_DRIVER
 	---help---
 		When enabled, mount() and open_blockdriver() will automatically
 		create a temporary FTL block device for an MTD device that is
 		passed as the source.  Disable this to save code space when
 		the block device is created manually (e.g. via
 		ftl_initialize_by_path).
+		This depends on FS_BLOCK_DRIVER because mtd_proxy() opens the
+		created FTL block device through open_blockdriver().
 
 source "fs/vfs/Kconfig"
 source "fs/aio/Kconfig"

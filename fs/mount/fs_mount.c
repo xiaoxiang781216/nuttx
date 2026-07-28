@@ -349,6 +349,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
           goto errout_with_inode;
         }
     }
+#ifdef CONFIG_MTD
   else if (source != NULL && source[0] != '\0' &&
            (ret = find_mtddriver(source, &drvr_inode)) >= 0)
     {
@@ -383,6 +384,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
 #endif
         }
     }
+#endif /* CONFIG_MTD */
   else
 #ifdef NODFS_SUPPORT
   if ((mops = mount_findfs(g_nonbdfsmap, filesystemtype)) != NULL)

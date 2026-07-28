@@ -2,6 +2,7 @@ config FS_LITTLEFS
 	bool "LITTLEFS File System"
 	default n
 	depends on !DISABLE_MOUNTPOINT
+	depends on FS_BLOCK_DRIVER
 	---help---
 		Build the LITTLEFS file system. https://github.com/littlefs-project/littlefs.
 

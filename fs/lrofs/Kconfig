@@ -7,6 +7,7 @@ config FS_LROFS
 	bool "LROFS file system"
 	default n
 	depends on !DISABLE_MOUNTPOINT
+	depends on FS_BLOCK_DRIVER
 	---help---
 		Enable LROFS filesystem support
 if FS_LROFS

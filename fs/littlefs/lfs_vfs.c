@@ -640,11 +640,13 @@ static int littlefs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       default:
         {
+#ifdef CONFIG_MTD
           if (INODE_IS_MTD(drv))
             {
               ret = MTD_IOCTL(drv->u.i_mtd, cmd, arg);
             }
           else
+#endif
             {
               if (drv->u.i_bops->ioctl != NULL)
                 {
@@ -1223,11 +1225,13 @@ static void littlefs_check(FAR struct inode *drv, lfs_block_t block,
 
   crc16_ori = crc16(buffer, geo->blocksize * size);
 
+#ifdef CONFIG_MTD
   if (INODE_IS_MTD(drv))
     {
       ret = MTD_BREAD(drv->u.i_mtd, block, size, (FAR void *)buffer);
     }
   else
+#endif
     {
       ret = drv->u.i_bops->read(drv, (FAR void *)buffer, block, size);
     }
@@ -1267,11 +1271,13 @@ static int littlefs_read_block(FAR const struct lfs_config *c,
   block = (block * c->block_size + off) / geo->blocksize;
   size  = size / geo->blocksize;
 
+#ifdef CONFIG_MTD
   if (INODE_IS_MTD(drv))
     {
       ret = MTD_BREAD(drv->u.i_mtd, block, size, buffer);
     }
   else
+#endif
     {
       ret = drv->u.i_bops->read(drv, buffer, block, size);
     }
@@ -1303,11 +1309,13 @@ static int littlefs_write_block(FAR const struct lfs_config *c,
   block = (block * c->block_size + off) / geo->blocksize;
   size  = size / geo->blocksize;
 
+#ifdef CONFIG_MTD
   if (INODE_IS_MTD(drv))
     {
       ret = MTD_BWRITE(drv->u.i_mtd, block, size, buffer);
     }
   else
+#endif
     {
       ret = drv->u.i_bops->write(drv, buffer, block, size);
     }
@@ -1334,6 +1342,7 @@ static int littlefs_erase_block(FAR const struct lfs_config *c,
       return -EACCES;
     }
 
+#ifdef CONFIG_MTD
   if (INODE_IS_MTD(drv))
     {
       FAR struct mtd_geometry_s *geo = &fs->geo;
@@ -1342,6 +1351,12 @@ static int littlefs_erase_block(FAR const struct lfs_config *c,
       block = block * c->block_size / geo->erasesize;
       ret = MTD_ERASE(drv->u.i_mtd, block, size);
     }
+#else
+  /* Block devices do not need an explicit erase; erase is an MTD concept. */
+
+  UNUSED(drv);
+  UNUSED(block);
+#endif
 
   return ret >= 0 ? OK : ret;
 }
@@ -1361,11 +1376,13 @@ static int littlefs_sync_block(FAR const struct lfs_config *c)
       return -EACCES;
     }
 
+#ifdef CONFIG_MTD
   if (INODE_IS_MTD(drv))
     {
       ret = MTD_IOCTL(drv->u.i_mtd, BIOC_FLUSH, 0);
     }
   else
+#endif
     {
       if (drv->u.i_bops->ioctl != NULL)
         {
@@ -1425,6 +1442,7 @@ static int littlefs_bind(FAR struct inode *driver, FAR const void *data,
   fs->drv = driver;        /* Save the driver reference */
   nxmutex_init(&fs->lock); /* Initialize the access control mutex */
 
+#ifdef CONFIG_MTD
   if (INODE_IS_MTD(driver))
     {
       /* Get MTD geometry directly */
@@ -1433,6 +1451,7 @@ static int littlefs_bind(FAR struct inode *driver, FAR const void *data,
                       (unsigned long)&fs->geo);
     }
   else
+#endif
     {
       /* Try to get FLT MTD geometry first */
 

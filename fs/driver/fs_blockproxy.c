@@ -45,9 +45,6 @@
 
 #include "driver.h"
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && \
-    !defined(CONFIG_DISABLE_PSEUDOFS_OPERATIONS)
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -202,5 +199,3 @@ int block_proxy(FAR struct file *filep, FAR const char *blkdev, int oflags)
 
   return ret;
 }
-
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && !CONFIG_DISABLE_PSEUDOFS_OPERATIONS */

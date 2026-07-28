@@ -6,7 +6,7 @@
 config FS_SPIFFS
 	bool "SPIFFS File System"
 	default n
-	depends on !DISABLE_MOUNTPOINT && ALLOW_BSD_COMPONENTS
+	depends on !DISABLE_MOUNTPOINT && ALLOW_BSD_COMPONENTS && MTD
 	select FS_LARGEFILE
 	---help---
 		Build the SPIFFS file system.  This is a port of version 0.3.7 of

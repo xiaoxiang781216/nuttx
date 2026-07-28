@@ -23,9 +23,7 @@
 set(SRCS fs_registerdriver.c fs_unregisterdriver.c fs_registerpipedriver.c
          fs_unregisterpipedriver.c)
 
-# Don't built-in block driver support if there are no mountpoints
-
-if(NOT CONFIG_DISABLE_MOUNTPOINT)
+if(CONFIG_FS_BLOCK_DRIVER)
   list(
     APPEND
     SRCS
@@ -35,26 +33,27 @@ if(NOT CONFIG_DISABLE_MOUNTPOINT)
     fs_openblockdriver.c
     fs_closeblockdriver.c
     fs_blockpartition.c
-    fs_findmtddriver.c
-    fs_blockmerge.c
-    fs_closemtddriver.c)
-
-  if(CONFIG_MTD)
-    list(APPEND SRCS fs_registermtddriver.c fs_unregistermtddriver.c)
-
-    if(CONFIG_FS_MTD_PROXY)
-      list(APPEND SRCS fs_mtdproxy.c)
-    endif()
-
-    if(CONFIG_MTD_PARTITION)
-      list(APPEND SRCS fs_mtdpartition.c)
-    endif()
-  endif()
+    fs_blockmerge.c)
 
   if(CONFIG_BCH)
-    if(NOT CONFIG_DISABLE_PSEUDOFS_OPERATIONS)
-      list(APPEND SRCS fs_blockproxy.c)
-    endif()
+    list(APPEND SRCS fs_blockproxy.c)
+  endif()
+endif()
+
+# MTD driver inode helpers are independent of the block driver inode helpers.
+# Only fs_mtdproxy.c needs a block driver (see its own gate below); the rest of
+# the MTD helpers are gated solely by CONFIG_MTD.
+
+if(CONFIG_MTD)
+  list(APPEND SRCS fs_registermtddriver.c fs_unregistermtddriver.c
+       fs_findmtddriver.c fs_closemtddriver.c)
+
+  if(CONFIG_FS_MTD_PROXY)
+    list(APPEND SRCS fs_mtdproxy.c)
+  endif()
+
+  if(CONFIG_MTD_PARTITION)
+    list(APPEND SRCS fs_mtdpartition.c)
   endif()
 endif()
 
