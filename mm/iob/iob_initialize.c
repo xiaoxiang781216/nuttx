@@ -41,7 +41,8 @@
                                              IOB_ALIGN_SIZE(blksize), \
                                              blkcnt, 0, 0, \
                                              CONFIG_IOB_THROTTLE, \
-                                             IOB_ALIGNMENT, ##__VA_ARGS__)
+                                             IOB_ALIGNMENT, \
+                                             NULL, NULL, ##__VA_ARGS__)
 
 #if CONFIG_IOB_EXTRA_HEADS > 0
 /* Head pools carry no payload-size tag (priv = NULL) and no throttle.

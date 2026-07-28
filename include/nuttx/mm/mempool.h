@@ -81,7 +81,9 @@
 #define MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, priv, blksize, \
                                                    prealloc, maxalloc, \
                                                    dynalloc, throttle, \
-                                                   alignsize, ...) \
+                                                   alignsize, \
+                                                   alloc_func, \
+                                                   free_func, ...) \
   static char CONCATENATE(name, _buffer) \
   [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE] \
   aligned_data(alignsize) MEMPOOL_LOCATE_DATA(__VA_ARGS__); \
@@ -96,8 +98,8 @@
       true, \
       priv, \
       STRINGIFY(name), \
-      NULL, \
-      NULL, \
+      alloc_func, \
+      free_func, \
       NULL, \
     }
 
@@ -105,7 +107,16 @@
   MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, NULL, blksize, \
                                              prealloc, maxalloc, \
                                              dynalloc, 0, \
-                                             MM_ALIGN)
+                                             MM_ALIGN, \
+                                             NULL, NULL)
+
+#define MEMPOOL_DEFINE_WITH_ALLOC(name, blksize, prealloc, maxalloc, \
+                                  dynalloc, alloc_func, free_func) \
+  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, NULL, blksize, \
+                                             prealloc, maxalloc, \
+                                             dynalloc, 0, \
+                                             MM_ALIGN, \
+                                             alloc_func, free_func)
 
 /* Static mempool definition related macros for bmp mode, in which:
  *   name:     The name of the static mempool
@@ -122,7 +133,9 @@
 #define MEMPOOL_DEFINE_BMP_WITH_THROTTLE_ALIGN_SECTION(name, priv, blksize,  \
                                                        prealloc, maxalloc, \
                                                        dynalloc, throttle, \
-                                                       alignsize, ...) \
+                                                       alignsize, \
+                                                       alloc_func, \
+                                                       free_func, ...) \
   static DEFINE_PER_CPU_BSS_BMP(char, CONCATENATE(name, _buffer) \
   [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE]) \
   aligned_data(alignsize) MEMPOOL_LOCATE_DATA(__VA_ARGS__); \
@@ -137,8 +150,8 @@
       true, \
       priv, \
       "bmp_" STRINGIFY(name), \
-      NULL, \
-      NULL, \
+      alloc_func, \
+      free_func, \
       NULL, \
     }
 
@@ -146,7 +159,8 @@
   MEMPOOL_DEFINE_BMP_WITH_THROTTLE_ALIGN_SECTION(name, NULL, blksize, \
                                                  prealloc, maxalloc, \
                                                  dynalloc, 0, \
-                                                 MM_ALIGN)
+                                                 MM_ALIGN, \
+                                                 NULL, NULL)
 
 /****************************************************************************
  * Public Types
