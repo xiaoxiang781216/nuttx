@@ -32,7 +32,7 @@
 #include <limits.h>
 #include <sys/types.h>
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
+#if defined(CONFIG_BLOCK_PARTITION) || defined(CONFIG_MTD_PARTITION)
 
 #ifdef __cplusplus
 #define EXTERN extern "C"
@@ -108,6 +108,6 @@ int parse_mtd_partition(FAR struct mtd_dev_s *mtd,
 }
 #endif
 
-#endif /* CONFIG_DISABLE_MOUNTPOINT */
+#endif /* CONFIG_BLOCK_PARTITION || CONFIG_MTD_PARTITION */
 
 #endif /* __INCLUDE_NUTTX_FS_PARTITION_H */
