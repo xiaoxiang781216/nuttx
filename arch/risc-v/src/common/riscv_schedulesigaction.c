@@ -91,6 +91,28 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 
   tcb->xcp.saved_regs        = tcb->xcp.regs;
 
+  /* If the signal is targeted at the task that is currently running, its
+   * extended (FPU / vector) registers are still live in hardware:  the
+   * trap entry logic saves the integer registers only.  Flush them into
+   * the TCB save area now, before the context frame is duplicated below,
+   * so that:
+   *
+   *   1. The state that riscv_sigdeliver() restores on return holds the
+   *      interrupted FPU / vector context, which the signal handler is
+   *      free to clobber.
+   *   2. When the FPU registers share the frame with the integer ones
+   *      (CONFIG_ARCH_LAZYFPU disabled, so XCPTCONTEXT_SIZE covers both),
+   *      the memcpy() below duplicates a valid FPU snapshot.
+   *
+   * Any other task had its extended state flushed when it was switched
+   * out, so there is nothing to do in that case.
+   */
+
+  if (tcb == this_task())
+    {
+      riscv_savecontext(tcb);
+    }
+
   /* Verify that duplicating the context frame will not underflow the
    * task stack.  The new frame is placed XCPTCONTEXT_SIZE below the
    * current one; if it drops below the stack allocation, the memcpy
