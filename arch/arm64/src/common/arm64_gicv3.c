@@ -27,6 +27,7 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/pci/pci.h>
 #include <nuttx/compiler.h>
 #include <arch/barriers.h>
 #include <arch/irq.h>
@@ -1081,5 +1082,33 @@ void arm64_gic_secondary_init(void)
 
 int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
 {
+#if CONFIG_ARM64_GICV3_LEGACY_IRQ0 >= 0
+  uint8_t slot;
+  uint8_t tmp;
+
+  /* Bare-metal ARM64 has no firmware to program the PCI_INTERRUPT_LINE
+   * register, so the line argument is unused; derive the IRQ from the
+   * interrupt pin and the INTx swizzle instead.
+   */
+
+  UNUSED(line);
+
+  if (pin < 1 || pin > 4)
+    {
+      /* 0 means the device does not use INTx; pin - 1 would underflow
+       * for pin == 0.
+       */
+
+      return -ENOTSUP;
+    }
+
+  slot = PCI_SLOT(devfn);
+  tmp = (pin - 1 + slot) % 4;
+  return CONFIG_ARM64_GICV3_LEGACY_IRQ0 + tmp;
+#else
+  UNUSED(devfn);
+  UNUSED(line);
+  UNUSED(pin);
   return -ENOTSUP;
+#endif
 }

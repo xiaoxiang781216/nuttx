@@ -431,6 +431,18 @@ config ARM64_GICV3_SPI_ROUTING_CPU0
 	---help---
 		Configure SPI interrupt affinity routing to CPU0 by default.
 
+config ARM64_GICV3_LEGACY_IRQ0
+	int "Base INTID for PCI legacy INTx (INTA)"
+	default -1
+	---help---
+		Base GIC INTID for PCI legacy INTA; INTB/INTC/INTD follow at
+		+1/+2/+3. The INTID equals GIC_SPI_INT_BASE (32) plus the SPI
+		offset that the PCIe host bridge's device-tree interrupt-map
+		assigns to INTA. QEMU's "virt" machine wires INTA..INTD to SPI
+		3..6, so set this to 35 for QEMU virt targets. A negative value
+		disables legacy INTx mapping (up_get_legacy_irq() returns
+		-ENOTSUP).
+
 endif
 
 config ARM64_SEMIHOSTING_HOSTFS
