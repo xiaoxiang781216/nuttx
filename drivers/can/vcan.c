@@ -122,18 +122,25 @@ static int vcan_transmit(FAR struct netdev_lowerhalf_s *dev,
   FAR struct net_vcan_dev_s *priv = (FAR struct net_vcan_dev_s *)dev;
   int i;
 
-  /* Put the packet to RX buffer */
+  /* Put the packet in a free RX slot. */
 
   for (i = 0; i < CONFIG_CAN_VCAN_NPKTS; i++)
     {
-      priv->rx_pkt[i] = pkt;
-      break;
+      if (priv->rx_pkt[i] == NULL)
+        {
+          priv->rx_pkt[i] = pkt;
+          break;
+        }
     }
 
   if (i >= CONFIG_CAN_VCAN_NPKTS)
     {
-      nwarn("No free RX MB buffer\n");
-      return -ENOMEM;
+      /* Every slot still holds an unread packet.  Ask the upper half to
+       * keep this one queued; vcan_receive() re-arms TX through
+       * netdev_lower_txdone() once a slot is drained.
+       */
+
+      return -EBUSY;
     }
 
   /* Notify upper layer that RX data is ready */
