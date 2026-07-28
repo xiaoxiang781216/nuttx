@@ -55,7 +55,8 @@
 #  define IOBPOOL_HEAD_DEFINE(name, blkcnt, ...) \
   MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, NULL, \
                                IOB_ALIGN_SIZE(sizeof(struct iob_s)), \
-                               blkcnt, 0, 0, 0, IOB_ALIGNMENT, ##__VA_ARGS__)
+                               blkcnt, 0, 0, 0, IOB_ALIGNMENT, \
+                               NULL, NULL, ##__VA_ARGS__)
 #endif
 
 /****************************************************************************
