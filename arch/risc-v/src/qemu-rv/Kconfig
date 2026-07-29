@@ -13,10 +13,12 @@ choice
 config ARCH_CHIP_QEMU_RV32
 	bool "QEMU RV32"
 	select ARCH_RV32
+	select ARCH_HAVE_RESET
 
 config ARCH_CHIP_QEMU_RV64
 	bool "QEMU RV64"
 	select ARCH_RV64
+	select ARCH_HAVE_RESET
 
 endchoice
 

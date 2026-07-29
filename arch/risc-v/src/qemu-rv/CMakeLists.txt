@@ -47,4 +47,8 @@ if(CONFIG_RPTUN)
   list(APPEND SRCS qemu_rv_rptun.c)
 endif()
 
+if(CONFIG_ARCH_HAVE_RESET)
+  list(APPEND SRCS qemu_rv_systemreset.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})

@@ -42,3 +42,7 @@ endif
 ifeq ($(CONFIG_RPTUN),y)
 CHIP_CSRCS += qemu_rv_rptun.c
 endif
+
+ifeq ($(CONFIG_ARCH_HAVE_RESET),y)
+CHIP_CSRCS += qemu_rv_systemreset.c
+endif
