@@ -1309,6 +1309,7 @@ static int audio_rpmsg_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
             case AUDIO_FMT_CVSD:
             case AUDIO_FMT_OPUS:
             case AUDIO_FMT_OGG_VORBIS:
+            case AUDIO_FMT_SILK:
               caps->ac_controls.b[0] = aud->info.subformat;
               caps->ac_controls.b[1] = AUDIO_SUBFMT_END;
 
