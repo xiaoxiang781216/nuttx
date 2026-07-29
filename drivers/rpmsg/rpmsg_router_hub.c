@@ -36,6 +36,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/trace.h>
 
 #include "rpmsg_router.h"
 
@@ -532,7 +533,9 @@ int rpmsg_router_hub_init(FAR const char *edge0,
                                 rpmsg_router_hub_bind);
   if (ret < 0)
     {
-      rpmsgerr("Register rpmsg callback failed: %d\n", ret);
+      rpmsg_diag(DIAG_RPMSG_ROUTER_INIT_FAIL,
+                 "Stage:HubRegCb,Edge0:%s,ErrorCode:%d",
+                 edge0, ret);
       nxmutex_destroy(&hub->lock);
       kmm_free(hub);
       return ret;

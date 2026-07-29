@@ -37,6 +37,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/reboot_notifier.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/trace.h>
 
 #include "rpmsg_port.h"
 
@@ -323,7 +324,8 @@ static void rpmsg_port_spi_exchange(FAR struct rpmsg_port_spi_s *rpspi)
     {
       if (pending > 1)
         {
-          rpmsgerr("pending too many requests: %d\n", pending);
+          rpmsg_diag(DIAG_RPMSG_SPI_TX_ERROR,
+                     "Reason:TxPendingTooMany,Pending:%d", pending);
         }
 
       return;
@@ -423,14 +425,17 @@ static void rpmsg_port_spi_complete_handler(FAR void *arg)
       rpspi->rxhdr->cmd < RPMSG_PORT_SPI_CMD_CONNECT ||
       rpspi->rxhdr->cmd > RPMSG_PORT_SPI_CMD_SHUTDOWN)
     {
-      rpmsgerr("drop malformed rx: len=%u crc=%u cmd=%u avail=%u\n",
-               rpspi->rxhdr->len, rpspi->rxhdr->crc, rpspi->rxhdr->cmd,
-               rpspi->rxhdr->avail);
+      rpmsg_diag(DIAG_RPMSG_SPI_RX_ERROR,
+                 "Reason:RxHdrInvalid,HdrLen:%u,HdrCrc:%u,"
+                 "HdrCmd:%u,HdrAvail:%u",
+                 rpspi->rxhdr->len, rpspi->rxhdr->crc,
+                 rpspi->rxhdr->cmd, rpspi->rxhdr->avail);
 #ifdef CONFIG_RPMSG_PORT_RETX
-      rpmsgerr("malformed rx retx state: seq=%u ack=%u min_seq=%u "
-               "rx_next=%u\n",
-               rpspi->rxhdr->seqno, rpspi->rxhdr->ackno,
-               rpspi->rxhdr->min_seq, rpspi->port.retx.rx_next);
+      rpmsg_diag(DIAG_RPMSG_SPI_RX_ERROR,
+                 "Reason:RxHdrInvalidRetx,Seq:%u,Ack:%u,MinSeq:%u,RxNext:%u",
+                 rpspi->rxhdr->seqno, rpspi->rxhdr->ackno,
+                 rpspi->rxhdr->min_seq,
+                 rpspi->port.retx.rx_next);
 #endif
       if (rpspi->rxerr_count != UINT16_MAX)
         {
@@ -449,12 +454,15 @@ static void rpmsg_port_spi_complete_handler(FAR void *arg)
   crc = rpmsg_port_spi_crc16(rpspi->rxhdr);
   if (crc != 0 && rpspi->rxhdr->crc != crc)
     {
-      rpmsgerr("crc check fail received: %u calculated: %u "
-               "len=%u cmd=%u\n",
-               rpspi->rxhdr->crc, crc, rpspi->rxhdr->len,
-               rpspi->rxhdr->cmd);
+      rpmsg_diag(DIAG_RPMSG_SPI_RX_ERROR,
+                 "Reason:RxCrcMismatch,HdrCrc:%u,CalcCrc:%u,"
+                 "HdrLen:%u,HdrCmd:%u",
+                 rpspi->rxhdr->crc, crc, rpspi->rxhdr->len,
+                 rpspi->rxhdr->cmd);
 #ifdef CONFIG_RPMSG_PORT_RETX
-      rpmsgerr("crc check fail retx state: seq=%u\n", rpspi->rxhdr->seqno);
+      rpmsg_diag(DIAG_RPMSG_SPI_RX_ERROR,
+                 "Reason:RxCrcMismatchRetx,Seq:%u",
+                 rpspi->rxhdr->seqno);
 #endif
       if (rpspi->rxerr_count != UINT16_MAX)
         {

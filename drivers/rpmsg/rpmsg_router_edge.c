@@ -35,6 +35,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
+#include <nuttx/trace.h>
 
 #include "rpmsg_router.h"
 
@@ -491,7 +492,9 @@ rpmsg_router_edge_send_offchannel_raw(FAR struct rpmsg_device *rdev,
                              rpmsg_router_edge_unbind);
       if (ret < 0)
         {
-          rpmsgerr("Create router endpoint failed: %d\n", ret);
+          rpmsg_diag(DIAG_RPMSG_ROUTER_COMM_FAIL,
+                     "Stage:CreateEpt,Name:%s,ErrorCode:%d",
+                     ns_msg->name, ret);
           kmm_free(ept);
         }
 
@@ -713,7 +716,9 @@ rpmsg_router_edge_create(FAR struct rpmsg_device *hubdev,
 
   if (ret < 0)
     {
-      rpmsgerr("Register rpmsg callback failed: %d\n", ret);
+      rpmsg_diag(DIAG_RPMSG_ROUTER_INIT_FAIL,
+                 "Stage:EdgeRegCb,CpuName:%s,ErrorCode:%d",
+                 edge->rpmsg.cpuname, ret);
       goto unregister;
     }
 

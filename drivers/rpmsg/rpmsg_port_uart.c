@@ -43,6 +43,7 @@
 #include <nuttx/power/pm.h>
 #include <nuttx/reboot_notifier.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/trace.h>
 
 #include "rpmsg_port.h"
 
@@ -786,25 +787,31 @@ static void rpmsg_port_uart_rx_worker(FAR struct rpmsg_port_uart_s *rpuart,
               }
             else if (buf[i] == RPMSG_PORT_UART_END)
               {
-                rpmsgerr("Recv dup end char buf[%zd]=%x dbg_i=%d\n",
-                         i, buf[i], rpuart->rx_dbg_idx);
+                rpmsg_diag(DIAG_RPMSG_UART_RX_ERROR,
+                           "Reason:RxDupEndChar,BufIdx:%zd,"
+                           "Char:%x,DbgIdx:%d",
+                           i, buf[i], rpuart->rx_dbg_idx);
                 rpmsgerrdump("Recv dbg:", rpuart->rx_dbg_buf,
                              sizeof(rpuart->rx_dbg_buf));
                 rpmsgerrdump("Recv error:", buf, ret);
               }
             else
               {
-                rpmsgerr("Recv non start char buf[%zd]=%x dbg_i=%d\n",
-                          i, buf[i], rpuart->rx_dbg_idx);
+                rpmsg_diag(DIAG_RPMSG_UART_RX_ERROR,
+                           "Reason:RxNonStartChar,BufIdx:%zd,"
+                           "Char:%x,DbgIdx:%d",
+                           i, buf[i], rpuart->rx_dbg_idx);
               }
             break;
 
           case RPMSG_PORT_UART_RX_RECV_NORMAL:
             if (buf[i] == RPMSG_PORT_UART_START)
               {
-                rpmsgerr("Recv dup start char, len=%u next=%u i=%zd "
-                         "dbg_i=%d\n", hdr->len, next, i,
-                         rpuart->rx_dbg_idx);
+                rpmsg_diag(DIAG_RPMSG_UART_RX_ERROR,
+                           "Reason:RxDupStartChar,HdrLen:%u,"
+                           "RecvLen:%u,BufIdx:%zd,DbgIdx:%d",
+                           hdr->len, next, i,
+                           rpuart->rx_dbg_idx);
                 rpmsgerrdump("Recv dbg:", rpuart->rx_dbg_buf,
                               sizeof(rpuart->rx_dbg_buf));
                 rpmsgerrdump("Recv error:", buf, ret);
@@ -825,9 +832,11 @@ static void rpmsg_port_uart_rx_worker(FAR struct rpmsg_port_uart_s *rpuart,
                     (hdr->crc != 0 &&
                      hdr->crc != rpmsg_port_uart_crc16(hdr)))
                   {
-                    rpmsgerr("Recv error crc=%u len=%u next=%u i=%zd "
-                             "dbg_i=%d\n", hdr->crc, hdr->len, next, i,
-                             rpuart->rx_dbg_idx);
+                    rpmsg_diag(DIAG_RPMSG_UART_RX_ERROR,
+                               "Reason:RxCrcError,HdrCrc:%u,HdrLen:%u,"
+                               "RecvLen:%u,BufIdx:%zd,DbgIdx:%d",
+                               hdr->crc, hdr->len, next, i,
+                               rpuart->rx_dbg_idx);
                     rpmsgerrdump("Recv dbg:", rpuart->rx_dbg_buf,
                                  sizeof(rpuart->rx_dbg_buf));
                     rpmsgerrdump("Recv error:", buf, ret);
@@ -860,8 +869,9 @@ static void rpmsg_port_uart_rx_worker(FAR struct rpmsg_port_uart_s *rpuart,
               }
             else
               {
-                rpmsgerr("Recv len %u exceed buffer len %u\n",
-                         next, rxq->len);
+                rpmsg_diag(DIAG_RPMSG_UART_RX_ERROR,
+                           "Reason:RxBufferOverflow,RecvLen:%u,"
+                           "BufLen:%u", next, rxq->len);
               }
             break;
 
@@ -1044,7 +1054,9 @@ int rpmsg_port_uart_initialize(FAR const struct rpmsg_port_config_s *cfg,
   ret = file_open(&rpuart->file, uartpath, O_RDWR);
   if (ret < 0)
     {
-      rpmsgerr("Open uart device failed, ret=%d\n", ret);
+      rpmsg_diag(DIAG_RPMSG_UART_INIT_FAIL,
+                 "Stage:OpenUart,Path:%s,ErrorCode:%d",
+                 uartpath, ret);
       goto err_file;
     }
 
