@@ -50,6 +50,7 @@
 #include <nuttx/reboot_notifier.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_rpmsg.h>
+#include <nuttx/trace.h>
 #include <openamp/remoteproc_loader.h>
 #include <openamp/remoteproc_virtio.h>
 #include <openamp/rsc_table_parser.h>
@@ -59,6 +60,8 @@
  ****************************************************************************/
 
 #define RPTUN_RETRY_PERIOD_US    1000
+
+#define RPTUN_PEER_TIMEOUT_TIMES (5 * USEC_PER_SEC / RPTUN_RETRY_PERIOD_US)
 
 #define RPTUN_STATUS_CHECK(s, v) (((s) & (1u << (v))) != 0)
 #define RPTUN_STATUS_SET(s, v)   ((s) |= (1u << (v)))
@@ -851,6 +854,10 @@ static int rptun_create_devices(FAR struct rptun_priv_s *priv)
       else if (ret < 0)
         {
           rptunerr("rptun_create_device failed, ret=%d i=%d\n", ret, i);
+          rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
+                           "Stage:CreateDevice,CpuName:%s,Index:%u,"
+                           "ErrorCode:%d",
+                           RPTUN_GET_CPUNAME(priv->dev), i, -ret);
           break;
         }
 
@@ -858,6 +865,10 @@ static int rptun_create_devices(FAR struct rptun_priv_s *priv)
       if (ret < 0)
         {
           rptunerr("rptun_register_device failed, ret=%d i=%d\n", ret, i);
+          rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
+                           "Stage:RegisterDevice,CpuName:%s,Index:%u,"
+                           "ErrorCode:%d",
+                           RPTUN_GET_CPUNAME(priv->dev), i, -ret);
           rptun_remove_device(priv, vdev);
           break;
         }
@@ -983,6 +994,8 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
 
       snprintf(msg, sizeof(msg), "Panic by remote core: %s",
                RPTUN_GET_CPUNAME(priv->dev));
+      rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_REMOTE_PANIC,
+                       "PanicByRemoteCore:%s", RPTUN_GET_CPUNAME(priv->dev));
       PANIC_WITH_MSG(msg);
     }
   else if (RPTUN_STATUS_CHECK(status, RPTUN_STATUS_STOP))
@@ -1126,12 +1139,18 @@ static int rptun_do_start(FAR struct remoteproc *rproc)
               if (ret < 0)
                 {
                   rptunerr("remoteproc set rsc_table failed, ret=%d\n", ret);
+                  rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
+                                   "Stage:SetRsc,CpuName:%s,ErrorCode:%d",
+                                   RPTUN_GET_CPUNAME(priv->dev), -ret);
                 }
             }
           else
             {
               rptunerr("RPTUN_GET_RESOURCE failed\n");
               ret = -EINVAL;
+              rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
+                               "Stage:GetResource,CpuName:%s,ErrorCode:%d",
+                               RPTUN_GET_CPUNAME(priv->dev), -ret);
             }
         }
 
@@ -1170,12 +1189,18 @@ static int rptun_do_start(FAR struct remoteproc *rproc)
             {
               remoteproc_shutdown(rproc);
               rptunerr("remoteproc_start failed, ret=%d\n", ret);
+              rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
+                               "Stage:Start,CpuName:%s,ErrorCode:%d",
+                               RPTUN_GET_CPUNAME(priv->dev), -ret);
             }
         }
     }
   else
     {
       rptunerr("remoteproc config failed, ret=%d\n", ret);
+      rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
+                       "Stage:Config,CpuName:%s,ErrorCode:%d",
+                       RPTUN_GET_CPUNAME(priv->dev), -ret);
     }
 
   return ret;
@@ -1190,12 +1215,26 @@ static int rptun_start_thread(int argc, FAR char *argv[])
   ret = rptun_do_start(&priv->rproc);
   if (ret >= 0)
     {
+      unsigned int retry = 0;
+
       while (!priv->stop)
         {
           ret = rptun_create_devices(priv);
           if (ret != -EAGAIN)
             {
               break;
+            }
+
+          /* Peer is not ready yet.  Report once when the wait crosses the
+           * timeout threshold so a persistently absent peer is visible in
+           * DFX without flooding the log on every retry.
+           */
+
+          if (++retry == RPTUN_PEER_TIMEOUT_TIMES)
+            {
+              rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_PEER_NOT_READY,
+                               "CpuName:%s,Retries:%u",
+                               RPTUN_GET_CPUNAME(priv->dev), retry);
             }
 
           nxsig_usleep(RPTUN_RETRY_PERIOD_US);

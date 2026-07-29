@@ -41,6 +41,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/rwsem.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/trace.h>
 
 #include "rpmsg.h"
 #include "rpmsg_trace.h"
@@ -396,6 +397,7 @@ int rpmsg_tickwait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem,
             {
               clock_t end = delay >= WDOG_MAX_DELAY ? 0 :
                             clock_systime_ticks() + delay;
+              bool reported = false;
 
               for (; ; )
                 {
@@ -421,6 +423,18 @@ int rpmsg_tickwait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem,
                       wqueue->recursive++;
                       work_queue_dispatch(wqueue->kwqueue);
                       wqueue->recursive--;
+                    }
+                  else if (!reported)
+                    {
+                      /* Nested dispatch is capped: report once so the stuck
+                       * sync call is visible in DFX without flooding the log
+                       * while the loop keeps waiting on the semaphore.
+                       */
+
+                      reported = true;
+                      rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_RECURSIVE_LIMIT,
+                                       "CpuName:%s,Recursive:%d",
+                                       rpmsg->cpuname, wqueue->recursive);
                     }
                 }
             }
@@ -868,6 +882,9 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
             }
           else
             {
+              rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_REGISTER_FAIL,
+                               "Stage:InitWorkrx,CpuName:%s,ErrorCode:%d",
+                               rpmsg->cpuname, -ret);
               unregister_driver(path);
               rpmsg_char_deinit(&rpmsg->chr);
               metal_finish();
@@ -875,9 +892,18 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
         }
       else
         {
+          rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_REGISTER_FAIL,
+                           "Stage:RegDriver,CpuName:%s,ErrorCode:%d",
+                           rpmsg->cpuname, -ret);
           rpmsg_char_deinit(&rpmsg->chr);
           metal_finish();
         }
+    }
+  else
+    {
+      rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_REGISTER_FAIL,
+                       "Stage:MetalInit,CpuName:%s,ErrorCode:%d",
+                       rpmsg->cpuname, -ret);
     }
 
   return ret;
