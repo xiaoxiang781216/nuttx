@@ -279,6 +279,7 @@ int tcp_start_monitor(FAR struct socket *psock)
        */
 
       if (conn->tcpstateflags == TCP_CLOSED ||
+          conn->tcpstateflags == TCP_CLOSE_WAIT ||
           conn->tcpstateflags == TCP_LAST_ACK)
         {
           return OK;

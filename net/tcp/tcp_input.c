@@ -1726,6 +1726,21 @@ skip_rtt:
 
             flags |= TCP_RXCLOSE;
 
+#ifdef CONFIG_NET_TCPBACKLOG
+            /* If the connection is still backlogged (not yet accepted), no
+             * connection monitor has been registered, so the TCP_RXCLOSE
+             * event delivered by tcp_callback() below would be lost.  Set
+             * the read-shutdown flag manually here so that, once the
+             * connection is accepted, the socket still reflects that the
+             * peer has closed its side.
+             */
+
+            if (conn->blparent != NULL)
+              {
+                conn->shutdown |= SHUT_RD;
+              }
+#endif
+
             result = tcp_callback(dev, conn, flags);
 
             conn->tcpstateflags = TCP_CLOSE_WAIT;
