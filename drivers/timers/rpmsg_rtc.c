@@ -36,8 +36,10 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/timers/rpmsg_rtc.h>
 #include <nuttx/timers/arch_rtc.h>
+#include <nuttx/trace.h>
 
 #include <errno.h>
+#include <inttypes.h>
 #include <string.h>
 #include <debug.h>
 
@@ -379,6 +381,9 @@ static int rpmsg_rtc_send_recv(FAR struct rpmsg_rtc_lowerhalf_s *lower,
   ret = rpmsg_send(&lower->ept, msg, len);
   if (ret < 0)
     {
+      rpmsg_diag(DIAG_RPMSG_RTC_ERROR,
+                 "Stage:SendRecv,CpuName:%s,Cmd:%" PRIu32 ",ErrorCode:%d",
+                 rpmsg_get_cpuname(lower->ept.rdev), command, ret);
       goto fail;
     }
 
@@ -815,6 +820,7 @@ static void rpmsg_rtc_server_created(FAR struct rpmsg_device *rdev,
 {
   FAR struct rpmsg_rtc_server_s *server = priv;
   FAR struct rpmsg_rtc_client_s *client;
+  int ret;
 
   client = kmm_zalloc(sizeof(*client));
   if (client == NULL)
@@ -826,11 +832,15 @@ static void rpmsg_rtc_server_created(FAR struct rpmsg_device *rdev,
   client->ept.release_cb = rpmsg_rtc_server_ept_release;
   client->ept.ns_bound_cb = rpmsg_rtc_server_ns_bound;
 
-  if (rpmsg_create_ept(&client->ept, rdev, RPMSG_RTC_EPT_NAME,
-                       RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
-                       rpmsg_rtc_server_ept_cb,
-                       rpmsg_destroy_ept) < 0)
+  ret = rpmsg_create_ept(&client->ept, rdev, RPMSG_RTC_EPT_NAME,
+                         RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
+                         rpmsg_rtc_server_ept_cb,
+                         rpmsg_destroy_ept);
+  if (ret < 0)
     {
+      rpmsg_diag(DIAG_RPMSG_RTC_ERROR,
+                 "Stage:ServerCreateEpt,CpuName:%s,ErrorCode:%d",
+                 rpmsg_get_cpuname(rdev), ret);
       kmm_free(client);
       return;
     }
@@ -887,6 +897,7 @@ FAR struct rtc_lowerhalf_s *rpmsg_rtc_server_initialize(
                                          FAR struct rtc_lowerhalf_s *lower)
 {
   FAR struct rpmsg_rtc_server_s *server;
+  int ret;
 
   server = kmm_zalloc(sizeof(*server));
   if (server)
@@ -895,9 +906,12 @@ FAR struct rtc_lowerhalf_s *rpmsg_rtc_server_initialize(
       server->lower = lower;
       list_initialize(&server->list);
       nxmutex_init(&server->lock);
-      if (rpmsg_register_callback(server, rpmsg_rtc_server_created, NULL,
-                                  NULL, NULL) < 0)
+      ret = rpmsg_register_callback(server, rpmsg_rtc_server_created, NULL,
+                                    NULL, NULL);
+      if (ret < 0)
         {
+          rpmsg_diag(DIAG_RPMSG_RTC_ERROR,
+                     "Stage:ServerReg,ErrorCode:%d", ret);
           nxmutex_destroy(&server->lock);
           kmm_free(server);
           return NULL;

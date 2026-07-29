@@ -42,6 +42,7 @@
 #include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/trace.h>
 #include <nuttx/fs/ioctl.h>
 
 #include <netinet/in.h>
@@ -497,6 +498,10 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
               if (written != len)
                 {
                   nerr("circbuf_write overflow, %zu, %zu\n", written, len);
+                  rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_SOCKET_RX_ERROR,
+                                   "Reason:RxBufferOverflow,"
+                                   "WrittenLen:%zu,DataLen:%zu",
+                                   written, len);
                 }
 
               rpmsg_socket_poll_notify(conn, POLLIN);
@@ -771,6 +776,10 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
       nerr("Server %s:%s (ept:%s) reject the connection, Max listen %d\n",
            new->rpaddr.rp_cpu, new->rpaddr.rp_name, namebuf,
            server->backlog);
+      rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_SOCKET_RX_ERROR,
+                       "Reason:AcceptBacklogFull,Name:%s:%s,Backlog:%d",
+                       new->rpaddr.rp_cpu, new->rpaddr.rp_name,
+                       server->backlog);
       spin_unlock_irqrestore(&server->recvlock, flags);
       rpmsg_socket_free(new);
       return;
@@ -808,6 +817,9 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
 
       server->pending--;
       spin_unlock_irqrestore(&server->recvlock, flags);
+      rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_SOCKET_RX_ERROR,
+                       "Reason:ServerCreateEptFail,Name:%s,ErrorCode:%d",
+                       name, ret);
       rpmsg_socket_free(new);
       return;
     }
@@ -956,6 +968,9 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
                                 NULL);
   if (ret < 0)
     {
+      rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_SOCKET_TX_ERROR,
+                       "Reason:ConnectCreateEptFail,CpuName:%s,"
+                       "ErrorCode:%d", conn->rpaddr.rp_cpu, ret);
       return ret;
     }
 

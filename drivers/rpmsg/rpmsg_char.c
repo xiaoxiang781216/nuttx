@@ -39,6 +39,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/trace.h>
 
 #include "rpmsg.h"
 
@@ -572,13 +573,17 @@ static void rpmsg_eptdev_device_created(FAR struct rpmsg_device *rdev,
             }
           else
             {
-              rpmsgerr("Failed to register driver %s %d\n", path, ret);
+              rpmsg_diag(DIAG_RPMSG_CHAR_INIT_FAIL,
+                         "Stage:RegDriver,Path:%s,ErrorCode:%d",
+                         path, ret);
               rpmsg_destroy_ept(&eptdev->ept);
             }
         }
       else
         {
-          rpmsgerr("Failed to create endpoint %s %d\n", info->name, ret);
+          rpmsg_diag(DIAG_RPMSG_CHAR_INIT_FAIL,
+                     "Stage:CreateEpt,Name:%s,ErrorCode:%d",
+                     info->name, ret);
         }
     }
 
