@@ -202,11 +202,6 @@ static int gdb_putchar_flush(FAR struct gdb_state_s *state)
   if (state->tx_pos > 0)
     {
       ret = state->send(state->priv, state->tx_buf, state->tx_pos);
-      if (ret < 0)
-        {
-          return ret;
-        }
-
       state->tx_pos = 0;
     }
 

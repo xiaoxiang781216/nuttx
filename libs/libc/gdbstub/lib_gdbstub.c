@@ -106,6 +106,11 @@ static int gdb_panic_callback(FAR struct notifier_block *nb,
         }
     }
 
+  /* Process first received packet. */
+
+  state->rx_len = ret;
+  state->rx_pos = 0;
+
   gdb_process(state, GDB_STOPREASON_NONE, NULL);
   return 0;
 }
@@ -262,9 +267,10 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
 {
   int ret;
 
+  state->pid = gettid();
+
   if (stopreason != GDB_STOPREASON_NONE)
     {
-      state->pid = gettid();
       gdb_update_regcache(state);
       gdb_send_stop(state, stopreason, stopaddr);
     }
