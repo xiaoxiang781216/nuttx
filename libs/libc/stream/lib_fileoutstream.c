@@ -42,7 +42,7 @@
  * Name: rawoutstream_puts
  ****************************************************************************/
 
-static ssize_t fileoutstream_puts(FAR struct lib_outstream_s *self,
+static ssize_t fileoutstream_puts(FAR struct lib_sostream_s *self,
                                   FAR const void *buf, size_t len)
 {
   FAR struct lib_fileoutstream_s *stream =
@@ -71,13 +71,45 @@ static ssize_t fileoutstream_puts(FAR struct lib_outstream_s *self,
 }
 
 /****************************************************************************
- * Name: rawoutstream_putc
+ * Name: fileoutstream_putc
  ****************************************************************************/
 
-static void fileoutstream_putc(FAR struct lib_outstream_s *self, int ch)
+static void fileoutstream_putc(FAR struct lib_sostream_s *self, int ch)
 {
   char tmp = ch;
   fileoutstream_puts(self, &tmp, 1);
+}
+
+/****************************************************************************
+ * Name: fileoutstream_seek
+ ****************************************************************************/
+
+static off_t fileoutstream_seek(FAR struct lib_sostream_s *self,
+                                off_t offset, int whence)
+{
+  FAR struct lib_fileoutstream_s *stream =
+                                  (FAR struct lib_fileoutstream_s *)self;
+  off_t ret;
+
+  ret = file_seek(&stream->file, offset, whence);
+  if (ret >= 0)
+    {
+      self->nput = ret;
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: fileoutstream_flush
+ ****************************************************************************/
+
+static int fileoutstream_flush(FAR struct lib_sostream_s *self)
+{
+  FAR struct lib_fileoutstream_s *stream =
+                                  (FAR struct lib_fileoutstream_s *)self;
+
+  return file_fsync(&stream->file);
 }
 
 /****************************************************************************
@@ -118,7 +150,8 @@ int lib_fileoutstream_open(FAR struct lib_fileoutstream_s *stream,
 
   stream->common.putc  = fileoutstream_putc;
   stream->common.puts  = fileoutstream_puts;
-  stream->common.flush = lib_noflush;
+  stream->common.seek  = fileoutstream_seek;
+  stream->common.flush = fileoutstream_flush;
   stream->common.nput  = 0;
 
   return 0;
