@@ -1778,13 +1778,10 @@
 #define DIAG_SYSTEM_IPC_BASE             (DIAG_SYSTEM_BASE + 300)     /* 961010300 */
 #define DIAG_SYSTEM_RPMSG_BASE           (DIAG_SYSTEM_BASE + 400)     /* 961010400 */
 
-/* Rpmsg fault codes (within DIAG_SYSTEM_RPMSG_BASE).  The IDs are grouped by
- * the module that reports them, each module owning a decade (10 IDs) so a
- * new fault code can be added within its module without disturbing the
- * others: DIAG_RPMSG_* framework at +0, DIAG_RPTUN_* at +10, and
- * DIAG_RPMSG_VIRTIO_* transport at +20.  Failures in the same category share
- * a single ID and are distinguished by the "Stage:"/"Reason:" field in the
- * DFX log string, so adding a new failure step needs no new fault code.
+/* Rpmsg fault codes (within DIAG_SYSTEM_RPMSG_BASE).  Each module owns a
+ * decade (10 IDs), as labelled below, so a new code can be added without
+ * disturbing the others.  Failures in the same category share a single ID
+ * and are distinguished by the "Stage:"/"Reason:" field in the log string.
  */
 
 /* Rpmsg framework (BASE + 0..9) */
@@ -1803,6 +1800,34 @@
 #define DIAG_RPMSG_VIRTIO_INIT_FAIL      (DIAG_SYSTEM_RPMSG_BASE + 20)  /* 961010420 */
 #define DIAG_RPMSG_VIRTIO_TX_FAIL        (DIAG_SYSTEM_RPMSG_BASE + 21)  /* 961010421 */
 #define DIAG_RPMSG_VIRTIO_LOST_IRQ       (DIAG_SYSTEM_RPMSG_BASE + 22)  /* 961010422 */
+
+/* Rpmsg port-uart transport (BASE + 30..39) */
+
+#define DIAG_RPMSG_UART_INIT_FAIL        (DIAG_SYSTEM_RPMSG_BASE + 30)  /* 961010430 */
+#define DIAG_RPMSG_UART_RX_ERROR         (DIAG_SYSTEM_RPMSG_BASE + 31)  /* 961010431 */
+
+/* Rpmsg port-spi transport (BASE + 40..49) */
+
+#define DIAG_RPMSG_SPI_RX_ERROR          (DIAG_SYSTEM_RPMSG_BASE + 40)  /* 961010440 */
+#define DIAG_RPMSG_SPI_TX_ERROR          (DIAG_SYSTEM_RPMSG_BASE + 41)  /* 961010441 */
+
+/* Rpmsg router (BASE + 50..59) */
+
+#define DIAG_RPMSG_ROUTER_INIT_FAIL      (DIAG_SYSTEM_RPMSG_BASE + 50)  /* 961010450 */
+#define DIAG_RPMSG_ROUTER_COMM_FAIL      (DIAG_SYSTEM_RPMSG_BASE + 51)  /* 961010451 */
+
+/* Rpmsg socket service (BASE + 60..69) */
+
+#define DIAG_RPMSG_SOCKET_RX_ERROR       (DIAG_SYSTEM_RPMSG_BASE + 60)  /* 961010460 */
+#define DIAG_RPMSG_SOCKET_TX_ERROR       (DIAG_SYSTEM_RPMSG_BASE + 61)  /* 961010461 */
+
+/* Rpmsg char service (BASE + 70..79) */
+
+#define DIAG_RPMSG_CHAR_INIT_FAIL        (DIAG_SYSTEM_RPMSG_BASE + 70)  /* 961010470 */
+
+/* Rpmsg rtc service (BASE + 80..89) */
+
+#define DIAG_RPMSG_RTC_ERROR             (DIAG_SYSTEM_RPMSG_BASE + 80)  /* 961010480 */
 
 #define DIAG_SYSTEM_BINDER_BASE          (DIAG_SYSTEM_BASE + 500)     /* 961010500 */
 #define DIAG_SYSTEM_SENSOR_BASE          (DIAG_SYSTEM_BASE + 600)     /* 961010600 */
