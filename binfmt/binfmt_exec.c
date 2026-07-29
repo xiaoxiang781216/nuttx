@@ -86,6 +86,12 @@ static int exec_internal(FAR const char *filename,
 
   /* Allocate the load information */
 
+#ifdef CONFIG_BINFMT_LOADABLE
+  /* LOADABLE formats (ELF/NXFLAT): bin must persist beyond this function
+   * because it is attached to the task group (tg_bininfo) and freed when
+   * the task exits via binfmt_exit().
+   */
+
   bin = kmm_zalloc(sizeof(struct binary_s));
   if (!bin)
     {
@@ -93,6 +99,16 @@ static int exec_internal(FAR const char *filename,
       ret = -ENOMEM;
       goto errout;
     }
+#else
+  /* Non-loadable formats (builtin): bin is only used as a temporary
+   * carrier between load_module() and exec_module(). Stack allocation
+   * avoids the heap malloc/free overhead entirely.
+   */
+
+  struct binary_s bin_storage;
+  memset(&bin_storage, 0, sizeof(bin_storage));
+  bin = &bin_storage;
+#endif
 
   /* Load the module into memory */
 
@@ -143,22 +159,15 @@ static int exec_internal(FAR const char *filename,
       goto errout_with_lock;
     }
 
-#ifndef CONFIG_BINFMT_LOADABLE
-  /* Free the binary_s structure here */
-
-  kmm_free(bin);
-
-  /* TODO: How does the module get unloaded in this case? */
-
-#endif
-
   return pid;
 
 errout_with_lock:
   unload_module(bin);
 errout_with_bin:
+#ifdef CONFIG_BINFMT_LOADABLE
   kmm_free(bin);
 errout:
+#endif
   return ret;
 }
 
