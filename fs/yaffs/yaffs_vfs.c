@@ -1450,6 +1450,7 @@ static int yaffs_vfs_bind(FAR struct inode *driver, FAR const void *data,
 #ifdef CONFIG_FS_YAFFS_EMPTY_LOST_FOUND
   p->empty_lost_n_found = 1;
 #endif
+  p->hide_lost_n_found = 1;
   p->start_block = 0;
   p->end_block = fs->geo.neraseblocks - 1;
   p->total_bytes_per_chunk = fs->geo.blocksize;
