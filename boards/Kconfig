@@ -4853,11 +4853,24 @@ config BOARD_COREDUMP_CPUID
 		which preserves the original behavior for single-core or SMP
 		configurations.
 
+if BOARD_COREDUMP_BLKDEV || BOARD_COREDUMP_MTDDEV || BOARD_COREDUMP_MEMDEV
+
 config BOARD_COREDUMP_DEVPATH
 	string "Save Core Dump data with device PATH"
-	depends on BOARD_COREDUMP_BLKDEV || BOARD_COREDUMP_MTDDEV || BOARD_COREDUMP_MEMDEV
 	---help---
 		Save coredump file into block/mtd/memory device path.
+
+config BOARD_COREDUMP_NSLOTS
+	int "Number of coredump slots on the storage device"
+	default 4
+	range 1 16
+	---help---
+		The storage device is divided into NSLOTS equal-sized slots.
+		Each coredump starts at a slot boundary and may span multiple
+		slots if its size exceeds one slot.  The actual number of
+		coredumps stored depends on their individual sizes.
+
+endif # BOARD_COREDUMP_BLKDEV || BOARD_COREDUMP_MTDDEV || BOARD_COREDUMP_MEMDEV
 
 config BOARD_COREDUMP_FULL
 	bool "Core Dump all thread registers and stacks"

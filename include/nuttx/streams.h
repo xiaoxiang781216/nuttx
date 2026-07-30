@@ -56,6 +56,10 @@
         ((FAR struct lib_outstream_s *)(stream))->puts( \
         (FAR struct lib_outstream_s *)(stream), buf, len)
 #define lib_stream_eof(c) ((c) <= 0)
+#define lib_stream_nput(stream) \
+        ((FAR struct lib_outstream_s *)(stream))->nput
+#define lib_stream_nget(stream) \
+        ((FAR struct lib_instream_s *)(stream))->nget
 #define lib_stream_getc(stream) \
         ((FAR struct lib_instream_s *)(stream))->getc( \
         (FAR struct lib_instream_s *)(stream))

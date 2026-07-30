@@ -85,8 +85,37 @@
 #if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
 struct coredump_procfs_s
 {
+  struct procfs_entry_s  entry;
   struct coredump_info_s info;
-  struct file            file;
+  off_t                  offset;
+  char                   path[64];
+};
+
+struct coredump_procfs_rfile_s
+{
+  struct procfs_file_s base;
+  FAR struct coredump_procfs_s *ctx;
+  struct lib_wrapsistream_s wrapstream;
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+  struct lib_blksistream_s instream;
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+  struct lib_mtdsistream_s instream;
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+  struct lib_filesistream_s instream;
+#endif
+};
+
+struct coredump_procfs_wfile_s
+{
+  struct procfs_file_s base;
+  FAR struct coredump_procfs_s *ctx;
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+  struct lib_blkoutstream_s outstream;
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+  struct lib_mtdoutstream_s outstream;
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+  struct lib_fileoutstream_s outstream;
+#endif
 };
 #endif
 
@@ -102,6 +131,7 @@ struct elf_dumpinfo_s
   FAR struct tcb_s           *tcb;
   int                         stksegs;
   int                         memsegs;
+  off_t                       written;
 };
 
 /* Per-CPU coredump context — all mutable per-cpu state in one struct */
@@ -131,11 +161,33 @@ struct coredump_context_s
   struct lib_netpolloutstream_s netpollstream;
 #endif
 
+#ifdef CONFIG_BOARD_COREDUMP_DEVPATH
+  uint32_t seqno;
+  off_t    next;
+  off_t    devsize;
+  off_t    align;
+#endif
+
   FAR const struct memory_region_s *regions;
   mutex_t regions_lock;
-  bool stream_initialized;
   bool enabled;
 };
+
+/****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
+
+#if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
+static int coredump_procfs_open(FAR struct file *filep,
+                                FAR const char *relpath,
+                                int oflags, mode_t mode);
+static int coredump_procfs_close(FAR struct file *filep);
+static ssize_t coredump_procfs_read(FAR struct file *filep,
+                                    FAR char *buffer, size_t buflen);
+static ssize_t coredump_procfs_write(FAR struct file *filep,
+                                     FAR const char *buffer,
+                                     size_t buflen);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -149,6 +201,16 @@ static const struct memory_region_s g_memory_region[] =
   {
     CONFIG_BOARD_MEMORY_RANGE
   };
+#endif
+
+#if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
+static const struct procfs_operations g_coredump_procfs_ops =
+{
+  coredump_procfs_open,
+  coredump_procfs_close,
+  coredump_procfs_read,
+  coredump_procfs_write,
+};
 #endif
 
 /****************************************************************************
@@ -181,22 +243,23 @@ static int elf_emit(FAR struct elf_dumpinfo_s *cinfo,
                     FAR const void *buf, size_t len)
 {
   FAR const uint8_t *ptr = buf;
-  size_t total = len;
+  size_t total = 0;
   int ret = 0;
 
-  while (total > 0)
+  while (total < len)
     {
-      ret = lib_stream_puts(cinfo->stream, ptr, total);
+      ret = lib_stream_puts(cinfo->stream, ptr, len - total);
       if (ret < 0)
         {
           break;
         }
 
-      total -= ret;
+      total += ret;
       ptr   += ret;
     }
 
-  return ret < 0 ? ret : len - total;
+  cinfo->written += total;
+  return ret < 0 ? ret : total;
 }
 
 /****************************************************************************
@@ -210,8 +273,8 @@ static int elf_emit(FAR struct elf_dumpinfo_s *cinfo,
 noinline_function
 static int elf_emit_align(FAR struct elf_dumpinfo_s *cinfo)
 {
-  off_t align = ALIGN_UP(cinfo->stream->nput,
-                         ELF_PAGESIZE) - cinfo->stream->nput;
+  off_t pos = cinfo->written;
+  off_t align = ALIGN_UP(pos, ELF_PAGESIZE) - pos;
   unsigned char null[256];
   off_t total = align;
   off_t ret = 0;
@@ -252,6 +315,11 @@ static int elf_emit_hdr(FAR struct elf_dumpinfo_s *cinfo)
   ehdr.e_ident[EI_DATA]    = ELF_DATA;
   ehdr.e_ident[EI_VERSION] = EV_CURRENT;
   ehdr.e_ident[EI_OSABI]   = ELF_OSABI;
+
+#ifdef CONFIG_BOARD_COREDUMP_DEV
+  memcpy(&ehdr.e_ident[EI_PAD], &g_coredump.seqno, sizeof(uint32_t));
+  g_coredump.seqno++;
+#endif
 
   ehdr.e_type              = ET_CORE;
   ehdr.e_machine           = EM_ARCH;
@@ -641,7 +709,7 @@ static void elf_emit_info_note(FAR struct elf_dumpinfo_s *cinfo)
   strlcpy(name, "NuttX", sizeof(name));
   elf_emit(cinfo, name, sizeof(name));
 
-  info.size = cinfo->stream->nput + sizeof(info);
+  info.size = cinfo->written + sizeof(info);
   clock_gettime(CLOCK_REALTIME, &info.time);
   uname(&info.name);
 
@@ -718,7 +786,7 @@ static void elf_emit_tcb_phdr(FAR struct elf_dumpinfo_s *cinfo,
 
 static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo)
 {
-  off_t offset = cinfo->stream->nput + sizeof(Elf_Phdr) *
+  off_t offset = cinfo->written + sizeof(Elf_Phdr) *
                  (cinfo->stksegs + cinfo->memsegs + 1 + 1);
   FAR const struct memory_region_s *region;
   FAR struct tcb_s *tcb;
@@ -838,6 +906,7 @@ static int elf_setup_dumpinfo(FAR struct elf_dumpinfo_s *cinfo,
   cinfo->regions = regions;
   cinfo->stream  = stream;
   cinfo->tcb     = tcb;
+  cinfo->written = 0;
   cinfo->memsegs = 0;
 
   if (cinfo->tcb != NULL)
@@ -1033,16 +1102,19 @@ static void coredump_dump_syslog(FAR struct tcb_s *tcb)
 #ifdef CONFIG_BOARD_COREDUMP_DEV
 static void coredump_dump_dev(FAR struct tcb_s *tcb)
 {
-  FAR void *stream = &g_coredump.devstream;
+  FAR struct lib_outstream_s *stream;
+  struct lib_wrapsostream_s wrapstream;
   int ret;
 
-# if defined(CONFIG_BOARD_COREDUMP_BLKDEV) || defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-  if (g_coredump.devstream.inode == NULL)
-    {
-      _alert("Coredump device not found\n");
-      return;
-    }
-# endif
+  /* Wrap output in a stream that automatically wraps around
+   * to the beginning when the device end is reached.
+   */
+
+  lib_wrapsostream_init(&wrapstream,
+                       (FAR struct lib_sostream_s *)&g_coredump.devstream);
+  lib_stream_seek(&wrapstream, g_coredump.next, SEEK_SET);
+
+  stream = (FAR struct lib_outstream_s *)&wrapstream;
 
 # ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   lib_lzfoutstream(&g_coredump.lzfstream, stream);
@@ -1056,8 +1128,13 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
       return;
     }
 
-  _alert("Coredump finish, write %"PRIuOFF" bytes to %s\n",
-         g_coredump.devstream.common.nput, CONFIG_BOARD_COREDUMP_DEVPATH);
+  lib_stream_flush(stream);
+
+  g_coredump.next = ALIGN_UP(lib_stream_nput(&wrapstream),
+                             g_coredump.align) % g_coredump.devsize;
+
+  _alert("Coredump finish, write %" PRIuOFF " bytes to %s\n",
+         lib_stream_nput(stream), CONFIG_BOARD_COREDUMP_DEVPATH);
 }
 #endif
 
@@ -1244,8 +1321,10 @@ int coredump_remove_memory_region(FAR const void *ptr, size_t size)
  ****************************************************************************/
 
 static int coredump_get_info(FAR struct lib_sistream_s *stream,
+                             off_t base,
                              FAR struct coredump_info_s *info,
-                             FAR bool *compressed)
+                             FAR bool *compressed,
+                             FAR uint32_t *seqno)
 {
 #ifdef CONFIG_LIBC_LZF
   struct lib_lzfsistream_s lzfstream;
@@ -1257,6 +1336,10 @@ static int coredump_get_info(FAR struct lib_sistream_s *stream,
   Elf_Nhdr nhdr;
   int ret;
 
+  /* Seek to the base offset before reading */
+
+  lib_stream_seek(stream, base, SEEK_SET);
+
   /* Detect format by reading the first 2 bytes */
 
   ret = lib_stream_gets(stream, magic, sizeof(magic));
@@ -1265,7 +1348,7 @@ static int coredump_get_info(FAR struct lib_sistream_s *stream,
       return ret < 0 ? ret : -EIO;
     }
 
-  lib_stream_seek(stream, 0, SEEK_SET);
+  lib_stream_seek(stream, base, SEEK_SET);
 
   *compressed = false;
   if (magic[0] == 'Z' && magic[1] == 'V')
@@ -1290,12 +1373,27 @@ static int coredump_get_info(FAR struct lib_sistream_s *stream,
       return -EINVAL;
     }
 
-  /* The last program header contains the info note */
+  /* Extract seqno from ELF header padding area */
 
-  ret = lib_stream_seek(stream,
-                        ehdr.e_phoff +
-                        ehdr.e_phentsize * (ehdr.e_phnum - 1),
-                        SEEK_SET);
+  if (seqno != NULL)
+    {
+      memcpy(seqno, &ehdr.e_ident[EI_PAD], sizeof(*seqno));
+    }
+
+  /* The last program header contains the info note.
+   * For uncompressed streams, offsets are device-absolute (base + offset).
+   * For compressed (LZF) streams, offsets are relative to decompressed
+   * content (base is already incorporated in the backend position).
+   */
+
+  if (*compressed)
+    {
+      base = 0;
+    }
+
+  ret = lib_stream_seek(stream, base + ehdr.e_phoff +
+                       ehdr.e_phentsize * (ehdr.e_phnum - 1),
+                       SEEK_SET);
   if (ret < 0)
     {
       return ret;
@@ -1307,7 +1405,7 @@ static int coredump_get_info(FAR struct lib_sistream_s *stream,
       return ret < 0 ? ret : -EIO;
     }
 
-  ret = lib_stream_seek(stream, phdr.p_offset, SEEK_SET);
+  ret = lib_stream_seek(stream, base + phdr.p_offset, SEEK_SET);
   if (ret < 0)
     {
       return ret;
@@ -1354,20 +1452,146 @@ static int coredump_get_info(FAR struct lib_sistream_s *stream,
  *
  ****************************************************************************/
 
-static ssize_t coredump_procfs_read(FAR struct file *filep,
-                                    FAR char *buffer, size_t buflen,
-                                    FAR void *priv)
+static int coredump_procfs_open(FAR struct file *filep,
+                               FAR const char *relpath,
+                               int oflags, mode_t mode)
 {
-  FAR struct coredump_procfs_s *ctx = priv;
+  FAR struct procfs_entry_s *entry =
+    (FAR struct procfs_entry_s *)filep->f_priv;
+  FAR struct coredump_procfs_s *ctx =
+    container_of(entry, struct coredump_procfs_s, entry);
+  int ret;
+
+  if ((oflags & O_RDWR) == O_RDWR)
+    {
+      return -EINVAL;
+    }
+
+  if ((oflags & O_WRONLY) == 0)
+    {
+      /* Read mode — open input stream */
+
+      FAR struct coredump_procfs_rfile_s *file;
+
+      file = kmm_zalloc(sizeof(*file));
+      if (file == NULL)
+        {
+          return -ENOMEM;
+        }
+
+      file->ctx = ctx;
+
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+      ret = lib_blksistream_open(&file->instream,
+                                 CONFIG_BOARD_COREDUMP_DEVPATH);
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+      ret = lib_mtdsistream_open(&file->instream,
+                                 CONFIG_BOARD_COREDUMP_DEVPATH);
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+      ret = lib_filesistream_open(&file->instream,
+                                  CONFIG_BOARD_COREDUMP_DEVPATH,
+                                  O_RDONLY | O_CLOEXEC, 0600);
+#endif
+      if (ret < 0)
+        {
+          kmm_free(file);
+          return ret;
+        }
+
+      lib_wrapsistream_init(&file->wrapstream,
+                            (FAR struct lib_sistream_s *)&file->instream);
+      lib_stream_seek(&file->wrapstream, ctx->offset, SEEK_SET);
+      filep->f_priv = file;
+    }
+  else
+    {
+      /* Write mode — open output stream */
+
+      FAR struct coredump_procfs_wfile_s *file;
+
+      file = kmm_zalloc(sizeof(*file));
+      if (file == NULL)
+        {
+          return -ENOMEM;
+        }
+
+      file->ctx = ctx;
+
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+      ret = lib_blkoutstream_open(&file->outstream,
+                                  CONFIG_BOARD_COREDUMP_DEVPATH);
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+      ret = lib_mtdoutstream_open(&file->outstream,
+                                  CONFIG_BOARD_COREDUMP_DEVPATH);
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+      ret = lib_fileoutstream_open(&file->outstream,
+                                   CONFIG_BOARD_COREDUMP_DEVPATH,
+                                   O_WRONLY | O_CLOEXEC, 0600);
+#endif
+      if (ret < 0)
+        {
+          kmm_free(file);
+          return ret;
+        }
+
+      filep->f_priv = file;
+    }
+
+  return OK;
+}
+
+static int coredump_procfs_close(FAR struct file *filep)
+{
+  if ((filep->f_oflags & O_WRONLY) == 0)
+    {
+      FAR struct coredump_procfs_rfile_s *file = filep->f_priv;
+
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+      lib_blksistream_close(&file->instream);
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+      lib_mtdsistream_close(&file->instream);
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+      lib_filesistream_close(&file->instream);
+#endif
+      kmm_free(file);
+    }
+  else
+    {
+      FAR struct coredump_procfs_wfile_s *file = filep->f_priv;
+
+      lib_stream_flush(&file->outstream);
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+      lib_blkoutstream_close(&file->outstream);
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+      lib_mtdoutstream_close(&file->outstream);
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+      lib_fileoutstream_close(&file->outstream);
+#endif
+      kmm_free(file);
+    }
+
+  return OK;
+}
+
+static ssize_t coredump_procfs_read(FAR struct file *filep,
+                                    FAR char *buffer, size_t buflen)
+{
+  FAR struct coredump_procfs_rfile_s *file = filep->f_priv;
+  FAR struct coredump_procfs_s *ctx = file->ctx;
   off_t offset = filep->f_pos;
   ssize_t nread;
+
+  if (offset >= ctx->info.size)
+    {
+      return 0;
+    }
 
   if (buflen > ctx->info.size - offset)
     {
       buflen = ctx->info.size - offset;
     }
 
-  nread = file_pread(&ctx->file, buffer, buflen, offset);
+  nread = lib_stream_gets(&file->wrapstream, buffer, buflen);
   if (nread > 0)
     {
       filep->f_pos += nread;
@@ -1377,94 +1601,197 @@ static ssize_t coredump_procfs_read(FAR struct file *filep,
 }
 
 static ssize_t coredump_procfs_write(FAR struct file *filep,
-                                     FAR const char *buffer, size_t buflen,
-                                     FAR void *priv)
+                                     FAR const char *buffer, size_t buflen)
 {
-  FAR struct coredump_procfs_s *ctx = priv;
+  FAR struct coredump_procfs_wfile_s *file = filep->f_priv;
+  FAR struct coredump_procfs_s *ctx = file->ctx;
   char zero[EI_MAGIC_SIZE] =
     {
       0
     };
-
-  int ret;
 
   if (buflen < 5 || strncmp(buffer, "clear", 5) != 0)
     {
       return -EINVAL;
     }
 
-  /* Clear file header magic */
+  /* Clear file header magic at the slot offset */
 
-  ret = file_pwrite(&ctx->file, zero, EI_MAGIC_SIZE, 0);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  lib_stream_seek(&file->outstream, ctx->offset, SEEK_SET);
+  lib_stream_puts(&file->outstream, zero, EI_MAGIC_SIZE);
+  lib_stream_flush(&file->outstream);
 
-  file_ioctl(&ctx->file, BIOC_FLUSH, 0);
   return buflen;
 }
 
-static void coredump_procfs_register(FAR const char *devpath)
+/****************************************************************************
+ * Name: coredump_procfs_register
+ *
+ * Description:
+ *   Register a coredump procfs entry for a single valid dump at the given
+ *   offset and size.
+ *
+ ****************************************************************************/
+
+static void coredump_procfs_register(FAR const struct coredump_info_s *info,
+                                     uint32_t seqno, bool compressed,
+                                     off_t offset, off_t size)
 {
-  struct lib_filesistream_s filestream;
-  struct coredump_info_s info;
   FAR struct coredump_procfs_s *ctx;
   FAR const char *ext;
-  FAR char *path;
-  bool compressed = false;
   int ret;
 
-  ret = lib_filesistream_open(&filestream, devpath, O_RDONLY | O_CLOEXEC, 0);
-  if (ret < 0)
-    {
-      return;
-    }
-
-  ret = coredump_get_info(&filestream.common, &info, &compressed);
-  lib_filesistream_close(&filestream);
-  if (ret < 0)
-    {
-      return;
-    }
-
-  ctx = kmm_zalloc(sizeof(struct coredump_procfs_s));
+  ctx = kmm_zalloc(sizeof(*ctx));
   if (ctx == NULL)
     {
       return;
     }
 
-  ctx->info = info;
-  ret = file_open(&ctx->file, devpath, O_RDWR | O_CLOEXEC);
-  if (ret < 0)
-    {
-      kmm_free(ctx);
-      return;
-    }
+  ctx->info   = *info;
+  ctx->offset = offset;
 
   ext = compressed ? "lzf" : "core";
-  ret = asprintf(&path, "coredump/%.16s-%jx.%s",
-                 info.name.version, (intmax_t)info.time.tv_sec, ext);
-  if (ret < 0)
-    {
-      file_close(&ctx->file);
-      kmm_free(ctx);
-      return;
-    }
+
+  snprintf(ctx->path, sizeof(ctx->path),
+           "coredump/%" PRIu32 "-%.16s-%jx.%s", seqno,
+           info->name.version, (intmax_t)info->time.tv_sec, ext);
 
   /* Replace spaces and colons with dashes in filename */
 
-  for (ret = 0; path[ret] != '\0'; ret++)
+  for (ret = 0; ctx->path[ret] != '\0'; ret++)
     {
-      if (path[ret] == ' ' || path[ret] == ':')
+      if (ctx->path[ret] == ' ' || ctx->path[ret] == ':')
         {
-          path[ret] = '-';
+          ctx->path[ret] = '-';
         }
     }
 
-  procfs_create_custom(path, 0644,
-                       coredump_procfs_read,
-                       coredump_procfs_write, ctx);
+  ctx->entry.pathpattern = ctx->path;
+  ctx->entry.ops = &g_coredump_procfs_ops;
+  ctx->entry.type = PROCFS_FILE_TYPE;
+  ctx->entry.mode = 0600;
+
+  procfs_register(&ctx->entry);
+}
+
+/****************************************************************************
+ * Name: coredump_boot_scan
+ *
+ * Description:
+ *   Iterate all slots on the device, find valid coredumps, register them
+ *   in procfs, and determine the next write position (wptr) and sequence.
+ *
+ ****************************************************************************/
+
+static void coredump_boot_scan(void)
+{
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+  struct lib_blksistream_s scanstream;
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+  struct lib_mtdsistream_s scanstream;
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+  struct lib_filesistream_s scanstream;
+#endif
+  struct lib_wrapsistream_s wrapstream;
+  char magic[EI_MAGIC_SIZE];
+  off_t blkalign;
+  int nslots;
+  int ret;
+  int i;
+
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+  ret = lib_blksistream_open(&scanstream, CONFIG_BOARD_COREDUMP_DEVPATH);
+  blkalign = scanstream.geo.geo_sectorsize;
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+  ret = lib_mtdsistream_open(&scanstream, CONFIG_BOARD_COREDUMP_DEVPATH);
+  blkalign = scanstream.geo.erasesize;
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+  ret = lib_filesistream_open(&scanstream, CONFIG_BOARD_COREDUMP_DEVPATH,
+                              O_RDONLY | O_CLOEXEC, 0);
+  blkalign = 512;
+#endif
+  if (ret < 0)
+    {
+      return;
+    }
+
+  /* Compute device size and slot size.
+   * Each slot is devsize/NSLOTS rounded up to hardware block alignment.
+   * A coredump always starts at a slot boundary and may span multiple slots.
+   */
+
+  g_coredump.devsize = lib_stream_seek(&scanstream, 0, SEEK_END);
+  lib_stream_seek(&scanstream, 0, SEEK_SET);
+
+  g_coredump.align = ALIGN_DOWN(
+      g_coredump.devsize / CONFIG_BOARD_COREDUMP_NSLOTS, blkalign);
+
+  /* Actual slot count may be less if align-up causes overflow */
+
+  nslots = g_coredump.devsize / g_coredump.align;
+
+  lib_wrapsistream_init(&wrapstream,
+                       (FAR struct lib_sistream_s *)&scanstream);
+
+  /* Scan each slot start position for a valid coredump magic */
+
+  for (i = 0; i < nslots; i++)
+    {
+      struct coredump_info_s info;
+      uint32_t seqno;
+      bool compressed;
+      ssize_t nread;
+      off_t pos;
+
+      pos = i * g_coredump.align;
+      lib_stream_seek(&wrapstream, pos, SEEK_SET);
+
+      nread = lib_stream_gets(&wrapstream, magic, EI_MAGIC_SIZE);
+      if (nread < EI_MAGIC_SIZE)
+        {
+          continue;
+        }
+
+      if (memcmp(magic, ELFMAG, EI_MAGIC_SIZE) != 0
+#ifdef CONFIG_LIBC_LZF
+          && !(magic[0] == 'Z' && magic[1] == 'V')
+#endif
+         )
+        {
+          continue;
+        }
+
+      ret = coredump_get_info(
+              (FAR struct lib_sistream_s *)&wrapstream,
+              pos, &info, &compressed, &seqno);
+      if (ret < 0 || info.size == 0)
+        {
+          continue;
+        }
+
+      coredump_procfs_register(&info, seqno, compressed,
+                               pos, info.size);
+
+      if (seqno + 1 > g_coredump.seqno)
+        {
+          g_coredump.seqno = seqno + 1;
+          g_coredump.next  =
+            ALIGN_UP(pos + info.size, g_coredump.align) %
+            g_coredump.devsize;
+        }
+
+      /* Skip slots occupied by this dump */
+
+      i += ALIGN_UP(info.size, g_coredump.align) / g_coredump.align - 1;
+    }
+
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+  lib_blksistream_close(&scanstream);
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+  lib_mtdsistream_close(&scanstream);
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+  lib_filesistream_close(&scanstream);
+#endif
 }
 
 #endif /* CONFIG_FS_PROCFS_REGISTER && CONFIG_BOARD_COREDUMP_DEVPATH */
@@ -1486,13 +1813,15 @@ int coredump_initialize(void)
 {
   int ret = 0;
 
-  g_coredump.enabled = true;
-
   ret = coredump_initialize_memory_region();
   if (ret < 0)
     {
       return ret;
     }
+
+#if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
+  coredump_boot_scan();
+#endif
 
 #ifdef CONFIG_BOARD_COREDUMP_BLKDEV
   ret = lib_blkoutstream_open(&g_coredump.devstream,
@@ -1524,18 +1853,14 @@ int coredump_initialize(void)
       _alert("%s Coredump device init failed:%d\n",
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
     }
-
+  else
 #endif
-
-  g_coredump.stream_initialized = true;
-
+    {
+      g_coredump.enabled = true;
 #ifdef CONFIG_FS_PROCFS_REGISTER
-  procfs_create_bool("coredump/ctl", 0644, &g_coredump.enabled);
+      procfs_create_bool("coredump/ctl", 0644, &g_coredump.enabled);
 #endif
-
-#if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
-  coredump_procfs_register(CONFIG_BOARD_COREDUMP_DEVPATH);
-#endif
+    }
 
   return ret;
 }
@@ -1553,12 +1878,6 @@ int coredump_initialize(void)
 
 void coredump_dump(FAR struct tcb_s *tcb)
 {
-  if (!g_coredump.stream_initialized)
-    {
-      _alert("Coredump device is not initialized.\n");
-      return;
-    }
-
   if (!g_coredump.enabled)
     {
       _alert("Coredump is disabled.\n");
