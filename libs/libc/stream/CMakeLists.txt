@@ -34,6 +34,8 @@ list(
   lib_zeroinstream.c
   lib_nullinstream.c
   lib_nulloutstream.c
+  lib_wrapsostream.c
+  lib_wrapsistream.c
   lib_libnoflush.c
   lib_libsnoflush.c
   lib_syslogstream.c

@@ -232,6 +232,24 @@ struct lib_memsostream_s
   size_t                 buflen;  /* Size of the buffer in bytes */
 };
 
+/* These are wrap-around stream wrappers.  Reads/writes wrap back to
+ * the beginning of the backend stream when the end is reached.
+ */
+
+struct lib_wrapsostream_s
+{
+  struct lib_sostream_s   common;
+  FAR struct lib_sostream_s *backend;
+  off_t                   length;
+};
+
+struct lib_wrapsistream_s
+{
+  struct lib_sistream_s   common;
+  FAR struct lib_sistream_s *backend;
+  off_t                   length;
+};
+
 /* These are streams that operate on a FILE */
 
 struct lib_stdinstream_s
@@ -477,6 +495,21 @@ void lib_memsistream(FAR struct lib_memsistream_s *stream,
                      FAR const char *bufstart, size_t buflen);
 void lib_memsostream(FAR struct lib_memsostream_s *stream,
                      FAR char *bufstart, size_t buflen);
+
+/****************************************************************************
+ * Name: lib_wrapsostream_init, lib_wrapsistream_init
+ *
+ * Description:
+ *   Initialize wrap-around stream wrappers.  Reads/writes wrap back to
+ *   the beginning of the backend stream when the end is reached.
+ *   The stream length is auto-detected via SEEK_END on the backend.
+ *
+ ****************************************************************************/
+
+void lib_wrapsostream_init(FAR struct lib_wrapsostream_s *stream,
+                           FAR struct lib_sostream_s *backend);
+void lib_wrapsistream_init(FAR struct lib_wrapsistream_s *stream,
+                           FAR struct lib_sistream_s *backend);
 
 /****************************************************************************
  * Name: lib_stdinstream, lib_stdoutstream
