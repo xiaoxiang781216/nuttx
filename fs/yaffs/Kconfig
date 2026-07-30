@@ -72,4 +72,16 @@ config FS_YAFFS_POSIX_TIMESTAMP
 		close and readdir for POSIX conformance. Adds a per-operation
 		flush (flash-wear cost) and PATH_MAX storage per open directory;
 		intended for conformance testing, not production use.
+
+config FS_YAFFS_N_HANDLES
+	int "YAFFS max open file handles (system-wide)"
+	default LIBC_OPEN_MAX
+	---help---
+		Size of the YAFFS per-device handle/inode/file-descriptor
+		pool, i.e. the system-wide cap on concurrently open YAFFS
+		files.  Must be at least CONFIG_LIBC_OPEN_MAX (OPEN_MAX) so
+		that the per-process file-descriptor limit (EMFILE) is the
+		binding constraint when a process exhausts its fd table;
+		otherwise YAFFS returns ENFILE first, failing POSIX cases
+		that expect EMFILE (e.g. PSE52 VSX fopen).
 endif
