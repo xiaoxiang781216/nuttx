@@ -142,9 +142,9 @@ netpolloutstream_send(FAR struct lib_netpolloutstream_s *stream,
       return ret;
     }
 
-  if (np->lower->ops->txpoll != NULL)
+  if (np->lower->ops->poll != NULL)
     {
-      np->lower->ops->txpoll(np->lower);
+      np->lower->ops->poll(np->lower, NETPKT_TX);
     }
 
   return chunk;

@@ -188,7 +188,8 @@ static void e1000_rxclean(FAR struct e1000_driver_s *priv);
 static int e1000_transmit(FAR struct netdev_lowerhalf_s *dev,
                           FAR netpkt_t *pkt);
 #ifdef CONFIG_NET_NETPOLL
-static void e1000_txpoll(FAR struct netdev_lowerhalf_s *dev);
+static void e1000_poll(FAR struct netdev_lowerhalf_s *dev,
+                       enum netpkt_type_e type);
 #endif
 
 /* Interrupt handling */
@@ -312,7 +313,7 @@ static const struct netdev_ops_s g_e1000_ops =
   .rmmac    = e1000_rmmac,
 #endif
 #ifdef CONFIG_NET_NETPOLL
-  .txpoll   = e1000_txpoll
+  .poll     = e1000_poll
 #endif
 };
 
@@ -770,22 +771,33 @@ static bool e1000_txdone(FAR struct netdev_lowerhalf_s *dev)
 
 #ifdef CONFIG_NET_NETPOLL
 /*****************************************************************************
- * Name: e1000_txpoll
+ * Name: e1000_poll
  *
  * Description:
- *   Wait for TX done
+ *   Advance TX or RX in a polled (interrupt-disabled) context for netpoll.
  *
  * Input Parameters:
  *   dev - Reference to the driver state structure
+ *   type - NETPKT_TX to drain TX, NETPKT_RX to service RX
  *
  * Returned Value:
  *   None
  *
  *****************************************************************************/
 
-static void e1000_txpoll(FAR struct netdev_lowerhalf_s *dev)
+static void e1000_poll(FAR struct netdev_lowerhalf_s *dev,
+                       enum netpkt_type_e type)
 {
   FAR struct e1000_driver_s *priv = (FAR struct e1000_driver_s *)dev;
+
+  /* RX is self-contained: e1000_receive() polls the RX descriptor DD bit
+   * directly and does not depend on the RX ISR, so nothing to do here.
+   */
+
+  if (type == NETPKT_RX)
+    {
+      return;
+    }
 
   /* Wait for TX done with interrupt disabled */
 

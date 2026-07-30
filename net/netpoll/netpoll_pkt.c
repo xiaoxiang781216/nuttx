@@ -94,7 +94,7 @@ FAR netpkt_t *netpoll_pkt_alloc(FAR struct netpoll_s *np)
 
       /* Drain pending TX so a quota slot comes back */
 
-      lower->ops->txpoll(lower);
+      lower->ops->poll(lower, NETPKT_TX);
     }
 }
 

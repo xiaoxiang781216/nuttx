@@ -202,6 +202,10 @@ static int  ctucanfd_sock_ifdown(FAR struct netdev_lowerhalf_s *dev);
 static int  ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
                                    FAR netpkt_t *pkt);
 static void ctucanfd_sock_txpoll(FAR struct netdev_lowerhalf_s *dev);
+#  ifdef CONFIG_NET_NETPOLL
+static void ctucanfd_sock_poll(FAR struct netdev_lowerhalf_s *dev,
+                               enum netpkt_type_e type);
+#  endif
 static FAR netpkt_t *ctucanfd_sock_recv(FAR struct netdev_lowerhalf_s *dev);
 
 #  ifdef CONFIG_NETDEV_IOCTL
@@ -260,7 +264,7 @@ static const struct netdev_ops_s g_ctucanfd_net_ops =
   .ioctl    = ctucanfd_sock_ioctl,
 #endif
 #ifdef CONFIG_NET_NETPOLL
-  .txpoll   = ctucanfd_sock_txpoll
+  .poll     = ctucanfd_sock_poll
 #endif
 };
 #endif
@@ -1674,6 +1678,30 @@ static void ctucanfd_sock_txpoll(FAR struct netdev_lowerhalf_s *dev)
       ctucanfd_putreg(priv, CTUCANFD_INTSTAT, CTUCANFD_INT_TXI);
     }
 }
+
+#ifdef CONFIG_NET_NETPOLL
+/*****************************************************************************
+ * Name: ctucanfd_sock_poll
+ *
+ * Description:
+ *   Advance TX or RX in a polled (interrupt-disabled) context for netpoll.
+ *
+ *****************************************************************************/
+
+static void ctucanfd_sock_poll(FAR struct netdev_lowerhalf_s *dev,
+                               enum netpkt_type_e type)
+{
+  /* RX is self-contained: ctucanfd_sock_recv() reads the RX buffer status
+   * register directly and does not depend on the RX ISR, so nothing to do
+   * for the RX direction here.
+   */
+
+  if (type == NETPKT_TX)
+    {
+      ctucanfd_sock_txpoll(dev);
+    }
+}
+#endif
 
 /*****************************************************************************
  * Name: ctucanfd_sock_txconfirm

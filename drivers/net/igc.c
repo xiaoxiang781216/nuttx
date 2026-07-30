@@ -181,7 +181,8 @@ static int igc_transmit(FAR struct netdev_lowerhalf_s *dev,
 static FAR netpkt_t *igc_receive(FAR struct netdev_lowerhalf_s *dev);
 static bool igc_txdone(FAR struct netdev_lowerhalf_s *dev);
 #ifdef CONFIG_NET_NETPOLL
-static void igc_txpoll(FAR struct netdev_lowerhalf_s *dev);
+static void igc_poll(FAR struct netdev_lowerhalf_s *dev,
+                     enum netpkt_type_e type);
 #endif
 
 static void igc_msix_interrupt(FAR struct igc_driver_s *priv);
@@ -260,7 +261,7 @@ static const struct netdev_ops_s g_igc_ops =
   .rmmac    = igc_rmmac,
 #endif
 #ifdef CONFIG_NET_NETPOLL
-  .txpoll   = igc_txpoll
+  .poll     = igc_poll
 #endif
 };
 
@@ -592,22 +593,33 @@ static int igc_transmit(FAR struct netdev_lowerhalf_s *dev,
 
 #ifdef CONFIG_NET_NETPOLL
 /*****************************************************************************
- * Name: igc_txpoll
+ * Name: igc_poll
  *
  * Description:
- *   Wait for TX done
+ *   Advance TX or RX in a polled (interrupt-disabled) context for netpoll.
  *
  * Input Parameters:
  *   dev - Reference to the driver state structure
+ *   type - NETPKT_TX to drain TX, NETPKT_RX to service RX
  *
  * Returned Value:
  *   None
  *
  *****************************************************************************/
 
-static void igc_txpoll(FAR struct netdev_lowerhalf_s *dev)
+static void igc_poll(FAR struct netdev_lowerhalf_s *dev,
+                     enum netpkt_type_e type)
 {
   FAR struct igc_driver_s *priv = (FAR struct igc_driver_s *)dev;
+
+  /* RX is self-contained: igc_receive() polls the RX descriptor DD bit
+   * directly and does not depend on the RX ISR, so nothing to do here.
+   */
+
+  if (type == NETPKT_RX)
+    {
+      return;
+    }
 
   /* Wait for TX done with interrupt disabled */
 

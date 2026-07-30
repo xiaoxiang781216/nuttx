@@ -195,7 +195,8 @@ static int  kvaser_sock_ifdown(FAR struct netdev_lowerhalf_s *dev);
 static int  kvaser_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
                                  FAR netpkt_t *pkt);
 #ifdef CONFIG_NET_NETPOLL
-static void kvaser_sock_txpoll(FAR struct netdev_lowerhalf_s *dev);
+static void kvaser_sock_poll(FAR struct netdev_lowerhalf_s *dev,
+                             enum netpkt_type_e type);
 #endif
 
 static FAR netpkt_t *kvaser_sock_recv(FAR struct netdev_lowerhalf_s *dev);
@@ -253,7 +254,7 @@ static const struct netdev_ops_s g_kvaser_net_ops =
   .ioctl    = kvaser_sock_ioctl,
 #endif
 #ifdef CONFIG_NET_NETPOLL
-  .txpoll   = kvaser_sock_txpoll
+  .poll     = kvaser_sock_poll
 #endif
 };
 #endif
@@ -1294,22 +1295,34 @@ static FAR netpkt_t *kvaser_sock_recv(FAR struct netdev_lowerhalf_s *dev)
 
 #ifdef CONFIG_NET_NETPOLL
 /*****************************************************************************
- * Name: kvaser_sock_txpoll
+ * Name: kvaser_sock_poll
  *
  * Description:
- *   Wait for TX done
+ *   Advance TX or RX in a polled (interrupt-disabled) context for netpoll.
  *
  * Input Parameters:
  *   dev - Reference to the driver state structure
+ *   type - NETPKT_TX to drain TX, NETPKT_RX to service RX
  *
  * Returned Value:
  *   None
  *
  *****************************************************************************/
 
-static void kvaser_sock_txpoll(FAR struct netdev_lowerhalf_s *dev)
+static void kvaser_sock_poll(FAR struct netdev_lowerhalf_s *dev,
+                             enum netpkt_type_e type)
 {
   FAR struct kvaser_sja_s *priv = (FAR struct kvaser_sja_s *)dev;
+
+  /* RX is self-contained: kvaser_sock_recv() reads the SJA1000 status
+   * register directly and does not depend on the RX ISR, so nothing to do
+   * for the RX direction here.
+   */
+
+  if (type == NETPKT_RX)
+    {
+      return;
+    }
 
   /* Wait for TX done with interrupt disabled */
 

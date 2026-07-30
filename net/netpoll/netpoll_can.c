@@ -105,7 +105,7 @@ static int netpoll_can_pkt_send(FAR struct netpoll_s *np, FAR netpkt_t *pkt,
           break;
         }
 
-      lower->ops->txpoll(lower);
+      lower->ops->poll(lower, NETPKT_TX);
     }
 
   return OK;
@@ -135,7 +135,7 @@ int netpoll_can_init(FAR struct netpoll_s *np,
                      FAR struct netdev_lowerhalf_s *lower,
                      uint16_t srcport)
 {
-  if (lower->ops->txpoll == NULL)
+  if (lower->ops->poll == NULL)
     {
       return -EINVAL;
     }

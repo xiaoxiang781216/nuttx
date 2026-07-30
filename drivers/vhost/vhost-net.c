@@ -97,7 +97,8 @@ static int vhost_net_ioctl(FAR struct netdev_lowerhalf_s *dev,
                            int cmd, unsigned long arg);
 #endif
 #ifdef CONFIG_NET_NETPOLL
-static void vhost_net_txpoll(FAR struct netdev_lowerhalf_s *dev);
+static void vhost_net_poll(FAR struct netdev_lowerhalf_s *dev,
+                           enum netpkt_type_e type);
 #endif
 
 static int  vhost_net_probe(FAR struct vhost_device *hdev);
@@ -129,7 +130,7 @@ static const struct netdev_ops_s g_vhost_net_ops =
   vhost_net_ioctl,
 #endif
 #ifdef CONFIG_NET_NETPOLL
-  vhost_net_txpoll,
+  vhost_net_poll,
 #endif
 };
 
@@ -260,14 +261,25 @@ static uint32_t vhost_net_pkt2vb(FAR struct netdev_lowerhalf_s *dev,
 }
 
 /****************************************************************************
- * Name: vhost_net_txpoll
+ * Name: vhost_net_poll
  ****************************************************************************/
 
 #ifdef CONFIG_NET_NETPOLL
-static void vhost_net_txpoll(FAR struct netdev_lowerhalf_s *dev)
+static void vhost_net_poll(FAR struct netdev_lowerhalf_s *dev,
+                           enum netpkt_type_e type)
 {
   FAR struct vhost_net_priv_s *priv = (FAR struct vhost_net_priv_s *)dev;
   FAR struct virtqueue *vq;
+
+  /* RX is self-contained: vhost_net_recv() pulls buffers off the RX
+   * virtqueue directly and does not depend on the RX ISR, so nothing to
+   * do for the RX direction here.
+   */
+
+  if (type == NETPKT_RX)
+    {
+      return;
+    }
 
   vq = priv->hdev->vrings_info[VHOST_NET_TX].vq;
 

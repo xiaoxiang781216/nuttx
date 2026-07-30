@@ -77,7 +77,8 @@ static int vlan_ioctl(FAR struct netdev_lowerhalf_s *dev, int cmd,
                       unsigned long arg);
 #endif
 #ifdef CONFIG_NET_NETPOLL
-static void vlan_txpoll(FAR struct netdev_lowerhalf_s *dev);
+static void vlan_poll(FAR struct netdev_lowerhalf_s *dev,
+                      enum netpkt_type_e type);
 #endif
 #if CONFIG_IOB_EXTRA_HEADS > 0
 static netpkt_t *vlan_alloc(struct netdev_lowerhalf_s *dev, int priority,
@@ -103,7 +104,7 @@ static const struct netdev_ops_s g_vlan_ops =
   vlan_ioctl,    /* ioctl */
 #endif
 #ifdef CONFIG_NET_NETPOLL
-  vlan_txpoll,   /* txpoll */
+  vlan_poll,     /* poll */
 #endif
 #if CONFIG_IOB_EXTRA_HEADS > 0
   vlan_alloc,    /* alloc */
@@ -278,14 +279,15 @@ static int vlan_ioctl(FAR struct netdev_lowerhalf_s *dev, int cmd,
 #endif
 
 #ifdef CONFIG_NET_NETPOLL
-static void vlan_txpoll(FAR struct netdev_lowerhalf_s *dev)
+static void vlan_poll(FAR struct netdev_lowerhalf_s *dev,
+                      enum netpkt_type_e type)
 {
   FAR struct vlan_device_s      *vlan = (FAR struct vlan_device_s *)dev;
   FAR struct netdev_lowerhalf_s *real = vlan->real;
 
-  if (real->ops->txpoll)
+  if (real->ops->poll)
     {
-      real->ops->txpoll(real);
+      real->ops->poll(real, type);
     }
 }
 #endif

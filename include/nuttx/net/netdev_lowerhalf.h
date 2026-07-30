@@ -193,9 +193,26 @@ struct netdev_ops_s
                     unsigned long arg);
 #endif
 #ifdef CONFIG_NET_NETPOLL
-  /* txpoll - Wait for transmition done. */
+  /* poll - Advance TX or RX in a polled (interrupt-disabled) context.
+   *
+   *   Used by the netpoll fast path, which runs with interrupts disabled
+   *   and without the net stack (e.g. crash dump / IRQ context).  Since
+   *   the normal IRQ-driven completion cannot run there, this callback
+   *   drives one direction of the datapath synchronously in the caller's
+   *   context.
+   *
+   *   type == NETPKT_TX: wait for in-flight TX to complete and reclaim the
+   *                      TX quota / IOBs (former txpoll behavior).
+   *   type == NETPKT_RX: service the RX path so a following receive() can
+   *                      succeed without interrupts (move frames from HW
+   *                      into the driver, refill descriptors, notify
+   *                      netdev_lower_rxready()).  Drivers whose receive()
+   *                      already polls hardware directly may leave this a
+   *                      no-op.
+   */
 
-  CODE void (*txpoll)(FAR struct netdev_lowerhalf_s *dev);
+  CODE void (*poll)(FAR struct netdev_lowerhalf_s *dev,
+                    enum netpkt_type_e type);
 #endif
 
 #if CONFIG_IOB_EXTRA_HEADS > 0

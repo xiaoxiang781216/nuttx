@@ -92,6 +92,14 @@ static FAR netpkt_t *netpoll_isotp_pkt_recv(FAR struct netpoll_s *np,
 
   for (; ; )
     {
+      /* Advance the RX path in the caller's context before every attempt:
+       * with interrupts disabled the RX ISR cannot run, so drivers that
+       * stage frames from an ISR (or throttle receive() between hardware
+       * interrupts) must be given a chance to make progress first.
+       */
+
+      lower->ops->poll(lower, NETPKT_RX);
+
       pkt = lower->ops->receive(lower);
       if (pkt == NULL)
         {

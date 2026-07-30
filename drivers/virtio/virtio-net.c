@@ -128,7 +128,8 @@ static int virtio_net_ioctl(FAR struct netdev_lowerhalf_s *dev,
 #endif
 static void virtio_net_txfree(FAR struct netdev_lowerhalf_s *dev);
 #ifdef CONFIG_NET_NETPOLL
-static void virtio_net_txpoll(FAR struct netdev_lowerhalf_s *dev);
+static void virtio_net_poll(FAR struct netdev_lowerhalf_s *dev,
+                            enum netpkt_type_e type);
 #endif
 
 static int  virtio_net_probe(FAR struct virtio_device *vdev);
@@ -162,7 +163,7 @@ static const struct netdev_ops_s g_virtio_net_ops =
   virtio_net_ioctl,
 #endif
 #ifdef CONFIG_NET_NETPOLL
-  virtio_net_txpoll,
+  virtio_net_poll,
 #endif
 };
 
@@ -318,15 +319,26 @@ static void virtio_net_txfree(FAR struct netdev_lowerhalf_s *dev)
 }
 
 /****************************************************************************
- * Name: virtio_net_txpoll
+ * Name: virtio_net_poll
  ****************************************************************************/
 
 #ifdef CONFIG_NET_NETPOLL
-static void virtio_net_txpoll(FAR struct netdev_lowerhalf_s *dev)
+static void virtio_net_poll(FAR struct netdev_lowerhalf_s *dev,
+                            enum netpkt_type_e type)
 {
   FAR struct virtio_net_priv_s *priv = (FAR struct virtio_net_priv_s *)dev;
   FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_NET_TX].vq;
   FAR struct virtio_net_llhdr_s *hdr;
+
+  /* RX is self-contained: virtio_net_recv() pulls buffers off the RX
+   * virtqueue directly and does not depend on the RX ISR, so nothing to
+   * do for the RX direction here.
+   */
+
+  if (type == NETPKT_RX)
+    {
+      return;
+    }
 
   /* Busy-poll until at least one TX buffer completes. */
 

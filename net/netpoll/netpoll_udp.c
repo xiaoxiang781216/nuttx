@@ -122,7 +122,7 @@ int netpoll_udp_init(FAR struct netpoll_s *np,
 {
   struct ether_addr addr;
 
-  if (lower->ops->txpoll == NULL)
+  if (lower->ops->poll == NULL)
     {
       return -EINVAL;
     }
@@ -329,6 +329,14 @@ ssize_t netpoll_udp_recv(FAR struct netpoll_s *np, FAR void *buf, size_t len)
 
   while (!found)
     {
+      /* Advance the RX path in the caller's context before every attempt:
+       * with interrupts disabled the RX ISR cannot run, so drivers that
+       * stage frames from an ISR (or throttle receive() between hardware
+       * interrupts) must be given a chance to make progress first.
+       */
+
+      lower->ops->poll(lower, NETPKT_RX);
+
       /* Try to get packet */
 
       pkt = lower->ops->receive(lower);
