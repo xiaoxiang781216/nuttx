@@ -33,6 +33,7 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <sys/param.h>
 
 #include <nuttx/mutex.h>
 #ifdef CONFIG_FDSAN
@@ -83,6 +84,9 @@ FAR FILE *fdopen(int fd, FAR const char *mode)
 
   if (fd >= 3)
     {
+      size_t nstdio;
+      size_t i;
+
       ret = nxmutex_lock(&list->sl_lock);
       if (ret < 0)
         {
@@ -90,7 +94,21 @@ FAR FILE *fdopen(int fd, FAR const char *mode)
           return NULL;
         }
 
-      if (list->sl_count >= STREAM_MAX)
+      /* STREAM_MAX bounds the total number of open streams, including
+       * the stdio streams (sl_std[]).  sl_count only tracks non-stdio
+       * streams, so count stdio here to enforce the real limit and
+       * return EMFILE when STREAM_MAX streams are already open.
+       */
+
+      for (nstdio = 0, i = 0; i < nitems(list->sl_std); i++)
+        {
+          if (list->sl_std[i].fs_cookie != NULL)
+            {
+              nstdio++;
+            }
+        }
+
+      if (list->sl_count + nstdio >= STREAM_MAX)
         {
           nxmutex_unlock(&list->sl_lock);
           set_errno(EMFILE);
