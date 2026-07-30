@@ -2629,6 +2629,12 @@ static int nvs_read(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
  * Input Parameters:
  *   fs    - Pointer to file system.
  *   pdata - Pointer to data buffer.
+ *   force - When true, skip the read-back of the previous entry and the
+ *           content comparison, writing the new data unconditionally.  This
+ *           avoids the flash read cost at the price of a possible redundant
+ *           write, improving performance when the caller knows the data has
+ *           changed.  When false, the previous entry is read back and the
+ *           write is skipped if the stored data already matches.
  *
  * Returned Value:
  *   Number of bytes written. On success, it will be equal to the
@@ -2636,7 +2642,8 @@ static int nvs_read(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
  *
  ****************************************************************************/
 
-static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
+static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata,
+                     bool force)
 {
   size_t ate_size = nvs_ate_size(fs);
   uint64_t wlk_addr = fs->ate_wra;
@@ -2681,54 +2688,57 @@ static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
 
   hash_id = nvs_fnv_hash_id(nvs_fnv_hash(key, key_len));
 
-  /* Find latest entry with same id. */
+  /* Find latest entry with same id.  Skipped when force is set. */
 
+  if (!force)
+    {
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
-  wlk_addr = nvs_lookup_addr(fs, hash_id);
-  if (wlk_addr != NVS_CACHE_NO_ADDR)
+      wlk_addr = nvs_lookup_addr(fs, hash_id);
+      if (wlk_addr != NVS_CACHE_NO_ADDR)
 #endif
-    {
-      rc = nvs_find_ate_with_key(fs, key, key_len, wlk_addr, fs->ate_wra,
-                                 wlk_ate, &wlk_addr);
-    }
-
-  if (rc < 0)
-    {
-      return rc;
-    }
-
-  if (rc)
-    {
-      /* Previous entry found. */
-
-      if (pdata->len == 0)
         {
-          /* If prev ate len is 0, it is deleted. */
+          rc = nvs_find_ate_with_key(fs, key, key_len, wlk_addr,
+                                     fs->ate_wra, wlk_ate, &wlk_addr);
+        }
 
-          if (wlk_ate->ate_len == 0)
+      if (rc < 0)
+        {
+          return rc;
+        }
+
+      if (rc)
+        {
+          /* Previous entry found. */
+
+          if (pdata->len == 0)
             {
-              /* Skip delete entry as it is already the
-               * last one.
-               */
+              /* If prev ate len is 0, it is deleted. */
 
-              return 0;
+              if (wlk_ate->ate_len == 0)
+                {
+                  /* Skip delete entry as it is already the
+                   * last one.
+                   */
+
+                  return 0;
+                }
+            }
+          else
+            {
+              rc = nvs_cmp_data(fs, wlk_ate, wlk_addr, pdata->configdata,
+                                pdata->len);
+              if (rc <= 0)
+                {
+                  return rc;
+                }
             }
         }
-      else
+      else if (pdata->len == 0)
         {
-          rc = nvs_cmp_data(fs, wlk_ate, wlk_addr, pdata->configdata,
-                            pdata->len);
-          if (rc <= 0)
-            {
-              return rc;
-            }
-        }
-    }
-  else if (pdata->len == 0)
-    {
-      /* Skip delete entry for non-existing entry. */
+          /* Skip delete entry for non-existing entry. */
 
-      return 0;
+          return 0;
+        }
     }
 
   if (pdata->len)
@@ -2798,7 +2808,7 @@ static int nvs_delete(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
    */
 
   pdata->len = 0;
-  return nvs_write(fs, pdata);
+  return nvs_write(fs, pdata, false);
 }
 
 /****************************************************************************
@@ -3040,7 +3050,7 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
   FAR struct config_data_s *pdata = (FAR struct config_data_s *)arg;
   int rc;
 
-  if (cmd >= CFGDIOC_GETCONFIG && cmd <= CFGDIOC_NEXTCONFIG &&
+  if (cmd >= CFGDIOC_GETCONFIG && cmd <= CFGDIOC_SETCONFIG_FORCE &&
       (pdata == NULL || pdata->len > UINT16_MAX ||
       (pdata->len > 0 && pdata->configdata == NULL
       && cmd != CFGDIOC_DELCONFIG)))
@@ -3067,7 +3077,19 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
 
         /* Write a nvs item. */
 
-        rc = nvs_write(fs, pdata);
+        rc = nvs_write(fs, pdata, false);
+        if (rc >= 0)
+          {
+            mtdconfig_notify(fs, POLLPRI);
+          }
+
+        break;
+
+      case CFGDIOC_SETCONFIG_FORCE:
+
+        /* Write a nvs item without read-back comparison. */
+
+        rc = nvs_write(fs, pdata, true);
         if (rc >= 0)
           {
             mtdconfig_notify(fs, POLLPRI);

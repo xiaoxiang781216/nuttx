@@ -58,14 +58,23 @@
  *   ioctl argument:  Pointer to a config_data_s structure to receive the
  *                    config data.  All fields of the structure must be
  *                    specified (i.e. id, instance, pointer and len).
+ *
+ * CFGDIOC_SETCONFIG_FORCE - Set a specified Config Data Item without
+ *                           read-back comparison.
+ *
+ *   ioctl argument:  Pointer to a config_data_s structure, same as
+ *                    CFGDIOC_SETCONFIG, but the existing entry is not
+ *                    read back and compared; the new data is written
+ *                    unconditionally.
  */
 
-#define CFGDIOC_GETCONFIG    _CFGDIOC(1)
-#define CFGDIOC_SETCONFIG    _CFGDIOC(2)
-#define CFGDIOC_DELCONFIG    _CFGDIOC(3)
-#define CFGDIOC_FINDCONFIG   _CFGDIOC(4)
-#define CFGDIOC_FIRSTCONFIG  _CFGDIOC(5)
-#define CFGDIOC_NEXTCONFIG   _CFGDIOC(6)
+#define CFGDIOC_GETCONFIG       _CFGDIOC(1)
+#define CFGDIOC_SETCONFIG       _CFGDIOC(2)
+#define CFGDIOC_DELCONFIG       _CFGDIOC(3)
+#define CFGDIOC_FINDCONFIG      _CFGDIOC(4)
+#define CFGDIOC_FIRSTCONFIG     _CFGDIOC(5)
+#define CFGDIOC_NEXTCONFIG      _CFGDIOC(6)
+#define CFGDIOC_SETCONFIG_FORCE _CFGDIOC(7)
 
 /****************************************************************************
  * Public Types
