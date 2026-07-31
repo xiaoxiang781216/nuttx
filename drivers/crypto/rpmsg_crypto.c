@@ -602,7 +602,11 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
         }
 
       data_size = MIN(space - sizeof(*msg), remaining);
-      memcpy(msg->buf, crp->crp_buf + offset, data_size);
+      if (data_size > 0)
+        {
+          memcpy(msg->buf, crp->crp_buf + offset, data_size);
+        }
+
       offset += data_size;
       remaining -= data_size;
       if (remaining == 0 && !(flags & CRD_F_UPDATE))
