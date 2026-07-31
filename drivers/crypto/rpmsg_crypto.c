@@ -755,7 +755,6 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
         {
           memcpy(buf, crp->crp_buf + offset, datalen);
           len += datalen;
-          buf += datalen;
           offset += datalen;
           remaining -= datalen;
         }
