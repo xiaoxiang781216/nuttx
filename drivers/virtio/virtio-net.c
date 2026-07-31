@@ -77,8 +77,9 @@ struct virtio_net_priv_s
 
   /* Virtio device information */
 
-  FAR struct virtio_device *vdev;      /* Virtio device pointer */
-  int                       bufnum;    /* TX and RX Buffer number */
+  FAR struct virtio_device *vdev;          /* Virtio device pointer */
+  int                       bufnum;        /* TX and RX Buffer number */
+  int                       rx_inflight;   /* RX buffers in virtqueue */
 };
 
 /* Virtio Link Layer Header, follow shows the iob buffer layout:
@@ -260,7 +261,13 @@ static void virtio_net_rxfill(FAR struct netdev_lowerhalf_s *dev)
   FAR netpkt_t *pkt;
   int i;
 
-  for (i = 0; i < priv->bufnum; i++)
+  /* Keep at most priv->bufnum RX buffers outstanding in the virtqueue.
+   * The per-driver netpkt quota used to enforce this limit; now that quota
+   * tracking is gone from the netdev upper half, bound the refill locally
+   * so we do not drain the shared IOB pool by filling the whole RX ring.
+   */
+
+  for (i = 0; i < priv->bufnum - priv->rx_inflight; i++)
     {
       /* IOB Offload, Alloc buffer from RX netpkt */
 
@@ -284,6 +291,7 @@ static void virtio_net_rxfill(FAR struct netdev_lowerhalf_s *dev)
       /* Add buffer to RX virtqueue */
 
       virtio_net_addbuffer(dev, vq, pkt, VIRTIO_NET_RX);
+      priv->rx_inflight++;
     }
 
   if (i > 0)
@@ -432,6 +440,7 @@ static int virtio_net_send(FAR struct netdev_lowerhalf_s *dev,
 {
   FAR struct virtio_net_priv_s *priv = (FAR struct virtio_net_priv_s *)dev;
   FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_NET_TX].vq;
+  int ret;
 
   /* Check the send length */
 
@@ -443,7 +452,24 @@ static int virtio_net_send(FAR struct netdev_lowerhalf_s *dev,
 
   /* Add buffer to vq and notify the other side */
 
-  virtio_net_addbuffer(dev, vq, pkt, VIRTIO_NET_TX);
+  ret = virtio_net_addbuffer(dev, vq, pkt, VIRTIO_NET_TX);
+  if (ret == ERROR_VRING_FULL)
+    {
+      /* The TX vring is full and the packet was not enqueued (its cookie
+       * was not stored, so nobody else will free it).  Reclaim completed
+       * TX buffers and retry before touching the interrupt, so a retry
+       * that succeeds does not needlessly arm the TX-done callback.
+       */
+
+      virtio_net_txfree(dev);
+      ret = virtio_net_addbuffer(dev, vq, pkt, VIRTIO_NET_TX);
+      if (ret == ERROR_VRING_FULL)
+        {
+          virtqueue_enable_cb_lock(vq, &priv->lock[VIRTIO_NET_TX]);
+          return -EBUSY;
+        }
+    }
+
   virtqueue_kick_lock(vq, &priv->lock[VIRTIO_NET_TX]);
 
   /* Try return Netpkt TX buffer to upper-half. */
@@ -483,10 +509,12 @@ static netpkt_t *virtio_net_recv(FAR struct netdev_lowerhalf_s *dev)
       vrtinfo("get NULL buffer\n");
       return NULL;
     }
-  else
-    {
-      spin_unlock_irqrestore(&priv->lock[VIRTIO_NET_RX], flags);
-    }
+
+  spin_unlock_irqrestore(&priv->lock[VIRTIO_NET_RX], flags);
+
+  /* One RX buffer left the virtqueue; allow rxfill to replenish it. */
+
+  priv->rx_inflight--;
 
   /* Set the received pkt length */
 
