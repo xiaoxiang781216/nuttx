@@ -554,6 +554,32 @@ arm_vectorfiq:
 
 	/* On entry: FIQ mode, spsr = SVC CPSR, lr = SVC PC */
 
+	/* A FIQ may preempt another exception before exception_entry has
+	 * switched to SYS mode and masked FIQ.  Such a context is not safe for
+	 * arm_doirq(), which may switch tasks.  Leave the interrupt pending and
+	 * defer it until execution has returned to a task context.
+	 *
+	 * r8-r9 are banked in FIQ mode, so the interrupted context is unchanged.
+	 */
+
+	cpsid		aif
+	mrs		r8, spsr
+	and		r9, r8, #PSR_MODE_MASK
+	cmp		r9, #PSR_MODE_USR
+	cmpne		r9, #PSR_MODE_SYS
+	beq		.Lfiq_saveable
+
+	/* Mask FIQ in the interrupted exception context.  Do not acknowledge
+	 * the GIC interrupt here; it will be taken again when that context
+	 * returns to the task and restores its original CPSR.
+	 */
+
+	orr		r8, r8, #PSR_F_BIT
+	msr		spsr_cxsf, r8
+	subs		pc, lr, #4
+
+.Lfiq_saveable:
+
 	exception_entry PSR_MODE_FIQ, 4
 
 	/* Then call the FIQ handler with interrupts disabled. */
