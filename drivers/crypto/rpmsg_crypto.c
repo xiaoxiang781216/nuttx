@@ -756,6 +756,12 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
 
       /* Copy data */
 
+      if (space <= len)
+        {
+          rpmsg_release_tx_buffer(&rdev->ept, msg);
+          return -ENOMEM;
+        }
+
       datalen = MIN(space - len, remaining);
       if (datalen > 0)
         {
