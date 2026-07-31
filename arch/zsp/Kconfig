@@ -1,0 +1,12 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_ZSP
+comment "ZSP Options"
+
+config ARCH_FAMILY
+	string
+
+endif # ARCH_ZSP

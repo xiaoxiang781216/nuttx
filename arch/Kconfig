@@ -218,6 +218,11 @@ config ARCH_TRICORE
 	---help---
 		Infineon 32-bit AURIX TriCore architectures
 
+config ARCH_ZSP
+	bool "ZSP DSP"
+	---help---
+		VeriSilicon ZSP DSP architectures (NanoPlus).
+
 endchoice
 
 config ARCH
@@ -239,6 +244,7 @@ config ARCH
 	default "or1k"    if ARCH_OR1K
 	default "sparc"   if ARCH_SPARC
 	default "tricore" if ARCH_TRICORE
+	default "zsp"     if ARCH_ZSP
 
 source "arch/arm/Kconfig"
 source "arch/arm64/Kconfig"
@@ -257,6 +263,7 @@ source "arch/z80/Kconfig"
 source "arch/or1k/Kconfig"
 source "arch/sparc/Kconfig"
 source "arch/tricore/Kconfig"
+source "arch/zsp/Kconfig"
 
 config ARCH_CHIP_CUSTOM
 	bool "Custom Chip Support"
