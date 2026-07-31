@@ -3262,6 +3262,12 @@ config ARCH_BOARD_CUSTOM
 		Don't see the board you want?  You must first select the exact MCU part
 		number, then the boards supporting that part will be available for selection.
 
+config ARCH_BOARD_ZSP_SIM
+	bool "ZSP NanoPlus Simulator"
+	depends on ARCH_CHIP_ZSP_SIM
+	---help---
+		ZSP NanoPlus running on zsimg5 instruction-accurate simulator.
+
 endchoice
 
 if ARCH_BOARD_CUSTOM
@@ -3547,6 +3553,7 @@ config ARCH_BOARD
 	default "milkv_duos"                if ARCH_BOARD_SG2000_MILKV_DUOS
 	default "sabre-6quad"               if ARCH_BOARD_SABRE_6QUAD
 	default "tc397"                     if ARCH_BOARD_TC397
+	default "zsp_sim"                   if ARCH_BOARD_ZSP_SIM
 	default "qemu-armv7a"               if ARCH_BOARD_QEMU_ARMV7A
 	default "qemu-armv7r"               if ARCH_BOARD_QEMU_ARMV7R
 	default "qemu-armv8a"               if ARCH_BOARD_QEMU_ARMV8A
@@ -3763,6 +3770,9 @@ source "boards/arm/imx6/sabre-6quad/Kconfig"
 endif
 if ARCH_BOARD_TC397
 source "boards/tricore/tc3xx/tc397/Kconfig"
+endif
+if ARCH_BOARD_ZSP_SIM
+source "boards/zsp/zsp_sim/zsp_sim/Kconfig"
 endif
 if ARCH_BOARD_MPS2_AN500
 source "boards/arm/mps/mps2-an500/Kconfig"

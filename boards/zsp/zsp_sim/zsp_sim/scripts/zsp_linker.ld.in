@@ -1,0 +1,117 @@
+/****************************************************************************
+ * boards/zsp/zsp_sim/zsp_sim/scripts/zsp_linker.ld.in
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ ****************************************************************************/
+
+/* This file is preprocessed by the C preprocessor before being passed to
+ * the ZSP linker (zld).  All memory sizes come from Kconfig (CONFIG_*),
+ * eliminating hardcoded values.  The preprocessor is invoked in
+ * arch/zsp/src/Makefile via the PREPROCESS macro.
+ */
+
+#include <nuttx/config.h>
+
+#include "hardware/zsp_sim_memorymap.h"
+
+/* RAM region: base and size from Kconfig (defconfig) */
+
+#define ZSP_DATA_BASE    CONFIG_RAM_START
+#define ZSP_DATA_SIZE    CONFIG_RAM_SIZE
+
+_ZPMEM_regs       = ZSP_PMEM_BASE;
+_ZMPU_regs        = ZSP_PMEM_BASE + 0x1000;
+
+ENTRY(__start)
+
+SECTIONS
+{
+  .uvt (0) : {
+    KEEP(*(.uvt))
+  }
+  .itcm ALIGN(8) : {
+    *(.itcm)
+    *(.itcm.*)
+  }
+  .text (ZSP_TEXT_BASE) :
+  {
+    _stext = .;
+    *(.text .text.*)
+    _etext = .;
+  }
+
+  . = ALIGN(8);
+
+  .rodata :
+  {
+    _srodata = .;
+    *(.rodata .rodata.*)
+    _erodata = .;
+  }
+
+  .init_array :
+  {
+    _sinit = .;
+    KEEP (*(SORT(.init_array.*)))
+    KEEP (*(.init_array))
+    _einit = .;
+  }
+  _eronly = .; __eronly = .;
+
+  .data (ZSP_DATA_BASE) :
+  {
+    _sdata = .; __sdata = .;
+    *(.data .data.*)
+    _edata = .; __edata = .;
+  }
+
+  . = ALIGN(8);
+
+  .bss :
+  {
+    _sbss = .;
+    *(.bss .bss.*)
+    *(COMMON)
+    _ebss = .;
+    __ebss = .;   /* C symbol _ebss resolves to __ebss (ZSP name mangling) */
+  }
+
+  . = ALIGN(8);
+
+  /* Memory layout after BSS (computed by C code using CONFIG_* macros):
+   *
+   *   _ebss
+   *   +-- idle thread stack (CONFIG_IDLETHREAD_STACKSIZE)
+   *   +-- heap (fills remaining space)
+   *   ...
+   *   +-- interrupt stack (CONFIG_ARCH_INTERRUPTSTACK) at top of RAM
+   *   CONFIG_RAM_START + CONFIG_RAM_SIZE
+   */
+
+  /* crt0 needs __stack_start for simulator startup.
+   * Point to top of RAM (aligned to 8 bytes per ZSP ABI).
+   * Real idle stack is set in zsp_head.S using g_idle_topstack
+   * computed in C code from CONFIG_IDLETHREAD_STACKSIZE.
+   */
+
+  __stack_start = ALIGN(ZSP_DATA_BASE + ZSP_DATA_SIZE, 8) - 8;
+}
+
+/* ZSP simulator configuration symbols */
+
+___zsp_use_exceptions = 1;
+_ZSP_SVT_BASE = 0x7FFF0000;
