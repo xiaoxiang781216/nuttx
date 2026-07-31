@@ -223,7 +223,7 @@ int up_relocate(const Elf32_Rel *rel, const Elf32_Sym *sym,
     case R_ARM_TARGET2:
       {
         binfo("Performing TARGET2 link "
-              "at addr=%08" PRIx32
+              "at addr=%08" PRIxPTR
               " [%08" PRIx32 "] to "
               "sym=%p st_value=%08" PRIx32 "\n",
               addr, *(uint32_t *)addr,
