@@ -265,6 +265,60 @@
 #define QSPI_FREE(d,b) (d)->ops->free(d,b)
 
 /****************************************************************************
+ * Name: QSPI_ATTACH
+ *
+ * Description:
+ *   Attach a device to the QSPI controller.  This is a lifecycle hook that
+ *   is intended to be invoked (from within the kernel, not via a device
+ *   node) when a hardware device that lives on the QSPI bus becomes present
+ *   / is mounted.  Its purpose is to give the controller driver a well
+ *   defined point at which to bring the QSPI interface hardware up (clocks,
+ *   pinmux, controller registers, etc.).
+ *
+ *   This method is OPTIONAL.  Most QSPI controller drivers (for example the
+ *   various arch/ implementations) do not implement it and leave the
+ *   'attach' vtable slot NULL.  For those drivers this macro evaluates to
+ *   -ENOSYS and performs no action, so existing drivers are unaffected.
+ *
+ * Input Parameters:
+ *   dev - Device-specific state data (the QSPI controller lower half)
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.  -ENOSYS is
+ *   returned if the controller driver does not implement the callback.
+ *
+ ****************************************************************************/
+
+#define QSPI_ATTACH(d) \
+  ((d)->ops->attach ? (d)->ops->attach(d) : -ENOSYS)
+
+/****************************************************************************
+ * Name: QSPI_DETACH
+ *
+ * Description:
+ *   Detach a device from the QSPI controller.  This is the counterpart to
+ *   QSPI_ATTACH and is intended to be invoked (from within the kernel, not
+ *   via a device node) when the hardware device is removed / unmounted from
+ *   the QSPI bus.  It gives the controller driver a well defined point at
+ *   which to tear the QSPI interface hardware down.
+ *
+ *   Like QSPI_ATTACH, this method is OPTIONAL.  If the controller driver
+ *   leaves the 'detach' vtable slot NULL, this macro evaluates to -ENOSYS
+ *   and performs no action.
+ *
+ * Input Parameters:
+ *   dev - Device-specific state data (the QSPI controller lower half)
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.  -ENOSYS is
+ *   returned if the controller driver does not implement the callback.
+ *
+ ****************************************************************************/
+
+#define QSPI_DETACH(d) \
+  ((d)->ops->detach ? (d)->ops->detach(d) : -ENOSYS)
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -331,6 +385,22 @@ struct qspi_ops_s
                     FAR struct qspi_meminfo_s *meminfo);
   CODE FAR void *(*alloc)(FAR struct qspi_dev_s *dev, size_t buflen);
   CODE void      (*free)(FAR struct qspi_dev_s *dev, FAR void *buffer);
+
+  /* The following two callbacks are OPTIONAL lifecycle hooks. Access them
+   * only through the QSPI_ATTACH()/QSPI_DETACH() macros.
+   */
+
+  /* attach - Bring the QSPI interface hardware up when a bus device is
+   * mounted.
+   */
+
+  CODE int       (*attach)(FAR struct qspi_dev_s *dev);
+
+  /* detach - Tear the QSPI interface hardware down when a bus device is
+   * unmounted.
+   */
+
+  CODE int       (*detach)(FAR struct qspi_dev_s *dev);
 };
 
 /* QSPI private data.  This structure only defines the initial fields of the
