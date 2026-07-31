@@ -376,17 +376,25 @@ static inline bool test_and_set_bit(unsigned long nr,
   return (old & mask) != 0;
 }
 
+/* Counter width depends on the allocated counter, not the requested event.
+ * PMCCNTR is always 64-bit; PMEVCNTRn needs PMUv3p5 + PMCR.LP for 64-bit.
+ */
+
 static uint64_t arm64pmu_event_max_period(
                          FAR struct perf_event_s *event)
 {
-  if (event->hw.flags & ARM64PMU_EVT_64BIT)
+  if (event->hw.idx == PMU_IDX_CYCLE_COUNTER)
     {
-      return (uint64_t)UINT64_MAX;
+      return UINT64_MAX;
     }
-  else
+
+  if (to_arm64_pmu(event->pmu)->pmuver >= ARM64PMU_V3P5_VERSION &&
+      (read_pmcr() & PMU_PMCR_LP) != 0)
     {
-      return (uint64_t)UINT32_MAX;
+      return UINT64_MAX;
     }
+
+  return UINT32_MAX;
 }
 
 static int arm64pmu_map_cache_event(FAR const unsigned int (*cache_map)
@@ -872,7 +880,11 @@ static void pmuv3_write_counter(FAR struct perf_event_s *event,
 
 static void pmuv3_start(FAR struct arm64_pmu_s *cpu_pmu)
 {
-  pmuv3_pmcr_write(read_pmcr() | PMU_PMCR_E);
+  /* Enable LC (64-bit PMCCNTR overflow) and LP (64-bit PMEVCNTRn, PMUv3.5+).
+   * LP is RES0 on older PMU versions.
+   */
+
+  pmuv3_pmcr_write(read_pmcr() | PMU_PMCR_E | PMU_PMCR_LC | PMU_PMCR_LP);
 }
 
 static void pmuv3_stop(FAR struct arm64_pmu_s *cpu_pmu)
@@ -1020,7 +1032,7 @@ static void pmuv3_reset(FAR void *info)
   pmuv3_disable_counter(UINT32_MAX);
   pmuv3_disable_intens(UINT32_MAX);
 
-  pmcr = PMU_PMCR_P | PMU_PMCR_C | PMU_PMCR_LC;
+  pmcr = PMU_PMCR_P | PMU_PMCR_C | PMU_PMCR_LC | PMU_PMCR_LP;
 
   pmuv3_pmcr_write(pmcr);
 }
