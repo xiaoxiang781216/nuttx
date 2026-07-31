@@ -494,6 +494,7 @@ static int optee_shm_mmap(FAR struct file *filep,
 {
   FAR struct optee_shm *shm = filep->f_priv;
   FAR struct optee_priv_data *priv = shm->priv;
+  FAR struct mm_map_entry_s *entry;
   int32_t ret = OK;
 
   if ((map->flags & MAP_PRIVATE) && (map->flags & MAP_SHARED))
@@ -526,16 +527,29 @@ static int optee_shm_mmap(FAR struct file *filep,
       shm->paddr = optee_va_to_pa(map->vaddr);
       shm->flags |= TEE_SHM_REGISTER;
 
-      shm->munmap = map->munmap;
-      map->munmap = optee_shm_munmap;
-      shm->p = map->priv.p;
-      map->priv.p = shm;
+      entry = mm_map_find(get_current_mm(), map->vaddr, map->length);
+      DEBUGASSERT(entry != NULL);
+
+      shm->munmap = entry->munmap;
+      entry->munmap = optee_shm_munmap;
+      shm->p = entry->priv.p;
+      entry->priv.p = shm;
 
       ret = optee_shm_register(priv, shm);
       if (ret < 0)
         {
-          shm->munmap(this_task()->group, map,
-                      map->vaddr, map->length);
+          /* Restore the transport private data (rdev) on the registered
+           * mm_map entry before invoking the transport munmap callback,
+           * mirroring optee_shm_munmap(). Operate on the registered entry
+           * (not the caller's stack copy) so that mm_map_remove() inside
+           * the transport munmap actually removes it; otherwise the
+           * transport buffer is freed here and then freed again by
+           * mm_map_destroy() on task exit (double free).
+           */
+
+          entry->priv.p = shm->p;
+          shm->munmap(this_task()->group, entry,
+                      entry->vaddr, entry->length);
           optee_shm_free(shm);
         }
     }
