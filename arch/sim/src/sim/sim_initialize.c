@@ -325,6 +325,13 @@ void up_initialize(void)
   audio_tunnel_initialize("blesnk");  /* blesnkp provide format */
   audio_tunnel_initialize("wtpsrc");  /* wtpsrcc provide format */
   audio_tunnel_initialize("wtpsnk");  /* wtpsnkp provide format */
+
+  /* Dedicated test tunnels for cross-core compress unit tests
+   * (CROSS_CORE_FWD/REV_PRODUCER/CONSUMER in cross_core_config.h).
+   */
+
+  audio_tunnel_initialize("ctestsrc"); /* ctestsrcc provide format */
+  audio_tunnel_initialize("ctestsnk"); /* ctestsnkp provide format */
 #endif
 
 #ifdef CONFIG_SIM_USB_DEV
