@@ -16,4 +16,23 @@ config ARCH_FAMILY
 	string
 	default "nanoplus" if ARCH_CHIP_ZSP_NANOPLUS
 
+choice
+	prompt "ZSP Chip Selection"
+	default ARCH_CHIP_ZSP_SIM
+
+config ARCH_CHIP_ZSP_SIM
+	bool "ZSP NanoPlus Simulator"
+	select ARCH_CHIP_ZSP_NANOPLUS
+	select ONESHOT
+	select ONESHOT_COUNT
+	select ALARM_ARCH
+	---help---
+		ZSP NanoPlus running on zsimg5 instruction-accurate simulator.
+
+endchoice
+
+config ARCH_CHIP
+	string
+	default "zsp_sim" if ARCH_CHIP_ZSP_SIM
+
 endif # ARCH_ZSP
