@@ -159,22 +159,13 @@ real_start:
     cmp    x1, #0
     bne    1b
 
-#  ifdef CONFIG_STACK_COLORATION
-    /* Write a known value to the IDLE thread stack to support stack
-     * monitoring logic
+    /* The IDLE thread stack is colored by up_cpu_idlestack() on CPU0 before
+     * tls_init_info() carves the TLS region out of its bottom.  Re-coloring
+     * the whole stack here would overwrite that TLS info, so just advance
+     * x24 to the stack top.
      */
 
-    ldr    w1, =STACK_WORDS
-    ldr    w2, =STACK_COLOR
-
-.loop:
-    sub    w1, w1, #1
-    str    w2, [x24], #4
-    cmp    w1, #0
-    bne    .loop
-#  else
     add    x24, x24, #(CONFIG_IDLETHREAD_STACKSIZE)
-#  endif
 
 #ifdef CONFIG_ARCH_SHADOW_STACK
     sub    x24, x24, #(IDLETHREAD_SHADOW)  /* Adjust stack top */
