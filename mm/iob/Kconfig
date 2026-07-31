@@ -499,6 +499,24 @@ config IOB_SECTION3
 		The section must be zero-initialized on system boot.
 		If not set, IOB_SECTION2 will be used.
 
+config IOB_EXTRA_HEADS
+	int "Number of pre-allocated extra IOB heads"
+	default 0
+	range 0 65535
+	---help---
+		Number of standalone struct iob_s headers to pre-allocate in the
+		dedicated head pool g_iob_head_pool.  These heads are used by
+		zero-copy paths such as iob_alloc_with_data() and
+		iob_init_with_data() to wrap externally-owned payloads without
+		calling kmm_zalloc().
+
+		The head pool block size is sizeof(struct iob_s) (no payload),
+		so each head consumes far less memory than a regular IOB block.
+
+		Set to 0 to disable iob_alloc_with_data() / iob_init_with_data()
+		entirely (the head pool is not built and these helpers are not
+		compiled in).
+
 endif # !BMP
 
 config IOB_ALIGNMENT
@@ -545,24 +563,6 @@ config IOB_NOTIFIER_DIV
 		include:  1, 2, 4, 8, 16, 32, 64.  The default value of 4 means that
 		a notification will be sent only when there are a multiple of 4 IOBs
 		available.
-
-config IOB_EXTRA_HEADS
-	int "Number of pre-allocated extra IOB heads"
-	default 0
-	range 0 65535
-	---help---
-		Number of standalone struct iob_s headers to pre-allocate in the
-		dedicated head pool g_iob_head_pool.  These heads are used by
-		zero-copy paths such as iob_alloc_with_data() and
-		iob_init_with_data() to wrap externally-owned payloads without
-		calling kmm_zalloc().
-
-		The head pool block size is sizeof(struct iob_s) (no payload),
-		so each head consumes far less memory than a regular IOB block.
-
-		Set to 0 to disable iob_alloc_with_data() / iob_init_with_data()
-		entirely (the head pool is not built and these helpers are not
-		compiled in).
 
 config IOB_DUMP_MAX_ENTRIES
 	int "Maximum IOBs printed per dump"
