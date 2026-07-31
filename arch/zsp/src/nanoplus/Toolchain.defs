@@ -1,0 +1,68 @@
+############################################################################
+# arch/zsp/src/nanoplus/Toolchain.defs
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+############################################################################
+
+CROSSDEV = z
+
+CC = $(CROSSDEV)cc
+CXX = $(CROSSDEV)c++
+CPP = $(CROSSDEV)cc -E -P -x c
+LD = $(CROSSDEV)ld
+STRIP = $(CROSSDEV)strip
+AR = $(CROSSDEV)ar rcs
+NM = $(CROSSDEV)nm
+OBJCOPY = $(CROSSDEV)objcopy
+OBJDUMP = $(CROSSDEV)objdump
+
+# Target flags
+ARCHCPUFLAGS = -mnanoplus
+
+# Optimization level from Kconfig
+
+ifeq ($(CONFIG_DEBUG_CUSTOMOPT),y)
+  ARCHOPTIMIZATION += $(CONFIG_DEBUG_OPTLEVEL)
+else ifeq ($(CONFIG_DEBUG_FULLOPT),y)
+  ARCHOPTIMIZATION += -Os
+else ifeq ($(CONFIG_DEBUG_NOOPT),y)
+  ARCHOPTIMIZATION += -O0
+else
+  ARCHOPTIMIZATION += -O1
+endif
+
+ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
+  ARCHOPTIMIZATION += -g
+endif
+
+# ZSP compiler's float.h is incomplete (missing LDBL_MIN, LDBL_MANT_DIG, etc).
+# Force-include our arch float.h to supplement the missing definitions.
+
+ARCHCFLAGS = -include $(TOPDIR)/arch/zsp/include/float.h -fno-common -Wall -Wshadow -Wundef -fno-builtin
+ARCHCXXFLAGS = -fno-common -Wall -Wshadow -Wundef -fno-exceptions -fno-rtti -fno-builtin
+
+CFLAGS := $(ARCHCFLAGS) $(ARCHCPUFLAGS) $(ARCHOPTIMIZATION) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
+CXXFLAGS := $(ARCHCXXFLAGS) $(ARCHCPUFLAGS) $(ARCHOPTIMIZATION) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
+CPPFLAGS := $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
+AFLAGS := $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
+
+LDFLAGS += -mnanoplus --no-check-sections
+
+COMPILER_RT_LIB = $(shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name)
+EXTRA_LIBS += $(COMPILER_RT_LIB)
+
+EXEEXT = .out

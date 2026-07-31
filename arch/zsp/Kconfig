@@ -6,7 +6,14 @@
 if ARCH_ZSP
 comment "ZSP Options"
 
+config ARCH_CHIP_ZSP_NANOPLUS
+	bool
+	default n
+	select ARCH_HAVE_INTERRUPTSTACK
+	select LIBC_ATOMIC_IRQ
+
 config ARCH_FAMILY
 	string
+	default "nanoplus" if ARCH_CHIP_ZSP_NANOPLUS
 
 endif # ARCH_ZSP
