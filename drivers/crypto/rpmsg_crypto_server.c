@@ -1373,6 +1373,11 @@ static int rpmsg_crypto_process_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsg_crypto_process_s *msg = data;
   int ret = -EINVAL;
 
+  if (msg == NULL || len < sizeof(struct rpmsg_crypto_process_s))
+    {
+      return -EINVAL;
+    }
+
   if (msg->data.header.opcode == VIRTIO_CRYPTO_CIPHER_ENCRYPT ||
       msg->data.header.opcode == VIRTIO_CRYPTO_CIPHER_DECRYPT)
     {
