@@ -237,18 +237,17 @@ static void binder_free_proc(FAR struct binder_proc *proc)
                    proc->outstanding_txns);
     }
 
+  /* The binder_device is a driver-lifetime singleton allocated once in
+   * binder_initialize() and registered via register_driver() as
+   * inode->i_private. It outlives every open/close pair; freeing it when
+   * the last proc goes away leaves inode->i_private dangling and causes a
+   * use-after-free on the next open. Keep ref_count for accounting only.
+   */
+
   device = container_of(proc->context, struct binder_device, context);
   nxmutex_lock(&device->binder_procs_lock);
   device->ref_count--;
-  if (device->ref_count == 0)
-    {
-      nxmutex_unlock(&device->binder_procs_lock);
-      kmm_free(device);
-    }
-  else
-    {
-      nxmutex_unlock(&device->binder_procs_lock);
-    }
+  nxmutex_unlock(&device->binder_procs_lock);
 
   binder_alloc_deferred_release(&proc->alloc);
   kmm_free(proc);
