@@ -700,7 +700,6 @@ rpmsg_crypto_process_aead_update_aad(
         {
           memcpy(buf, crp->crp_aad + offset, datalen);
           len += datalen;
-          buf += datalen;
           offset += datalen;
           remaining -= datalen;
         }
