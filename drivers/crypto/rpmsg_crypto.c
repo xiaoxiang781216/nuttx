@@ -685,6 +685,12 @@ rpmsg_crypto_process_aead_update_aad(
 
       /* Copy AAD data */
 
+      if (space <= len)
+        {
+          rpmsg_release_tx_buffer(&rdev->ept, msg);
+          return -ENOMEM;
+        }
+
       datalen = MIN(space - len, remaining);
       if (datalen > 0)
         {
