@@ -228,6 +228,14 @@ static const struct igb_type_s g_igb_i211 =
   .mta_regs   = 128
 };
 
+/* Intel I210 */
+
+static const struct igb_type_s g_igb_i210 =
+{
+  .desc_align = 128,
+  .mta_regs   = 128
+};
+
 static const struct pci_device_id_s g_igb_id_table[] =
 {
   {
@@ -243,6 +251,11 @@ static const struct pci_device_id_s g_igb_id_table[] =
   {
     PCI_DEVICE(0x8086, 0x1533),
     .driver_data = (uintptr_t)&g_igb_i211
+  },
+
+  {
+    PCI_DEVICE(0x8086, 0x157b),
+    .driver_data = (uintptr_t)&g_igb_i210
   },
   { }
 };
