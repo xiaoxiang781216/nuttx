@@ -212,6 +212,13 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   parent = this_task();
   DEBUGASSERT(parent != NULL);
 
+  /* The thread entry point must be non-NULL */
+
+  if (entry == NULL)
+    {
+      return EINVAL;
+    }
+
   /* If attributes were not supplied, use the default attributes */
 
   if (!attr)
@@ -221,6 +228,13 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
     }
   else if (attr->priority < SCHED_PRIORITY_MIN ||
            attr->priority > SCHED_PRIORITY_MAX)
+    {
+      return EINVAL;
+    }
+
+  /* The stack size must be at least PTHREAD_STACK_MIN */
+
+  if (attr->stacksize < PTHREAD_STACK_MIN)
     {
       return EINVAL;
     }
