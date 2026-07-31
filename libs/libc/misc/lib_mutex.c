@@ -112,12 +112,16 @@ int nxmutex_trywait(FAR sem_t *sem)
   DEBUGASSERT(sem != NULL);
   DEBUGASSERT(NXSEM_IS_MUTEX(sem));
 
-  /* Disable fast path if priority protection is enabled on the semaphore */
+  /* Disable fast path if the mutex was destroyed, or if priority protection
+   * is enabled on the semaphore
+   */
 
+  if ((sem->flags & SEM_FLAG_DESTROYED) == 0
 #ifdef CONFIG_PRIORITY_PROTECT
-  if ((sem->flags & SEM_PRIO_MASK) != SEM_PRIO_PROTECT)
-    {
+      && (sem->flags & SEM_PRIO_MASK) != SEM_PRIO_PROTECT
 #endif
+     )
+    {
       for (; ; )
         {
           FAR atomic_t *val = NXSEM_MHOLDER(sem);
@@ -134,13 +138,13 @@ int nxmutex_trywait(FAR sem_t *sem)
               break;
             }
         }
-#ifdef CONFIG_PRIORITY_PROTECT
     }
   else
     {
+      /* The slow path rejects a destroyed semaphore with -EINVAL */
+
       ret = nxsem_trywait_slow(sem);
     }
-#endif
 
   return ret;
 }

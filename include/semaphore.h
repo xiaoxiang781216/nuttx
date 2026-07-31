@@ -47,6 +47,13 @@
 
 #define SEM_TYPE_MUTEX            4
 
+/* Bit 3: marks an un-named semaphore as destroyed.  Set by
+ * nxsem_destroy() and cleared by nxsem_init().  Independent of
+ * SEM_PRIO_MASK/SEM_TYPE_MUTEX and the separate ceiling/saved fields.
+ */
+
+#define SEM_FLAG_DESTROYED        8
+
 /* Value returned by sem_open() in the event of a failure. */
 
 #define SEM_FAILED                NULL

@@ -135,7 +135,7 @@ int nxsem_post_slow(FAR sem_t *sem)
 #endif
   bool blocking = false;
   bool mutex = NXSEM_IS_MUTEX(sem);
-  int ret = OK;
+  int ret = -EINVAL;
 
   /* The following operations must be performed with interrupts
    * disabled because sem_post() may be called from an interrupt
@@ -144,7 +144,12 @@ int nxsem_post_slow(FAR sem_t *sem)
 
   flags = enter_critical_section();
 
-  ret = get_blocking(sem, mutex, &blocking);
+  /* Reject a destroyed semaphore; otherwise ret stays -EINVAL. */
+
+  if ((sem->flags & SEM_FLAG_DESTROYED) == 0)
+    {
+      ret = get_blocking(sem, mutex, &blocking);
+    }
 
   if (ret == OK)
     {

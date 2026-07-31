@@ -63,7 +63,7 @@
 int nxsem_trywait_slow(FAR sem_t *sem)
 {
   irqstate_t flags;
-  int ret = OK;
+  int ret = -EINVAL;
   bool mutex = NXSEM_IS_MUTEX(sem);
   FAR atomic_t *val = mutex ? NXSEM_MHOLDER(sem) : NXSEM_COUNT(sem);
   int32_t old;
@@ -75,39 +75,45 @@ int nxsem_trywait_slow(FAR sem_t *sem)
 
   flags = enter_critical_section();
 
-  /* If the semaphore is available, give it to the requesting task */
+  /* Skip a destroyed semaphore, which keeps ret as -EINVAL.  Otherwise, if
+   * the semaphore is available, give it to the requesting task
+   */
 
-  old = atomic_read(val);
-  do
+  if ((sem->flags & SEM_FLAG_DESTROYED) == 0)
     {
-      if (mutex)
+      ret = OK;
+      old = atomic_read(val);
+      do
         {
-          if (NXSEM_MACQUIRED(old))
+          if (mutex)
             {
-              ret = -EAGAIN;
-              break;
-            }
+              if (NXSEM_MACQUIRED(old))
+                {
+                  ret = -EAGAIN;
+                  break;
+                }
 
-          new = gettid();
-        }
-      else
-        {
-          if (old <= 0)
+              new = gettid();
+            }
+          else
             {
-              ret = -EAGAIN;
-              break;
-            }
+              if (old <= 0)
+                {
+                  ret = -EAGAIN;
+                  break;
+                }
 
-          new = old - 1;
+              new = old - 1;
+            }
         }
+      while (!atomic_try_cmpxchg_acquire(val, &old, new));
     }
-  while (!atomic_try_cmpxchg_acquire(val, &old, new));
 
-  if (ret != -EAGAIN)
+  if (ret == OK)
     {
       /* It is, let the task take the semaphore */
 
-  #ifdef CONFIG_PRIORITY_PROTECT
+#ifdef CONFIG_PRIORITY_PROTECT
       ret = nxsem_protect_wait(sem);
       if (ret < 0)
         {
@@ -121,7 +127,7 @@ int nxsem_trywait_slow(FAR sem_t *sem)
             }
         }
       else
-  #endif
+#endif
         {
           if (!mutex)
             {

@@ -73,7 +73,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
   FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
   int ret = OK;
-  bool unlocked;
+  bool unlocked = false;
   int32_t mholder;
   FAR struct tcb_s *htcb = NULL;
   bool mutex = NXSEM_IS_MUTEX(sem);
@@ -85,11 +85,13 @@ int nxsem_wait_slow(FAR sem_t *sem)
 
   flags = enter_critical_section();
 
-  /* Make sure we were supplied with a valid semaphore. */
+  /* Reject a destroyed semaphore, otherwise check if the lock is available */
 
-  /* Check if the lock is available */
-
-  if (mutex)
+  if ((sem->flags & SEM_FLAG_DESTROYED) != 0)
+    {
+      ret = -EINVAL;
+    }
+  else if (mutex)
     {
       /* We lock the mutex for us by setting the blocks bit,
        * this is all that is needed if we block
@@ -171,7 +173,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
    * current thread of execution.
    */
 
-  else
+  else if (ret == OK)
     {
 #ifdef CONFIG_PRIORITY_INHERITANCE
       uint8_t prioinherit = sem->flags & SEM_PRIO_MASK;

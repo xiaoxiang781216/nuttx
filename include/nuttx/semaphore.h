@@ -513,7 +513,13 @@ int nxsem_setprioceiling(FAR sem_t *sem, int prioceiling,
 #ifdef CONFIG_LIBC_INLINE_SEMAPHORE
 SEMAPHORE_INLINE int nxmutex_wait(FAR sem_t *sem)
 {
-  /* Disable fast path if priority protection is enabled on the semaphore */
+  /* Disable fast path if priority protection is enabled on the semaphore.
+   *
+   * No destroyed check is needed here:  nxsem_destroy() leaves a destroyed
+   * mutex with NXSEM_MBLOCKING_BIT set in the holder, so the cmpxchg below
+   * cannot succeed and we fall through to nxsem_wait_slow(), which rejects
+   * a destroyed semaphore with -EINVAL.
+   */
 
 #ifdef CONFIG_PRIORITY_PROTECT
   if ((sem->flags & SEM_PRIO_MASK) != SEM_PRIO_PROTECT)
@@ -554,7 +560,13 @@ int nxmutex_wait(FAR sem_t *sem);
 #ifdef CONFIG_LIBC_INLINE_SEMAPHORE
 SEMAPHORE_INLINE int nxmutex_post(FAR sem_t *sem)
 {
-  /* Disable fast path if priority protection is enabled on the semaphore */
+  /* Disable fast path if priority protection is enabled on the semaphore.
+   *
+   * No destroyed check is needed here:  the expected value below always has
+   * NXSEM_MBLOCKING_BIT cleared, so the cmpxchg cannot succeed while that
+   * bit is set.  nxsem_destroy() leaves it set on a destroyed mutex, so we
+   * fall through to nxsem_post_slow(), which rejects it with -EINVAL.
+   */
 
 #ifdef CONFIG_PRIORITY_PROTECT
   if ((sem->flags & SEM_PRIO_MASK) != SEM_PRIO_PROTECT)
@@ -630,11 +642,17 @@ int nxmutex_trywait(FAR sem_t *sem);
 #ifdef CONFIG_LIBC_INLINE_SEMAPHORE
 SEMAPHORE_INLINE int nxsem_wait(FAR sem_t *sem)
 {
-  /* Disable fast path if priority protection is enabled on the semaphore */
+  int ret = -EINVAL;
 
+  /* Disable fast path if the semaphore was destroyed, or if priority
+   * protection is enabled on the semaphore
+   */
+
+  if ((sem->flags & SEM_FLAG_DESTROYED) == 0
 #if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-  if ((sem->flags & SEM_PRIO_MASK) == SEM_PRIO_NONE)
+      && (sem->flags & SEM_PRIO_MASK) == SEM_PRIO_NONE
 #endif
+     )
     {
       FAR atomic_t *val = NXSEM_COUNT(sem);
       int32_t old = atomic_read(val);
@@ -643,12 +661,21 @@ SEMAPHORE_INLINE int nxsem_wait(FAR sem_t *sem)
         {
           if (atomic_try_cmpxchg_acquire(val, &old, old - 1))
             {
-              return OK;
+              ret = OK;
             }
         }
     }
 
-  return nxsem_wait_slow(sem);
+  /* Take the slow path if the fast path was skipped or failed.  A destroyed
+   * semaphore is rejected there with the same -EINVAL.
+   */
+
+  if (ret == -EINVAL)
+    {
+      ret = nxsem_wait_slow(sem);
+    }
+
+  return ret;
 }
 #else
 int nxsem_wait(FAR sem_t *sem);
@@ -686,11 +713,17 @@ int nxsem_wait(FAR sem_t *sem);
 #ifdef CONFIG_LIBC_INLINE_SEMAPHORE
 SEMAPHORE_INLINE int nxsem_post(FAR sem_t *sem)
 {
-  /* Disable fast path if priority protection is enabled on the semaphore */
+  int ret = -EINVAL;
 
+  /* Disable fast path if the semaphore was destroyed, or if priority
+   * protection is enabled on the semaphore
+   */
+
+  if ((sem->flags & SEM_FLAG_DESTROYED) == 0
 #if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-  if ((sem->flags & SEM_PRIO_MASK) == SEM_PRIO_NONE)
+      && (sem->flags & SEM_PRIO_MASK) == SEM_PRIO_NONE
 #endif
+     )
     {
       FAR atomic_t *val = NXSEM_COUNT(sem);
       int32_t old = atomic_read(val);
@@ -699,17 +732,25 @@ SEMAPHORE_INLINE int nxsem_post(FAR sem_t *sem)
         {
           if (old >= SEM_VALUE_MAX)
             {
-              return -EOVERFLOW;
+              ret = -EOVERFLOW;
             }
-
-          if (atomic_try_cmpxchg_release(val, &old, old + 1))
+          else if (atomic_try_cmpxchg_release(val, &old, old + 1))
             {
-              return OK;
+              ret = OK;
             }
         }
     }
 
-  return nxsem_post_slow(sem);
+  /* Take the slow path if the fast path was skipped or failed.  A destroyed
+   * semaphore is rejected there with the same -EINVAL.
+   */
+
+  if (ret == -EINVAL)
+    {
+      ret = nxsem_post_slow(sem);
+    }
+
+  return ret;
 }
 #else
 int nxsem_post(FAR sem_t *sem);

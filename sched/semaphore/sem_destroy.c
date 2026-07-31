@@ -70,7 +70,17 @@ int nxsem_destroy(FAR sem_t *sem)
 
   mutex = NXSEM_IS_MUTEX(sem);
   val = mutex ? NXSEM_MHOLDER(sem) : NXSEM_COUNT(sem);
-  new = mutex ? NXSEM_NO_MHOLDER : 1;
+
+  /* A destroyed mutex keeps NXSEM_MBLOCKING_BIT set with no holder.  This is
+   * the same encoding that nxsem_reset() uses, and the lock-free fast paths
+   * in nxmutex_wait() / nxmutex_post() cannot complete their cmpxchg against
+   * it, so they fall through to the slow paths where SEM_FLAG_DESTROYED is
+   * checked first and -EINVAL is returned.  Do not reset the holder to a
+   * plain NXSEM_NO_MHOLDER here:  that would make a destroyed mutex look
+   * free to the fast paths again.
+   */
+
+  new = mutex ? (NXSEM_NO_MHOLDER | NXSEM_MBLOCKING_BIT) : 1;
 
   /* There is really no particular action that we need
    * take to destroy a semaphore.  We will just reset
@@ -102,6 +112,12 @@ int nxsem_destroy(FAR sem_t *sem)
   /* Release holders of the semaphore */
 
   nxsem_destroyholder(sem);
-  sem->flags = 0;
+
+  /* Mark the semaphore as destroyed.  The priority protocol is dropped as
+   * before, but SEM_TYPE_MUTEX is preserved so that NXSEM_IS_MUTEX() keeps
+   * telling the truth about a destroyed object.
+   */
+
+  sem->flags = (sem->flags & SEM_TYPE_MUTEX) | SEM_FLAG_DESTROYED;
   return OK;
 }
