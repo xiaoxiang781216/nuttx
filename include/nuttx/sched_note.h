@@ -74,11 +74,47 @@ extern "C"
 #define NOTE_PRINTF_GET_TYPE(tag, index) (((tag) >> (index) * 2) & 0x03)
 #define NOTE_PRINTF_GET_COUNT(tag)       ((tag) >> NOTE_PRINTF_COUNT_SHIFT)
 
+/* Check if a variable is 32-bit or 64-bit */
+
+#define NOTE_PRINTF_INT_TYPE(arg) (sizeof((arg) + 0) <= sizeof(uint32_t) ? \
+                                   NOTE_PRINTF_UINT32 : NOTE_PRINTF_UINT64)
+
+/* Use object_size to mark strings of known size */
+
+#define NOTE_PRINTF_OBJECT_SIZE(arg) object_size((FAR void *)(uintptr_t)(arg), 2)
+
+/* Use _Generic to determine the type of the parameter */
+
+#define NOTE_PRINTF_ARG_TYPE(__arg__) \
+        _Generic((__arg__) + 0, \
+                 float : NOTE_PRINTF_DOUBLE, \
+                 double: NOTE_PRINTF_DOUBLE, \
+                 char *: ({NOTE_PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
+                         NOTE_PRINTF_STRING : \
+                         NOTE_PRINTF_INT_TYPE(__arg__);}), \
+                 const char *: ({NOTE_PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
+                               NOTE_PRINTF_STRING : \
+                               NOTE_PRINTF_INT_TYPE(__arg__);}), \
+                 default: NOTE_PRINTF_INT_TYPE(__arg__))
+
+/* Set the type of each parameter */
+
+#define NOTE_PRINTF_TYPE(_, arg, index) + ((NOTE_PRINTF_ARG_TYPE(arg) << (index) * 2))
+#define NOTE_PRINTF_TYPES(...)          FOREACH_ARG(NOTE_PRINTF_TYPE, _, ##__VA_ARGS__)
+
+/* Using macro expansion to calculate the expression of tag, tag will
+ * be a constant at compile time, which will reduce the number of
+ * size in the code.
+ */
+
+#define NOTE_PRINTF_TAG(...) \
+        ((GET_ARG_COUNT(__VA_ARGS__) << 28) + NOTE_PRINTF_TYPES(__VA_ARGS__))
+
 #define sched_note_event(event, tag, level, buf, len) \
         sched_note_event_ip(event, tag, level, up_getpc(), buf, len)
+
 #define sched_note_vprintf(tag, level, fmt, va) \
         sched_note_vprintf_ip(tag, level, up_getpc(), fmt, va)
-
 #define sched_note_printf(tag, level, fmt, ...) \
         sched_note_printf_ip(tag, level, up_getpc(), fmt, ##__VA_ARGS__)
 
@@ -492,40 +528,27 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
 #if defined(CONFIG_SCHED_INSTRUMENTATION_DUMP) && defined(CONFIG_DRIVERS_NOTE)
 #  define sched_note_event_ip(e,t,l,i,b,n) note_event_ip(e,t,l,i,b,n)
 
-#  ifdef CONFIG_DRIVERS_NOTE_STRIP_FORMAT
-#    define sched_note_vprintf_ip(t,l,i,f,v) \
+#  define sched_note_vprintf_ip(t,l,i,f,v) \
           do \
             { \
-              locate_data("note_format") used_data \
               static const struct { uint8_t sz; char str[sizeof(f)]; } \
               fmt = { sizeof(f) - 1, f }; \
-              locate_data("note_type") used_data \
-              static const union { FAR const char *fmt; uintptr_t type; } \
-              ft = { .fmt = fmt.str }; \
-              note_vprintf_ip(t,l,i,fmt.str,ft.type,&(v)); \
+              note_vprintf_ip(t,l,i,fmt.str,0,&(v)); \
             } \
           while (0)
+
+#  ifdef CONFIG_DRIVERS_NOTE_STRIP_FORMAT
 #    define sched_note_printf_ip(t,l,i,f,...) \
           do \
             { \
               locate_data("note_format") used_data \
               static const struct { uint8_t sz; char str[sizeof(f)]; } \
               fmt = { sizeof(f) - 1, f }; \
-              locate_data("note_type") used_data \
-              static const union { FAR const char *fmt; uintptr_t type; } \
-              ft = { .fmt = fmt.str }; \
-              note_printf_ip(t,l,i,fmt.str,ft.type,##__VA_ARGS__); \
+              note_printf_ip(t,l,i,fmt.str, \
+                             NOTE_PRINTF_TAG(__VA_ARGS__),##__VA_ARGS__); \
             } \
           while (0)
 #  else
-#    define sched_note_vprintf_ip(t,l,i,f,v) \
-         do \
-           { \
-             static const struct { uint8_t sz; char str[sizeof(f)]; } \
-             fmt = { sizeof(f) - 1, f }; \
-             note_vprintf_ip(t,l,i,fmt.str,0,&(v)); \
-           } \
-         while (0)
 #    define sched_note_printf_ip(t,l,i,f,...) \
          do \
            { \
