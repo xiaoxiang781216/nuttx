@@ -242,6 +242,9 @@ FAR static DEFINE_PER_CPU_BMP(note_drivers_t, g_note_drivers) =
 #  ifdef CONFIG_DRIVERS_NOTESNAP
   (FAR struct note_driver_s *)&g_notesnap,
 #  endif
+#  ifdef CONFIG_DRIVERS_NOTENET
+  (FAR struct note_driver_s *)&g_notenet,
+#  endif
 #  ifdef CONFIG_DRIVERS_NOTESTREAM
 #    ifdef CONFIG_DRIVERS_NOTEBUF
   (FAR struct note_driver_s *)&g_notebufstream,
@@ -565,6 +568,9 @@ static void note_drivers_initialize(void)
 #  endif
 #  ifdef CONFIG_DRIVERS_NOTESNAP
       g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notesnap;
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTENET
+      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notenet;
 #  endif
 #  ifdef CONFIG_DRIVERS_NOTESTREAM
 #    ifdef CONFIG_DRIVERS_NOTEBUF
