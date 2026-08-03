@@ -71,5 +71,20 @@ unsigned int alarm(unsigned int seconds)
   value.it_value.tv_sec = seconds;
   setitimer(ITIMER_REAL, &value, &ovalue);
 
+  /* alarm() has one-second granularity: round the remaining time up to the
+   * next whole second.  A just-armed alarm(N) polled immediately still has
+   * (N seconds minus a few microseconds) left, so flooring it to whole
+   * seconds would return N-1 instead of N.  That fails the VSX PSE52 alarm
+   * conformance test, which expects alarm(1) followed at once by alarm(0)
+   * to return 1.  Rounding up any non-zero sub-second remainder matches the
+   * historical Unix behaviour; a disarmed timer has a zero ovalue, so it
+   * still returns 0.
+   */
+
+  if (ovalue.it_value.tv_usec != 0)
+    {
+      ovalue.it_value.tv_sec++;
+    }
+
   return ovalue.it_value.tv_sec;
 }
