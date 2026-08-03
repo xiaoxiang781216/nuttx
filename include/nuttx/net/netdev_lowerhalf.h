@@ -472,6 +472,35 @@ int netdev_lower_vlan_add(FAR struct netdev_lowerhalf_s *dev, uint16_t vid,
  ****************************************************************************/
 
 int netdev_lower_vlan_del(FAR struct netdev_lowerhalf_s *dev, uint16_t vid);
+
+/****************************************************************************
+ * Name: netdev_lower_vlan_rxpoll
+ *
+ * Description:
+ *   Pull every pending frame out of a physical device and dispatch it into
+ *   the RX queue of the VLAN device owning its VID, so that a subsequent
+ *   receive() on a VLAN device can return it.
+ *
+ *   This exists for netpoll: the upper-half RX path that normally performs
+ *   this dispatch cannot run with interrupts disabled.  Unlike that path,
+ *   this takes no blocking lock and does not enter the network stack, so it
+ *   is safe to call from a panic context.
+ *
+ *   Frames that are not delivered to a VLAN device (untagged, unknown VID,
+ *   or a truncated tag) are dropped, since reaching the physical device's
+ *   own RX path is not possible without the network lock.
+ *
+ * Input Parameters:
+ *   dev - The physical (trunk) lower half device
+ *
+ * Assumptions:
+ *   Called from netpoll context, i.e. with interrupts disabled.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_NETPOLL
+void netdev_lower_vlan_rxpoll(FAR struct netdev_lowerhalf_s *dev);
+#endif
 #endif
 
 /****************************************************************************

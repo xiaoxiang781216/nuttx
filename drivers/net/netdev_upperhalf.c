@@ -538,12 +538,19 @@ netdev_upper_vlan_foreach(FAR struct netdev_upperhalf_s *upper,
  *   pkt   - The received packet
  *
  * Returned Value:
- *   0:Success; negated errno on failure
+ *   The VLAN device the packet was queued to, or NULL if it was not queued
+ *   to any.  A NULL return leaves the packet owned by the caller, which has
+ *   to dispose of it: feed it into the physical device's own RX path, or
+ *   free it where that path is not reachable.
+ *
+ *   Announcing the pending data with netdev_lower_rxready() is left to the
+ *   caller, since netpoll cannot afford it.
  *
  ****************************************************************************/
 
-static int netdev_upper_vlan_dispatch(FAR struct netdev_upperhalf_s *upper,
-                                      FAR netpkt_t *pkt)
+static FAR struct netdev_lowerhalf_s *
+netdev_upper_vlan_dispatch(FAR struct netdev_upperhalf_s *upper,
+                           FAR netpkt_t *pkt)
 {
   FAR struct netdev_lowerhalf_s *vlan;
   FAR struct netdev_lowerhalf_s *lower = upper->lower;
@@ -553,7 +560,7 @@ static int netdev_upper_vlan_dispatch(FAR struct netdev_upperhalf_s *upper,
 
   if (lower->netdev.d_lltype != NET_LL_ETHERNET)
     {
-      return -ENOENT;
+      return NULL;
     }
 
   /* Check if this is an 802.1Q VLAN tagged packet */
@@ -561,27 +568,20 @@ static int netdev_upper_vlan_dispatch(FAR struct netdev_upperhalf_s *upper,
   eth_hdr = (FAR struct eth_hdr_s *)netpkt_getdata(lower, pkt);
   if (eth_hdr->type != HTONS(ETHERTYPE_VLAN))
     {
-      return -ENOENT;
+      return NULL;
     }
 
   vlan_hdr = (FAR struct eth_8021qhdr_s *)netpkt_getdata(lower, pkt);
   vid = NTOHS(vlan_hdr->tci) & VLAN_VID_MASK;
   vlan = netdev_upper_vlan_dev(upper, vid);
-  if (vlan)
+  if (vlan == NULL)
     {
-      if (vlan_dispatch(vlan, pkt) == 0)
-        {
-          netdev_lower_rxready(vlan);
-        }
-    }
-  else
-    {
-      nerr("ERROR: Dropped, unknown vlan id: %d\n", vid);
-      netpkt_free(lower, pkt, NETPKT_RX);
-      NETDEV_RXDROPPED(&lower->netdev);
+      nerr("ERROR: No device for vlan id: %d\n", vid);
+      return NULL;
     }
 
-  return 0;
+  vlan_dispatch(vlan, pkt);
+  return vlan;
 }
 #endif
 
@@ -780,6 +780,9 @@ static void netdev_upper_rxpoll_work(FAR struct netdev_upperhalf_s *upper)
   FAR struct netdev_lowerhalf_s *lower = upper->lower;
   FAR struct net_driver_s       *dev   = &lower->netdev;
   FAR netpkt_t                  *pkt;
+#if defined(CONFIG_NET_VLAN) && defined(CONFIG_NET_ETHERNET)
+  FAR struct netdev_lowerhalf_s *vlan;
+#endif
 
   /* Loop while receive() successfully retrieves valid Ethernet frames. */
 
@@ -796,8 +799,10 @@ static void netdev_upper_rxpoll_work(FAR struct netdev_upperhalf_s *upper)
         }
 
 #if defined(CONFIG_NET_VLAN) && defined(CONFIG_NET_ETHERNET)
-      if (netdev_upper_vlan_dispatch(upper, pkt) == 0)
+      vlan = netdev_upper_vlan_dispatch(upper, pkt);
+      if (vlan)
         {
+          netdev_lower_rxready(vlan);
           continue;
         }
 #endif
@@ -2041,7 +2046,62 @@ int netdev_lower_vlan_del(FAR struct netdev_lowerhalf_s *dev, uint16_t vid)
 
   return -ENOENT;
 }
-#endif
+
+/****************************************************************************
+ * Name: netdev_lower_vlan_rxpoll
+ *
+ * Description:
+ *   Pull every pending frame out of a physical device and dispatch it into
+ *   the RX queue of the VLAN device owning its VID, so that a subsequent
+ *   receive() on a VLAN device can return it.
+ *
+ *   This exists for netpoll: the upper-half RX path that normally performs
+ *   this dispatch cannot run with interrupts disabled.  It shares the
+ *   dispatch with the regular path, and simply skips the
+ *   netdev_lower_rxready() that path does afterwards, so no blocking lock
+ *   is taken and the network stack is not entered.
+ *
+ *   Any frame that is not delivered to a VLAN device is dropped, whether
+ *   it is untagged, carries an unknown VID, or is a truncated tag.  Such a
+ *   frame belongs to the physical device's own RX path, and reaching that
+ *   path needs netdev_lock() plus the network stack below it, neither of
+ *   which is available here.  This mirrors what netpoll already does on a
+ *   physical device, where netpoll_udp_recv() discards everything that is
+ *   not a UDP datagram addressed to us.
+ *
+ * Input Parameters:
+ *   dev - The physical (trunk) lower half device
+ *
+ * Assumptions:
+ *   Called from netpoll context, i.e. with interrupts disabled.  Must not
+ *   be used as a general RX path: the upper half owns that while it runs.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_NETPOLL
+void netdev_lower_vlan_rxpoll(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct netdev_upperhalf_s *upper = dev->netdev.d_private;
+  FAR netpkt_t *pkt;
+
+  while ((pkt = dev->ops->receive(dev)) != NULL)
+    {
+      NETDEV_RXPACKETS(&dev->netdev);
+
+      /* A queued frame is left for vlan_receive() to pick up, with the
+       * (dormant) upper half not notified.  Anything else comes back to us
+       * still owned, and has nowhere to go while netpoll owns the RX path.
+       */
+
+      if (netdev_upper_vlan_dispatch(upper, pkt) == NULL)
+        {
+          NETDEV_RXDROPPED(&dev->netdev);
+          netpkt_free(dev, pkt, NETPKT_RX);
+        }
+    }
+}
+#endif /* CONFIG_NET_NETPOLL */
+#endif /* CONFIG_NET_VLAN */
 
 /****************************************************************************
  * Name: netpkt_alloc

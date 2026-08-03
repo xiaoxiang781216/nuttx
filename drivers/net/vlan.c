@@ -289,6 +289,26 @@ static void vlan_poll(FAR struct netdev_lowerhalf_s *dev,
     {
       real->ops->poll(real, type);
     }
+
+  /* Advance the RX path ourselves.  vlan_receive() only drains rxq, which
+   * is filled by netdev_upper_vlan_dispatch() from the upper-half RX
+   * path -- and that cannot run while netpoll holds interrupts disabled,
+   * so rxq would stay empty forever.  Run the same dispatch here, in the
+   * caller's context, without notifying the upper half: every tagged frame
+   * still lands in the rxq of the VLAN device owning its VID, so traffic
+   * for our sibling VLANs is not stolen or dropped.
+   *
+   * The NETPKT_RX test is required, not just an optimization.  poll() is
+   * not exclusive with the interrupt-driven path: notenet and
+   * syslog_netdev call poll(NETPKT_TX) during normal operation, while the
+   * upper half is alive and owns RX.  Draining the real device there would
+   * steal frames from it.
+   */
+
+  if (type == NETPKT_RX)
+    {
+      netdev_lower_vlan_rxpoll(real);
+    }
 }
 #endif
 
