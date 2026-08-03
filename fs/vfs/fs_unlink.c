@@ -37,17 +37,6 @@
 #include "vfs.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#undef FS_HAVE_UNLINK
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_DISABLE_PSEUDOFS_OPERATIONS)
-#  define FS_HAVE_UNLINK 1
-#endif
-
-#ifdef FS_HAVE_UNLINK
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -149,7 +138,7 @@ int nx_unlink(FAR const char *pathname)
               goto errout_with_inode;
             }
         }
-#ifndef CONFIG_DISABLE_MOUNTPOINT
+#ifdef CONFIG_FS_BLOCK_DRIVER
       else if (INODE_IS_BLOCK(inode) && inode->u.i_bops->unlink)
         {
           /* Notify the block driver that it has been unlinked */
@@ -238,5 +227,3 @@ int unlink(FAR const char *pathname)
 
   return OK;
 }
-
-#endif /* FS_HAVE_UNLINK */

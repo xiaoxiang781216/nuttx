@@ -46,12 +46,17 @@ set(SRCS
     fs_sendfile.c
     fs_statfs.c
     fs_uio.c
-    fs_unlink.c
     fs_write.c
     fs_dir.c
     fs_fsync.c
     fs_syncfs.c
     fs_truncate.c)
+
+# Unlink support: needed when either mountpoint or pseudofs operations exist
+
+if(NOT (CONFIG_DISABLE_MOUNTPOINT AND CONFIG_DISABLE_PSEUDOFS_OPERATIONS))
+  list(APPEND SRCS fs_unlink.c)
+endif()
 
 # File notify support
 
