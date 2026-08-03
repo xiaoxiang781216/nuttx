@@ -2405,7 +2405,7 @@ static void uvc_device_cleanup_worker(FAR void *arg)
 
   DEBUGASSERT(priv->dev);
 
-  snprintf(devpath, sizeof(devpath), "/dev/uvc%d", priv->dev->minor);
+  snprintf(devpath, sizeof(devpath), "/dev/video%d", priv->dev->minor);
   if (priv->isoin && hport && hport->drvr)
     {
       DRVR_CANCEL(hport->drvr, priv->isoin);
@@ -2448,7 +2448,7 @@ static int uvc_register(FAR struct uvc_priv_s *priv)
   char                    devpath[32];
   int                     ret;
 
-  snprintf(devpath, sizeof(devpath), "/dev/uvc%d", priv->minor);
+  snprintf(devpath, sizeof(devpath), "/dev/video%d", priv->minor);
 
   uinfo("UVC: register devpath=%s\n", devpath);
 
