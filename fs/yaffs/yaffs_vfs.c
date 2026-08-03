@@ -743,11 +743,25 @@ static int yaffs_vfs_truncate(FAR struct file *filep, off_t length)
 {
   int handle;
   int ret;
+#ifdef CONFIG_FS_YAFFS_POSIX_TIMESTAMP
+  struct stat st;
+  struct timespec ts;
+#endif
 
   handle = filep_to_yaffs_handle(filep);
   ret = yaffs_ftruncate(handle, length);
+  if (ret < 0)
+    {
+      return yaffsfs_GetLastError();
+    }
 
-  return ret < 0 ? yaffsfs_GetLastError() : 0;
+#ifdef CONFIG_FS_YAFFS_POSIX_TIMESTAMP
+  nxclock_gettime(CLOCK_REALTIME, &ts);
+  st.st_mtime = st.st_ctime = ts.tv_sec;
+  yaffs_vfs_fchstat(filep, &st, CH_STAT_MTIME | CH_STAT_CTIME);
+#endif
+
+  return 0;
 }
 
 /****************************************************************************
