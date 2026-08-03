@@ -402,7 +402,7 @@ ssize_t file_mq_timedreceive_internal(FAR struct file *mq, FAR char *msg,
         }
       else if (ticks >= 0)
         {
-          tcb_timer_start(rtcb, ticks, nxmq_rcvtimeout);
+          tcb_timer_start_ticks(rtcb, ticks, nxmq_rcvtimeout);
         }
 
       ret = nxmq_wait_receive(msgq, &mqmsg);

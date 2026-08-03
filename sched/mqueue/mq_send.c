@@ -578,7 +578,7 @@ int file_mq_timedsend_internal(FAR struct file *mq, FAR const char *msg,
         }
       else if (ticks >= 0)
         {
-          tcb_timer_start(rtcb, ticks, nxmq_sndtimeout);
+          tcb_timer_start_ticks(rtcb, ticks, nxmq_sndtimeout);
         }
 
       ret = nxmq_wait_send(msgq);

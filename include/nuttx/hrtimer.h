@@ -58,6 +58,13 @@
 #define HRTIMER_GUARD_DELAY ((uint64_t)INT64_MAX - (1ull << 48))
 #define HRTIMER_MAX_DELAY   (((uint64_t)INT64_MAX >> 1) + 1u)
 
+/* Compare functions for the expired time. Since some compilers may not
+ * optimize the compare.
+ */
+
+#define HRTIMER_TIME_BEFORE(t1, t2)    ((int64_t)((t2) - (t1)) > 0)
+#define HRTIMER_TIME_BEFORE_EQ(t1, t2) ((int64_t)((t2) - (t1)) >= 0)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/

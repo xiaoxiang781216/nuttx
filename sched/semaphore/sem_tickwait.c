@@ -35,7 +35,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/wdog.h>
 
 #include "sched/sched.h"
 #include "clock/clock.h"
@@ -80,13 +79,13 @@ int nxsem_tickwait_slow(FAR sem_t *sem, clock_t delay)
 
   if (delay != 0u)
     {
-      /* Start the watchdog with interrupts still disabled */
+      /* Start the timer with interrupts still disabled */
 
       flags = enter_critical_section();
 
       /* Start the timer */
 
-      tcb_timer_start(rtcb, delay, nxsem_timeout);
+      tcb_timer_start_ticks(rtcb, delay, nxsem_timeout);
 
       /* Now perform the blocking wait */
 

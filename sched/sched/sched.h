@@ -35,11 +35,14 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
+#include <nuttx/hrtimer.h>
 #include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/tls.h>
 #include <nuttx/trace.h>
+
+#include "clock/clock.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -127,49 +130,6 @@ void restore_critical_section(uint16_t count);
 #    define restore_critical_section(count)
 #  endif
 #endif
-
-#define tcb_timer_start(tcb, delay, func) \
-  do \
-    { \
-      DEBUGASSERT((uint64_t)delay <= HRTIMER_MAX_DELAY / NSEC_PER_TICK); \
-      hrtimer_start(&(tcb)->waittimer, func, TICK2NSEC((uint64_t)(delay)), \
-                    HRTIMER_MODE_REL); \
-    } \
-  while(0)
-
-#define tcb_timer_start_absnsec(tcb, absnsec, func) \
-  hrtimer_start(&(tcb)->waittimer, func, absnsec, HRTIMER_MODE_ABS)
-
-#define tcb_timer_start_abstime(tcb, clockid, abstime, func) \
-  do \
-    { \
-      if ((clockid) == CLOCK_REALTIME) \
-        { \
-          struct timespec ts; \
-          clock_realtime2abstime(abstime, &ts); \
-          tcb_timer_start_absnsec(tcb, clock_time2nsec(&ts), func); \
-        } \
-      else \
-        { \
-          DEBUGASSERT((abstime)->tv_sec >= 0 && \
-                      (uint64_t)(abstime)->tv_sec <= \
-                      HRTIMER_MAX_DELAY / NSEC_PER_SEC - 1u); \
-          tcb_timer_start_absnsec(tcb, clock_time2nsec(abstime), func); \
-        } \
-    } \
-  while(0)
-
-/* The tcb_timer_cancel assumes the 64-bit nanoseconds never wraparound. */
-
-#define tcb_timer_cancel(tcb) \
-  do \
-    { \
-      hrtimer_cancel(&(tcb)->waittimer); \
-      (tcb)->waittimer.expired = 0u; \
-    } \
-  while (0)
-
-#define tcb_timer_cancel_sync(tcb) hrtimer_cancel_sync(&(tcb)->waittimer)
 
 /****************************************************************************
  * Public Type Definitions
@@ -536,4 +496,116 @@ static inline_function int nxsched_select_cpu(cpu_set_t affinity)
   return cpu;
 }
 #endif
+
+/****************************************************************************
+ * Name: tcb_timer_start
+ *
+ * Description:
+ *   Start the wait timer with a relative delay in nanoseconds.  Returns
+ *   the absolute expiration time so the caller can compute the remaining
+ *   time if needed.
+ *
+ ****************************************************************************/
+
+static inline_function
+uint64_t tcb_timer_start(FAR struct tcb_s *tcb, uint64_t delay,
+                         hrtimer_entry_t func)
+{
+  uint64_t expected = delay + clock_systime_nsec();
+  hrtimer_start(&tcb->waittimer, func, expected, HRTIMER_MODE_ABS);
+  return expected;
+}
+
+/****************************************************************************
+ * Name: tcb_timer_start_ticks
+ *
+ * Description:
+ *   Start the wait timer with a relative delay in ticks.  The delay is
+ *   clamped to HRTIMER_MAX_DELAY / NSEC_PER_TICK.  Returns the absolute
+ *   expiration time so the caller can compute the remaining time if needed.
+ *
+ ****************************************************************************/
+
+static inline_function
+uint64_t tcb_timer_start_ticks(FAR struct tcb_s *tcb, clock_t delay,
+                               hrtimer_entry_t func)
+{
+  uint64_t ticks = (uint64_t)delay > HRTIMER_MAX_DELAY / NSEC_PER_TICK ?
+                   HRTIMER_MAX_DELAY / NSEC_PER_TICK : (uint64_t)delay;
+  return tcb_timer_start(tcb, TICK2NSEC(ticks), func);
+}
+
+/****************************************************************************
+ * Name: tcb_timer_start_abstime
+ *
+ * Description:
+ *   Start the wait timer with an absolute time (timespec).  If the time
+ *   is already in the past, clamp to the current time so the timer fires
+ *   immediately.  Returns the absolute expiration time in nanoseconds.
+ *
+ ****************************************************************************/
+
+static inline_function
+uint64_t tcb_timer_start_abstime(FAR struct tcb_s *tcb, clockid_t clockid,
+                                 FAR const struct timespec *abstime,
+                                 hrtimer_entry_t func)
+{
+  uint64_t now = clock_systime_nsec();
+  uint64_t expected;
+
+  if (clockid == CLOCK_REALTIME)
+    {
+#ifdef CONFIG_CLOCK_TIMEKEEPING
+      struct timespec rt;
+      nxclock_gettime(CLOCK_REALTIME, &rt);
+      clock_timespec_subtract(abstime, &rt, &rt);
+      expected = clock_time2nsec(&rt) + now;
+#else
+      struct timespec ts;
+      clock_timespec_subtract(abstime, &g_basetime, &ts);
+      expected = clock_time2nsec(&ts);
+      expected = HRTIMER_TIME_BEFORE(now, expected) ? expected : now;
+#endif
+    }
+  else
+    {
+      DEBUGASSERT(abstime->tv_sec >= 0);
+      expected = clock_time2nsec(abstime);
+      expected = HRTIMER_TIME_BEFORE(now, expected) ? expected : now;
+    }
+
+  hrtimer_start(&tcb->waittimer, func, expected, HRTIMER_MODE_ABS);
+  return expected;
+}
+
+/****************************************************************************
+ * Name: tcb_timer_cancel
+ *
+ * Description:
+ *   Cancel the wait timer asynchronously.  If a callback is in-flight on
+ *   another CPU, it will fail the state check and no-op.
+ *
+ ****************************************************************************/
+
+static inline_function
+void tcb_timer_cancel(FAR struct tcb_s *tcb)
+{
+  hrtimer_cancel(&tcb->waittimer);
+}
+
+/****************************************************************************
+ * Name: tcb_timer_cancel_sync
+ *
+ * Description:
+ *   Cancel the wait timer and synchronously wait for any in-flight
+ *   callback to complete.
+ *
+ ****************************************************************************/
+
+static inline_function
+void tcb_timer_cancel_sync(FAR struct tcb_s *tcb)
+{
+  hrtimer_cancel_sync(&tcb->waittimer);
+}
+
 #endif /* __SCHED_SCHED_SCHED_H */

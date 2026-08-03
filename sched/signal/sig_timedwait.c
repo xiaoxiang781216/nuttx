@@ -39,7 +39,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/wdog.h>
 #include <nuttx/signal.h>
 #include <nuttx/cancelpt.h>
 #include <nuttx/queue.h>
@@ -310,8 +309,8 @@ int nxsig_clockwait(int clockid, int flags,
 
           if ((flags & TIMER_ABSTIME) == 0)
             {
-              expect = clock_time2nsec(rqtp) + clock_systime_nsec();
-              tcb_timer_start_absnsec(rtcb, expect, nxsig_timeout);
+              expect = tcb_timer_start(rtcb, clock_time2nsec(rqtp),
+                                       nxsig_timeout);
             }
           else
             {

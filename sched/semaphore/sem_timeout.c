@@ -30,7 +30,6 @@
 #include <errno.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/wdog.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/spinlock.h>

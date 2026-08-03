@@ -27,7 +27,6 @@ set(SRCS
     clock_getres.c
     clock_settime.c
     clock_gettime.c
-    clock_realtime2abstime.c
     clock_systime_ticks.c
     clock_systime_timespec.c
     clock_perf.c)

@@ -52,13 +52,6 @@
 
 #define hrtimer_is_pending(hrtimer)    ((hrtimer)->func != NULL)
 
-/* Compare functions for the expired time. Since some compilers may not
- * optimize the compare.
- */
-
-#define HRTIMER_TIME_BEFORE(t1, t2)    ((int64_t)((t2) - (t1)) > 0)
-#define HRTIMER_TIME_BEFORE_EQ(t1, t2) ((int64_t)((t2) - (t1)) >= 0)
-
 /* Precision mask for reducing hrtimer resolution.
  * When CONFIG_HRTIMER_PRECISION_SHIFT > 0, the programmed expiration
  * time is ceiling-aligned to (1 << SHIFT) nanosecond boundaries.
