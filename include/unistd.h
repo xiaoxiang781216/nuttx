@@ -67,8 +67,26 @@
 
 #define _POSIX_VERSION 201712L
 #define _POSIX_PRIORITIZED_IO _POSIX_VERSION
-#define _POSIX_CPUTIME _POSIX_VERSION
-#define _POSIX_THREAD_CPUTIME _POSIX_VERSION
+
+/* CPU-time clocks (CLOCK_PROCESS_CPUTIME_ID / CLOCK_THREAD_CPUTIME_ID) are
+ * only implemented when the critical-section latency monitor is enabled, as
+ * nxclock_gettime() handles these clock ids under
+ * CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0.  When the monitor is off
+ * (the default), that branch is not compiled and the clock ids return
+ * EINVAL, so POSIX option groups must report them as unsupported (-1) to
+ * keep sysconf()/feature-test macros consistent with the implementation.
+ * Define to -1 (not undef) so feature-test checks like "#if _POSIX_CPUTIME
+ * != -1" do not trip -Wundef in consumers such as LTP.
+ */
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
+#  define _POSIX_CPUTIME _POSIX_VERSION
+#  define _POSIX_THREAD_CPUTIME _POSIX_VERSION
+#else
+#  define _POSIX_CPUTIME -1
+#  define _POSIX_THREAD_CPUTIME -1
+#endif
+
 #define _POSIX_REALTIME_SIGNALS _POSIX_VERSION
 #define _POSIX_THREAD_PRIORITY_SCHEDULING _POSIX_VERSION
 #define _POSIX_SEMAPHORES _POSIX_VERSION
