@@ -448,6 +448,20 @@ static void nxsig_wakeup_task(FAR struct tcb_s *stcb,
       memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
     }
 
+  /* A task in TSTATE_WAIT_SIG is woken either by sigtimedwait() (which
+   * sets sigwaitmask to the signals it wants and treats arrival as
+   * success) or by a timed sleep such as nanosleep()/clock_nanosleep()
+   * (which does not set sigwaitmask and must return EINTR).  When the
+   * arriving signal is not one the caller is explicitly waiting for,
+   * mark the wakeup as an interruption so nxsig_clockwait() returns
+   * -EINTR instead of OK.
+   */
+
+  if (!nxsig_ismember(&stcb->sigwaitmask, info->si_signo))
+    {
+      stcb->errcode = EINTR;
+    }
+
   sigemptyset(&stcb->sigwaitmask);
 
   tcb_timer_cancel(stcb);
