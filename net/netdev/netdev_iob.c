@@ -223,6 +223,22 @@ int netdev_iob_prepare(FAR struct net_driver_s *dev, bool throttled,
 
       netdev_iob_replace(dev, iob);
     }
+  else
+    {
+      /* Reusing an existing buffer: re-establish the L2 guard headroom.
+       *
+       * A reused head may have lost its headroom (io_offset == 0) after an
+       * in-place consume such as iob_trimhead() on the RX/recv path (which
+       * resets io_offset to 0 when the whole chain is trimmed away).  A
+       * freshly allocated buffer already carries CONFIG_NET_LL_GUARDSIZE of
+       * headroom, so this only matters on the reuse path.  Without restoring
+       * it, prepending the L2 header (NETLLBUF = IOB_DATA - NET_LL_HDRLEN)
+       * would underflow past io_data into the iob struct header and corrupt
+       * io_flink, later crashing iob_add_queue() while walking the chain.
+       */
+
+      iob_reserve(dev->d_iob, CONFIG_NET_LL_GUARDSIZE);
+    }
 
   /* Set the device buffer to l2 */
 
