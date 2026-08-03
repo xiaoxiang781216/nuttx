@@ -88,6 +88,12 @@ int hrtimer_cancel(FAR hrtimer_t *hrtimer)
 
   ret = hrtimer_cancel_running(hrtimer);
 
+  /* Update the expired time to ensure the cancelled timer will return 0
+   * in hrtimer_gettime.
+   */
+
+  hrtimer->expired = hrtimer_last_expired();
+
   if (hrtimer_is_pending(hrtimer))
     {
       /* Update the hardware timer if the queue head changed. */

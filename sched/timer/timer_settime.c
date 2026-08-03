@@ -250,15 +250,6 @@ int timer_settime(timer_t timerid, int flags,
 
       nxsig_cancel_notification(&timer->pt_work);
 
-      /* Reset the expiration time to the current time. hrtimer_gettime()
-       * computes the remaining time as (expired - now) without checking
-       * whether the timer is armed. After cancellation, expired retains
-       * its previous value, which would cause a subsequent timer_settime()
-       * to return a stale non-zero remaining time for a disarmed timer.
-       */
-
-      timer->pt_timer.expired = clock_systime_nsec();
-
       /* If the it_value member of value is zero, the timer will not be
        * re-armed
        */
@@ -303,12 +294,10 @@ int timer_settime(timer_t timerid, int flags,
               delay = clock_time2nsec(&value->it_value);
             }
 
-          delay = delay <= HRTIMER_MAX_DELAY ? delay : HRTIMER_MAX_DELAY;
-
           /* Then start the timer */
 
-          hrtimer_start(&timer->pt_timer, timer_timeout,
-                        timer->pt_timer.expired + delay, HRTIMER_MODE_ABS);
+          hrtimer_start(&timer->pt_timer, timer_timeout, delay,
+                        HRTIMER_MODE_REL);
         }
     }
 

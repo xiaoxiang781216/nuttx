@@ -199,6 +199,12 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
           ret->pt_owner = tcb->pid;
           ret->pt_delay = 0u;
 
+          /* To ensure the timer is expired so hrtimer_gettime
+           * will return zero.
+           */
+
+          ret->pt_timer.expired = clock_systime_nsec();
+
           /* Was a struct sigevent provided? */
 
           if (evp)
