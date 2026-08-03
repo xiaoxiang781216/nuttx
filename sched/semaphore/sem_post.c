@@ -218,7 +218,7 @@ int nxsem_post_slow(FAR sem_t *sem)
                   nxsem_add_holder_tcb(stcb, sem);
                 }
 
-              /* Stop the watchdog timer */
+              /* Cancel the wait timer */
 
               tcb_timer_cancel(stcb);
 

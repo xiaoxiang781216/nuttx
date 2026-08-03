@@ -48,10 +48,11 @@
  *   semaphore is acquired.
  *
  * Input Parameters:
- *   arg - The argument that was provided when the timeout was configured.
+ *   timer   - The hrtimer that expired.
+ *   expired - The expiration time snapshot captured at dispatch time.
  *
  * Returned Value:
- *   None
+ *   0 (no periodic re-arm).
  *
  * Assumptions:
  *   - Called from the context of the timer interrupt handler.

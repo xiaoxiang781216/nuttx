@@ -249,10 +249,11 @@ static void nxmq_add_queue(FAR struct mqueue_inode_s *msgq,
  *   becomes non-full.
  *
  * Input Parameters:
- *   arg - The argument that was provided when the timeout was configured.
+ *   timer   - The hrtimer that expired.
+ *   expired - The expiration time snapshot captured at dispatch time.
  *
  * Returned Value:
- *   None
+ *   0 (no periodic re-arm).
  *
  * Assumptions:
  *
@@ -606,11 +607,8 @@ int file_mq_timedsend_internal(FAR struct file *mq, FAR const char *msg,
 out:
   leave_critical_section(flags);
 
-  /* Cancel the timeout timer.  A non-sync cancel is sufficient: any
-   * in-flight callback is rendered harmless by the expired-version check
-   * in the timeout handler, and the invalidating expired=0 write done by
-   * the waker (nxmq_notify_send) was already performed under the critical
-   * section above.
+  /* Cancel the wait timer.  The task is no longer in a waiting state,
+   * so any in-flight stale callback will fail the state check and no-op.
    */
 
   tcb_timer_cancel(rtcb);

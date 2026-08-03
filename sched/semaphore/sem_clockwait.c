@@ -57,7 +57,7 @@ int nxsem_clockwait_slow(FAR sem_t *sem, clockid_t clockid,
   /* We will disable interrupts until we have completed the semaphore
    * wait.  We need to do this (as opposed to just disabling pre-emption)
    * because there could be interrupt handlers that are asynchronously
-   * posting semaphores and to prevent race conditions with watchdog
+   * posting semaphores and to prevent race conditions with the timer
    * timeout.  This is not too bad because interrupts will be re-
    * enabled while we are blocked waiting for the semaphore.
    */

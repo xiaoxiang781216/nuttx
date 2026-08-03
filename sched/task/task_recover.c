@@ -47,8 +47,8 @@
  *
  * Description:
  *   This function is called when a task is deleted via task_delete() or
- *   via pthread_cancel.  I checks checks for semaphores, message queue, and
- *   watchdog timer resources stranded in bad conditions.
+ *  via pthread_cancel.  I checks checks for semaphores, message queue, and
+ *  timer resources stranded in bad conditions.
  *
  * Input Parameters:
  *   tcb - The TCB of the terminated task or thread

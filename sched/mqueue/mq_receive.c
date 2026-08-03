@@ -114,10 +114,11 @@ static int nxmq_verify_receive(FAR struct file *mq,
  *   becomes non-empty.
  *
  * Input Parameters:
- *   arg - the argument provided when the timeout was configured.
+ *   timer   - The hrtimer that expired.
+ *   expired - The expiration time snapshot captured at dispatch time.
  *
  * Returned Value:
- *   None
+ *   0 (no periodic re-arm).
  *
  * Assumptions:
  *
