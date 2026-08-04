@@ -153,6 +153,11 @@ void drivers_initialize(void)
   devfreq_rpmsg_server_init();
 #endif
 
+#if defined(CONFIG_DEVFREQ_RPMSG) && \
+    !defined(CONFIG_DEVFREQ_RPMSG_GOV_NONE)
+  devfreq_rpmsg_init();
+#endif
+
 #if defined(CONFIG_DEV_NULL)
   devnull_register();   /* Standard /dev/null */
 #endif

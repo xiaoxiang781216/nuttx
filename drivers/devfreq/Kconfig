@@ -127,6 +127,45 @@ config DEVFREQ_RPMSG
 		to add/update/remove QoS requests, get frequency, suspend and
 		resume devfreq devices on the server CPU via rpmsg.
 
+choice
+	prompt "devfreq rpmsg governor"
+	default DEVFREQ_RPMSG_GOV_NONE
+	depends on DEVFREQ_RPMSG
+
+config DEVFREQ_RPMSG_GOV_NONE
+	bool "none"
+	---help---
+		Do not auto-initialize devfreq rpmsg client in
+		drivers_initialize(). Board code must call
+		devfreq_rpmsg_register() manually.
+
+config DEVFREQ_RPMSG_GOV_PERFORMANCE
+	bool "performance"
+
+config DEVFREQ_RPMSG_GOV_POWERSAVE
+	bool "powersave"
+
+config DEVFREQ_RPMSG_GOV_ONDEMAND
+	bool "ondemand"
+	depends on DEVFREQ_GOV_ONDEMAND
+
+endchoice
+
+if DEVFREQ_RPMSG && !DEVFREQ_RPMSG_GOV_NONE
+
+config DEVFREQ_RPMSG_DEVICE_NAME
+	string "devfreq rpmsg device name"
+	default "cpu"
+	---help---
+		The local devfreq device name for the rpmsg proxy.
+
+config DEVFREQ_RPMSG_REMOTE_NAME
+	string "devfreq rpmsg remote cpu name"
+	---help---
+		The rpmsg remote CPU name that owns the devfreq device.
+
+endif
+
 config DEVFREQ_RPMSG_SERVER
 	bool "devfreq rpmsg server"
 	default n

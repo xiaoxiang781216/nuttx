@@ -397,3 +397,41 @@ int devfreq_rpmsg_unregister(FAR void *handle)
 
   return 0;
 }
+
+/****************************************************************************
+ * Name: devfreq_rpmsg_init
+ *
+ * Description:
+ *   Initialize the devfreq rpmsg client with Kconfig-driven parameters.
+ *   Called from drivers_initialize().
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno on failure
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_DEVFREQ_RPMSG_GOV_NONE
+int devfreq_rpmsg_init(void)
+{
+  FAR struct devfreq_governor_s *governor;
+
+  if (devfreq_find_by_name(CONFIG_DEVFREQ_RPMSG_DEVICE_NAME))
+    {
+      pwrerr("devfreq rpmsg: device \"%s\" already registered locally\n",
+             CONFIG_DEVFREQ_RPMSG_DEVICE_NAME);
+      return -EEXIST;
+    }
+
+#if defined(CONFIG_DEVFREQ_RPMSG_GOV_POWERSAVE)
+  governor = devfreq_powersave();
+#elif defined(CONFIG_DEVFREQ_RPMSG_GOV_ONDEMAND)
+  governor = devfreq_ondemand();
+#else
+  governor = devfreq_performance();
+#endif
+
+  return devfreq_rpmsg_register(CONFIG_DEVFREQ_RPMSG_DEVICE_NAME,
+                                CONFIG_DEVFREQ_RPMSG_REMOTE_NAME,
+                                governor) ? 0 : -ENOMEM;
+}
+#endif

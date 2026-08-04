@@ -119,6 +119,19 @@ int devfreq_rpmsg_unregister(FAR void *handle);
 
 int devfreq_rpmsg_server_init(void);
 
+/****************************************************************************
+ * Name: devfreq_rpmsg_init
+ *
+ * Description:
+ *   Initialize the devfreq rpmsg client with Kconfig-driven parameters.
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno on failure
+ *
+ ****************************************************************************/
+
+int devfreq_rpmsg_init(void);
+
 #undef EXTERN
 #if defined(__cplusplus)
 }
