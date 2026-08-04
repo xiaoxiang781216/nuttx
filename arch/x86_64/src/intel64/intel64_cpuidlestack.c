@@ -106,6 +106,12 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
   tcb->shadow_base_ptr = (uintptr_t)tcb->stack_base_ptr + stack_size;
   tcb->shadow_top_ptr  = tcb->shadow_base_ptr + unsafe_size;
 #  endif
+
+  /* On x86_64 xcp.regs must be a valid pointer to the context save area
+   * before the first context switch away from the AP IDLE task.
+   */
+
+  up_initial_state(tcb);
 #endif
   return OK;
 }
