@@ -71,6 +71,10 @@ if(CONFIG_ARM64_HAVE_EL3)
   list(APPEND SRCS arm64_smccc.S)
 endif()
 
+if(CONFIG_ARCH_HAVE_BOOT_ENTRY)
+  list(APPEND SRCS arm64_boot_image.S)
+endif()
+
 if(CONFIG_ARCH_HAVE_MMU)
   list(APPEND SRCS arm64_mmu.c)
   if(CONFIG_ARCH_TOOLCHAIN_CLANG)

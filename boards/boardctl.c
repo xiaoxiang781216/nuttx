@@ -546,17 +546,20 @@ int boardctl(unsigned int cmd, uintptr_t arg)
         break;
 #endif
 
-#ifdef CONFIG_BOARDCTL_BOOT_IMAGE
+#if defined(CONFIG_BOARDCTL_BOOT_IMAGE) || defined(CONFIG_BOARDCTL_BOOT_ENTRY)
       /* CMD:           BOARDIOC_BOOT_IMAGE
-       * DESCRIPTION:   Boot a new application firmware image.
-       *                Execute the required actions for booting a new
-       *                application firmware image (e.g. deinitialize
-       *                peripherals, load the Program Counter register with
-       *                the application firmware image entry point address).
+       * DESCRIPTION:   Boot a new firmware image.  Either the caller has
+       *                already parsed and loaded the image and prepared its
+       *                boot argument (info->entry != 0), in which case only
+       *                the architecture specific hand-off is left to do, or
+       *                the image is named by info->path and both parsing and
+       *                loading are left to the board logic.
        * ARG:           Pointer to a read-only instance of struct
        *                boardioc_boot_info_s.
-       * DEPENDENCIES:  Board logic must provide the board_boot_image()
-       *                interface.
+       * DEPENDENCIES:  With CONFIG_BOARDCTL_BOOT_ENTRY, architecture
+        *                specific logic must provide up_boot_entry().  With
+       *                CONFIG_BOARDCTL_BOOT_IMAGE, board logic must provide
+       *                board_boot_image().
        */
 
       case BOARDIOC_BOOT_IMAGE:
@@ -564,9 +567,27 @@ int boardctl(unsigned int cmd, uintptr_t arg)
           FAR const struct boardioc_boot_info_s *info =
             (FAR const struct boardioc_boot_info_s *)arg;
 
-          DEBUGASSERT(info != NULL);
-
-          ret = board_boot_image(info->path, info->header_size);
+          if (info == NULL)
+            {
+              ret = -EINVAL;
+            }
+#ifdef CONFIG_BOARDCTL_BOOT_ENTRY
+          else if (info->entry != 0)
+            {
+              up_boot_entry(info->entry, info->arg);
+            }
+#endif
+#ifdef CONFIG_BOARDCTL_BOOT_IMAGE
+          else
+            {
+              ret = board_boot_image(info->path, info->header_size);
+            }
+#else
+          else
+            {
+              ret = -EINVAL;
+            }
+#endif
         }
         break;
 #endif

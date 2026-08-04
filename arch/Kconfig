@@ -30,6 +30,7 @@ config ARCH_ARM64
 	select ALARM_ARCH
 	select ARCH_64BIT
 	select ARCH_HAVE_BACKTRACE
+	select ARCH_HAVE_BOOT_ENTRY
 	select ARCH_HAVE_INTERRUPTSTACK
 	select ARCH_HAVE_FORK if !BUILD_KERNEL && !BUILD_PROTECTED
 	select ARCH_HAVE_STACKCHECK
@@ -749,6 +750,13 @@ config ARCH_JUMP_LABEL_PER_CPU
 config ARCH_HAVE_BOOTLOADER
 	bool
 	default n
+
+config ARCH_HAVE_BOOT_ENTRY
+	bool
+	default n
+	---help---
+		Selected by an architecture that provides up_boot_entry(), the
+		hand-off to an already loaded image used by BOARDCTL_BOOT_ENTRY.
 
 config ARCH_HAVE_CPUINFO
 	bool

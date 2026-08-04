@@ -80,6 +80,10 @@ ifeq ($(CONFIG_ARM64_HAVE_EL3),y)
 CMN_ASRCS += arm64_smccc.S
 endif
 
+ifeq ($(CONFIG_ARCH_HAVE_BOOT_ENTRY),y)
+CMN_ASRCS += arm64_boot_image.S
+endif
+
 ifeq ($(CONFIG_ARCH_HAVE_MMU),y)
 CMN_CSRCS += arm64_mmu.c
 endif

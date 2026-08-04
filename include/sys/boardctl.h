@@ -402,14 +402,31 @@ struct boardioc_nxterm_ioctl_s
 };
 #endif /* CONFIG_NXTERM */
 
-#ifdef CONFIG_BOARDCTL_BOOT_IMAGE
+#if defined(CONFIG_BOARDCTL_BOOT_IMAGE) || defined(CONFIG_BOARDCTL_BOOT_ENTRY)
 
-/* Structure containing the arguments to the BOARDIOC_BOOT_IMAGE command */
+/* Structure containing the arguments to the BOARDIOC_BOOT_IMAGE command.
+ *
+ * Two ways of naming the image to boot are supported, so the same command
+ * covers both an image the board logic loads itself and one the caller has
+ * already placed in memory:
+ *
+ *   path != NULL  The image is named by 'path' and both parsing and loading
+ *                 are left to the board logic.  'entry' is unused.
+ *   path == NULL  With a non-zero 'entry' the caller has parsed and loaded
+ *                 the image itself and prepared its boot argument, so only
+ *                 the architecture specific hand-off is left to do.
+ *
+ * 'path' is what tells the two apart, so a caller that predates 'entry'
+ * keeps reaching the board logic whether it fills 'path' in or not.  Clear
+ * the whole structure before use.
+ */
 
 struct boardioc_boot_info_s
 {
   FAR const char *path;           /* Path to application firmware image */
   uint32_t        header_size;    /* Size of the image header in bytes */
+  uintptr_t       entry;          /* Entry point of an already loaded image */
+  uintptr_t       arg;            /* Boot argument, e.g. a device tree */
 };
 #endif
 

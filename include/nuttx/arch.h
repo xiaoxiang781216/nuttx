@@ -293,6 +293,32 @@ void up_systempoweroff(void) noreturn_function;
 void up_systemreset(void) noreturn_function;
 
 /****************************************************************************
+ * Name: up_boot_entry
+ *
+ * Description:
+ *   Perform the architecture specific hand-off to an already loaded image:
+ *   leave the CPU in the state the image's boot protocol requires (typically
+ *   MMU and caches off), pass it the boot argument and enter it.
+ *
+ *   Parsing and loading the image is the caller's job; this only performs
+ *   the part that needs privileged, architecture specific instructions.  The
+ *   image may be any payload the boot protocol of this architecture accepts,
+ *   e.g. a Linux or a NuttX kernel.
+ *
+ *   Only available when CONFIG_BOARDCTL_BOOT_ENTRY is selected, and never
+ *   returns.
+ *
+ * Input Parameters:
+ *   entry - Entry point of the loaded image.
+ *   arg   - Boot argument passed to the image, e.g. a device tree.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_BOARDCTL_BOOT_ENTRY
+void up_boot_entry(uintptr_t entry, uintptr_t arg) noreturn_function;
+#endif
+
+/****************************************************************************
  * Name: up_idle
  *
  * Description:

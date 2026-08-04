@@ -5089,6 +5089,24 @@ config BOARDCTL_BOOT_IMAGE
 		Program Counter register with the application firmware image entry
 		point address).
 
+config BOARDCTL_BOOT_ENTRY
+	bool "Hand control to an already loaded image"
+	default n
+	depends on ARCH_HAVE_BOOT_ENTRY
+	---help---
+		Lets the BOARDIOC_BOOT_IMAGE boardctl() command hand control to an
+		image the caller has already parsed and loaded.  Where
+		BOARDCTL_BOOT_IMAGE takes a path and leaves the loading to board
+		logic, this takes the entry point and the boot argument through the
+		same command, so the image handling can live in an application.
+
+		The image may be any payload the boot protocol of this architecture
+		accepts, e.g. a Linux or a NuttX kernel.
+
+		Architecture-specific logic must provide the up_boot_entry()
+		interface, which leaves the CPU in the state the image's boot
+		protocol requires and enters it.
+
 config BOARDCTL_MKRD
 	bool "Enable application space creation of RAM disks"
 	default n
