@@ -35,8 +35,11 @@
 
 #ifdef CONFIG_RPMSG
 
+#include <debug.h>
+
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/trace.h>
 #include <openamp/rpmsg.h>
 #include <openamp/rpmsg_internal.h>
 
@@ -73,6 +76,18 @@
 #endif
 
 #define rpmsg_wait(e, s)                rpmsg_tickwait(e, s, CLOCK_MAX)
+
+/* Report a fault to the syslog and the DFX record in one call.  The shared
+ * format must be a string literal, as rpmsg_trace_diag() requires.
+ */
+
+#define rpmsg_diag(id, fmt, ...) \
+  do \
+    { \
+      rpmsgerr(fmt "\n", ##__VA_ARGS__); \
+      rpmsg_trace_diag(LOG_EMERG, id, fmt, ##__VA_ARGS__); \
+    } \
+  while (0)
 
 /****************************************************************************
  * Public Types

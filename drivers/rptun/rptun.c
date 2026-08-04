@@ -72,6 +72,18 @@
 
 #define rptunvbs(format, ...)    syslog(LOG_ALERT, format, ##__VA_ARGS__)
 
+/* Report a fault to the syslog and the DFX record in one call.  The shared
+ * format must be a string literal, as rptun_trace_diag() requires.
+ */
+
+#define rptun_diag(id, fmt, ...) \
+  do \
+    { \
+      rptunerr(fmt "\n", ##__VA_ARGS__); \
+      rptun_trace_diag(LOG_EMERG, id, fmt, ##__VA_ARGS__); \
+    } \
+  while (0)
+
 #define RPTUN_STATUS_PAUSE       BOARDIOC_SOFTRESETCAUSE_MAX
 #define RPTUN_STATUS_STOP        (BOARDIOC_SOFTRESETCAUSE_MAX + 1)
 
