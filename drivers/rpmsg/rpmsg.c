@@ -930,9 +930,9 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
             }
           else
             {
-              rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_REGISTER_FAIL,
-                               "Stage:InitWorkrx,CpuName:%s,ErrorCode:%d",
-                               rpmsg->cpuname, -ret);
+              rpmsg_diag(DIAG_RPMSG_REGISTER_FAIL,
+                         "Stage:InitWorkrx,CpuName:%s,ErrorCode:%d",
+                         rpmsg->cpuname, -ret);
               unregister_driver(path);
               rpmsg_char_deinit(&rpmsg->chr);
               metal_finish();
@@ -940,18 +940,18 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
         }
       else
         {
-          rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_REGISTER_FAIL,
-                           "Stage:RegDriver,CpuName:%s,ErrorCode:%d",
-                           rpmsg->cpuname, -ret);
+          rpmsg_diag(DIAG_RPMSG_REGISTER_FAIL,
+                     "Stage:RegDriver,CpuName:%s,ErrorCode:%d",
+                     rpmsg->cpuname, -ret);
           rpmsg_char_deinit(&rpmsg->chr);
           metal_finish();
         }
     }
   else
     {
-      rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_REGISTER_FAIL,
-                       "Stage:MetalInit,CpuName:%s,ErrorCode:%d",
-                       rpmsg->cpuname, -ret);
+      rpmsg_diag(DIAG_RPMSG_REGISTER_FAIL,
+                 "Stage:MetalInit,CpuName:%s,ErrorCode:%d",
+                 rpmsg->cpuname, -ret);
     }
 
   return ret;

@@ -865,22 +865,18 @@ static int rptun_create_devices(FAR struct rptun_priv_s *priv)
         }
       else if (ret < 0)
         {
-          rptunerr("rptun_create_device failed, ret=%d i=%d\n", ret, i);
-          rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
-                           "Stage:CreateDevice,CpuName:%s,Index:%u,"
-                           "ErrorCode:%d",
-                           RPTUN_GET_CPUNAME(priv->dev), i, -ret);
+          rptun_diag(DIAG_RPTUN_INIT_FAIL,
+                     "Stage:CreateDevice,CpuName:%s,Index:%u,ErrorCode:%d",
+                     RPTUN_GET_CPUNAME(priv->dev), i, -ret);
           break;
         }
 
       ret = rptun_register_device(priv, vdev);
       if (ret < 0)
         {
-          rptunerr("rptun_register_device failed, ret=%d i=%d\n", ret, i);
-          rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
-                           "Stage:RegisterDevice,CpuName:%s,Index:%u,"
-                           "ErrorCode:%d",
-                           RPTUN_GET_CPUNAME(priv->dev), i, -ret);
+          rptun_diag(DIAG_RPTUN_INIT_FAIL,
+                     "Stage:RegisterDevice,CpuName:%s,Index:%u,ErrorCode:%d",
+                     RPTUN_GET_CPUNAME(priv->dev), i, -ret);
           rptun_remove_device(priv, vdev);
           break;
         }
@@ -1150,19 +1146,17 @@ static int rptun_do_start(FAR struct remoteproc *rproc)
                                              sizeof(struct rptun_rsc_s));
               if (ret < 0)
                 {
-                  rptunerr("remoteproc set rsc_table failed, ret=%d\n", ret);
-                  rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
-                                   "Stage:SetRsc,CpuName:%s,ErrorCode:%d",
-                                   RPTUN_GET_CPUNAME(priv->dev), -ret);
+                  rptun_diag(DIAG_RPTUN_INIT_FAIL,
+                             "Stage:SetRsc,CpuName:%s,ErrorCode:%d",
+                             RPTUN_GET_CPUNAME(priv->dev), -ret);
                 }
             }
           else
             {
-              rptunerr("RPTUN_GET_RESOURCE failed\n");
               ret = -EINVAL;
-              rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
-                               "Stage:GetResource,CpuName:%s,ErrorCode:%d",
-                               RPTUN_GET_CPUNAME(priv->dev), -ret);
+              rptun_diag(DIAG_RPTUN_INIT_FAIL,
+                         "Stage:GetResource,CpuName:%s,ErrorCode:%d",
+                         RPTUN_GET_CPUNAME(priv->dev), -ret);
             }
         }
 
@@ -1200,19 +1194,17 @@ static int rptun_do_start(FAR struct remoteproc *rproc)
           else
             {
               remoteproc_shutdown(rproc);
-              rptunerr("remoteproc_start failed, ret=%d\n", ret);
-              rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
-                               "Stage:Start,CpuName:%s,ErrorCode:%d",
-                               RPTUN_GET_CPUNAME(priv->dev), -ret);
+              rptun_diag(DIAG_RPTUN_INIT_FAIL,
+                         "Stage:Start,CpuName:%s,ErrorCode:%d",
+                         RPTUN_GET_CPUNAME(priv->dev), -ret);
             }
         }
     }
   else
     {
-      rptunerr("remoteproc config failed, ret=%d\n", ret);
-      rptun_trace_diag(LOG_EMERG, DIAG_RPTUN_INIT_FAIL,
-                       "Stage:Config,CpuName:%s,ErrorCode:%d",
-                       RPTUN_GET_CPUNAME(priv->dev), -ret);
+      rptun_diag(DIAG_RPTUN_INIT_FAIL,
+                 "Stage:Config,CpuName:%s,ErrorCode:%d",
+                 RPTUN_GET_CPUNAME(priv->dev), -ret);
     }
 
   return ret;

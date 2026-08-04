@@ -846,10 +846,9 @@ static void rpmsg_virtio_start_worker(FAR void *arg)
         }
       else
         {
-          rpmsgerr("rpmsg_init_vdev failed, ret=%d\n", ret);
-          rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_VIRTIO_INIT_FAIL,
-                           "Stage:InitVdev,CpuName:%s,ErrorCode:%d",
-                           priv->rpmsg.cpuname, -ret);
+          rpmsg_diag(DIAG_RPMSG_VIRTIO_INIT_FAIL,
+                     "Stage:InitVdev,CpuName:%s,ErrorCode:%d",
+                     priv->rpmsg.cpuname, -ret);
           rpmsg_unregister(name, &priv->rpmsg);
         }
     }
@@ -955,10 +954,9 @@ int rpmsg_virtio_probe_cpuname(FAR struct virtio_device *vdev,
         }
       else
         {
-          rpmsgerr("rpmsg_init_wqueues failed, ret=%d\n", ret);
-          rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_VIRTIO_INIT_FAIL,
-                           "Stage:InitWqueues,CpuName:%s,ErrorCode:%d",
-                           priv->rpmsg.cpuname, -ret);
+          rpmsg_diag(DIAG_RPMSG_VIRTIO_INIT_FAIL,
+                     "Stage:InitWqueues,CpuName:%s,ErrorCode:%d",
+                     priv->rpmsg.cpuname, -ret);
           nxsem_destroy(&priv->semtx);
           nxsem_destroy(&priv->semrx);
           kmm_free(priv);
