@@ -118,6 +118,22 @@
  * interface
  */
 
+/* Locking rules
+ *
+ *   lock (mutex)  - Serializes the data path (read_buf/write_buf,
+ *                   read_d_len/write_d_len, dev) and every arm/disarm of the
+ *                   IOB notification (iob_notify_key).  May block, so it
+ *                   must never be taken from a work queue callback that
+ *                   another thread can wait on with work_cancel_sync().
+ *   spinlock      - Protects the state that tun_pollnotify() touches:
+ *                   poll_fds, read_wait and write_wait.  tun_pollnotify()
+ *                   also runs from tun_iob_notify_work(), which must not
+ *                   block, so the mutex cannot be used there.
+ *
+ * Lock order is lock -> spinlock.  tun_iob_notify_work() takes neither: it
+ * only calls tun_pollnotify(), which takes the spinlock itself.
+ */
+
 struct tun_device_s
 {
   bool              bifup;     /* true:ifup false:ifdown */
@@ -140,8 +156,14 @@ struct tun_device_s
   FAR struct iob_s *write_buf;
 
 #ifdef CONFIG_IOB_NOTIFIER
-  int               iob_notify_key; /* Key of a pending IOB-available notify,
-                                     * 0 if none is armed */
+  /* Key of the IOB-available notification owned by this device, 0 if none
+   * is armed.  Written only by tun_iob_notify_setup()/_teardown(), both of
+   * which run with the mutex held.  The key deliberately stays valid after
+   * tun_iob_notify_work() has run: it is what lets the paired teardown
+   * synchronize with a callback that may still be in flight.
+   */
+
+  int               iob_notify_key;
 #endif
 
   /* This holds the information visible to the NuttX network */
@@ -243,7 +265,18 @@ static const struct file_operations g_tun_file_ops =
 static void tun_pollnotify(FAR struct tun_device_s *priv,
                            pollevent_t eventset)
 {
-  FAR struct pollfd *fds = priv->poll_fds;
+  FAR struct pollfd *fds;
+  irqstate_t flags;
+
+  /* poll_fds and the two wait flags are read here from contexts that do not
+   * hold priv->lock (tun_iob_notify_work() must not block on it), so the
+   * spinlock is what actually serializes them.  poll_notify() is safe in a
+   * critical section: drivers routinely call it from interrupt handlers.
+   */
+
+  flags = spin_lock_irqsave_nopreempt(&priv->spinlock);
+
+  fds = priv->poll_fds;
 
   if (priv->read_wait && (eventset & POLLIN))
     {
@@ -258,6 +291,8 @@ static void tun_pollnotify(FAR struct tun_device_s *priv,
     }
 
   poll_notify(&fds, 1, eventset);
+
+  spin_unlock_irqrestore_nopreempt(&priv->spinlock, flags);
 }
 
 #ifdef CONFIG_IOB_NOTIFIER
@@ -268,8 +303,21 @@ static void tun_pollnotify(FAR struct tun_device_s *priv,
  *   Worker executed by the IOB notifier when an IOB has become available.
  *   tun_poll() only tracks write_d_len, not IOB availability, so a writer
  *   that runs out of IOBs would otherwise keep seeing POLLOUT and busy-spin.
- *   When invoked, re-check the writable condition and either notify POLLOUT
- *   or re-arm the notification if IOBs are still exhausted.
+ *   This worker only reports POLLOUT; the notification is one-shot, and the
+ *   next tun_poll() setup re-evaluates the writable condition and re-arms if
+ *   IOBs are still exhausted.
+ *
+ *   IMPORTANT - this callback must not block and must not take priv->lock.
+ *   work_notifier_worker() invokes it before retiring the notifier entry, so
+ *   work_notifier_teardown() still finds the entry and its work_cancel_sync
+ *   sleeps until this callback returns.  The teardown callers (tun_poll()
+ *   teardown, tun_dev_uninit()) hold priv->lock, so waiting on priv->lock
+ *   here would be an AB-BA deadlock.
+ *
+ *   Note also that priv->iob_notify_key is deliberately left untouched here.
+ *   Clearing it would turn the paired teardown into a no-op, and without the
+ *   work_cancel_sync() it performs, tun_dev_uninit() could destroy and
+ *   memset priv while this callback is still running on it.
  *
  * Input Parameters:
  *   arg - Reference to the driver state structure
@@ -283,17 +331,9 @@ static void tun_iob_notify_work(FAR void *arg)
 {
   FAR struct tun_device_s *priv = (FAR struct tun_device_s *)arg;
 
-  nxmutex_lock(&priv->lock);
-
-  /* The notification has fired and been automatically torn down. */
-
-  priv->iob_notify_key = 0;
-
   /* Wake up any writer/poll waiting for POLLOUT. */
 
   tun_pollnotify(priv, POLLOUT);
-
-  nxmutex_unlock(&priv->lock);
 }
 
 /****************************************************************************
@@ -301,13 +341,14 @@ static void tun_iob_notify_work(FAR void *arg)
  *
  * Description:
  *   Arm an IOB-available notification if one is not already pending.  Must
- *   be called with priv->lock held.
+ *   be called with priv->lock held so that arm and disarm are serialized
+ *   against each other.
  *
  * Returned Value:
- *   true  - An IOB is already available (no notification was armed); the
- *           caller should treat the device as writable now.
- *   false - No IOB is available.  A notification is armed (or was already
- *           armed) and the worker will fire once an IOB is freed.
+ *   true  - No notification could be armed; the caller should treat the
+ *           device as writable now to avoid a stall.
+ *   false - A notification is armed (or was already armed) and the worker
+ *           will fire once an IOB is freed.
  *
  ****************************************************************************/
 
@@ -317,6 +358,8 @@ static bool tun_iob_notify_setup(FAR struct tun_device_s *priv)
 
   if (priv->iob_notify_key != 0)
     {
+      /* Already armed.  Nothing to do. */
+
       return false;
     }
 
@@ -341,8 +384,18 @@ static bool tun_iob_notify_setup(FAR struct tun_device_s *priv)
  * Name: tun_iob_notify_teardown
  *
  * Description:
- *   Cancel a pending IOB-available notification, if any.  Must be called
- *   with priv->lock held.
+ *   Cancel the IOB-available notification, if any.  Must be called with
+ *   priv->lock held (to serialize against tun_iob_notify_setup()) and
+ *   without priv->spinlock held, because iob_notifier_teardown() ends up in
+ *   work_cancel_sync() and may block until tun_iob_notify_work() returns.
+ *
+ *   The key is valid whether or not the notification has already fired:
+ *   work_notifier_worker() only retires the entry after the callback
+ *   returns, so a teardown that races with a running callback still finds
+ *   the entry, unlinks it (which also stops work_notifier_signal() from
+ *   re-queueing it) and waits for the callback to complete.  Once the entry
+ *   has been retired the key no longer matches anything and the teardown is
+ *   a harmless no-op.
  *
  ****************************************************************************/
 
@@ -1044,9 +1097,16 @@ static void tun_dev_uninit(FAR struct tun_device_s *priv)
   tun_ifdown(&priv->dev);
 
 #ifdef CONFIG_IOB_NOTIFIER
-  /* Cancel any pending IOB-available notification */
+  /* Cancel the IOB-available notification.  Its entry holds a pointer to
+   * priv, which is about to be destroyed and reused by the next TUNSETIFF,
+   * so the teardown must both unlink the entry and wait for a callback that
+   * may already be running on it.  priv->lock is taken to keep the
+   * arm/disarm serialization promised by tun_iob_notify_teardown().
+   */
 
+  nxmutex_lock(&priv->lock);
   tun_iob_notify_teardown(priv);
+  nxmutex_unlock(&priv->lock);
 #endif
 
   work_cancel_sync(TUNWORK, &priv->work);
@@ -1098,6 +1158,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
                          size_t buflen)
 {
   FAR struct tun_device_s *priv = filep->f_priv;
+  irqstate_t flags;
   uint8_t llhdrlen;
   ssize_t ret;
 
@@ -1165,7 +1226,10 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
           break;
         }
 
+      flags = spin_lock_irqsave(&priv->spinlock);
       priv->write_wait = true;
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+
       nxmutex_unlock(&priv->lock);
       nxsem_wait(&priv->write_wait_sem);
     }
@@ -1182,6 +1246,7 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen)
 {
   FAR struct tun_device_s *priv = filep->f_priv;
+  irqstate_t flags;
   uint8_t llhdrlen;
   ssize_t ret;
 
@@ -1265,7 +1330,10 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
           break;
         }
 
+      flags = spin_lock_irqsave(&priv->spinlock);
       priv->read_wait = true;
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+
       nxmutex_unlock(&priv->lock);
       nxsem_wait(&priv->read_wait_sem);
     }
@@ -1300,13 +1368,18 @@ static int tun_poll(FAR struct file *filep,
 
   if (setup)
     {
+      irqstate_t flags;
+
+      flags = spin_lock_irqsave(&priv->spinlock);
       if (priv->poll_fds)
         {
+          spin_unlock_irqrestore(&priv->spinlock, flags);
           ret = -EBUSY;
           goto errout;
         }
 
       priv->poll_fds = fds;
+      spin_unlock_irqrestore(&priv->spinlock, flags);
 
       eventset = 0;
 
@@ -1340,7 +1413,12 @@ static int tun_poll(FAR struct file *filep,
     }
   else
     {
+      irqstate_t flags;
+
+      flags = spin_lock_irqsave(&priv->spinlock);
       priv->poll_fds = NULL;
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+
 #ifdef CONFIG_IOB_NOTIFIER
       tun_iob_notify_teardown(priv);
 #endif
