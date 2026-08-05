@@ -383,6 +383,28 @@
 #define NOTE_MODE_READ_ASCII             0
 #define NOTE_MODE_READ_BINARY            1
 
+/* npt_meta field layout accessors. The argument type slots occupy the low
+ * 48 bits (2 bits each, up to 24 args). When fewer than 24 args are passed,
+ * a PRINTF_TERM sentinel marks the end; at exactly 24 args the slots fill
+ * all 48 bits and no sentinel is needed.
+ *
+ *   tag [63..56]   level [55..48]   type slots [47..0]
+ */
+
+#define NOTE_META_TYPE_MASK   0x0000ffffffffffffull
+#define NOTE_META_LEVEL_SHIFT 48
+#define NOTE_META_TAG_SHIFT   56
+#define NOTE_META_MAX_ARGS    24
+
+#define NOTE_META_PACK(tag, level, type) \
+        (((uint64_t)(type) & NOTE_META_TYPE_MASK) | \
+         ((uint64_t)((level) & 0xff) << NOTE_META_LEVEL_SHIFT) | \
+         ((uint64_t)((tag) & 0xff) << NOTE_META_TAG_SHIFT))
+
+#define NOTE_META_TAG(m)   ((uint8_t)((m) >> NOTE_META_TAG_SHIFT))
+#define NOTE_META_LEVEL(m) ((uint8_t)((m) >> NOTE_META_LEVEL_SHIFT))
+#define NOTE_META_TYPE(m)  ((uint64_t)((m) & NOTE_META_TYPE_MASK))
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -524,9 +546,9 @@ struct note_driver_ops_s
   CODE void (*event)(FAR struct note_driver_s *drv, uint8_t event,
                      uint8_t tag, uint8_t level, uintptr_t ip,
                      FAR const void *buf, size_t len);
-  CODE void (*vprintf)(FAR struct note_driver_s *drv, uint8_t tag,
-                       uint8_t level, uintptr_t ip, uintptr_t type,
-                       FAR const char *fmt, va_list va) printf_like(6, 0);
+  CODE void (*vprintf)(FAR struct note_driver_s *drv, uint64_t meta,
+                       uintptr_t ip, FAR const char *fmt,
+                       va_list va) printf_like(4, 0);
 #endif
   CODE void (*flush)(FAR struct note_driver_s *drv);
   CODE int (*open)(FAR struct file *filep);
@@ -779,14 +801,18 @@ struct note_printf_s
   struct note_common_s npt_cmn; /* Common note parameters */
   uintptr_t npt_ip;             /* Instruction pointer called from */
   uintptr_t npt_fmt;            /* Printf format string */
-  uintptr_t npt_type;           /* Printf parameter type */
-  uint8_t npt_tag;              /* Printf tag */
-  uint8_t npt_level;            /* Event level */
-  char npt_data[2];             /* Print arguments */
+  uint64_t npt_meta;            /* Packed meta word, accessed via NOTE_META_*
+                                 * macros. Layout: type slots [0..47],
+                                 * level [48..55], tag [56..63].
+                                 * Kept as a plain 64-bit word (not bitfields)
+                                 * so the frame is identical across compilers
+                                 * and arches, and to satisfy the TriCore EABI
+                                 * which forbids bitfields wider than 32 bits. */
+  char npt_data[0];             /* Print arguments */
 };
 
 #define SIZEOF_NOTE_PRINTF(n) (sizeof(struct note_printf_s) + \
-                              ((n) - 2) * sizeof(uint8_t))
+                              (n) * sizeof(uint8_t))
 
 struct note_event_s
 {
@@ -993,15 +1019,13 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver,
                             uintptr_t ip,
                             FAR const void *buf, size_t len);
 void note_driver_vprintf_ip(FAR struct note_driver_s *driver,
-                            uint8_t tag, uint8_t level,
-                            uintptr_t ip, uintptr_t type,
+                            uint64_t meta, uintptr_t ip,
                             FAR const char *fmt,
-                            va_list *va) printf_like(6, 0);
+                            va_list *va) printf_like(4, 0);
 void note_driver_printf_ip(FAR struct note_driver_s *driver,
-                           uint8_t tag, uint8_t level,
-                           uintptr_t ip, uintptr_t type,
+                           uint64_t meta, uintptr_t ip,
                            FAR const char *fmt, ...)
-                           printf_like(6, 7);
+                           printf_like(4, 5);
 
 /****************************************************************************
  * Name: note_event_ip/vprintf_ip/printf_ip
@@ -1009,12 +1033,12 @@ void note_driver_printf_ip(FAR struct note_driver_s *driver,
 
 void note_event_ip(uint8_t event, uint8_t tag, uint8_t level, uintptr_t ip,
                    FAR const void *buf, size_t len);
-void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                     FAR const char *fmt, uintptr_t type,
-                     va_list *va) printf_like(4, 0);
-void note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                    FAR const char *fmt, uintptr_t type,
-                    ...) printf_like(4, 6);
+void note_vprintf_ip(uint64_t meta, uintptr_t ip,
+                     FAR const char *fmt,
+                     va_list *va) printf_like(3, 0);
+void note_printf_ip(uint64_t meta, uintptr_t ip,
+                    FAR const char *fmt,
+                    ...) printf_like(3, 4);
 #endif
 
 #endif /* CONFIG_DRIVERS_NOTE */

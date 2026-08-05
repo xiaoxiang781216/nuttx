@@ -108,8 +108,8 @@
   ((drv)->ops->wqueue(drv, event, worker, arg), true))
 #define note_do_event(drv, event, tag, level, ip, buf, len)                          \
   ((drv)->ops->event && ((drv)->ops->event(drv, event, tag, level, ip, buf, len), true))
-#define note_do_vprintf(drv, tag, level, ip, type, fmt, va)                                \
-  ((drv)->ops->vprintf && ((drv)->ops->vprintf(drv, tag, level, ip, type, fmt, va), true))
+#define note_do_vprintf(drv, meta, ip, fmt, va)                              \
+  ((drv)->ops->vprintf && ((drv)->ops->vprintf(drv, meta, ip, fmt, va), true))
 
 /****************************************************************************
  * Private Types
@@ -1432,7 +1432,7 @@ static int note_dump_sched_switch(FAR struct lib_outstream_s *s,
 static int note_dump_printf(FAR struct lib_outstream_s *s,
                             FAR struct note_printf_s *note)
 {
-  return lib_osprintf(s, note->npt_type,
+  return lib_osprintf(s, NOTE_META_TYPE(note->npt_meta),
                       (FAR const char *)note->npt_fmt, note->npt_data);
 }
 #endif
@@ -2372,8 +2372,10 @@ void note_add(FAR const void *data, size_t len)
             {
               FAR struct note_printf_s *npt =
                   (FAR struct note_printf_s *)note;
-              if (!note_driver_isenabled_dump(*driver, npt->npt_tag,
-                                              npt->npt_level, note->nc_type))
+              if (!note_driver_isenabled_dump(*driver,
+                                              NOTE_META_TAG(npt->npt_meta),
+                                              NOTE_META_LEVEL(npt->npt_meta),
+                                              note->nc_type))
                 {
                   continue;
                 }
@@ -3222,10 +3224,11 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t event,
   return length - SIZEOF_NOTE_EVENT(0);
 }
 
-void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                            uint8_t level, uintptr_t ip, uintptr_t type,
-                            FAR const char *fmt, FAR va_list *va)
+void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint64_t meta,
+                            uintptr_t ip, FAR const char *fmt,
+                            FAR va_list *va)
 {
+  uint64_t type = NOTE_META_TYPE(meta);
   FAR struct tcb_s *tcb = running_task();
   FAR struct note_printf_s *note;
   uint8_t data[NOTE_BUFFER_SIZE];
@@ -3235,7 +3238,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   note = (FAR struct note_printf_s *)data;
   length = sizeof(data) - SIZEOF_NOTE_PRINTF(0);
 
-  if (note_do_vprintf(driver, tag, level, ip, type, fmt, *va))
+  if (note_do_vprintf(driver, meta, ip, fmt, *va))
     {
       return;
     }
@@ -3254,23 +3257,21 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   length = SIZEOF_NOTE_PRINTF(next);
   note_common(tcb, &note->npt_cmn, length, NOTE_DUMP_PRINTF);
   note->npt_ip = ip;
-  note->npt_tag = tag;
   note->npt_fmt = (uintptr_t)fmt;
-  note->npt_type = type;
-  note->npt_level = level;
+
+  note->npt_meta = meta;
 
   /* Add the note to circular buffer */
 
   note_do_add(driver, note, length, false);
 }
 
-void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                           uint8_t level, uintptr_t ip, uintptr_t type,
-                           FAR const char *fmt, ...)
+void note_driver_printf_ip(FAR struct note_driver_s *driver, uint64_t meta,
+                           uintptr_t ip, FAR const char *fmt, ...)
 {
   va_list va;
   va_start(va, fmt);
-  note_driver_vprintf_ip(driver, tag, level, ip, type, fmt, &va);
+  note_driver_vprintf_ip(driver, meta, ip, fmt, &va);
   va_end(va);
 }
 
@@ -3295,11 +3296,12 @@ void note_event_ip(uint8_t event, uint8_t tag, uint8_t level, uintptr_t ip,
     }
 }
 
-__jumpfunc__ void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                                  FAR const char *fmt, uintptr_t type,
-                                  FAR va_list *va)
+__jumpfunc__ void note_vprintf_ip(uint64_t meta, uintptr_t ip,
+                                  FAR const char *fmt, FAR va_list *va)
 {
   FAR struct note_driver_s **driver;
+  uint8_t tag = NOTE_META_TAG(meta);
+  uint8_t level = NOTE_META_LEVEL(meta);
 
   note_drivers_initialize();
   if (static_branch_unlikely(&g_note_keys[NOTE_DUMP_PRINTF]) &&
@@ -3315,18 +3317,18 @@ __jumpfunc__ void note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
             }
 
           va_copy(copy, *va);
-          note_driver_vprintf_ip(*driver, tag, level, ip, type, fmt, &copy);
+          note_driver_vprintf_ip(*driver, meta, ip, fmt, &copy);
           va_end(copy);
         }
     }
 }
 
-void note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
-                    FAR const char *fmt, uintptr_t type, ...)
+void note_printf_ip(uint64_t meta, uintptr_t ip,
+                    FAR const char *fmt, ...)
 {
   va_list va;
-  va_start(va, type);
-  note_vprintf_ip(tag, level, ip, fmt, type, &va);
+  va_start(va, fmt);
+  note_vprintf_ip(meta, ip, fmt, &va);
   va_end(va);
 }
 

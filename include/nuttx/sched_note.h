@@ -476,7 +476,7 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
             { \
               static const struct { uint8_t sz; char str[sizeof(f)]; } \
               fmt = { sizeof(f) - 1, f }; \
-              note_vprintf_ip(t,l,i,fmt.str,0,&(v)); \
+              note_vprintf_ip(NOTE_META_PACK(t,l,0),i,fmt.str,&(v)); \
             } \
           while (0)
 
@@ -489,8 +489,8 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
               locate_data("note_format") used_data \
               static const struct { uint8_t sz; char str[sizeof(f)]; } \
               fmt = { sizeof(f) - 1, f }; \
-              note_printf_ip(t,l,i,fmt.str, \
-                             PRINTF_TAG(__VA_ARGS__),##__VA_ARGS__); \
+              note_printf_ip(NOTE_META_PACK(t,l,PRINTF_TAG(__VA_ARGS__)), \
+                             i,fmt.str,##__VA_ARGS__); \
             } \
           while (0)
 #  else
@@ -499,7 +499,8 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
            { \
              static const struct { uint8_t sz; char str[sizeof(f)]; } \
              fmt = { sizeof(f) - 1, f }; \
-             note_printf_ip(t,l,i,fmt.str,0,##__VA_ARGS__); \
+             note_printf_ip(NOTE_META_PACK(t,l,0),i,fmt.str, \
+                            ##__VA_ARGS__); \
            } \
          while (0)
 #  endif
