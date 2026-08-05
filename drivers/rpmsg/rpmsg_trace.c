@@ -52,18 +52,21 @@
 static DEFINE_PER_CPU_BSS_BMP(struct note_driver_s *, g_rpmsg_trace_drv);
 #  define g_rpmsg_trace_drv this_cpu_var_bmp(g_rpmsg_trace_drv)
 #  define rpmsg_trace_printf(...) \
-          note_driver_printf(g_rpmsg_trace_drv, NXTAG_RPMSG, __VA_ARGS__)
+          note_driver_printf(g_rpmsg_trace_drv, NXTAG_RPMSG, \
+                             LOG_DEBUG, __VA_ARGS__)
 #  define rpmsg_trace_vprintf(fmt, ap) \
-          note_driver_vprintf(g_rpmsg_trace_drv, NXTAG_RPMSG, fmt, &(ap))
+          note_driver_vprintf(g_rpmsg_trace_drv, NXTAG_RPMSG, \
+                              LOG_DEBUG, fmt, &(ap))
 #  define rpmsg_trace_binary(buf, len) \
-          note_driver_binary(g_rpmsg_trace_drv, NXTAG_RPMSG, buf, len)
+          note_driver_binary(g_rpmsg_trace_drv, NXTAG_RPMSG, \
+                             LOG_DEBUG, buf, len)
 #else
 #  define rpmsg_trace_printf(...) \
-          sched_note_printf(NXTAG_RPMSG, 0, __VA_ARGS__)
+          sched_note_printf(NXTAG_RPMSG, LOG_DEBUG, __VA_ARGS__)
 #  define rpmsg_trace_vprintf(fmt, ap) \
-          sched_note_vprintf(NXTAG_RPMSG, 0, fmt, ap)
+          sched_note_vprintf(NXTAG_RPMSG, LOG_DEBUG, fmt, ap)
 #  define rpmsg_trace_binary(buf, len) \
-          sched_note_binary(NXTAG_RPMSG, 0, buf, len)
+          sched_note_binary(NXTAG_RPMSG, LOG_DEBUG, buf, len)
 #endif
 
 static DEFINE_PER_CPU_BMP(spinlock_t, g_rpmsg_trace_lock) = SP_UNLOCKED;

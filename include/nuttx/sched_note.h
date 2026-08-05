@@ -484,6 +484,8 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
 #    define sched_note_printf_ip(t,l,i,f,...) \
           do \
             { \
+              static_assert(GET_ARG_COUNT(__VA_ARGS__) <= NOTE_META_MAX_ARGS, \
+                            "too many printf args for note meta"); \
               locate_data("note_format") used_data \
               static const struct { uint8_t sz; char str[sizeof(f)]; } \
               fmt = { sizeof(f) - 1, f }; \

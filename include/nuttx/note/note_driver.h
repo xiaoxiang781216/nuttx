@@ -38,6 +38,7 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/jump_label.h>
 #include <nuttx/percpu.h>
+#include <nuttx/streams.h>
 #include <nuttx/tag.h>
 
 /* For system call numbers definition */
@@ -226,25 +227,49 @@
 #  define note_filter_dump(tag) (0)
 #endif /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
 
-/* Per-driver dump convenience macros */
+/* Per-driver convenience API, mirrors sched_note_xxx but targets a single
+ * driver instance instead of the global fan-out.
+ */
 
-#define note_driver_event(driver, event, tag, buf, len) \
-        note_driver_event_ip(driver, event, tag, 0, up_getpc(), \
+#define note_driver_event(driver, event, tag, level, buf, len) \
+        note_driver_event_ip(driver, event, tag, level, up_getpc(), \
                              buf, len)
-#define note_driver_vprintf(driver, tag, fmt, va) \
-        note_driver_vprintf_ip(driver, tag, 0, up_getpc(), \
+
+#define note_driver_vprintf(driver, tag, level, fmt, va) \
+        note_driver_vprintf_ip(driver, tag, level, up_getpc(), \
                                0, fmt, va)
-#define note_driver_printf(driver, tag, fmt, ...) \
-        note_driver_printf_ip(driver, tag, 0, up_getpc(), \
-                              0, fmt, ##__VA_ARGS__)
-#define note_driver_begin(driver, tag) \
-        note_driver_event(driver, NOTE_DUMP_BEGIN, tag, NULL, 0)
-#define note_driver_end(driver, tag) \
-        note_driver_event(driver, NOTE_DUMP_END, tag, NULL, 0)
-#define note_driver_mark(driver, tag, buf) \
-        note_driver_event(driver, NOTE_DUMP_MARK, tag, \
-                          buf, strlen(buf))
-#define note_driver_binary(driver, tag, buf, len) \
+
+#ifdef CONFIG_DRIVERS_NOTE_STRIP_FORMAT
+#  define note_driver_printf(driver, tag, level, fmt, ...) \
+          do \
+            { \
+              static_assert(GET_ARG_COUNT(__VA_ARGS__) <= NOTE_META_MAX_ARGS, \
+                            "too many printf args for note meta"); \
+              locate_data("note_format") used_data \
+              static const struct { uint8_t sz; char str[sizeof(fmt)]; } \
+              _fmt = { sizeof(fmt) - 1, fmt }; \
+              note_driver_printf_ip(driver, tag, level, up_getpc(), \
+                                    PRINTF_TAG(__VA_ARGS__), _fmt.str, \
+                                    ##__VA_ARGS__); \
+            } \
+          while (0)
+#else
+#  define note_driver_printf(driver, tag, level, fmt, ...) \
+          note_driver_printf_ip(driver, tag, level, up_getpc(), \
+                                0, fmt, ##__VA_ARGS__)
+#endif
+
+#define note_driver_begin(driver, tag, level) \
+        note_driver_event(driver, NOTE_DUMP_BEGIN, tag, level, \
+                          NULL, 0)
+#define note_driver_end(driver, tag, level) \
+        note_driver_event(driver, NOTE_DUMP_END, tag, level, \
+                          NULL, 0)
+#define note_driver_mark(driver, tag, level, str) \
+        note_driver_event(driver, NOTE_DUMP_MARK, tag, level, \
+                          str, strlen(str))
+
+#define note_driver_binary(driver, tag, level, buf, len) \
         do \
           { \
             FAR const char *_nb_p = (FAR const char *)(buf); \
@@ -252,7 +277,7 @@
             while (_nb_n > 0) \
               { \
                 ssize_t _nb_w = note_driver_event_ip(driver, \
-                                  NOTE_DUMP_BINARY, tag, 0, \
+                                  NOTE_DUMP_BINARY, tag, level, \
                                   up_getpc(), _nb_p, _nb_n); \
                 if (_nb_w <= 0) \
                   { \
