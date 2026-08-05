@@ -100,23 +100,24 @@
  * the argument types, so compiler folds PRINTF_TAG() to a constant.
  */
 
-#define PRINTF_INT_TYPE(arg) (sizeof((arg) + 0) <= sizeof(uint32_t) ? \
-                                    PRINTF_32BIT : PRINTF_64BIT)
+#if defined(__cplusplus)
+#  define PRINTF_ARG_DECAY(a) (+(a))
+#else
+#  define PRINTF_ARG_DECAY(a) (1 ? (a) : (a))
+#endif
 
-#define PRINTF_OBJECT_SIZE(arg) \
-        object_size((FAR void *)(uintptr_t)(arg), 2)
+#define PRINTF_ARG_IS_STR(a) \
+        ((is_types_compatible(PRINTF_ARG_DECAY(a), char *) || \
+          is_types_compatible(PRINTF_ARG_DECAY(a), const char *)) && \
+         object_size(a, 2) > 0)
 
-#define PRINTF_ARG_TYPE(__arg__) \
-        (_Generic((__arg__) + 0, \
-                 float : PRINTF_64BIT, \
-                 double: PRINTF_64BIT, \
-                 char *: ({PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
-                         PRINTF_STRING : \
-                         PRINTF_INT_TYPE(__arg__);}), \
-                 const char *: ({PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
-                               PRINTF_STRING : \
-                               PRINTF_INT_TYPE(__arg__);}), \
-                 default: PRINTF_INT_TYPE(__arg__)))
+#define PRINTF_ARG_IS_64BIT(a) \
+        (is_types_compatible(PRINTF_ARG_DECAY(a), float) || \
+         sizeof(PRINTF_ARG_DECAY(a)) == sizeof(uint64_t))
+
+#define PRINTF_ARG_TYPE(a) \
+        (PRINTF_ARG_IS_STR(a) ? PRINTF_STRING : \
+         PRINTF_ARG_IS_64BIT(a) ? PRINTF_64BIT : PRINTF_32BIT)
 
 #define PRINTF_TYPE(_, arg, index) \
         + (PRINTF_ARG_TYPE(arg) << (index) * 2)
