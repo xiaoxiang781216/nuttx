@@ -92,13 +92,15 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
 
   /* Fixed mappings and protections are not currently supported.  These
    * options could be supported in the KERNEL build with an MMU, but that
-   * logic is not in place.
+   * logic is not in place.  Report ENOTSUP (rather than ENOSYS) so that
+   * callers can distinguish "this optional mmap() feature is not
+   * supported on this configuration" from "mmap() is not implemented".
    */
 
   if ((flags & (MAP_FIXED | MAP_DENYWRITE)) != 0)
     {
       ferr("ERROR: Unsupported options, prot=%x flags=%04x\n", prot, flags);
-      return -ENOSYS;
+      return -ENOTSUP;
     }
 
   /* A length of 0 is invalid. */
@@ -158,8 +160,21 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
    */
 
 #ifdef CONFIG_FS_FILEMAP
+  /* Hand the mapping to the object's own mmap() when it is either a shared
+   * mapping, or a device driver that implements mmap().  A device driver's
+   * mmap has device-specific semantics (e.g. binder maps a shared kernel
+   * transaction buffer, framebuffers expose their VRAM); the POSIX
+   * MAP_PRIVATE copy-on-write rule applies to file-system backing store,
+   * not to such device nodes, so MAP_PRIVATE must NOT bypass the driver.
+   *
+   * Only a MAP_PRIVATE mapping of a regular file skips the direct mmap and
+   * falls through to rammap(), which allocates a private in-RAM copy of the
+   * mapped range so that writes do not propagate to the underlying file.
+   */
+
   if (filep->f_inode &&
-      filep->f_inode->u.i_ops->mmap != NULL)
+      filep->f_inode->u.i_ops->mmap != NULL &&
+      ((flags & MAP_SHARED) != 0 || INODE_IS_DRIVER(filep->f_inode)))
     {
       ret = filep->f_inode->u.i_ops->mmap(filep, &entry);
     }

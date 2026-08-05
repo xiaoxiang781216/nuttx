@@ -420,6 +420,86 @@ static int shmfs_unmap_area(FAR struct task_group_s *group,
 }
 
 /****************************************************************************
+ * Name: shmfs_munmap_partial
+ *
+ * Description:
+ *   Handle a partial unmap request on a shm object.  The covering mapping
+ *   record is shrunk (unmap of the head or tail) or split in two (unmap of
+ *   the middle) so that the still-mapped sub-region(s) remain valid.  The
+ *   inode reference taken at mmap() time is preserved because the object
+ *   stays (partially) mapped; a middle split creates a second mapping and
+ *   therefore takes one extra reference so that each resulting mapping owns
+ *   exactly one.
+ *
+ *   On BUILD_FLAT mmap() hands back the physical address of the whole
+ *   object and munmap() frees no memory (the object lives until the last
+ *   open descriptor is closed and the name is unlinked), so a partial unmap
+ *   is pure bookkeeping.  On a BUILD_KERNEL (MMU) build the unmapped
+ *   sub-range is additionally torn down from the caller's address space via
+ *   vm_unmap_region(); the physical pages stay owned by the object and are
+ *   freed only when the last mapping is removed.
+ *
+ ****************************************************************************/
+
+static int shmfs_munmap_partial(FAR struct mm_map_s *mm,
+                                FAR struct mm_map_entry_s *entry,
+                                FAR void *start, size_t length)
+{
+  FAR char *entry_end = (FAR char *)entry->vaddr + entry->length;
+  FAR char *unmap_end = (FAR char *)start + length;
+  off_t head = (FAR char *)start - (FAR char *)entry->vaddr;
+  off_t tail = entry_end - unmap_end;
+
+#ifdef CONFIG_BUILD_KERNEL
+  /* Tear down the unmapped sub-range from the caller's address space and
+   * release its virtual region.  The physical pages remain owned by the shm
+   * object (freed only when the last mapping is removed), so this never
+   * frees the backing store.
+   */
+
+  int ret = vm_unmap_region(mm, start, length);
+  if (ret < 0)
+    {
+      return ret;
+    }
+#endif
+
+  if (head > 0 && tail > 0)
+    {
+      /* Unmapping the middle: keep the current entry as the head part and
+       * add a new entry describing the tail part.
+       */
+
+      struct mm_map_entry_s tailmap = *entry;
+
+      tailmap.vaddr   = unmap_end;
+      tailmap.length  = tail;
+      tailmap.offset  = entry->offset + head + length;
+
+      entry->length = head;
+
+      inode_addref((FAR struct inode *)entry->priv.p);
+      return mm_map_add(mm, &tailmap);
+    }
+  else if (tail > 0)
+    {
+      /* Unmapping the head: advance the start of the mapping */
+
+      entry->vaddr   = unmap_end;
+      entry->offset += length;
+      entry->length  = tail;
+    }
+  else
+    {
+      /* Unmapping the tail: just shrink the length */
+
+      entry->length = head;
+    }
+
+  return OK;
+}
+
+/****************************************************************************
  * Name: shmfs_munmap
  ****************************************************************************/
 
@@ -431,11 +511,15 @@ static int shmfs_munmap(FAR struct task_group_s *group,
   FAR struct inode *inode;
   int ret;
 
-  /* Partial unmap is not supported yet */
-
   if (start != entry->vaddr || length != entry->length)
     {
-      return -EINVAL;
+      /* Partial unmap: adjust the mapping bookkeeping and, on a MMU build,
+       * tear down the affected sub-range.  No backing memory is freed here;
+       * the object lives until its last mapping is removed and it has been
+       * unlinked.
+       */
+
+      return shmfs_munmap_partial(get_group_mm(group), entry, start, length);
     }
 
   inode = (FAR struct inode *)entry->priv.p;
