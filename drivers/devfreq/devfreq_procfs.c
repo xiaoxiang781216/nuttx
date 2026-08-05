@@ -100,12 +100,12 @@ static const struct procfs_operations g_devfreq_operations =
   .stat       = devfreq_stat,         /* stat */
 };
 
-static const struct procfs_entry_s g_devfreq_procfs_root =
+static struct procfs_entry_s g_devfreq_procfs_root =
 {
   "devfreq", &g_devfreq_operations, PROCFS_DIR_TYPE
 };
 
-static const struct procfs_entry_s g_devfreq_procfs_entry =
+static struct procfs_entry_s g_devfreq_procfs_entry =
 {
   "devfreq/**", &g_devfreq_operations, PROCFS_UNKOWN_TYPE
 };
