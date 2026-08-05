@@ -92,6 +92,22 @@ config CAN_NPENDINGRTR
 	---help---
 		The size of the list of pending RTR requests. Default: 4
 
+config CAN_CLOSE_TIMEOUT_SEC
+	int "CAN close TX drain timeout, in seconds"
+	default 1
+	range 1 5
+	---help---
+		Maximum time, in seconds, that can_close() will wait for the
+		software sender queue and the hardware TX buffer to drain before
+		forcing the device to shut down.
+
+		In automotive products an unbounded wait in the close path is not
+		acceptable: if the CAN bus is in bus-off, disconnected, or otherwise
+		unable to transmit, the pending messages may never drain and the
+		close would block forever.  This deadline bounds that wait.  When the
+		deadline expires with data still pending, can_close() logs an error
+		and proceeds with the shutdown. Default: 1
+
 config CAN_TXCONFIRM
 	bool "can txconfirm ability"
 	default n

@@ -343,8 +343,9 @@ static int can_close(FAR struct file *filep)
 {
   FAR struct inode     *inode = filep->f_inode;
   FAR struct can_dev_s *dev   = inode->i_private;
-  irqstate_t            flags;
   FAR struct list_node *node;
+  clock_t               start_shot;
+  irqstate_t            flags;
   int                   ret;
 
 #ifdef  CONFIG_DEBUG_CAN_INFO
@@ -392,8 +393,11 @@ static int can_close(FAR struct file *filep)
 
   if (dev->cd_crefs > 0)
     {
+      leave_critical_section(flags);
       goto errout;
     }
+
+  leave_critical_section(flags);
 
 #ifdef CONFIG_CAN_ERROR_POLLING
   work_cancel(CEPWORK, &dev->cd_errp_work);
@@ -405,17 +409,22 @@ static int can_close(FAR struct file *filep)
 
   dev_rxint(dev, false);
 
-  /* Now we wait for the sender to clear */
+  /* Wait for the software TX queue and hardware TX buffer to drain.
+   * Break out after the configured timeout to avoid blocking forever.
+   */
 
-  while (!TX_EMPTY(&dev->cd_sender))
+  start_shot = clock_systime_ticks();
+
+  while (!TX_EMPTY(&dev->cd_sender) || !dev_txempty(dev))
     {
-      nxsig_usleep(HALF_SECOND_USEC);
-    }
+      if (clock_systime_ticks() - start_shot >
+          SEC2TICK(CONFIG_CAN_CLOSE_TIMEOUT_SEC))
+        {
+          canerr("CAN TX not drained within %d s\n",
+                 CONFIG_CAN_CLOSE_TIMEOUT_SEC);
+          break;
+        }
 
-  /* And wait for the hardware sender to drain */
-
-  while (!dev_txempty(dev))
-    {
       nxsig_usleep(HALF_SECOND_USEC);
     }
 
@@ -424,7 +433,6 @@ static int can_close(FAR struct file *filep)
   dev_shutdown(dev); /* Disable the CAN */
 
 errout:
-  leave_critical_section(flags);
   nxmutex_unlock(&dev->cd_closelock);
   return ret;
 }
