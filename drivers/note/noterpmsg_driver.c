@@ -371,7 +371,8 @@ static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
   memcpy(note->npt_data + cpunamelen, fmt, fmtlen);
 
   length = sizeof(data) - SIZEOF_NOTE_PRINTF(0) - cpunamelen - fmtlen;
-  next = lib_bsprintf(note->npt_data + cpunamelen + fmtlen, length, fmt, va);
+  next = lib_bsprintf(note->npt_data + cpunamelen + fmtlen,
+                      length, 0, fmt, va);
 
   /* Silently truncate if data exceeds buffer - avoid assert in syslog path */
 

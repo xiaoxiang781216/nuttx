@@ -38,11 +38,11 @@
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   #include <nuttx/arch.h>
-  #include <nuttx/macro.h>
   #include <nuttx/ratelimit.h>
 #endif
 
 #include <nuttx/note/note_driver.h>
+#include <nuttx/streams.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -52,63 +52,6 @@
 extern "C"
 {
 #endif
-
-/* Printf argument type */
-
-#define NOTE_PRINTF_UINT32 0
-#define NOTE_PRINTF_UINT64 1
-#define NOTE_PRINTF_DOUBLE 2
-#define NOTE_PRINTF_STRING 3
-
-/* Get/set printf tag. each parameter occupies 2 bits. The highest
- * bits are used to represent the number of parameters.
- * On 32-bit platforms (uintptr_t = 4 bytes): 4-bit count, up to 14 args.
- * On 64-bit platforms (uintptr_t = 8 bytes): 5-bit count, up to 29 args.
- */
-
-#define NOTE_PRINTF_COUNT_BITS \
-    (sizeof(uintptr_t) >= 8 ? 5 : 4)
-#define NOTE_PRINTF_COUNT_SHIFT \
-    (sizeof(uintptr_t) * 8 - NOTE_PRINTF_COUNT_BITS)
-
-#define NOTE_PRINTF_GET_TYPE(tag, index) (((tag) >> (index) * 2) & 0x03)
-#define NOTE_PRINTF_GET_COUNT(tag)       ((tag) >> NOTE_PRINTF_COUNT_SHIFT)
-
-/* Check if a variable is 32-bit or 64-bit */
-
-#define NOTE_PRINTF_INT_TYPE(arg) (sizeof((arg) + 0) <= sizeof(uint32_t) ? \
-                                   NOTE_PRINTF_UINT32 : NOTE_PRINTF_UINT64)
-
-/* Use object_size to mark strings of known size */
-
-#define NOTE_PRINTF_OBJECT_SIZE(arg) object_size((FAR void *)(uintptr_t)(arg), 2)
-
-/* Use _Generic to determine the type of the parameter */
-
-#define NOTE_PRINTF_ARG_TYPE(__arg__) \
-        _Generic((__arg__) + 0, \
-                 float : NOTE_PRINTF_DOUBLE, \
-                 double: NOTE_PRINTF_DOUBLE, \
-                 char *: ({NOTE_PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
-                         NOTE_PRINTF_STRING : \
-                         NOTE_PRINTF_INT_TYPE(__arg__);}), \
-                 const char *: ({NOTE_PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
-                               NOTE_PRINTF_STRING : \
-                               NOTE_PRINTF_INT_TYPE(__arg__);}), \
-                 default: NOTE_PRINTF_INT_TYPE(__arg__))
-
-/* Set the type of each parameter */
-
-#define NOTE_PRINTF_TYPE(_, arg, index) + ((NOTE_PRINTF_ARG_TYPE(arg) << (index) * 2))
-#define NOTE_PRINTF_TYPES(...)          FOREACH_ARG(NOTE_PRINTF_TYPE, _, ##__VA_ARGS__)
-
-/* Using macro expansion to calculate the expression of tag, tag will
- * be a constant at compile time, which will reduce the number of
- * size in the code.
- */
-
-#define NOTE_PRINTF_TAG(...) \
-        ((GET_ARG_COUNT(__VA_ARGS__) << 28) + NOTE_PRINTF_TYPES(__VA_ARGS__))
 
 #define sched_note_event(event, tag, level, buf, len) \
         sched_note_event_ip(event, tag, level, up_getpc(), buf, len)
@@ -545,7 +488,7 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
               static const struct { uint8_t sz; char str[sizeof(f)]; } \
               fmt = { sizeof(f) - 1, f }; \
               note_printf_ip(t,l,i,fmt.str, \
-                             NOTE_PRINTF_TAG(__VA_ARGS__),##__VA_ARGS__); \
+                             PRINTF_TAG(__VA_ARGS__),##__VA_ARGS__); \
             } \
           while (0)
 #  else

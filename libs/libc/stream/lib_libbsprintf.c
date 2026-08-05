@@ -43,7 +43,7 @@
  *
  ****************************************************************************/
 
-ssize_t lib_bsprintf(FAR void *buffer, size_t size,
+ssize_t lib_bsprintf(FAR void *buffer, size_t size, uintptr_t type,
                      FAR const IPTR char *fmt, va_list va)
 {
   begin_packed_struct union var
@@ -74,6 +74,74 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
   FAR const char *p = fmt;
   bool infmt = false;
   char c;
+
+  if (type != 0)
+    {
+      size_t count = PRINTF_GET_COUNT(type);
+      size_t i;
+
+      for (i = 0; i < count; i++)
+        {
+          var = (FAR union var *)&buff[next];
+          switch (PRINTF_GET_TYPE(type, i))
+            {
+              case PRINTF_UINT32:
+                if (next + sizeof(var->i) > length)
+                  {
+                    return -ENOMEM;
+                  }
+
+                var->i = va_arg(va, int);
+                next += sizeof(var->i);
+                break;
+
+              case PRINTF_UINT64:
+                if (next + sizeof(var->ll) > length)
+                  {
+                    return -ENOMEM;
+                  }
+
+                var->ll = va_arg(va, long long);
+                next += sizeof(var->ll);
+                break;
+
+              case PRINTF_STRING:
+                {
+                  FAR const char *s = va_arg(va, FAR const char *);
+                  size_t len;
+
+                  if (s == NULL)
+                    {
+                      s = "(null)";
+                    }
+
+                  len = strlen(s) + 1;
+                  if (next + len > length)
+                    {
+                      return -ENOMEM;
+                    }
+
+                  strlcpy(buff + next, s, len);
+                  next += len;
+                }
+                break;
+
+#ifdef CONFIG_HAVE_DOUBLE
+              case PRINTF_DOUBLE:
+                if (next + sizeof(var->d) > length)
+                  {
+                    return -ENOMEM;
+                  }
+
+                var->d = va_arg(va, double);
+                next += sizeof(var->d);
+                break;
+#endif
+            }
+        }
+
+      return next;
+    }
 
   while ((c = *p++) != '\0')
     {
@@ -230,15 +298,20 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
 
               /* copy the va_list member to the buffer */
 
+              if (next >= length)
+                {
+                  return -ENOMEM;
+                }
+
 #  ifdef va_copy
               va_list copy;
               va_copy(copy, *vaf->va);
               ret = lib_bsprintf(buff + next, length - next,
-                                 vaf->fmt, copy);
+                                 0, vaf->fmt, copy);
               va_end(copy);
 #  else
               ret = lib_bsprintf(buff + next, length - next,
-                                 vaf->fmt, vaf->va);
+                                 0, vaf->fmt, vaf->va);
 #  endif
               if (ret < 0)
                 {

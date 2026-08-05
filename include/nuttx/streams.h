@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/compiler.h>
+#include <nuttx/macro.h>
 #include <nuttx/percpu.h>
 
 #ifdef CONFIG_NET_NETPOLL
@@ -71,6 +72,56 @@
 #ifdef CONFIG_LIBC_LZF
 #define LZF_STREAM_BLOCKSIZE  ((1 << CONFIG_STREAM_LZF_BLOG) - 1)
 #endif
+
+/* lib_bsprintf type-word wire-format contract, shared by the libc encoder,
+ * the note driver and the host decoder; keep the three in sync. A 2-bit type
+ * code per argument sits in the low bits, argument count in the high bits
+ * (COUNT_SHIFT). Nonzero type word = pack by these codes (fmt not parsed);
+ * zero = pack by parsing fmt conversions. The count field width tracks the
+ * pointer width to keep the frame identical to the note-local layout.
+ */
+
+#define PRINTF_UINT32      0
+#define PRINTF_UINT64      1
+#define PRINTF_DOUBLE      2
+#define PRINTF_STRING      3
+
+#define PRINTF_COUNT_BITS  (sizeof(uintptr_t) >= 8 ? 5 : 4)
+#define PRINTF_COUNT_SHIFT (sizeof(uintptr_t) * 8 - PRINTF_COUNT_BITS)
+#define PRINTF_MAX_ARGS    (PRINTF_COUNT_SHIFT / 2)
+
+#define PRINTF_GET_TYPE(type, index) (((type) >> (index) * 2) & 0x03)
+#define PRINTF_GET_COUNT(type)       ((type) >> PRINTF_COUNT_SHIFT)
+
+/* Compile-time type-word derivation. The type word is a pure function of
+ * the argument types, so compiler folds PRINTF_TAG() to a constant.
+ */
+
+#define PRINTF_INT_TYPE(arg) (sizeof((arg) + 0) <= sizeof(uint32_t) ? \
+                                    PRINTF_UINT32 : PRINTF_UINT64)
+
+#define PRINTF_OBJECT_SIZE(arg) \
+        object_size((FAR void *)(uintptr_t)(arg), 2)
+
+#define PRINTF_ARG_TYPE(__arg__) \
+        _Generic((__arg__) + 0, \
+                 float : PRINTF_DOUBLE, \
+                 double: PRINTF_DOUBLE, \
+                 char *: ({PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
+                         PRINTF_STRING : \
+                         PRINTF_INT_TYPE(__arg__);}), \
+                 const char *: ({PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
+                               PRINTF_STRING : \
+                               PRINTF_INT_TYPE(__arg__);}), \
+                 default: PRINTF_INT_TYPE(__arg__))
+
+#define PRINTF_TYPE(_, arg, index) \
+        + ((PRINTF_ARG_TYPE(arg) << (index) * 2))
+#define PRINTF_TYPES(...) \
+        FOREACH_ARG(PRINTF_TYPE, _, ##__VA_ARGS__)
+
+#define PRINTF_TAG(...) \
+        ((GET_ARG_COUNT(__VA_ARGS__) << 28) + PRINTF_TYPES(__VA_ARGS__))
 
 /****************************************************************************
  * Public Types
@@ -942,11 +993,13 @@ int lib_sprintf(FAR struct lib_outstream_s *stream,
  * Description:
  *  Implementation of sprintf formatted output buffer data. Structure data
  *  types must be one-byte aligned. Uses native architecture for parsing.
+ *  A nonzero type word restores a buffer packed by lib_bsprintf via its
+ *  per-argument type codes; zero parses fmt directly.
  *
  ****************************************************************************/
 
-int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
-                 FAR const void *buf);
+int lib_osprintf(FAR struct lib_outstream_s *s, uintptr_t type,
+                 FAR const IPTR char *fmt, FAR const void *buf);
 
 /****************************************************************************
  * Name: lib_osprintf_32
@@ -958,9 +1011,8 @@ int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
  *
  ****************************************************************************/
 
-int lib_osprintf_32(FAR struct lib_outstream_s *s,
-                    FAR const IPTR char *fmt,
-                    FAR const void *buf);
+int lib_osprintf_32(FAR struct lib_outstream_s *s, uintptr_t type,
+                    FAR const IPTR char *fmt, FAR const void *buf);
 
 /****************************************************************************
  * Name: lib_osprintf_64
@@ -972,20 +1024,21 @@ int lib_osprintf_32(FAR struct lib_outstream_s *s,
  *
  ****************************************************************************/
 
-int lib_osprintf_64(FAR struct lib_outstream_s *s,
-                    FAR const IPTR char *fmt,
-                    FAR const void *buf);
+int lib_osprintf_64(FAR struct lib_outstream_s *s, uintptr_t type,
+                    FAR const IPTR char *fmt, FAR const void *buf);
 
 /****************************************************************************
  * Name: lib_bsprintf
  *
  * Description:
- *  Implements saving sprintf parameters to buffer, which can use
- *  lib_osprintf to restore the data in buffer to a string.
+ *  Save sprintf parameters to a buffer that lib_osprintf can later restore
+ *  to a string. A nonzero type word packs the arguments by its per-argument
+ *  type codes (fmt is not parsed); zero packs them by parsing the fmt
+ *  conversion specifiers.
  *
  ****************************************************************************/
 
-ssize_t lib_bsprintf(FAR void *buffer, size_t size,
+ssize_t lib_bsprintf(FAR void *buffer, size_t size, uintptr_t type,
                      FAR const IPTR char *fmt, va_list va);
 
 /****************************************************************************

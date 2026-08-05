@@ -1432,52 +1432,8 @@ static int note_dump_sched_switch(FAR struct lib_outstream_s *s,
 static int note_dump_printf(FAR struct lib_outstream_s *s,
                             FAR struct note_printf_s *note)
 {
-  size_t ret = 0;
-
-  if (note->npt_type == 0)
-    {
-      ret = lib_osprintf(s, (FAR const char *)note->npt_fmt, note->npt_data);
-    }
-  else
-    {
-      size_t count = NOTE_PRINTF_GET_COUNT(note->npt_type);
-      char fmt[128];
-      size_t i;
-
-      fmt[0] = '\0';
-      ret += lib_sprintf(s, "%p", (FAR void *)note->npt_fmt);
-      for (i = 0; i < count; i++)
-        {
-          int type = NOTE_PRINTF_GET_TYPE(note->npt_type, i);
-
-          switch (type)
-            {
-              case NOTE_PRINTF_UINT32:
-                {
-                  strcat(fmt, " %u");
-                }
-                break;
-              case NOTE_PRINTF_UINT64:
-                {
-                  strcat(fmt, " %llu");
-                }
-                break;
-              case NOTE_PRINTF_STRING:
-                {
-                  strcat(fmt, " %s");
-                }
-                break;
-              case NOTE_PRINTF_DOUBLE:
-                {
-                  strcat(fmt, " %f");
-                }
-            }
-        }
-
-        ret += lib_osprintf(s, fmt, note->npt_data);
-    }
-
-  return ret;
+  return lib_osprintf(s, note->npt_type,
+                      (FAR const char *)note->npt_fmt, note->npt_data);
 }
 #endif
 
@@ -3273,32 +3229,9 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   FAR struct tcb_s *tcb = running_task();
   FAR struct note_printf_s *note;
   uint8_t data[NOTE_BUFFER_SIZE];
-  size_t length = 0;
+  size_t length;
+  ssize_t next;
 
-  /* Format the note */
-
-  begin_packed_struct union
-    {
-      int i;
-      long l;
-#ifdef CONFIG_HAVE_LONG_LONG
-      long long ll;
-#endif
-      intmax_t im;
-      size_t sz;
-      ptrdiff_t ptr;
-      FAR void *p;
-      FAR const char *s;
-#ifdef CONFIG_HAVE_DOUBLE
-      double d;
-#  ifdef CONFIG_HAVE_LONG_DOUBLE
-      long double ld;
-#  endif
-#endif
-    }
-
-  end_packed_struct *var;
-  size_t next = 0;
   note = (FAR struct note_printf_s *)data;
   length = sizeof(data) - SIZEOF_NOTE_PRINTF(0);
 
@@ -3312,80 +3245,10 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
       return;
     }
 
-  if (type)
+  next = lib_bsprintf(note->npt_data, length, type, fmt, *va);
+  if (next < 0)
     {
-      size_t count = NOTE_PRINTF_GET_COUNT(type);
-      size_t i;
-
-      for (i = 0; i < count; i++)
-        {
-          var = (FAR void *)&note->npt_data[next];
-          switch (NOTE_PRINTF_GET_TYPE(type, i))
-            {
-              case NOTE_PRINTF_UINT32:
-                {
-                  var->i = va_arg(*va, int);
-                  if (next + sizeof(var->i) > length)
-                    {
-                      break;
-                    }
-
-                  next += sizeof(var->i);
-                }
-              break;
-              case NOTE_PRINTF_UINT64:
-                {
-                  if (next + sizeof(var->ll) > length)
-                    {
-                      break;
-                    }
-
-                  var->ll = va_arg(*va, long long);
-                  next += sizeof(var->ll);
-                }
-              break;
-              case NOTE_PRINTF_STRING:
-                {
-                  size_t len;
-                  var->s = va_arg(*va, FAR const char *);
-                  if (var->s == NULL)
-                    {
-                      var->s = "(null)";
-                    }
-
-                  len = strlen(var->s) + 1;
-                  if (next + len > length)
-                    {
-                      len = length - next;
-                    }
-
-                  strlcpy(note->npt_data + next, var->s, len);
-                  next += len;
-                }
-              break;
-#ifdef CONFIG_HAVE_DOUBLE
-            case NOTE_PRINTF_DOUBLE:
-              {
-                var->d = va_arg(*va, double);
-                if (next + sizeof(var->d) > length)
-                  {
-                    break;
-                  }
-
-                next += sizeof(var->d);
-              }
-            break;
-#endif
-            }
-        }
-    }
-  else
-    {
-      next = lib_bsprintf(note->npt_data, length, fmt, *va);
-      if ((ssize_t)next < 0)
-        {
-          return;
-        }
+      return;
     }
 
   length = SIZEOF_NOTE_PRINTF(next);

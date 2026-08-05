@@ -171,6 +171,7 @@ static size_t get_arch_dependent_size(char type, osprintf_arch_e arch)
 }
 
 static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
+                                 uintptr_t type,
                                  FAR const IPTR char *fmt,
                                  FAR const void *buf,
                                  FAR size_t *offset,
@@ -207,6 +208,37 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
   size_t ret = 0;
   size_t len = 0;
   char c;
+
+  if (type != 0)
+    {
+      char tfmt[128];
+      size_t i;
+      size_t count = PRINTF_GET_COUNT(type);
+
+      ret = lib_sprintf(s, "%p", fmt);
+
+      tfmt[0] = '\0';
+      for (i = 0; i < count; i++)
+        {
+          switch (PRINTF_GET_TYPE(type, i))
+            {
+              case PRINTF_UINT32:
+                strcat(tfmt, " %u");
+                break;
+              case PRINTF_UINT64:
+                strcat(tfmt, " %llu");
+                break;
+              case PRINTF_STRING:
+                strcat(tfmt, " %s");
+                break;
+              case PRINTF_DOUBLE:
+                strcat(tfmt, " %f");
+                break;
+            }
+        }
+
+      fmt = tfmt;
+    }
 
   while ((c = *fmt++) != '\0')
     {
@@ -332,8 +364,8 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
             {
               size_t off = 0;
               len = strlen(var->s) + 1;
-              ret += lib_osprintf_internal(s, var->s, var->s + len, &off,
-                                           arch);
+              ret += lib_osprintf_internal(s, 0, var->s, var->s + len,
+                                           &off, arch);
               *offset += len + off;
               fmt++;
             }
@@ -366,12 +398,11 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
  *
  ****************************************************************************/
 
-int lib_osprintf(FAR struct lib_outstream_s *s,
-                 FAR const IPTR char *fmt,
-                 FAR const void *buf)
+int lib_osprintf(FAR struct lib_outstream_s *s, uintptr_t type,
+                 FAR const IPTR char *fmt, FAR const void *buf)
 {
   size_t offset = 0;
-  return lib_osprintf_internal(s, fmt, buf, &offset, ARCH_NATIVE);
+  return lib_osprintf_internal(s, type, fmt, buf, &offset, ARCH_NATIVE);
 }
 
 /****************************************************************************
@@ -384,12 +415,11 @@ int lib_osprintf(FAR struct lib_outstream_s *s,
  *
  ****************************************************************************/
 
-int lib_osprintf_32(FAR struct lib_outstream_s *s,
-                    FAR const IPTR char *fmt,
-                    FAR const void *buf)
+int lib_osprintf_32(FAR struct lib_outstream_s *s, uintptr_t type,
+                    FAR const IPTR char *fmt, FAR const void *buf)
 {
   size_t offset = 0;
-  return lib_osprintf_internal(s, fmt, buf, &offset, ARCH_32BIT);
+  return lib_osprintf_internal(s, type, fmt, buf, &offset, ARCH_32BIT);
 }
 
 /****************************************************************************
@@ -402,10 +432,9 @@ int lib_osprintf_32(FAR struct lib_outstream_s *s,
  *
  ****************************************************************************/
 
-int lib_osprintf_64(FAR struct lib_outstream_s *s,
-                    FAR const IPTR char *fmt,
-                    FAR const void *buf)
+int lib_osprintf_64(FAR struct lib_outstream_s *s, uintptr_t type,
+                    FAR const IPTR char *fmt, FAR const void *buf)
 {
   size_t offset = 0;
-  return lib_osprintf_internal(s, fmt, buf, &offset, ARCH_64BIT);
+  return lib_osprintf_internal(s, type, fmt, buf, &offset, ARCH_64BIT);
 }
