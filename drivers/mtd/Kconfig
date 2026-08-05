@@ -198,6 +198,14 @@ config MTD_CONFIG_NVS2
 		like RRAM and MRAM that do not require a separate erase operation
 		at all.
 
+config MTD_CONFIG_RRAM
+	bool "RRAM"
+	---help---
+		A lightweight fixed-slot KV store for byte overwrite-in-place,
+		erase-free memory (RRAM/MRAM). No GC, no wear leveling, no dual
+		backup: every KV occupies one fixed-size slot whose size is derived
+		from the configured maximum value size.
+
 config MTD_CONFIG_NONE
 	bool "None MTD config"
 
@@ -240,6 +248,15 @@ config MTD_CONFIG_NAME_LEN
 	---help---
 		Sets the maximum length of config item names.
 
+config MTD_CONFIG_VALUE_LEN
+	int "rram: max value size (bytes) per slot"
+	default 64
+	depends on MTD_CONFIG_RRAM
+	---help---
+		Maximum value length stored in one slot. The fixed slot size is
+		derived from this value. The number of slots equals
+		partition_size / slot_size.
+
 config MTD_CONFIG_BLOCKSIZE_MULTIPLE
 	int "Set NVS blocksize multiple"
 	default 1
@@ -247,18 +264,16 @@ config MTD_CONFIG_BLOCKSIZE_MULTIPLE
 	---help---
 		The size of a multiple of blocksize compared to erasize
 
-config MTD_CONFIG_CACHE_SIZE
-	int "Non-volatile Storage lookup cache size"
-	default 0
-	depends on MTD_CONFIG_NVS || MTD_CONFIG_NVS2
-	---help---
-		Number of entries in Non-volatile Storage lookup cache.
-		It is recommended that it be a power of 2.
-
 choice
 	prompt "Non-volatile Storage lookup cache mode"
-	depends on MTD_CONFIG_CACHE_SIZE > 0
-	default MTD_CONFIG_FULL_CACHE
+	default MTD_CONFIG_CACHE_NONE
+
+config MTD_CONFIG_CACHE_NONE
+	bool "no lookup cache"
+	---help---
+		Do not enable the lookup cache; resolve each key by
+		scanning the flash slots. Minimal RAM cost, slower
+		lookups.
 
 config MTD_CONFIG_HASH_TABLE
 	bool "hash table"
@@ -273,7 +288,14 @@ config MTD_CONFIG_FULL_CACHE
 		smaller than the cache size, it is recommended to
 		choose full cache mode.
 
-endchoice # Non-volatile Storage lookup cache size
+endchoice # Non-volatile Storage lookup cache mode
+
+config MTD_CONFIG_CACHE_SIZE
+	int "Non-volatile Storage lookup cache size"
+	depends on MTD_CONFIG_HASH_TABLE || MTD_CONFIG_FULL_CACHE
+	---help---
+		Number of entries in Non-volatile Storage lookup cache.
+		It is recommended that it be a power of 2.
 
 config MTD_CONFIG_AUTOFORMAT
 	bool "NVS Autoformat"
