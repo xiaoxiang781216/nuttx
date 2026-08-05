@@ -222,6 +222,11 @@ perf_inherit_event(FAR struct perf_event_s *parent_event,
 {
   FAR struct perf_event_s *event;
 
+  if (parent_event->parent_event != NULL)
+    {
+      parent_event = parent_event->parent_event;
+    }
+
   event = perf_event_alloc(&parent_event->attr, parent_event->cpu,
                            group_leader, parent_event);
   if (event == NULL)
@@ -525,7 +530,7 @@ void perf_child_detach(FAR struct perf_event_s *event)
   child_count = PERF_GET_COUNT(event);
   parent_event->child_count += child_count;
 
-  nxmutex_unlock(&parent_event->child_mutex);
-
   list_delete(&event->child_list);
+
+  nxmutex_unlock(&parent_event->child_mutex);
 }
