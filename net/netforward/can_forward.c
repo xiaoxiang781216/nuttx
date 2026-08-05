@@ -340,6 +340,24 @@ static int can_dev_forward(FAR struct net_driver_s *dev,
       goto errout_with_fwd;
     }
 
+#ifdef CONFIG_NET_CAN_CANFD
+  /* Upgrade Classic CAN frame to FD in the cloned IOB if the rule
+   * requests it. Frames already marked FD are left untouched.
+   */
+
+  if (fwdrule->flags & CGW_FLAGS_CAN_TX_FD)
+    {
+      FAR struct canfd_frame *f =
+          (FAR struct canfd_frame *)IOB_DATA(fwd->f_iob);
+
+      f->flags |= CANFD_FDF;
+      if (fwdrule->flags & CGW_FLAGS_CAN_TX_BRS)
+        {
+          f->flags |= CANFD_BRS;
+        }
+    }
+#endif
+
   /* Split by forwarding mode:
    *   Synchronous — forward in RX context (no ASYNC flag)
    *   Async       — enqueue to async list (ASYNC flag set)

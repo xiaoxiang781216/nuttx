@@ -154,13 +154,15 @@ enum
 
 #define MAX_MODFUNCTIONS (CGW_MOD_FUNCS * CGW_FRAME_MODS)
 
-#define CGW_FLAGS_CAN_ECHO       0x01
-#define CGW_FLAGS_CAN_SRC_TSTAMP 0x02
-#define CGW_FLAGS_CAN_IIF_TX_OK  0x04
-#define CGW_FLAGS_CAN_FD         0x08
-#define CGW_FLAGS_CAN_DISABLED   0x10  /* rule is disabled */
-#define CGW_FLAGS_CAN_ASYNC      0x20  /* rule uses async forwarding */
-#define CGW_FLAGS_CAN_NO_RECV    0x40  /* do NOT deliver locally */
+#define CGW_FLAGS_CAN_ECHO       0x0001
+#define CGW_FLAGS_CAN_SRC_TSTAMP 0x0002
+#define CGW_FLAGS_CAN_IIF_TX_OK  0x0004
+#define CGW_FLAGS_CAN_FD         0x0008
+#define CGW_FLAGS_CAN_DISABLED   0x0010  /* rule is disabled */
+#define CGW_FLAGS_CAN_ASYNC      0x0020  /* rule uses async forwarding */
+#define CGW_FLAGS_CAN_NO_RECV    0x0040  /* do NOT deliver locally */
+#define CGW_FLAGS_CAN_TX_FD      0x0080  /* upgrade to CAN FD on TX */
+#define CGW_FLAGS_CAN_TX_BRS     0x0100  /* enable BRS when upgrading to FD */
 
 /* length of checksum operation parameters.
  * idx = index in CAN frame data[]
