@@ -213,26 +213,29 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
     {
       char tfmt[128];
       size_t i;
-      size_t count = PRINTF_GET_COUNT(type);
 
       ret = lib_sprintf(s, "%p", fmt);
 
       tfmt[0] = '\0';
-      for (i = 0; i < count; i++)
+      for (i = 0; i < PRINTF_MAX_ARGS; i++)
         {
-          switch (PRINTF_GET_TYPE(type, i))
+          uint8_t argtype = PRINTF_GET_TYPE(type, i);
+
+          if (argtype == PRINTF_TERM)
             {
-              case PRINTF_UINT32:
+              break;
+            }
+
+          switch (argtype)
+            {
+              case PRINTF_32BIT:
                 strcat(tfmt, " %u");
                 break;
-              case PRINTF_UINT64:
+              case PRINTF_64BIT:
                 strcat(tfmt, " %llu");
                 break;
               case PRINTF_STRING:
                 strcat(tfmt, " %s");
-                break;
-              case PRINTF_DOUBLE:
-                strcat(tfmt, " %f");
                 break;
             }
         }

@@ -75,53 +75,57 @@
 
 /* lib_bsprintf type-word wire-format contract, shared by the libc encoder,
  * the note driver and the host decoder; keep the three in sync. A 2-bit type
- * code per argument sits in the low bits, argument count in the high bits
- * (COUNT_SHIFT). Nonzero type word = pack by these codes (fmt not parsed);
- * zero = pack by parsing fmt conversions. The count field width tracks the
- * pointer width to keep the frame identical to the note-local layout.
+ * code per argument sits in the low bits, terminated by a PRINTF_TERM
+ * sentinel slot. Nonzero type word = pack by these codes (fmt not parsed);
+ * zero = pack by parsing fmt conversions. The type word is a full 64-bit
+ * value at the stream level; the note/syslog layers may mask it to 48 bits.
  */
 
-#define PRINTF_UINT32      0
-#define PRINTF_UINT64      1
-#define PRINTF_DOUBLE      2
-#define PRINTF_STRING      3
+#define PRINTF_TERM        0ull
+#define PRINTF_32BIT       1ull
+#define PRINTF_64BIT       2ull
+#define PRINTF_STRING      3ull
 
-#define PRINTF_COUNT_BITS  (sizeof(uintptr_t) >= 8 ? 5 : 4)
-#define PRINTF_COUNT_SHIFT (sizeof(uintptr_t) * 8 - PRINTF_COUNT_BITS)
-#define PRINTF_MAX_ARGS    (PRINTF_COUNT_SHIFT / 2)
+/* Up to 31 argument slots occupy the low 62 bits (2 bits each, plus one
+ * PRINTF_TERM sentinel); the type word is a full 64-bit value at the
+ * stream level. The note/syslog layers may mask it to 48 bits to reserve
+ * the upper 16 bits for tag/level.
+ */
+
+#define PRINTF_MAX_ARGS    31
 
 #define PRINTF_GET_TYPE(type, index) (((type) >> (index) * 2) & 0x03)
-#define PRINTF_GET_COUNT(type)       ((type) >> PRINTF_COUNT_SHIFT)
 
 /* Compile-time type-word derivation. The type word is a pure function of
  * the argument types, so compiler folds PRINTF_TAG() to a constant.
  */
 
 #define PRINTF_INT_TYPE(arg) (sizeof((arg) + 0) <= sizeof(uint32_t) ? \
-                                    PRINTF_UINT32 : PRINTF_UINT64)
+                                    PRINTF_32BIT : PRINTF_64BIT)
 
 #define PRINTF_OBJECT_SIZE(arg) \
         object_size((FAR void *)(uintptr_t)(arg), 2)
 
 #define PRINTF_ARG_TYPE(__arg__) \
-        _Generic((__arg__) + 0, \
-                 float : PRINTF_DOUBLE, \
-                 double: PRINTF_DOUBLE, \
+        (_Generic((__arg__) + 0, \
+                 float : PRINTF_64BIT, \
+                 double: PRINTF_64BIT, \
                  char *: ({PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
                          PRINTF_STRING : \
                          PRINTF_INT_TYPE(__arg__);}), \
                  const char *: ({PRINTF_OBJECT_SIZE(__arg__) > 0 ? \
                                PRINTF_STRING : \
                                PRINTF_INT_TYPE(__arg__);}), \
-                 default: PRINTF_INT_TYPE(__arg__))
+                 default: PRINTF_INT_TYPE(__arg__)))
 
 #define PRINTF_TYPE(_, arg, index) \
-        + ((PRINTF_ARG_TYPE(arg) << (index) * 2))
+        + (PRINTF_ARG_TYPE(arg) << (index) * 2)
 #define PRINTF_TYPES(...) \
         FOREACH_ARG(PRINTF_TYPE, _, ##__VA_ARGS__)
 
 #define PRINTF_TAG(...) \
-        ((GET_ARG_COUNT(__VA_ARGS__) << 28) + PRINTF_TYPES(__VA_ARGS__))
+        ((PRINTF_TERM << (GET_ARG_COUNT(__VA_ARGS__) * 2)) + \
+         PRINTF_TYPES(__VA_ARGS__))
 
 /****************************************************************************
  * Public Types

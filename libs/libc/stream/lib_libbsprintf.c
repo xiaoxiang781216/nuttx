@@ -77,15 +77,21 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
 
   if (type != 0)
     {
-      size_t count = PRINTF_GET_COUNT(type);
       size_t i;
 
-      for (i = 0; i < count; i++)
+      for (i = 0; i < PRINTF_MAX_ARGS; i++)
         {
-          var = (FAR union var *)&buff[next];
-          switch (PRINTF_GET_TYPE(type, i))
+          uint8_t argtype = PRINTF_GET_TYPE(type, i);
+
+          if (argtype == PRINTF_TERM)
             {
-              case PRINTF_UINT32:
+              break;
+            }
+
+          var = (FAR union var *)&buff[next];
+          switch (argtype)
+            {
+              case PRINTF_32BIT:
                 if (next + sizeof(var->i) > length)
                   {
                     return -ENOMEM;
@@ -95,7 +101,7 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
                 next += sizeof(var->i);
                 break;
 
-              case PRINTF_UINT64:
+              case PRINTF_64BIT:
                 if (next + sizeof(var->ll) > length)
                   {
                     return -ENOMEM;
@@ -125,18 +131,6 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
                   next += len;
                 }
                 break;
-
-#ifdef CONFIG_HAVE_DOUBLE
-              case PRINTF_DOUBLE:
-                if (next + sizeof(var->d) > length)
-                  {
-                    return -ENOMEM;
-                  }
-
-                var->d = va_arg(va, double);
-                next += sizeof(var->d);
-                break;
-#endif
             }
         }
 
