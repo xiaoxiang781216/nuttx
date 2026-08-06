@@ -45,6 +45,19 @@
 
 #define TMR_IRQ IRQ14
 
+/* Value written to IA32_TSC_DEADLINE to disarm the local APIC timer.
+ *
+ * Intel SDM Vol. 3, "TSC-Deadline Mode": writing 0 to the
+ * IA32_TSC_DEADLINE MSR disarms the local-APIC timer.  Do NOT use
+ * UINT64_MAX as a "never expire" deadline: a hypervisor translates the
+ * guest deadline into a host TSC value by subtracting the (negative)
+ * VMX TSC offset, and UINT64_MAX makes that computation wrap around to a
+ * timestamp in the past, which arms an immediately expiring timer and
+ * livelocks the guest in a timer interrupt storm.
+ */
+
+#define TSC_DEADLINE_DISARM (0ull)
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -177,7 +190,7 @@ static int intel64_tsc_compare_isr(int irq, void *regs, void *arg)
 {
   struct oneshot_lowerhalf_s *priv = &g_intel64_tsc_lowerhalf;
 
-  intel64_tsc_set_compare(UINT64_MAX);
+  intel64_tsc_set_compare(TSC_DEADLINE_DISARM);
 
   /* Then perform the callback */
 
@@ -188,7 +201,13 @@ static int intel64_tsc_compare_isr(int irq, void *regs, void *arg)
 
 static clkcnt_t intel64_tsc_max_delay(struct oneshot_lowerhalf_s *lower)
 {
-  return UINT64_MAX;
+  /* Keep the deadline away from the top of the 64-bit range so that a
+   * hypervisor can still translate it into a host TSC value without
+   * wrapping around.  INT64_MAX ticks is more than a century at any
+   * realistic TSC frequency.
+   */
+
+  return INT64_MAX;
 }
 
 static clkcnt_t intel64_tsc_current(struct oneshot_lowerhalf_s *lower)
@@ -212,13 +231,13 @@ static void intel64_tsc_start(struct oneshot_lowerhalf_s *lower,
    */
 
   clkcnt_t now      = intel64_tsc_count() + intel64_tsc_get_offset();
-  clkcnt_t expected = now + delta >= now ? now + delta : UINT64_MAX;
+  clkcnt_t expected = now + delta >= now ? now + delta : INT64_MAX;
   intel64_tsc_set_compare(expected);
 }
 
 static void intel64_tsc_cancel(struct oneshot_lowerhalf_s *lower)
 {
-  intel64_tsc_set_compare(UINT64_MAX);
+  intel64_tsc_set_compare(TSC_DEADLINE_DISARM);
 }
 
 /****************************************************************************
@@ -275,6 +294,6 @@ void intel64_timer_secondary_init(void)
 {
   intel64_tsc_set_offset(g_tsc_offset);
 
-  intel64_tsc_set_compare(UINT64_MAX);
+  intel64_tsc_set_compare(TSC_DEADLINE_DISARM);
   intel64_unmask_tmr();
 }
