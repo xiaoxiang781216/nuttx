@@ -2015,8 +2015,19 @@ skip_rtt:
         goto drop;
 
       case TCP_TIME_WAIT:
-        tcp_send(dev, conn, TCP_ACK, tcpiplen);
-        return;
+        /* RFC793, Section 3.9: Acknowledge a retransmitted FIN and restart
+         * the 2*MSL timeout.  Completely trimmed duplicate FINs are handled
+         * above; ignore other segments reaching this point.
+         */
+
+        if ((tcp->flags & TCP_FIN) != 0)
+          {
+            tcp_start_timewait(conn, TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+            tcp_send(dev, conn, TCP_ACK, tcpiplen);
+            return;
+          }
+
+        goto drop;
 
       case TCP_CLOSING:
         /* Derived from RFC793, Section 3.9, Page 75 Event Processing:
