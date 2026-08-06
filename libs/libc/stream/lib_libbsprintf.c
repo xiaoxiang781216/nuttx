@@ -43,7 +43,7 @@
  *
  ****************************************************************************/
 
-ssize_t lib_bsprintf(FAR void *buffer, size_t size, uintptr_t type,
+ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
                      FAR const IPTR char *fmt, va_list va)
 {
   begin_packed_struct union var

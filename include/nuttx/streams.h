@@ -998,7 +998,7 @@ int lib_sprintf(FAR struct lib_outstream_s *stream,
  *
  ****************************************************************************/
 
-int lib_osprintf(FAR struct lib_outstream_s *s, uintptr_t type,
+int lib_osprintf(FAR struct lib_outstream_s *s, uint64_t type,
                  FAR const IPTR char *fmt, FAR const void *buf);
 
 /****************************************************************************
@@ -1011,7 +1011,7 @@ int lib_osprintf(FAR struct lib_outstream_s *s, uintptr_t type,
  *
  ****************************************************************************/
 
-int lib_osprintf_32(FAR struct lib_outstream_s *s, uintptr_t type,
+int lib_osprintf_32(FAR struct lib_outstream_s *s, uint64_t type,
                     FAR const IPTR char *fmt, FAR const void *buf);
 
 /****************************************************************************
@@ -1024,7 +1024,7 @@ int lib_osprintf_32(FAR struct lib_outstream_s *s, uintptr_t type,
  *
  ****************************************************************************/
 
-int lib_osprintf_64(FAR struct lib_outstream_s *s, uintptr_t type,
+int lib_osprintf_64(FAR struct lib_outstream_s *s, uint64_t type,
                     FAR const IPTR char *fmt, FAR const void *buf);
 
 /****************************************************************************
@@ -1038,7 +1038,7 @@ int lib_osprintf_64(FAR struct lib_outstream_s *s, uintptr_t type,
  *
  ****************************************************************************/
 
-ssize_t lib_bsprintf(FAR void *buffer, size_t size, uintptr_t type,
+ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
                      FAR const IPTR char *fmt, va_list va);
 
 /****************************************************************************
