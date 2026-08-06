@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <sys/param.h>
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mm/map.h>
@@ -41,6 +42,18 @@
  * Private Function Prototypes
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
+static void shmfs_buffer_rw(FAR void *dbuf, FAR void *dpaddr,
+                            size_t doffset, FAR const void *sbuf,
+                            FAR const void *spaddr, size_t soffset,
+                            size_t nbytes);
+#endif
+static void shmfs_buffer_read(FAR void *dest, FAR const void *src,
+                              size_t offset, size_t nbytes);
+static void shmfs_buffer_write(FAR void *dest, size_t offset,
+                               FAR const void *src, size_t nbytes);
+static void shmfs_buffer_copy(FAR void *dest, FAR const void *src,
+                              size_t nbytes);
 static int shmfs_close(FAR struct file *filep);
 static ssize_t shmfs_read(FAR struct file *filep, FAR char *buffer,
                           size_t buflen);
@@ -59,6 +72,8 @@ static int shmfs_munmap(FAR struct task_group_s *group,
                         FAR struct mm_map_entry_s *entry,
                         FAR void *start,
                         size_t length);
+static int shmfs_unmap_area(FAR struct task_group_s *group,
+                            FAR void *vaddr, size_t length);
 #endif
 
 /****************************************************************************
@@ -88,6 +103,123 @@ const struct file_operations g_shmfs_operations =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_BUILD_KERNEL
+
+/****************************************************************************
+ * Name: shmfs_buffer_rw
+ *
+ *   Copy nbytes between two regions.  Each side is either a linear
+ *   buffer (dpaddr/spaddr == NULL, use dbuf/sbuf) or a shm backing
+ *   store page-pointer array (dpaddr/spaddr != NULL, map each page
+ *   via up_addrenv_page_vaddr).
+ *
+ ****************************************************************************/
+
+static void shmfs_buffer_rw(FAR void *dbuf, FAR void *dpaddr,
+                            size_t doffset, FAR const void *sbuf,
+                            FAR const void *spaddr, size_t soffset,
+                            size_t nbytes)
+{
+  FAR void **dpages = dpaddr;
+  FAR void **spages = (FAR void **)spaddr;
+  size_t dpgoff = doffset & MM_PGMASK;
+  size_t spgoff = soffset & MM_PGMASK;
+  size_t dpgidx = doffset >> MM_PGSHIFT;
+  size_t spgidx = soffset >> MM_PGSHIFT;
+  size_t copied = 0;
+
+  while (copied < nbytes)
+    {
+      FAR char *dptr;
+      FAR const char *sptr;
+      size_t chunk = nbytes - copied;
+
+      if (dpaddr != NULL)
+        {
+          uintptr_t dvaddr =
+            up_addrenv_page_vaddr((uintptr_t)dpages[dpgidx]);
+          DEBUGASSERT(dvaddr != 0);
+          dptr = (FAR char *)dvaddr + dpgoff;
+          chunk = MIN(chunk, MM_PGSIZE - dpgoff);
+        }
+      else
+        {
+          dptr = (FAR char *)dbuf + copied;
+        }
+
+      if (spaddr != NULL)
+        {
+          uintptr_t svaddr =
+            up_addrenv_page_vaddr((uintptr_t)spages[spgidx]);
+          DEBUGASSERT(svaddr != 0);
+          sptr = (FAR const char *)svaddr + spgoff;
+          if (spaddr != dpaddr)
+            {
+              chunk = MIN(MM_PGSIZE - spgoff, chunk);
+            }
+        }
+      else
+        {
+          sptr = (FAR const char *)sbuf + copied;
+        }
+
+      memcpy(dptr, sptr, chunk);
+      copied += chunk;
+
+      if (dpaddr != NULL)
+        {
+          dpgoff = 0;
+          dpgidx++;
+        }
+
+      if (spaddr != NULL)
+        {
+          spgoff = 0;
+          spgidx++;
+        }
+    }
+}
+
+static void shmfs_buffer_read(FAR void *dest, FAR const void *src,
+                              size_t offset, size_t nbytes)
+{
+  shmfs_buffer_rw(dest, NULL, 0, NULL, src, offset, nbytes);
+}
+
+static void shmfs_buffer_write(FAR void *dest, size_t offset,
+                               FAR const void *src, size_t nbytes)
+{
+  shmfs_buffer_rw(NULL, dest, offset, src, NULL, 0, nbytes);
+}
+
+static void shmfs_buffer_copy(FAR void *dest, FAR const void *src,
+                              size_t nbytes)
+{
+  shmfs_buffer_rw(NULL, dest, 0, NULL, src, 0, nbytes);
+}
+
+#else /* !CONFIG_BUILD_KERNEL */
+
+static void shmfs_buffer_read(FAR void *dest, FAR const void *src,
+                              size_t offset, size_t nbytes)
+{
+  memcpy(dest, (FAR const char *)src + offset, nbytes);
+}
+
+static void shmfs_buffer_write(FAR void *dest, size_t offset,
+                               FAR const void *src, size_t nbytes)
+{
+  memcpy((FAR char *)dest + offset, src, nbytes);
+}
+
+static void shmfs_buffer_copy(FAR void *dest, FAR const void *src,
+                              size_t nbytes)
+{
+  memcpy(dest, src, nbytes);
+}
+
+#endif /* CONFIG_BUILD_KERNEL */
 
 /****************************************************************************
  * Name: shmfs_read
@@ -129,7 +261,7 @@ static ssize_t shmfs_read(FAR struct file *filep, FAR char *buffer,
 
   if (sho->paddr != NULL)
     {
-      memcpy(buffer, (FAR char *)sho->paddr + startpos, nread);
+      shmfs_buffer_read(buffer, sho->paddr, startpos, nread);
       filep->f_pos += nread;
     }
   else
@@ -178,7 +310,7 @@ static ssize_t shmfs_write(FAR struct file *filep, FAR const char *buffer,
 
   if (sho->paddr != NULL)
     {
-      memcpy((FAR char *)sho->paddr + startpos, buffer, nwritten);
+      shmfs_buffer_write(sho->paddr, startpos, buffer, nwritten);
       filep->f_pos += nwritten;
     }
   else
@@ -233,41 +365,54 @@ static int shmfs_truncate(FAR struct file *filep, off_t length)
   FAR struct shmfs_object_s *object;
   int ret = 0;
 
+  if (length < 0)
+    {
+      return -EINVAL;
+    }
+
   object = filep->f_inode->i_private;
   DEBUGASSERT(object != NULL);
 
   nxmutex_lock(&object->lock);
 
-  if (object->paddr == NULL)
+  if (object->length == length)
     {
-      object->paddr = shmfs_alloc_buffer(length);
+      goto unlock;
+    }
+
+  if (mm_map_exist(get_current_mm(), filep->f_inode))
+    {
+      ret = -EBUSY;
+      goto unlock;
+    }
+
+  if (length == 0)
+    {
+      shmfs_free_buffer(object);
+      filep->f_inode->i_size = 0;
+    }
+  else
+    {
+      FAR void *newpaddr = shmfs_alloc_buffer(length);
+      if (newpaddr == NULL)
+        {
+          ret = -ENOMEM;
+          goto unlock;
+        }
+
       if (object->paddr != NULL)
         {
-          object->length = length;
-          filep->f_inode->i_size = length;
+          size_t copylen = MIN(object->length, length);
+          shmfs_buffer_copy(newpaddr, object->paddr, copylen);
         }
-      else
-        {
-          ret = -ENOMEM;
-        }
-    }
-  else if (object->length != length)
-    {
-      /* Re-allocate to the requested length (no in-place resize) */
 
-      newobj = shmfs_alloc_object(length);
-      if (newobj != NULL)
-        {
-          shmfs_free_object(object);
-          filep->f_inode->i_private = newobj;
-          filep->f_inode->i_size = length;
-        }
-      else
-        {
-          ret = -ENOMEM;
-        }
+      shmfs_free_buffer(object);
+      object->paddr = newpaddr;
+      object->length = length;
+      filep->f_inode->i_size = length;
     }
 
+unlock:
   nxmutex_unlock(&object->lock);
   return ret;
 }
@@ -383,27 +528,42 @@ static int shmfs_mmap(FAR struct file *filep,
 
   /* Keep the inode when mmapped, increase refcount */
 
-  inode_addref(filep->f_inode);
   object = filep->f_inode->i_private;
-  if (object)
+  DEBUGASSERT(object != NULL);
+
+  nxmutex_lock(&object->lock);
+
+  if (object->paddr == NULL)
     {
-      /* In FLAT mode the raw paddr is returned directly, so a mapping
-       * larger than the object would overflow into adjacent heap memory.
-       */
-
-      if (entry->length > object->length)
-        {
-          inode_release(filep->f_inode);
-          return -EINVAL;
-        }
-
-      ret = shmfs_map_object(object, &entry->vaddr);
+      nxmutex_unlock(&object->lock);
+      return -EINVAL;
     }
 
-  if (ret < 0 ||
-      (ret = shmfs_add_map(entry, filep->f_inode)) < 0)
+  /* In FLAT mode the raw paddr is returned directly, so a mapping
+   * larger than the object would overflow into adjacent heap memory.
+   */
+
+  if (entry->length > object->length)
     {
-      inode_release(filep->f_inode);
+      nxmutex_unlock(&object->lock);
+      return -EINVAL;
+    }
+
+  ret = shmfs_map_object(object, &entry->vaddr);
+
+  nxmutex_unlock(&object->lock);
+
+  if (ret >= 0)
+    {
+      ret = shmfs_add_map(entry, filep->f_inode);
+      if (ret < 0)
+        {
+          shmfs_unmap_area(nxsched_self()->group, entry->vaddr,
+                           entry->length);
+          return ret;
+        }
+
+      inode_addref(filep->f_inode);
     }
 
   return ret;
