@@ -47,8 +47,14 @@
  * Private Functions
  ****************************************************************************/
 
+/* Returns whether the caller must post the wqueue semaphore once the
+ * wqueue lock has been dropped.  Waking the worker runs the scheduler,
+ * which emits notes, and a note backend may call work_queue() again.  The
+ * wqueue lock is a plain spinlock, so doing that here would self-deadlock.
+ */
+
 static inline_function
-void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
+bool work_queue_start(FAR struct kwork_wqueue_s *wqueue,
                       FAR struct work_s *work, worker_t worker,
                       FAR void *arg, clock_t expected, clock_t delay)
 {
@@ -64,23 +70,14 @@ void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
   work->arg    = arg;      /* Callback argument */
   work->qtime  = expected; /* Expected time */
 
-  /* Record enqueue trace for scheduling latency analysis */
-
-  sched_note_wqueue_start(worker, arg);
-
   /* Insert to the pending list of the wqueue. */
 
   retimer |= work_insert_pending(wqueue, work, !delay);
 
-  /* Non-SMP fast-path. Notice that we can not wake up the worker
-   * thread in SMP configuaration due to the deadlock introduced by
-   * the circular-wait.
-   */
-
   if (!delay)
     {
-      nxsem_post(&wqueue->sem);
       hrtimer_cancel(&wqueue->timer);
+      return true;
     }
   else if (retimer)
     {
@@ -89,6 +86,8 @@ void work_queue_start(FAR struct kwork_wqueue_s *wqueue,
       hrtimer_start(&wqueue->timer, work_timer_expired,
                     TICK2NSEC((uint64_t)expected), HRTIMER_MODE_ABS);
     }
+
+  return false;
 }
 
 /****************************************************************************
@@ -124,14 +123,27 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
 {
   irqstate_t flags;
   int ret = -EINVAL;
+  bool post;
 
   if (wqueue && work && worker && delay <= WQUEUE_MAX_DELAY)
     {
+      /* Record enqueue trace for scheduling latency analysis.  Emitted
+       * before taking the lock: it runs the scheduler, and a note backend
+       * may call work_queue() again, which would re-enter the wqueue lock.
+       */
+
+      sched_note_wqueue_start(worker, arg);
+
       ret   = OK;
       flags = wqueue_lock(wqueue, false);
-      work_queue_start(wqueue, work, worker, arg,
-                       work->qtime + delay, delay);
+      post  = work_queue_start(wqueue, work, worker, arg,
+                               work->qtime + delay, delay);
       wqueue_unlock(wqueue, flags, false);
+
+      if (post)
+        {
+          nxsem_post(&wqueue->sem);
+        }
     }
 
   return ret;
@@ -179,6 +191,7 @@ int work_queue_wq(FAR struct kwork_wqueue_s *wqueue,
 {
   irqstate_t flags;
   clock_t expected;
+  bool        post;
   int          ret = -EINVAL;
 
   if (wqueue && work && worker && delay <= WQUEUE_MAX_DELAY)
@@ -187,11 +200,24 @@ int work_queue_wq(FAR struct kwork_wqueue_s *wqueue,
 
       bool nopreempt = !delay;
 
+      /* Record enqueue trace for scheduling latency analysis.  Emitted
+       * before taking the lock: it runs the scheduler, and a note backend
+       * may call work_queue() again, which would re-enter the wqueue lock.
+       */
+
+      sched_note_wqueue_start(worker, arg);
+
       ret      = OK;
       expected = delay ? clock_delay2abstick(delay) : clock_systime_ticks();
       flags    = wqueue_lock(wqueue, nopreempt);
-      work_queue_start(wqueue, work, worker, arg, expected, delay);
+      post     = work_queue_start(wqueue, work, worker, arg,
+                                  expected, delay);
       wqueue_unlock(wqueue, flags, nopreempt);
+
+      if (post)
+        {
+          nxsem_post(&wqueue->sem);
+        }
     }
 
   return ret;
