@@ -44,129 +44,114 @@
 FAR struct shmfs_object_s *shmfs_alloc_object(size_t length)
 {
   FAR struct shmfs_object_s *object;
-  bool allocated = false;
-
-#if defined(CONFIG_BUILD_FLAT)
-  /* in FLAT build, allocate the object metadata and the data in the same
-   * chunk in kernel heap
-   */
-
-  size_t hdr_size = sizeof(struct shmfs_object_s);
-  size_t alloc_size = length;
-  size_t cachesize = up_get_dcache_linesize();
-
-  if (cachesize > 0)
-    {
-      hdr_size = ALIGN_UP(hdr_size, cachesize);
-      alloc_size = ALIGN_UP(alloc_size, cachesize);
-      object = fs_large_memalign(cachesize, hdr_size + alloc_size);
-    }
-  else
-    {
-      object = fs_large_malloc(hdr_size + alloc_size);
-    }
-
-  if (object)
-    {
-      memset(object, 0, hdr_size + alloc_size);
-      object->paddr = (void *)((uintptr_t)object + hdr_size);
-      allocated = true;
-    }
-
-#elif defined(CONFIG_BUILD_PROTECTED)
-  /* in PROTECTED build, allocate the shm object in kernel heap, and shared
-   * memory in user heap
-   */
-
-  size_t alloc_size = length;
 
   object = fs_heap_zalloc(sizeof(struct shmfs_object_s));
-  if (object)
+  if (object == NULL)
     {
-      size_t cachesize = up_get_dcache_linesize();
+      return NULL;
+    }
 
-      if (cachesize > 0)
+  if (length > 0)
+    {
+      object->paddr = shmfs_alloc_buffer(length);
+      if (object->paddr == NULL)
         {
-          alloc_size = ALIGN_UP(alloc_size, cachesize);
-          object->paddr = kumm_memalign(cachesize, alloc_size);
-        }
-      else
-        {
-          object->paddr = kumm_malloc(alloc_size);
-        }
-
-      if (object->paddr)
-        {
-          memset(object->paddr, 0, alloc_size);
-          allocated = true;
+          shmfs_free_object(object);
+          return NULL;
         }
     }
 
-#elif defined(CONFIG_BUILD_KERNEL)
-  /* in KERNEL build, allocate the shared memory from page pool and store the
-   * physical address
-   */
+  object->length = length;
 
-  size_t i = 0;
-  FAR void **pages;
+  return object;
+}
+
+FAR void *shmfs_alloc_buffer(size_t length)
+{
+  FAR void *paddr = NULL;
+
+#if defined(CONFIG_BUILD_KERNEL)
   size_t n_pages = MM_NPAGES(length);
-
-  object = fs_heap_zalloc(sizeof(struct shmfs_object_s) +
-                          (n_pages - 1) * sizeof(object->paddr));
-
-  if (object)
+  FAR void **pages = fs_heap_malloc(n_pages * sizeof(FAR void *));
+  if (pages)
     {
-      pages = &object->paddr;
-      for (; i < n_pages; i++)
+      size_t i;
+      for (i = 0; i < n_pages; i++)
         {
           pages[i] = (FAR void *)mm_pgalloc(1);
           if (!pages[i])
             {
               break;
             }
-          else
-            {
-              /* Clear the page memory (requirement for truncate) */
 
-              up_addrenv_page_wipe((uintptr_t)pages[i]);
+          up_addrenv_page_wipe((uintptr_t)pages[i]);
+        }
+
+      if (i == n_pages)
+        {
+          paddr = pages;
+        }
+      else
+        {
+          while (i-- > 0)
+            {
+              mm_pgfree((uintptr_t)pages[i], 1);
             }
+
+          fs_heap_free(pages);
         }
     }
-
-  if (i == n_pages)
+#else
+  size_t alloc_size = length;
+  size_t cachesize = up_get_dcache_linesize();
+  if (cachesize > 0)
     {
-      allocated = true;
-    }
-#endif
-
-  if (allocated)
-    {
-      object->length = length;
+      alloc_size = ALIGN_UP(alloc_size, cachesize);
+#  if defined(CONFIG_BUILD_FLAT)
+      paddr = fs_large_memalign(cachesize, alloc_size);
+#  else
+      paddr = kumm_memalign(cachesize, alloc_size);
+#  endif
     }
   else
     {
-      /* delete any partial allocation */
-
-      shmfs_free_object(object);
-      object = NULL;
+#  if defined(CONFIG_BUILD_FLAT)
+      paddr = fs_large_malloc(alloc_size);
+#  else
+      paddr = kumm_malloc(alloc_size);
+#  endif
     }
 
-  return object;
+  if (paddr)
+    {
+      memset(paddr, 0, alloc_size);
+    }
+#endif
+
+  return paddr;
 }
 
 void shmfs_free_object(FAR struct shmfs_object_s *object)
 {
   if (object)
     {
+      shmfs_free_buffer(object);
+      fs_heap_free(object);
+    }
+}
+
+void shmfs_free_buffer(FAR struct shmfs_object_s *object)
+{
+  if (object && object->paddr)
+    {
 #if defined(CONFIG_BUILD_FLAT)
-      fs_large_free(object);
+      fs_large_free(object->paddr);
 #elif defined(CONFIG_BUILD_PROTECTED)
       kumm_free(object->paddr);
-      fs_heap_free(object);
 #elif defined(CONFIG_BUILD_KERNEL)
       size_t i;
       size_t n_pages = MM_NPAGES(object->length);
-      FAR void **pages = &object->paddr;
+      FAR void **pages = object->paddr;
       for (i = 0; i < n_pages; i++)
         {
           if (pages[i])
@@ -175,7 +160,10 @@ void shmfs_free_object(FAR struct shmfs_object_s *object)
             }
         }
 
-      fs_heap_free(object);
+      fs_heap_free(pages);
 #endif
+
+      object->paddr = NULL;
+      object->length = 0;
     }
 }

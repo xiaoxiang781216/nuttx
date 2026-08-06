@@ -45,20 +45,20 @@ struct shmfs_object_s
 
   size_t length;
 
-  /* Vector of allocations from physical memory.
+  /* Pointer to the physical memory backing store.
    *
-   * - In flat and protected builds this is a pointer to the
-   *   allocated memory.
+   * - In flat and protected builds this points to a contiguous buffer
+   *   allocated from the kernel heap.
    *
-   * - In kernel build this is start of a malloc'd vector of void pointers
-   *   and the length of the vector is MM_NPAGES(length).
+   * - In kernel build this points to a separately malloc'd array of
+   *   page pointers (length MM_NPAGES(length)), each entry a physical
+   *   page from mm_pgalloc.
+   *
+   * May be NULL when the backing store has been dropped by ftruncate(0);
+   * the object shell remains valid.
    */
 
   FAR void *paddr;
-
-  /* The struct continues here as malloc'd array of void pointers
-   * if CONFIG_BUILD_KERNEL
-   */
 };
 
 /****************************************************************************
@@ -66,7 +66,9 @@ struct shmfs_object_s
  ****************************************************************************/
 
 FAR struct shmfs_object_s *shmfs_alloc_object(size_t length);
+FAR void *shmfs_alloc_buffer(size_t length);
 
 void shmfs_free_object(FAR struct shmfs_object_s *object);
+void shmfs_free_buffer(FAR struct shmfs_object_s *object);
 
 #endif
