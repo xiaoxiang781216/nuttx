@@ -584,7 +584,7 @@ static void note_drivers_initialize(void)
 
 #if defined(CONFIG_DRIVERS_NOTESTREAM) && defined(CONFIG_DRIVERS_NOTEBUF)
   ring_mpmc_init(&g_notebufstream.ring, &g_notebuf_blob,
-                 sizeof(g_notebuf_blob));
+                 sizeof(g_notebuf_blob), 0);
 #endif
 }
 

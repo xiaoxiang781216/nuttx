@@ -132,7 +132,7 @@ static ssize_t notesnap_add(FAR struct note_driver_s *drv,
   if (snap == &g_notesnap)
     {
       ring_mpmc_init(&snap->ring, &g_notesnap_blob,
-                     sizeof(g_notesnap_blob));
+                     sizeof(g_notesnap_blob), 0);
     }
 
   /* ring_mpmc_overwrite is CAS-based and reentrancy-safe, so no lock is
@@ -244,7 +244,7 @@ notesnap_initialize(FAR const char *devname, size_t bufsize)
       return NULL;
     }
 
-  ring_mpmc_init(&snap->ring, buffer, bufsize);
+  ring_mpmc_init(&snap->ring, buffer, bufsize, 0);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   snap->driver.name = (FAR const char *)(snap + 1);

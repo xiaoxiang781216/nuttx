@@ -376,7 +376,7 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 #ifdef CONFIG_RAMLOG_SYSLOG
   if (priv == &g_ramlog_dev)
     {
-      ring_mpmc_init(r, g_ramlog_blob, sizeof(g_ramlog_blob));
+      ring_mpmc_init(r, g_ramlog_blob, sizeof(g_ramlog_blob), 0);
     }
 #endif
 
@@ -671,7 +671,8 @@ static int ramlog_file_open(FAR struct file *filep)
 #ifdef CONFIG_RAMLOG_SYSLOG
   if (priv == &g_ramlog_dev)
     {
-      ring_mpmc_init(&priv->rl_ring, g_ramlog_blob, sizeof(g_ramlog_blob));
+      ring_mpmc_init(&priv->rl_ring, g_ramlog_blob, sizeof(g_ramlog_blob),
+                     0);
     }
 #endif
 
@@ -740,7 +741,7 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
       return -ENOMEM;
     }
 
-  ring_mpmc_init(&priv->rl_ring, buffer, buflen);
+  ring_mpmc_init(&priv->rl_ring, buffer, buflen, 0);
 
   spin_lock_init(&priv->rl_lock);
 

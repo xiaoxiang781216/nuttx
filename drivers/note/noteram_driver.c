@@ -275,7 +275,7 @@ static int noteram_open(FAR struct file *filep)
 
   if (drv == &g_noteram_driver)
     {
-      ring_mpmc_init(&drv->ring, g_noteram_blob, sizeof(g_noteram_blob));
+      ring_mpmc_init(&drv->ring, g_noteram_blob, sizeof(g_noteram_blob), 0);
     }
 
   atomic_add(&drv->count_ref, 1);
@@ -665,7 +665,7 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
 
   if (drv == &g_noteram_driver)
     {
-      ring_mpmc_init(&drv->ring, g_noteram_blob, sizeof(g_noteram_blob));
+      ring_mpmc_init(&drv->ring, g_noteram_blob, sizeof(g_noteram_blob), 0);
     }
 
   if (ratelimit_islimited(&drv->ratelimit))
@@ -803,7 +803,7 @@ noteram_initialize_with_buffer(FAR const char *devname,
 
   drv->driver.ops = &g_noteram_ops;
 
-  ring_mpmc_init(&drv->ring, buffer, bufsize);
+  ring_mpmc_init(&drv->ring, buffer, bufsize, 0);
 
   atomic_set(&drv->overwrite, overwrite);
   dq_init(&drv->poll_list);
