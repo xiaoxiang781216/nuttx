@@ -464,15 +464,15 @@ include(nuttx_remove_compile_options)
 include(nuttx_source_file_properties)
 include(menuconfig)
 
-# add Nuttx CMake custom module exexternally provided
-if(NUTTX_HAVE_CUSTOM_CMAKE_MODULE)
-  include(nuttx_custom_module)
-endif()
-
 include(ExternalProject)
 include(FetchContent)
 
 set(FETCHCONTENT_QUIET OFF)
+
+# add Nuttx CMake custom module exexternally provided
+if(NUTTX_HAVE_CUSTOM_CMAKE_MODULE)
+  include(nuttx_custom_module)
+endif()
 
 # Board common directory #####################################################
 
