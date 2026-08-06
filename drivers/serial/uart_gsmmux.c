@@ -555,8 +555,12 @@ static ssize_t gsmmux_uart_write(FAR struct gsmmux_s *gsmmux,
         {
           if (gsmmux->uart->ops->sendbuf)
             {
-              written += uart_sendbuf(gsmmux->uart, iov[i].iov_base,
-                                      iov[i].iov_len);
+              ssize_t ret = uart_sendbuf(gsmmux->uart, iov[i].iov_base,
+                                         iov[i].iov_len);
+              if (ret > 0)
+                {
+                  written += ret;
+                }
             }
           else
             {
