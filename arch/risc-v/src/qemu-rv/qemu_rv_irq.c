@@ -142,6 +142,12 @@ void up_irqinitialize(void)
   riscv_ipi_clear(0);
 
 #ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+  /* IMSIC IPI: attach handler to external interrupt path (EIID=1),
+   * and enable the IPI identity in this core's IMSIC.
+   */
+
+  irq_attach(RISCV_IRQ_EXT + RISCV_IMSIC_IPI_ID,
+             riscv_cpu_call_handler, NULL);
   riscv_imsic_local_eie_enable(RISCV_IMSIC_IPI_ID);
 #else
   up_enable_irq(RISCV_IRQ_SOFT);

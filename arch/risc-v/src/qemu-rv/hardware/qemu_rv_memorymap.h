@@ -55,4 +55,10 @@
 #  define QEMU_RV_IMSIC_BASE   0x24000000
 #endif
 
+/* Common layer uses RISCV_IMSIC_BASE */
+
+#ifdef CONFIG_ARCH_RV_HAVE_IMSIC
+#  define RISCV_IMSIC_BASE    QEMU_RV_IMSIC_BASE
+#endif
+
 #endif /* __ARCH_RISCV_SRC_QEMU_RV_HARDWARE_QEMU_RV_MEMORYMAP_H */
