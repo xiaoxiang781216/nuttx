@@ -220,12 +220,8 @@ static int shmfs_close(FAR struct file *filep)
 static int shmfs_truncate(FAR struct file *filep, off_t length)
 {
   FAR struct shmfs_object_s *object;
+  FAR struct shmfs_object_s *newobj;
   int ret = 0;
-
-  if (length == 0)
-    {
-      return -EINVAL;
-    }
 
   inode_lock();
   object = filep->f_inode->i_private;
@@ -244,9 +240,19 @@ static int shmfs_truncate(FAR struct file *filep, off_t length)
     }
   else if (object->length != length)
     {
-      /* This doesn't support resize */
+      /* Re-allocate to the requested length (no in-place resize) */
 
-      ret = -EINVAL;
+      newobj = shmfs_alloc_object(length);
+      if (newobj != NULL)
+        {
+          shmfs_free_object(object);
+          filep->f_inode->i_private = newobj;
+          filep->f_inode->i_size = length;
+        }
+      else
+        {
+          ret = -ENOMEM;
+        }
     }
 
   inode_unlock();
