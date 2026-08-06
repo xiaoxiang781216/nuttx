@@ -86,9 +86,22 @@ void riscv_cpu_boot(int cpu)
 
   riscv_ipi_clear(cpu);
 
+#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+  /* IMSIC IPI: enable external interrupt and IMSIC IPI identity
+   * before waiting for the boot IPI from the primary core.
+   */
+
+  riscv_imsic_csr_write(ISELECT_EITHRESHOLD,
+                         RISCV_IMSIC_ENABLE_EITHRESHOLD);
+  riscv_imsic_csr_write(ISELECT_EIDELIVERY,
+                         RISCV_IMSIC_ENABLE_EIDELIVERY);
+  riscv_imsic_local_eie_enable(RISCV_IMSIC_IPI_ID);
+  up_enable_irq(RISCV_IRQ_EXT);
+#else
   /* Enable machine software interrupt for IPI to boot */
 
   up_enable_irq(RISCV_IRQ_SOFT);
+#endif
 
   /* Wait interrupt */
 
@@ -96,7 +109,11 @@ void riscv_cpu_boot(int cpu)
     {
       asm("WFI");
     }
+#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+  while (!(READ_CSR(CSR_IP) & IP_EIP));
+#else
   while (!(READ_CSR(CSR_IP) & IP_SIP));
+#endif
 
 #ifdef CONFIG_RISCV_PERCPU_SCRATCH
   /* Initialize the per CPU areas */
@@ -129,6 +146,12 @@ void riscv_cpu_boot(int cpu)
   /* Clear machine software interrupt for CPU(cpu) */
 
   riscv_ipi_clear(cpu);
+
+#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+  /* Claim the boot IPI that woke us up (clear IMSIC pending bit) */
+
+  SWAP_CSR(CSR_TOPEI, 0);
+#endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that this CPU has started */

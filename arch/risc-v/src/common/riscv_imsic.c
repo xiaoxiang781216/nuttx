@@ -25,6 +25,10 @@
 #include "riscv_internal.h"
 #include "riscv_aia.h"
 
+#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+#  include "chip.h"
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -61,3 +65,30 @@ void riscv_imsic_local_eix_update(unsigned long base_id,
         }
     }
 }
+
+/****************************************************************************
+ * Name: riscv_imsic_send_ipi
+ *
+ * Description:
+ *   Send an IPI to the target CPU by writing the IPI identity to
+ *   the target hart's IMSIC MMIO page (seteipnum_le register).
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+void riscv_imsic_send_ipi(int cpu)
+{
+  uintptr_t hartid = riscv_cpuid_to_hartid(cpu);
+  uintptr_t page   = RISCV_IMSIC_BASE +
+                     ((uintptr_t)hartid << RISCV_IMSIC_MMIO_PAGE_BIT);
+
+  /* AIA spec Ch.6: A FENCE is needed before sending an MSI to ensure
+   * prior memory stores (e.g. task delivery data) are visible to the
+   * target hart before the interrupt arrives.
+   */
+
+  __asm__ __volatile__ ("fence rw, w" ::: "memory");
+
+  putreg32(RISCV_IMSIC_IPI_ID, page + RISCV_IMSIC_MMIO_PAGE_LE);
+}
+#endif

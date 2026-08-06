@@ -844,6 +844,16 @@ config ARCH_RV_HAVE_IMSIC
 	bool "Enable RISC-V AIA Incoming Message Controller support"
 	default n
 
+config ARCH_RV_USE_IMSIC_IPI
+	bool "Use IMSIC for inter-processor interrupts"
+	default n
+	depends on ARCH_RV_HAVE_IMSIC && SMP
+	---help---
+		Use IMSIC MSI mechanism for IPI instead of CLINT/ACLINT.
+		When enabled, IPI is sent by writing the IPI identity to the
+		target hart's IMSIC MMIO page, and received via the external
+		interrupt path.
+
 endif # ARCH_RV_EXT_AIA
 
 choice
