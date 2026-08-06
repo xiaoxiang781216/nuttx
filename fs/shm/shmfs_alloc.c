@@ -61,6 +61,7 @@ FAR struct shmfs_object_s *shmfs_alloc_object(size_t length)
         }
     }
 
+  nxmutex_init(&object->lock);
   object->length = length;
 
   return object;
@@ -135,6 +136,7 @@ void shmfs_free_object(FAR struct shmfs_object_s *object)
 {
   if (object)
     {
+      nxmutex_destroy(&object->lock);
       shmfs_free_buffer(object);
       fs_heap_free(object);
     }

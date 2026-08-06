@@ -135,8 +135,10 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
 
       if ((oflags & O_TRUNC) == O_TRUNC && inode->i_private != NULL)
         {
-          shmfs_free_object(inode->i_private);
-          inode->i_private = NULL;
+          FAR struct shmfs_object_s *obj = inode->i_private;
+          nxmutex_lock(&obj->lock);
+          shmfs_free_buffer(obj);
+          nxmutex_unlock(&obj->lock);
           inode->i_size = 0;
         }
     }
@@ -162,7 +164,14 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
 
       INODE_SET_SHM(inode);
       inode->u.i_ops = &g_shmfs_operations;
-      inode->i_private = NULL;
+      inode->i_private = shmfs_alloc_object(0);
+      if (inode->i_private == NULL)
+        {
+          inode_remove(fullpath);
+          ret = -ENOMEM;
+          goto errout_with_sem;
+        }
+
       inode_addref(inode);
     }
 

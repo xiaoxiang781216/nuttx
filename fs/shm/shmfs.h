@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/fs/fs.h>
+#include <nuttx/mutex.h>
 
 /****************************************************************************
  * Public Data
@@ -41,6 +42,12 @@ extern const struct file_operations g_shmfs_operations;
 
 struct shmfs_object_s
 {
+  /* Protects paddr/length against concurrent access (ftruncate vs
+   * read/write/mmap/O_TRUNC).
+   */
+
+  mutex_t lock;
+
   /* Total number of bytes needed from physical memory. */
 
   size_t length;

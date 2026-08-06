@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <assert.h>
+#include <string.h>
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mm/map.h>
@@ -104,9 +105,12 @@ static ssize_t shmfs_read(FAR struct file *filep, FAR char *buffer,
 
   sho = filep->f_inode->i_private;
 
+  nxmutex_lock(&sho->lock);
+
   if (filep->f_pos > sho->length)
     {
-      return 0;
+      nread = 0;
+      goto unlock;
     }
 
   /* Handle attempts to read beyond the end of the file. */
@@ -133,6 +137,8 @@ static ssize_t shmfs_read(FAR struct file *filep, FAR char *buffer,
       DEBUGASSERT(sho->length == 0 && nread == 0);
     }
 
+unlock:
+  nxmutex_unlock(&sho->lock);
   return nread;
 }
 
@@ -152,6 +158,8 @@ static ssize_t shmfs_write(FAR struct file *filep, FAR const char *buffer,
 
   sho = filep->f_inode->i_private;
 
+  nxmutex_lock(&sho->lock);
+
   /* Handle attempts to write beyond the end of the file */
 
   startpos = filep->f_pos;
@@ -162,7 +170,8 @@ static ssize_t shmfs_write(FAR struct file *filep, FAR const char *buffer,
 
   if (endpos > sho->length)
     {
-      return -EFBIG;
+      nwritten = -EFBIG;
+      goto unlock;
     }
 
   /* Copy data from the user buffer to the memory object */
@@ -177,6 +186,8 @@ static ssize_t shmfs_write(FAR struct file *filep, FAR const char *buffer,
       DEBUGASSERT(sho->length == 0 && nwritten == 0);
     }
 
+unlock:
+  nxmutex_unlock(&sho->lock);
   return nwritten;
 }
 
@@ -220,22 +231,24 @@ static int shmfs_close(FAR struct file *filep)
 static int shmfs_truncate(FAR struct file *filep, off_t length)
 {
   FAR struct shmfs_object_s *object;
-  FAR struct shmfs_object_s *newobj;
   int ret = 0;
 
-  inode_lock();
   object = filep->f_inode->i_private;
-  if (!object)
+  DEBUGASSERT(object != NULL);
+
+  nxmutex_lock(&object->lock);
+
+  if (object->paddr == NULL)
     {
-      filep->f_inode->i_private = shmfs_alloc_object(length);
-      if (!filep->f_inode->i_private)
+      object->paddr = shmfs_alloc_buffer(length);
+      if (object->paddr != NULL)
         {
-          filep->f_inode->i_size = 0;
-          ret = -EFAULT;
+          object->length = length;
+          filep->f_inode->i_size = length;
         }
       else
         {
-          filep->f_inode->i_size = length;
+          ret = -ENOMEM;
         }
     }
   else if (object->length != length)
@@ -255,7 +268,7 @@ static int shmfs_truncate(FAR struct file *filep, off_t length)
         }
     }
 
-  inode_unlock();
+  nxmutex_unlock(&object->lock);
   return ret;
 }
 
