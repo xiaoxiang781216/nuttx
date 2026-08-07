@@ -357,6 +357,19 @@ struct net_driver_s
 
   uint16_t d_pktsize;           /* Maximum packet size */
 
+  /* Upper limit for d_pktsize, i.e. the largest frame that the driver and
+   * the hardware are really able to send/receive.  d_pktsize may be changed
+   * at run time (SIOCSIFMTU, the MTU option of an ICMPv6 Router
+   * Advertisement, ...) but never beyond this value.
+   *
+   * A driver that is able to handle frames larger than its default
+   * d_pktsize (for example a driver supporting jumbo frames) may set this
+   * field before calling netdev_register().  Otherwise netdev_register()
+   * will initialize it with the default d_pktsize of the device.
+   */
+
+  uint16_t d_maxpktsize;        /* Maximum packet size supported by driver */
+
   /* Link layer address */
 
 #if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_NET_6LOWPAN) || \

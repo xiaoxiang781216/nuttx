@@ -37,6 +37,7 @@
 #include <nuttx/net/dns.h>
 
 #include "devif/devif.h"
+#include "netdev/netdev.h"
 #include "netlink/netlink.h"
 #include "neighbor/neighbor.h"
 #include "utils/utils.h"
@@ -395,17 +396,21 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
         uint16_t optlen;
         int ndx;
 
-        /* Get the length of the option data */
+        /* Get the length of the option data.  Note that the ICMPv6 header
+         * does not necessarily follow the IPv6 header immediately; extension
+         * headers may precede it and they are included in the IPv6 payload
+         * length.
+         */
 
         pktlen = (uint16_t)ipv6->len[0] << 8 | ipv6->len[1];
-        if (pktlen <= ICMPv6_RADV_MINLEN)
+        if (IPv6_HDRLEN + pktlen <= ICMPv6_RADV_MINLEN + iplen)
           {
             /* Too small to contain any options */
 
             goto icmpv6_drop_packet;
           }
 
-        optlen = ICMPv6_RADV_OPTLEN(pktlen);
+        optlen = ICMPv6_RADV_OPTLEN(IPv6_HDRLEN + pktlen - iplen);
 
         /* We need to have a valid router advertisement with a Prefix and
          * with the "A" bit set in the flags.  Options immediately follow
@@ -416,10 +421,24 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
         options = (FAR uint8_t *)adv +
                    sizeof(struct icmpv6_router_advertise_s);
 
-        for (ndx = 0; ndx < optlen; )
+        for (ndx = 0; ndx + ICMPv6_OPT_MINLEN <= optlen; )
           {
-           FAR struct icmpv6_generic_s *opt =
+            FAR struct icmpv6_generic_s *opt =
                                 (FAR struct icmpv6_generic_s *)&options[ndx];
+            uint16_t curlen = opt->optlen << 3;
+
+            /* RFC 4861: Nodes MUST silently discard an ND packet that
+             * contains an option with length zero.  Stop parsing also if
+             * the option claims to be longer than the remaining data,
+             * otherwise we would loop forever or read beyond the packet.
+             */
+
+            if (curlen == 0 || ndx + curlen > optlen)
+              {
+                nwarn("WARNING: Bad ND option: type %u, length %u\n",
+                      opt->opttype, opt->optlen);
+                break;
+              }
 
             switch (opt->opttype)
               {
@@ -435,6 +454,17 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
                   {
                     FAR struct icmpv6_prefixinfo_s *prefixopt =
                                       (FAR struct icmpv6_prefixinfo_s *)opt;
+
+                    /* The Prefix Information option has a fixed length of
+                     * 32 octets.
+                     */
+
+                    if (curlen != sizeof(struct icmpv6_prefixinfo_s))
+                      {
+                        nwarn("WARNING: Bad prefix option length %u\n",
+                              prefixopt->optlen);
+                        break;
+                      }
 
                    /* Is the "A" flag set? */
 
@@ -465,7 +495,35 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
                   {
                     FAR struct icmpv6_mtu_s *mtuopt =
                                         (FAR struct icmpv6_mtu_s *)opt;
-                    dev->d_pktsize = NTOHS(mtuopt->mtu[1]) + dev->d_llhdrlen;
+                    int mtu;
+
+                    /* The MTU option has a fixed length of 8 octets */
+
+                    if (curlen != sizeof(struct icmpv6_mtu_s))
+                      {
+                        nwarn("WARNING: Bad MTU option length %u\n",
+                              mtuopt->optlen);
+                        break;
+                      }
+
+                    mtu = NTOHS(mtuopt->mtu[0]) << 16 |
+                          NTOHS(mtuopt->mtu[1]);
+
+                    /* RFC 4861: Copy the advertised value only if it is not
+                     * below the IPv6 minimum link MTU and does not exceed
+                     * what this link/driver can really handle.  A router
+                     * announcing a larger MTU than the hardware supports
+                     * (e.g. 1500 on a device limited to 1400) must not be
+                     * allowed to enlarge our MTU:  we would build frames
+                     * that the driver can only drop or truncate.
+                     */
+
+                    if (mtu < IPv6_MIN_MTU || netdev_setmtu(dev, mtu) < 0)
+                      {
+                        nwarn("WARNING: %s: Ignoring advertised MTU %d"
+                              ", keeping %d\n", dev->d_ifname, mtu,
+                              netdev_getmtu(dev));
+                      }
                   }
                   break;
 
@@ -519,7 +577,7 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
 
             /* Skip to the next option (units of octets) */
 
-            ndx += (opt->optlen << 3);
+            ndx += curlen;
           }
 
         if (prefix)

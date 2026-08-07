@@ -2,7 +2,8 @@
  * include/nuttx/net/icmpv6.h
  *
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2007-2009, 2012, 2014, 2017 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2007-2009, 2012, 2014, 2017 Gregory Nutt.
+ *                         All rights reserved.
  * SPDX-FileCopyrightText: 2001-2003, Adam Dunkels. All rights reserved.
  * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  * SPDX-FileContributor: Adam Dunkels <adam@dunkels.com>
@@ -103,6 +104,13 @@
 #define ICMPv6_OPT_REDIRECT   4  /* Redirected Header */
 #define ICMPv6_OPT_MTU        5  /* MTU */
 #define ICMPv6_OPT_RDNSS      25 /* DNS */
+
+/* Neighbor Discovery options are a multiple of 8 octets in length and the
+ * option length field counts those 8-octet units.  Hence 8 is the smallest
+ * legal option size (a length field of zero is invalid, see RFC 4861).
+ */
+
+#define ICMPv6_OPT_MINLEN     8
 
 /* ICMPv6 Neighbor Advertisement message flags */
 

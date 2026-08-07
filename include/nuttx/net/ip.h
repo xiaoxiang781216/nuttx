@@ -87,6 +87,7 @@
 
 #ifdef CONFIG_NET_IPv6
 #  define IPv6_HDRLEN     40    /* Size of IPv6 header */
+#  define IPv6_MIN_MTU    1280  /* Minimum MTU of an IPv6 link (RFC 8200) */
 #endif
 
 /****************************************************************************

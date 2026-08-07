@@ -422,6 +422,17 @@ int netdev_register(FAR struct net_driver_s *dev, enum net_lltype_e lltype)
           dev->d_pktsize = pktsize;
         }
 
+      /* Remember the largest packet size that this device can handle.  It
+       * is the upper limit whenever d_pktsize is modified at run time.  A
+       * driver may announce a larger capability than its default packet
+       * size by initializing d_maxpktsize before registering.
+       */
+
+      if (dev->d_maxpktsize < dev->d_pktsize)
+        {
+          dev->d_maxpktsize = dev->d_pktsize;
+        }
+
       dev->d_flags |= flags;
 
       /* Remember the verified link type */

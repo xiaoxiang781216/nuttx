@@ -232,7 +232,7 @@ void icmpv6_radvertise(FAR struct net_driver_s *dev)
   mtu->optlen       = 1;
   mtu->reserved     = 0;
   mtu->mtu[0]       = 0;
-  mtu->mtu[1]       = HTONS(dev->d_pktsize - dev->d_llhdrlen);
+  mtu->mtu[1]       = HTONS(netdev_getmtu(dev));
 
 #ifndef CONFIG_NET_ICMPv6_ROUTER_MANUAL
   /* We only anounce a prefix when we have one. */

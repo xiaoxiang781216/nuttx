@@ -1399,7 +1399,7 @@ uint16_t devif_get_mtu(FAR struct net_driver_s *dev)
 {
   if (dev->d_iob == NULL || dev->d_len == 0)
     {
-      return dev->d_pktsize - dev->d_llhdrlen;
+      return netdev_getmtu(dev);
     }
 
 #if (defined(CONFIG_NET_IPv6) && \
@@ -1444,7 +1444,7 @@ uint16_t devif_get_mtu(FAR struct net_driver_s *dev)
     }
 #  endif
 
-  return dev->d_pktsize - dev->d_llhdrlen;
+  return netdev_getmtu(dev);
 }
 
 #endif /* CONFIG_NET */

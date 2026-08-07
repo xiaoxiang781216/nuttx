@@ -50,14 +50,6 @@
 #ifdef CONFIG_NET_ICMPv6
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* The latest drafts declared increase in minimal mtu up to 1280. */
-
-#define ICMPv6_MINMTULEN  1280
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -107,9 +99,9 @@ void icmpv6_reply(FAR struct net_driver_s *dev, int type, int code, int data)
 
   /* RFC says return as much as we can without exceeding 1280 bytes. */
 
-  if (datalen > ICMPv6_MINMTULEN - ipicmplen)
+  if (datalen > IPv6_MIN_MTU - ipicmplen)
     {
-      datalen = ICMPv6_MINMTULEN - ipicmplen;
+      datalen = IPv6_MIN_MTU - ipicmplen;
       iob_trimtail(dev->d_iob, dev->d_iob->io_pktlen - datalen);
     }
 

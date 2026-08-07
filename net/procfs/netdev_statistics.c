@@ -270,7 +270,7 @@ static int netprocfs_linklayer(FAR struct netprocfs_file_s *netfile)
                   " at %s", status);
 
   len += snprintf(&netfile->line[len], NET_LINELEN - len,
-                  " mtu %d\n", (dev->d_pktsize - dev->d_llhdrlen));
+                  " mtu %d\n", netdev_getmtu(dev));
   return len;
 }
 

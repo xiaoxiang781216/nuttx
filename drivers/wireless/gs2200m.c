@@ -3525,6 +3525,14 @@ FAR void *gs2200m_register(FAR const char *devpath,
       goto errout;
     }
 
+  /* Set d_pktsize before registering so that netdev_register() keeps it and
+   * records it as the maximum packet size of this device.  Assigning it
+   * afterwards would leave d_pktsize larger than d_maxpktsize and prevent
+   * the MTU from ever being set to the size this device really supports.
+   */
+
+  dev->net_dev.d_pktsize  = MAX_PKT_LEN;
+
   ret = netdev_register(&dev->net_dev, NET_LL_IEEE80211);
   if (ret < 0)
     {
@@ -3532,9 +3540,11 @@ FAR void *gs2200m_register(FAR const char *devpath,
       goto errout;
     }
 
-  /* Set d_pktsize and d_llhdrlen to show mtu info correctly */
+  /* This device has no link layer header.  It can only be cleared after
+   * netdev_register(), which replaces a zero d_llhdrlen with the default
+   * header length of the link type.
+   */
 
-  dev->net_dev.d_pktsize  = MAX_PKT_LEN;
   dev->net_dev.d_llhdrlen = 0;
 
   return dev;

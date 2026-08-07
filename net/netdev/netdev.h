@@ -111,6 +111,44 @@ typedef int (*netdev_callback_t)(FAR struct net_driver_s *dev,
 bool netdev_verify(FAR struct net_driver_s *dev);
 
 /****************************************************************************
+ * Name: netdev_getmtu
+ *
+ * Description:
+ *   Get the current MTU of a network device.
+ *
+ * Input Parameters:
+ *   dev - The network device
+ *
+ * Returned Value:
+ *   The current MTU of the device.
+ *
+ ****************************************************************************/
+
+int netdev_getmtu(FAR struct net_driver_s *dev);
+
+/****************************************************************************
+ * Name: netdev_setmtu
+ *
+ * Description:
+ *   Change the MTU of a network device.  The request is rejected if the
+ *   resulting packet size would exceed the capability reported by the
+ *   driver (d_maxpktsize).  No lower limit is enforced other than a
+ *   positive MTU.
+ *
+ * Input Parameters:
+ *   dev - The network device
+ *   mtu - The requested MTU
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success.  -EINVAL is returned if the requested
+ *   MTU is out of the range supported by the device, in which case the MTU
+ *   of the device is left unchanged.
+ *
+ ****************************************************************************/
+
+int netdev_setmtu(FAR struct net_driver_s *dev, int mtu);
+
+/****************************************************************************
  * Name: netdev_foreach
  *
  * Description:

@@ -518,7 +518,7 @@ netlink_get_device(FAR struct net_driver_s *dev,
 
   resp->attrmtu.rta_len  = RTA_LENGTH(sizeof(uint32_t));
   resp->attrmtu.rta_type = IFLA_MTU;
-  resp->mtu              = NETDEV_PKTSIZE(dev) - NET_LL_HDRLEN(dev);
+  resp->mtu              = netdev_getmtu(dev);
 
 #if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_NET_TUN)
   resp->attraddr.rta_len  = RTA_LENGTH(ETH_ALEN);

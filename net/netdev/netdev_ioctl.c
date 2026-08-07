@@ -1026,10 +1026,10 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
 
       case SIOCGLIFMTU:  /* Get MTU size */
       case SIOCGIFMTU:   /* Get MTU size */
-        req->ifr_mtu = NETDEV_PKTSIZE(dev) - dev->d_llhdrlen;
+        req->ifr_mtu = netdev_getmtu(dev);
         break;
       case SIOCSIFMTU:   /* Set MTU size */
-        NETDEV_PKTSIZE(dev) = req->ifr_mtu + dev->d_llhdrlen;
+        ret = netdev_setmtu(dev, req->ifr_mtu);
         break;
 
 #ifdef CONFIG_NET_ICMPv6_AUTOCONF
