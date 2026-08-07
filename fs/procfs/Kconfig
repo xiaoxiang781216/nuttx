@@ -175,4 +175,20 @@ config FS_PROCFS_LEVEL0_MAX_PIDS
 		of concurrent tasks. If g_npidhash grows beyond this at runtime,
 		opendir("/proc") will fail with ENOMEM.
 
+config FS_PROCFS_PREALLOC_PROCFILE
+	int "Number of pre-allocated procfs file structure slots"
+	default 0
+	range 0 32
+	depends on !FS_PROCFS_EXCLUDE_PROCESS
+	---help---
+		Number of statically pre-allocated slots for struct proc_file_s,
+		used when opening procfs per-task files (e.g. /proc/<pid>/status).
+		When set to a non-zero value, proc_open() will use pre-allocated
+		buffers instead of dynamic heap allocation. If all slots are in
+		use, proc_open will fail with ENOMEM.
+
+		Set to 0 to use dynamic allocation (original behavior).
+		Typical value: 2~4. ps command uses open/read/close serially,
+		so 1 slot is sufficient for single-task ps execution.
+
 endif # FS_PROCFS

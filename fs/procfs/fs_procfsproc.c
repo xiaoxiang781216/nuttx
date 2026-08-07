@@ -50,6 +50,7 @@
 #include <nuttx/tls.h>
 #include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/environ.h>
 #include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
@@ -159,6 +160,18 @@ static FAR const char * const g_policy[4] =
 {
   "SCHED_FIFO", "SCHED_RR", "SCHED_SPORADIC"
 };
+
+#if CONFIG_FS_PROCFS_PREALLOC_PROCFILE > 0
+
+/* Static mempool: prealloc slots, no dynamic expansion */
+
+MEMPOOL_DEFINE(g_proc_file_pool,
+               sizeof(struct proc_file_s),
+               CONFIG_FS_PROCFS_PREALLOC_PROCFILE,
+               CONFIG_FS_PROCFS_PREALLOC_PROCFILE,
+               0);
+
+#endif /* CONFIG_FS_PROCFS_PREALLOC_PROCFILE > 0 */
 
 /****************************************************************************
  * Private Function Prototypes
@@ -409,6 +422,34 @@ static FAR const char * const g_ttypenames[4] =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#if CONFIG_FS_PROCFS_PREALLOC_PROCFILE > 0
+
+static FAR struct proc_file_s *proc_file_alloc(void)
+{
+  return (FAR struct proc_file_s *)
+    mempool_zallocate(&g_proc_file_pool, 0);
+}
+
+static void proc_file_free(FAR struct proc_file_s *procfile)
+{
+  mempool_release(&g_proc_file_pool, (FAR void *)procfile);
+}
+
+#else /* CONFIG_FS_PROCFS_PREALLOC_PROCFILE == 0 */
+
+static FAR struct proc_file_s *proc_file_alloc(void)
+{
+  return (FAR struct proc_file_s *)
+    fs_heap_zalloc(sizeof(struct proc_file_s));
+}
+
+static void proc_file_free(FAR struct proc_file_s *procfile)
+{
+  fs_heap_free(procfile);
+}
+
+#endif /* CONFIG_FS_PROCFS_PREALLOC_PROCFILE */
 
 /****************************************************************************
  * Name: proc_findnode
@@ -1611,8 +1652,7 @@ static int proc_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Allocate a container to hold the task and node selection */
 
-  procfile = (FAR struct proc_file_s *)
-    fs_heap_zalloc(sizeof(struct proc_file_s));
+  procfile = proc_file_alloc();
   if (procfile == NULL)
     {
       ferr("ERROR: Failed to allocate file container\n");
@@ -1645,7 +1685,7 @@ static int proc_close(FAR struct file *filep)
 
   /* Release the file container structure */
 
-  fs_heap_free(procfile);
+  proc_file_free(procfile);
   filep->f_priv = NULL;
   return OK;
 }
