@@ -135,6 +135,7 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
 {
   FAR struct work_s *work;
   FAR struct work_s *next;
+  unsigned int wakeups = 0u;
   irqstate_t flags;
   worker_t worker;
   FAR void *arg;
@@ -189,9 +190,23 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
 
           if (count++ > 0u && count <= wqueue->nthreads)
             {
-              nxsem_post(&wqueue->sem);
+              wakeups++;
             }
         }
+
+      /* Wake the idle workers so they dispatch in parallel.  Posting the
+       * semaphore runs the scheduler, which emits notes, and a note
+       * backend may re-enter work_queue() and the wqueue spinlock, so the
+       * lock must be dropped around the posts.
+       */
+
+      wqueue_unlock(wqueue, flags, true);
+      for (; wakeups > 0u; wakeups--)
+        {
+          nxsem_post(&wqueue->sem);
+        }
+
+      flags = wqueue_lock(wqueue, true);
     }
 
   while (!list_is_empty(&wqueue->expired))
@@ -233,16 +248,20 @@ static inline_function void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
 
       kworker->work = NULL;
 
-      /* Check if someone is waiting, if so, wakeup it */
+      /* Accumulate any cancel_sync waiters; they are posted once the lock
+       * is released at the end of the function.
+       */
 
-      while (kworker->wait_count > 0)
-        {
-          kworker->wait_count--;
-          nxsem_post(&kworker->wait);
-        }
+      wakeups += kworker->wait_count;
+      kworker->wait_count = 0;
     }
 
   wqueue_unlock(wqueue, flags, true);
+
+  for (; wakeups > 0u; wakeups--)
+    {
+      nxsem_post(&kworker->wait);
+    }
 }
 
 /****************************************************************************
