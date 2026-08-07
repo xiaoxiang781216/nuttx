@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
@@ -119,7 +120,7 @@ static int g_fb_power = 100;
 
 /* This structure describes the simulated video controller */
 
-static const struct fb_videoinfo_s g_videoinfo =
+static struct fb_videoinfo_s g_videoinfo =
 {
   .fmt      = FB_FMT,
   .xres     = CONFIG_SIM_FBWIDTH,
@@ -474,12 +475,25 @@ void sim_x11loop(void)
 int up_fbinitialize(int display)
 {
   int ret = OK;
+  int i;
+
+  for (i = 1; i < g_argc; i++)
+    {
+      if (strncmp(g_argv[i], "FB_WIDTH=", 9) == 0)
+        {
+          g_videoinfo.xres = atoi(g_argv[i] + 9);
+        }
+      else if (strncmp(g_argv[i], "FB_HEIGHT=", 10) == 0)
+        {
+          g_videoinfo.yres = atoi(g_argv[i] + 10);
+        }
+    }
 
 #ifdef CONFIG_SIM_X11FB
-  g_planeinfo.xres_virtual = CONFIG_SIM_FBWIDTH;
-  g_planeinfo.yres_virtual = CONFIG_SIM_FBHEIGHT *
+  g_planeinfo.xres_virtual = g_videoinfo.xres;
+  g_planeinfo.yres_virtual = g_videoinfo.yres *
                              CONFIG_SIM_FRAMEBUFFER_COUNT;
-  ret = sim_x11initialize(CONFIG_SIM_FBWIDTH, CONFIG_SIM_FBHEIGHT,
+  ret = sim_x11initialize(g_videoinfo.xres, g_videoinfo.yres,
                           &g_planeinfo.fbmem, &g_planeinfo.fblen,
                           &g_planeinfo.bpp, &g_planeinfo.stride,
                           CONFIG_SIM_FRAMEBUFFER_COUNT,
