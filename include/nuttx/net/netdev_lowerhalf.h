@@ -130,12 +130,6 @@ struct netdev_lowerhalf_s
   FAR const struct wireless_ops_s *iw_ops;
 #endif
 
-  /* Set by the lower half (transmit() returning -EBUSY) to ask the upper
-   * half to pause TX until netdev_lower_txdone() re-arms it.
-   */
-
-  bool txpause;
-
   uint8_t rxtype;
   uint8_t priority;
 

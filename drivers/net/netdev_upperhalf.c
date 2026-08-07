@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
 #include <nuttx/mm/iob.h>
@@ -97,6 +98,14 @@ struct netdev_upperhalf_s
 
   int txing;
 
+  /* TX completion flag (0/1), raised by netdev_lower_txdone() (possibly
+   * from an ISR or another CPU) and consumed by the TX loop. Both sides
+   * must use atomic_xchg(): RMWs on one location are totally ordered, so
+   * the two sides cannot miss each other and strand a re-queued packet.
+   */
+
+  atomic_t txdone;
+
   /* Deferring process to work queue or thread */
 
   union
@@ -157,34 +166,6 @@ static void netpkt_put(FAR struct net_driver_s *dev, FAR netpkt_t *pkt,
 {
   DEBUGASSERT(dev && pkt);
   netdev_iob_replace_l2(dev, pkt);
-}
-
-/****************************************************************************
- * Name: netdev_upper_can_tx
- *
- * Description:
- *   Check if we allow tx on this device.  After quota tracking was removed,
- *   backpressure from the lower-half driver is signalled via the
- *   `lower->txpause` flag:
- *
- *   - When transmit() returns -EBUSY, netdev_upper_txpoll sets txpause=true
- *     to mark the driver as paused.  We refuse further TX attempts so the
- *     upper half stops hammering an unwilling driver.
- *   - The driver clears the pause by calling netdev_lower_txdone() once a
- *     TX slot frees up; that path resets txpause=false and re-arms TX.
- *
- *   When not paused we always return true so the polling loop can both
- *   drain pending packets in txq and let devif_poll() pull fresh packets
- *   from the network stack.
- *
- * Assumptions:
- *   Called with the network locked.
- *
- ****************************************************************************/
-
-static inline bool netdev_upper_can_tx(FAR struct netdev_upperhalf_s *upper)
-{
-  return !upper->lower->txpause;
 }
 
 /****************************************************************************
@@ -250,21 +231,15 @@ static int netdev_upper_txpoll(FAR struct net_driver_s *dev)
   if (ret == -EBUSY)
     {
       /* Transient error -- re-queue to txq head for retry.
-       * Head-insert preserves packet ordering.  The retry will
-       * be driven by txdone callback from the lower half driver.
-       *
-       * Set txpause=true to pause the upper-half TX path until the
-       * lower-half driver calls netdev_lower_txdone() to signal that
-       * a TX slot has freed up.  Without this gate, the upper half
-       * would keep feeding packets into an already-busy driver,
-       * burning CPU and bouncing packets via the txq head-insert.
+       * Head-insert preserves packet ordering.
+       * Returning the error breaks the TX loop,
+       * and netdev_lower_txdone() drives the retry.
        *
        * Note: After netpkt_get(), dev->d_iob is already NULL.
        */
 
-      nwarn("WARNING: Transmit busy (%d), re-queue pkt\n", ret);
+      ninfo("Transmit busy (%d), re-queue pkt\n", ret);
       iob_add_queue_head(pkt, &upper->txq);
-      lower->txpause = true;
       return ret;
     }
 
@@ -347,8 +322,15 @@ static void netdev_upper_txavail_work(FAR struct netdev_upperhalf_s *upper)
     {
       DEBUGASSERT(dev->d_buf == NULL); /* Make sure: IOB only. */
       upper->txing = true;
-      while (netdev_upper_can_tx(upper) &&
-             netdev_upper_tx(dev) == NETDEV_TX_CONTINUE);
+
+      atomic_xchg(&upper->txdone, 0);
+
+      do
+        {
+          while (netdev_upper_tx(dev) == NETDEV_TX_CONTINUE);
+        }
+      while (atomic_xchg(&upper->txdone, 0) != 0);
+
       upper->txing = false;
     }
 
@@ -1458,9 +1440,12 @@ static int netdev_upper_ifdown(FAR struct net_driver_s *dev)
 {
   FAR struct netdev_upperhalf_s *upper = dev->d_private;
 
-  /* Drain the TX queue before tearing down the interface. */
+  /* Drain the TX queue before tearing down the interface, and drop any
+   * pending completion so that the next ifup starts clean.
+   */
 
   iob_free_queue(&upper->txq);
+  atomic_set(&upper->txdone, 0);
 
   switch (upper->lower->rxtype)
     {
@@ -1836,9 +1821,8 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
 #ifdef CONFIG_NET_VLAN
   /* A TX completion on the physical device may also let its VLAN children
    * make progress, so we must always notify VLAN children even when the
-   * physical itself has no pending TX (txpause == false && txq empty);
-   * otherwise per-VLAN upper->txq packets and per-VLAN txpause flags
-   * accumulate and never drain.
+   * physical itself has no pending TX; otherwise per-VLAN upper->txq
+   * packets accumulate and never drain.
    *
    * The recursion is bounded: VLAN devices do not have grand-children,
    * so the inner call only walks an empty vlan[] table.
@@ -1854,9 +1838,10 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
     }
 #endif
 
-  if (dev->txpause || !IOB_QEMPTY(&upper->txq))
+  atomic_xchg(&upper->txdone, 1);
+
+  if (!IOB_QEMPTY(&upper->txq))
     {
-      dev->txpause = false;
       if (dev->rxtype == NETDEV_RX_DIRECT)
         {
           netdev_upper_txavail_work(dev->netdev.d_private);
