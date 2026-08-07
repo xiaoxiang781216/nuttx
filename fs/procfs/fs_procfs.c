@@ -45,6 +45,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 
@@ -359,8 +360,61 @@ struct procfs_level1_s
 };
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+#if CONFIG_FS_PROCFS_PREALLOC_LEVEL0 > 0
+
+#define PROCFS_LEVEL0_BLKSIZE \
+    (sizeof(struct procfs_level0_s) + \
+     sizeof(pid_t) * CONFIG_FS_PROCFS_LEVEL0_MAX_PIDS)
+
+/* Static mempool: prealloc slots, no dynamic expansion */
+
+MEMPOOL_DEFINE(g_procfs_level0_pool,
+               PROCFS_LEVEL0_BLKSIZE,
+               CONFIG_FS_PROCFS_PREALLOC_LEVEL0,
+               CONFIG_FS_PROCFS_PREALLOC_LEVEL0,
+               0);
+
+#endif /* CONFIG_FS_PROCFS_PREALLOC_LEVEL0 > 0 */
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#if CONFIG_FS_PROCFS_PREALLOC_LEVEL0 > 0
+
+static FAR struct procfs_level0_s *procfs_level0_alloc(size_t num)
+{
+  if (num > CONFIG_FS_PROCFS_LEVEL0_MAX_PIDS)
+    {
+      return NULL;
+    }
+
+  return (FAR struct procfs_level0_s *)
+    mempool_zallocate(&g_procfs_level0_pool, 0);
+}
+
+static void procfs_level0_free(FAR struct procfs_level0_s *level0)
+{
+  mempool_release(&g_procfs_level0_pool, (FAR void *)level0);
+}
+
+#else /* CONFIG_FS_PROCFS_PREALLOC_LEVEL0 == 0 */
+
+static FAR struct procfs_level0_s *procfs_level0_alloc(size_t num)
+{
+  return (FAR struct procfs_level0_s *)
+    fs_heap_zalloc(sizeof(struct procfs_level0_s) + sizeof(pid_t) * num);
+}
+
+static void procfs_level0_free(FAR struct procfs_level0_s *level0)
+{
+  fs_heap_free(level0);
+}
+
+#endif /* CONFIG_FS_PROCFS_PREALLOC_LEVEL0 */
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
 
@@ -758,8 +812,7 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
       num = g_npidhash;
 #endif
 
-      level0 = (FAR struct procfs_level0_s *)
-      fs_heap_zalloc(sizeof(struct procfs_level0_s) + sizeof(pid_t) * num);
+      level0 = procfs_level0_alloc(num);
       if (!level0)
         {
           ferr("ERROR: Failed to allocate the level0 directory structure\n");
@@ -923,6 +976,10 @@ static int procfs_closedir(FAR struct inode *mountpt,
       dirpriv->procfsentry->ops->closedir != NULL)
     {
       ret = dirpriv->procfsentry->ops->closedir(dir);
+    }
+  else if (dirpriv->level == 0)
+    {
+      procfs_level0_free((FAR struct procfs_level0_s *)dir);
     }
   else
     {

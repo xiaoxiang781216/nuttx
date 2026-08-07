@@ -148,4 +148,31 @@ config FS_PROCFS_INCLUDE_PRESSURE
 	default n
 
 endmenu # Exclude individual procfs entries
+
+config FS_PROCFS_PREALLOC_LEVEL0
+	int "Number of pre-allocated procfs level0 directory slots"
+	default 0
+	range 0 32
+	---help---
+		Number of statically pre-allocated slots for procfs top-level
+		directory operations (opendir /proc). When set to a non-zero
+		value, opendir("/proc") will use pre-allocated buffers instead
+		of dynamic heap allocation. If all slots are in use or
+		g_npidhash exceeds LEVEL0_MAX_PIDS, opendir will fail with
+		ENOMEM.
+
+		Set to 0 to use dynamic allocation (original behavior).
+		Typical value: 2~4 for systems requiring zero dynamic allocation
+		during normal operation.
+
+config FS_PROCFS_LEVEL0_MAX_PIDS
+	int "Maximum PIDs per pre-allocated level0 slot"
+	default PID_INITIAL_COUNT
+	depends on FS_PROCFS_PREALLOC_LEVEL0 > 0
+	---help---
+		Maximum number of PIDs that can be stored in each pre-allocated
+		level0 slot. Should be set to cover the expected maximum number
+		of concurrent tasks. If g_npidhash grows beyond this at runtime,
+		opendir("/proc") will fail with ENOMEM.
+
 endif # FS_PROCFS
