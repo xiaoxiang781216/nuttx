@@ -26,6 +26,7 @@
 
 #include <debug.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -546,7 +547,8 @@ uvc_try_frame_interval(FAR const struct uvc_frame_info_s *frame,
         }
     }
 
-  uinfo("UVC: clamp interval %u -> %u\n", requested_interval, best);
+  uinfo("UVC: clamp interval %" PRIu32 " -> %" PRIu32 "\n",
+        requested_interval, best);
   return best;
 }
 
@@ -559,7 +561,8 @@ static int uvc_execute_probe_commit(FAR struct usbhost_hubport_s *hport,
   uint32_t             interval_100ns = fps > 0 ? (10000000u / fps) : 0;
   int                  ret;
 
-  uinfo("UVC: probe fmt=%d frm=%d fps=%d intv=%u\n",
+  uinfo("UVC: probe fmt=%d frm=%d fps=%" PRIu32
+        " intv=%" PRIu32 "\n",
         format_idx, frame_idx, fps, interval_100ns);
 
   /* Build probe data from scratch instead of GET_CUR.
@@ -665,7 +668,7 @@ static int uvc_set_interface_alt(FAR struct usbhost_hubport_s *hport,
   uint8_t                 i;
   int                     ret;
 
-  uinfo("UVC: required payload=%u\n", required_payload);
+  uinfo("UVC: required payload=%" PRIu32 "\n", required_payload);
 
   /* Find best alternate setting */
 
@@ -861,7 +864,7 @@ static int uvc_set_format(FAR struct uvc_priv_s *priv,
 
   if (frame)
     {
-      uinfo("UVC: frame num_interval=%d intv=%u\n",
+      uinfo("UVC: frame num_interval=%d intv=%" PRIu32 "\n",
             frame->num_interval, frame->interval);
     }
 
@@ -870,13 +873,13 @@ static int uvc_set_format(FAR struct uvc_priv_s *priv,
       requested_intv = 10000000u / fps;
       clamped_intv = uvc_try_frame_interval(frame, requested_intv);
 
-      uinfo("UVC: requested_intv=%u clamped=%u\n",
+      uinfo("UVC: requested_intv=%" PRIu32 " clamped=%" PRIu32 "\n",
             requested_intv, clamped_intv);
 
       if (clamped_intv != requested_intv)
         {
           fps = 10000000u / clamped_intv;
-          uinfo("UVC: clamped fps to %u\n", fps);
+          uinfo("UVC: clamped fps to %" PRIu32 "\n", fps);
         }
     }
 
@@ -903,7 +906,8 @@ static int uvc_find_format_match(FAR struct uvc_dev_s *dev,
   uint8_t                i;
   uint8_t                j;
 
-  uinfo("UVC: find format %dx%d pix=0x%08x\n",
+  uinfo("UVC: find format %" PRIu32 "x%" PRIu32
+        " pix=0x%08" PRIx32 "\n",
         width, height, pixelformat);
 
   /* Only exact match (resolution + pixel format) - no fallback to avoid
@@ -930,7 +934,8 @@ static int uvc_find_format_match(FAR struct uvc_dev_s *dev,
         }
     }
 
-  uerr("UVC: no match for %dx%d 0x%08x (%s)\n",
+  uerr("UVC: no match for %" PRIu32 "x%" PRIu32
+       " 0x%08" PRIx32 " (%s)\n",
        width, height, pixelformat, uvc_fourcc_to_string(pixelformat));
   for (i = 0; i < priv->format_list.num_formats; i++)
     {
@@ -1000,7 +1005,8 @@ static int uvc_applyformat(FAR struct uvc_dev_s *dev,
       if (req_inter && req_inter->denominator > 0)
         {
           uint32_t format_fps = uvc_calculate_fps(NULL, frame->interval);
-          uinfo("UVC: fallback to default %d fps\n", format_fps);
+          uinfo("UVC: fallback to default %" PRIu32 " fps\n",
+                format_fps);
 
           ret = uvc_set_format(priv, priv->stream_iface,
                                fmt->format_index, frame->frame_index, NULL);
@@ -1282,7 +1288,7 @@ uvc_imgdata_validate_frame_setting(FAR struct imgdata_s *data,
                                      converted_pixelformat, &frame_idx);
   if (format_idx < 0)
     {
-      uerr("UVC: format %dx%d (0x%08x) unsupported\n",
+      uerr("UVC: format %dx%d (0x%08" PRIx32 ") unsupported\n",
            datafmts[0].width, datafmts[0].height, converted_pixelformat);
       return -EINVAL;
     }
@@ -1981,7 +1987,7 @@ static int uvc_imgdata_start_capture(FAR struct imgdata_s *data,
         {
           int fi;
 
-          uerr("UVC: unsupported: %dx%d 0x%08x (%s)\n",
+          uerr("UVC: unsupported: %dx%d 0x%08" PRIx32 " (%s)\n",
                datafmts[0].width, datafmts[0].height,
                converted_pixelformat,
                uvc_fourcc_to_string(converted_pixelformat));
@@ -2109,7 +2115,7 @@ uvc_imgsensor_validate_frame_setting(FAR struct imgsensor_s *sensor,
                                      converted_pixelformat, &frame_idx);
   if (format_idx < 0)
     {
-      uerr("UVC: sensor validate failed: %dx%d 0x%08x\n",
+      uerr("UVC: sensor validate failed: %dx%d 0x%08" PRIx32 "\n",
            datafmts[0].width, datafmts[0].height,
            converted_pixelformat);
       return -EINVAL;
@@ -2293,7 +2299,7 @@ static int uvc_query_ctrl_hw(FAR struct uvc_dev_s *dev,
   cache->default_value = (ret >= 0) ?
     uvc_ctrl_read_value(map, data) : cache->minimum;
 
-  uinfo("UVC: ctrl 0x%x [%lld,%lld] step=%lld def=%lld\n",
+  uinfo("UVC: ctrl 0x%" PRIx32 " [%lld,%lld] step=%lld def=%lld\n",
         id, cache->minimum, cache->maximum,
         cache->step, cache->default_value);
 
@@ -2389,7 +2395,7 @@ static int uvc_imgsensor_set_value(FAR struct imgsensor_s *sensor,
   ret = uvc_ctrl_query(dev, map, UVC_REQUEST_SET_CUR, data);
   if (ret < 0)
     {
-      uerr("UVC: SET_CUR failed id=0x%x: %d\n",
+      uerr("UVC: SET_CUR failed id=0x%" PRIx32 ": %d\n",
            id, ret);
       return ret;
     }
@@ -3002,7 +3008,7 @@ static int uvc_parse_cfgdesc(FAR struct uvc_priv_s *priv,
 
                   format = fmt;
                   uinfo("UVC: fmt %d type=0x%02x "
-                        "fourcc=0x%08x\n",
+                        "fourcc=0x%08" PRIx32 "\n",
                         idx, subtype,
                         fmt->pixel_format_fourcc);
                 }
@@ -3087,7 +3093,7 @@ static int uvc_parse_cfgdesc(FAR struct uvc_priv_s *priv,
                         }
 
                       uinfo("UVC: Frame %d: %dx%d, "
-                            "interval=%u, discrete=%d\n",
+                            "interval=%" PRIu32 ", discrete=%d\n",
                             frame->frame_index,
                             frame->width,
                             frame->height,
@@ -3097,7 +3103,7 @@ static int uvc_parse_cfgdesc(FAR struct uvc_priv_s *priv,
                   else
                     {
                       uinfo("UVC: Frame %d: %dx%d, "
-                            "interval=%u (continuous)\n",
+                            "interval=%" PRIu32 " (continuous)\n",
                             frame->frame_index,
                             frame->width,
                             frame->height,
