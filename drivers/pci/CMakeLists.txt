@@ -36,6 +36,21 @@ if(CONFIG_PCI)
     list(APPEND SRCS pci_ivshmem.c)
   endif()
 
+  # pci_ivshmem.c pulls in SEGGER_RTT.h for the RTT ivshmem device, which in
+  # turn pulls in SEGGER_RTT_Conf.h from the config directory, so both SEGGER
+  # header directories are needed. Scope them to that source instead of the
+  # whole drivers target, and set them on the parent directory because that is
+  # where the drivers target is defined.
+
+  if(CONFIG_PCI_RTT_IVSHMEM)
+    set_source_files_properties(
+      pci_ivshmem.c DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/..
+      PROPERTIES
+        INCLUDE_DIRECTORIES
+        "${NUTTX_DIR}/drivers/segger/config;${NUTTX_DIR}/drivers/segger/SystemView/SEGGER"
+    )
+  endif()
+
   if(CONFIG_PCI_RAMDISK_IVSHMEM)
     list(APPEND SRCS pci_ramdisk_ivshmem.c)
   endif()

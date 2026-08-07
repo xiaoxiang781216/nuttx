@@ -35,6 +35,16 @@ ifeq ($(CONFIG_PCI_IVSHMEM),y)
 CSRCS += pci_ivshmem.c
 endif
 
+# pci_ivshmem.c pulls in SEGGER_RTT.h for the RTT ivshmem device, which in turn
+# pulls in SEGGER_RTT_Conf.h from the config directory, so add both SEGGER
+# header directories here rather than relying on the ones that
+# drivers/segger/Make.defs puts into the shared CFLAGS.
+
+ifeq ($(CONFIG_PCI_RTT_IVSHMEM),y)
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)segger$(DELIM)config
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)segger$(DELIM)SystemView$(DELIM)SEGGER
+endif
+
 ifeq ($(CONFIG_PCI_RAMDISK_IVSHMEM),y)
 CSRCS += pci_ramdisk_ivshmem.c
 endif
