@@ -276,10 +276,10 @@ struct i2c_ops_s
 #ifdef CONFIG_I2C_RESET
   CODE int (*reset)(FAR struct i2c_master_s *dev);
 #endif
-  CODE int (*cancel)(FAR struct i2c_master_s *dev, FAR void *cookie);
   CODE int (*setup)(FAR struct i2c_master_s *dev);
   CODE int (*shutdown)(FAR struct i2c_master_s *dev);
   CODE uint8_t (*status)(FAR struct i2c_master_s *dev);
+  CODE int (*cancel)(FAR struct i2c_master_s *dev, FAR void *cookie);
 };
 
 /* This structure contains the full state of I2C as needed for a specific
