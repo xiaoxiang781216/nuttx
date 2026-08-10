@@ -42,7 +42,6 @@
 static FAR const char *const g_nxtag_names[] =
 {
   "global",
-  "log",
   "analog",
   "audio",
   "battery",

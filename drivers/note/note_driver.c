@@ -1293,16 +1293,6 @@ static inline int
 note_driver_isenabled_dump(FAR struct note_driver_s *driver, uint8_t tag,
                            uint8_t level, int type)
 {
-#  ifdef CONFIG_SYSLOG_TO_SCHED_NOTE
-  if (tag == NXTAG_LOG)
-    {
-      /* For NXTAG_LOG, use the syslog level mask */
-
-      return (g_syslog_mask[NXTAG_GLOBAL] & LOG_MASK(level)) != 0;
-    }
-
-#endif
-
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   if (!note_driver_isenabled_type(driver, type))
     {

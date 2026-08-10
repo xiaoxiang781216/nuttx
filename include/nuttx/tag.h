@@ -60,7 +60,6 @@
 enum nxtag_e
 {
   NXTAG_GLOBAL,
-  NXTAG_LOG,
   NXTAG_ANALOG,
   NXTAG_AUDIO,
   NXTAG_BATTERY,

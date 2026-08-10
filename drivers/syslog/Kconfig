@@ -23,13 +23,6 @@ config ARCH_SYSLOG
 	---help---
 		Architecture-specific SYSLOG support
 
-config SYSLOG_TO_SCHED_NOTE
-	bool "SYSLOG redirected to sched_note"
-	depends on SCHED_INSTRUMENTATION_DUMP
-	---help---
-		If this option is enabled, syslog will be redirected to sched_note,
-		It uses the sched_note_printf macro to replace syslog
-
 config SYSLOG_NONE
 	bool "Disable system logging completely"
 	---help---

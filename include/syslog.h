@@ -31,10 +31,6 @@
 #include <nuttx/compiler.h>
 #include <nuttx/tag.h>
 
-#ifdef CONFIG_SYSLOG_TO_SCHED_NOTE
-#include <nuttx/sched_note.h>
-#endif
-
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -251,13 +247,6 @@ void nx_syslog(int priority, FAR const IPTR char *fmt, ...)
      syslog_like(2, 3);
 void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
      syslog_like(2, 0);
-#elif defined(CONFIG_SYSLOG_TO_SCHED_NOTE)
-#  define syslog(priority, fmt, ...) \
-          sched_note_printf(LOG_GETTAG(priority), \
-                            LOG_GETPRI(priority), fmt, ##__VA_ARGS__)
-#  define vsyslog(priority, fmt, ap) \
-          sched_note_vprintf(LOG_GETTAG(priority), \
-                             LOG_GETPRI(priority), fmt, ap)
 #else
 static inline_function void syslog_like(2, 3)
 syslog(int priority, FAR const char *fmt, ...)
