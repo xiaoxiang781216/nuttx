@@ -146,23 +146,30 @@ except ImportError:
     )
     sys.exit(1)
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from kconfig_env import KconfigEnv  # noqa: E402
+
 TOPDIR = Path(__file__).resolve().parent.parent
 DPATH = Path("defconfig")
 CMAKE_BINARY_DIR = None
 NEED_RESET = False
+# Top-level Kconfig to parse. With layered Kconfig.defaults the build parses a
+# generated aggregate root instead of nuttx/Kconfig, and parsing the wrong root
+# silently drops every value the layers contribute. See tools/kconfig_env.py.
+TOP_KCONFIG = "Kconfig"
 os.chdir(TOPDIR)
 
 
 # Prepare enviroment for Kconfig
 def prepare_env():
-    global NEED_RESET
+    global NEED_RESET, TOP_KCONFIG
     if CMAKE_BINARY_DIR:
-        # we are in cmake env
-        os.environ["APPSDIR"] = str(TOPDIR / Path("../apps"))
-        os.environ["APPSBINDIR"] = str(CMAKE_BINARY_DIR / Path("apps"))
-        os.environ["EXTERNALDIR"] = "dummy"
-        os.environ["BINDIR"] = str(CMAKE_BINARY_DIR)
-        os.environ["KCONFIG_CONFIG"] = str(DPATH)
+        # we are in cmake env. Let kconfig_env set up the parse environment and
+        # pick the top-level Kconfig, so that we see the same tree the build
+        # does -- including the layered Kconfig.defaults aggregate root.
+        env = KconfigEnv.from_build_dir(CMAKE_BINARY_DIR)
+        env.apply(DPATH)
+        TOP_KCONFIG = str(env.top_kconfig)
     else:
         # check if we are in the configured Kconfig environment
         full_config_file = TOPDIR / Path(".config")
@@ -193,6 +200,7 @@ def reset_env():
     os.environ.pop("APPSDIR", None)
     os.environ.pop("APPSBINDIR", None)
     os.environ.pop("EXTERNALDIR", None)
+    os.environ.pop("DRIVERS_PLATFORM_DIR", None)
     os.environ.pop("BINDIR", None)
     os.environ.pop("KCONFIG_CONFIG", None)
     if NEED_RESET:
@@ -234,7 +242,11 @@ def parse_diff(diff_path):
 def apply_changes(kconf, changes):
 
     # step 1: keep track of original values
-    orig_state = {sym.name: sym.str_value for sym in kconf.defined_syms}
+    # unique_defined_syms, not defined_syms: with layered Kconfig.defaults a
+    # symbol is defined both in a layer and in the base tree, and defined_syms
+    # lists it once per definition, so it would be reported once per definition.
+    syms = kconf.unique_defined_syms
+    orig_state = {sym.name: sym.str_value for sym in syms}
 
     # step 2: apply the congfig settings
     value_map = {"n": 0, "m": 1, "y": 2}
@@ -251,7 +263,7 @@ def apply_changes(kconf, changes):
 
     # step 3: check for changes
     changed = []
-    for sym in kconf.defined_syms:
+    for sym in syms:
         orig = orig_state.get(sym.name, "")
         curr = sym.str_value
         if orig != curr:
@@ -261,7 +273,7 @@ def apply_changes(kconf, changes):
 
 
 def track_multiple_changes(config_changes):
-    kconf = Kconfig()
+    kconf = Kconfig(TOP_KCONFIG)
     kconf.load_config()
 
     # Convert list of [config, value, config, value, ...] to dictionary
@@ -275,7 +287,7 @@ def track_multiple_changes(config_changes):
 
 
 def track_diff_changes(diff_path):
-    kconf = Kconfig()
+    kconf = Kconfig(TOP_KCONFIG)
     kconf.load_config()
     changes = parse_diff(diff_path)
     return apply_changes(kconf, changes)
