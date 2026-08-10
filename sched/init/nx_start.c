@@ -243,7 +243,7 @@ static int reboot_trace_callback(FAR struct notifier_block *nb,
 {
   /* DFX: report system reset event (961010011) */
 
-  sched_trace_diag(LOG_INFO, DIAG_SCHED_REBOOT,
+  sched_trace_diag(LOG_CRIT, DIAG_SCHED_REBOOT,
                    "Action:%s,UptimeMs:%ju",
                    action == SYS_POWER_OFF ? "shutdown" :
                    action == SYS_RESTART ? "reboot" :
@@ -858,13 +858,13 @@ void nx_start(void)
 #  ifdef CONFIG_BOARDCTL_RESET_CAUSE
   memset(&cause, 0, sizeof(cause));
   board_reset_cause(&cause);
-  sched_trace_diag(LOG_INFO, DIAG_SCHED_BOOT,
+  sched_trace_diag(LOG_CRIT, DIAG_SCHED_BOOT,
                    "Action:boot,BootTimeMs:%ju,"
                    "ResetCause:%d,ResetFlag:%" PRIu32,
                    (uintmax_t)TICK2MSEC(clock_systime_ticks()),
                    cause.cause, cause.flag);
 #  else
-  sched_trace_diag(LOG_INFO, DIAG_SCHED_BOOT,
+  sched_trace_diag(LOG_CRIT, DIAG_SCHED_BOOT,
                    "Action:boot,BootTimeMs:%ju",
                    (uintmax_t)TICK2MSEC(clock_systime_ticks()));
 #  endif
