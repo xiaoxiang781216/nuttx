@@ -598,11 +598,17 @@ static int e1000_transmit(FAR struct netdev_lowerhalf_s *dev,
       return -ENETDOWN;
     }
 
-  /* Drop packet if ring full */
+  /* Pause TX if ring full.  -EBUSY makes the upper half re-queue the packet
+   * at the head of its txq and stop pulling more packets from the network
+   * stack until netdev_lower_txdone() is called from e1000_txdone().  Any
+   * other error code would make the upper half drop the packet and keep
+   * polling, which is not what we want here: the packet is perfectly valid,
+   * we just have no descriptor for it yet.
+   */
 
   if (tx_next == priv->tx_done)
     {
-      return -ENOMEM;
+      return -EBUSY;
     }
 
   /* Store TX packet reference */
