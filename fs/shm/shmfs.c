@@ -374,6 +374,16 @@ static int shmfs_mmap(FAR struct file *filep,
   object = filep->f_inode->i_private;
   if (object)
     {
+      /* In FLAT mode the raw paddr is returned directly, so a mapping
+       * larger than the object would overflow into adjacent heap memory.
+       */
+
+      if (entry->length > object->length)
+        {
+          inode_release(filep->f_inode);
+          return -EINVAL;
+        }
+
       ret = shmfs_map_object(object, &entry->vaddr);
     }
 
