@@ -150,7 +150,7 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
 #endif
     &g_noteram_ops
   },
-  RING_BASE(&g_noteram_ring),
+  &g_noteram_ring.base,
 #ifdef CONFIG_DRIVERS_NOTERAM_DEFAULT_NOOVERWRITE
   NOTE_MODE_OVERWRITE_DISABLE,
 #else

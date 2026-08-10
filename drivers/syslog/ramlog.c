@@ -163,7 +163,7 @@ RING_DEFINE(g_ramlog_ring, char, CONFIG_RAMLOG_BUFSIZE);
 
 static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_ramlog_dev) =
 {
-  .rl_ring = RING_BASE(&g_ramlog_ring),
+  .rl_ring = &g_ramlog_ring.base,
 };
 #  define g_ramlog_dev this_cpu_var_bmp(g_ramlog_dev)
 #endif

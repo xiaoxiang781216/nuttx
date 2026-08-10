@@ -95,7 +95,7 @@ DEFINE_PER_CPU_BMP(struct notesnap_s, g_notesnap) =
 #endif
     &g_notesnap_ops
   },
-  RING_BASE(&g_notesnap_buffer),
+  &g_notesnap_buffer.base,
 };
 #define g_notesnap this_cpu_var_bmp(g_notesnap)
 
