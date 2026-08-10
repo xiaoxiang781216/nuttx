@@ -496,6 +496,25 @@ config DRIVERS_NOTENET_CPUSET
 	---help---
 		CPU set for note netdev
 
+config DRIVERS_NOTENET_FLUSH_TIMEOUT
+	int "Note netdev flush timeout (msec)"
+	default 0
+	---help---
+		Interval in milliseconds at which the bound CPU drains the
+		ring to the transport. BMP cannot arm work on a remote core,
+		so production never triggers a drain and this poll is the
+		only way staged notes reach the wire.
+		Set 0 to disable buffering and send from the producer.
+
+config DRIVERS_NOTENET_BUFSIZE
+	int "Note netdev buffer size"
+	default 4096
+	depends on DRIVERS_NOTENET_FLUSH_TIMEOUT > 0
+	---help---
+		The size of the netdev note ring buffer in bytes. Notes are
+		staged here by any CPU and drained by the CPU bound to the
+		netdev, so the transport is never touched from a foreign core.
+
 endif
 
 endmenu # Note Driver Support
