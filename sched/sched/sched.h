@@ -591,6 +591,7 @@ static inline_function
 void tcb_timer_cancel(FAR struct tcb_s *tcb)
 {
   hrtimer_cancel(&tcb->waittimer);
+  tcb->waittimer.expired += INT64_MAX;
 }
 
 /****************************************************************************
