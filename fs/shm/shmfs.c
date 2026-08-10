@@ -27,10 +27,12 @@
 #include <assert.h>
 #include <string.h>
 #include <sys/param.h>
+#include <unistd.h>
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mm/map.h>
 #include <nuttx/arch.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/pgalloc.h>
 #include <nuttx/sched.h>
 
@@ -539,11 +541,13 @@ static int shmfs_mmap(FAR struct file *filep,
       return -EINVAL;
     }
 
-  /* In FLAT mode the raw paddr is returned directly, so a mapping
-   * larger than the object would overflow into adjacent heap memory.
+  /* In FLAT/PROTECTED builds the raw paddr is returned directly, so a
+   * mapping larger than the page-rounded backing would overflow into
+   * adjacent heap memory.  The rounded size permits the POSIX pattern
+   * ftruncate + mmap(fd, sysconf(_SC_PAGESIZE)).
    */
 
-  if (entry->length > object->length)
+  if (entry->length > ALIGN_UP(object->length, sysconf(_SC_PAGESIZE)))
     {
       nxmutex_unlock(&object->lock);
       return -EINVAL;

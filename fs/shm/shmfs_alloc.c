@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
+#include <unistd.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/cache.h>
@@ -103,7 +104,11 @@ FAR void *shmfs_alloc_buffer(size_t length)
         }
     }
 #else
-  size_t alloc_size = length;
+  /* Round up to a page so a page-granular mmap() of the raw paddr
+   * stays within the allocation.
+   */
+
+  size_t alloc_size = ALIGN_UP(length, sysconf(_SC_PAGESIZE));
   size_t cachesize = up_get_dcache_linesize();
   if (cachesize > 0)
     {
