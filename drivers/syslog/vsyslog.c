@@ -302,21 +302,3 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 
   return ret;
 }
-
-/****************************************************************************
- * Name: nx_syslog
- *
- * Description:
- *   nx_syslog() handles the system logging system calls. It is functionally
- *   equivalent to syslog() but is used within the kernel space.
- *
- ****************************************************************************/
-
-void nx_syslog(int priority, FAR const IPTR char *fmt, ...)
-{
-  va_list ap;
-
-  va_start(ap, fmt);
-  nx_vsyslog(priority, fmt, &ap);
-  va_end(ap);
-}

@@ -24,8 +24,13 @@
 
 set(SRCS syslog_initialize.c setlogmask.c)
 
-if(CONFIG_SYSLOG)
-  list(APPEND SRCS vsyslog.c syslog_channel.c syslog_write.c syslog_flush.c)
+if(CONFIG_SYSLOG OR CONFIG_BINARY_SYSLOG)
+  list(APPEND SRCS syslog_channel.c syslog_write.c syslog_flush.c)
+  if(CONFIG_BINARY_SYSLOG)
+    list(APPEND SRCS vsyslog_binary.c)
+  else()
+    list(APPEND SRCS vsyslog.c)
+  endif()
 endif()
 
 if(CONFIG_SYSLOG_INTBUFFER)

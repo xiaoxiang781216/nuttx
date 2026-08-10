@@ -48,14 +48,6 @@
 
 #define NOTERPMSG_EPT_NAME           "rpmsg-note"
 
-/* nc_length is a single byte, so bound the staging buffer by UINT8_MAX and
- * let every note built in it fit the length field by construction.
- */
-
-#define NOTE_BUFFER_SIZE UINT8_MAX
-static_assert(NOTE_BUFFER_SIZE >= sizeof(struct note_event_s),
-              "Buffer size too small");
-
 /* Sometimes perf_getime is not a syscall */
 
 #ifdef CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS

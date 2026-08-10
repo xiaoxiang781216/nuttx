@@ -23,6 +23,13 @@ config ARCH_SYSLOG
 	---help---
 		Architecture-specific SYSLOG support
 
+config BINARY_SYSLOG
+	bool "Enable binary system logging (binlog)"
+	---help---
+		Enable binary syslog encoding. Log arguments are encoded
+		into compact binary frames (note_printf_s format) and
+		written through syslog channel dispatch.
+
 config SYSLOG_NONE
 	bool "Disable system logging completely"
 	---help---
@@ -60,15 +67,20 @@ config SYSLOG_RATELIMIT_BURST
 	---help---
 		"The burst traffic allowed within the window."
 
-if SYSLOG
+if SYSLOG || BINARY_SYSLOG
 comment "SYSLOG options"
 
 config SYSLOG_CRLF
 	bool "Syslog convert LF to CRLF"
 	default y
+	depends on SYSLOG
 	---help---
 		Pre-pend a carriage return before every linefeed that goes into the
 		syslog.
+
+		Not available in binary mode: syslog frames are opaque note_printf_s
+		records whose bytes (including 0x0a) are data, not line endings, so
+		CR injection would corrupt frame boundaries.
 
 config SYSLOG_MAX_CHANNELS
 	int "Maximum SYSLOG channels"

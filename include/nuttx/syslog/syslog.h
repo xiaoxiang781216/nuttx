@@ -391,7 +391,7 @@ ssize_t syslog_write(FAR const char *buffer, size_t buflen);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG
+#if defined(CONFIG_SYSLOG) || defined(CONFIG_BINARY_SYSLOG)
 int syslog_flush(void);
 #else
 #  define syslog_flush()

@@ -69,6 +69,13 @@
 #  define CONFIG_SCHED_INSTRUMENTATION_CPUSET ~0
 #endif
 
+/* Maximum size of a single note record (bytes).  Used by both the note
+ * drivers and by the binary syslog backend to size stack buffers that
+ * hold one encoded note_printf_s frame.
+ */
+
+#define NOTE_BUFFER_SIZE UINT8_MAX
+
 /* Note filter mode flag definitions — bitmasks grouping note types */
 
 #define NOTE_FILTER_MODE_FLAG_SWITCH                         \
@@ -822,6 +829,9 @@ struct note_event_s
 };
 
 #define SIZEOF_NOTE_EVENT(n) (offsetof(struct note_event_s, nev_data) + (n))
+
+static_assert(NOTE_BUFFER_SIZE >= sizeof(struct note_event_s),
+              "Buffer size too small");
 
 struct note_counter_s
 {

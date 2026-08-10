@@ -69,7 +69,7 @@ void syslog_register(void);
  * g_default_channel.
  */
 
-#ifdef CONFIG_SYSLOG
+#if defined(CONFIG_SYSLOG) || defined(CONFIG_BINARY_SYSLOG)
 typedef FAR syslog_channel_t *syslog_channels_t[CONFIG_SYSLOG_MAX_CHANNELS];
 
 #  ifdef CONFIG_SYSLOG_REGISTER
