@@ -311,20 +311,21 @@ FAR struct mm_map_entry_s *mm_map_find(FAR struct mm_map_s *mm,
  * Name: mm_map_exist
  *
  * Description:
- *   Return whether any existing mapping overlaps the given address range.
+ *   Return whether any existing mapping was registered with the given
+ *   private data pointer.  File systems store their own object pointer
+ *   (e.g. inode or file object) in mm_map_entry_s.priv.p at mmap time;
+ *   this function checks whether any entry matches.
  *
  * Input Parameters:
- *   mm     - A pointer to mm_map_s, which describes the virtual memory area
- *   vaddr  - Start address of the range to test
- *   length - Length of the range to test
+ *   mm   - A pointer to mm_map_s, which describes the virtual memory area
+ *   priv - The private data pointer to match against entry->priv.p
  *
  * Returned Value:
- *   true if an overlapping mapping exists, false otherwise
+ *   true if a matching mapping exists, false otherwise
  *
  ****************************************************************************/
 
-bool mm_map_exist(FAR struct mm_map_s *mm, FAR const void *vaddr,
-                  size_t length);
+bool mm_map_exist(FAR struct mm_map_s *mm, FAR const void *priv);
 
 /****************************************************************************
  * Name: mm_map_remove

@@ -295,17 +295,14 @@ FAR struct mm_map_entry_s *mm_map_find(FAR struct mm_map_s *mm,
  * Name: mm_map_exist
  *
  * Description:
- *   Return whether any existing mapping overlaps the address range
- *   [vaddr, vaddr + length).
+ *   Return whether any existing mapping was registered with the given
+ *   private data pointer.
  *
  ****************************************************************************/
 
-bool mm_map_exist(FAR struct mm_map_s *mm, FAR const void *vaddr,
-                  size_t length)
+bool mm_map_exist(FAR struct mm_map_s *mm, FAR const void *priv)
 {
   FAR struct mm_map_entry_s *entry;
-  FAR const char *start = vaddr;
-  FAR const char *end = start + length;
   bool exist = false;
 
   if (nxrmutex_lock(&mm->mm_map_mutex) == OK)
@@ -314,10 +311,7 @@ bool mm_map_exist(FAR struct mm_map_s *mm, FAR const void *vaddr,
            entry != NULL;
            entry = (FAR struct mm_map_entry_s *)sq_next((sq_entry_t *)entry))
         {
-          FAR const char *e_start = entry->vaddr;
-          FAR const char *e_end = e_start + entry->length;
-
-          if (start < e_end && e_start < end)
+          if (entry->priv.p == priv)
             {
               exist = true;
               break;

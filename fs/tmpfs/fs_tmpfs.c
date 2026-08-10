@@ -2130,12 +2130,10 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 
   if (mapend > tfo->tfo_alloc)
     {
-      FAR void *data = tfo->tfo_data;
-      size_t alloc = tfo->tfo_alloc;
       bool mapped;
 
       tmpfs_unlock_file(tfo);
-      mapped = mm_map_exist(mm, data, alloc);
+      mapped = mm_map_exist(mm, tfo);
       tmpfs_lock_file(tfo);
 
       if (mapped)
