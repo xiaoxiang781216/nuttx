@@ -483,7 +483,7 @@ static inline void inode_release(FAR struct inode *inode)
  *
  ****************************************************************************/
 
-int foreach_inode(foreach_inode_t handler, FAR void *arg);
+int foreach_inode(foreach_inode_t handler, FAR void *arg, bool readonly);
 
 /****************************************************************************
  * Name: dir_allocate

@@ -80,27 +80,21 @@ struct inode_path_s
 static int foreach_inodelevel(FAR struct inode *inode,
                               FAR struct inode_path_s *info)
 {
+  FAR struct inode *next;
   int ret = OK;
 
   /* Visit each node at this level */
 
-  for (; inode; inode = inode->i_peer)
+  for (; inode; inode = next)
     {
-      /* Give the next inode to the callback */
-
-      ret = info->handler(inode, info->path, info->arg);
-
-      /* Break out of the loop early if the handler returns a non-zero
-       * value.
+      /* Snapshot the sibling link before the callback: the handler may
+       * unmount and free 'inode', after which inode->i_peer cannot be read.
        */
 
-      if (ret != 0)
-        {
-          break;
-        }
+      next = inode->i_peer;
 
       /* If there is a level 'beneath' this one, then recurse to visit all
-       * of the inodes at that level.
+       * of the inodes at that level (children before their parent).
        */
 
       if (inode->i_child)
@@ -137,6 +131,19 @@ static int foreach_inodelevel(FAR struct inode *inode,
               break;
             }
         }
+
+      /* Give the inode to the callback */
+
+      ret = info->handler(inode, info->path, info->arg);
+
+      /* Break out of the loop early if the handler returns a non-zero
+       * value.
+       */
+
+      if (ret != 0)
+        {
+          break;
+        }
     }
 
   /* Return the result of the traversal. */
@@ -156,6 +163,15 @@ static int foreach_inodelevel(FAR struct inode *inode,
  *   when the callback 'handler' returns a non-zero value, or when all of
  *   the inodes have been visited.
  *
+ *   'readonly' selects the lock held across the whole traversal: true takes
+ *   the inode READ lock (read-only visitors, so they do not serialize
+ *   behind an exclusive lock); false takes the WRITE lock so the handler may
+ *   mutate the tree in place -- specifically call nx_umount2(), whose own
+ *   inode_lock() nests safely because the NuttX rwsem is recursive for the
+ *   current writer.  The traversal core snapshots the sibling/child links
+ *   before each callback, so with readonly=false a handler may unmount (and
+ *   free) the inode it is handed.
+ *
  *   NOTE 1: Use with caution... The pseudo-file system is locked throughout
  *   the traversal.
  *   NOTE 2: The search algorithm is recursive and could, in principle, use
@@ -164,7 +180,7 @@ static int foreach_inodelevel(FAR struct inode *inode,
  *
  ****************************************************************************/
 
-int foreach_inode(foreach_inode_t handler, FAR void *arg)
+int foreach_inode(foreach_inode_t handler, FAR void *arg, bool readonly)
 {
 #ifdef ENUM_INODE_ALLOC
   FAR struct inode_path_s *info;
@@ -186,9 +202,25 @@ int foreach_inode(foreach_inode_t handler, FAR void *arg)
 
   /* Start the recursion at the root inode */
 
-  inode_rlock();
+  if (readonly)
+    {
+      inode_rlock();
+    }
+  else
+    {
+      inode_lock();
+    }
+
   ret = foreach_inodelevel(g_root_inode->i_child, info);
-  inode_runlock();
+
+  if (readonly)
+    {
+      inode_runlock();
+    }
+  else
+    {
+      inode_unlock();
+    }
 
   /* Free the info structure and return the result */
 
@@ -207,9 +239,25 @@ int foreach_inode(foreach_inode_t handler, FAR void *arg)
 
   /* Start the recursion at the root inode */
 
-  inode_rlock();
+  if (readonly)
+    {
+      inode_rlock();
+    }
+  else
+    {
+      inode_lock();
+    }
+
   ret = foreach_inodelevel(g_root_inode->i_child, &info);
-  inode_runlock();
+
+  if (readonly)
+    {
+      inode_runlock();
+    }
+  else
+    {
+      inode_unlock();
+    }
 
   return ret;
 
