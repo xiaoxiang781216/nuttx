@@ -790,15 +790,6 @@ struct note_heap_s
   size_t used;
 };
 
-/* Manually aligned to the
- * 4-byte boundary as some compilers
- * like GHS prefers alignment and it's
- * no harm anyway.
- * Without packing the struct, implicitly
- * alignment will lead to an incorrect result
- * from SIZEOF_NOTE_PRINTF/SIZEOF_NOTE_EVENT
- */
-
 struct note_printf_s
 {
   struct note_common_s npt_cmn; /* Common note parameters */
@@ -814,8 +805,13 @@ struct note_printf_s
   char npt_data[0];             /* Print arguments */
 };
 
-#define SIZEOF_NOTE_PRINTF(n) (sizeof(struct note_printf_s) + \
-                              (n) * sizeof(uint8_t))
+/* Use offsetof to get the true payload offset. sizeof() would include
+ * the struct's trailing padding (npt_meta forces 8-byte alignment, so
+ * on some ABIs sizeof exceeds the payload offset), which overcounts the
+ * header and corrupts the serialized layout.
+ */
+
+#define SIZEOF_NOTE_PRINTF(n) (offsetof(struct note_printf_s, npt_data) + (n))
 
 struct note_event_s
 {
@@ -826,8 +822,7 @@ struct note_event_s
   uint8_t nev_data[2];               /* Event data */
 };
 
-#define SIZEOF_NOTE_EVENT(n) (sizeof(struct note_event_s) + \
-                             ((n - 2)) * sizeof(uint8_t))
+#define SIZEOF_NOTE_EVENT(n) (offsetof(struct note_event_s, nev_data) + (n))
 
 struct note_counter_s
 {
