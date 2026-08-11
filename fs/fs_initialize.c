@@ -25,49 +25,14 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/reboot_notifier.h>
 #include <nuttx/trace.h>
-#include <nuttx/irq.h>
 
 #include "rpmsgfs/rpmsgfs.h"
 #include "inode/inode.h"
 #include "aio/aio.h"
 #include "vfs/vfs.h"
 #include "fs_heap.h"
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: sync_reboot_handler
- ****************************************************************************/
-
-static int sync_reboot_handler(FAR struct notifier_block *nb,
-                               unsigned long action, FAR void *data)
-{
-  if ((action == SYS_POWER_OFF || action == SYS_RESTART) &&
-       !up_interrupt_context())
-    {
-      sync();
-    }
-
-  return 0;
-}
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/****************************************************************************
- * Name: fs_sync_reboot_nb
- ****************************************************************************/
-
-static DEFINE_PER_CPU_BMP(struct notifier_block, g_sync_nb) =
-{
-  sync_reboot_handler
-};
-#define g_sync_nb this_cpu_var_bmp(g_sync_nb)
+#include "fs_reboot.h"
 
 /****************************************************************************
  * Public Functions
@@ -113,6 +78,6 @@ void fs_initialize(void)
   notify_initialize();
 #endif
 
-  register_reboot_notifier(&g_sync_nb);
+  fs_reboot_initialize();
   fs_trace_end();
 }

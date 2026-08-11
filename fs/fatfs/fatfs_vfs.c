@@ -38,7 +38,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/lib/lib.h>
 #include <nuttx/mutex.h>
-#include <nuttx/reboot_notifier.h>
 
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -69,16 +68,15 @@ struct fatfs_dir_s
 
 struct fatfs_file_s
 {
-  char       path[PATH_MAX + 3];
-  FIL        f;
+  char path[PATH_MAX + 3];
+  FIL f;
 };
 
 struct fatfs_mountpt_s
 {
-  FATFS                 fat;
-  BYTE                  pdrv;
-  mutex_t               lock;
-  struct notifier_block nb;
+  FATFS fat;
+  BYTE pdrv;
+  mutex_t lock;
 };
 
 struct fatfs_driver_s
@@ -327,29 +325,6 @@ static int fatfs_convert_oflags(int oflags)
       ret |= FA_CREATE_ALWAYS;
     }
 
-  return ret;
-}
-
-static int fatfs_reboot_notifier(FAR struct notifier_block *notify,
-                                     unsigned long action, FAR void *data)
-{
-  FAR struct fatfs_mountpt_s *fs = container_of(notify,
-                                                struct fatfs_mountpt_s, nb);
-  char path[3];
-  int ret = 0;
-
-  path[0] = '0' + fs->pdrv;
-  path[1] = ':';
-  path[2] = '\0';
-
-  if (action == SYS_HALT)
-    {
-      return ret;
-    }
-
-  nxmutex_lock(&fs->lock);
-  ret = fatfs_convert_result(f_unmount(path));
-  nxmutex_unlock(&fs->lock);
   return ret;
 }
 
@@ -1341,11 +1316,6 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
         }
     }
 
-  /* Initialize the notifier */
-
-  fs->nb.notifier_call = fatfs_reboot_notifier;
-  register_reboot_notifier(&fs->nb);
-
   *handle = fs;
   return OK;
 
@@ -1398,7 +1368,6 @@ static int fatfs_unbind(FAR void *handle, FAR struct inode **driver,
 
   /* Release the mountpoint private data */
 
-  unregister_reboot_notifier(&fs->nb);
   nxmutex_destroy(&fs->lock);
   fs_heap_free(fs);
   return ret;
