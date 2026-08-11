@@ -1047,6 +1047,11 @@ int lib_sprintf(FAR struct lib_outstream_s *stream,
  *  A nonzero type word restores a buffer packed by lib_bsprintf via its
  *  per-argument type codes; zero parses fmt directly.
  *
+ *  A NULL fmt says that the record is self contained, that is buf holds
+ *  [prefix\0][fmt\0][arguments...]. The format string is then recovered
+ *  from buf, the prefix is printed as stored by the producer, and the type
+ *  word is ignored.
+ *
  ****************************************************************************/
 
 int lib_osprintf(FAR struct lib_outstream_s *s, uint64_t type,

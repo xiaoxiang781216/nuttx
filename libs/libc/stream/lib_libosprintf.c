@@ -209,12 +209,46 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
   size_t len = 0;
   char c;
 
+  /* A NULL format string says that the producer could not hand us a usable
+   * address and made the record self contained instead:
+   *
+   *   buf: [prefix\0][fmt\0][arguments...]
+   *
+   * See lib_bsprintf().  Recover the source name and the format string from
+   * the buffer, otherwise a NULL format string would be dereferenced: this
+   * runs from the note dump path, where a crash would take the whole system
+   * down while only diagnostic information is being collected.
+   *
+   * The producer stores the name ready to be printed, brackets included, so
+   * copy the field out as is: an image that does not name itself stores an
+   * empty field and nothing is printed for it.
+   *
+   * Such a record is always packed by parsing fmt, so decode it that way no
+   * matter what the caller says, otherwise the recovered format string would
+   * be replaced by its own address.
+   */
+
+  if (fmt == NULL)
+    {
+      if (data == NULL)
+        {
+          return 0;
+        }
+
+      len = strlen(data);
+      ret = lib_stream_puts(s, data, len);
+      data += len + 1;
+      fmt = data;
+      data += strlen(fmt) + 1;
+      type = 0;
+    }
+
   if (type != 0)
     {
       char tfmt[128];
       size_t i;
 
-      ret = lib_sprintf(s, "%p", fmt);
+      ret += lib_sprintf(s, "%p", fmt);
 
       tfmt[0] = '\0';
       for (i = 0; i < PRINTF_MAX_ARGS; i++)

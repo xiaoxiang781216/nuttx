@@ -40,6 +40,10 @@
 
 #define NOTE_RPMSG_WORK_DELAY MSEC2TICK(CONFIG_DRIVERS_NOTERPMSG_WORK_DELAY)
 
+/* Name of the sending core, stored in the record the way it is printed */
+
+#define NOTERPMSG_CPUNAME     "[" CONFIG_RPMSG_LOCAL_CPUNAME "]"
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -359,11 +363,13 @@ static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint64_t meta,
   note = (FAR struct note_printf_s *)data;
 
   /* npt_data layout: [cpuname\0][fmt\0][args...]
-   * When npt_fmt == 0, receiver can extract cpuname to identify source core
+   * When npt_fmt == 0, receiver can extract cpuname to identify source core.
+   * The name is stored ready to be printed, so the receiver copies it out as
+   * is instead of decorating it again.
    */
 
-  cpunamelen = strlen(CONFIG_RPMSG_LOCAL_CPUNAME) + 1;
-  memcpy(note->npt_data, CONFIG_RPMSG_LOCAL_CPUNAME, cpunamelen);
+  cpunamelen = sizeof(NOTERPMSG_CPUNAME);
+  memcpy(note->npt_data, NOTERPMSG_CPUNAME, cpunamelen);
 
   fmtlen = strlen(fmt) + 1;
   memcpy(note->npt_data + cpunamelen, fmt, fmtlen);
