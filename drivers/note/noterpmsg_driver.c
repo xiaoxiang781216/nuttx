@@ -40,10 +40,6 @@
 
 #define NOTE_RPMSG_WORK_DELAY MSEC2TICK(CONFIG_DRIVERS_NOTERPMSG_WORK_DELAY)
 
-/* Name of the sending core, stored in the record the way it is printed */
-
-#define NOTERPMSG_CPUNAME     "[" CONFIG_RPMSG_LOCAL_CPUNAME "]"
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -66,8 +62,6 @@ struct noterpmsg_driver_s
 static ssize_t noterpmsg_add(FAR struct note_driver_s *driver,
                              FAR const void *note, size_t notelen,
                              bool noswitches);
-static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint64_t meta,
-                              uintptr_t ip, FAR const char *fmt, va_list va);
 static int noterpmsg_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg);
 
@@ -87,7 +81,6 @@ DEFINE_PER_CPU_BSS_BMP(noterpmsg_buffer_t, g_noterpmsg_buffer);
 static const struct note_driver_ops_s g_noterpmsg_ops =
 {
   .add = noterpmsg_add,
-  .vprintf = noterpmsg_vprintf,
   .ioctl = noterpmsg_ioctl,
 };
 
@@ -345,60 +338,6 @@ static int noterpmsg_ioctl(FAR struct file *filep, int cmd,
     }
 
   return ret;
-}
-
-static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint64_t meta,
-                              uintptr_t ip, FAR const char *fmt, va_list va)
-{
-  FAR struct tcb_s *tcb = running_task();
-  FAR struct note_printf_s *note;
-  uint8_t data[NOTE_BUFFER_SIZE];
-  size_t cpunamelen;
-  size_t length;
-  size_t fmtlen;
-  size_t next;
-
-  noterpmsg_driver_initialize();
-
-  note = (FAR struct note_printf_s *)data;
-
-  /* npt_data layout: [cpuname\0][fmt\0][args...]
-   * When npt_fmt == 0, receiver can extract cpuname to identify source core.
-   * The name is stored ready to be printed, so the receiver copies it out as
-   * is instead of decorating it again.
-   */
-
-  cpunamelen = sizeof(NOTERPMSG_CPUNAME);
-  memcpy(note->npt_data, NOTERPMSG_CPUNAME, cpunamelen);
-
-  fmtlen = strlen(fmt) + 1;
-  memcpy(note->npt_data + cpunamelen, fmt, fmtlen);
-
-  length = sizeof(data) - SIZEOF_NOTE_PRINTF(0) - cpunamelen - fmtlen;
-  next = lib_bsprintf(note->npt_data + cpunamelen + fmtlen,
-                      length, 0, fmt, va);
-
-  /* Silently truncate if data exceeds buffer - avoid assert in syslog path */
-
-  if (next > length)
-    {
-      next = length;
-    }
-
-  length = SIZEOF_NOTE_PRINTF(next + cpunamelen + fmtlen);
-  note_common(tcb, &note->npt_cmn, length, NOTE_DUMP_PRINTF);
-  note->npt_ip = ip;
-  note->npt_fmt = 0;
-
-  /* meta is pre-packed to a fixed layout, so the frame decodes identically
-   * on a remote core regardless of pointer width.
-   */
-
-  note->npt_meta = meta;
-
-  /* Add the note to circular buffer */
-
-  noterpmsg_add(drv, note, length, false);
 }
 
 static int noterpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
