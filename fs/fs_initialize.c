@@ -49,8 +49,6 @@
 
 void fs_initialize(void)
 {
-  fs_trace_begin();
-
   fs_heap_initialize();
 
   /* Initial inode, file, and VFS data structures */
@@ -79,5 +77,4 @@ void fs_initialize(void)
 #endif
 
   fs_reboot_initialize();
-  fs_trace_end();
 }
