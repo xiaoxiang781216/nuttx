@@ -235,7 +235,23 @@ set(ENV{PYTHONPYCACHEPREFIX} ${CMAKE_BINARY_DIR})
 set(ENV{APPSDIR} ${NUTTX_APPS_DIR}) # TODO: support not having apps/
 set(ENV{APPSBINDIR} ${NUTTX_APPS_BINDIR}) # TODO: support not having apps/
 set(ENV{BINDIR} ${CMAKE_BINARY_DIR}) # TODO: support not having apps/
-set(ENV{EXTERNALDIR} dummy) # TODO
+# EXTERNALDIR is sourced by nuttx/Kconfig as a sibling of the "Application
+# Configuration" menu. It keeps pointing at the upstream empty "dummy" tree and
+# is only taken over when out-of-layout application roots are actually
+# registered, so a build without NUTTX_EXTERNAL_APPS is unchanged. A caller may
+# still override it with -DEXTERNALDIR=<path>.
+if(NOT DEFINED EXTERNALDIR OR "${EXTERNALDIR}" STREQUAL "")
+  if(NOT "${NUTTX_EXTERNAL_APPS}" STREQUAL "")
+    set(EXTERNALDIR ${CMAKE_BINARY_DIR}/extapps)
+    file(MAKE_DIRECTORY ${EXTERNALDIR})
+    if(NOT EXISTS ${EXTERNALDIR}/Kconfig)
+      file(TOUCH ${EXTERNALDIR}/Kconfig)
+    endif()
+  else()
+    set(EXTERNALDIR dummy)
+  endif()
+endif()
+set(ENV{EXTERNALDIR} ${EXTERNALDIR})
 set(ENV{DRIVERS_PLATFORM_DIR} dummy) # TODO
 
 set(ENV{HOST_LINUX} n)
@@ -250,6 +266,7 @@ include(nuttx_parse_function_args)
 include(nuttx_add_subdirectory)
 include(nuttx_create_symlink)
 include(nuttx_aggregate_kconfig)
+include(nuttx_add_external_apps)
 
 # Add apps/ to the build (if present)
 #
