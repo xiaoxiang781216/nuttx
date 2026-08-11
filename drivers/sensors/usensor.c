@@ -31,6 +31,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/sensors/sensor.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -166,6 +167,8 @@ static int usensor_unregister(FAR struct usensor_context_s *usensor,
             {
               snerr("ERROR: Topic %s unregister failed! return:%d",
                     lower->path, ret);
+              sensor_trace_diag(LOG_ERR, DIAG_SENSOR_USENSOR_UNREG_FAIL,
+                                "path:%s,ret:%d", lower->path, ret);
               return ret;
             }
 

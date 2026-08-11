@@ -37,6 +37,7 @@
 #include <nuttx/rwsem.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -327,6 +328,9 @@ static void sensor_rpmsg_advsub_one(FAR struct sensor_rpmsg_dev_s *dev,
     {
       snerr("ERROR: advsub:%d get buffer failed:%s, %s\n",
             command, dev->path, rpmsg_get_cpuname(ept->rdev));
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_ADVSUB,
+                        "err:get tx buffer fail,cmd:%d,path:%s,cpu:%s",
+                        command, dev->path, rpmsg_get_cpuname(ept->rdev));
       return;
     }
 
@@ -341,6 +345,10 @@ static void sensor_rpmsg_advsub_one(FAR struct sensor_rpmsg_dev_s *dev,
       rpmsg_release_tx_buffer(ept, msg);
       snerr("ERROR: advsub:%d rpmsg send failed:%s, %d, %s\n",
             command, dev->path, ret, rpmsg_get_cpuname(ept->rdev));
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_ADVSUB,
+                        "err:tx buffer fail,cmd:%d,path:%s,ret:%d,cpu:%s",
+                        command, dev->path, ret,
+                        rpmsg_get_cpuname(ept->rdev));
     }
 }
 
@@ -450,6 +458,10 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
             {
               snerr("ERROR: wait proxy create failed:%s, cmd:%d\n",
                     dev->path, cmd);
+              sensor_trace_diag(LOG_ERR,
+                                DIAG_SENSOR_RPMSG_IOCTL_PROXY_TIMEOUT,
+                                "err:wait proxy create fail,path:%s,cmd:%d",
+                                dev->path, cmd);
               return ret;
             }
 
@@ -483,6 +495,9 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
           ret = -ENOMEM;
           snerr("ERROR: ioctl get buffer failed:%s, %s\n",
                 dev->path, rpmsg_get_cpuname(ept->rdev));
+          sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_IOCTL_BUF_FAIL,
+                            "err:ioctl get buffer fail,path:%s,cpu:%s",
+                            dev->path, rpmsg_get_cpuname(ept->rdev));
           break;
         }
 
@@ -506,6 +521,9 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
           rpmsg_release_tx_buffer(ept, msg);
           snerr("ERROR: ioctl rpmsg send failed:%s, %d, %s\n",
                 dev->path, ret, rpmsg_get_cpuname(ept->rdev));
+          sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_IOCTL_SEND_FAIL,
+                            "err:rpmsg send fail,path:%s,ret:%d,cpu:%s",
+                            dev->path, ret, rpmsg_get_cpuname(ept->rdev));
           break;
         }
 
@@ -521,6 +539,9 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
         {
           snerr("ERROR: ioctl rpmsg wait failed:%s, %d, %s\n",
                 dev->path, ret, rpmsg_get_cpuname(ept->rdev));
+          sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_IOCTL_WAIT_FAIL,
+                            "err:rpmsg wait fail,path:%s,ret:%d,cpu:%s",
+                            dev->path, ret, rpmsg_get_cpuname(ept->rdev));
           break;
         }
 
@@ -1307,6 +1328,9 @@ static int sensor_rpmsg_adv_handler(FAR struct rpmsg_endpoint *ept,
   if (!proxy)
     {
       snerr("ERROR: adv create proxy failed:%s\n", dev->path);
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_ADV,
+                        "err:adv create proxy fail proxy fail,path:%s",
+                        dev->path);
     }
   else
     {
@@ -1317,6 +1341,9 @@ static int sensor_rpmsg_adv_handler(FAR struct rpmsg_endpoint *ept,
         {
           snerr("ERROR: adv rpmsg send failed:%s, %d, %s\n",
                 dev->path, ret, rpmsg_get_cpuname(ept->rdev));
+          sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_ADV,
+                            "err:send fail,path:%s,ret:%d,cpu:%s",
+                            dev->path, ret, rpmsg_get_cpuname(ept->rdev));
         }
       else
         {
@@ -1341,6 +1368,9 @@ static int sensor_rpmsg_advack_handler(FAR struct rpmsg_endpoint *ept,
     {
       snerr("ERROR: advack failed:%s, %s\n", dev->path,
             rpmsg_get_cpuname(ept->rdev));
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_ADVACK_STUB_FAIL,
+                        "err:advack fail,path:%s,cpu:%s",
+                        dev->path, rpmsg_get_cpuname(ept->rdev));
     }
 
   return 0;
@@ -1381,6 +1411,8 @@ static int sensor_rpmsg_sub_handler(FAR struct rpmsg_endpoint *ept,
   if (!stub)
     {
       snerr("ERROR: sub alloc stub failed:%s\n", dev->path);
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_SUB,
+                        "err:stub fail,path:%s", dev->path);
     }
   else
     {
@@ -1396,6 +1428,9 @@ static int sensor_rpmsg_sub_handler(FAR struct rpmsg_endpoint *ept,
           sensor_rpmsg_unlock(dev);
           snerr("ERROR: sub rpmsg send failed:%s, %d, %s\n",
                 dev->path, ret, rpmsg_get_cpuname(ept->rdev));
+          sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_SUB,
+                            "err:send fail,path:%s,ret:%d,cpu:%s",
+                            dev->path, ret, rpmsg_get_cpuname(ept->rdev));
         }
     }
 
@@ -1417,6 +1452,8 @@ static int sensor_rpmsg_suback_handler(FAR struct rpmsg_endpoint *ept,
     {
       sensor_rpmsg_advsub_one(dev, ept, SENSOR_RPMSG_UNSUBSCRIBE);
       snerr("ERROR: suback failed:%s\n", dev->path);
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_SUBACK_FAIL,
+                        "err:suback fail,path:%s", dev->path);
     }
   else
     {
@@ -1570,6 +1607,10 @@ static int sensor_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
   snerr("ERROR: ioctl stub not found:%s, cmd:%" PRId32 ", cookie:%" PRIu64
         ", %s\n", dev->path, msg->request, msg->cookie,
         rpmsg_get_cpuname(ept->rdev));
+  sensor_trace_diag(LOG_ERR, DIAG_SENSOR_RPMSG_IOCTL_STUB_NOT_FOUND,
+                    "err:stub not found,path:%s,cmd:%" PRId32 ",cpu:%s",
+                    dev->path, msg->request,
+                    rpmsg_get_cpuname(ept->rdev));
   sensor_rpmsg_unlock(dev);
   return 0;
 }

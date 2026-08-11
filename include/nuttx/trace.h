@@ -2050,6 +2050,18 @@
 #define DIAG_FF_OPEN_FAIL                (DIAG_SYSTEM_DRIVER_BASE + 127) /* 961011527 */
 #define DIAG_FF_SETGAIN_FAIL             (DIAG_SYSTEM_DRIVER_BASE + 128) /* 961011528 */
 
+/* Diagnostic sub-IDs for the uORB user space library
+ * (apps/system/uorb/uORB/), tagged NXTAG_SENSORS.
+ */
+
+#define DIAG_UORB_BASE                   (DIAG_SYSTEM_DRIVER_BASE + 140) /* 961011540 */
+#define DIAG_UORB_ADVSUB                 (DIAG_UORB_BASE + 0)            /* 961011540 */
+#define DIAG_UORB_ADV_PUBLISH_FAIL       (DIAG_UORB_BASE + 1)            /* 961011541 */
+#define DIAG_UORB_UNLINK                 (DIAG_UORB_BASE + 2)            /* 961011542 */
+#define DIAG_UORB_LOOP                   (DIAG_UORB_BASE + 3)            /* 961011553 */
+#define DIAG_UORB_LOOP_DEINIT_FAIL       (DIAG_UORB_BASE + 4)            /* 961011554 */
+#define DIAG_UORB_EPOLL_CTL_FAIL         (DIAG_UORB_BASE + 5)            /* 961011555 */
+
 /* Network module diagnostic IDs */
 
 #define DIAG_NET_BASE                    961030000
@@ -2097,5 +2109,37 @@
 /* DIAG_NET_DNS_LATENCY_HIGH (961030013) threshold (ms) */
 
 #define DIAG_NET_DNS_LATENCY_THRESHOLD_MS 1000
+
+/* Sensor module diagnostic IDs.
+ *
+ * These live in the 100 IDs already reserved for sensors by
+ * DIAG_SYSTEM_SENSOR_BASE (961010600).  All sensor fault codes -- the
+ * upper-half framework, usensor and the cross-core rpmsg layer alike --
+ * are numbered sequentially in this single block, with no per-file
+ * sub-ranges.
+ *
+ * In use   : 961010600 ~ 961010626 (23 IDs)
+ * Reserved : 961010627 ~ 961010699 (73 IDs)
+ */
+
+#define DIAG_SENSOR_BASE                       DIAG_SYSTEM_SENSOR_BASE
+
+/* sensor.c: register failures */
+
+#define DIAG_SENSOR_REG                        (DIAG_SENSOR_BASE + 0)  /* 961010600 */
+#define DIAG_SENSOR_OPEN                       (DIAG_SENSOR_BASE + 1)  /* 961010601 */
+#define DIAG_SENSOR_IOCTL_INTERVAL_FAIL        (DIAG_SENSOR_BASE + 2)  /* 961010602 */
+#define DIAG_SENSOR_IOCTL_BATCH_FAIL           (DIAG_SENSOR_BASE + 3)  /* 961010603 */
+#define DIAG_SENSOR_USENSOR_UNREG_FAIL         (DIAG_SENSOR_BASE + 4)  /* 961010604 */
+#define DIAG_SENSOR_RPMSG_ADV                  (DIAG_SENSOR_BASE + 5)  /* 961010605 */
+#define DIAG_SENSOR_RPMSG_ADVACK_STUB_FAIL     (DIAG_SENSOR_BASE + 6)  /* 961010606 */
+#define DIAG_SENSOR_RPMSG_SUB                  (DIAG_SENSOR_BASE + 7)  /* 961010607 */
+#define DIAG_SENSOR_RPMSG_SUBACK_FAIL          (DIAG_SENSOR_BASE + 8)  /* 961010608 */
+#define DIAG_SENSOR_RPMSG_IOCTL_PROXY_TIMEOUT  (DIAG_SENSOR_BASE + 9)  /* 961010609 */
+#define DIAG_SENSOR_RPMSG_IOCTL_BUF_FAIL       (DIAG_SENSOR_BASE + 10) /* 961010610 */
+#define DIAG_SENSOR_RPMSG_IOCTL_SEND_FAIL      (DIAG_SENSOR_BASE + 11) /* 961010611 */
+#define DIAG_SENSOR_RPMSG_IOCTL_WAIT_FAIL      (DIAG_SENSOR_BASE + 12) /* 961010612 */
+#define DIAG_SENSOR_RPMSG_ADVSUB               (DIAG_SENSOR_BASE + 13) /* 961010613 */
+#define DIAG_SENSOR_RPMSG_IOCTL_STUB_NOT_FOUND (DIAG_SENSOR_BASE + 14) /* 961010614 */
 
 #endif /* __INCLUDE_NUTTX_TRACE_H */

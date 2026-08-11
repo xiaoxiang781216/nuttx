@@ -43,6 +43,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/trace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -350,6 +351,9 @@ again:
           ret = lower->ops->set_interval(lower, filep, &min_interval);
           if (ret < 0)
             {
+              sensor_trace_diag(LOG_ERR, DIAG_SENSOR_IOCTL_INTERVAL_FAIL,
+                                "name:%s,interval:%" PRIu32 ",ret:%d",
+                                upper->name, min_interval, ret);
               return ret;
             }
 
@@ -490,6 +494,9 @@ update:
       ret = lower->ops->batch(lower, filep, &min_latency);
       if (ret < 0)
         {
+          sensor_trace_diag(LOG_ERR, DIAG_SENSOR_IOCTL_BATCH_FAIL,
+                            "name:%s,latency:%" PRIu32 ",ret:%d",
+                            upper->name, min_latency, ret);
           return ret;
         }
 
@@ -781,6 +788,8 @@ static int sensor_open(FAR struct file *filep)
   user = kmm_zalloc(sizeof(struct sensor_user_s));
   if (user == NULL)
     {
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_OPEN,
+                        "err:alloc failed,name:%s", upper->name);
       return -ENOMEM;
     }
 
@@ -793,6 +802,9 @@ static int sensor_open(FAR struct file *filep)
       ret = lower->ops->open(lower, filep);
       if (ret < 0)
         {
+          sensor_trace_diag(LOG_ERR, DIAG_SENSOR_OPEN,
+                            "errr:lower fail,name:%s,ret:%d",
+                            upper->name, ret);
           goto errout_with_user;
         }
     }
@@ -805,6 +817,9 @@ static int sensor_open(FAR struct file *filep)
           ret = lower->ops->activate(lower, filep, true);
           if (ret < 0)
             {
+              sensor_trace_diag(LOG_ERR, DIAG_SENSOR_OPEN,
+                                "err:activate fail,name:%s,ret:%d",
+                                upper->name, ret);
               goto errout_with_open;
             }
         }
@@ -1508,6 +1523,9 @@ int sensor_custom_register(FAR struct sensor_lowerhalf_s *lower,
   if (lower->type >= SENSOR_TYPE_COUNT || !esize)
     {
       snerr("ERROR: type is invalid\n");
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_REG,
+                        "err:type invalid,type:%d,esize:%zu,path:%s",
+                        lower->type, esize, path);
       return ret;
     }
 
@@ -1517,6 +1535,8 @@ int sensor_custom_register(FAR struct sensor_lowerhalf_s *lower,
   if (!upper)
     {
       snerr("ERROR: Allocation failed\n");
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_REG,
+                        "err:alloc fail,path:%s", path);
       return -ENOMEM;
     }
 
@@ -1561,6 +1581,8 @@ int sensor_custom_register(FAR struct sensor_lowerhalf_s *lower,
   if (lower == NULL)
     {
       ret = -EIO;
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_REG,
+                        "err:rpmsg fail,path:%s", path);
       goto rpmsg_err;
     }
 #endif
@@ -1572,6 +1594,8 @@ int sensor_custom_register(FAR struct sensor_lowerhalf_s *lower,
   if (ret)
     {
       snerr("ERROR: register failed! path:%s\n", path);
+      sensor_trace_diag(LOG_ERR, DIAG_SENSOR_REG,
+                        "err:drv failed,ret:%d,path:%s", ret, path);
       goto drv_err;
     }
 
