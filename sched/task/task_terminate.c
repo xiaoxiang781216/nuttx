@@ -137,7 +137,7 @@ static inline_function int remove_running_task(FAR struct tcb_s *dtcb)
  *
  ****************************************************************************/
 
-int nxtask_terminate(pid_t pid)
+__jumpfunc__ int nxtask_terminate(pid_t pid)
 {
   FAR struct tcb_s *dtcb;
   int ret = OK;

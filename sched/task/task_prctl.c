@@ -62,7 +62,7 @@
  *
  ****************************************************************************/
 
-int prctl(int option, ...)
+__jumpfunc__ int prctl(int option, ...)
 {
   va_list ap;
   int errcode = OK;
