@@ -31,20 +31,39 @@
 #include <stdlib.h>
 
 /****************************************************************************
- * Public Functions
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifdef CONFIG_STREAM_BSPRINTF_PREFIX
+#  define BSPRINTF_PREFIX "[" CONFIG_STREAM_BSPRINTF_PREFIX "]"
+#else
+#  define BSPRINTF_PREFIX ""
+#endif
+
+/* The prefix is stored the way it is printed, so a reader copies that field
+ * out as is.  An image that does not name itself stores an empty field
+ * rather than an empty pair of brackets.  The sizeof() folds at compile
+ * time, so only one of the two literals survives.
+ */
+
+#define BSPRINTF_PREFIX_LEN sizeof(BSPRINTF_PREFIX)
+
+/****************************************************************************
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: lib_bsprintf
+ * Name: lib_bsprintf_args
  *
  * Description:
- *  Implements saving sprintf parameters to buffer, which can use
- *  lib_osprintf to restore the data in buffer to a string.
+ *  Pack the arguments only, either by the per-argument codes of the type
+ *  word or by parsing the conversions of fmt when the type word is zero.
  *
  ****************************************************************************/
 
-ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
-                     FAR const IPTR char *fmt, va_list va)
+static ssize_t lib_bsprintf_args(FAR void *buffer, size_t size,
+                                 uint64_t type, FAR const IPTR char *fmt,
+                                 va_list va)
 {
   begin_packed_struct union var
     {
@@ -300,12 +319,12 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
 #  ifdef va_copy
               va_list copy;
               va_copy(copy, *vaf->va);
-              ret = lib_bsprintf(buff + next, length - next,
-                                 0, vaf->fmt, copy);
+              ret = lib_bsprintf_args(buff + next, length - next,
+                                      0, vaf->fmt, copy);
               va_end(copy);
 #  else
-              ret = lib_bsprintf(buff + next, length - next,
-                                 0, vaf->fmt, vaf->va);
+              ret = lib_bsprintf_args(buff + next, length - next,
+                                      0, vaf->fmt, vaf->va);
 #  endif
               if (ret < 0)
                 {
@@ -328,4 +347,92 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
     }
 
   return next;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: lib_bsprintf
+ *
+ * Description:
+ *  Implements saving sprintf parameters to buffer, which can use
+ *  lib_osprintf to restore the data in buffer to a string.
+ *
+ *  By default the arguments are packed alone: the caller keeps the format
+ *  string addressable and hands its address to the reader.  Under
+ *  STREAM_BSPRINTF_EMBED_FORMAT the record is made self contained instead:
+ *
+ *    buffer: [prefix\0][fmt\0][arguments...]
+ *
+ *  and a reader is told so by a NULL format string passed to lib_osprintf().
+ *  Enable it whenever the reader cannot resolve an address of this image:
+ *  another core (noterpmsg) or another image that inherits a retained buffer
+ *  (a boot stage handing its records to the image it jumps to).  The prefix
+ *  comes from STREAM_BSPRINTF_PREFIX and is stored the way it is printed; an
+ *  image that does not name itself stores an empty prefix, so a record
+ *  always decodes the same way whether or not it names its source.
+ *
+ *  A self contained record is always packed by parsing fmt, so its encoding
+ *  does not depend on the type word the caller derived at compile time.
+ *
+ * Input Parameters:
+ *   buffer - Where to pack the record
+ *   size   - Size of buffer
+ *   type   - Packed per-argument type codes, 0 to parse fmt instead
+ *   fmt    - Format string
+ *   va     - Format arguments
+ *
+ * Returned Value:
+ *   Number of bytes packed on success; negated errno on failure.
+ *
+ ****************************************************************************/
+
+ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
+                     FAR const IPTR char *fmt, va_list va)
+{
+  FAR char *buf = buffer;
+  size_t hdrlen = 0;
+  ssize_t ret;
+
+#ifdef CONFIG_STREAM_BSPRINTF_EMBED_FORMAT
+  size_t fmtlen;
+
+  /* Room for the prefix, for the terminator of fmt. */
+
+  if (size < BSPRINTF_PREFIX_LEN + 1)
+    {
+      return -ENOMEM;
+    }
+
+  memcpy(buf, BSPRINTF_PREFIX, BSPRINTF_PREFIX_LEN);
+
+  /* Truncate fmt instead of rejecting the record: this may run from the
+   * syslog path, where losing the tail of a message is better than losing
+   * all of it, and an assert would recurse.
+   */
+
+  fmtlen = strnlen(fmt, size - BSPRINTF_PREFIX_LEN - 1) + 1;
+  memcpy(buf + BSPRINTF_PREFIX_LEN, fmt, fmtlen - 1);
+  buf[BSPRINTF_PREFIX_LEN + fmtlen - 1] = '\0';
+
+  hdrlen = BSPRINTF_PREFIX_LEN + fmtlen;
+
+  /* The reader recovers fmt from the record and parses it, so pack the
+   * arguments by parsing the very same copy: a truncated format string then
+   * simply drops its trailing arguments on both sides.
+   */
+
+  fmt = buf + BSPRINTF_PREFIX_LEN;
+  type = 0;
+#endif
+
+  ret = lib_bsprintf_args(buf + hdrlen, size - hdrlen, type, fmt, va);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  return hdrlen + ret;
 }

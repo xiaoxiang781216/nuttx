@@ -3305,7 +3305,18 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint64_t meta,
   length = SIZEOF_NOTE_PRINTF(next);
   note_common(tcb, &note->npt_cmn, length, NOTE_DUMP_PRINTF);
   note->npt_ip = ip;
+
+#ifdef CONFIG_STREAM_BSPRINTF_EMBED_FORMAT
+  /* The record carries its own format string, and a NULL npt_fmt is how a
+   * reader tells the two encodings apart.  Its arguments were packed by
+   * parsing that string, so a reader ignores the type slots and there is
+   * no need to clear them.
+   */
+
+  note->npt_fmt = 0;
+#else
   note->npt_fmt = (uintptr_t)fmt;
+#endif
 
   note->npt_meta = meta;
 

@@ -1048,9 +1048,10 @@ int lib_sprintf(FAR struct lib_outstream_s *stream,
  *  per-argument type codes; zero parses fmt directly.
  *
  *  A NULL fmt says that the record is self contained, that is buf holds
- *  [prefix\0][fmt\0][arguments...]. The format string is then recovered
- *  from buf, the prefix is printed as stored by the producer, and the type
- *  word is ignored.
+ *  [prefix\0][fmt\0][arguments...] as packed by lib_bsprintf under
+ *  STREAM_BSPRINTF_EMBED_FORMAT. The format string is then recovered from
+ *  buf, the prefix is printed as stored by the producer, and the type word
+ *  is ignored.
  *
  ****************************************************************************/
 
@@ -1091,6 +1092,20 @@ int lib_osprintf_64(FAR struct lib_outstream_s *s, uint64_t type,
  *  to a string. A nonzero type word packs the arguments by its per-argument
  *  type codes (fmt is not parsed); zero packs them by parsing the fmt
  *  conversion specifiers.
+ *
+ *  STREAM_BSPRINTF_EMBED_FORMAT makes the record self contained instead,
+ *  that is it stores [prefix\0][fmt\0][arguments...] and packs the arguments
+ *  by parsing fmt whatever the type word says. Enable it when the reader
+ *  cannot resolve an address of this image, and pass a NULL fmt to
+ *  lib_osprintf to decode such a record. The prefix names this image and
+ *  comes from STREAM_BSPRINTF_PREFIX, an image that does not name itself
+ *  stores an empty prefix so that the layout does not depend on the name.
+ *
+ *  The choice belongs to an image rather than to a call site: every reader
+ *  of these records, note or syslog, decodes them the same way. A consumer
+ *  that keeps the address of the format string beside the record tests
+ *  STREAM_BSPRINTF_EMBED_FORMAT to know which of the two encodings it
+ *  produces.
  *
  ****************************************************************************/
 

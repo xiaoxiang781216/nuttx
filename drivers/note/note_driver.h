@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <syscall.h>
 #include <sys/types.h>
 
@@ -47,7 +48,11 @@
 
 #define NOTERPMSG_EPT_NAME           "rpmsg-note"
 
-#define NOTE_BUFFER_SIZE 256
+/* nc_length is a single byte, so bound the staging buffer by UINT8_MAX and
+ * let every note built in it fit the length field by construction.
+ */
+
+#define NOTE_BUFFER_SIZE UINT8_MAX
 static_assert(NOTE_BUFFER_SIZE >= sizeof(struct note_event_s),
               "Buffer size too small");
 

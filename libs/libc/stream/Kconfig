@@ -21,6 +21,54 @@ config STREAM_LZF_BLOG
 
 endif
 
+config STREAM_BSPRINTF_EMBED_FORMAT
+	bool "Self-contained bsprintf records"
+	default DRIVERS_NOTERPMSG
+	---help---
+		Make lib_bsprintf() store the format string in the record itself,
+		prefixed by the name of the image that packed it, instead of leaving
+		the format string to be addressed by the reader:
+
+			[prefix\0][fmt\0][arguments...]
+
+		The address of a format string is meaningful just inside the image
+		that packed the record, so a reader living anywhere else faults or
+		prints garbage when it resolves that address. This happens whenever
+		the reader is not the producer:
+
+		- Another core reads the records forwarded by the noterpmsg driver.
+		- Another image reads a note buffer that survived a warm restart,
+		  where DRIVERS_NOTERAM_SECTION points at retained memory: a boot
+		  stage (bootloader, OTA, recovery) packs a record and the image it
+		  jumps to unpacks it.
+
+		Enable this on such short lived images. Leave it disabled on images
+		that use these records for high rate tracing, where the extra copy
+		and the larger records do matter.
+
+		The arguments are then always packed by parsing the format string, so
+		the encoding no longer depends on the type word the caller derived at
+		compile time, that is on DRIVERS_NOTE_STRIP_FORMAT for a note.
+
+		Set STREAM_BSPRINTF_PREFIX to name the image, or the records are
+		reported without a source name.
+
+config STREAM_BSPRINTF_PREFIX
+	string "Name of the image packing bsprintf records"
+	depends on STREAM_BSPRINTF_EMBED_FORMAT
+	default RPMSG_LOCAL_CPUNAME if RPMSG
+	default LIBC_HOSTNAME if !RPMSG
+	---help---
+		Name of the image that packed a record, stored in the record and
+		reported as a [prefix] tag when it is unpacked. Use something that
+		identifies the producer to whoever reads the records: the core for a
+		cross core reader ("ap", "cp"), the boot stage for an image that
+		inherits a retained buffer ("ota", "recovery").
+
+		Defaults to RPMSG_LOCAL_CPUNAME where there is rpmsg, which is what
+		the noterpmsg driver used to store on its own. Leave it empty to keep
+		self-contained records without naming their source.
+
 config STREAM_OUT_BUFFER_SIZE
 	int "Output stream buffer size"
 	default 64
