@@ -42,6 +42,14 @@ if(CONFIG_DEVICE_TREE)
     list(APPEND SRCS fdt_ctucanfd.c)
   endif()
 
+  if(CONFIG_TIMER_SP804 AND CONFIG_TIMER)
+    list(APPEND SRCS fdt_sp804.c)
+  endif()
+
+  if(CONFIG_WATCHDOG_CMSDK)
+    list(APPEND SRCS fdt_cmsdk_wdt.c)
+  endif()
+
   target_include_directories(drivers
                              PRIVATE ${NUTTX_DIR}/libs/libc/fdt/dtc/libfdt)
   target_sources(drivers PRIVATE ${SRCS})
