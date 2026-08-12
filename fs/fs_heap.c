@@ -26,6 +26,8 @@
 
 #include <assert.h>
 
+#include <nuttx/percpu.h>
+
 #include "fs_heap.h"
 
 #if CONFIG_FS_HEAPSIZE > 0
@@ -34,7 +36,8 @@
  * Private Data
  ****************************************************************************/
 
-static FAR struct mm_heap_s *g_fs_heap;
+static DEFINE_PER_CPU_BMP(FAR struct mm_heap_s *, g_fs_heap);
+#define g_fs_heap this_cpu_var_bmp(g_fs_heap)
 
 /****************************************************************************
  * Public Functions
