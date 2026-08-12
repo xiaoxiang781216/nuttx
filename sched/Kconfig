@@ -1554,6 +1554,22 @@ config SCHED_INSTRUMENTATION_FUNCTION
 		For a more detailed description of compilation options,
 		refer to the "Program Instrumentation Options" chapter in the gcc documentation
 
+config SCHED_INSTRUMENTATION_PERF
+	bool "Perf sample monitor hooks"
+	default n
+	depends on PERF_EVENTS
+	select SCHED_INSTRUMENTATION
+	---help---
+		Mirror each perf overflow sample into the note instrumentation
+		stream as a NOTE_PERF_SAMPLE record, in addition to the normal
+		perf.data ring buffer.  This lets a perf capture be visualized
+		on the same Perfetto timeline as scheduler/note events (via the
+		nxtrace note-to-perfetto converter).  Both paths share the
+		perf_gettime() time base, so the timestamps align directly.
+
+		Runtime-gated by the NOTE_PERF_SAMPLE note filter; no samples
+		are emitted to the note stream until that type is enabled.
+
 endmenu # System performance monitor hooks
 
 endmenu # Performance Monitoring

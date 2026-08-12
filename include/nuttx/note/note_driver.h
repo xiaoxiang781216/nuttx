@@ -477,6 +477,8 @@ enum note_type_e
   NOTE_DUMP_ASYNC_BEGIN,
   NOTE_DUMP_ASYNC_END,
 
+  NOTE_PERF_SAMPLE,
+
   /* Always last */
 
   NOTE_TYPE_LAST
@@ -844,6 +846,23 @@ struct note_async_s
   char names[];         /* [name\0][track\0] (track optional) */
 };
 
+/* A single perf sample redirected into the note stream (NOTE_PERF_SAMPLE).
+ * Carries the sampled instruction pointer plus enough identity to attribute
+ * the sample to a perf event.  Emitted from perf's overflow path so a perf
+ * capture can be visualized on the same Perfetto timeline as note events;
+ * both share the perf_gettime() time base so timestamps align directly.
+ */
+
+struct note_perf_sample_s
+{
+  struct note_common_s nps_cmn;      /* Common note parameters */
+  uintptr_t nps_ip;                  /* Sampled instruction pointer */
+  uint64_t  nps_id;                  /* Perf event id */
+  uint64_t  nps_config;              /* Perf event config (attr.config) */
+  uint64_t  nps_period;              /* Sample period */
+  uint32_t  nps_type;                /* Perf event type (attr.type) */
+};
+
 /* Maximum note structure for temporary buffer when copying from byte stream.
  */
 
@@ -1007,6 +1026,29 @@ void note_wqueue(uint8_t event, FAR void *worker, FAR const void *arg);
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
 void note_heap(uint8_t event, FAR void *heap, FAR void *mem,
                size_t size, size_t curused);
+#endif
+
+/****************************************************************************
+ * Name: note_perf_sample
+ *
+ * Description:
+ *   Record a NOTE_PERF_SAMPLE note carrying a single perf sample (sampled
+ *   IP plus the identity of the perf event it belongs to).  Called from the
+ *   perf overflow path so a perf capture can be rendered on the same
+ *   Perfetto timeline as note events.
+ *
+ * Input Parameters:
+ *   ip     - Sampled instruction pointer.
+ *   id     - Perf event id.
+ *   type   - Perf event type (attr.type).
+ *   config - Perf event config (attr.config).
+ *   period - Sample period.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PERF
+void note_perf_sample(uintptr_t ip, uint64_t id, uint32_t type,
+                      uint64_t config, uint64_t period);
 #endif
 
 /****************************************************************************

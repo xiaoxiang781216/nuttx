@@ -379,6 +379,20 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
 #  define sched_note_wdog_leave(h,a)
 #endif
 
+#if defined(CONFIG_SCHED_INSTRUMENTATION_PERF) && defined(CONFIG_DRIVERS_NOTE)
+#  define sched_note_perf_sample(ip,id,type,config,period) \
+       do \
+         { \
+           if (static_branch_unlikely(&g_note_keys[NOTE_PERF_SAMPLE])) \
+             { \
+               note_perf_sample(ip, id, type, config, period); \
+             } \
+         } \
+       while (0)
+#else
+#  define sched_note_perf_sample(ip,id,type,config,period)
+#endif
+
 #if defined(CONFIG_SCHED_INSTRUMENTATION_HEAP) && defined(CONFIG_DRIVERS_NOTE)
 #  define sched_note_heap_add(h,m,s,c) \
        do \

@@ -3086,6 +3086,47 @@ void note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
 }
 #endif
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PERF
+void note_perf_sample(uintptr_t ip, uint64_t id, uint32_t type,
+                      uint64_t config, uint64_t period)
+{
+  FAR struct note_driver_s **driver;
+  struct note_perf_sample_s note;
+  bool formatted = false;
+  FAR struct tcb_s *tcb = this_task();
+
+  note_drivers_initialize();
+
+  for (driver = g_note_drivers; *driver; driver++)
+    {
+      if (!note_driver_isenabled_type(*driver, NOTE_PERF_SAMPLE))
+        {
+          continue;
+        }
+
+      if ((*driver)->ops->add == NULL)
+        {
+          continue;
+        }
+
+      if (!formatted)
+        {
+          formatted = true;
+          note_common(tcb, &note.nps_cmn, sizeof(note), NOTE_PERF_SAMPLE);
+          note.nps_ip     = ip;
+          note.nps_id     = id;
+          note.nps_config = config;
+          note.nps_period = period;
+          note.nps_type   = type;
+        }
+
+      /* Add the note to circular buffer */
+
+      note_do_add(*driver, &note, note.nps_cmn.nc_length, false);
+    }
+}
+#endif
+
 #ifdef CONFIG_SCHED_INSTRUMENTATION_WQUEUE
 /****************************************************************************
  * Name: note_wqueue

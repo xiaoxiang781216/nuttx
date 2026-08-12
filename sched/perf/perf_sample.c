@@ -34,6 +34,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/perf.h>
 #include <nuttx/sched.h>
+#include <nuttx/sched_note.h>
 
 #include "perf.h"
 
@@ -414,6 +415,16 @@ int perf_event_data_overflow(FAR struct perf_event_s *event,
   flags = spin_lock_irqsave(&event->buf->lock);
   perf_output_sample(&header, data, event);
   spin_unlock_irqrestore(&event->buf->lock, flags);
+
+  /* Mirror the sample into the note stream so a perf capture can be
+   * rendered on the same Perfetto timeline as note events.  Best-effort
+   * and gated by CONFIG_SCHED_INSTRUMENTATION_PERF; a no-op when
+   * disabled.  Both paths use the perf_gettime() time base, so the
+   * timestamps align directly.
+   */
+
+  sched_note_perf_sample(ip, perf_get_eventid(event), event->attr.type,
+                         event->attr.config, data->period);
   return 0;
 }
 
