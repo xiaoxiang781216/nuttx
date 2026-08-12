@@ -1279,12 +1279,7 @@ int devif_poll(FAR struct net_driver_s *dev, devif_poll_callback_t callback)
   dev->d_buf = buf;
 
 out:
-#ifdef CONFIG_NET_IPv4
-  IFF_CLR_IPv4(dev->d_flags);
-#endif
-#ifdef CONFIG_NET_IPv6
-  IFF_CLR_IPv6(dev->d_flags);
-#endif
+  IFF_SET_IPNO(dev->d_flags);
   netdev_unlock(dev);
 
   return bstop;
@@ -1354,6 +1349,7 @@ int devif_poll_out(FAR struct net_driver_s *dev,
 
   if (dev->d_len == 0)
     {
+      IFF_SET_IPNO(dev->d_flags);
       return 0;
     }
 

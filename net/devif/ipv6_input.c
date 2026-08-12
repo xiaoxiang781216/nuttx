@@ -322,7 +322,7 @@ static int ipv6_in(FAR struct net_driver_s *dev)
     {
       if (ipv6_fragin(dev) == OK)
         {
-          IFF_CLR_IPv6(dev->d_flags);
+          IFF_SET_IPNO(dev->d_flags);
           return OK;
         }
       else
@@ -561,7 +561,7 @@ done:
 
   devif_out(dev);
 
-  IFF_CLR_IPv6(dev->d_flags);
+  IFF_SET_IPNO(dev->d_flags);
 
   /* Return and let the caller do any pending transmission. */
 
@@ -575,7 +575,7 @@ drop:
 #ifdef CONFIG_NET_STATISTICS
   g_netstats.ipv6.drop++;
 #endif
-  IFF_CLR_IPv6(dev->d_flags);
+  IFF_SET_IPNO(dev->d_flags);
   dev->d_len = 0;
   return OK;
 }

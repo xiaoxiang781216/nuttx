@@ -71,8 +71,12 @@
 
 #define IFF_SET_UP(f)            do { (f) |= IFF_UP; } while (0)
 #define IFF_SET_RUNNING(f)       do { (f) |= IFF_RUNNING; } while (0)
-#define IFF_SET_IPv6(f)          do { (f) |= IFF_IPv6; } while (0)
-#define IFF_SET_IPv4(f)          do { (f) |= IFF_IPv4; } while (0)
+#define IFF_SET_IPv6(f)          do { (f) &= ~IFF_IPv4; (f) |= IFF_IPv6; } \
+                                 while (0)
+#define IFF_SET_IPv4(f)          do { (f) &= ~IFF_IPv6; (f) |= IFF_IPv4; } \
+                                 while (0)
+#define IFF_SET_IPNO(f)          do { (f) &= ~(IFF_IPv4 | IFF_IPv6); } \
+                                 while (0)
 #define IFF_SET_NOARP(f)         do { (f) |= IFF_NOARP; } while (0)
 #define IFF_SET_NAT(f)           do { (f) |= IFF_NAT; } while (0)
 #define IFF_SET_LOOPBACK(f)      do { (f) |= IFF_LOOPBACK; } while (0)
