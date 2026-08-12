@@ -28,6 +28,8 @@
 
 #include <assert.h>
 #include <sched.h>
+#include <string.h>
+#include <sys/param.h>
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
@@ -35,6 +37,9 @@
 #include <nuttx/mutex.h>
 #include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/syslog/syslog_rpmsg.h>
+#ifdef CONFIG_BINARY_SYSLOG
+#  include <nuttx/sched_note.h>
+#endif
 
 #include "syslog.h"
 #include "syslog_rpmsg.h"
@@ -43,7 +48,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SYSLOG_RPMSG_MAXLEN             256
+#ifdef CONFIG_BINARY_SYSLOG
+#  define SYSLOG_RPMSG_MAXLEN (NOTE_BUFFER_SIZE - SIZEOF_NOTE_PRINTF(0))
+#else
+#  define SYSLOG_RPMSG_MAXLEN 256
+#endif
 
 /****************************************************************************
  * Private Types
@@ -55,14 +64,22 @@ struct syslog_rpmsg_server_s
   struct list_node      node;
 #endif
   struct rpmsg_endpoint ept;
-  char                  tmpbuf[SYSLOG_RPMSG_MAXLEN];
-  unsigned int          nextpos;
+
+  /* Line reassembly buffer: carries a partial line across packets until a
+   * '\n' is seen.  Sized SYSLOG_RPMSG_MAXLEN so the text path's
+   * linepos + copied bound never overflows; in binary mode it is further
+   * bounded to leave room for the note header (see above).
+   */
+
+  char                  linebuf[SYSLOG_RPMSG_MAXLEN];
+  unsigned int          linepos;
 };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
+static void syslog_rpmsg_flush(FAR const char *buf, size_t len);
 static void syslog_rpmsg_write_(FAR const char *buf1, size_t len1,
                                 FAR const char *buf2, size_t len2);
 static bool syslog_rpmsg_ns_match(FAR struct rpmsg_device *rdev,
@@ -131,6 +148,35 @@ static int syslog_rpmsg_file_ioctl(FAR struct file *filep, int cmd,
 }
 #endif
 
+static void syslog_rpmsg_flush(FAR const char *buf, size_t len)
+{
+#ifdef CONFIG_BINARY_SYSLOG
+  /* The binary stream carries notes, so text received from a non-binary
+   * client must be re-wrapped: emit each complete line as its own printf
+   * note via nx_syslog().  Copy the line into a NUL-terminated temporary
+   * bounded by SYSLOG_RPMSG_MAXLEN so "%s" cannot over-read past the
+   * rpmsg payload and the resulting note stays within NOTE_BUFFER_SIZE.
+   */
+
+  while (len > 0)
+    {
+      char tmpbuf[SYSLOG_RPMSG_MAXLEN];
+      FAR const char *nl = memchr(buf, '\n', len);
+      size_t linelen = nl != NULL ? nl + 1 - buf : len;
+      size_t copy = linelen < sizeof(tmpbuf) ? linelen : sizeof(tmpbuf) - 1;
+
+      memcpy(tmpbuf, buf, copy);
+      tmpbuf[copy] = '\0';
+      nx_syslog(LOG_INFO, "%s", tmpbuf);
+
+      buf += linelen;
+      len -= linelen;
+    }
+#else
+  syslog_write(buf, len);
+#endif
+}
+
 static void syslog_rpmsg_write_(FAR const char *buf1, size_t len1,
                                 FAR const char *buf2, size_t len2)
 {
@@ -145,23 +191,23 @@ static void syslog_rpmsg_write_(FAR const char *buf1, size_t len1,
     {
       char tmpbuf[SYSLOG_RPMSG_MAXLEN];
 
-      /* Ensure each syslog_write's buffer end with '\n' */
+      /* Ensure each flushed buffer ends with '\n' */
 
       memcpy(tmpbuf, buf1, len1);
       memcpy(tmpbuf + len1, buf2, len);
-      syslog_write(tmpbuf, len1 + len);
+      syslog_rpmsg_flush(tmpbuf, len1 + len);
 
       if (len < len2)
         {
-          syslog_write(nl + 1, len2 - len);
+          syslog_rpmsg_flush(nl + 1, len2 - len);
         }
     }
   else
     {
       /* Give up, the merge buffer is too big */
 
-      syslog_write(buf1, len1);
-      syslog_write(buf2, len2);
+      syslog_rpmsg_flush(buf1, len1);
+      syslog_rpmsg_flush(buf2, len2);
     }
 }
 
@@ -176,10 +222,13 @@ static void syslog_rpmsg_ept_release(FAR struct rpmsg_endpoint *ept)
 {
   FAR struct syslog_rpmsg_server_s *priv = ept->priv;
 
-  if (priv->nextpos)
+#ifndef CONFIG_BINARY_SYSLOG
+  if (priv->linepos)
     {
-      syslog_rpmsg_write_(priv->tmpbuf, priv->nextpos, "\n", 1);
+      syslog_rpmsg_write_(priv->linebuf, priv->linepos, "\n", 1);
     }
+
+#endif
 
 #ifdef CONFIG_SYSLOG_RPMSG_SERVER_CHARDEV
   nxmutex_lock(&g_lock);
@@ -226,12 +275,12 @@ static int syslog_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
                                FAR void *data, size_t len,
                                uint32_t src, FAR void *priv_)
 {
-  FAR struct syslog_rpmsg_server_s *priv = priv_;
   FAR struct syslog_rpmsg_header_s *header = data;
 
   if (header->command == SYSLOG_RPMSG_TRANSFER)
     {
       FAR struct syslog_rpmsg_transfer_s *msg = data;
+      FAR struct syslog_rpmsg_server_s *priv = priv_;
       unsigned int copied = msg->count;
       unsigned int printed = 0;
       FAR const char *nl;
@@ -242,39 +291,33 @@ static int syslog_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
           printed = nl + 1 - msg->data;
           copied = msg->count - printed;
 
-          if (priv->nextpos)
+          if (priv->linepos)
             {
-              syslog_rpmsg_write_(priv->tmpbuf, priv->nextpos,
+              syslog_rpmsg_write_(priv->linebuf, priv->linepos,
                                   msg->data, printed);
-              priv->nextpos = 0;
+              priv->linepos = 0;
             }
           else
             {
-              syslog_write(msg->data, printed);
+              syslog_rpmsg_flush(msg->data, printed);
             }
         }
 
       if (copied != 0)
         {
-          unsigned int newsize = priv->nextpos + copied;
+          unsigned int newsize = priv->linepos + copied;
 
-          /* The temporary buffer is fixed at SYSLOG_RPMSG_MAXLEN and is not
-           * allowed to grow. If the incoming data would overflow it, flag
-           * the error via DEBUGPANIC() and clamp the copy length so the
-           * memcpy below can never overrun the buffer.
+          /* linebuf is fixed at SYSLOG_RPMSG_MAXLEN; clamp the carried
+           * tail so the memcpy below can never overrun it.
            */
 
           if (newsize > SYSLOG_RPMSG_MAXLEN)
             {
-              /* Truncate to the remaining space so the memcpy below can
-               * never overflow the fixed buffer, then flag the overflow.
-               */
-
-              copied = SYSLOG_RPMSG_MAXLEN - priv->nextpos;
+              copied = SYSLOG_RPMSG_MAXLEN - priv->linepos;
             }
 
-          memcpy(priv->tmpbuf + priv->nextpos, msg->data + printed, copied);
-          priv->nextpos += copied;
+          memcpy(priv->linebuf + priv->linepos, msg->data + printed, copied);
+          priv->linepos += copied;
         }
     }
 #ifdef CONFIG_SYSLOG_RPMSG_SERVER_CHARDEV

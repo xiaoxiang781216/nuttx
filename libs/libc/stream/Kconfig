@@ -23,7 +23,7 @@ endif
 
 config STREAM_BSPRINTF_EMBED_FORMAT
 	bool "Self-contained bsprintf records"
-	default DRIVERS_NOTERPMSG
+	default DRIVERS_NOTERPMSG || SYSLOG_RPMSG
 	---help---
 		Make lib_bsprintf() store the format string in the record itself,
 		prefixed by the name of the image that packed it, instead of leaving

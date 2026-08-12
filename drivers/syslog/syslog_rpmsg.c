@@ -198,7 +198,11 @@ static bool syslog_rpmsg_transfer(FAR struct syslog_rpmsg_s *priv, bool wait)
 
       msg->count          = len;
       header->tail        = (header->tail + len) % header->size;
+#ifdef CONFIG_BINARY_SYSLOG
+      msg->header.command = SYSLOG_RPMSG_TRANSFER_BINARY;
+#else
       msg->header.command = SYSLOG_RPMSG_TRANSFER;
+#endif
       len_send            = len;
       len = SYSLOG_RPMSG_COUNT(header);
       spin_unlock_irqrestore(&priv->lock, flags);
