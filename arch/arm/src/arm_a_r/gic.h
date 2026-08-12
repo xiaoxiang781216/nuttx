@@ -908,12 +908,15 @@
    (((_aff1) & SGIR_AFF_MASK) << SGIR_AFF1_SHIFT) |               \
    ((_tgt) & SGIR_TGT_MASK))
 
+/* Linux owns SGI0-7 for its architectural SMP IPIs, which is why the secure
+ * group is limited to SGI12-15. SGI12 is reserved for the rptun doorbell the
+ * non-secure world rings, so the secure IPIs take the ids above it.
+ */
+
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-#  define GIC_SMP_CPUSTART          GIC_IRQ_SGI9
-#  define GIC_CPU_CALL              GIC_IRQ_SGI10
-#  define GIC_SMP_SCHED             GIC_IRQ_SGI11
+#  define GIC_CPU_CALL              GIC_IRQ_SGI14
+#  define GIC_SMP_SCHED             GIC_IRQ_SGI15
 #else
-#  define GIC_SMP_CPUSTART          GIC_IRQ_SGI1
 #  define GIC_CPU_CALL              GIC_IRQ_SGI2
 #  define GIC_SMP_SCHED             GIC_IRQ_SGI3
 #endif

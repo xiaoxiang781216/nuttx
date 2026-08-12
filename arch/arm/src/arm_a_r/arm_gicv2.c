@@ -42,10 +42,14 @@
  *   IGROUPR_SGI_SECURE_VAL bit=1 -> Group 1 (non-secure)
  *   IGROUPR_SGI_SECURE_VAL bit=0 -> Group 0 (secure)
  *
- * Default: SGI0-7 are non-secure (0xFF), SGI8-15 are secure.
+ * Default: SGI0-11 are non-secure (0xFFF), SGI12-15 are secure.
+ *
+ * Linux owns SGI0-7 for its architectural SMP IPIs, so an SGI raised
+ * towards Linux must come from SGI8-11; hence the group boundary sits at
+ * 12 rather than at 8.
  */
 
-#define IGROUPR_SGI_SECURE_VAL 0x000000ffu
+#define IGROUPR_SGI_SECURE_VAL 0x00000fffu
 
 /****************************************************************************
  * Private Data
@@ -255,8 +259,9 @@ void arm_gic_initialize(void)
 
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
   /* per-CPU inerrupts config:
-   * ID0-ID7(SGI)  for Non-secure interrupts
-   * ID8-ID15(SGI)  for Secure interrupts.
+   * ID0-ID11(SGI)  for Non-secure interrupts, of which ID0-ID7 are taken
+   *                by Linux for its architectural SMP IPIs.
+   * ID12-ID15(SGI)  for Secure interrupts.
    * All PPI config as secure interrupts.
    */
 

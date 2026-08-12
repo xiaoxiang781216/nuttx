@@ -280,9 +280,14 @@
 #define GIC_IRQ_PTM                 30 /* Non-secure Physical Timer (PTM) PPI(2) */
 #define GIC_IRQ_IRQ                 31 /* Interrupt Request (nIRQ) PPI(3) */
 
+/* Linux owns SGI0-7 for its architectural SMP IPIs, which is why the secure
+ * group is limited to SGI12-15. SGI12 is reserved for the rptun doorbell the
+ * non-secure world rings, so the secure IPIs take the ids above it.
+ */
+
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-#  define GIC_SMP_SCHED             GIC_IRQ_SGI9
-#  define GIC_CPU_CALL              GIC_IRQ_SGI11
+#  define GIC_SMP_SCHED             GIC_IRQ_SGI13
+#  define GIC_CPU_CALL              GIC_IRQ_SGI14
 #else
 #  define GIC_SMP_SCHED             GIC_IRQ_SGI1
 #  define GIC_CPU_CALL              GIC_IRQ_SGI3

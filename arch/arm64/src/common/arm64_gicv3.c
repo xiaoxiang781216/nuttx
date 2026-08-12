@@ -67,11 +67,19 @@
 /* SGI group assignment bitmask:
  *   IGROUPR_SGI_SECURE_VAL bit=1 -> G1NS (non-secure)
  *   IGROUPR_SGI_SECURE_VAL bit=0 -> G1S  (secure)
- * Default: SGI0-7 are G1NS (0xFF), SGI8-15 are G1S.
+ * Default: SGI0-11 are G1NS (0xFFF), SGI12-15 are G1S.
+ *
+ * Linux owns SGI0-7 for its architectural SMP IPIs, so an SGI raised
+ * towards Linux must come from SGI8-11; hence the group boundary sits at
+ * 12 rather than at 8.
+ *
+ * The BMP notification pair lives in these ranges: the REE doorbell is
+ * a G1NS SGI taken from SGI8-11, the TEE one a G1S SGI that the
+ * non-secure world can only raise through the SPD.
  */
 
 #define IGROUPR_SGI_VAL 0xFFFFFFFFU
-#define IGROUPR_SGI_SECURE_VAL 0x000000FFU
+#define IGROUPR_SGI_SECURE_VAL 0x00000FFFU
 
 #define PENDING_GRP1NS_INTID 1021
 #define SPURIOUS_INT         1023
@@ -459,7 +467,8 @@ static void gicv3_cpuif_init(void)
   /* Secure state SGI/PPI group configuration:
    *   IGROUPR_SGI_SECURE_VAL bit=1 -> G1NS (non-secure)
    *   IGROUPR_SGI_SECURE_VAL bit=0 -> G1S  (secure, IRQ in S-EL1)
-   * Default: SGI0-7 G1NS, SGI8-15 G1S, all PPIs G1S.
+   * Default: SGI0-11 G1NS, SGI12-15 G1S, all PPIs G1S. SGI0-7 of the G1NS
+   * range are Linux's architectural SMP IPIs.
    *
    * Per-interrupt overrides (e.g. PPI14 for NS timer) are handled
    * separately via up_secure_irq() after init.

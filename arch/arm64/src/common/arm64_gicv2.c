@@ -858,12 +858,19 @@ static void arm64_gic_init(void)
 
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
   /* per-CPU inerrupts config:
-   * ID0-ID7(SGI)  for Non-secure interrupts
-   * ID8-ID15(SGI)  for Secure interrupts.
+   * ID0-ID11(SGI)  for Non-secure interrupts, of which ID0-ID7 are taken
+   *                by Linux for its architectural SMP IPIs.
+   * ID12-ID15(SGI)  for Secure interrupts.
    * All PPI config as secure interrupts.
+   *
+   * An SGI raised towards Linux must come from ID8-ID11, which is why the
+   * boundary sits at 12 rather than at 8.
+   *
+   * Keep the SGI split here in sync with the range up_trigger_irq() uses to
+   * decide whether to ask for Group 1 delivery.
    */
 
-  putreg32(0x000000ff, GIC_ICDISR(0));
+  putreg32(0x00000fff, GIC_ICDISR(0));
 #else
   putreg32(0x00000000, GIC_ICDISR(0));      /* SGIs and PPIs secure */
 #endif
@@ -1385,7 +1392,7 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
 #endif
 
 #if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
-      if (irq >= GIC_IRQ_SGI0 && irq <= GIC_IRQ_SGI7)
+      if (irq >= GIC_IRQ_SGI0 && irq <= GIC_IRQ_SGI11)
 #endif
         {
           /* Set NSATT be 1: forward the SGI specified in the SGIINTID field
