@@ -65,7 +65,7 @@ DEFINE_PER_CPU_BMP(int, g_irqmap_count) = 1;
 DEFINE_PER_CPU_BSS_BMP(irq_mapped_t, g_irqmap[NR_IRQS]);
 #define g_irqmap this_cpu_var_bmp(g_irqmap)
 #undef g_irqrevmap
-DEFINE_PER_CPU_BSS_BMP(int, g_irqrevmap[CONFIG_ARCH_NUSER_INTERRUPTS]);
+DEFINE_PER_CPU_BSS_BMP(irq_t, g_irqrevmap[CONFIG_ARCH_NUSER_INTERRUPTS]);
 #define g_irqrevmap this_cpu_var_bmp(g_irqrevmap)
 #endif
 

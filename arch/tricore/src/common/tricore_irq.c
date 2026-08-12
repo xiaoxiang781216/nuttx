@@ -55,7 +55,7 @@ const IfxSrc_Tos tricore_tos[] =
 #endif
 };
 
-typedef int srpn_to_irq_t[TRICORE_IRQ_MAX_PRIORITY + 1];
+typedef irq_t srpn_to_irq_t[TRICORE_IRQ_MAX_PRIORITY + 1];
 static DEFINE_PER_CPU_BSS_BMP(srpn_to_irq_t, g_srpn_to_irq);
 #define g_srpn_to_irq this_cpu_var_bmp(g_srpn_to_irq)
 
