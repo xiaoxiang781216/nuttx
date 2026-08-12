@@ -33,6 +33,7 @@
 #include <nuttx/compiler.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/queue.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/virtio/virtio-config.h>
 #include <openamp/open_amp.h>
 
@@ -100,6 +101,25 @@ FAR void *vhost_get_next_buffer(FAR struct virtqueue *vq, uint16_t idx,
 int vhost_get_vq_buffers(FAR struct virtqueue *vq,
                          FAR struct virtqueue_buf *vb, size_t vbsize,
                          FAR size_t *vbcnt);
+
+/****************************************************************************
+ * Name: vhost_get_vq_buffers_lock
+ ****************************************************************************/
+
+static inline_function int
+vhost_get_vq_buffers_lock(FAR struct virtqueue *vq,
+                          FAR struct virtqueue_buf *vb, size_t vbsize,
+                          FAR size_t *vbcnt, FAR spinlock_t *lock)
+{
+  irqstate_t flags;
+  int ret;
+
+  flags = spin_lock_irqsave_notrace(lock);
+  ret = vhost_get_vq_buffers(vq, vb, vbsize, vbcnt);
+  spin_unlock_irqrestore_notrace(lock, flags);
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: vhost_register_drivers
