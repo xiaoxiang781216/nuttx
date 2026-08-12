@@ -145,7 +145,7 @@ endif()
 
 list(APPEND SRCS lib_fdcheck.c lib_tag.c)
 
-if(CONFIG_DRIVERS_NOTE)
+if(CONFIG_DRIVERS_NOTE OR CONFIG_BINARY_SYSLOG)
   list(APPEND SRCS lib_note.c)
 endif()
 

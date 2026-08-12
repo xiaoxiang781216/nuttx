@@ -10,15 +10,6 @@ config DRIVERS_NOTE
 	---help---
 		Note Driver Support, enable this option to enable note driver.
 
-config DRIVERS_NOTE_TEXT_DUMP
-	bool
-	default n
-	---help---
-		Select this to build the shared binary-note to ftrace-text parser
-		(note_dump_one) in note_driver.c.  Selected by any backend that
-		dumps notes in human-readable text (noteram text/crash dump,
-		notesnap).
-
 config DRIVERS_NOTE_MAX
 	int "Maximum number of sched_note drivers"
 	default 1
@@ -88,7 +79,7 @@ config DRIVERS_NOTE_STATS
 config DRIVERS_NOTERAM
 	bool "Note RAM driver"
 	select DRIVERS_NOTE
-	select DRIVERS_NOTE_TEXT_DUMP
+	select LIBC_NOTE_TEXT_DUMP
 	default SCHED_INSTRUMENTATION
 	---help---
 		If this option is selected, then in-memory buffering logic is
@@ -319,7 +310,7 @@ config DRIVERS_NOTELOG_CPUSET
 config DRIVERS_NOTESNAP
 	bool "Last scheduling information"
 	select DRIVERS_NOTE
-	select DRIVERS_NOTE_TEXT_DUMP
+	select LIBC_NOTE_TEXT_DUMP
 	default n
 	---help---
 		Record the last scheduling information.

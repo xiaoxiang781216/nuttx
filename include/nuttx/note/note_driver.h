@@ -876,6 +876,36 @@ struct note_max_s
   uint8_t data[256 - sizeof(struct note_common_s)];
 };
 
+/* Per-CPU context used by the text formatter
+ * (CONFIG_LIBC_NOTE_TEXT_DUMP).  Kept in the public header because
+ * note_dump_stream_s embeds it.
+ */
+
+struct note_dump_context_s
+{
+  int intr_nest;
+  bool pendingswitch;
+  int current_state;
+  pid_t current_pid;
+  pid_t next_pid;
+  uint8_t current_priority;
+  uint8_t next_priority;
+};
+
+/* Non-consuming ring input stream that emits whole note frames.
+ * Used by note drivers and by the binary syslog ramlog backend.
+ */
+
+struct note_dump_stream_s
+{
+  struct lib_instream_s      common;
+  FAR struct ring_s         *ring;
+  uint32_t                   pos;
+  bool                       binary;
+  struct note_max_s          note;
+  struct note_dump_context_s ctx[CONFIG_SMP_NCPUS];
+};
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -1088,6 +1118,29 @@ void note_printf_ip(uint64_t meta, uintptr_t ip,
 #endif
 
 #endif /* CONFIG_DRIVERS_NOTE */
+
+/****************************************************************************
+ * Name: note_dump_stream
+ *
+ * Description:
+ *   Initialize a trace dump stream and wire its embedded non-consuming
+ *   input stream to a byte ring buffer.  Notes are then read from the
+ *   embedded stream->common with lib_stream_gets(); the live ring is read
+ *   without consuming it, so the caller must freeze the producer while
+ *   dumping so the ring contents stay stable.
+ *
+ * Input Parameters:
+ *   stream - The dump stream to initialize
+ *   ring   - The byte ring buffer (element size one) to read from
+ *   binary - Emit raw binary notes when true, ftrace text when false
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void note_dump_stream(FAR struct note_dump_stream_s *stream,
+                      FAR struct ring_s *ring, bool binary);
 
 #undef EXTERN
 #if defined(__cplusplus)

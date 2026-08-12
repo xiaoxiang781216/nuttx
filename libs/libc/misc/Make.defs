@@ -100,7 +100,7 @@ endif
 
 # Note support
 
-ifeq ($(CONFIG_DRIVERS_NOTE),y)
+ifneq ($(CONFIG_DRIVERS_NOTE)$(CONFIG_BINARY_SYSLOG),)
 CSRCS += lib_note.c
 endif
 

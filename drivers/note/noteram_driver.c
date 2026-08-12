@@ -299,7 +299,7 @@ static int noteram_open(FAR struct file *filep)
   ctx->threshold = sizeof(struct note_common_s);
 
   filep->f_priv = ctx;
-#ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
+#ifdef CONFIG_LIBC_NOTE_TEXT_DUMP
   note_dump_stream(&ctx->stream, drv->ring, false);
 #else
   note_dump_stream(&ctx->stream, drv->ring, true);

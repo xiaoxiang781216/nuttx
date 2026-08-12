@@ -226,3 +226,12 @@ config LIBC_CAN_ISOTP_LONG_PDU
 		Leave it disabled on classic-CAN-only configurations that never
 		transfer long PDUs so no transfer long PDUs so no extra code or
 		memory is spent on long-message support.
+
+config LIBC_NOTE_TEXT_DUMP
+	bool "Binary-note to text parser"
+	default n
+	---help---
+		Select this to build the shared binary-note to ftrace-text parser
+		(note_dump_one) in lib_note.c.  Selected by any backend that
+		dumps notes in human-readable text (noteram text/crash dump,
+		notesnap).
