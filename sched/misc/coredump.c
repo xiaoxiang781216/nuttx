@@ -138,10 +138,6 @@ struct elf_dumpinfo_s
 
 struct coredump_context_s
 {
-#ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  struct lib_lzfoutstream_s lzfstream;
-#endif
-
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
   struct lib_syslogstream_s syslogstream;
 #  ifdef CONFIG_BOARD_COREDUMP_BASE64STREAM
@@ -195,6 +191,10 @@ static ssize_t coredump_procfs_write(FAR struct file *filep,
 
 static DEFINE_PER_CPU_BSS_BMP(struct coredump_context_s, g_coredump);
 #define g_coredump this_cpu_var_bmp(g_coredump)
+
+#ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+static struct lib_lzfoutstream_s g_lzfstream;
+#endif
 
 #ifdef CONFIG_BOARD_MEMORY_RANGE
 static const struct memory_region_s g_memory_region[] =
@@ -1019,8 +1019,8 @@ static void coredump_dump_netpoll(FAR struct tcb_s *tcb)
   stream = &netstream->common;
 
 #  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  lib_lzfoutstream(&g_coredump.lzfstream, stream);
-  stream = (FAR struct lib_outstream_s *)&g_coredump.lzfstream;
+  lib_lzfoutstream(&g_lzfstream, stream);
+  stream = (FAR struct lib_outstream_s *)&g_lzfstream;
 #  endif
 
   ret = coredump_with_tcb(g_coredump.regions, stream, tcb);
@@ -1072,8 +1072,8 @@ static void coredump_dump_syslog(FAR struct tcb_s *tcb)
 
   /* Initialize LZF compression stream */
 
-  lib_lzfoutstream(&g_coredump.lzfstream, stream);
-  stream = &g_coredump.lzfstream;
+  lib_lzfoutstream(&g_lzfstream, stream);
+  stream = &g_lzfstream;
 #  endif
 
   /* Do core dump */
@@ -1117,8 +1117,8 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
   stream = (FAR struct lib_outstream_s *)&wrapstream;
 
 # ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  lib_lzfoutstream(&g_coredump.lzfstream, stream);
-  stream = &g_coredump.lzfstream;
+  lib_lzfoutstream(&g_lzfstream, stream);
+  stream = &g_lzfstream;
 # endif
 
   ret = coredump_with_tcb(g_coredump.regions, stream, tcb);
