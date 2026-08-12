@@ -361,7 +361,8 @@
 
 #define NOTE_CREATE                      _NOTEIOC(0x13)
 #define NOTE_DESTROY                     _NOTEIOC(0x14)
-#define NOTE_FLUSH                       _NOTEIOC(0x15)
+#define NOTE_SYNCTASKNAME                _NOTEIOC(0x15)
+#define NOTE_FLUSH                       _NOTEIOC(0x16)
 
 /* NOTE_GETSTATS
  *              - Get cumulative note statistics (notes, bytes, drop_bytes)
@@ -924,7 +925,6 @@ int note_initialize(void);
  ****************************************************************************/
 
 int note_driver_register(FAR struct note_driver_s *driver);
-#endif
 
 /****************************************************************************
  * Name: note_driver_unregister

@@ -1017,7 +1017,14 @@ note_driver_isenabled_type(FAR struct note_driver_s *driver, int type)
  * Name: note_spinlock
  *
  * Description:
- *   Common spinlock note logic
+ *   Common logic for NOTE_SPINLOCK, NOTE_SPINLOCKED, and NOTE_SPINUNLOCK
+ *
+ * Input Parameters:
+ *   tcb  - The TCB containing the information
+ *   note - The common note structure to use
+ *
+ * Returned Value:
+ *   None
  *
  ****************************************************************************/
 

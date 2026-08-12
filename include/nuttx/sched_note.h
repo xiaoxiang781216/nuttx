@@ -153,7 +153,6 @@ extern "C"
 #define sched_note_async_end_track(tag, track, name, cookie) \
         sched_note_async(tag, NOTE_DUMP_ASYNC_END, track, name, cookie)
 
-
 #if defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && defined(CONFIG_DRIVERS_NOTE)
 #  define sched_note_start(t) \
        do \
@@ -203,7 +202,7 @@ extern "C"
 #  define sched_note_taskname(t) \
        do \
          { \
-           if (!note_filter_type(NOTE_TASKNAME)) \
+           if (static_branch_unlikely(&g_note_keys[NOTE_TASKNAME])) \
              { \
                note_taskname(t); \
              } \
