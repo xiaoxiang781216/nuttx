@@ -881,7 +881,7 @@ static void arm64_gic_init(void)
   putreg32(0x80808080, GIC_ICDIPR(0));      /* SGI[3:0] priority */
   putreg32(0x80808080, GIC_ICDIPR(4));      /* SGI[4:7] priority */
   putreg32(0x80808080, GIC_ICDIPR(8));      /* SGI[8:11] priority */
-  putreg32(0x80808080, GIC_ICDIPR(12));     /* SGI[12:15] priority */
+  putreg32(0x00000000, GIC_ICDIPR(12));     /* SGI[12:15] priority */
   putreg32(0x80808000, GIC_ICDIPR(24));     /* PPI[0] priority */
   putreg32(0x80808080, GIC_ICDIPR(28));     /* PPI[1:4] priority */
 

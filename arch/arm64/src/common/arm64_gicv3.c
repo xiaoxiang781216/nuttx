@@ -489,6 +489,12 @@ static void gicv3_cpuif_init(void)
       putreg32(GIC_INT_DEF_PRI_X4, IPRIORITYR(base, intid));
     }
 
+  /* SGI12-15 are Secure Group 1 (G1S); give them the highest priority so
+   * a secure interrupt can always preempt an active non-secure one.
+   */
+
+  putreg32(0x00000000, IPRIORITYR(base, 12));
+
   /* Configure PPIs as level triggered */
 
   putreg32(0, ICFGR(base, 1));
