@@ -294,17 +294,40 @@ static int mtdlog_read_block(FAR struct mtdlog_s *mtdlog,
                              uint16_t blkidx,
                              FAR struct mtdlog_block_s *info)
 {
-  int ret;
+  FAR uint8_t *tmp_buf = mtdlog->tmp_buf;
+  ssize_t nblocks;
   uint32_t offset;
+  int ret;
 
   offset = blkidx * mtdlog->blocksize;
+
   ret = MTD_READ(mtdlog->mtd, offset,
                  sizeof(struct mtdlog_block_s), (uint8_t *)info);
-  if (ret != sizeof(struct mtdlog_block_s))
+  if (ret == sizeof(struct mtdlog_block_s))
+    {
+      return 0;
+    }
+
+  if (ret != -ENOSYS)
     {
       ferr("ERROR: MTD_READ failed: %" PRIu32 ", %d\n", offset, ret);
       return ret < 0 ? ret : -EIO;
     }
+
+  /* Fallback to MTD_BREAD for drivers without byte-level read */
+
+  nblocks = MTDLOG_ALIGN(mtdlog,
+              sizeof(struct mtdlog_block_s)) / mtdlog->progsize;
+
+  ret = MTD_BREAD(mtdlog->mtd, (offset / mtdlog->progsize), nblocks,
+                  tmp_buf);
+  if (ret != nblocks)
+    {
+      ferr("ERROR: MTD_BREAD failed: %" PRIu32 ", %d\n", offset, ret);
+      return ret < 0 ? ret : -EIO;
+    }
+
+  memcpy(info, tmp_buf, sizeof(struct mtdlog_block_s));
 
   return 0;
 }
@@ -393,18 +416,41 @@ static int mtdlog_read_entry(FAR struct mtdlog_s *mtdlog,
                              FAR struct mtdlog_pos_s *pos,
                              FAR struct mtdlog_entry_s *info)
 {
-  int ret;
+  FAR uint8_t *tmp_buf = mtdlog->tmp_buf;
+  ssize_t nblocks;
   uint32_t offset;
+  int ret;
 
   offset = pos->blkidx * mtdlog->blocksize;
   offset += pos->entryoff;
+
   ret = MTD_READ(mtdlog->mtd, offset,
                  sizeof(struct mtdlog_entry_s), (uint8_t *)info);
-  if (ret != sizeof(struct mtdlog_entry_s))
+  if (ret == sizeof(struct mtdlog_entry_s))
+    {
+      return 0;
+    }
+
+  if (ret != -ENOSYS)
     {
       ferr("ERROR: MTD_READ failed: %" PRIu32 ", %d\n", offset, ret);
       return ret < 0 ? ret : -EIO;
     }
+
+  /* Fallback to MTD_BREAD for drivers without byte-level read */
+
+  nblocks = MTDLOG_ALIGN(mtdlog,
+              sizeof(struct mtdlog_entry_s)) / mtdlog->progsize;
+
+  ret = MTD_BREAD(mtdlog->mtd, (offset / mtdlog->progsize), nblocks,
+                  tmp_buf);
+  if (ret != nblocks)
+    {
+      ferr("ERROR: MTD_BREAD failed: %" PRIu32 ", %d\n", offset, ret);
+      return ret < 0 ? ret : -EIO;
+    }
+
+  memcpy(info, tmp_buf, sizeof(struct mtdlog_entry_s));
 
   return 0;
 }
@@ -447,13 +493,88 @@ static int mtdlog_read_data(FAR struct mtdlog_s *mtdlog,
                             uint32_t offset, uint32_t length,
                             FAR char *buf)
 {
+  FAR uint8_t *tmp_buf = mtdlog->tmp_buf;
+  uint32_t copied = 0;
+  uint32_t inblk_off;
+  ssize_t nblocks;
+  uint32_t remain;
   int ret;
 
   ret = MTD_READ(mtdlog->mtd, offset, length, (uint8_t *)buf);
-  if (ret != length)
+  if (ret == length)
+    {
+      return 0;
+    }
+
+  if (ret != -ENOSYS)
     {
       ferr("ERROR: MTD_READ failed: %" PRIu32 ", %d\n", offset, ret);
       return ret < 0 ? ret : -EIO;
+    }
+
+  /* Fallback to MTD_BREAD for drivers without byte-level read */
+
+  /* Handle the head portion if offset is not block-aligned. */
+
+  inblk_off = offset % mtdlog->progsize;
+  if (inblk_off != 0)
+    {
+      uint32_t head_len = mtdlog->progsize - inblk_off;
+
+      if (head_len > length)
+        {
+          head_len = length;
+        }
+
+      ret = MTD_BREAD(mtdlog->mtd,
+                      (offset / mtdlog->progsize), 1, tmp_buf);
+      if (ret != 1)
+        {
+          ferr("ERROR: MTD_BREAD failed: %" PRIu32 ", %d\n",
+               offset, ret);
+          return ret < 0 ? ret : -EIO;
+        }
+
+      memcpy(buf, tmp_buf + inblk_off, head_len);
+      copied = head_len;
+    }
+
+  /* Read the block-aligned middle portion directly into the
+   * caller's buffer.
+   */
+
+  nblocks = (length - copied) / mtdlog->progsize;
+  if (nblocks > 0)
+    {
+      ret = MTD_BREAD(mtdlog->mtd,
+                      ((offset + copied) / mtdlog->progsize),
+                      nblocks, (uint8_t *)(buf + copied));
+      if (ret != nblocks)
+        {
+          ferr("ERROR: MTD_BREAD failed: %" PRIu32 ", %d\n",
+               offset + copied, ret);
+          return ret < 0 ? ret : -EIO;
+        }
+
+      copied += nblocks * mtdlog->progsize;
+    }
+
+  /* Read the remaining unaligned tail via tmp_buf. */
+
+  remain = length - copied;
+  if (remain != 0)
+    {
+      ret = MTD_BREAD(mtdlog->mtd,
+                      ((offset + copied) / mtdlog->progsize), 1,
+                      tmp_buf);
+      if (ret != 1)
+        {
+          ferr("ERROR: MTD_BREAD failed: %" PRIu32 ", %d\n",
+               offset + copied, ret);
+          return ret < 0 ? ret : -EIO;
+        }
+
+      memcpy(buf + copied, tmp_buf, remain);
     }
 
   return 0;
