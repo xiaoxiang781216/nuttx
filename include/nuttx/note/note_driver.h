@@ -236,8 +236,8 @@
                              buf, len)
 
 #define note_driver_vprintf(driver, tag, level, fmt, va) \
-        note_driver_vprintf_ip(driver, tag, level, up_getpc(), \
-                               0, fmt, va)
+        note_driver_vprintf_ip(driver, NOTE_META_PACK(tag, level, 0), \
+                               up_getpc(), fmt, va)
 
 #ifdef CONFIG_DRIVERS_NOTE_STRIP_FORMAT
 #  define note_driver_printf(driver, tag, level, fmt, ...) \
@@ -247,15 +247,15 @@
                             "too many printf args for note meta"); \
               locate_data("note_format") used_data \
               static const char _fmt[] = fmt; \
-              note_driver_printf_ip(driver, tag, level, up_getpc(), \
-                                    PRINTF_TAG(__VA_ARGS__), _fmt, \
-                                    ##__VA_ARGS__); \
+              note_driver_printf_ip(driver, NOTE_META_PACK(tag, level, \
+                                    PRINTF_TAG(__VA_ARGS__)), up_getpc(), \
+                                    _fmt, ##__VA_ARGS__); \
             } \
           while (0)
 #else
 #  define note_driver_printf(driver, tag, level, fmt, ...) \
-          note_driver_printf_ip(driver, tag, level, up_getpc(), \
-                                0, fmt, ##__VA_ARGS__)
+          note_driver_printf_ip(driver, NOTE_META_PACK(tag, level, 0), \
+                                up_getpc(), fmt, ##__VA_ARGS__)
 #endif
 
 #define note_driver_begin(driver, tag, level) \
@@ -384,17 +384,17 @@
 #define NOTE_MODE_READ_BINARY            1
 
 /* npt_meta field layout accessors. The argument type slots occupy the low
- * 48 bits (2 bits each, up to 24 args). When fewer than 24 args are passed,
- * a PRINTF_TERM sentinel marks the end; at exactly 24 args the slots fill
- * all 48 bits and no sentinel is needed.
+ * 46 bits (2 bits each, up to 23 args), with a PRINTF_TERM(3) sentinel in
+ * bits [47:46] marking the end. The sentinel is always present and nonzero,
+ * so the type word is never zero in strip mode.
  *
- *   tag [63..56]   level [55..48]   type slots [47..0]
+ *   tag [63..56]   level [55..48]   sentinel[47:46]   type slots [45..0]
  */
 
 #define NOTE_META_TYPE_MASK   0x0000ffffffffffffull
 #define NOTE_META_LEVEL_SHIFT 48
 #define NOTE_META_TAG_SHIFT   56
-#define NOTE_META_MAX_ARGS    24
+#define NOTE_META_MAX_ARGS    23
 
 #define NOTE_META_PACK(tag, level, type) \
         (((uint64_t)(type) & NOTE_META_TYPE_MASK) | \

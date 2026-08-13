@@ -80,15 +80,17 @@
 /* lib_bsprintf type-word wire-format contract, shared by the libc encoder,
  * the note driver and the host decoder; keep the three in sync. A 2-bit type
  * code per argument sits in the low bits, terminated by a PRINTF_TERM
- * sentinel slot. Nonzero type word = pack by these codes (fmt not parsed);
- * zero = pack by parsing fmt conversions. The type word is a full 64-bit
- * value at the stream level; the note/syslog layers may mask it to 48 bits.
+ * sentinel slot. The type word is always nonzero in strip mode (even with
+ * zero arguments, the PRINTF_TERM sentinel occupies the lowest slot);
+ * zero is reserved for non-strip mode where fmt is available and must be
+ * parsed. The type word is a full 64-bit value at the stream level; the
+ * note/syslog layers may mask it to 48 bits.
  */
 
-#define PRINTF_TERM        0ull
-#define PRINTF_32BIT       1ull
-#define PRINTF_64BIT       2ull
-#define PRINTF_STRING      3ull
+#define PRINTF_32BIT       0ull
+#define PRINTF_64BIT       1ull
+#define PRINTF_STRING      2ull
+#define PRINTF_TERM        3ull
 
 /* Up to 31 argument slots occupy the low 62 bits (2 bits each, plus one
  * PRINTF_TERM sentinel); the type word is a full 64-bit value at the
@@ -111,9 +113,8 @@
 #endif
 
 #define PRINTF_ARG_IS_STR(a) \
-        ((is_types_compatible(PRINTF_ARG_DECAY(a), char *) || \
-          is_types_compatible(PRINTF_ARG_DECAY(a), const char *)) && \
-         object_size(a, 2) > 0)
+        (is_types_compatible(PRINTF_ARG_DECAY(a), char *) || \
+         is_types_compatible(PRINTF_ARG_DECAY(a), const char *))
 
 #define PRINTF_ARG_IS_64BIT(a) \
         (is_types_compatible(PRINTF_ARG_DECAY(a), float) || \
