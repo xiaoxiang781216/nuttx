@@ -32,8 +32,6 @@
 
 #include <arch/barriers.h>
 
-#include <IfxCpu_Intrinsics.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -71,7 +69,7 @@
   void func(volatile void *ptr, t value, int memorder)                   \
   {                                                                      \
     ARCH_ATOMIC_PRE_BARRIER(memorder);                                   \
-    __swap((void *)ptr, value);                                          \
+    tricore_atomic_swap(ptr, value);                                     \
     ARCH_ATOMIC_POST_BARRIER(memorder);                                  \
   }
 
@@ -82,7 +80,7 @@
     t ret;                                                               \
                                                                          \
     ARCH_ATOMIC_PRE_BARRIER(memorder);                                   \
-    ret = __ld32((void *)ptr);                                           \
+    ret = *(volatile uint32_t *)ptr;                                     \
     ARCH_ATOMIC_POST_BARRIER(memorder);                                  \
     return ret;                                                          \
   }
@@ -94,7 +92,7 @@
     t ret;                                                               \
                                                                          \
     ARCH_ATOMIC_PRE_BARRIER(memorder);                                   \
-    ret = __swap((void *)ptr, value);                                    \
+    ret = tricore_atomic_swap(ptr, value);                               \
     ARCH_ATOMIC_POST_BARRIER(memorder);                                  \
     return ret;                                                          \
   }
@@ -107,7 +105,7 @@
     t old;                                                               \
                                                                          \
     ARCH_ATOMIC_PRE_BARRIER(success);                                    \
-    old = __cmpAndSwap((void *)ptr, desired, *(t *)expect);              \
+    old = tricore_atomic_cmpswap(ptr, desired, *(t *)expect);            \
     if (old == *(t *)expect)                                             \
       {                                                                  \
         ARCH_ATOMIC_POST_BARRIER(success);                               \
@@ -127,7 +125,7 @@
     t ret;                                                               \
                                                                          \
     ARCH_ATOMIC_PRE_BARRIER(memorder);                                   \
-    ret = __swap((void *)ptr, 1);                                        \
+    ret = tricore_atomic_swap(ptr, 1);                                   \
     ARCH_ATOMIC_POST_BARRIER(memorder);                                  \
     return ret;                                                          \
   }
@@ -143,8 +141,8 @@
       {                                                                  \
         old_val = atomic_load_ ## n(ptr, memorder);                      \
       }                                                                  \
-    while (__cmpAndSwap((void *)ptr,                                     \
-                        old_val op value, old_val) != old_val);          \
+    while (tricore_atomic_cmpswap(ptr, old_val op value, old_val)        \
+           != old_val);                                                  \
     ARCH_ATOMIC_POST_BARRIER(memorder);                                  \
                                                                          \
     return old_val;                                                      \
@@ -167,6 +165,29 @@
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
+
+always_inline_function
+static uint32_t tricore_atomic_swap(volatile void *addr, uint32_t value)
+{
+  uint32_t res;
+
+  __asm__ volatile ("swap.w [%1]0, %2"
+                    : "=d"(res) : "a"(addr), "0"(value));
+  return res;
+}
+
+always_inline_function
+static uint32_t tricore_atomic_cmpswap(volatile void *addr, uint32_t value,
+                                       uint32_t condition)
+{
+  uint64_t reg64 = value | ((uint64_t)condition << 32);
+
+  __asm__ __volatile__ ("cmpswap.w [%1]0, %A0"
+                        : "+d" (reg64)
+                        : "a" (addr)
+                        : "memory");
+  return (uint32_t)reg64;
+}
 
 ARCH_ATOMIC_DEFINE(atomic, int32_t, 4)
 
