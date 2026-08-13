@@ -32,12 +32,12 @@
 #include <debug.h>
 #include <sys/prctl.h>
 #include <execinfo.h>
-#include <stdatomic.h>
 #include <sys/types.h>
 #include <stdbool.h>
 #include <syslog.h>
 #include <unistd.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/board.h>
 #include <nuttx/lib/lib.h>
 #include <nuttx/sched_note.h>

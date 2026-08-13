@@ -33,6 +33,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/sched.h>
 #include <nuttx/fs/procfs.h>
+#include <nuttx/atomic.h>
 #include <nuttx/lib/math32.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/mm/mm.h>
@@ -42,7 +43,6 @@
 #include <execinfo.h>
 #include <sys/types.h>
 #include <stdbool.h>
-#include <stdatomic.h>
 #include <string.h>
 #include <unistd.h>
 

@@ -32,7 +32,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <stdatomic.h>
+#include <nuttx/atomic.h>
 
 #include <nuttx/nuttx.h>
 #include <nuttx/mm/mm.h>

@@ -32,13 +32,13 @@
 #include <debug.h>
 #include <execinfo.h>
 #include <sched.h>
-#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
 #include <sys/param.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/atomic.h>
 #include <nuttx/board.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/lib/lib.h>
