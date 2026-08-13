@@ -1105,6 +1105,13 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
     }
 
   keylen = ALIGN_UP(keylen, 4); /* keysize align to 4 bytes */
+  if (keylen > keybufsize)
+    {
+      rpmsg_release_tx_buffer(&rdev->ept, msg);
+      rpmsg_crypto_put_session(rdev, sid);
+      return -EINVAL;
+    }
+
   ctrl->op_flf.akcipher.key_len = keylen;
 
   /* Pad data header for passing data */
