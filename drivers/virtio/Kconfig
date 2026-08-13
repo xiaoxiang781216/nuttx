@@ -44,7 +44,7 @@ config DRIVERS_VIRTIO_BLK
 
 config DRIVERS_VIRTIO_CRYPTO
 	bool "Virtio Crypto support"
-	depends on CRYPTO_CRYPTODEV
+	depends on CRYPTO_BACKENDS
 	default n
 	select DRIVERS_VIRTIO
 

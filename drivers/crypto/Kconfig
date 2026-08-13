@@ -79,12 +79,12 @@ endif # DEV_URANDOM
 config CRYPTO_RPMSG
 	bool "RPMSG Crypto Driver Client Support"
 	default n
-	depends on RPMSG && CRYPTO_CRYPTODEV
+	depends on RPMSG && CRYPTO_BACKENDS
 
 config CRYPTO_RPMSG_SERVER
 	bool "RPMSG Crypto Driver Server Support"
 	default n
-	depends on RPMSG && CRYPTO_CRYPTODEV
+	depends on RPMSG && CRYPTO_BACKENDS
 
 config CRYPTO_RPMSG_SESSIONS_NUM
 	int "Number of pre-allocated rpmsg crypto session slots"
