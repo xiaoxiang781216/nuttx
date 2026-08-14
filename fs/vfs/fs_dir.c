@@ -369,8 +369,19 @@ static int read_pseudodir(FAR struct fs_dirent_s *dir,
                           FAR struct dirent *entry)
 {
   FAR struct fs_pseudodir_s *pdir = (FAR struct fs_pseudodir_s *)dir;
-  FAR struct inode *next = pdir->next;
+  FAR struct inode *next;
   FAR struct inode *prev;
+
+  /* The pseudo inode tree may be modified concurrently by another CPU
+   * (e.g. driver register/unregister). Hold the inode lock across the
+   * entire read so that the 'next' pointer and every field dereferenced
+   * below (i_name, u.i_ops, i_child and i_peer) stay valid, matching the
+   * locking already used by seek_pseudodir().
+   */
+
+  inode_lock();
+
+  next = pdir->next;
 
   /* Check if we are at the end of the list */
 
@@ -380,6 +391,7 @@ static int read_pseudodir(FAR struct fs_dirent_s *dir,
        * readdir. Here we return -ENOENT to signal the end of the directory.
        */
 
+      inode_unlock();
       return -ENOENT;
     }
 
@@ -463,8 +475,6 @@ static int read_pseudodir(FAR struct fs_dirent_s *dir,
   entry->d_ino = next->i_ino;
 
   /* Now get the inode to visit next time that readdir() is called */
-
-  inode_lock();
 
   prev       = pdir->next;
   pdir->next = prev->i_peer; /* The next node to visit */
