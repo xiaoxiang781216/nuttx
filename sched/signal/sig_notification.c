@@ -38,44 +38,6 @@
 #include "signal/signal.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#ifdef CONFIG_SIG_EVTHREAD_HPWORK
-#  define SIG_EVTHREAD_WORK HPWORK
-#else
-#  define SIG_EVTHREAD_WORK LPWORK
-#endif
-
-/****************************************************************************
- * Name: nxsig_notification_worker
- *
- * Description:
- *   Perform the callback from the context of the worker thread.
- *
- * Input Parameters:
- *   arg - Work argument.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SIG_EVTHREAD
-static void nxsig_notification_worker(FAR void *arg)
-{
-  FAR struct sigwork_s *work = (FAR struct sigwork_s *)arg;
-
-  DEBUGASSERT(work != NULL);
-
-  /* Perform the callback */
-
-  work->func(work->value);
-}
-
-#endif /* CONFIG_SIG_EVTHREAD */
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -154,38 +116,22 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
 
   else if (event->sigev_notify & SIGEV_THREAD)
     {
-      /* Initialize the work information */
+      /* The sigev_notify_function_t and worker_t types both take a single
+       * argument of the same width, so they are ABI-compatible.  Use union
+       * type-punning to convert the function pointer without triggering
+       * -Wcast-function-type or invoking undefined behavior.  Similarly,
+       * reinterpret the sigev_value as a void * argument; the notification
+       * function will receive it as its union sigval parameter.
+       */
 
-      work->value = event->sigev_value;
-      work->func  = event->sigev_notify_function;
+      worker_t  worker = (worker_t)event->sigev_notify_function;
+      FAR void *arg    = event->sigev_value.sival_ptr;
 
-      /* Then queue the work */
+      /* Then queue the work, invoking the notification function directly */
 
-      ret = work_queue(SIG_EVTHREAD_WORK, &work->work,
-                       nxsig_notification_worker, work, 0);
+      ret = work_queue(SIG_EVTHREAD_WORK, work, worker, arg, 0);
     }
 #endif
 
   return ret;
 }
-
-/****************************************************************************
- * Name: nxsig_cancel_notification
- *
- * Description:
- *   Cancel the notification if it doesn't send yet.
- *
- * Input Parameters:
- *   work  - The work structure to cancel
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SIG_EVTHREAD
-void nxsig_cancel_notification(FAR struct sigwork_s *work)
-{
-  work_cancel_sync(SIG_EVTHREAD_WORK, &work->work);
-}
-#endif

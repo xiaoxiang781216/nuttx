@@ -59,16 +59,17 @@
 #define SIGSET_FMT     "%08" PRIx32 "%08" PRIx32
 #define SIGSET_ELEM(s) (s)->_elem[1], (s)->_elem[0]
 
+#ifdef CONFIG_SIG_EVTHREAD_HPWORK
+#  define SIG_EVTHREAD_WORK HPWORK
+#else
+#  define SIG_EVTHREAD_WORK LPWORK
+#endif
+
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
 
-struct sigwork_s
-{
-  struct work_s work;           /* Work queue structure */
-  union sigval value;           /* Data passed with notification */
-  sigev_notify_function_t func; /* Notification function */
-};
+#define sigwork_s work_s
 
 #ifdef __cplusplus
 extern "C"
@@ -778,7 +779,8 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
  ****************************************************************************/
 
 #ifdef CONFIG_SIG_EVTHREAD
-void nxsig_cancel_notification(FAR struct sigwork_s *work);
+#  define nxsig_cancel_notification(work) \
+     work_cancel_sync(SIG_EVTHREAD_WORK, work)
 #else
 #  define nxsig_cancel_notification(work)
 #endif
