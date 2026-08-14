@@ -32,13 +32,14 @@
 #include <assert.h>
 #include <errno.h>
 
+#include <stdatomic.h>
+
 #include <nuttx/nuttx.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/spinlock.h>
 
-#ifdef CONFIG_MM_BUMP_FREE_TRAP
-#  include <debug.h>
-#  include <nuttx/sched.h>
+#ifdef CONFIG_MM_HEAP_FORBID_HOOK
+#  include <nuttx/board.h>
 #endif
 
 /****************************************************************************
@@ -60,13 +61,53 @@ struct mm_heap_s
   int              nregions;    /* Number of registered regions */
   int              region;      /* Currently active region index */
 #endif
-  bool             forbid;      /* True forbids allocation */
+#ifndef CONFIG_MM_HEAP_FORBID_NONE
+  atomic_t         forbid;      /* Non-zero forbids allocation */
+#endif
   spinlock_t       lock;        /* IRQ-safe spinlock */
 };
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: mm_skip_operation
+ *
+ * Description:
+ *   Check if the current heap operation should be skipped due to forbid
+ *   state. Dispatches to the configured policy (PANIC / HOOK).
+ *
+ *   For free/realloc (mem != NULL), the forbid is structural —
+ *   bump-allocated memory is inherently non-freeable, so the policy is
+ *   always enforced regardless of the forbid runtime flag.
+ *
+ *   For malloc (mem == NULL), the policy is only enforced when
+ *   forbid has been set at runtime.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_MM_HEAP_FORBID_NONE
+#  define mm_skip_operation(heap, mem, size) false
+#else
+static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap,
+                                              FAR void *mem, size_t size)
+{
+  if (mem == NULL && atomic_read(&heap->forbid) == 0)
+    {
+      return false;
+    }
+
+#  if defined(CONFIG_MM_HEAP_FORBID_PANIC)
+  PANIC();
+  return true;
+#  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
+  return board_heap_forbid_hook(heap, mem, size);
+#  else
+#    error "Invalid MM_HEAP_FORBID config for bump allocator"
+#  endif
+}
+#endif
 
 /****************************************************************************
  * Name: mm_bump_region_end
@@ -84,35 +125,6 @@ static inline FAR char *mm_bump_region_end(FAR struct mm_heap_s *heap)
   return heap->regions[0].end;
 #endif
 }
-
-#ifdef CONFIG_MM_BUMP_FREE_TRAP
-
-/****************************************************************************
- * Name: mm_bump_trap
- *
- * Description:
- *   Debug trap for free/realloc calls. Prints the calling thread's name,
- *   pid, and backtrace via _alert(), then calls PANIC().
- *   Safe in any context (idle thread, before syslog init, IRQ).
- *   On multi-core BMP, only the calling core is stuck.
- *
- ****************************************************************************/
-
-static void mm_bump_trap(FAR const char *func, FAR void *mem)
-{
-  FAR struct tcb_s *tcb = nxsched_self();
-
-  _alert("[BUMP TRAP] %s(%p) called by \"%s\" pid=%d\n",
-         func, mem, tcb ? tcb->name : "?", tcb ? tcb->pid : -1);
-
-  sched_dumpstack(tcb ? tcb->pid : -1);
-
-  PANIC();
-}
-
-#else
-#  define mm_bump_trap(func, mem)
-#endif /* CONFIG_MM_BUMP_FREE_TRAP */
 
 /****************************************************************************
  * Public Functions
@@ -269,15 +281,12 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap,
       return NULL;
     }
 
-  flags = spin_lock_irqsave(&heap->lock);
-
-  /* Allocation is rejected while the heap is forbidden (mm_heap_forbid). */
-
-  if (heap->forbid)
+  if (mm_skip_operation(heap, NULL, size))
     {
-      spin_unlock_irqrestore(&heap->lock, flags);
       return NULL;
     }
+
+  flags = spin_lock_irqsave(&heap->lock);
 
 #if CONFIG_MM_REGIONS > 1
   while (heap->region < heap->nregions)
@@ -357,38 +366,31 @@ FAR void *mm_calloc(FAR struct mm_heap_s *heap, size_t n, size_t elem_size)
  *
  * Description:
  *   Bump allocator mm_free implementation.
- *   NOP mode: does nothing (memory is never reclaimed).
- *   TRAP mode: alerts and calls PANIC() to catch free callers.
+ *   Bump-allocated memory cannot be freed; dispatches to the configured
+ *   forbid policy via mm_skip_operation().
  *
  ****************************************************************************/
 
-#ifndef CONFIG_MM_BUMP_FREE_NONE
 void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
 {
-  UNUSED(heap);
-
   if (mem == NULL)
     {
       return;
     }
 
-  mm_bump_trap("mm_free", mem);
+  mm_skip_operation(heap, mem, 0);
 }
-#endif
 
 /****************************************************************************
  * Name: mm_realloc
  *
  * Description:
  *   Bump allocator mm_realloc implementation.
- *   NOP mode: realloc(NULL, size) -> malloc;
- *             realloc(ptr, size) -> NULL (cannot resize).
- *   TRAP mode: realloc(NULL, size) -> malloc;
- *              realloc(ptr, size) -> trap.
+ *   realloc(NULL, size) -> malloc (normal allocation path).
+ *   realloc(ptr, size)  -> policy dispatch then return NULL (cannot resize).
  *
  ****************************************************************************/
 
-#ifndef CONFIG_MM_BUMP_FREE_NONE
 FAR void *mm_realloc(FAR struct mm_heap_s *heap,
                      FAR void *mem, size_t size)
 {
@@ -397,7 +399,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap,
       return mm_malloc(heap, size);
     }
 
-  mm_bump_trap("mm_realloc", mem);
+  mm_skip_operation(heap, mem, size);
 
   /* Bump allocator cannot resize -- fail explicitly.
    * Per C standard, on failure the original pointer remains valid.
@@ -405,23 +407,19 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap,
 
   return NULL;
 }
-#endif
 
 /****************************************************************************
  * Name: mm_delayfreecb
  *
  * Description:
  *   Bump allocator mm_delayfreecb implementation.
- *   NOP mode: does nothing.
- *   TRAP mode: alerts and calls PANIC().
+ *   Dispatches to mm_skip_operation() unconditionally.
  *
  ****************************************************************************/
 
-#ifndef CONFIG_MM_BUMP_FREE_NONE
 void mm_delayfreecb(FAR struct mm_heap_s *heap, FAR void *mem,
                     mm_delaycb_t cb)
 {
-  UNUSED(heap);
   UNUSED(cb);
 
   if (mem == NULL)
@@ -429,9 +427,8 @@ void mm_delayfreecb(FAR struct mm_heap_s *heap, FAR void *mem,
       return;
     }
 
-  mm_bump_trap("mm_delayfreecb", mem);
+  mm_skip_operation(heap, mem, 0);
 }
-#endif
 
 /****************************************************************************
  * Name: mm_heapmember
@@ -805,13 +802,12 @@ int mm_sbrk(FAR struct mm_heap_s *heap, intptr_t incr, FAR void **mem)
       return -ENOSYS;
     }
 
-  flags = spin_lock_irqsave(&heap->lock);
-
-  if (heap->forbid)
+  if (mm_skip_operation(heap, NULL, incr))
     {
-      spin_unlock_irqrestore(&heap->lock, flags);
       return -EPERM;
     }
+
+  flags = spin_lock_irqsave(&heap->lock);
 
   end = mm_bump_region_end(heap);
 
@@ -878,24 +874,15 @@ void mm_notify_pressure(FAR struct mm_heap_s *heap)
 #ifndef CONFIG_MM_HEAP_FORBID_NONE
 bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
 {
-  irqstate_t flags;
-  bool prev;
+  DEBUGASSERT(heap != NULL);
 
-  flags = spin_lock_irqsave(&heap->lock);
-  prev = heap->forbid;
-  heap->forbid = forbid;
-  spin_unlock_irqrestore(&heap->lock, flags);
-  return prev;
+  return atomic_xchg(&heap->forbid, forbid) != 0;
 }
 
 bool mm_heap_is_forbid(FAR struct mm_heap_s *heap)
 {
-  irqstate_t flags;
-  bool forbid;
+  DEBUGASSERT(heap != NULL);
 
-  flags = spin_lock_irqsave(&heap->lock);
-  forbid = heap->forbid;
-  spin_unlock_irqrestore(&heap->lock, flags);
-  return forbid;
+  return atomic_read(&heap->forbid) != 0;
 }
 #endif

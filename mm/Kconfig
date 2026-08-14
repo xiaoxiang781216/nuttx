@@ -38,43 +38,6 @@ config MM_CUSTOMIZE_MANAGER
 
 endchoice
 
-choice
-	prompt "Bump allocator free/realloc mode"
-	default MM_BUMP_FREE_NOP
-	depends on MM_BUMP_ALLOCATOR
-
-config MM_BUMP_FREE_NONE
-	bool "No implementation (link-time error)"
-	---help---
-		Do not provide any free/realloc implementation.
-		If any code references free/realloc, the linker will fail.
-		Use this for final production validation to prove the binary
-		contains zero free/realloc calls after all callsites have
-		been eliminated.
-
-config MM_BUMP_FREE_NOP
-	bool "Empty stub (no-op)"
-	---help---
-		Provide stub implementations of free/realloc.
-		free() does nothing (memory is never reclaimed).
-		realloc(NULL, size) forwards to malloc; realloc(ptr, size)
-		returns NULL because the bump allocator cannot resize (it
-		does not track block sizes). Per C standard, on failure the
-		original pointer remains valid.
-		Use this for normal operation when the system has code paths
-		that call free but you want the bump allocator to work.
-
-config MM_BUMP_FREE_TRAP
-	bool "Debug trap (alert + spin)"
-	---help---
-		Provide a debug implementation of free/realloc that prints
-		the calling thread name, pid, and backtrace via _alert(),
-		then spins forever. This allows the firmware to boot and
-		identify free callsites at runtime.
-		Use this during development to locate code that calls free.
-
-endchoice
-
 config MM_POOL_PARAM
 	string "Mempool block size and number for user"
 	---help---
