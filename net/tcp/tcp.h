@@ -308,6 +308,15 @@ struct tcp_conn_s
   struct tcp_ofoseg_s ofosegs[TCP_SACK_RANGES_MAX];
 #endif
 
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+  /* SACK ranges received from the peer's latest ACK.
+   * Parsed in tcp_input and consumed by psock_send_eventhandler.
+   */
+
+  uint8_t nsacks;
+  struct tcp_sack_s sack_ranges[TCP_SACK_RANGES_MAX];
+#endif
+
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   /* Write buffering
    *

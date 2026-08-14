@@ -780,6 +780,10 @@ void tcp_free_rx_buffers(FAR struct tcp_conn_s *conn)
       conn->nofosegs = 0;
     }
 #endif /* CONFIG_NET_TCP_OUT_OF_ORDER */
+
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+  conn->nsacks = 0;
+#endif
 }
 
 /****************************************************************************

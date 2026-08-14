@@ -653,6 +653,133 @@ static void tcp_parse_option(FAR struct net_driver_s *dev,
 }
 
 /****************************************************************************
+ * Name: tcp_parse_sack
+ *
+ * Description:
+ *   Parse SACK options from incoming TCP header and store the results
+ *   in conn->sack_ranges[].  Called from tcp_input before invoking the
+ *   send callback so that psock_send_eventhandler can use the parsed
+ *   SACK information without re-accessing the packet buffer.
+ *
+ * Input Parameters:
+ *   conn - The TCP connection of interest
+ *   tcp  - Pointer to the TCP header containing options
+ *
+ * Returned Value:
+ *   Number of SACK blocks parsed (stored in conn->nsacks)
+ *
+ * Assumptions:
+ *   The network device is locked.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+static int tcp_parse_sack(FAR struct tcp_conn_s *conn,
+                          FAR struct tcp_hdr_s *tcp)
+{
+  FAR struct tcp_sack_s *sacks;
+  int nsack = 0;
+  uint8_t opt;
+  int i;
+
+  /* No SACK capability negotiated or no options present */
+
+  if ((conn->flags & TCP_SACK) == 0 ||
+      (tcp->tcpoffset & 0xf0) <= 0x50)
+    {
+      conn->nsacks = 0;
+      return 0;
+    }
+
+  for (i = 0; i < ((tcp->tcpoffset >> 4) - 5) << 2; )
+    {
+      opt = *(tcp->optdata + i);
+      if (opt == TCP_OPT_END)
+        {
+          /* End of options. */
+
+          break;
+        }
+      else if (opt == TCP_OPT_NOOP)
+        {
+          /* NOP option. */
+
+          ++i;
+          continue;
+        }
+      else if (opt == TCP_OPT_SACK)
+        {
+          nsack = (*(tcp->optdata + 1 + i) -
+                   TCP_OPT_SACK_PERM_LEN) /
+                   (sizeof(uint32_t) * 2);
+          sacks = (FAR struct tcp_sack_s *)
+                  (tcp->optdata + i +
+                   TCP_OPT_SACK_PERM_LEN);
+
+          if (nsack > TCP_SACK_RANGES_MAX)
+            {
+              nsack = TCP_SACK_RANGES_MAX;
+            }
+
+          for (i = 0; i < nsack; i++)
+            {
+              conn->sack_ranges[i].left =
+                tcp_getsequence((FAR uint8_t *)&sacks[i]);
+              conn->sack_ranges[i].right =
+                tcp_getsequence((FAR uint8_t *)&sacks[i] + 4);
+            }
+
+          break;
+        }
+      else
+        {
+          /* All other options have a length field,
+           * so that we easily can skip past them.
+           */
+
+          if (*(tcp->optdata + 1 + i) == 0)
+            {
+              /* If the length field is zero,
+               * the options are malformed and
+               * we don't process them further.
+               */
+
+              break;
+            }
+        }
+
+      i += *(tcp->optdata + 1 + i);
+    }
+
+  conn->nsacks = nsack;
+
+  /* Sort SACK ranges by left edge for efficient retransmission */
+
+  if (nsack > 1)
+    {
+      struct tcp_sack_s tmp;
+      int j;
+
+      for (i = 0; i < nsack - 1; i++)
+        {
+          for (j = 0; j < nsack - 1 - i; j++)
+            {
+              if (TCP_SEQ_GT(conn->sack_ranges[j].left,
+                             conn->sack_ranges[j + 1].left))
+                {
+                  tmp = conn->sack_ranges[j];
+                  conn->sack_ranges[j] = conn->sack_ranges[j + 1];
+                  conn->sack_ranges[j + 1] = tmp;
+                }
+            }
+        }
+    }
+
+  return nsack;
+}
+#endif /* CONFIG_NET_TCP_SELECTIVE_ACK */
+
+/****************************************************************************
  * Name: tcp_clear_zero_probe
  *
  * Description:
@@ -1384,6 +1511,14 @@ found:
       /* Set the acknowledged flag. */
 
       flags |= TCP_ACKDATA;
+
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+      /* Parse SACK options once here so that send callbacks can use
+       * conn->sack_ranges without re-accessing the packet buffer.
+       */
+
+      tcp_parse_sack(conn, tcp);
+#endif
 
       /* RFC 6298 Section 5.3: Only reset the retransmission timer when
        * the ACK acknowledges new data (i.e., tx_unacked has decreased).

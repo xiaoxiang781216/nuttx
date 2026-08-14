@@ -311,99 +311,6 @@ static inline void psock_lost_connection(FAR struct tcp_conn_s *conn,
 }
 
 /****************************************************************************
- * Name: parse_sack
- *
- * Description:
- *   Parse sack from incoming TCP options
- *
- * Input Parameters:
- *   conn   - The TCP connection of interest
- *   tcp    - Header of tcp structure
- *   segs   - Segments edge of sacks
- *
- * Returned Value:
- *   Number of sacks
- *
- * Assumptions:
- *   The network is locked.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
-static int parse_sack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp,
-                      FAR struct tcp_ofoseg_s *segs)
-{
-  FAR struct tcp_sack_s *sacks;
-  int nsack = 0;
-  uint8_t opt;
-  int i;
-
-  /* Get the size of the link layer header,
-   * the IP and TCP header
-   */
-
-  for (i = 0; i < ((tcp->tcpoffset >> 4) - 5) << 2 ; )
-    {
-      opt = *(tcp->optdata + i);
-      if (opt == TCP_OPT_END)
-        {
-          /* End of options. */
-
-          break;
-        }
-      else if (opt == TCP_OPT_NOOP)
-        {
-          /* NOP option. */
-
-          ++i;
-          continue;
-        }
-      else if (opt == TCP_OPT_SACK)
-        {
-          nsack = (*(tcp->optdata + 1 + i) -
-                   TCP_OPT_SACK_PERM_LEN) /
-                   (sizeof(uint32_t) * 2);
-          sacks = (FAR struct tcp_sack_s *)
-                  (tcp->optdata + i +
-                   TCP_OPT_SACK_PERM_LEN);
-
-          for (i = 0; i < nsack; i++)
-            {
-              /* Use the pointer to avoid the error of 4 byte alignment. */
-
-              segs[i].left = tcp_getsequence((uint8_t *)&sacks[i]);
-              segs[i].right = tcp_getsequence((uint8_t *)&sacks[i] + 4);
-            }
-
-          tcp_reorder_ofosegs(nsack, segs);
-
-          break;
-        }
-      else
-        {
-          /* All other options have a length field,
-           * so that we easily can skip past them.
-           */
-
-          if (*(tcp->optdata + 1 + i) == 0)
-            {
-              /* If the length field is zero,
-               * the options are malformed and
-               * we don't process them further.
-               */
-
-              break;
-            }
-        }
-
-      i += *(tcp->optdata + 1 + i);
-    }
-
-  return nsack;
-}
-#endif /* CONFIG_NET_TCP_SELECTIVE_ACK */
-
-/****************************************************************************
  * Name: psock_send_eventhandler
  *
  * Description:
@@ -427,10 +334,6 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                                         FAR void *pvpriv, uint32_t flags)
 {
   FAR struct tcp_conn_s *conn = pvpriv;
-#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
-  struct tcp_ofoseg_s ofosegs[TCP_SACK_RANGES_MAX];
-  uint8_t nsacks = 0;
-#endif
 #ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
   uint32_t rexmitno = 0;
 #endif
@@ -469,34 +372,16 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
   if ((flags & TCP_ACKDATA) != 0)
     {
       FAR struct tcp_wrbuffer_s *wrb;
-      FAR struct tcp_hdr_s *tcp;
       FAR sq_entry_t *entry;
       FAR sq_entry_t *next;
       uint32_t ackno;
 
-      /* Get the offset address of the TCP header */
+      /* Derive the current SND.UNA (what the peer has acknowledged up to)
+       * from the connection state.  tcp_input already updated tx_unacked
+       * before invoking this callback.
+       */
 
-#ifdef CONFIG_NET_IPv4
-#ifdef CONFIG_NET_IPv6
-      if (conn->domain == PF_INET)
-#endif
-        {
-          tcp = TCPIPv4BUF;
-        }
-#endif /* CONFIG_NET_IPv4 */
-
-#ifdef CONFIG_NET_IPv6
-#ifdef CONFIG_NET_IPv4
-      else
-#endif
-        {
-          tcp = TCPIPv6BUF;
-        }
-#endif /* CONFIG_NET_IPv6 */
-
-      /* Get the ACK number from the TCP header */
-
-      ackno = tcp_getsequence(tcp->ackno);
+      ackno = conn->sndseq_max - conn->tx_unacked;
       ninfo("ACK: ackno=%" PRIu32 " flags=%" PRIx32 "\n", ackno, flags);
 
       /* Look at every write buffer in the unacked_q.  The unacked_q
@@ -598,7 +483,6 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
               if (conn->tx_unacked > 0 &&
                   (flags & TCP_NEWDATA) == 0 &&
-                  (tcp->flags & (TCP_SYN | TCP_FIN)) == 0 &&
                   conn->snd_wnd == conn->snd_prev_wnd)
                 {
                   ++TCP_WBNACK(wrb);
@@ -618,12 +502,9 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 #endif
 
 #ifdef CONFIG_NET_TCP_SELECTIVE_ACK
-                  if ((conn->flags & TCP_SACK) &&
-                      (tcp->tcpoffset & 0xf0) > 0x50)
+                  if (conn->nsacks > 0)
                     {
-                      /* Parse s-ack from tcp options */
-
-                      nsacks = parse_sack(conn, tcp, ofosegs);
+                      /* SACK was already parsed in tcp_input */
 
                       flags |= TCP_REXMIT;
                     }
@@ -805,7 +686,7 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
   /* Check if we are being asked to retransmit s-ack data */
 
-  if (nsacks > 0)
+  if (conn->nsacks > 0)
     {
       FAR struct tcp_wrbuffer_s *wrb;
       FAR sq_entry_t *entry;
@@ -815,12 +696,13 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
       /* Dump s-ack edge */
 
-      for (i = 0, right = 0; i < nsacks; i++)
+      for (i = 0, right = 0; i < conn->nsacks; i++)
         {
           ninfo("TCP SACK [%d]"
                 "[%" PRIu32 " : %" PRIu32 " : %" PRIu32 "]\n",
-                i, ofosegs[i].left, ofosegs[i].right,
-                TCP_SEQ_SUB(ofosegs[i].right, ofosegs[i].left));
+                i, conn->sack_ranges[i].left, conn->sack_ranges[i].right,
+                TCP_SEQ_SUB(conn->sack_ranges[i].right,
+                            conn->sack_ranges[i].left));
         }
 
       for (entry = sq_peek(&conn->unacked_q); entry; entry = next)
@@ -828,11 +710,12 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           wrb  = (FAR struct tcp_wrbuffer_s *)entry;
           next = sq_next(entry);
 
-          for (i = 0, right = 0; i < nsacks; i++)
+          for (i = 0, right = 0; i < conn->nsacks; i++)
             {
               /* Wrb seqno out of s-ack edge ? do retransmit ! */
 
-              if (TCP_SEQ_LT(TCP_WBSEQNO(wrb), ofosegs[i].left) &&
+              if (TCP_SEQ_LT(TCP_WBSEQNO(wrb),
+                             conn->sack_ranges[i].left) &&
                   TCP_SEQ_GTE(TCP_WBSEQNO(wrb), right))
                 {
                   ninfo("TCP REXMIT "
@@ -845,7 +728,7 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                   break;
                 }
 
-              right = ofosegs[i].right;
+              right = conn->sack_ranges[i].right;
             }
         }
 
@@ -861,6 +744,10 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
               tcp_cc_update(conn, NULL);
             }
 #endif
+
+      /* Consumed - clear to prevent stale use by poll path */
+
+      conn->nsacks = 0;
     }
   else
 #endif
