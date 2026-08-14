@@ -160,11 +160,11 @@ static bool perf_buffer_has_space(FAR struct perf_event_s *event,
 {
   size_t space = circbuf_space(&(event->buf->rb));
 
-  /* Wake up the reader (perf record) when the buffer is filling up so it
-   * can drain the data before we start dropping samples.
+  /* Wake the reader at half full instead of the last fifth, so it has
+   * more time to drain before the producer runs out of room.
    */
 
-  if (space < circbuf_size(&(event->buf->rb)) / 5 && event->pfd)
+  if (space < circbuf_size(&(event->buf->rb)) / 2 && event->pfd)
     {
       poll_notify(&event->pfd, 1, POLLIN);
     }
