@@ -80,7 +80,7 @@ __jumpfunc__ FAR void *mm_realloc(FAR struct mm_heap_s *heap,
   FAR void *newmem;
   bool bypass;
 
-  if (mm_skip_operation(heap))
+  if (mm_skip_operation(heap, oldmem, size))
     {
       return NULL;
     }

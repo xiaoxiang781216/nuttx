@@ -189,12 +189,12 @@ struct mm_memdump_priv_s
  * Private Functions
  ****************************************************************************/
 
-static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap)
-{
 #ifdef CONFIG_MM_HEAP_FORBID_NONE
-  UNUSED(heap);
-  return false;
+#  define mm_skip_operation(heap, mem, size) false
 #else
+static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap,
+                                              FAR void *mem, size_t size)
+{
   if (atomic_read(&heap->mm_heapforbid) == 0)
     {
       return false;
@@ -204,14 +204,12 @@ static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap)
   PANIC();
   return true;
 #  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
-  return board_heap_forbid_hook(heap);
-#  elif defined(CONFIG_MM_HEAP_FORBID_TRACE)
-  return false;
+  return board_heap_forbid_hook(heap, mem, size);
 #  else
 #    error "Invalid MM_HEAP_FORBID config"
 #  endif
-#endif
 }
+#endif
 
 #ifdef CONFIG_MM_HEAP_MEMPOOL
 static inline_function
@@ -962,7 +960,7 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
       return;
     }
 
-  if (mm_skip_operation(heap))
+  if (mm_skip_operation(heap, mem, 0))
     {
       return;
     }
@@ -998,7 +996,7 @@ void mm_delayfreecb(FAR struct mm_heap_s *heap, FAR void *mem,
       return;
     }
 
-  if (mm_skip_operation(heap))
+  if (mm_skip_operation(heap, mem, 0))
     {
       return;
     }
@@ -1520,7 +1518,7 @@ __jumpfunc__ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   size_t nodesize;
   FAR void *ret;
 
-  if (mm_skip_operation(heap))
+  if (mm_skip_operation(heap, NULL, size))
     {
       return NULL;
     }
@@ -1623,7 +1621,7 @@ __jumpfunc__ FAR void *mm_memalign(FAR struct mm_heap_s *heap,
   size_t nodesize;
   FAR void *ret;
 
-  if (mm_skip_operation(heap))
+  if (mm_skip_operation(heap, NULL, size))
     {
       return NULL;
     }
@@ -1722,7 +1720,7 @@ __jumpfunc__ FAR void *mm_realloc(FAR struct mm_heap_s *heap,
   size_t newsize;
 #endif
 
-  if (mm_skip_operation(heap))
+  if (mm_skip_operation(heap, oldmem, size))
     {
       return NULL;
     }

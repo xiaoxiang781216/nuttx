@@ -392,12 +392,12 @@ static bool free_delaylist(struct mm_heap_s *heap, bool force)
   return ret;
 }
 
-static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap)
-{
 #ifdef CONFIG_MM_HEAP_FORBID_NONE
-  UNUSED(heap);
-  return false;
+#  define mm_skip_operation(heap, mem, size) false
 #else
+static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap,
+                                              FAR void *mem, size_t size)
+{
   if (atomic_read(&heap->mm_heapforbid) == 0)
     {
       return false;
@@ -407,12 +407,12 @@ static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap)
   PANIC();
   return true;
 #  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
-  return board_heap_forbid_hook(heap);
+  return board_heap_forbid_hook(heap, mem, size);
 #  else
 #    error "Invalid MM_HEAP_FORBID config"
 #  endif
-#endif
 }
+#endif
 
 static void *reallocate(void *oldmem, size_t alignment, size_t size)
 {
@@ -555,7 +555,7 @@ void umm_addregion(void *heapstart, size_t heapsize)
 
 void *malloc(size_t size)
 {
-  if (mm_skip_operation(g_mmheap))
+  if (mm_skip_operation(g_mmheap, NULL, size))
     {
       return NULL;
     }
@@ -581,7 +581,7 @@ void free(void *mem)
       return;
     }
 
-  if (mm_skip_operation(g_mmheap))
+  if (mm_skip_operation(g_mmheap, mem, 0))
     {
       return;
     }
@@ -612,7 +612,7 @@ void umm_delayfreecb(void *mem, mm_delaycb_t cb)
       return;
     }
 
-  if (mm_skip_operation(g_mmheap))
+  if (mm_skip_operation(g_mmheap, mem, 0))
     {
       return;
     }
@@ -645,7 +645,7 @@ void umm_delayfreecb(void *mem, mm_delaycb_t cb)
 
 void *realloc(void *oldmem, size_t size)
 {
-  if (mm_skip_operation(g_mmheap))
+  if (mm_skip_operation(g_mmheap, oldmem, size))
     {
       return NULL;
     }
@@ -709,7 +709,7 @@ void *zalloc(size_t size)
 
 void *memalign(size_t alignment, size_t size)
 {
-  if (mm_skip_operation(g_mmheap))
+  if (mm_skip_operation(g_mmheap, NULL, size))
     {
       return NULL;
     }

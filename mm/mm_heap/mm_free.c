@@ -269,7 +269,7 @@ void mm_delayfreecb(FAR struct mm_heap_s *heap, FAR void *mem,
       return;
     }
 
-  if (mm_skip_operation(heap))
+  if (mm_skip_operation(heap, mem, 0))
     {
       return;
     }
@@ -298,7 +298,7 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
       return;
     }
 
-  if (mm_skip_operation(heap))
+  if (mm_skip_operation(heap, mem, 0))
     {
       return;
     }

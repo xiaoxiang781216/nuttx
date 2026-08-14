@@ -64,7 +64,7 @@ __jumpfunc__ FAR void *mm_memalign(FAR struct mm_heap_s *heap,
   size_t newsize;
   bool bypass;
 
-  if (mm_skip_operation(heap))
+  if (mm_skip_operation(heap, NULL, size))
     {
       return NULL;
     }

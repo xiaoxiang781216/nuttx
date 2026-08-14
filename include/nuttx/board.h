@@ -897,16 +897,36 @@ int board_start_cpu(int cpuid);
  * Name: board_heap_forbid_hook
  *
  * Description:
- *   Called when heap malloc/free is attempted while the heap is in forbid
- *   state. The board can decide whether to skip the operation or not.
+ *   Called when malloc/free is attempted while the heap is in forbid state.
+ *   The board layer decides whether to skip the operation or not.
+ *
  *   Support for this function is required by board-level logic if
  *   CONFIG_MM_HEAP_FORBID_HOOK is selected.
+ *
+ * Input Parameters:
+ *   heap    - The heap instance
+ *   mem     - Memory pointer (non-NULL for free/realloc, NULL for alloc)
+ *   size    - Requested size (0 for free, non-zero for alloc/realloc)
+ *
+ *   Use the helper macros below to determine the operation type:
+ *     BOARD_HEAP_IS_FREE(mem, size)    - true when the operation is free
+ *     BOARD_HEAP_IS_ALLOC(mem, size)   - true when the operation is alloc
+ *     BOARD_HEAP_IS_REALLOC(mem, size) - true when the operation is realloc
+ *
+ * Returned Value:
+ *   true  - skip (abort) the operation
+ *   false - allow the operation to proceed
  *
  ****************************************************************************/
 
 #ifdef CONFIG_MM_HEAP_FORBID_HOOK
+#define BOARD_HEAP_IS_FREE(mem, size)    ((mem) != NULL && (size) == 0)
+#define BOARD_HEAP_IS_ALLOC(mem, size)   ((mem) == NULL && (size) != 0)
+#define BOARD_HEAP_IS_REALLOC(mem, size) ((mem) != NULL && (size) != 0)
+
 struct mm_heap_s; /* Forward reference */
-bool board_heap_forbid_hook(FAR struct mm_heap_s *heap);
+bool board_heap_forbid_hook(FAR struct mm_heap_s *heap, FAR void *mem,
+                            size_t size);
 #endif
 
 #undef EXTERN
