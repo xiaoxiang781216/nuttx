@@ -86,3 +86,17 @@ Segmentation, flow control, and reassembly are handled transparently by the
 kernel. The N_Cr timeout (1000 ms) applies on both TX (waiting for a Flow
 Control frame after the First Frame) and RX (waiting for Consecutive Frames
 after a First Frame).
+
+RPMsg CAN
+=========
+
+Exposes a remote CAN controller as a local SocketCAN interface over RPMsg,
+using the generic net rpmsg driver.
+
+Enable ``CONFIG_NET_RPMSG_DRV`` on both sides: the client registers the
+interface with ``net_rpmsg_drv_init(cpuname, name, NET_LL_CAN)``, and the
+side that owns the bus bridges a local SocketCAN interface with
+``net_rpmsg_bridge_init(cpuname, name, ifname)``.
+
+The remote bus follows the client interface: bringing the client up or down
+brings the far interface up or down with it.

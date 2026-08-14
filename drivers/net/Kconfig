@@ -49,6 +49,7 @@ config NET_RPMSG_DRV
 	bool "RPMSG net driver"
 	depends on RPMSG
 	select ARCH_HAVE_NETDEV_STATISTICS
+	select NET_CAN_HAVE_CANFD if NET_CAN
 	---help---
 		Use the RPMSG as net device, transfer packet between remoteproc.
 

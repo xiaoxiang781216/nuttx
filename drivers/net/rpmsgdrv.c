@@ -29,17 +29,24 @@
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
+#include <netpacket/packet.h>
+#include <poll.h>
 #include <stdio.h>
+#include <sys/socket.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/net/netdev.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 
+#include <nuttx/can.h>
 #include <nuttx/net/can.h>
 #include <nuttx/net/dns.h>
+#include <nuttx/net/ioctl.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev_lowerhalf.h>
+#include <nuttx/net/net.h>
 #include <nuttx/net/pkt.h>
 #include <nuttx/net/rpmsg.h>
 #include <nuttx/net/rpmsgdrv.h>
@@ -66,8 +73,8 @@ struct net_rpmsg_cookie_s
   sem_t                         sem;
 };
 
-/* net_rpmsg_base_s is the rpmsg link state shared by the roles layered
- * on it
+/* net_rpmsg_base_s is the rpmsg link state shared by the netdev role and
+ * the bridge role
  */
 
 struct net_rpmsg_base_s
@@ -81,6 +88,20 @@ struct net_rpmsg_base_s
                                   * between two cpu established.
                                   */
   struct rpmsg_endpoint ept;
+};
+
+/* net_rpmsg_bridge_s is the bridge role on top of the link: no netdev
+ * is registered; the endpoint is relayed to a socket on the local
+ * interface, which follows the remote state.
+ */
+
+struct net_rpmsg_bridge_s
+{
+  struct net_rpmsg_base_s  base;    /* The rpmsg link */
+
+  FAR struct net_driver_s *ifdev;   /* The local bridged interface */
+  struct socket            ifsock;  /* Socket on the local interface */
+  struct pollfd            pfd;
 };
 
 /* net_rpmsg_drv_s is the netdev role on top of the link */
@@ -163,6 +184,28 @@ static int  net_rpmsg_drv_ioctl(FAR struct netdev_lowerhalf_s *dev, int cmd,
                                 unsigned long arg);
 #endif
 
+/* Bridge role functions */
+
+static int net_rpmsg_bridge_ifup_handler(FAR struct rpmsg_endpoint *ept,
+                                         FAR void *data, size_t len,
+                                         uint32_t src, FAR void *priv);
+static int net_rpmsg_bridge_ifdown_handler(FAR struct rpmsg_endpoint *ept,
+                                           FAR void *data, size_t len,
+                                           uint32_t src, FAR void *priv);
+static int net_rpmsg_bridge_transfer_handler(FAR struct rpmsg_endpoint *ept,
+                                             FAR void *data, size_t len,
+                                             uint32_t src, FAR void *priv);
+static int net_rpmsg_bridge_mcast_handler(FAR struct rpmsg_endpoint *ept,
+                                          FAR void *data, size_t len,
+                                          uint32_t src, FAR void *priv);
+static int net_rpmsg_bridge_devioctl_handler(FAR struct rpmsg_endpoint *ept,
+                                             FAR void *data, size_t len,
+                                             uint32_t src, FAR void *priv);
+static int net_rpmsg_bridge_ept_cb(FAR struct rpmsg_endpoint *ept,
+                                   FAR void *data, size_t len,
+                                   uint32_t src, FAR void *priv);
+static void net_rpmsg_bridge_work(FAR void *arg);
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -185,6 +228,16 @@ static const rpmsg_ept_cb g_net_rpmsg_drv_response[] =
   [NET_RPMSG_RMMCAST]   = net_rpmsg_drv_default_response,
   [NET_RPMSG_DEVIOCTL]  = net_rpmsg_drv_default_response,
   [NET_RPMSG_TRANSFER]  = net_rpmsg_drv_default_response,
+};
+
+static const rpmsg_ept_cb g_net_rpmsg_bridge_handler[] =
+{
+  [NET_RPMSG_IFUP]      = net_rpmsg_bridge_ifup_handler,
+  [NET_RPMSG_IFDOWN]    = net_rpmsg_bridge_ifdown_handler,
+  [NET_RPMSG_ADDMCAST]  = net_rpmsg_bridge_mcast_handler,
+  [NET_RPMSG_RMMCAST]   = net_rpmsg_bridge_mcast_handler,
+  [NET_RPMSG_DEVIOCTL]  = net_rpmsg_bridge_devioctl_handler,
+  [NET_RPMSG_TRANSFER]  = net_rpmsg_bridge_transfer_handler,
 };
 
 static const struct netdev_ops_s g_net_rpmsg_drv_ops =
@@ -964,6 +1017,323 @@ static int net_rpmsg_drv_ioctl(FAR struct netdev_lowerhalf_s *dev, int cmd,
 #endif
 
 /****************************************************************************
+ * Name: net_rpmsg_bridge_ifup_handler
+ ****************************************************************************/
+
+static int net_rpmsg_bridge_ifup_handler(FAR struct rpmsg_endpoint *ept,
+                                         FAR void *data, size_t len,
+                                         uint32_t src, FAR void *priv)
+{
+  FAR struct net_rpmsg_bridge_s *br =
+    container_of(priv, struct net_rpmsg_bridge_s, base);
+  FAR struct net_rpmsg_header_s *header = data;
+  int ret;
+
+  ret = psock_poll(&br->ifsock, &br->pfd, true);
+  if (ret >= 0)
+    {
+      ret = netdev_ifup(br->ifdev);
+      if (ret < 0)
+        {
+          psock_poll(&br->ifsock, &br->pfd, false);
+        }
+    }
+
+  rpmsg_send_response(ept, header, sizeof(*header), ret);
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_ifdown_handler
+ ****************************************************************************/
+
+static int net_rpmsg_bridge_ifdown_handler(FAR struct rpmsg_endpoint *ept,
+                                           FAR void *data, size_t len,
+                                           uint32_t src, FAR void *priv)
+{
+  FAR struct net_rpmsg_bridge_s *br =
+    container_of(priv, struct net_rpmsg_bridge_s, base);
+  FAR struct net_rpmsg_header_s *header = data;
+  int ret;
+
+  psock_poll(&br->ifsock, &br->pfd, false);
+  ret = netdev_ifdown(br->ifdev);
+  rpmsg_send_response(ept, header, sizeof(*header), ret);
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_mcast_handler
+ *
+ * Description:
+ *   Apply a multicast filter change to the local interface.
+ *
+ ****************************************************************************/
+
+static int net_rpmsg_bridge_mcast_handler(FAR struct rpmsg_endpoint *ept,
+                                          FAR void *data, size_t len,
+                                          uint32_t src, FAR void *priv)
+{
+  FAR struct net_rpmsg_mcast_s *msg = data;
+  int ret = -ENOSYS;
+
+#ifdef CONFIG_NET_MCASTGROUP
+  FAR struct net_rpmsg_bridge_s *br =
+    container_of(priv, struct net_rpmsg_bridge_s, base);
+
+  if (NET_RPMSG_GET_COMMAND(msg->header.command) == NET_RPMSG_ADDMCAST)
+    {
+      if (br->ifdev->d_addmac != NULL)
+        {
+          ret = br->ifdev->d_addmac(br->ifdev, msg->lnkaddr.addr);
+        }
+    }
+  else if (br->ifdev->d_rmmac != NULL)
+    {
+      ret = br->ifdev->d_rmmac(br->ifdev, msg->lnkaddr.addr);
+    }
+#endif
+
+  rpmsg_send_response(ept, &msg->header, sizeof(*msg), ret);
+  return 0;
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_devioctl_handler
+ *
+ * Description:
+ *   Forward a device ioctl to the local interface.
+ *
+ ****************************************************************************/
+
+static int net_rpmsg_bridge_devioctl_handler(FAR struct rpmsg_endpoint *ept,
+                                             FAR void *data, size_t len,
+                                             uint32_t src, FAR void *priv)
+{
+  FAR struct net_rpmsg_ioctl_s *msg = data;
+  int ret = -ENOSYS;
+#ifdef CONFIG_NETDEV_IOCTL
+  FAR struct net_rpmsg_bridge_s *br =
+    container_of(priv, struct net_rpmsg_bridge_s, base);
+
+  if (br->ifdev->d_ioctl != NULL)
+    {
+      ret = br->ifdev->d_ioctl(br->ifdev, msg->code,
+                               (unsigned long)(uintptr_t)msg->arg);
+    }
+#endif
+
+  rpmsg_send_response(ept, &msg->header, sizeof(*msg) + msg->length, ret);
+  return 0;
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_transfer_handler
+ *
+ * Description:
+ *   Put the received frame on the local interface.
+ *
+ ****************************************************************************/
+
+static int net_rpmsg_bridge_transfer_handler(FAR struct rpmsg_endpoint *ept,
+                                             FAR void *data, size_t len,
+                                             uint32_t src, FAR void *priv)
+{
+  FAR struct net_rpmsg_bridge_s *br =
+    container_of(priv, struct net_rpmsg_bridge_s, base);
+  FAR struct net_rpmsg_transfer_s *transfer = data;
+
+  if (transfer->length > len - sizeof(*transfer))
+    {
+      nerr("ERROR: net_rpmsg got invalid transfer length!");
+      return 0;
+    }
+
+  psock_sendto(&br->ifsock, transfer + 1, transfer->length, 0, NULL, 0);
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_ept_cb
+ ****************************************************************************/
+
+static int net_rpmsg_bridge_ept_cb(FAR struct rpmsg_endpoint *ept,
+                                   FAR void *data, size_t len,
+                                   uint32_t src, FAR void *priv)
+{
+  FAR struct net_rpmsg_header_s *header = data;
+  uint32_t cmd = NET_RPMSG_GET_COMMAND(header->command);
+
+  /* The bridge issues no commands, so no responses arrive */
+
+  if (cmd < nitems(g_net_rpmsg_bridge_handler) &&
+      g_net_rpmsg_bridge_handler[cmd] != NULL &&
+      !NET_RPMSG_IS_RESPONSE(header->command))
+    {
+      return g_net_rpmsg_bridge_handler[cmd](ept, data, len, src, priv);
+    }
+
+  return -EINVAL;
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_ept_release
+ ****************************************************************************/
+
+static void net_rpmsg_bridge_ept_release(FAR struct rpmsg_endpoint *ept)
+{
+  FAR struct net_rpmsg_bridge_s *br =
+    container_of(ept->priv, struct net_rpmsg_bridge_s, base);
+
+  /* The remote went away without an IFDOWN */
+
+  psock_poll(&br->ifsock, &br->pfd, false);
+  netdev_ifdown(br->ifdev);
+  rpmsg_wait(&br->base.ept, &br->base.wait);
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_poll_cb
+ ****************************************************************************/
+
+static void net_rpmsg_bridge_poll_cb(FAR struct pollfd *pfds)
+{
+  FAR struct net_rpmsg_bridge_s *br = pfds->arg;
+
+  work_queue(LPWORK, &br->base.txwork, net_rpmsg_bridge_work, br, 0);
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_sock
+ *
+ * Description:
+ *   Raw socket bound to the local interface, the link layer specific part
+ *   of the bridge.  recv_own loops the frames written to the interface
+ *   back to the remote side.
+ *
+ ****************************************************************************/
+
+static int net_rpmsg_bridge_sock(FAR struct socket *sock,
+                                 FAR struct net_driver_s *dev)
+{
+  int ret = -ENOSYS;
+
+  switch (dev->d_lltype)
+    {
+#ifdef CONFIG_NET_CAN
+      case NET_LL_CAN:
+        {
+          struct sockaddr_can addr;
+          int on = 1;
+
+          ret = psock_socket(PF_CAN, SOCK_RAW, CAN_RAW, sock);
+          if (ret < 0)
+            {
+              return ret;
+            }
+
+          psock_setsockopt(sock, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS,
+                           &on, sizeof(on));
+          psock_setsockopt(sock, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
+                           &on, sizeof(on));
+
+          memset(&addr, 0, sizeof(addr));
+          addr.can_family  = AF_CAN;
+          addr.can_ifindex = dev->d_ifindex;
+          ret = psock_bind(sock, (FAR struct sockaddr *)&addr,
+                           sizeof(addr));
+          if (ret < 0)
+            {
+              psock_close(sock);
+            }
+
+          return ret;
+        }
+#endif
+
+#ifdef CONFIG_NET_PKT
+      case NET_LL_ETHERNET:
+        {
+          struct sockaddr_ll addr;
+
+          ret = psock_socket(PF_PACKET, SOCK_RAW, 0, sock);
+          if (ret < 0)
+            {
+              return ret;
+            }
+
+          memset(&addr, 0, sizeof(addr));
+          addr.sll_family  = AF_PACKET;
+          addr.sll_ifindex = dev->d_ifindex;
+          ret = psock_bind(sock, (FAR struct sockaddr *)&addr,
+                           sizeof(addr));
+          if (ret < 0)
+            {
+              psock_close(sock);
+            }
+
+          return ret;
+        }
+#endif
+
+      default:
+        return ret;
+    }
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_work
+ *
+ * Description:
+ *   Relay the local socket into rpmsg TX buffers.  Queued on the shared
+ *   txwork item by the socket poll callback, which is registered only
+ *   while the remote interface is up, so the endpoint is valid here.
+ *
+ ****************************************************************************/
+
+static void net_rpmsg_bridge_work(FAR void *arg)
+{
+  FAR struct net_rpmsg_bridge_s *br = arg;
+  FAR struct net_rpmsg_base_s *base = &br->base;
+  FAR struct net_rpmsg_transfer_s *msg;
+  uint32_t space;
+  ssize_t len;
+
+  for (; ; )
+    {
+      /* Read the frame straight into the rpmsg buffer.  No buffer is
+       * backpressure: nothing signals a buffer return, so retry after
+       * a short delay.
+       */
+
+      msg = rpmsg_get_tx_payload_buffer(&base->ept, &space, false);
+      if (msg == NULL)
+        {
+          work_queue(LPWORK, &base->txwork, net_rpmsg_bridge_work, br,
+                     MSEC2TICK(10));
+          return;
+        }
+
+      len = psock_recvfrom(&br->ifsock, msg + 1, space - sizeof(*msg),
+                           MSG_DONTWAIT, NULL, NULL);
+      if (len <= 0)
+        {
+          rpmsg_release_tx_buffer(&base->ept, msg);
+          return;
+        }
+
+      msg->header.command = NET_RPMSG_TRANSFER;
+      msg->header.result  = 0;
+      msg->header.cookie  = 0;
+      msg->length         = len;
+      rpmsg_send_nocopy(&base->ept, msg, sizeof(*msg) + len);
+    }
+}
+
+/****************************************************************************
  * Name: net_rpmsg_drv_alloc
  ****************************************************************************/
 
@@ -1166,6 +1536,82 @@ void net_rpmsg_drv_set_callback(FAR struct netdev_lowerhalf_s *dev,
 
   drv->cb = cb;
   drv->priv = priv;
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_bridge_init
+ *
+ * Description:
+ *   Bridge the remote interface devname to the local interface ifname.
+ *
+ ****************************************************************************/
+
+int net_rpmsg_bridge_init(FAR const char *cpuname,
+                          FAR const char *devname,
+                          FAR const char *ifname)
+{
+  FAR struct net_rpmsg_bridge_s *br;
+  FAR struct net_rpmsg_base_s *base;
+  FAR struct net_driver_s *ifdev;
+  int ret;
+
+  if (cpuname == NULL || devname == NULL || ifname == NULL)
+    {
+      return -EINVAL;
+    }
+
+  ifdev = netdev_findbyname(ifname);
+  if (ifdev == NULL)
+    {
+      return -ENODEV;
+    }
+
+  /* The bridge shares the endpoint machinery with the netdev role but
+   * registers no netdev: the local interface is the only one.
+   */
+
+  br = kmm_zalloc(sizeof(*br));
+  if (br == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  base = &br->base;
+  br->ifdev             = ifdev;
+  br->pfd.events        = POLLIN;
+  br->pfd.arg           = br;
+  br->pfd.cb            = net_rpmsg_bridge_poll_cb;
+  base->ept.priv        = base;
+  base->ept.release_cb  = net_rpmsg_bridge_ept_release;
+  base->ept.ns_bound_cb = net_rpmsg_ns_bound;
+  base->eptcb           = net_rpmsg_bridge_ept_cb;
+  nxsem_init(&base->wait, 0, 0);
+  strlcpy(base->cpuname, cpuname, RPMSG_NAME_SIZE);
+  strlcpy(base->devname, devname, IFNAMSIZ);
+
+  ret = net_rpmsg_bridge_sock(&br->ifsock, ifdev);
+  if (ret < 0)
+    {
+      goto err;
+    }
+
+  ret = rpmsg_register_callback(base,
+                                net_rpmsg_device_created,
+                                net_rpmsg_device_destroy,
+                                NULL,
+                                NULL);
+  if (ret < 0)
+    {
+      psock_close(&br->ifsock);
+      goto err;
+    }
+
+  return OK;
+
+err:
+  nxsem_destroy(&base->wait);
+  kmm_free(br);
+  return ret;
 }
 
 #ifdef CONFIG_NET_RPMSG_DRV_SERVER

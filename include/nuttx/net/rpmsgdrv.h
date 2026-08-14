@@ -124,6 +124,23 @@ void net_rpmsg_drv_set_callback(FAR struct netdev_lowerhalf_s *dev,
 int net_rpmsg_drv_server_init(void);
 #endif
 
+/****************************************************************************
+ * Name: net_rpmsg_bridge_init
+ *
+ * Description:
+ *   Bridge the remote interface devname to the local interface ifname.
+ *
+ * Input Parameters:
+ *   cpuname    - Remote CPU name
+ *   devname    - Local and remote network device name
+ *   ifname     - Local interface bridged to the remote device
+ *
+ ****************************************************************************/
+
+int net_rpmsg_bridge_init(FAR const char *cpuname,
+                          FAR const char *devname,
+                          FAR const char *ifname);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
