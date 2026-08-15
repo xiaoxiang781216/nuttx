@@ -161,8 +161,14 @@ struct rammtd_config_s
 
 enum mtd_protect_mode_e
 {
-  MTD_PROT_RECOVERABLE = 0, /* Reversible (can be unprotected) */
-  MTD_PROT_PERMANENT   = 1, /* Irreversible (OTP-like) */
+  MTD_PROT_TEMPORARY   = 0, /* Runtime-only: not persisted, the protection is
+                             * lost after a reset/power cycle. Value 0 so that
+                             * a zeroed or uninitialised mode defaults to the
+                             * safest, non-persistent behaviour. */
+  MTD_PROT_RECOVERABLE = 1, /* Persistent across reset and reversible: can be
+                             * removed later with an unprotect request. */
+  MTD_PROT_PERMANENT   = 2, /* Persistent across reset and irreversible: can
+                             * never be unprotected (one-time). */
 };
 
 /* This structure describes a range of sectors to be protected or
