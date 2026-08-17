@@ -39,6 +39,9 @@
 #ifdef CONFIG_NET_VSOCK
 #  include <sys/vm_sockets.h>
 #endif
+#if CONFIG_TLS_NCLEANUP > 0
+#  include <nuttx/tls.h>
+#endif
 #include <netdb.h>
 #include <sys/un.h>
 
@@ -393,13 +396,19 @@ int getaddrinfo(FAR const char *hostname, FAR const char *servname,
       return EAI_MEMORY;
     }
 
+#if CONFIG_TLS_NCLEANUP > 0
   tls_cleanup_push(tls_get_info(), lib_free, hostbuffer);
+#endif
 
   gethostentbyname_r(hostname, &host,
                      hostbuffer, CONFIG_NETDB_BUFSIZE, &ret, flags);
   if (ret != OK)
     {
+#if CONFIG_TLS_NCLEANUP > 0
       tls_cleanup_pop(tls_get_info(), 1);
+#else
+      lib_free(hostbuffer);
+#endif
       return ret;
     }
 
@@ -423,7 +432,11 @@ int getaddrinfo(FAR const char *hostname, FAR const char *servname,
               freeaddrinfo(*res);
             }
 
+#if CONFIG_TLS_NCLEANUP > 0
           tls_cleanup_pop(tls_get_info(), 1);
+#else
+          lib_free(hostbuffer);
+#endif
           return EAI_MEMORY;
         }
 
@@ -452,6 +465,10 @@ int getaddrinfo(FAR const char *hostname, FAR const char *servname,
       prev_ai = ai;
     }
 
+#if CONFIG_TLS_NCLEANUP > 0
   tls_cleanup_pop(tls_get_info(), 1);
+#else
+  lib_free(hostbuffer);
+#endif
   return (*res != NULL) ? OK : EAI_FAMILY;
 }

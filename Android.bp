@@ -41,6 +41,7 @@ genrule {
     srcs: [
         "include/debug.h",
         "include/netdb.h",
+        "include/netpacket/rpmsg.h",
         "include/nuttx/atomic.h",
         "include/nuttx/audio/audio.h",
         "include/nuttx/compiler.h",
@@ -48,8 +49,12 @@ genrule {
         "include/nuttx/fs/fs.h",
         "include/nuttx/fs/ioctl.h",
         "include/nuttx/fs/uio.h",
+        "include/nuttx/irq.h",
+        "include/nuttx/jump_label.h",
+        "include/nuttx/kconfig.h",
         "include/nuttx/kmalloc.h",
         "include/nuttx/lib/lib.h",
+        "include/nuttx/macro.h",
         "include/nuttx/mm/gran.h",
         "include/nuttx/mm/map.h",
         "include/nuttx/mutex_type.h",
@@ -69,7 +74,9 @@ genrule {
         "include/sys/ioctl.h",
         "include/sys/queue.h",
     ],
-    cmd: "mkdir -p $(genDir)/nuttx/audio; " +
+    cmd: "mkdir -p $(genDir)/arch; " +
+         "mkdir -p $(genDir)/netpacket; " +
+         "mkdir -p $(genDir)/nuttx/audio; " +
          "mkdir -p $(genDir)/nuttx/fs; " +
          "mkdir -p $(genDir)/nuttx/lib; " +
          "mkdir -p $(genDir)/nuttx/mm; " +
@@ -81,8 +88,11 @@ genrule {
          "cp $$f $(genDir)/$${f#*include/};" +
          "done;",
     out: [
+        "arch/irq.h",
         "debug.h",
         "netdb.h",
+        "netpacket/rpmsg.h",
+        "nuttx/arch.h",
         "nuttx/atomic.h",
         "nuttx/audio/audio.h",
         "nuttx/compiler.h",
@@ -91,8 +101,12 @@ genrule {
         "nuttx/fs/fs.h",
         "nuttx/fs/ioctl.h",
         "nuttx/fs/uio.h",
+        "nuttx/irq.h",
+        "nuttx/jump_label.h",
+        "nuttx/kconfig.h",
         "nuttx/kmalloc.h",
         "nuttx/lib/lib.h",
+        "nuttx/macro.h",
         "nuttx/mm/gran.h",
         "nuttx/mm/map.h",
         "nuttx/mutex_type.h",
