@@ -314,6 +314,8 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
   bool found = false;
   int i;
 
+  DEBUGASSERT(dev != NULL);
+
   /* Walk through the ARP mapping table and try to find an entry to
    * update. If none is found, the IP -> MAC address mapping is
    * inserted in the ARP table.
@@ -390,7 +392,7 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
                       ethaddr, ETHER_ADDR_LEN) != 0 &&
       memcmp(&tabptr->at_ethaddr, &g_zero_ethaddr,
              sizeof(struct ether_addr)) != 0 &&
-      dev != NULL && ipaddr == dev->d_draddr)
+      ipaddr == dev->d_draddr)
     {
       net_trace_diag(LOG_ERR, DIAG_NET_CONN_STATE_ABNORM,
                      "ErrorCode:%d,ErrorDetail:gw=%08" PRIx32 "/"
