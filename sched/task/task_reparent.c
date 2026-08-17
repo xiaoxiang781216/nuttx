@@ -118,7 +118,7 @@ int task_reparent(pid_t ppid, pid_t chpid)
               if (ptcb)
                 {
                   ret = OK;
-                  pgrp = chtcb->group;
+                  pgrp = ptcb->group;
                   ppid = pgrp->tg_pid;
                 }
               else
