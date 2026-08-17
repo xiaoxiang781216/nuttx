@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <debug.h>
 
 #include <nuttx/nuttx.h>
@@ -40,6 +41,7 @@
 #include <nuttx/drivers/rpmsgdev.h>
 #include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/mtd/configdata.h>
+#include <nuttx/trace.h>
 
 #include "rpmsgdev.h"
 
@@ -652,6 +654,10 @@ static void rpmsgdev_ns_bind(FAR struct rpmsg_device *rdev,
                          rpmsgdev_ept_cb, rpmsg_destroy_ept);
   if (ret < 0)
     {
+      rpmsg_diag(DIAG_RPMSG_DEV_INIT_FAIL,
+                 "Stage:ServerCreateEpt,CpuName:%s,Name:%s,Dest:%" PRIx32
+                 ",ErrorCode:%d",
+                 rpmsg_get_cpuname(rdev), name, dest, ret);
       nxmutex_destroy(&server->lock);
       kmm_free(server);
     }

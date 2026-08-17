@@ -1829,6 +1829,11 @@
 
 #define DIAG_RPMSG_RTC_ERROR             (DIAG_SYSTEM_RPMSG_BASE + 80)  /* 961010480 */
 
+/* Rpmsg dev service (BASE + 90..99) */
+
+#define DIAG_RPMSG_DEV_INIT_FAIL         (DIAG_SYSTEM_RPMSG_BASE + 90)  /* 961010490 */
+#define DIAG_RPMSG_DEV_IO_ERROR          (DIAG_SYSTEM_RPMSG_BASE + 91)  /* 961010491 */
+
 #define DIAG_SYSTEM_BINDER_BASE          (DIAG_SYSTEM_BASE + 500)     /* 961010500 */
 #define DIAG_SYSTEM_SENSOR_BASE          (DIAG_SYSTEM_BASE + 600)     /* 961010600 */
 #define DIAG_SYSTEM_PM_BASE              (DIAG_SYSTEM_BASE + 700)     /* 961010700 */

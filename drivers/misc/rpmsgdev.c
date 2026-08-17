@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <assert.h>
 #include <fcntl.h>
@@ -50,16 +51,13 @@
 #include <nuttx/power/battery_ioctl.h>
 #include <nuttx/input/mouse.h>
 #include <nuttx/mtd/configdata.h>
+#include <nuttx/trace.h>
 
 #include "rpmsgdev.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#ifndef rpmsgdeverr
-#  define rpmsgdeverr(fmt, ...)
-#endif
 
 /****************************************************************************
  * Private Types
@@ -259,7 +257,9 @@ static int rpmsgdev_open(FAR struct file *filep)
                            sizeof(*msg), NULL);
   if (ret < 0)
     {
-      rpmsgdeverr("open failed, ret=%d\n", ret);
+      rpmsg_diag(DIAG_RPMSG_DEV_IO_ERROR,
+                 "Stage:Open,CpuName:%s,Path:%s,Flags:%04x,ErrorCode:%d",
+                 dev->remotecpu, dev->remotepath, filep->f_oflags, ret);
       rpmsg_pool_free(msg);
       flags = spin_lock_irqsave(&dev->lock);
       list_add_tail(&dev->free, &priv->node);
@@ -315,7 +315,10 @@ static int rpmsgdev_close(FAR struct file *filep)
   if (ret < 0)
     {
       rpmsg_pool_free(msg);
-      rpmsgdeverr("close failed, ret=%d\n", ret);
+      rpmsg_diag(DIAG_RPMSG_DEV_IO_ERROR,
+                 "Stage:Close,CpuName:%s,Path:%s,Filep:%" PRIx64
+                 ",ErrorCode:%d",
+                 dev->remotecpu, dev->remotepath, priv->filep, ret);
       return ret;
     }
 
@@ -583,7 +586,10 @@ static ssize_t rpmsgdev_write(FAR struct file *filep, const char *buffer,
       ret = rpmsgdev_wait(filep, POLLOUT);
       if (ret < 0)
         {
-          rpmsgerr("write wait failed, ret=%d\n", ret);
+          rpmsg_diag(DIAG_RPMSG_DEV_IO_ERROR,
+                     "Stage:WriteWait,CpuName:%s,Path:%s,"
+                     "Written:%zu,Buflen:%zu,ErrorCode:%d",
+                     dev->remotecpu, dev->remotepath, written, buflen, ret);
           break;
         }
     }
@@ -1420,7 +1426,9 @@ int rpmsgdev_register(FAR const char *remotecpu, FAR const char *remotepath,
                                 NULL);
   if (ret < 0)
     {
-      rpmsgdeverr("register callback failed, ret=%d\n", ret);
+      rpmsg_diag(DIAG_RPMSG_DEV_INIT_FAIL,
+                 "Stage:RegCallback,CpuName:%s,RemotePath:%s,ErrorCode:%d",
+                 remotecpu, remotepath, ret);
       goto fail;
     }
 
@@ -1434,7 +1442,10 @@ int rpmsgdev_register(FAR const char *remotecpu, FAR const char *remotepath,
   ret = register_driver(localpath, &g_rpmsgdev_ops, 0666, dev);
   if (ret < 0)
     {
-      rpmsgdeverr("register driver failed, ret=%d\n", ret);
+      rpmsg_diag(DIAG_RPMSG_DEV_INIT_FAIL,
+                 "Stage:RegDriver,CpuName:%s,RemotePath:%s,LocalPath:%s,"
+                 "ErrorCode:%d",
+                 remotecpu, remotepath, localpath, ret);
       goto fail_with_rpmsg;
     }
 
@@ -1485,7 +1496,9 @@ int rpmsgdev_unregister(FAR const char *localpath)
   ret = file_open(&file, localpath, O_RDWR);
   if (ret < 0)
     {
-      rpmsgdeverr("Failed to open %s, ret=%d\n", localpath, ret);
+      rpmsg_diag(DIAG_RPMSG_DEV_INIT_FAIL,
+                 "Stage:UnregOpen,LocalPath:%s,ErrorCode:%d",
+                 localpath, ret);
       return ret;
     }
 
@@ -1499,7 +1512,9 @@ int rpmsgdev_unregister(FAR const char *localpath)
   ret = unregister_driver(localpath);
   if (ret < 0)
     {
-      rpmsgdeverr("unregister driver failed, ret=%d\n", ret);
+      rpmsg_diag(DIAG_RPMSG_DEV_INIT_FAIL,
+                 "Stage:UnregDriver,LocalPath:%s,ErrorCode:%d",
+                 localpath, ret);
       return ret;
     }
 
