@@ -168,10 +168,7 @@ static void irq_wakeup_notify(FAR struct pm_callback_s *cb, int domain,
     }
 }
 
-static struct pm_callback_s g_wakeup_cb =
-{
-  .notify = irq_wakeup_notify,
-};
+static struct pm_callback_s g_wakeup_cb[CONFIG_PM_NDOMAINS];
 #endif
 
 /****************************************************************************
@@ -185,7 +182,8 @@ void irq_wakeup_initialize(void)
 
   for (i = 0; i < CONFIG_PM_NDOMAINS; i++)
     {
-      pm_domain_register(i, &g_wakeup_cb);
+      g_wakeup_cb[i].notify = irq_wakeup_notify;
+      pm_domain_register(i, &g_wakeup_cb[i]);
     }
 }
 #endif
