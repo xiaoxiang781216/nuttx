@@ -299,9 +299,11 @@
 #    define compiler_assume(x) __builtin_assume(x)
 #  elif __GNUC__ >= 13 /* The assume(x) is supported since GCC 13. */
 #    define compiler_assume(x) __attribute__((assume(x)))
-#  else
+#  elif __has_builtin(__builtin_unreachable)
 #    define compiler_assume(x) \
      do { if (!(x)) { __builtin_unreachable(); } } while(0)
+#  else
+#    define compiler_assume(x)
 #  endif
 
 /* Code locate */
