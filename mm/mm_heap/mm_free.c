@@ -333,14 +333,14 @@ bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_xchg(&heap->mm_heapforbid, forbid) != 0;
+  return atomic_xchg(&heap->mm_forbid, forbid) != 0;
 }
 
 bool mm_heap_is_forbid(FAR struct mm_heap_s *heap)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_read(&heap->mm_heapforbid) != 0;
+  return atomic_read(&heap->mm_forbid) != 0;
 }
 #endif
 

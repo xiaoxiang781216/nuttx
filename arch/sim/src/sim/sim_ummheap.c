@@ -151,7 +151,7 @@ struct mm_heap_s
 #endif
 
 #ifndef CONFIG_MM_HEAP_FORBID_NONE
-  atomic_t mm_heapforbid;
+  atomic_t forbid;
 #endif
 
   atomic_t aordblks;
@@ -398,7 +398,7 @@ static bool free_delaylist(struct mm_heap_s *heap, bool force)
 static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap,
                                               FAR void *mem, size_t size)
 {
-  if (atomic_read(&heap->mm_heapforbid) == 0)
+  if (atomic_read(&heap->forbid) == 0)
     {
       return false;
     }
@@ -934,14 +934,14 @@ bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_xchg(&heap->mm_heapforbid, forbid) != 0;
+  return atomic_xchg(&heap->forbid, forbid) != 0;
 }
 
 bool mm_heap_is_forbid(FAR struct mm_heap_s *heap)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_read(&heap->mm_heapforbid) != 0;
+  return atomic_read(&heap->forbid) != 0;
 }
 #endif
 

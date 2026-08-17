@@ -131,14 +131,14 @@ struct mm_heap_s
 
   /* Free delay list, for some situation can't do free immediately */
 
-  mm_delaylist_t delay;
+  mm_delaylist_t mm_delay;
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   FAR struct procfs_meminfo_entry_s *mm_procfs;
 #endif
 
 #ifndef CONFIG_MM_HEAP_FORBID_NONE
-  atomic_t mm_heapforbid;
+  atomic_t mm_forbid;
 #endif
 
   /* Kasan is disable or enable for this heap */
@@ -195,7 +195,7 @@ struct mm_memdump_priv_s
 static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap,
                                               FAR void *mem, size_t size)
 {
-  if (atomic_read(&heap->mm_heapforbid) == 0)
+  if (atomic_read(&heap->mm_forbid) == 0)
     {
       return false;
     }
@@ -356,9 +356,9 @@ static inline_function
 FAR struct mm_delayhead_s *get_delayhead(FAR struct mm_heap_s *heap)
 {
 #ifdef CONFIG_SMP
-  return &heap->delay[this_cpu()];
+  return &heap->mm_delay[this_cpu()];
 #else
-  return &heap->delay;
+  return &heap->mm_delay;
 #endif
 }
 
@@ -1025,14 +1025,14 @@ bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_xchg(&heap->mm_heapforbid, forbid) != 0;
+  return atomic_xchg(&heap->mm_forbid, forbid) != 0;
 }
 
 bool mm_heap_is_forbid(FAR struct mm_heap_s *heap)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_read(&heap->mm_heapforbid) != 0;
+  return atomic_read(&heap->mm_forbid) != 0;
 }
 #endif
 
