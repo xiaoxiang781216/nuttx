@@ -46,6 +46,10 @@
 #define VIRTIO_I2C_MSG_OK                0
 #define VIRTIO_I2C_MSG_ERR               1
 
+/* Max length of the local I2C device node path in the device config space */
+
+#define VHOST_I2C_PATH_MAX               64
+
 #define VIRTIO_I2C_REQ_SIZE(n) \
   (sizeof(struct virtio_i2c_out_hdr_s) + (n) + \
    sizeof(struct virtio_i2c_in_hdr_s))
@@ -56,14 +60,15 @@
 
 /* 5.16.6.1 Device Operation: Request Queue */
 
-/* Device-side private config space (the I2C spec defines none): the index
- * of the local bus this device forwards to, filled by the resource table
- * author and read back by the vhost I2C backend.
+/* Device-side private config space (the I2C spec defines none): the path of
+ * the local I2C device node (e.g. "/dev/i2c0") this device forwards to,
+ * filled by the resource table author and read back by the vhost I2C
+ * backend, which opens it via file_open().
  */
 
 begin_packed_struct struct vhost_i2c_config_s
 {
-  uint8_t bus;
+  char path[VHOST_I2C_PATH_MAX];
 } end_packed_struct;
 
 begin_packed_struct struct virtio_i2c_out_hdr_s

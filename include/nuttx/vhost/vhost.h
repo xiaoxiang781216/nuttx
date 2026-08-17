@@ -108,21 +108,6 @@ int vhost_get_vq_buffers(FAR struct virtqueue *vq,
 void vhost_register_drivers(void);
 
 /****************************************************************************
- * Name: vhost_i2c_get_bus
- *
- * Description:
- *   Return the local I2C lower-half for the bus index carried in a vhost
- *   I2C device's config space (struct vhost_i2c_config_s bus), or NULL.
- *   Implemented by board logic.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_DRIVERS_VHOST_I2C
-struct i2c_master_s;
-FAR struct i2c_master_s *vhost_i2c_get_bus(int index);
-#endif
-
-/****************************************************************************
  * Name: vhost_spi_get_bus
  *
  * Description:

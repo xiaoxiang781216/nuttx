@@ -26,10 +26,12 @@
 
 #include <debug.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <string.h>
 #include <sys/endian.h>
 #include <sys/param.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/percpu.h>
@@ -46,7 +48,7 @@
 struct vhost_i2c_priv_s
 {
   FAR struct vhost_device *hdev;
-  FAR struct i2c_master_s *bus;     /* Local bus this device forwards to */
+  struct file              bus;      /* Local I2C bus forwarded to */
   struct work_s            work;
 };
 
@@ -184,7 +186,11 @@ static void vhost_i2c_work(FAR void *arg)
           ret = virtio_i2c_decode(vb[0].buf, data, buflen, &msg);
           if (ret >= 0)
             {
-              ret = I2C_TRANSFER(priv->bus, &msg, 1);
+              struct i2c_transfer_s xfer;
+
+              xfer.msgv = &msg;
+              xfer.msgc = 1;
+              ret = file_ioctl(&priv->bus, I2CIOC_TRANSFER, &xfer);
             }
 
           in->status = ret >= 0 ? VIRTIO_I2C_MSG_OK : VIRTIO_I2C_MSG_ERR;
@@ -221,9 +227,9 @@ static void vhost_i2c_handler(FAR struct virtqueue *vq)
 static int vhost_i2c_probe(FAR struct vhost_device *hdev)
 {
   FAR struct vhost_i2c_priv_s *priv;
+  struct vhost_i2c_config_s cfg;
   FAR const char *vqnames[1];
   vq_callback callback[1];
-  uint8_t bus;
   int ret;
 
   priv = kmm_zalloc(sizeof(*priv));
@@ -235,15 +241,17 @@ static int vhost_i2c_probe(FAR struct vhost_device *hdev)
 
   priv->hdev = hdev;
 
-  /* Bind to the bus index carried in the device config space */
+  /* Open the local I2C device node named in the device config space. */
 
-  vhost_read_config_member(hdev, struct vhost_i2c_config_s, bus, &bus);
-  priv->bus = vhost_i2c_get_bus(bus);
-  if (!priv->bus)
+  vhost_read_config(hdev, 0, &cfg, sizeof(cfg));
+  cfg.path[sizeof(cfg.path) - 1] = '\0';
+
+  ret = file_open(&priv->bus, cfg.path, O_RDWR | O_CLOEXEC);
+  if (ret < 0)
     {
-      vhosterr("I2C device not found\n");
+      vhosterr("Failed to open %s: %d\n", cfg.path, ret);
       kmm_free(priv);
-      return -ENODEV;
+      return ret;
     }
 
   hdev->priv = priv;
@@ -254,6 +262,7 @@ static int vhost_i2c_probe(FAR struct vhost_device *hdev)
   if (ret < 0)
     {
       vhosterr("vhost_create_virtqueues failed, ret=%d\n", ret);
+      file_close(&priv->bus);
       kmm_free(priv);
       return ret;
     }
@@ -277,6 +286,7 @@ static void vhost_i2c_remove(FAR struct vhost_device *hdev)
   virtqueue_disable_cb(hdev->vrings_info[0].vq);
   work_cancel_sync(HPWORK, &priv->work);
   vhost_delete_virtqueues(hdev);
+  file_close(&priv->bus);
   kmm_free(priv);
 }
 

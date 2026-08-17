@@ -436,7 +436,7 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
     },
   .i2c_config =
     {
-      .bus = 0,               /* Local bus binding on the device side */
+      .path = "/dev/i2c0",    /* Local I2C device node on the device side */
     },
   .i2c_carveout =
     {
