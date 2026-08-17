@@ -392,6 +392,16 @@ FAR struct mtd_dev_s *mtd_bbm_initialize(FAR struct mtd_dev_s *mtd);
 
 void mtd_bbm_uninitialize(FAR struct mtd_dev_s *mtd);
 
+#else
+
+/* Without the bad block management layer the device is used as it is, which
+ * is the same thing the layer does for flash that reports no bad blocks.
+ * Consumers can therefore call these unconditionally.
+ */
+
+#  define mtd_bbm_initialize(m)   (m)
+#  define mtd_bbm_uninitialize(m)
+
 #endif /* CONFIG_MTD_BBM */
 
 /****************************************************************************

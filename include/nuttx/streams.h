@@ -420,10 +420,17 @@ struct lib_blkoutstream_s
 #endif
 
 #ifdef CONFIG_MTD
+/* The 'mtd' member is the device the stream actually talks to.  It is the
+ * device found at 'inode', possibly wrapped by the bad block management
+ * layer, in which case the wrapper is owned by the stream and released when
+ * the stream is closed.
+ */
+
 struct lib_mtdoutstream_s
 {
   struct lib_sostream_s  common;
   FAR struct inode      *inode;
+  FAR struct mtd_dev_s  *mtd;
   struct mtd_geometry_s  geo;
   FAR unsigned char     *cache;
 };
@@ -432,6 +439,7 @@ struct lib_mtdsostream_s
 {
   struct lib_sostream_s  common;
   FAR struct inode      *inode;
+  FAR struct mtd_dev_s  *mtd;
   struct mtd_geometry_s  geo;
   FAR unsigned char     *cache;
 };
@@ -440,6 +448,7 @@ struct lib_mtdsistream_s
 {
   struct lib_sistream_s  common;
   FAR struct inode      *inode;
+  FAR struct mtd_dev_s  *mtd;
   struct mtd_geometry_s  geo;
   FAR unsigned char     *cache;
   off_t                  eblock;

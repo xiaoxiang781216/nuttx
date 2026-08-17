@@ -43,7 +43,7 @@ static int mtdsostream_flush(FAR struct lib_sostream_s *self)
 {
   FAR struct lib_mtdsostream_s *stream =
     (FAR struct lib_mtdsostream_s *)self;
-  FAR struct mtd_dev_s *mtd = stream->inode->u.i_mtd;
+  FAR struct mtd_dev_s *mtd = stream->mtd;
   size_t erasesize = stream->geo.erasesize;
   size_t nblkpererase = erasesize / stream->geo.blocksize;
   int ret = OK;
@@ -74,7 +74,7 @@ static ssize_t mtdsostream_puts(FAR struct lib_sostream_s *self,
 {
   FAR struct lib_mtdsostream_s *stream =
     (FAR struct lib_mtdsostream_s *)self;
-  FAR struct mtd_dev_s *mtd = stream->inode->u.i_mtd;
+  FAR struct mtd_dev_s *mtd = stream->mtd;
   size_t erasesize = stream->geo.erasesize;
   size_t nblkpererase = erasesize / stream->geo.blocksize;
   FAR const unsigned char *ptr = buf;
@@ -178,7 +178,7 @@ static off_t mtdsostream_seek(FAR struct lib_sostream_s *self,
 {
   FAR struct lib_mtdsostream_s *stream =
     (FAR struct lib_mtdsostream_s *)self;
-  FAR struct mtd_dev_s *mtd = stream->inode->u.i_mtd;
+  FAR struct mtd_dev_s *mtd = stream->mtd;
   size_t erasesize    = stream->geo.erasesize;
   off_t  streamsize   = erasesize * stream->geo.neraseblocks;
   size_t nblkpererase = erasesize / stream->geo.blocksize;
@@ -278,6 +278,9 @@ void lib_mtdsostream_close(FAR struct lib_mtdsostream_s *stream)
           stream->cache = NULL;
         }
 
+      mtd_bbm_uninitialize(stream->mtd);
+      stream->mtd = NULL;
+
       if (stream->inode != NULL)
         {
           close_mtddriver(stream->inode);
@@ -305,7 +308,6 @@ void lib_mtdsostream_close(FAR struct lib_mtdsostream_s *stream)
 int lib_mtdsostream_open(FAR struct lib_mtdsostream_s *stream,
                          FAR const char *name)
 {
-  FAR struct inode *node = NULL;
   int ret;
 
   if (stream == NULL || name == NULL)
@@ -313,39 +315,58 @@ int lib_mtdsostream_open(FAR struct lib_mtdsostream_s *stream,
       return -EINVAL;
     }
 
-  ret = find_mtddriver(name, &node);
+  memset(stream, 0, sizeof(*stream));
+
+  ret = find_mtddriver(name, &stream->inode);
   if (ret < 0)
     {
       return ret;
     }
 
-  memset(stream, 0, sizeof(*stream));
+  /* Add bad block management on top of the device.  Returns the device
+   * unchanged when it reports no bad blocks, so NOR flash is unaffected.
+   * The geometry is queried afterwards on purpose: the wrapper reports the
+   * number of good blocks, which is what the size checks below have to use.
+   */
 
-  if (node->u.i_mtd->ioctl == NULL ||
-      node->u.i_mtd->erase == NULL ||
-      node->u.i_mtd->bwrite == NULL ||
-      node->u.i_mtd->ioctl(node->u.i_mtd, MTDIOC_GEOMETRY,
-                           (unsigned long)&stream->geo) < 0 ||
+  stream->mtd = mtd_bbm_initialize(stream->inode->u.i_mtd);
+  if (stream->mtd == NULL)
+    {
+      ret = -ENOMEM;
+      goto err;
+    }
+
+  if (stream->mtd->ioctl == NULL ||
+      stream->mtd->erase == NULL ||
+      stream->mtd->bwrite == NULL ||
+      stream->mtd->ioctl(stream->mtd, MTDIOC_GEOMETRY,
+                         (unsigned long)&stream->geo) < 0 ||
       stream->geo.blocksize <= 0 ||
       stream->geo.erasesize <= 0 ||
       stream->geo.neraseblocks <= 0)
     {
-      close_mtddriver(node);
-      return -EINVAL;
+      ret = -EINVAL;
+      goto err;
     }
 
   stream->cache = lib_malloc(stream->geo.erasesize);
   if (stream->cache == NULL)
     {
-      close_mtddriver(node);
-      return -ENOMEM;
+      ret = -ENOMEM;
+      goto err;
     }
 
-  stream->inode        = node;
   stream->common.putc  = mtdsostream_putc;
   stream->common.puts  = mtdsostream_puts;
   stream->common.flush = mtdsostream_flush;
   stream->common.seek  = mtdsostream_seek;
 
   return OK;
+
+err:
+  mtd_bbm_uninitialize(stream->mtd);
+  close_mtddriver(stream->inode);
+  stream->mtd   = NULL;
+  stream->inode = NULL;
+  return ret;
 }
