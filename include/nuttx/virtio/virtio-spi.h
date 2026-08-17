@@ -72,6 +72,10 @@
   (sizeof(struct spi_transfer_head_s) + (txlen) + (rxlen) + \
    sizeof(struct spi_transfer_result_s))
 
+/* Max length of the local SPI device node path in the device config space */
+
+#define VHOST_SPI_PATH_MAX              64
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -94,14 +98,15 @@ begin_packed_struct struct virtio_spi_config_s
 } end_packed_struct;
 
 /* Device-side private config space extension: the spec config followed by
- * the index of the local bus this device forwards to, filled by the
- * resource table author and read back by the vhost SPI backend.
+ * the path of the local SPI device node (e.g. "/dev/spi0") this device
+ * forwards to, filled by the resource table author and read back by the
+ * vhost SPI backend, which opens it via file_open().
  */
 
 begin_packed_struct struct vhost_spi_config_s
 {
   struct virtio_spi_config_s config;
-  uint8_t bus;
+  char path[VHOST_SPI_PATH_MAX];
 } end_packed_struct;
 
 /* 5.21.6.1 Device Operation: Request Queue */

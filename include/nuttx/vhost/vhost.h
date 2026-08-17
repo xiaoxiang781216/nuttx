@@ -107,21 +107,6 @@ int vhost_get_vq_buffers(FAR struct virtqueue *vq,
 
 void vhost_register_drivers(void);
 
-/****************************************************************************
- * Name: vhost_spi_get_bus
- *
- * Description:
- *   Return the local SPI lower-half for the bus index carried in a vhost
- *   SPI device's config space (struct vhost_spi_config_s bus), or NULL.
- *   Implemented by board logic.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_DRIVERS_VHOST_SPI
-struct spi_dev_s;
-FAR struct spi_dev_s *vhost_spi_get_bus(int index);
-#endif
-
 #undef EXTERN
 #ifdef __cplusplus
 }

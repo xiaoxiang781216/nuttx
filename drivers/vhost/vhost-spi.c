@@ -26,10 +26,12 @@
 
 #include <debug.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <string.h>
 #include <sys/param.h>
 #include <sys/endian.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/percpu.h>
 #include <nuttx/spi/spi.h>
@@ -47,7 +49,7 @@
 struct vhost_spi_priv_s
 {
   FAR struct vhost_device *hdev;
-  FAR struct spi_dev_s    *bus;     /* Local bus this device forwards to */
+  struct file              bus;      /* Local SPI bus forwarded to */
   struct work_s            work;
 };
 
@@ -256,7 +258,7 @@ static bool vhost_spi_split(FAR struct virtqueue *vq, uint16_t idx,
  *
  ****************************************************************************/
 
-static size_t vhost_spi_one(FAR struct spi_dev_s *spi,
+static size_t vhost_spi_one(FAR struct file *spi,
                             FAR struct virtqueue *vq, uint16_t idx)
 {
   FAR struct spi_transfer_head_s *head;
@@ -289,7 +291,7 @@ static size_t vhost_spi_one(FAR struct spi_dev_s *spi,
        */
 
       seq.keepcs = !trans.deselect;
-      ret = spi_transfer(spi, &seq);
+      ret = file_ioctl(spi, SPIIOC_TRANSFER, &seq);
     }
 
   result->result = virtio_spi_errno_to_status(ret);
@@ -319,7 +321,7 @@ static void vhost_spi_work(FAR void *arg)
           break;
         }
 
-      total = vhost_spi_one(priv->bus, vq, idx);
+      total = vhost_spi_one(&priv->bus, vq, idx);
       virtqueue_add_consumed_buffer(vq, idx, total);
     }
 
@@ -347,9 +349,9 @@ static void vhost_spi_handler(FAR struct virtqueue *vq)
 static int vhost_spi_probe(FAR struct vhost_device *hdev)
 {
   FAR struct vhost_spi_priv_s *priv;
+  struct vhost_spi_config_s cfg;
   FAR const char *vqnames[1];
   vq_callback callback[1];
-  uint8_t bus;
   int ret;
 
   priv = kmm_zalloc(sizeof(*priv));
@@ -361,15 +363,17 @@ static int vhost_spi_probe(FAR struct vhost_device *hdev)
 
   priv->hdev = hdev;
 
-  /* Bind to the bus index carried in the device config space */
+  /* Open the local SPI device node named in the device config space. */
 
-  vhost_read_config_member(hdev, struct vhost_spi_config_s, bus, &bus);
-  priv->bus = vhost_spi_get_bus(bus);
-  if (!priv->bus)
+  vhost_read_config(hdev, 0, &cfg, sizeof(cfg));
+  cfg.path[sizeof(cfg.path) - 1] = '\0';
+
+  ret = file_open(&priv->bus, cfg.path, O_RDWR | O_CLOEXEC);
+  if (ret < 0)
     {
-      vhosterr("SPI device not found\n");
+      vhosterr("Failed to open %s: %d\n", cfg.path, ret);
       kmm_free(priv);
-      return -ENODEV;
+      return ret;
     }
 
   hdev->priv = priv;
@@ -380,6 +384,7 @@ static int vhost_spi_probe(FAR struct vhost_device *hdev)
   if (ret < 0)
     {
       vhosterr("vhost_create_virtqueues failed, ret=%d\n", ret);
+      file_close(&priv->bus);
       kmm_free(priv);
       return ret;
     }
@@ -401,6 +406,7 @@ static void vhost_spi_remove(FAR struct vhost_device *hdev)
   virtqueue_disable_cb(hdev->vrings_info[0].vq);
   work_cancel_sync(HPWORK, &priv->work);
   vhost_delete_virtqueues(hdev);
+  file_close(&priv->bus);
   kmm_free(priv);
 }
 

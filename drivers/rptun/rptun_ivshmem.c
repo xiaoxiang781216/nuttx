@@ -469,7 +469,7 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
     },
   .spi_config =
     {
-      .bus = 0,               /* Local bus binding on the device side */
+      .path = "/dev/spi0",    /* Local SPI device node on the device side */
     },
   .spi_carveout =
     {
