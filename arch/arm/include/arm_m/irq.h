@@ -641,7 +641,7 @@ static inline_function uint32_t up_getsp(void)
 static inline_function uintptr_t up_getusrsp(void *regs)
 {
   uint32_t *ptr = (uint32_t *)regs;
-  return ptr[REG_SP];
+  return ptr != NULL ? ptr[REG_SP] : 0u;
 }
 
 static inline_function bool up_interrupt_context(void)
