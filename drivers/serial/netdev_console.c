@@ -33,22 +33,16 @@
 #include <net/if.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/poll.h>
 #include <netinet/in.h>
 
 #include <nuttx/signal.h>
 #include <nuttx/net/net.h>
 #include <nuttx/serial/serial.h>
-#include <nuttx/wqueue.h>
 
 #ifdef CONFIG_NET_CAN
 #  include <nuttx/can.h>
 #endif
-
-/****************************************************************************
- * Pre-processor definitions
- ****************************************************************************/
-
-#define CONSOLE_WORK_DELAY USEC2TICK(CONFIG_CONSOLE_NETDEV_DELAY_USEC)
 
 /****************************************************************************
  * Private Types
@@ -62,7 +56,7 @@ struct netdev_consol_s
   uint16_t          rxdgram_len;
   uint8_t           rxdgram[CONFIG_CONSOLE_NETDEV_RXBUFSIZE];
   bool              rxint;
-  struct work_s     work;
+  struct pollfd     fds;
 };
 
 /****************************************************************************
@@ -94,7 +88,7 @@ static void netdev_console_send(FAR struct uart_dev_s *dev, int ch);
 static void netdev_console_txint(FAR struct uart_dev_s *dev, bool enable);
 static bool netdev_console_txready(FAR struct uart_dev_s *dev);
 static bool netdev_console_txempty(FAR struct uart_dev_s *dev);
-static void netdev_console_work(FAR void *arg);
+static void netdev_console_poll(FAR struct pollfd *fds);
 
 /****************************************************************************
  * Private Data
@@ -294,6 +288,25 @@ static int netdev_console_attach(FAR struct uart_dev_s *dev)
 #endif
     }
 
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Register the poll callback so that received data wakes us up on demand
+   * instead of polling the socket periodically from a work queue.
+   */
+
+  priv->fds.arg    = priv;
+  priv->fds.events = POLLIN;
+  priv->fds.cb     = netdev_console_poll;
+  ret = psock_poll(&priv->psock, &priv->fds, true);
+  if (ret < 0)
+    {
+      psock_close(&priv->psock);
+      nerr("ERROR: Failed to setup socket poll: %d\n", ret);
+    }
+
   return ret;
 }
 
@@ -307,6 +320,7 @@ static void netdev_console_detach(FAR struct uart_dev_s *dev)
 
   priv->rxdgram_off = 0;
   priv->rxdgram_len = 0;
+  psock_poll(&priv->psock, &priv->fds, false);
   psock_close(&priv->psock);
 }
 
@@ -319,14 +333,6 @@ static void netdev_console_rxint(FAR struct uart_dev_s *dev, bool enable)
   FAR struct netdev_consol_s *priv = (FAR struct netdev_consol_s *)dev;
 
   priv->rxint = enable;
-  if (enable)
-    {
-      work_queue(LPWORK, &priv->work, netdev_console_work, dev, 0);
-    }
-  else
-    {
-      work_cancel(LPWORK, &priv->work);
-    }
 }
 
 #ifdef CONFIG_SERIAL_IFLOWCONTROL
@@ -498,20 +504,27 @@ static bool netdev_console_txempty(FAR struct uart_dev_s *dev)
 }
 
 /****************************************************************************
- * Name: netdev_console_work
+ * Name: netdev_console_poll
+ *
+ * Description:
+ *   Socket poll callback.  Invoked by the network stack when the console
+ *   socket becomes readable, so that received data is pulled on demand
+ *   rather than by periodically polling from a work queue.
+ *
  ****************************************************************************/
 
-static void netdev_console_work(FAR void *arg)
+static void netdev_console_poll(FAR struct pollfd *fds)
 {
-  FAR struct netdev_consol_s *priv = arg;
+  FAR struct netdev_consol_s *priv = fds->arg;
 
-  if (priv->rxint)
+  if ((fds->revents & POLLIN) != 0)
     {
-      uart_dmarxfree(&priv->dev);
+      fds->revents &= ~POLLIN;
+      if (priv->rxint)
+        {
+          uart_dmarxfree(&priv->dev);
+        }
     }
-
-  work_queue_next(LPWORK, &priv->work, netdev_console_work, arg,
-                  CONSOLE_WORK_DELAY);
 }
 
 /****************************************************************************
