@@ -98,17 +98,17 @@ SECTIONS
 #elif defined(CONFIG_LIBC_ELF_UNWIND_SECTNAME)
   .eh_frame : SUBALIGN(SECTIONS_ALIGN)
     {
-      __eh_frame_start = ABSOLUTE(.);
+      __eh_frame_start = .;
       KEEP(*(.eh_frame))
       LONG(0)
-      __eh_frame_end = ABSOLUTE(.);
+      __eh_frame_end = .;
     }
 
   .eh_frame_hdr : SUBALIGN(SECTIONS_ALIGN)
     {
-      __eh_frame_hdr_start = ABSOLUTE(.);
+      __eh_frame_hdr_start = .;
       KEEP(*(.eh_frame_hdr))
-      __eh_frame_hdr_end = ABSOLUTE(.);
+      __eh_frame_hdr_end = .;
     }
 #endif
 

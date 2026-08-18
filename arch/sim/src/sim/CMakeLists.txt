@@ -31,6 +31,9 @@ if(CONFIG_COVERAGE_TOOLCHAIN)
   list(APPEND STDLIBS gcov)
 endif()
 
+# Ensure libgcc_s provides _Unwind_* symbols (takes priority over libunwind.so
+# which does not honor __register_frame registrations)
+list(APPEND STDLIBS gcc_s)
 list(APPEND STDLIBS unwind)
 list(APPEND HOST_DEFINITIONS -D__SIM__)
 list(APPEND HOST_DEFINITIONS -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64)

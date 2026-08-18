@@ -29,6 +29,15 @@
 #include <nuttx/arch.h>
 
 /****************************************************************************
+ * External References
+ ****************************************************************************/
+
+#if defined(CONFIG_CXX_EXCEPTION) && !defined(__ARM_EABI__)
+extern void __register_frame(void *begin);
+extern char __eh_frame_start[];
+#endif
+
+/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -104,6 +113,14 @@ static void exec_dtors(void)
 void __start(int argc, char *argv[])
 {
   int ret;
+
+#if defined(CONFIG_CXX_EXCEPTION) && !defined(__ARM_EABI__)
+  /* Register .eh_frame with the host unwinder so that C++ exceptions
+   * can unwind through this loadable module.
+   */
+
+  __register_frame(__eh_frame_start);
+#endif
 
 #ifdef CONFIG_HAVE_CXXINITIALIZE
   /* Call C++ constructors */
