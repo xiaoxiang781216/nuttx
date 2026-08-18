@@ -445,7 +445,6 @@ int rpmsg_tickwait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem,
             {
               clock_t end = delay >= WDOG_MAX_DELAY ? 0 :
                             clock_systime_ticks() + delay;
-              bool reported = false;
 
               for (; ; )
                 {
@@ -471,18 +470,6 @@ int rpmsg_tickwait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem,
                       wqueue->recursive++;
                       work_queue_dispatch(wqueue->kwqueue);
                       wqueue->recursive--;
-                    }
-                  else if (!reported)
-                    {
-                      /* Nested dispatch is capped: report once so the stuck
-                       * sync call is visible in DFX without flooding the log
-                       * while the loop keeps waiting on the semaphore.
-                       */
-
-                      reported = true;
-                      rpmsg_trace_diag(LOG_EMERG, DIAG_RPMSG_RECURSIVE_LIMIT,
-                                       "CpuName:%s,Recursive:%d",
-                                       rpmsg->cpuname, wqueue->recursive);
                     }
                 }
             }

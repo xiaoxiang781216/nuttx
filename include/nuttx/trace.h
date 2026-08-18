@@ -1786,7 +1786,6 @@
 
 /* Rpmsg framework (BASE + 0..9) */
 
-#define DIAG_RPMSG_RECURSIVE_LIMIT       (DIAG_SYSTEM_RPMSG_BASE + 0)   /* 961010400 */
 #define DIAG_RPMSG_REGISTER_FAIL         (DIAG_SYSTEM_RPMSG_BASE + 1)   /* 961010401 */
 
 /* Rptun (BASE + 10..19) */
