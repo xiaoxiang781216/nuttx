@@ -324,6 +324,12 @@ static int audio_rpmsg_local_configure(FAR struct audio_rpmsg_s *aud,
     {
       case AUDIO_TYPE_OUTPUT:
       case AUDIO_TYPE_INPUT:
+        if (caps->ac_codec.extradata_size > AUDIO_CODEC_EXTRADATA_MAX)
+          {
+            ret = -E2BIG;
+            break;
+          }
+
         aud->info.format = caps->ac_subtype;
         aud->info.samplerate = caps->ac_controls.hw[0] |
                                   (caps->ac_controls.b[3] << 16);
@@ -332,11 +338,13 @@ static int audio_rpmsg_local_configure(FAR struct audio_rpmsg_s *aud,
         memcpy(&aud->info.codec, &caps->ac_codec,
                sizeof(caps->ac_codec));
 
-        audinfo("Codec type %" PRIu8 " %" PRIu32 " %" PRIu8 " %" PRIu8 "\n",
+        audinfo("Codec type %" PRIu8 " %" PRIu32 " %" PRIu8 " %" PRIu8
+                " extradata %" PRIu32 "\n",
                 aud->info.format,
                 aud->info.samplerate,
                 aud->info.channels,
-                aud->info.subformat);
+                aud->info.subformat,
+                aud->info.codec.extradata_size);
         break;
 
       default:
