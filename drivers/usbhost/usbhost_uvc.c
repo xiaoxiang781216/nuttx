@@ -1858,6 +1858,12 @@ static int uvc_capture_thread(int argc, FAR char *argv[])
            * callbacks in uvc_iso_decode_packet.
            */
 
+          if (!atomic_read(&dev->thread_running) ||
+              atomic_read(&priv->disconnected))
+            {
+              goto cleanup;
+            }
+
           /* Resubmit slot */
 
           atomic_set(&slot->state, UVC_ISO_SLOT_FREE);
