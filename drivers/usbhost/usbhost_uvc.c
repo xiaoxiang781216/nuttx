@@ -33,7 +33,6 @@
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/videoio.h>
-#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 #include <nuttx/arch.h>
@@ -1185,12 +1184,10 @@ static int uvc_imgdata_stop_capture(FAR struct imgdata_s *data)
 
   uinfo("UVC: stop capture\n");
 
-  if (!atomic_read(&dev->thread_running))
+  if (!atomic_xchg(&dev->thread_running, false))
     {
       return OK;
     }
-
-  atomic_set(&dev->thread_running, false);
 
   /* Cancel pending ISO transfers so the thread can exit */
 
@@ -1206,7 +1203,8 @@ static int uvc_imgdata_stop_capture(FAR struct imgdata_s *data)
 
   if (dev->capture_tid > 0)
     {
-      waitpid(dev->capture_tid, NULL, 0);
+      nxsem_wait_uninterruptible(&dev->capture_exit_sem);
+      nxsem_destroy(&dev->capture_exit_sem);
       dev->capture_tid = 0;
     }
 
@@ -1771,6 +1769,7 @@ static int uvc_capture_thread(int argc, FAR char *argv[])
     {
       uerr("UVC: pipe init failed: %d\n", ret);
       atomic_set(&dev->thread_running, false);
+      nxsem_post(&dev->capture_exit_sem);
       return ret;
     }
 
@@ -1783,6 +1782,7 @@ static int uvc_capture_thread(int argc, FAR char *argv[])
       uerr("UVC: frame buf alloc failed\n");
       uvc_iso_pipe_destroy(dev);
       atomic_set(&dev->thread_running, false);
+      nxsem_post(&dev->capture_exit_sem);
       return -ENOMEM;
     }
 
@@ -1929,6 +1929,7 @@ cleanup:
   dev->iso_frame_buffer = NULL;
   dev->iso_frame_buffer_size = 0;
 
+  nxsem_post(&dev->capture_exit_sem);
   return OK;
 }
 
@@ -2055,6 +2056,8 @@ static int uvc_imgdata_start_capture(FAR struct imgdata_s *data,
   targv[0] = tid_buf;
   targv[1] = NULL;
 
+  nxsem_init(&dev->capture_exit_sem, 0, 0);
+
   ret = kthread_create("uvc_capture",
                        CONFIG_USBHOST_UVC_THREAD_PRIORITY,
                        CONFIG_USBHOST_UVC_THREAD_STACKSIZE,
@@ -2062,6 +2065,7 @@ static int uvc_imgdata_start_capture(FAR struct imgdata_s *data,
 
   if (ret < 0)
     {
+      nxsem_destroy(&dev->capture_exit_sem);
       atomic_set(&dev->thread_running, false);
       return ret;
     }

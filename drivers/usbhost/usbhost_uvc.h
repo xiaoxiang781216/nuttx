@@ -215,6 +215,7 @@ struct uvc_dev_s
 
   pid_t capture_tid;
   atomic_t thread_running;
+  sem_t capture_exit_sem;
 
   /* Per-device format arrays (dynamically allocated) */
 
