@@ -46,9 +46,7 @@
  * Name: netpolloutstream_bind
  ****************************************************************************/
 
-static int netpolloutstream_bind(FAR struct lib_netpolloutstream_s *stream,
-                                 FAR const char *intf, uint16_t port,
-                                 in_addr_t ipaddr, FAR const char *mac)
+static int netpolloutstream_bind(FAR struct lib_netpolloutstream_s *stream)
 {
   FAR struct net_driver_s *netdev;
   FAR struct netdev_lowerhalf_s *dev;
@@ -58,7 +56,7 @@ static int netpolloutstream_bind(FAR struct lib_netpolloutstream_s *stream,
       return -ENOMEM;
     }
 
-  netdev = netdev_findbyname(intf);
+  netdev = netdev_findbyname(stream->intf);
   if (netdev == NULL)
     {
       return -ENODEV;
@@ -69,13 +67,15 @@ static int netpolloutstream_bind(FAR struct lib_netpolloutstream_s *stream,
 #ifdef CONFIG_NET_CAN
   if (netdev->d_lltype == NET_LL_CAN)
     {
-      return netpoll_isotp_init(stream->np, dev, port, port + 1);
+      return netpoll_isotp_init(stream->np, dev, stream->port,
+                                stream->port + 1);
     }
   else
 #endif
     {
 #ifdef CONFIG_NET_UDP
-      return netpoll_udp_init(stream->np, dev, port, ipaddr, port, mac);
+      return netpoll_udp_init(stream->np, dev, stream->port, stream->ipaddr,
+                              stream->port, stream->mac);
 #endif
     }
 
@@ -173,6 +173,21 @@ static ssize_t netpolloutstream_puts(FAR struct lib_outstream_s *self,
   size_t total = len;
   ssize_t ret;
 
+  /* Defer the netdev bind to the first puts().  lib_netpolloutstream_init()
+   * may run at boot before the netpoll interface (e.g. eth0.65 VLAN) has
+   * been created, so binding there would fail.  By the time the first
+   * puts() happens on the crash path, the interface is up.
+   */
+
+  if (stream->np != NULL && stream->np->lower == NULL)
+    {
+      ret = netpolloutstream_bind(stream);
+      if (ret < 0)
+        {
+          return ret;
+        }
+    }
+
   while (len > 0)
     {
       ret = netpolloutstream_send(stream, src, len);
@@ -212,14 +227,23 @@ int lib_netpolloutstream_init(FAR struct lib_netpolloutstream_s *stream,
                               FAR const char *intf, uint16_t port,
                               in_addr_t ipaddr, FAR const char *mac)
 {
-  int ret;
-
   stream->common.nput  = 0;
   stream->common.putc  = netpolloutstream_putc;
   stream->common.puts  = netpolloutstream_puts;
   stream->common.flush = netpolloutstream_flush;
   stream->common.none  = NULL;
   stream->np           = NULL;
+
+  /* Keep the bind parameters for the deferred bind in the first puts().
+   * coredump_initialize() runs early at boot, before the netpoll interface
+   * (e.g. the eth0.65 VLAN) is created, so binding here would fail.  By the
+   * time the first puts() happens (on the crash path), the interface exists.
+   */
+
+  stream->intf   = intf;
+  stream->port   = port;
+  stream->ipaddr = ipaddr;
+  stream->mac    = mac;
 
   /* Allocate netpoll state instead of embedding it in streams.h.  Embedding
    * would require streams.h to include nuttx/net/netpoll.h, which pulls in
@@ -230,14 +254,6 @@ int lib_netpolloutstream_init(FAR struct lib_netpolloutstream_s *stream,
   if (stream->np == NULL)
     {
       return -ENOMEM;
-    }
-
-  ret = netpolloutstream_bind(stream, intf, port, ipaddr, mac);
-  if (ret < 0)
-    {
-      kmm_free(stream->np);
-      stream->np = NULL;
-      return ret;
     }
 
   return OK;

@@ -350,6 +350,10 @@ struct lib_netpolloutstream_s
 {
   struct lib_outstream_s common;
   FAR struct netpoll_s *np;
+  FAR const char *intf;
+  uint16_t port;
+  in_addr_t ipaddr;
+  FAR const char *mac;
 };
 #endif
 
