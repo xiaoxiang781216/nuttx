@@ -752,8 +752,11 @@ static inline bool pmuv3_event_is_64bit(FAR struct perf_event_s *event)
 static inline void pmuv3_pmcr_write(uint32_t val)
 {
   val &= PMU_PMCR_MASK;
-  UP_ISB();
   write_pmcr(val);
+
+  /* ISB after the write, matching pmuv3_disable_counter().  */
+
+  UP_ISB();
 }
 
 static inline int pmuv3_counter_has_overflowed(uint32_t pmovsr, int idx)
@@ -783,8 +786,10 @@ static inline void pmuv3_enable_event_counter(
 {
   uint32_t mask = BIT(PMU_IDX_TO_COUNTER(event->hw.idx));
 
-  UP_ISB();
+  /* Barrier after the write, matching pmuv3_disable_counter().  */
+
   write_pmcntenset(mask);
+  UP_ISB();
 }
 
 static inline void pmuv3_disable_counter(uint32_t mask)
