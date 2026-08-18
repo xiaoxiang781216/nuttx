@@ -310,6 +310,13 @@ target_include_directories(arch PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_sources(arch PRIVATE ${SRCS})
 target_compile_options(arch PRIVATE -fvisibility=default)
 
+nuttx_add_aux_library(STARTUP_OBJS crt0.c)
+
+target_compile_options(
+  STARTUP_OBJS
+  PRIVATE
+    $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_COMPILE_OPTIONS>>)
+
 if(CONFIG_WINDOWS_NATIVE)
   set(HOSTDIR win)
 else()
