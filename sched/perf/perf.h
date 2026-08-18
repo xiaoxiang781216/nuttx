@@ -60,6 +60,7 @@
 struct perf_buffer_s
 {
   struct circbuf_s rb;
+  uint64_t lost_count;           /* Samples dropped since last LOST record */
   uint32_t ref_count;
   spinlock_t lock;
 };

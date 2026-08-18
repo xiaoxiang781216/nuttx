@@ -53,6 +53,19 @@
 #define PERF_MAX_BACKTRACE    20
 
 /****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+/* PERF_RECORD_LOST payload, emitted when samples had to be dropped */
+
+begin_packed_struct struct perf_record_lost_s
+{
+  struct perf_event_header_s hdr;
+  uint64_t id;
+  uint64_t lost;
+} end_packed_struct;
+
+/****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
@@ -216,6 +229,12 @@ static void perf_output_sample(FAR struct perf_event_header_s *header,
 
   if (!perf_buffer_has_space(event, header->size))
     {
+      /* Accumulate the loss; the LOST record is emitted at the next
+       * successful sample, where space is guaranteed.
+       */
+
+      event->buf->lost_count++;
+
       return;
     }
 
@@ -298,6 +317,24 @@ static void perf_output_sample(FAR struct perf_event_header_s *header,
 
   rec_header->size = len;
   circbuf_write(&(event->buf->rb), record, len);
+
+  /* Emit a PERF_RECORD_LOST for the drops accumulated above: the buffer
+   * just fit a full sample, so a 24-byte record fits too.
+   */
+
+  if (event->buf->lost_count > 0)
+    {
+      struct perf_record_lost_s lost_rec;
+
+      lost_rec.hdr.type = PERF_RECORD_LOST;
+      lost_rec.hdr.misc = PERF_RECORD_MISC_USER;
+      lost_rec.hdr.size = sizeof(lost_rec);
+      lost_rec.id   = perf_get_eventid(event);
+      lost_rec.lost = event->buf->lost_count;
+      event->buf->lost_count = 0;
+
+      circbuf_write(&(event->buf->rb), &lost_rec, sizeof(lost_rec));
+    }
 }
 
 /****************************************************************************
