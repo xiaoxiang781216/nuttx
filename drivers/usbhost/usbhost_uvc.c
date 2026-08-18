@@ -2016,15 +2016,15 @@ static int uvc_imgdata_start_capture(FAR struct imgdata_s *data,
           return -ENOTSUP;
         }
 
-      /* Check if the requested format matches the current format indices */
-
-      if (dev->current_format_idx != format_idx ||
+      if (priv->stream_altsetting == 0 ||
+          dev->current_format_idx != format_idx ||
           dev->current_frame_idx != frame_idx)
         {
-          uinfo("UVC: fmt change %d/%d -> %d/%d\n",
+          uinfo("UVC: apply fmt %d/%d -> %d/%d alt=%d\n",
                 dev->current_format_idx,
                 dev->current_frame_idx,
-                format_idx, frame_idx);
+                format_idx, frame_idx,
+                priv->stream_altsetting);
 
           /* Set the format on the UVC device */
 
