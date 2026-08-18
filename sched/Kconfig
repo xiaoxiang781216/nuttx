@@ -565,6 +565,13 @@ config INIT_PRIORITY
 	---help---
 		The priority of the user initialization thread.
 
+config INIT_HEAPSIZE
+	int "init thread heapsize"
+	depends on MM_TASK_HEAP
+	default MM_TASK_HEAP_DEFAULT_SIZE
+	---help---
+		The heapsize of the user initialization thread.
+
 if INIT_ENTRY
 config INIT_ENTRYPOINT
 	string "Application entry point"

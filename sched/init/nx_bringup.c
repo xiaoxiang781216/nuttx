@@ -325,6 +325,9 @@ static inline void nx_start_application(void)
   posix_spawnattr_init(&attr);
   attr.priority  = CONFIG_INIT_PRIORITY;
   attr.stacksize = CONFIG_INIT_STACKSIZE;
+#ifdef CONFIG_MM_TASK_HEAP
+  attr.heapsize  = CONFIG_INIT_HEAPSIZE;
+#endif
 
   /* Call C++ static constructors */
 
