@@ -59,6 +59,28 @@
   devif_conn_callback_free(dev, cb, &conn->sconn.s_list, &conn->sconn.s_listtail)
 
 /****************************************************************************
+ * Name: can_iob_framelen
+ *
+ * Description:
+ *   Return the length of the CAN frame carried by an I/O buffer.  The buffer
+ *   may hold extra trailing data (e.g. a TX deadline appended after the
+ *   frame), so the frame length can be smaller than iob->io_pktlen.
+ *
+ ****************************************************************************/
+
+static inline_function unsigned int can_iob_framelen(FAR struct iob_s *iob)
+{
+#ifdef CONFIG_NET_CAN_CANFD
+  if (iob->io_pktlen >= CANFD_MTU)
+    {
+      return CANFD_MTU;
+    }
+#endif
+
+  return CAN_MTU;
+}
+
+/****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
 

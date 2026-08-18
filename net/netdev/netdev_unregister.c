@@ -165,6 +165,16 @@ int netdev_unregister(FAR struct net_driver_s *dev)
 
       nxrmutex_destroy(&dev->d_lock);
 
+#ifdef CONFIG_MM_IOB
+      /* Drop any outgoing frames still queued for transmission.  This is a
+       * no-op if the interface was already taken down (netdev_ifdown frees
+       * the queue too), but netdev_unregister may be called without a
+       * preceding ifdown.
+       */
+
+      iob_free_queue(&dev->d_txq);
+#endif
+
 #ifdef CONFIG_NET_CANFORWARD
       if (dev->d_cangw_rules != NULL)
         {

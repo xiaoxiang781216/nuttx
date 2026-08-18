@@ -136,22 +136,6 @@ static inline void can_sendbuffer_notify(FAR struct can_conn_s *conn)
 #endif /* CONFIG_NET_SEND_BUFSIZE */
 
 /****************************************************************************
- * Name: can_iob_framelen
- ****************************************************************************/
-
-static inline unsigned int can_iob_framelen(FAR struct iob_s *iob)
-{
-#ifdef CONFIG_NET_CAN_CANFD
-  if (iob->io_pktlen >= CANFD_MTU)
-    {
-      return CANFD_MTU;
-    }
-#endif
-
-  return CAN_MTU;
-}
-
-/****************************************************************************
  * Name: can_readahead_iob
  ****************************************************************************/
 
@@ -258,6 +242,7 @@ static uint32_t can_send_eventhandler(FAR struct net_driver_s *dev,
                                        FAR void *pvpriv, uint32_t flags)
 {
   FAR struct can_conn_s *conn = pvpriv;
+  FAR struct iob_s *iob;
 
   DEBUGASSERT(dev != NULL && conn != NULL);
 
@@ -272,41 +257,26 @@ static uint32_t can_send_eventhandler(FAR struct net_driver_s *dev,
       return flags;
     }
 
-  /* It looks like we are good to send the data */
+  /* Drain the whole write queue into dev->d_txq.  Frames are transmitted
+   * one by one from devif_poll_connections().
+   */
 
-  else
+  while ((iob = iob_remove_queue(&conn->write_q)) != NULL)
     {
-      FAR struct iob_s *wrb_iob;
+      IOB_SET_OWNER(iob, "can txq");
+      iob_add_queue(iob, &dev->d_txq);
+    }
 
-      wrb_iob = (FAR struct iob_s *)iob_remove_queue(&conn->write_q);
-      if (wrb_iob == NULL)
-        {
-          return flags;
-        }
-
-      netdev_iob_replace(dev, wrb_iob);
-
-      dev->d_sndlen = wrb_iob->io_pktlen;
-      dev->d_len = can_iob_framelen(wrb_iob);
-      ninfo("wrb=%p sndlen=%d\n", wrb_iob, dev->d_sndlen);
-
-      if (iob_peek_queue(&conn->write_q) != NULL)
-        {
-          netdev_txnotify(dev, CAN_POLL);
-        }
-      else
-        {
-          conn->sndcb->flags = 0;
-          conn->sndcb->priv = NULL;
-          conn->sndcb->event = NULL;
-        }
-
-      flags &= ~CAN_POLL;
+  if (conn->sndcb != NULL)
+    {
+      conn->sndcb->flags = 0;
+      conn->sndcb->priv  = NULL;
+      conn->sndcb->event = NULL;
+    }
 
 #if CONFIG_NET_SEND_BUFSIZE > 0
-      can_sendbuffer_notify(conn);
+  can_sendbuffer_notify(conn);
 #endif
-    }
 
   return flags;
 }
@@ -1346,4 +1316,3 @@ int can_cansend(FAR struct can_conn_s *conn)
   return OK;
 }
 #endif
-

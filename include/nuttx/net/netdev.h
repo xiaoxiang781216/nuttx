@@ -447,6 +447,20 @@ struct net_driver_s
 
   FAR struct iob_s *d_iob;
 
+#ifdef CONFIG_MM_IOB
+  /* Outgoing frames queued for transmission on this device.  Protocol
+   * stacks move pending TX frames from their per-connection write queues
+   * into this queue during poll, and drivers queue frames they could not
+   * hand to the hardware yet; they are sent one by one from
+   * devif_poll_connections().
+   *
+   * A driver whose transmit fails with -EBUSY re-queues the frame at the
+   * head of this queue, so that the retry preserves the frame order.
+   */
+
+  struct iob_queue_s d_txq;
+#endif
+
   /* Remember the outgoing fragments waiting to be sent */
 
 #ifdef CONFIG_NET_IPFRAG

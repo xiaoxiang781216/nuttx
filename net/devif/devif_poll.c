@@ -268,6 +268,65 @@ devif_poll_pkt_connections(FAR struct net_driver_s *dev,
 #endif /* CONFIG_NET_PKT */
 
 /****************************************************************************
+ * Name: devif_pkt_send
+ *
+ * Description:
+ *   Send the frame currently held in dev->d_iob to the driver.  When
+ *   loopback is requested, the frame is first cloned so that a copy can be
+ *   fed back to ourself (can_input) if the driver consumes the original.
+ *
+ * Input Parameters:
+ *   dev      - NIC Device instance holding the frame in dev->d_iob.
+ *   callback - the actual sending API provided by each NIC driver.
+ *   loopback - true to also deliver a copy of the frame to ourself.
+ *
+ * Returned Value:
+ *   Zero indicates the polling will continue, else stop the polling.
+ *
+ * Assumptions:
+ *   This function is called from the MAC device driver with the network
+ *   locked.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_CAN
+static int devif_pkt_send(FAR struct net_driver_s *dev,
+                          devif_poll_callback_t callback, bool loopback)
+{
+  FAR struct iob_s *iob = NULL;
+  int bstop;
+
+  /* Clone the frame for loopback before the driver consumes dev->d_iob */
+
+  if (loopback)
+    {
+      iob = netdev_iob_clone(dev, false);
+    }
+
+  /* Call back into the driver to send the frame */
+
+  bstop = callback(dev);
+
+  /* Feed the cloned frame back to ourself for loopback delivery */
+
+  if (iob != NULL)
+    {
+      if (bstop)
+        {
+          dev->d_iob = iob;
+          can_input(dev);
+          netdev_iob_release(dev);
+        }
+      else
+        {
+          iob_free_chain(iob);
+        }
+    }
+
+  return bstop;
+}
+
+/****************************************************************************
  * Name: devif_poll_can_connections
  *
  * Description:
@@ -279,7 +338,6 @@ devif_poll_pkt_connections(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_CAN
 static inline_function int
 devif_poll_can_connections(FAR struct net_driver_s *dev,
                            devif_poll_callback_t callback)
@@ -305,31 +363,13 @@ devif_poll_can_connections(FAR struct net_driver_s *dev,
 
           if (dev->d_len > 0)
             {
-              if (!IFF_IS_LOOPBACK(dev->d_flags)
+              bool loopback = !IFF_IS_LOOPBACK(dev->d_flags)
 #ifdef CONFIG_NET_CANPROTO_OPTIONS
                   && _SO_GETOPT(can_conn->sconn.s_options, CAN_RAW_LOOPBACK)
 #endif
-                 )
-                {
-                  FAR struct iob_s *iob = netdev_iob_clone(dev, false);
+                  ;
 
-                  bstop = callback(dev);
-
-                  if (bstop && iob != NULL)
-                    {
-                      dev->d_iob = iob;
-                      can_input(dev);
-                      netdev_iob_release(dev);
-                    }
-                  else
-                    {
-                      iob_free_chain(iob);
-                    }
-                }
-              else
-                {
-                  bstop = callback(dev);
-                }
+              bstop = devif_pkt_send(dev, callback, loopback);
             }
         }
     }
@@ -337,7 +377,7 @@ devif_poll_can_connections(FAR struct net_driver_s *dev,
   can_conn_list_unlock();
   return bstop;
 }
-#endif /* CONFIG_NET_PKT */
+#endif /* CONFIG_NET_CAN */
 
 /****************************************************************************
  * Name: devif_poll_bluetooth_connections
@@ -897,6 +937,66 @@ static inline_function int devif_poll_neighbor(FAR struct net_driver_s *dev,
 #endif
 
 /****************************************************************************
+ * Name: devif_poll_txq
+ *
+ * Description:
+ *   Send one frame that has been queued in dev->d_txq.  The CAN stack is
+ *   the first user of this path: can_poll() moves all pending write buffers
+ *   into dev->d_txq and they are transmitted one by one from here.  Other
+ *   protocols are expected to migrate onto d_txq in follow-up patches.
+ *
+ * Input Parameters:
+ *   dev      - NIC Device instance.
+ *   callback - the actual sending API provided by each NIC driver.
+ *
+ * Returned Value:
+ *   Zero indicates the polling will continue, else stop the polling.
+ *
+ * Assumptions:
+ *   This function is called from the MAC device driver with the network
+ *   locked and dev->d_txq is not empty.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_CAN
+static int devif_poll_txq(FAR struct net_driver_s *dev,
+                          devif_poll_callback_t callback)
+{
+  FAR struct iob_s *iob;
+  bool loopback;
+
+  /* Dequeue one outgoing frame from the device TX queue */
+
+  iob = iob_remove_queue(&dev->d_txq);
+  if (iob == NULL)
+    {
+      return 0;
+    }
+
+  /* Install it as the current device buffer and update lengths.  The iob
+   * may carry extra trailing data (e.g. a TX deadline appended after the
+   * frame), so d_len is the CAN frame length while d_sndlen covers the
+   * whole payload, matching can_send_eventhandler().
+   */
+
+  netdev_iob_replace(dev, iob);
+  dev->d_sndlen = iob->io_pktlen;
+  dev->d_len    = can_iob_framelen(iob);
+
+  /* Send it, cloning for loopback if the sending socket requested it */
+
+  loopback = !IFF_IS_LOOPBACK(dev->d_flags)
+#ifdef CONFIG_NET_CANPROTO_OPTIONS
+      && iob->io_conn != NULL
+      && _SO_GETOPT(iob->io_conn->s_options, CAN_RAW_LOOPBACK)
+#endif
+      ;
+
+  return devif_pkt_send(dev, callback, loopback);
+}
+#endif /* CONFIG_NET_CAN */
+
+/****************************************************************************
  * Name: devif_poll_connections
  *
  * Description:
@@ -937,6 +1037,21 @@ static int devif_poll_connections(FAR struct net_driver_s *dev,
 
   while (!bstop)
     {
+#ifdef CONFIG_NET_CAN
+      /* If there are frames already queued for transmission on this
+       * device, send one of them first before polling the sub protocol
+       * stacks for more.  This is used by the CAN stack: can_poll() moves
+       * all pending write buffers into dev->d_txq and they are sent one by
+       * one from here.
+       */
+
+      if (!IOB_QEMPTY(&dev->d_txq))
+        {
+          bstop = devif_poll_txq(dev, callback);
+          continue;
+        }
+#endif
+
       i = ffsl(dev->d_polltype);
       if (i == 0)
         {
@@ -976,7 +1091,10 @@ static int devif_poll_connections(FAR struct net_driver_s *dev,
 #ifdef CONFIG_NET_CAN
           case CAN_POLL:
 
-            /* Check for pending CAN connection transfer */
+            /* Check for pending CAN socket transfer.  can_poll() moves all
+             * pending TX frames into dev->d_txq; they are drained from
+             * there on the following iterations of this loop.
+             */
 
             bstop = devif_poll_can_connections(dev, callback);
             break;

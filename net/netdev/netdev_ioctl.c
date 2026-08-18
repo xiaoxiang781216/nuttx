@@ -2267,6 +2267,12 @@ int netdev_ifdown(FAR struct net_driver_s *dev)
 #endif
                 }
 
+#ifdef CONFIG_MM_IOB
+              /* Drop any outgoing frames still queued for transmission */
+
+              iob_free_queue(&dev->d_txq);
+#endif
+
               /* Mark the interface as down */
 
               dev->d_flags &= ~(IFF_UP | IFF_RUNNING);

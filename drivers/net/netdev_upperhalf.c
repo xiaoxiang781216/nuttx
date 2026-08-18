@@ -84,14 +84,6 @@ struct netdev_upperhalf_s
 {
   FAR struct netdev_lowerhalf_s *lower;
 
-  /* TX queue for pending packets.  Packets are queued here when:
-   *   - eth_input / ip_input generates a reply (e.g. ARP, ICMP echo)
-   *   - A transient transmit error causes a packet to be re-queued
-   *     for later retry (head-inserted to preserve ordering).
-   */
-
-  struct iob_queue_s txq;
-
 #ifdef CONFIG_NET_VLAN
   struct netdev_vlan_entry_s vlan[CONFIG_NET_VLAN_COUNT];
 #endif
@@ -239,7 +231,7 @@ static int netdev_upper_txpoll(FAR struct net_driver_s *dev)
        */
 
       ninfo("Transmit busy (%d), re-queue pkt\n", ret);
-      iob_add_queue_head(pkt, &upper->txq);
+      iob_add_queue_head(pkt, &dev->d_txq);
       return ret;
     }
 
@@ -272,12 +264,11 @@ drop:
 
 static int netdev_upper_tx(FAR struct net_driver_s *dev)
 {
-  FAR struct netdev_upperhalf_s *upper = dev->d_private;
   int ret;
 
-  if (!IOB_QEMPTY(&upper->txq))
+  if (!IOB_QEMPTY(&dev->d_txq))
     {
-      netdev_iob_replace_l2(dev, iob_remove_queue(&upper->txq));
+      netdev_iob_replace_l2(dev, iob_remove_queue(&dev->d_txq));
       ret = netdev_upper_txpoll(dev);
 
       /* Release dev->d_iob if txpoll left it non-NULL.
@@ -355,10 +346,8 @@ static void netdev_upper_txavail_work(FAR struct netdev_upperhalf_s *upper)
     defined(CONFIG_DRIVERS_IEEE80211) || defined(CONFIG_NET_MBIM)
 static void netdev_upper_queue_tx(FAR struct net_driver_s *dev)
 {
-  FAR struct netdev_upperhalf_s *upper = dev->d_private;
-
   IOB_SET_OWNER(dev->d_iob, "%s txq", dev->d_ifname);
-  iob_add_queue(dev->d_iob, &upper->txq);
+  iob_add_queue(dev->d_iob, &dev->d_txq);
   netdev_iob_clear(dev);
   netdev_upper_txavail(dev);
 }
@@ -1444,7 +1433,7 @@ static int netdev_upper_ifdown(FAR struct net_driver_s *dev)
    * pending completion so that the next ifup starts clean.
    */
 
-  iob_free_queue(&upper->txq);
+  iob_free_queue(&dev->d_txq);
   atomic_set(&upper->txdone, 0);
 
   switch (upper->lower->rxtype)
@@ -1713,8 +1702,6 @@ int netdev_lower_unregister(FAR struct netdev_lowerhalf_s *dev)
         break;
     }
 
-  iob_free_queue(&upper->txq);
-
   kmm_free(upper);
   dev->netdev.d_private = NULL;
 
@@ -1840,7 +1827,7 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
 
   atomic_xchg(&upper->txdone, 1);
 
-  if (!IOB_QEMPTY(&upper->txq))
+  if (!IOB_QEMPTY(&dev->netdev.d_txq))
     {
       if (dev->rxtype == NETDEV_RX_DIRECT)
         {
