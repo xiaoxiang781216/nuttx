@@ -2435,7 +2435,7 @@ static void uvc_device_cleanup_worker(FAR void *arg)
 
   DEBUGASSERT(priv->dev);
 
-  snprintf(devpath, sizeof(devpath), "/dev/video%d", priv->dev->minor);
+  snprintf(devpath, sizeof(devpath), "/dev/video%d", priv->minor);
   if (priv->isoin && hport && hport->drvr)
     {
       DRVR_CANCEL(hport->drvr, priv->isoin);
