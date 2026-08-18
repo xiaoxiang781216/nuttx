@@ -41,6 +41,10 @@ if(CONFIG_DRIVERS_VHOST_SPI)
   list(APPEND SRCS vhost-spi.c)
 endif()
 
+if(CONFIG_DRIVERS_VHOST_PING)
+  list(APPEND SRCS vhost-ping.c)
+endif()
+
 if(CONFIG_DRIVERS_VHOST_RNG)
   list(APPEND SRCS vhost-rng.c)
 endif()

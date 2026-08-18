@@ -45,6 +45,12 @@
 
 #define VHOSTIOC_DUMP         _VHOSTIOC(1)
 
+/* Run a ping measurement.  arg is a struct vhost_ping_s, which names the
+ * target device, since /dev/vhost is a single global node.
+ */
+
+#define VHOSTIOC_PING         _VHOSTIOC(2)
+
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
@@ -69,6 +75,13 @@
 /* Wrapper the struct vhost_device to struct virtio_device */
 
 #define vhost_device            virtio_device
+
+/* Called for each device visited by vhost_foreach_device().  Returning a
+ * negative errno stops the walk and is handed back to the caller.
+ */
+
+typedef CODE int (*vhost_foreach_t)(FAR struct vhost_device *hdev,
+                                    FAR void *arg);
 
 struct vhost_driver
 {
@@ -126,6 +139,28 @@ vhost_get_vq_buffers_lock(FAR struct virtqueue *vq,
  ****************************************************************************/
 
 void vhost_register_drivers(void);
+
+/****************************************************************************
+ * Name: vhost_foreach_device
+ *
+ * Description:
+ *   Walk every device on the vhost bus whose device id is 'id' and which a
+ *   driver has claimed, so hdev->priv is that driver's context.  The bus
+ *   lock is held across the walk, which keeps a device from being removed
+ *   underneath the handler.
+ *
+ * Input Parameters:
+ *   id      - Device id to match
+ *   handler - Called once per matching device
+ *   arg     - Opaque argument passed to handler
+ *
+ * Returned Value:
+ *   Zero on success, or the first negative errno a handler returned.
+ *
+ ****************************************************************************/
+
+int vhost_foreach_device(uint32_t id, vhost_foreach_t handler,
+                         FAR void *arg);
 
 #undef EXTERN
 #ifdef __cplusplus

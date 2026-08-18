@@ -71,6 +71,18 @@ config DRIVERS_VHOST_SPI
 		the Linux-compatible VirtIO SPI wire format, and drives a local SPI
 		lower-half registered with vhost_spi_register().
 
+config DRIVERS_VHOST_PING
+	bool "Virtual Host Ping Device Support"
+	default n
+	select DRIVERS_VHOST
+	---help---
+		Enable the vhost (device-side) ping backend.  When an rptun resource
+		table exposes a VirtIO ping device (vendor-local device ID 63) in the
+		device role, this driver serves the request virtqueue by echoing each
+		request's sequence number back through the writable segment of the
+		same descriptor chain, optionally verifying the payload.  It is the
+		peer of DRIVERS_VIRTIO_PING and is diagnostic-only.
+
 config DRIVERS_VHOST_RNG
 	bool "Virtual Host Rng Device Support"
 	default n

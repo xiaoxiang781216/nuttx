@@ -42,6 +42,10 @@ ifeq ($(CONFIG_DRIVERS_VHOST_SPI),y)
   CSRCS += vhost-spi.c
 endif
 
+ifeq ($(CONFIG_DRIVERS_VHOST_PING),y)
+  CSRCS += vhost-ping.c
+endif
+
 ifeq ($(CONFIG_DRIVERS_VHOST_RNG),y)
   CSRCS += vhost-rng.c
 endif

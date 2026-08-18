@@ -35,10 +35,12 @@
 #include <nuttx/queue.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/vhost/vhost.h>
+#include <nuttx/virtio/virtio-ping.h>
 
 #include "vhost-blk.h"
 #include "vhost-can.h"
 #include "vhost-i2c.h"
+#include "vhost-ping.h"
 #include "vhost-rng.h"
 #include "vhost-rpmsg.h"
 #include "vhost-rpmb.h"
@@ -201,6 +203,13 @@ static int vhost_dev_ioctl(FAR struct file *filep, int cmd,
         vhost_dump((FAR const char *)(uintptr_t)arg);
         ret = OK;
         break;
+
+#ifdef CONFIG_DRIVERS_VHOST_PING
+      case VHOSTIOC_PING:
+        ret = vhost_ping((FAR const struct vhost_ping_s *)
+                         (uintptr_t)arg);
+        break;
+#endif
 
       default:
         break;
@@ -372,6 +381,47 @@ int vhost_get_vq_buffers(FAR struct virtqueue *vq,
 
   *vbcnt = i;
   return head;
+}
+
+/****************************************************************************
+ * Name: vhost_foreach_device
+ ****************************************************************************/
+
+int vhost_foreach_device(uint32_t id, vhost_foreach_t handler,
+                         FAR void *arg)
+{
+  FAR struct vhost_device_item_s *item;
+  int ret;
+
+  DEBUGASSERT(handler != NULL);
+
+  ret = nxmutex_lock(&g_vhost_bus.lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Only the probed list is walked: a defered device has no driver yet, so
+   * hdev->priv does not hold a driver context.
+   */
+
+  dq_for_every_entry(&g_vhost_bus.device, item,
+                     struct vhost_device_item_s, node)
+    {
+      if (item->driver == NULL || item->device->id.device != id)
+        {
+          continue;
+        }
+
+      ret = handler(item->device, arg);
+      if (ret < 0)
+        {
+          break;
+        }
+    }
+
+  nxmutex_unlock(&g_vhost_bus.lock);
+  return ret;
 }
 
 /****************************************************************************
@@ -637,6 +687,14 @@ void vhost_register_drivers(void)
   if (ret < 0)
     {
       vhosterr("vhost_register_spi_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_VHOST_PING
+  ret = vhost_register_ping_driver();
+  if (ret < 0)
+    {
+      vhosterr("vhost_register_ping_driver failed, ret=%d\n", ret);
     }
 #endif
 
