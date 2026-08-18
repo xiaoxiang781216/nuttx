@@ -204,6 +204,8 @@ struct uvc_dev_s
 
   FAR struct uvc_priv_s *device;
 
+  spinlock_t buffer_lock;
+
   FAR uint8_t *buffer_addr;
   size_t buffer_size;
 

@@ -42,6 +42,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/video/v4l2_cap.h>
 
 #include "usbhost_uvc.h"
@@ -1245,6 +1246,7 @@ static int uvc_imgdata_set_buf(FAR struct imgdata_s *data,
                                FAR uint8_t *addr, uint32_t size)
 {
   FAR struct uvc_dev_s *dev = (FAR struct uvc_dev_s *)data;
+  irqstate_t            flags;
 
   /* NULL addr with size==0 is valid: enters drop-frame mode.
    * Reject mismatched states: addr without size, or size without addr.
@@ -1255,8 +1257,10 @@ static int uvc_imgdata_set_buf(FAR struct imgdata_s *data,
       return -EINVAL;
     }
 
+  flags = spin_lock_irqsave(&dev->buffer_lock);
   dev->buffer_addr = addr;
   dev->buffer_size = size;
+  spin_unlock_irqrestore(&dev->buffer_lock, flags);
 
   return OK;
 }
@@ -1416,6 +1420,9 @@ static void uvc_iso_complete_frame(FAR struct uvc_dev_s *dev)
 static void uvc_iso_deliver_completed_frame(FAR struct uvc_dev_s *dev)
 {
   struct timeval ts;
+  FAR uint8_t    *buf_addr;
+  size_t          buf_size;
+  irqstate_t      flags;
 
   if (dev->iso_frame_complete_size == 0)
     {
@@ -1423,14 +1430,19 @@ static void uvc_iso_deliver_completed_frame(FAR struct uvc_dev_s *dev)
     }
 
   gettimeofday(&ts, NULL);
-  if (dev->buffer_addr &&
-      dev->iso_frame_complete_size <= dev->buffer_size)
+
+  flags = spin_lock_irqsave(&dev->buffer_lock);
+  buf_addr = dev->buffer_addr;
+  buf_size = dev->buffer_size;
+  spin_unlock_irqrestore(&dev->buffer_lock, flags);
+
+  if (buf_addr && dev->iso_frame_complete_size <= buf_size)
     {
-      memcpy(dev->buffer_addr, dev->iso_frame_buffer,
+      memcpy(buf_addr, dev->iso_frame_buffer,
              dev->iso_frame_complete_size);
       uvc_deliver_frame(dev, dev->iso_frame_complete_size, &ts);
     }
-  else if (!dev->buffer_addr)
+  else if (!buf_addr)
     {
       if (dev->capture_callback)
         {
@@ -2473,6 +2485,8 @@ static int uvc_register(FAR struct uvc_priv_s *priv)
   dev->minor         = priv->minor;
   dev->imgdata.ops   = &g_uvc_imgdata_ops;
   dev->imgsensor.ops = &g_uvc_imgsensor_ops;
+
+  spin_lock_init(&dev->buffer_lock);
 
   sensors[0] = &dev->imgsensor;
 
