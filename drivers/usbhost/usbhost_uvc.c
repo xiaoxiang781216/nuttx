@@ -699,11 +699,13 @@ static int uvc_set_interface_alt(FAR struct usbhost_hubport_s *hport,
             {
               if (priv->stream_alts[i].max_payload > maxp)
                 {
-                  maxp = priv->stream_alts[i].max_payload;
+                  maxp        = priv->stream_alts[i].max_payload;
+                  desired_alt = priv->stream_alts[i].alt;
                 }
             }
 
-          uinfo("UVC: no alt fits, using max=%u\n", maxp);
+          uwarn("UVC: no alt fits, using max alt=%d payload=%u\n",
+                desired_alt, maxp);
         }
       else
         {
