@@ -43,7 +43,13 @@
  ****************************************************************************/
 
 #define PERF_RECORD_MISC_USER (2 << 0)
-#define FLAME_GRAPH_SKIP      11
+/* Skip perf-internal and interrupt entry frames before recording the
+ * callchain.  Must not exceed the real chain depth (9 frames measured on
+ * qemu-arm64-v8a-ap_test) or up_backtrace() consumes both stack-walk
+ * passes and yields an empty chain.
+ */
+
+#define FLAME_GRAPH_SKIP      8
 #define PERF_MAX_BACKTRACE    20
 
 /****************************************************************************
