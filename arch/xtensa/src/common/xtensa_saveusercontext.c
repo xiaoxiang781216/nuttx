@@ -83,6 +83,10 @@ int up_saveusercontext(void *saveregs)
           "   rsr  a2, SCOMPARE1\n"
           "   s32i a2, %0, (4 * " STRINGIFY(REG_SCOMPARE1) ")\n"
 #endif
+#if XCHAL_HAVE_BOOLEANS != 0
+          "   rsr  a2, BR\n"
+          "   s32i a2, %0, (4 * " STRINGIFY(REG_BR) ")\n"
+#endif
 #if XCHAL_HAVE_LOOPS != 0
           "   rsr  a2, LBEG\n"
           "   s32i a2, %0, (4 * " STRINGIFY(REG_LBEG) ")\n"

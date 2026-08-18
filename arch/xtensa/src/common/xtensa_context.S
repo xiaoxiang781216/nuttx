@@ -143,6 +143,11 @@ _xtensa_context_save:
 	s32i	a3, sp, (4 * REG_SCOMPARE1)
 #endif
 
+#if XCHAL_HAVE_BOOLEANS != 0
+	rsr		a3, BR
+	s32i	a3, sp, (4 * REG_BR)
+#endif
+
 #if XCHAL_HAVE_LOOPS != 0
 	rsr		a3, LBEG
 	s32i	a3, sp, (4 * REG_LBEG)
@@ -278,6 +283,11 @@ _xtensa_context_restore:
 #if XCHAL_HAVE_S32C1I != 0
 	l32i  a3, a2, (4 * REG_SCOMPARE1)
 	wsr   a3, SCOMPARE1
+#endif
+
+#if XCHAL_HAVE_BOOLEANS != 0
+	l32i  a3, a2, (4 * REG_BR)
+	wsr   a3, BR
 #endif
 
 	l32i	a3, a2, (4 * REG_SAR)
