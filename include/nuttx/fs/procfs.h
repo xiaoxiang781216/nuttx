@@ -38,6 +38,8 @@
 
 /* Data entry declaration prototypes ****************************************/
 
+struct procfs_entry_s;
+
 /* Procfs operations are a subset of the mountpt_operations */
 
 struct procfs_operations
@@ -76,6 +78,8 @@ struct procfs_operations
   /* Operations on paths */
 
   CODE int     (*stat)(FAR const char *relpath, FAR struct stat *buf);
+  CODE int     (*unlink)(FAR struct procfs_entry_s *entry,
+                         FAR const char *relpath);
 };
 
 /* Procfs handler prototypes ************************************************/

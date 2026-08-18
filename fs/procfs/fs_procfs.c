@@ -276,6 +276,8 @@ static int     procfs_statfs(FAR struct inode *mountpt,
 
 static int     procfs_stat(FAR struct inode *mountpt,
                  FAR const char *relpath, FAR struct stat *buf);
+static int     procfs_unlink(FAR struct inode *mountpt,
+                 FAR const char *relpath);
 
 /****************************************************************************
  * Public Data
@@ -316,7 +318,7 @@ const struct mountpt_operations g_procfs_operations =
   procfs_unbind,     /* unbind */
   procfs_statfs,     /* statfs */
 
-  NULL,              /* unlink */
+  procfs_unlink,     /* unlink */
   NULL,              /* mkdir */
   NULL,              /* rmdir */
   NULL,              /* rename */
@@ -1519,6 +1521,31 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
     }
 
   return ret;
+}
+
+static int procfs_unlink(FAR struct inode *mountpt,
+                         FAR const char *relpath)
+{
+#ifdef CONFIG_FS_PROCFS_REGISTER
+  FAR struct procfs_entry_s *entry;
+
+  dq_for_every_entry(&g_procfs_dynentries, entry,
+                     struct procfs_entry_s, node)
+    {
+      if (fnmatch(entry->pathpattern, relpath, 0) == 0)
+        {
+          if (entry->ops && entry->ops->unlink)
+            {
+              procfs_unregister(entry);
+              return entry->ops->unlink(entry, relpath);
+            }
+
+          return -EPERM;
+        }
+    }
+#endif
+
+  return -ENOENT;
 }
 
 #ifdef CONFIG_FS_PROCFS_REGISTER

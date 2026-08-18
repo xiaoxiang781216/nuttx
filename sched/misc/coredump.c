@@ -91,7 +91,7 @@ struct coredump_procfs_s
   char                   path[64];
 };
 
-struct coredump_procfs_rfile_s
+struct coredump_procfs_file_s
 {
   struct procfs_file_s base;
   FAR struct coredump_procfs_s *ctx;
@@ -102,19 +102,6 @@ struct coredump_procfs_rfile_s
   struct lib_mtdsistream_s instream;
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
   struct lib_filesistream_s instream;
-#endif
-};
-
-struct coredump_procfs_wfile_s
-{
-  struct procfs_file_s base;
-  FAR struct coredump_procfs_s *ctx;
-#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
-  struct lib_blkoutstream_s outstream;
-#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-  struct lib_mtdoutstream_s outstream;
-#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-  struct lib_fileoutstream_s outstream;
 #endif
 };
 #endif
@@ -180,9 +167,8 @@ static int coredump_procfs_open(FAR struct file *filep,
 static int coredump_procfs_close(FAR struct file *filep);
 static ssize_t coredump_procfs_read(FAR struct file *filep,
                                     FAR char *buffer, size_t buflen);
-static ssize_t coredump_procfs_write(FAR struct file *filep,
-                                     FAR const char *buffer,
-                                     size_t buflen);
+static int coredump_procfs_unlink(FAR struct procfs_entry_s *entry,
+                                  FAR const char *relpath);
 #endif
 
 /****************************************************************************
@@ -209,7 +195,14 @@ static const struct procfs_operations g_coredump_procfs_ops =
   coredump_procfs_open,
   coredump_procfs_close,
   coredump_procfs_read,
-  coredump_procfs_write,
+  NULL,                      /* write */
+  NULL,                      /* poll */
+  NULL,                      /* opendir */
+  NULL,                      /* closedir */
+  NULL,                      /* readdir */
+  NULL,                      /* rewinddir */
+  NULL,                      /* stat */
+  coredump_procfs_unlink,    /* unlink */
 };
 #endif
 
@@ -1445,7 +1438,7 @@ static int coredump_get_info(FAR struct lib_sistream_s *stream,
 }
 
 /****************************************************************************
- * Name: coredump_procfs_read / coredump_procfs_write
+ * Name: coredump_procfs_read
  *
  * Description:
  *   procfs callbacks for coredump file read and clear operations.
@@ -1460,115 +1453,59 @@ static int coredump_procfs_open(FAR struct file *filep,
     (FAR struct procfs_entry_s *)filep->f_priv;
   FAR struct coredump_procfs_s *ctx =
     container_of(entry, struct coredump_procfs_s, entry);
+  FAR struct coredump_procfs_file_s *file;
   int ret;
 
-  if ((oflags & O_RDWR) == O_RDWR)
+  if ((oflags & O_ACCMODE) != O_RDONLY)
     {
-      return -EINVAL;
+      return -EACCES;
     }
 
-  if ((oflags & O_WRONLY) == 0)
+  file = kmm_zalloc(sizeof(*file));
+  if (file == NULL)
     {
-      /* Read mode — open input stream */
+      return -ENOMEM;
+    }
 
-      FAR struct coredump_procfs_rfile_s *file;
-
-      file = kmm_zalloc(sizeof(*file));
-      if (file == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      file->ctx = ctx;
+  file->ctx = ctx;
 
 #if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
-      ret = lib_blksistream_open(&file->instream,
-                                 CONFIG_BOARD_COREDUMP_DEVPATH);
+  ret = lib_blksistream_open(&file->instream,
+                             CONFIG_BOARD_COREDUMP_DEVPATH);
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-      ret = lib_mtdsistream_open(&file->instream,
-                                 CONFIG_BOARD_COREDUMP_DEVPATH);
+  ret = lib_mtdsistream_open(&file->instream,
+                             CONFIG_BOARD_COREDUMP_DEVPATH);
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-      ret = lib_filesistream_open(&file->instream,
-                                  CONFIG_BOARD_COREDUMP_DEVPATH,
-                                  O_RDONLY | O_CLOEXEC, 0600);
+  ret = lib_filesistream_open(&file->instream,
+                              CONFIG_BOARD_COREDUMP_DEVPATH,
+                              O_RDONLY | O_CLOEXEC, 0600);
 #endif
-      if (ret < 0)
-        {
-          kmm_free(file);
-          return ret;
-        }
-
-      lib_wrapsistream_init(&file->wrapstream,
-                            (FAR struct lib_sistream_s *)&file->instream);
-      lib_stream_seek(&file->wrapstream, ctx->offset, SEEK_SET);
-      filep->f_priv = file;
-    }
-  else
+  if (ret < 0)
     {
-      /* Write mode — open output stream */
-
-      FAR struct coredump_procfs_wfile_s *file;
-
-      file = kmm_zalloc(sizeof(*file));
-      if (file == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      file->ctx = ctx;
-
-#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
-      ret = lib_blkoutstream_open(&file->outstream,
-                                  CONFIG_BOARD_COREDUMP_DEVPATH);
-#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-      ret = lib_mtdoutstream_open(&file->outstream,
-                                  CONFIG_BOARD_COREDUMP_DEVPATH);
-#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-      ret = lib_fileoutstream_open(&file->outstream,
-                                   CONFIG_BOARD_COREDUMP_DEVPATH,
-                                   O_WRONLY | O_CLOEXEC, 0600);
-#endif
-      if (ret < 0)
-        {
-          kmm_free(file);
-          return ret;
-        }
-
-      filep->f_priv = file;
+      kmm_free(file);
+      return ret;
     }
+
+  lib_wrapsistream_init(&file->wrapstream,
+                        (FAR struct lib_sistream_s *)&file->instream);
+  lib_stream_seek(&file->wrapstream, ctx->offset, SEEK_SET);
+  filep->f_priv = file;
 
   return OK;
 }
 
 static int coredump_procfs_close(FAR struct file *filep)
 {
-  if ((filep->f_oflags & O_WRONLY) == 0)
-    {
-      FAR struct coredump_procfs_rfile_s *file = filep->f_priv;
+  FAR struct coredump_procfs_file_s *file = filep->f_priv;
 
 #if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
-      lib_blksistream_close(&file->instream);
+  lib_blksistream_close(&file->instream);
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-      lib_mtdsistream_close(&file->instream);
+  lib_mtdsistream_close(&file->instream);
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-      lib_filesistream_close(&file->instream);
+  lib_filesistream_close(&file->instream);
 #endif
-      kmm_free(file);
-    }
-  else
-    {
-      FAR struct coredump_procfs_wfile_s *file = filep->f_priv;
-
-      lib_stream_flush(&file->outstream);
-#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
-      lib_blkoutstream_close(&file->outstream);
-#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-      lib_mtdoutstream_close(&file->outstream);
-#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-      lib_fileoutstream_close(&file->outstream);
-#endif
-      kmm_free(file);
-    }
+  kmm_free(file);
 
   return OK;
 }
@@ -1576,7 +1513,7 @@ static int coredump_procfs_close(FAR struct file *filep)
 static ssize_t coredump_procfs_read(FAR struct file *filep,
                                     FAR char *buffer, size_t buflen)
 {
-  FAR struct coredump_procfs_rfile_s *file = filep->f_priv;
+  FAR struct coredump_procfs_file_s *file = filep->f_priv;
   FAR struct coredump_procfs_s *ctx = file->ctx;
   off_t offset = filep->f_pos;
   ssize_t nread;
@@ -1600,28 +1537,59 @@ static ssize_t coredump_procfs_read(FAR struct file *filep,
   return nread;
 }
 
-static ssize_t coredump_procfs_write(FAR struct file *filep,
-                                     FAR const char *buffer, size_t buflen)
+/****************************************************************************
+ * Name: coredump_procfs_unlink
+ *
+ * Description:
+ *   Handle unlink(2) on a coredump procfs entry.  Clears the ELF magic
+ *   on the backing device to invalidate the dump, then frees the entry.
+ *   Userspace calls: unlink("/proc/coredump/<name>")
+ *
+ ****************************************************************************/
+
+static int coredump_procfs_unlink(FAR struct procfs_entry_s *entry,
+                                  FAR const char *relpath)
 {
-  FAR struct coredump_procfs_wfile_s *file = filep->f_priv;
-  FAR struct coredump_procfs_s *ctx = file->ctx;
+  FAR struct coredump_procfs_s *ctx =
+    container_of(entry, struct coredump_procfs_s, entry);
   char zero[EI_MAGIC_SIZE] =
     {
       0
     };
 
-  if (buflen < 5 || strncmp(buffer, "clear", 5) != 0)
+  int ret;
+
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+  struct lib_blkoutstream_s outstream;
+  ret = lib_blkoutstream_open(&outstream, CONFIG_BOARD_COREDUMP_DEVPATH);
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+  struct lib_mtdoutstream_s outstream;
+  ret = lib_mtdoutstream_open(&outstream, CONFIG_BOARD_COREDUMP_DEVPATH);
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+  struct lib_fileoutstream_s outstream;
+  ret = lib_fileoutstream_open(&outstream, CONFIG_BOARD_COREDUMP_DEVPATH,
+                               O_WRONLY | O_CLOEXEC, 0600);
+#endif
+  if (ret < 0)
     {
-      return -EINVAL;
+      kmm_free(ctx);
+      return ret;
     }
 
-  /* Clear file header magic at the slot offset */
+  lib_stream_seek(&outstream, ctx->offset, SEEK_SET);
+  lib_stream_puts(&outstream, zero, EI_MAGIC_SIZE);
+  lib_stream_flush(&outstream);
 
-  lib_stream_seek(&file->outstream, ctx->offset, SEEK_SET);
-  lib_stream_puts(&file->outstream, zero, EI_MAGIC_SIZE);
-  lib_stream_flush(&file->outstream);
+#if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
+  lib_blkoutstream_close(&outstream);
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+  lib_mtdoutstream_close(&outstream);
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+  lib_fileoutstream_close(&outstream);
+#endif
 
-  return buflen;
+  kmm_free(ctx);
+  return OK;
 }
 
 /****************************************************************************
