@@ -414,13 +414,16 @@ void arm_gic_initialize(void)
              GIC_ICCICRU_IRQBYPDISGRP1);
   icddcr  = GIC_ICDDCR_ENABLE;
 #else
-  /* Enable the Group 0 interrupts, FIQEn and disable Group 0/1
-   * bypass.
+  /* Enable Group 0 now; Group 1 (IRQ) is left to the non-secure world when
+   * a TrustZone partition exists, but must be enabled here otherwise.
    */
 
-  iccicr |= (GIC_ICCICRS_ENABLEGRP0 | GIC_ICCICRS_ENABLEGRP1 |
+  iccicr |= (GIC_ICCICRS_ENABLEGRP0 |
              GIC_ICCICRS_FIQBYPDISGRP0 | GIC_ICCICRS_IRQBYPDISGRP0 |
              GIC_ICCICRS_FIQBYPDISGRP1 | GIC_ICCICRS_IRQBYPDISGRP1);
+#ifndef CONFIG_ARCH_TRUSTZONE_SECURE
+  iccicr |= GIC_ICCICRS_ENABLEGRP1;
+#endif
   icddcr  = (GIC_ICDDCR_ENABLEGRP0 | GIC_ICDDCR_ENABLEGRP1);
 #endif
 
