@@ -69,14 +69,14 @@
  *
  ****************************************************************************/
 
-void nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
+void nx_vsyslog(uint64_t meta, FAR const IPTR char *fmt, FAR va_list *ap)
 {
   char data[NOTE_BUFFER_SIZE];
   FAR struct note_printf_s *note;
   FAR struct tcb_s *tcb;
   ssize_t len;
 
-  if (!syslog_is_enabled(priority))
+  if (!syslog_is_enabled(meta))
     {
       return;
     }
@@ -84,7 +84,7 @@ void nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
   note = (FAR struct note_printf_s *)data;
   len = sizeof(data) - SIZEOF_NOTE_PRINTF(0);
 
-  len = lib_bsprintf(note->npt_data, len, 0, fmt, *ap);
+  len = lib_bsprintf(note->npt_data, len, NOTE_META_TYPE(meta), fmt, *ap);
   if (len > 0)
     {
       len = SIZEOF_NOTE_PRINTF(len);
@@ -107,8 +107,7 @@ void nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 
       note->npt_ip   = 0;
       note->npt_fmt  = (uintptr_t)fmt;
-      note->npt_meta = NOTE_META_PACK(LOG_GETTAG(priority),
-                                      LOG_GETPRI(priority), 0);
+      note->npt_meta = meta;
 
       syslog_write(data, len);
     }

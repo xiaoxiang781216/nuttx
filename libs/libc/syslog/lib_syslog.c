@@ -28,15 +28,11 @@
 #include <nuttx/compiler.h>
 
 #include <stdarg.h>
-
-#ifdef CONFIG_SYSLOG
 #include <syslog.h>
 
 #include <nuttx/tls_task.h>
 #include <nuttx/ratelimit.h>
 #include <nuttx/syslog/syslog.h>
-
-#include "syslog/syslog.h"
 
 /****************************************************************************
  * Private Data
@@ -59,13 +55,16 @@ static DEFINE_RATELIMIT_STATE(g_ratelimit,
  *
  ****************************************************************************/
 
-void nx_syslog(int priority, FAR const IPTR char *fmt, ...)
+void nx_syslog(uint64_t meta, FAR const IPTR char *fmt, ...)
 {
-  va_list ap;
+  if (syslog_is_enabled(meta))
+    {
+      va_list ap;
 
-  va_start(ap, fmt);
-  nx_vsyslog(priority, fmt, &ap);
-  va_end(ap);
+      va_start(ap, fmt);
+      nx_vsyslog(meta, fmt, &ap);
+      va_end(ap);
+    }
 }
 
 /****************************************************************************
@@ -83,23 +82,8 @@ void nx_syslog(int priority, FAR const IPTR char *fmt, ...)
 
 void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
 {
-  FAR struct task_info_s *info = task_get_info();
-
-  /* Check if this priority is enabled.
-   * During early boot (before idle task TLS is fully initialized),
-   * info may be NULL. In this case, allow all log priorities to ensure
-   * early initialization logging works properly.
-   */
-
-  if (info == NULL || (info->ta_syslog_mask & LOG_MASK(priority)) != 0)
+  if (syslog_is_enabled(priority))
     {
-      /* Yes.. Perform the nx_vsyslog system call.
-       *
-       * NOTE:  The va_list parameter is passed by reference.  That is
-       * because the va_list is a structure in some compilers and passing
-       * of structures in the NuttX syscalls does not work.
-       */
-
 #ifdef va_copy
       va_list copy;
 
@@ -162,36 +146,3 @@ void syslog_ratelimit(int priority,
       va_end(ap);
     }
 }
-
-#else
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: vsyslog / syslog
- *
- * Description:
- *   When CONFIG_SYSLOG is not enabled, syslog/vsyslog may be defined as
- *   macros or static inline in the header. These functions provide real
- *   symbols for pre-built libraries that reference syslog() directly.
- *
- ****************************************************************************/
-
-#undef vsyslog
-void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
-{
-  (void)priority;
-  (void)fmt;
-  (void)ap;
-}
-
-#undef syslog
-void syslog(int priority, FAR const IPTR char *fmt, ...)
-{
-  (void)priority;
-  (void)fmt;
-}
-
-#endif

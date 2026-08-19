@@ -30,12 +30,17 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 #include <nuttx/tag.h>
+#include <nuttx/ratelimit.h>
+#include <nuttx/syslog/syslog.h>
+
+#ifdef CONFIG_BINARY_SYSLOG_STRIP_FORMAT
+#  include <nuttx/macro.h>
+#  include <nuttx/sched_note.h>
+#endif
 
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdbool.h>
-
-#include <nuttx/ratelimit.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -224,30 +229,8 @@ extern "C"
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SYSLOG) || defined(CONFIG_ARCH_SYSLOG)
-void syslog(int priority, FAR const IPTR char *fmt, ...) syslog_like(2, 3);
+#ifdef CONFIG_SYSLOG_NONE
 
-/****************************************************************************
- * Name: nx_syslog
- *
- * Description:
- *   nx_syslog() handles the system logging system calls. It is functionally
- *   equivalent to syslog() but is used within the kernel space.
- *
- ****************************************************************************/
-
-#  ifdef __KERNEL__
-#    ifdef CONFIG_SYSLOG
-#    define syslog(priority, fmt, ...) nx_syslog(priority, fmt, ##__VA_ARGS__)
-#    else
-#    define syslog(priority, fmt, ...)
-#    endif
-#  endif
-void nx_syslog(int priority, FAR const IPTR char *fmt, ...)
-     syslog_like(2, 3);
-void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
-     syslog_like(2, 0);
-#else
 static inline_function void syslog_like(2, 3)
 syslog(int priority, FAR const char *fmt, ...)
 {
@@ -262,7 +245,40 @@ vsyslog(int priority, FAR const char *fmt, va_list ap)
   (void)fmt;
   (void)ap;
 }
+
+static inline_function void syslog_like(2, 3)
+syslog_ratelimit(int priority, FAR const char *fmt, ...)
+{
+  (void)priority;
+  (void)fmt;
+}
+
+static inline_function int setlogmask(int mask)
+{
+  (void)mask;
+}
+#else
+
+#ifdef CONFIG_BINARY_SYSLOG_STRIP_FORMAT
+#  define syslog(priority, fmt, ...) \
+     do \
+       { \
+         static_assert(GET_ARG_COUNT(__VA_ARGS__) <= NOTE_META_MAX_ARGS, \
+                       "too many printf args for note meta"); \
+         locate_data("note_format." STRINGIFY(__COUNTER__)) used_data \
+         static const char _sfmt[] = fmt; \
+         nx_syslog(NOTE_META_PACK(LOG_GETTAG(priority), \
+                   LOG_GETPRI(priority), \
+                   PRINTF_TAG(__VA_ARGS__)), \
+                   _sfmt, ##__VA_ARGS__); \
+       } \
+     while (0)
+#else
+#  define syslog(priority, fmt, ...) nx_syslog(priority, fmt, ##__VA_ARGS__)
 #endif
+
+void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
+     syslog_like(2, 0);
 
 /****************************************************************************
  * Name: syslog_ratelimit
@@ -275,25 +291,6 @@ vsyslog(int priority, FAR const char *fmt, va_list ap)
 
 void syslog_ratelimit(int priority,
                       FAR const IPTR char *fmt, ...) syslog_like(2, 3);
-
-/****************************************************************************
- * Name: syslog_ratelimited
- *
- * Description:
- *   The rate-limiting version of syslog. Rate limiting will
- *   be performed using the private rate limiting state.
- *
- ****************************************************************************/
-
-#define syslog_ratelimited(priority, fmt, ...)                          \
-  ({                                                                    \
-    static DEFINE_RATELIMIT_STATE(_rs,                                  \
-      CONFIG_SYSLOG_RATELIMIT_INTERVAL, CONFIG_SYSLOG_RATELIMIT_BURST); \
-    if (!ratelimit_islimited(&_rs))                                     \
-      {                                                                 \
-        syslog(priority, fmt, ##__VA_ARGS__);                           \
-      }                                                                 \
-  })
 
 /****************************************************************************
  * Name: setlogmask
@@ -329,6 +326,28 @@ void syslog_ratelimit(int priority,
  ****************************************************************************/
 
 int setlogmask(int mask);
+#endif
+
+/****************************************************************************
+ * Name: syslog_ratelimited
+ *
+ * Description:
+ *   The rate-limiting version of syslog. Rate limiting will
+ *   be performed using the private rate limiting state.
+ *
+ ****************************************************************************/
+
+#define syslog_ratelimited(priority, fmt, ...)                            \
+  do                                                                      \
+    {                                                                     \
+      static DEFINE_RATELIMIT_STATE(_rs,                                  \
+        CONFIG_SYSLOG_RATELIMIT_INTERVAL, CONFIG_SYSLOG_RATELIMIT_BURST); \
+      if (!ratelimit_islimited(&_rs))                                     \
+        {                                                                 \
+          syslog(priority, fmt, ##__VA_ARGS__);                           \
+        }                                                                 \
+    }                                                                     \
+  while (0)
 
 #if defined(__cplusplus)
 }

@@ -29,9 +29,9 @@
 #include <stdint.h>
 #include <syslog.h>
 
+#include <nuttx/syslog/syslog.h>
+#include <nuttx/tag.h>
 #include <nuttx/tls_task.h>
-
-#include "syslog/syslog.h"
 
 /****************************************************************************
  * Public Data
@@ -40,6 +40,33 @@
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: syslog_is_enabled
+ *
+ * Description:
+ *   Check if a syslog message at given priority should be printed.
+ *
+ ****************************************************************************/
+
+bool syslog_is_enabled(int priority)
+{
+  uint8_t tag = LOG_GETTAG(priority);
+  uint8_t mask = LOG_MASK(LOG_GETPRI(priority));
+
+  if (tag >= NXTAG_KERNEL_MAX)
+    {
+      tag = NXTAG_GLOBAL;
+    }
+
+#ifdef __KERNEL__
+  return (g_syslog_mask[NXTAG_GLOBAL] & mask) != 0 &&
+         (g_syslog_mask[tag] & mask) != 0;
+#else
+  FAR struct task_info_s *info = task_get_info();
+  return info == NULL || (info->ta_syslog_mask & mask);
+#endif
+}
 
 /****************************************************************************
  * Name: setlogmask

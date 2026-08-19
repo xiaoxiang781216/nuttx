@@ -358,7 +358,6 @@
 "swab","unistd.h","","void","FAR const void *","FAR void *","ssize_t"
 "swprintf","wchar.h","","int","FAR wchar_t *","size_t","FAR const wchar_t *","..."
 "sysconf","unistd.h","","long","int"
-"syslog","syslog.h","","void","int","FAR const IPTR char *","..."
 "task_testcancel","sched.h","defined(CONFIG_CANCELLATION_POINTS)","void"
 "task_tls_alloc","nuttx/tls_task.h","!defined(CONFIG_BUILD_KERNEL) && CONFIG_TLS_TASK_NELEM > 0","int","tls_dtor_t"
 "task_tls_get_value","nuttx/tls.h","CONFIG_TLS_TASK_NELEM > 0","uintptr_t","int"

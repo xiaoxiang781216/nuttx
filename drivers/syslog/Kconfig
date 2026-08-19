@@ -37,6 +37,19 @@ config SYSLOG_NONE
 
 endchoice
 
+config BINARY_SYSLOG_STRIP_FORMAT
+	bool "Strip format strings from binary syslog"
+	depends on BINARY_SYSLOG && !STREAM_BSPRINTF_EMBED_FORMAT
+	default n
+	---help---
+		When enabled, syslog() routes through nx_syslog()
+		with tag, level and the compile-time argument type word
+		packed into a single meta word: the format string is emitted
+		into the non-alloc "syslog_format" section (host-only) and
+		the type word is derived at compile time via PRINTF_TAG().
+		Only the fmt address and meta travel in the binary frame;
+		there is no resident format string in the firmware image.
+
 config SYSLOG_CHARDEV
 	bool "SYSLOG character device"
 	depends on SYSLOG

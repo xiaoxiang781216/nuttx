@@ -78,6 +78,7 @@ DECLARE_PER_CPU_BMP(syslog_channels_t, g_syslog_channel);
 #  else
 EXTERN const syslog_channels_t g_syslog_channel;
 #  endif
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
@@ -232,8 +233,6 @@ ssize_t syslog_write_foreach(FAR const char *buffer,
 
 void syslog_panic_notifier_register(void);
 #endif
-
-#endif /* CONFIG_SYSLOG */
 
 #undef EXTERN
 #ifdef __cplusplus

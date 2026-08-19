@@ -22,7 +22,9 @@
 
 # Add the internal C files to the build
 
-CSRCS += lib_setlogmask.c lib_syslog.c
+ifneq ($(CONFIG_SYSLOG_NONE),y)
+CSRCS += lib_syslog.c lib_setlogmask.c
+endif
 
 # Add the syslog directory to the build
 

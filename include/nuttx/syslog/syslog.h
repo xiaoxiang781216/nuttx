@@ -29,14 +29,12 @@
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
-#include <nuttx/streams.h>
 #include <nuttx/tag.h>
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <stdarg.h>
-#include <syslog.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -198,19 +196,7 @@ EXTERN uint8_t g_syslog_mask[NXTAG_KERNEL_MAX];
  *
  ****************************************************************************/
 
-static inline_function bool syslog_is_enabled(int priority)
-{
-  uint8_t tag = LOG_GETTAG(priority);
-  uint8_t level = LOG_GETPRI(priority);
-
-  if (tag >= NXTAG_KERNEL_MAX)
-    {
-      tag = NXTAG_GLOBAL;
-    }
-
-  return (g_syslog_mask[NXTAG_GLOBAL] & LOG_MASK(level)) != 0 &&
-         (g_syslog_mask[tag] & LOG_MASK(level)) != 0;
-}
+bool syslog_is_enabled(int priority);
 
 /****************************************************************************
  * Public Function Prototypes
@@ -410,9 +396,19 @@ int syslog_flush(void);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG
-int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap);
-#endif
+void nx_vsyslog(uint64_t meta, FAR const IPTR char *fmt, FAR va_list *ap);
+
+/****************************************************************************
+ * Name: nx_syslog
+ *
+ * Description:
+ *   nx_syslog() handles the system logging system calls. It is functionally
+ *   equivalent to syslog() but is used within the kernel space.
+ *
+ ****************************************************************************/
+
+void nx_syslog(uint64_t meta, FAR const IPTR char *fmt, ...)
+    syslog_like(2, 3);
 
 /****************************************************************************
  * Name: nx_setlogmask
