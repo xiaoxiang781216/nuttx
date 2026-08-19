@@ -435,10 +435,11 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
   size_t hdrlen = 0;
   ssize_t ret;
 
-#ifdef CONFIG_STREAM_BSPRINTF_EMBED_FORMAT
-  size_t fmtlen;
-
-  /* Room for the prefix, for the terminator of fmt. */
+  /* When the caller already supplied a compile-time type word (strip format
+   * mode), the arguments are packed by that word and the reader recovers
+   * fmt from npt_fmt, so only the prefix is embedded.  When type is zero,
+   * the reader has no type word, so fmt must be embedded and parsed.
+   */
 
   if (size < BSPRINTF_PREFIX_LEN + 1)
     {
@@ -446,25 +447,31 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size, uint64_t type,
     }
 
   memcpy(buf, BSPRINTF_PREFIX, BSPRINTF_PREFIX_LEN);
+  hdrlen = BSPRINTF_PREFIX_LEN;
 
-  /* Truncate fmt instead of rejecting the record: this may run from the
-   * syslog path, where losing the tail of a message is better than losing
-   * all of it, and an assert would recurse.
-   */
+#ifdef CONFIG_STREAM_BSPRINTF_EMBED_FORMAT
+  if (type == 0)
+    {
+      size_t fmtlen;
 
-  fmtlen = strnlen(fmt, size - BSPRINTF_PREFIX_LEN - 1) + 1;
-  memcpy(buf + BSPRINTF_PREFIX_LEN, fmt, fmtlen - 1);
-  buf[BSPRINTF_PREFIX_LEN + fmtlen - 1] = '\0';
+      /* Truncate fmt instead of rejecting the record: this may run from the
+       * syslog path, where losing the tail of a message is better than
+       * losing all of it, and an assert would recurse.
+       */
 
-  hdrlen = BSPRINTF_PREFIX_LEN + fmtlen;
+      fmtlen = strnlen(fmt, size - BSPRINTF_PREFIX_LEN - 1) + 1;
+      memcpy(buf + BSPRINTF_PREFIX_LEN, fmt, fmtlen - 1);
+      buf[BSPRINTF_PREFIX_LEN + fmtlen - 1] = '\0';
 
-  /* The reader recovers fmt from the record and parses it, so pack the
-   * arguments by parsing the very same copy: a truncated format string then
-   * simply drops its trailing arguments on both sides.
-   */
+      hdrlen = BSPRINTF_PREFIX_LEN + fmtlen;
 
-  fmt = buf + BSPRINTF_PREFIX_LEN;
-  type = 0;
+      /* The reader recovers fmt from the record and parses it, so pack the
+       * arguments by parsing the very same copy: a truncated format string
+       * then simply drops its trailing arguments on both sides.
+       */
+
+      fmt = buf + BSPRINTF_PREFIX_LEN;
+    }
 #endif
 
   ret = lib_bsprintf_args(buf + hdrlen, size - hdrlen, type, fmt, va);

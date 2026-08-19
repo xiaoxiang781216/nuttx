@@ -247,6 +247,16 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
       char tfmt[128];
       size_t i;
 
+      /* The record still leads with the embedded prefix (see lib_bsprintf),
+       * so emit it as the source name and step over it before the packed
+       * arguments; an unnamed image stored an empty prefix and prints
+       * nothing here.
+       */
+
+      len = strlen(data);
+      ret += lib_stream_puts(s, data, len);
+      data += len + 1;
+
       ret += lib_sprintf(s, "%p", fmt);
 
       tfmt[0] = '\0';

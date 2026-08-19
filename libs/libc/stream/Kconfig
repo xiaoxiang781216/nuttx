@@ -55,7 +55,6 @@ config STREAM_BSPRINTF_EMBED_FORMAT
 
 config STREAM_BSPRINTF_PREFIX
 	string "Name of the image packing bsprintf records"
-	depends on STREAM_BSPRINTF_EMBED_FORMAT
 	default RPMSG_LOCAL_CPUNAME if RPMSG
 	default LIBC_HOSTNAME if !RPMSG
 	---help---
