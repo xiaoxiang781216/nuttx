@@ -76,3 +76,69 @@ if(INCLUDE_FOUND GREATER -1)
     ${NUTTX_DIR}/../nuttx-apps)
   set(NUTTX_DEFCONFIG ${CMAKE_BINARY_DIR}/.defconfig.processed)
 endif()
+
+# Kconfig value fragments ######################################################
+#
+# Overlay the fragments named by -DKCONFIG_FRAGMENTS onto the defconfig selected
+# above, by appending them to a copy of it. Everything below this point in the
+# configure is unchanged: NUTTX_DEFCONFIG simply names the assembled file.
+#
+# Deliberately a separate block rather than an extension of the preprocess step
+# above: .defconfig.processed keeps meaning "the #include expansion of the board
+# defconfig", which is what the config_tree.json decision above relies on, and
+# what makes the pure base expansion available for comparison when something
+# looks wrong.
+#
+# NUTTX_ORIG_DEFCONFIG was captured at the top of this file, so it still names
+# the in-tree board defconfig -- the fragments never leak into it.
+
+if(KCONFIG_FRAGMENTS)
+  include(nuttx_kconfig_fragments)
+
+  # A bare fragment name resolves next to the board defconfig and nowhere else.
+  # NUTTX_BOARD_DEFCONFIG_DIR was captured in CMakeLists.txt before the
+  # preprocess step above could rewrite NUTTX_DEFCONFIG, so it still names the
+  # board's own config directory rather than the build directory.
+  nuttx_kconfig_fragments_resolve(
+    NUTTX_KCONFIG_FRAGMENT_PATHS NUTTX_KCONFIG_FRAGMENT_ERROR TOKENS
+    ${KCONFIG_FRAGMENTS} DIR "${NUTTX_BOARD_DEFCONFIG_DIR}")
+
+  if(NOT NUTTX_KCONFIG_FRAGMENT_ERROR STREQUAL "")
+    message(FATAL_ERROR "Kconfig fragments could not be resolved:\n"
+                        "${NUTTX_KCONFIG_FRAGMENT_ERROR}")
+  endif()
+
+  if(NUTTX_KCONFIG_FRAGMENT_PATHS)
+    # The digest rides in the assembled file name, which is how a changed
+    # fragment reaches the .config re-expansion gate in CMakeLists.txt: that
+    # gate already compares NUTTX_DEFCONFIG against the cached
+    # NUTTX_DEFCONFIG_SAVED, so no new condition is needed there. With no
+    # fragments the name stays .defconfig.processed, and an existing build
+    # directory therefore sees no change at all.
+    nuttx_kconfig_fragments_signature(NUTTX_KCONFIG_FRAGMENT_SIG PATHS
+                                      ${NUTTX_KCONFIG_FRAGMENT_PATHS})
+
+    nuttx_kconfig_fragments_assemble(
+      NUTTX_DEFCONFIG
+      BASE
+      "${NUTTX_DEFCONFIG}"
+      PATHS
+      ${NUTTX_KCONFIG_FRAGMENT_PATHS}
+      SIGNATURE
+      "${NUTTX_KCONFIG_FRAGMENT_SIG}"
+      OUTPUT_DIR
+      "${CMAKE_BINARY_DIR}")
+
+    message(STATUS "Kconfig fragments (${NUTTX_KCONFIG_FRAGMENT_SIG}):")
+    foreach(FRAGMENT ${NUTTX_KCONFIG_FRAGMENT_PATHS})
+      message(STATUS "  ${FRAGMENT}")
+    endforeach()
+
+    # Editing a fragment has to re-run cmake, otherwise the digest above is
+    # never recomputed and the stale .config survives
+    set_property(
+      DIRECTORY
+      APPEND
+      PROPERTY CMAKE_CONFIGURE_DEPENDS ${NUTTX_KCONFIG_FRAGMENT_PATHS})
+  endif()
+endif()

@@ -91,19 +91,53 @@ add_custom_target(
   WORKING_DIRECTORY ${NUTTX_DIR})
 
 # utility target to replace defconfig to board's defconfig
-add_custom_target(
-  savedefconfig
-  COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} savedefconfig --kconfig
-          ${KCONFIG_TOP} --out ${CMAKE_BINARY_DIR}/defconfig.tmp
-  COMMAND ${CMAKE_COMMAND} -P ${NUTTX_DIR}/cmake/savedefconfig.cmake
-          ${CMAKE_BINARY_DIR}/.config ${CMAKE_BINARY_DIR}/defconfig.tmp
-  COMMAND
-    ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/process_config.py
-    postprocess ${CMAKE_BINARY_DIR}/config_tree.json
-    ${CMAKE_BINARY_DIR}/defconfig.orig ${CMAKE_BINARY_DIR}/defconfig
-    ${CMAKE_BINARY_DIR}/defconfig.post
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different
-          ${CMAKE_BINARY_DIR}/defconfig.post ${NUTTX_DEFCONFIG}
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different
-          ${CMAKE_BINARY_DIR}/defconfig.post ${NUTTX_ORIG_DEFCONFIG}
-  WORKING_DIRECTORY ${NUTTX_DIR})
+#
+# With Kconfig fragments in effect the configuration is a composite of the board
+# defconfig and the fragments, and config_tree.json describes only the former --
+# so the write-back below would move the fragments' values into the in-tree
+# board defconfig. Refuse instead.
+#
+# The whole target is replaced rather than guarded by an extra COMMAND, because
+# the second COMMAND already overwrites ${CMAKE_BINARY_DIR}/defconfig: stopping
+# after it had run would leave a build directory whose defconfig no longer
+# matches the one the configure produced, which kconfig_env.py, traceconfig.py
+# and checkkconfig.py all read.
+#
+# resetconfig and refreshsilent above need no such treatment: they copy
+# ${NUTTX_DEFCONFIG}, which already names the assembled defconfig, and they only
+# write inside the build directory.
+if(NUTTX_KCONFIG_FRAGMENT_PATHS)
+  string(REPLACE ";" " " NUTTX_KCONFIG_FRAGMENT_LIST
+                 "${NUTTX_KCONFIG_FRAGMENT_PATHS}")
+  # Keep the text free of quotes and apostrophes: these run through a shell
+  add_custom_target(
+    savedefconfig
+    COMMAND ${CMAKE_COMMAND} -E echo
+            "savedefconfig is refused while Kconfig fragments are active:"
+    COMMAND ${CMAKE_COMMAND} -E echo "  ${NUTTX_KCONFIG_FRAGMENT_LIST}"
+    COMMAND ${CMAKE_COMMAND} -E echo
+            "It would write the fragment values into the board defconfig:"
+    COMMAND ${CMAKE_COMMAND} -E echo "  ${NUTTX_ORIG_DEFCONFIG}"
+    COMMAND
+      ${CMAKE_COMMAND} -E echo
+      "Clear the fragments and redo the change, or edit the fragment instead."
+    COMMAND ${CMAKE_COMMAND} -E false
+    WORKING_DIRECTORY ${NUTTX_DIR})
+else()
+  add_custom_target(
+    savedefconfig
+    COMMAND ${CMAKE_COMMAND} -E env ${KCONFIG_ENV} savedefconfig --kconfig
+            ${KCONFIG_TOP} --out ${CMAKE_BINARY_DIR}/defconfig.tmp
+    COMMAND ${CMAKE_COMMAND} -P ${NUTTX_DIR}/cmake/savedefconfig.cmake
+            ${CMAKE_BINARY_DIR}/.config ${CMAKE_BINARY_DIR}/defconfig.tmp
+    COMMAND
+      ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/process_config.py
+      postprocess ${CMAKE_BINARY_DIR}/config_tree.json
+      ${CMAKE_BINARY_DIR}/defconfig.orig ${CMAKE_BINARY_DIR}/defconfig
+      ${CMAKE_BINARY_DIR}/defconfig.post
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_BINARY_DIR}/defconfig.post ${NUTTX_DEFCONFIG}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_BINARY_DIR}/defconfig.post ${NUTTX_ORIG_DEFCONFIG}
+    WORKING_DIRECTORY ${NUTTX_DIR})
+endif()

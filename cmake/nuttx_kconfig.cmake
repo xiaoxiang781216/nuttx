@@ -179,12 +179,26 @@ function(nuttx_olddefconfig)
     nuttx_kconfig_top(TOPKCONFIG)
   endif()
 
+  # A Kconfig fragment assigns symbols the board author never saw, so let
+  # kconfiglib report a typo or a re-assignment in one -- both come out on
+  # stderr with a file name and a line number, and are surfaced by the warning
+  # below. Enabled only for fragment builds: turning it on unconditionally would
+  # also report the pre-existing bad assignments in the in-tree defconfigs,
+  # which is a separate clean-up.
+  if(NUTTX_KCONFIG_FRAGMENT_PATHS)
+    set(ENV{KCONFIG_WARN_UNDEF_ASSIGN} y)
+  endif()
+
   execute_process(
     COMMAND olddefconfig "${TOPKCONFIG}"
     ERROR_VARIABLE KCONFIG_ERROR
     OUTPUT_VARIABLE KCONFIG_OUTPUT
     RESULT_VARIABLE KCONFIG_STATUS
     WORKING_DIRECTORY ${NUTTX_DIR})
+
+  if(NUTTX_KCONFIG_FRAGMENT_PATHS)
+    unset(ENV{KCONFIG_WARN_UNDEF_ASSIGN})
+  endif()
 
   if(KCONFIG_ERROR)
     message(WARNING "Kconfig Configuration Error: ${KCONFIG_ERROR}")
@@ -210,6 +224,26 @@ function(nuttx_olddefconfig)
       ${CMAKE_BINARY_DIR}/.config.compressed ${CMAKE_BINARY_DIR}/defconfig.tmp
       ${CMAKE_BINARY_DIR}/defconfig.orig
     WORKING_DIRECTORY ${NUTTX_DIR})
+
+  # Kconfig drops an assignment it cannot honour without saying so, and the
+  # build would then succeed with a configuration that is not the one the
+  # fragments asked for -- a clang fragment that did not take effect just builds
+  # with gcc. A warning by default, so that a fragment which is only partly
+  # applicable to a board does not block the build;
+  # -DKCONFIG_FRAGMENTS_STRICT=ON makes it an error. Checked here rather than
+  # from CMakeLists.txt because this function has a single caller, inside the
+  # .config re-expansion branch, so the two are equivalent and CMakeLists.txt
+  # stays untouched.
+  if(NUTTX_KCONFIG_FRAGMENT_PATHS)
+    if(DEFINED KCONFIG_FRAGMENTS_STRICT)
+      set(NUTTX_FRAGMENT_STRICT ${KCONFIG_FRAGMENTS_STRICT})
+    else()
+      set(NUTTX_FRAGMENT_STRICT OFF)
+    endif()
+    nuttx_kconfig_fragments_verify(
+      ${CMAKE_BINARY_DIR}/.config.compressed PATHS
+      ${NUTTX_KCONFIG_FRAGMENT_PATHS} STRICT ${NUTTX_FRAGMENT_STRICT})
+  endif()
 
 endfunction()
 
