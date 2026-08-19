@@ -56,6 +56,10 @@
 #include <nuttx/ring.h>
 #include <nuttx/ratelimit.h>
 
+#ifdef CONFIG_BINARY_SYSLOG
+#  include <nuttx/sched_note.h>
+#endif
+
 #ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
 #  include <nuttx/panic_notifier.h>
 #endif
@@ -65,6 +69,12 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifdef CONFIG_BINARY_SYSLOG
+#  define RAMLOG_BINARY true
+#else
+#  define RAMLOG_BINARY false
+#endif
 
 /****************************************************************************
  * Private Types
@@ -76,6 +86,9 @@ struct ramlog_user_s
   uint32_t          rl_read;       /* The read index (per-reader position) */
   uint32_t          rl_threashold; /* The threashold of the reader */
   sem_t             rl_readsem;    /* Per-reader wait semaphore */
+#ifdef CONFIG_BINARY_SYSLOG
+  struct note_dump_stream_s rl_stream; /* Per-reader frame-aware stream */
+#endif
 
   /* The following the poll structures of threads waiting for driver events.
    * The 'struct pollfd' reference for each open is also retained in the
@@ -443,6 +456,31 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
   return written;
 }
 
+#ifdef CONFIG_BINARY_SYSLOG
+
+/****************************************************************************
+ * Name: ramlog_binary_read
+ ****************************************************************************/
+
+static ssize_t ramlog_binary_read(FAR struct ramlog_dev_s *priv,
+                                  FAR struct ramlog_user_s *upriv,
+                                  FAR char *buffer, size_t len)
+{
+  ssize_t nread;
+
+  nread = lib_stream_gets(&upriv->rl_stream.common, buffer, len);
+
+  /* Sync the reader position so ramlog_unread() and pollnotify() report
+   * the correct amount of data still pending for this reader.
+   */
+
+  upriv->rl_read = upriv->rl_stream.pos;
+
+  return nread;
+}
+
+#endif /* CONFIG_BINARY_SYSLOG */
+
 /****************************************************************************
  * Name: ramlog_file_read
  *
@@ -465,7 +503,9 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
   FAR struct inode *inode = filep->f_inode;
   FAR struct ramlog_dev_s *priv = inode->i_private;
   FAR struct ramlog_user_s *upriv = filep->f_priv;
+#ifndef CONFIG_BINARY_SYSLOG
   FAR struct ring_s *r = priv->rl_ring;
+#endif
 #ifdef CONFIG_RAMLOG_NOOVERWRITE
   FAR dq_entry_t *entry;
   irqstate_t flags;
@@ -478,7 +518,11 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
 
   for (; ; )
     {
+#ifdef CONFIG_BINARY_SYSLOG
+      nread = ramlog_binary_read(priv, upriv, buffer, len);
+#else
       nread = ring_mpmc_peek(r, buffer, len, &upriv->rl_read);
+#endif
       if (nread > 0)
         {
           break;
@@ -553,6 +597,30 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
       case FIONREAD:
         *(FAR int *)((uintptr_t)arg) = ramlog_unread(priv, upriv);
         break;
+#ifdef CONFIG_BINARY_SYSLOG
+      case NOTE_GETREADMODE:
+        if (arg == 0)
+          {
+            ret = -EINVAL;
+          }
+        else
+          {
+            *(FAR unsigned int *)arg = upriv->rl_stream.binary ?
+                                       NOTE_MODE_READ_BINARY :
+                                       NOTE_MODE_READ_ASCII;
+          }
+        break;
+      case NOTE_SETREADMODE:
+        if (arg == 0)
+          {
+            ret = -EINVAL;
+          }
+        else
+          {
+            upriv->rl_stream.binary = (arg == NOTE_MODE_READ_BINARY);
+          }
+        break;
+#endif
       case PIPEIOC_POLLINTHRD:
         upriv->rl_threashold = (uint32_t)arg;
         break;
@@ -702,6 +770,10 @@ static int ramlog_file_open(FAR struct file *filep)
   upriv->rl_threashold = CONFIG_RAMLOG_POLLTHRESHOLD;
   upriv->rl_read = RING_IDX_OLDEST;
   ring_mpmc_peek(r, NULL, UINT32_MAX, &upriv->rl_read);
+
+#ifdef CONFIG_BINARY_SYSLOG
+  note_dump_stream(&upriv->rl_stream, priv->rl_ring, RAMLOG_BINARY);
+#endif
 
   nxsem_init(&upriv->rl_readsem, 0, 0);
 
