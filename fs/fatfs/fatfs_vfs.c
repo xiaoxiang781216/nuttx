@@ -68,8 +68,9 @@ struct fatfs_dir_s
 
 struct fatfs_file_s
 {
+  int  refs;
   char path[PATH_MAX + 3];
-  FIL f;
+  FIL  f;
 };
 
 struct fatfs_mountpt_s
@@ -379,6 +380,7 @@ static int fatfs_open(FAR struct file *filep, FAR const char *relpath,
       filep->f_pos = f_size(&fp->f);
     }
 
+  fp->refs = 1;
   filep->f_priv = fp;
 
 errsem:
@@ -394,6 +396,7 @@ static int fatfs_close(FAR struct file *filep)
 {
   FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
+  int crefs;
   int ret;
 
   fp = filep->f_priv;
@@ -404,9 +407,18 @@ static int fatfs_close(FAR struct file *filep)
       return ret;
     }
 
-  ret = fatfs_convert_result(f_close(&fp->f));
+  crefs = --fp->refs;
+  if (crefs <= 0)
+    {
+      ret = fatfs_convert_result(f_close(&fp->f));
+      if (ret < 0)
+        {
+          fp->refs++;
+        }
+    }
+
   nxmutex_unlock(&fs->lock);
-  if (ret >= 0)
+  if (crefs <= 0 && ret >= 0)
     {
       fs_heap_free(fp);
     }
@@ -637,107 +649,30 @@ static int fatfs_sync(FAR struct file *filep)
  * Name: fatfs_dup
  *
  * Description: Duplicate open file data in the new file structure.
- * Deep copy implementation for pathcache optimization.
- *
- * This function now supports both regular files and directories:
- * - For files: copies FIL structure with file position and state
- * - For directories: copies DIR structure with traversal position
  *
  ****************************************************************************/
 
 static int fatfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
   FAR struct fatfs_mountpt_s *fs;
+  FAR struct fatfs_file_s *fp;
   int ret;
 
+  /* Recover our private data from the struct file instance */
+
+  fp = oldp->f_priv;
   fs = oldp->f_inode->i_private;
-
-  /* Check if this is a directory or a regular file */
-
-  if (oldp->f_oflags & O_DIRECTORY)
+  ret = nxmutex_lock(&fs->lock);
+  if (ret < 0)
     {
-      FAR struct fatfs_dir_s *newdir;
-
-      /* Allocate a new directory structure */
-
-      newdir = fs_heap_malloc(sizeof(*newdir));
-      if (newdir == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      ret = nxmutex_lock(&fs->lock);
-      if (ret < 0)
-        {
-          fs_heap_free(newdir);
-          return ret;
-        }
-
-      memcpy(newdir, oldp->f_priv, sizeof(*newdir));
-
-      /* Set the private data in the new file descriptor */
-
-      newp->f_priv = newdir;
-      nxmutex_unlock(&fs->lock);
-    }
-  else
-    {
-      /* Duplicate file structure */
-
-      FAR struct fatfs_file_s *oldfp;
-      FAR struct fatfs_file_s *newfp;
-      size_t alloc_size;
-      size_t copy_size;
-      int oflags;
-
-      oldfp = oldp->f_priv;
-
-      if (newp->f_oflags & O_DIRECT)
-        {
-          alloc_size = sizeof(*newfp) - FF_MAX_SS;
-          copy_size  = alloc_size;
-        }
-      else if (oldp->f_oflags & O_DIRECT)
-        {
-          alloc_size = sizeof(*newfp) - FF_MAX_SS + SS(&fs->fat);
-          copy_size  = sizeof(*newfp) - FF_MAX_SS;
-        }
-      else
-        {
-          alloc_size = sizeof(*newfp) - FF_MAX_SS + SS(&fs->fat);
-          copy_size  = alloc_size;
-        }
-
-      newfp = fs_heap_malloc(alloc_size);
-      if (newfp == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      ret = nxmutex_lock(&fs->lock);
-      if (ret < 0)
-        {
-          fs_heap_free(newfp);
-          return ret;
-        }
-
-      memcpy(newfp, oldfp, copy_size);
-
-      newfp->f.fptr = 0;
-      newfp->f.sect = 0;
-
-      oflags = fatfs_convert_oflags(newp->f_oflags);
-      newfp->f.flag = oflags;
-
-#if FF_USE_FASTSEEK
-      newfp->f.cltbl = NULL;
-#endif
-
-      newp->f_priv = newfp;
-      nxmutex_unlock(&fs->lock);
+      return ret;
     }
 
-  return OK;
+  fp->refs++;
+  newp->f_priv = fp;
+  nxmutex_unlock(&fs->lock);
+
+  return ret;
 }
 
 /****************************************************************************
