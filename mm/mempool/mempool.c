@@ -183,12 +183,14 @@ static inline void mempool_record(FAR struct mempool_s *pool,
   stack = (magic == MEMPOOL_MAGIC_ALLOC ?
            &record->stack : &record->freestack);
   backtrace_remove(*stack);
+#    if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
   if (pool->procfs.backtrace)
     {
       *stack = backtrace_record(
           CONFIG_MM_HEAP_MEMPOOL_RECORD_STACK_SKIP);
     }
   else
+#    endif
     {
       *stack = NULL;
     }
