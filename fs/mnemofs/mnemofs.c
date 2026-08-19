@@ -407,7 +407,8 @@ static int mnemofs_open(FAR struct file *filep, FAR const char *relpath,
 
       MFS_EXTRA_LOG("OPEN", "Direntry exists at %p.", dirent);
 
-      if ((oflags & O_WRONLY) != 0 && (dirent->mode & O_WRONLY) == 0)
+      if ((oflags & O_ACCMODE) != O_RDONLY &&
+          (dirent->mode & O_ACCMODE) == O_RDONLY)
         {
           MFS_LOG("OPEN", "Write is not allowed.");
 
@@ -663,7 +664,7 @@ static ssize_t mnemofs_read(FAR struct file *filep, FAR char *buffer,
 
   /* Check if allowed to read. */
 
-  if ((f->com->oflags & O_RDONLY) == 0)
+  if ((f->com->oflags & O_ACCMODE) == O_WRONLY)
     {
       MFS_EXTRA_LOG("READ", "Not allowed to read file.");
 
@@ -760,7 +761,7 @@ static ssize_t mnemofs_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Check if allowed to write. */
 
-  if ((f->com->oflags & O_WRONLY) == 0)
+  if ((f->com->oflags & O_ACCMODE) == O_RDONLY)
     {
       MFS_EXTRA_LOG("WRITE", "Write not allowed.");
       ret = -EINVAL;

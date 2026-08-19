@@ -267,7 +267,7 @@ static int vhost_blk_probe(FAR struct vhost_device *hdev)
 
   vhost_read_config_member(priv->hdev, struct vhost_blk_config_s,
                            path, &priv->path);
-  ret = file_open(&priv->bdev, priv->path, O_RDONLY | O_WRONLY | O_CLOEXEC);
+  ret = file_open(&priv->bdev, priv->path, O_RDWR | O_CLOEXEC);
   if (ret < 0)
     {
       vhosterr("ERROR: Failed to open block driver\n");

@@ -81,8 +81,10 @@ static int inode_checkflags(FAR struct inode *inode, int oflags)
       return -ENXIO;
     }
 
-  if (((oflags & O_RDONLY) != 0 && !ops->readv && !ops->read && !ops->ioctl) ||
-      ((oflags & O_WRONLY) != 0 && !ops->writev && !ops->write && !ops->ioctl))
+  if (((oflags & O_ACCMODE) != O_WRONLY &&
+       !ops->readv && !ops->read && !ops->ioctl) ||
+      ((oflags & O_ACCMODE) != O_RDONLY &&
+       !ops->writev && !ops->write && !ops->ioctl))
     {
       return -EACCES;
     }
@@ -286,7 +288,7 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
       ret = -ENXIO;
     }
 
-  if (ret == -EISDIR && ((oflags & O_WRONLY) == 0))
+  if (ret == -EISDIR && (oflags & O_ACCMODE) == O_RDONLY)
     {
       ret = dir_allocate(filep, desc.relpath);
     }

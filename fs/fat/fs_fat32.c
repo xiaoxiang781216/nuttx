@@ -255,7 +255,7 @@ static int fat_open(FAR struct file *filep, FAR const char *relpath,
       /* Check if the caller has sufficient privileges to open the file */
 
       readonly = ((DIR_GETATTRIBUTES(direntry) & FATATTR_READONLY) != 0);
-      if (((oflags & O_WRONLY) != 0) && readonly)
+      if ((oflags & O_ACCMODE) != O_RDONLY && readonly)
         {
           ret = -EACCES;
           goto errout_with_lock;
@@ -267,7 +267,8 @@ static int fat_open(FAR struct file *filep, FAR const char *relpath,
        * access is ignored.
        */
 
-      if ((oflags & (O_TRUNC | O_WRONLY)) == (O_TRUNC | O_WRONLY))
+      if ((oflags & O_TRUNC) != 0 &&
+          (oflags & O_ACCMODE) != O_RDONLY)
         {
           /* Truncate the file to zero length */
 
@@ -385,7 +386,7 @@ static int fat_open(FAR struct file *filep, FAR const char *relpath,
    * the file.
    */
 
-  if ((oflags & (O_APPEND | O_WRONLY)) == (O_APPEND | O_WRONLY))
+  if ((oflags & O_APPEND) && (oflags & O_ACCMODE) != O_RDONLY)
     {
       off_t offset = fat_seek(filep, ff->ff_size, SEEK_SET);
       if (offset < 0)
@@ -808,7 +809,7 @@ static ssize_t fat_read(FAR struct file *filep, FAR char *buffer,
 
   /* Check if the file was opened with read access */
 
-  if ((ff->ff_oflags & O_RDONLY) == 0)
+  if ((ff->ff_oflags & O_ACCMODE) == O_WRONLY)
     {
       ret = -EACCES;
       goto errout_with_lock;
@@ -1026,7 +1027,7 @@ static ssize_t fat_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Check if the file was opened for write access */
 
-  if ((ff->ff_oflags & O_WRONLY) == 0)
+  if ((ff->ff_oflags & O_ACCMODE) == O_RDONLY)
     {
       ret = -EACCES;
       goto errout_with_lock;
@@ -1954,7 +1955,7 @@ static int fat_truncate(FAR struct file *filep, off_t length)
 
   /* Check if the file was opened for write access */
 
-  if ((ff->ff_oflags & O_WRONLY) == 0)
+  if ((ff->ff_oflags & O_ACCMODE) == O_RDONLY)
     {
       ret = -EACCES;
       goto errout_with_lock;

@@ -631,7 +631,7 @@ static ssize_t spiffs_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Verify that the file was opened with write access */
 
-  if ((fobj->oflags & O_WRONLY) == 0)
+  if ((fobj->oflags & O_ACCMODE) == O_RDONLY)
     {
       ret = -EACCES;
       goto errout_with_lock;

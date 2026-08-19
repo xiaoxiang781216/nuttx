@@ -162,7 +162,7 @@ int pipecommon_open(FAR struct file *filep)
    * instance.
    */
 
-  if ((filep->f_oflags & O_WRONLY) != 0)
+  if ((filep->f_oflags & O_ACCMODE) != O_RDONLY)
     {
       dev->d_nwriters++;
 
@@ -177,10 +177,10 @@ int pipecommon_open(FAR struct file *filep)
         }
     }
 
-  while ((filep->f_oflags & O_NONBLOCK) == 0 &&     /* Blocking */
-         (filep->f_oflags & O_RDWR) == O_WRONLY &&  /* Write-only */
-         dev->d_nreaders < 1 &&                     /* No readers on the pipe */
-         circbuf_is_empty(&dev->d_buffer))          /* Buffer is empty */
+  while ((filep->f_oflags & O_NONBLOCK) == 0 &&       /* Blocking */
+         (filep->f_oflags & O_ACCMODE) == O_WRONLY && /* Write-only */
+         dev->d_nreaders < 1 &&                       /* No readers on the pipe */
+         circbuf_is_empty(&dev->d_buffer))            /* Buffer is empty */
     {
       /* If opened for write-only, then wait for at least one reader
        * on the pipe.
@@ -217,7 +217,7 @@ int pipecommon_open(FAR struct file *filep)
    * instance.
    */
 
-  if ((filep->f_oflags & O_RDONLY) != 0)
+  if ((filep->f_oflags & O_ACCMODE) != O_WRONLY)
     {
       dev->d_nreaders++;
 
@@ -232,10 +232,10 @@ int pipecommon_open(FAR struct file *filep)
         }
     }
 
-  while ((filep->f_oflags & O_NONBLOCK) == 0 &&     /* Blocking */
-         (filep->f_oflags & O_RDWR) == O_RDONLY &&  /* Read-only */
-         dev->d_nwriters < 1 &&                     /* No writers on the pipe */
-         circbuf_is_empty(&dev->d_buffer))          /* Buffer is empty */
+  while ((filep->f_oflags & O_NONBLOCK) == 0 &&       /* Blocking */
+         (filep->f_oflags & O_ACCMODE) == O_RDONLY && /* Read-only */
+         dev->d_nwriters < 1 &&                       /* No writers on the pipe */
+         circbuf_is_empty(&dev->d_buffer))            /* Buffer is empty */
     {
       /* If opened for read-only, then wait for either at least one writer
        * on the pipe.
@@ -306,7 +306,7 @@ int pipecommon_close(FAR struct file *filep)
        * writers on the pipe instance.
        */
 
-      if ((filep->f_oflags & O_WRONLY) != 0)
+      if ((filep->f_oflags & O_ACCMODE) != O_RDONLY)
         {
           /* If there are no longer any writers on the pipe, then notify all
            * of the waiting readers that they must return end-of-file.
@@ -326,7 +326,7 @@ int pipecommon_close(FAR struct file *filep)
        * instance.
        */
 
-      if ((filep->f_oflags & O_RDONLY) != 0)
+      if ((filep->f_oflags & O_ACCMODE) != O_WRONLY)
         {
           if (--dev->d_nreaders <= 0)
             {
@@ -672,7 +672,7 @@ int pipecommon_poll(FAR struct file *filep, FAR struct pollfd *fds,
        */
 
       eventset = 0;
-      if ((filep->f_oflags & O_WRONLY) &&
+      if ((filep->f_oflags & O_ACCMODE) != O_RDONLY &&
           nbytes < (dev->d_bufsize - dev->d_polloutthrd))
         {
           eventset |= POLLOUT;
@@ -680,7 +680,8 @@ int pipecommon_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       /* Notify the POLLIN event if buffer used exceeds poll threshold */
 
-      if ((filep->f_oflags & O_RDONLY) && (nbytes > dev->d_pollinthrd))
+      if ((filep->f_oflags & O_ACCMODE) != O_WRONLY &&
+          (nbytes > dev->d_pollinthrd))
         {
           eventset |= POLLIN;
         }

@@ -310,7 +310,7 @@ static int can_open(FAR struct file *filep)
 
           /* Update the reader list only if driver was open for reading */
 
-          if ((filep->f_oflags & O_RDONLY) != 0)
+          if ((filep->f_oflags & O_ACCMODE) != O_WRONLY)
             {
               list_add_head(&dev->cd_readers,
                             (FAR struct list_node *)init_can_reader(filep));

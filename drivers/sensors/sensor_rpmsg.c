@@ -796,7 +796,7 @@ static int sensor_rpmsg_open(FAR struct sensor_lowerhalf_s *lower,
     }
 
   sensor_rpmsg_lock(dev);
-  if (filep->f_oflags & O_WRONLY)
+  if ((filep->f_oflags & O_ACCMODE) != O_RDONLY)
     {
       if (filep->f_oflags & SENSOR_PERSIST)
         {
@@ -810,7 +810,7 @@ static int sensor_rpmsg_open(FAR struct sensor_lowerhalf_s *lower,
         }
     }
 
-  if (filep->f_oflags & O_RDONLY)
+  if ((filep->f_oflags & O_ACCMODE) != O_WRONLY)
     {
       /* Send broadcast subscribed info if dev isn't
        * physical sensor to avoid waking up remote core.
@@ -859,7 +859,7 @@ static int sensor_rpmsg_close(FAR struct sensor_lowerhalf_s *lower,
     }
 
   sensor_rpmsg_lock(dev);
-  if (filep->f_oflags & O_WRONLY)
+  if ((filep->f_oflags & O_ACCMODE) != O_RDONLY)
     {
       if (dev->nadvertisers == 1)
         {
@@ -873,7 +873,7 @@ static int sensor_rpmsg_close(FAR struct sensor_lowerhalf_s *lower,
       dev->nadvertisers--;
     }
 
-  if (filep->f_oflags & O_RDONLY)
+  if ((filep->f_oflags & O_ACCMODE) != O_WRONLY)
     {
       /* Send broadcast unsubscribed info if dev isn't
        * physical sensor to avoid waking up remote core.

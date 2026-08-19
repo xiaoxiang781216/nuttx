@@ -265,7 +265,7 @@ int aio_write_internal(FAR struct aiocb *aiocbp)
    */
 
   flags = fcntl(aiocbp->aio_fildes, F_GETFL);
-  if (flags == ERROR || ((flags & O_WRONLY) == 0))
+  if (flags == ERROR || (flags & O_ACCMODE) == O_RDONLY)
     {
       aiocbp->aio_result = -EBADF;
       return OK;

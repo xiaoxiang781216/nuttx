@@ -300,14 +300,19 @@ static int fatfs_convert_oflags(int oflags)
 {
   int ret = 0;
 
-  if ((oflags & O_RDONLY) != 0)
+  switch (oflags & O_ACCMODE)
     {
-      ret |= FA_READ;
-    }
+      case O_RDONLY:
+        ret |= FA_READ;
+        break;
 
-  if ((oflags & O_WRONLY) != 0)
-    {
-      ret |= FA_WRITE;
+      case O_WRONLY:
+        ret |= FA_WRITE;
+        break;
+
+      case O_RDWR:
+        ret |= FA_READ | FA_WRITE;
+        break;
     }
 
   if ((oflags & O_CREAT) != 0)

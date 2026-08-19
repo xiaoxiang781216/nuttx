@@ -306,7 +306,7 @@ int pathcache_open(FAR struct file *filep, FAR const char *relpath,
        * the file is already opened. Caching is just an optimization.
        */
 
-      if (!(oflags & O_WRONLY))
+      if ((oflags & O_ACCMODE) == O_RDONLY)
         {
           pathcache_create(filep, abspath);
         }
@@ -324,7 +324,7 @@ int pathcache_open(FAR struct file *filep, FAR const char *relpath,
       /* Put the cache entry every time we have finished using it */
 
       pathcache_put(cached_file);
-      if (oflags & O_WRONLY)
+      if ((oflags & O_ACCMODE) != O_RDONLY)
         {
           lru_cache_remove(&g_pathcache, abspath);
         }
@@ -627,7 +627,7 @@ int pathcache_close(FAR struct file *filep, FAR const char *path)
    * entry is still valid, so there is nothing to do.
    */
 
-  if (!(filep->f_oflags & O_WRONLY))
+  if ((filep->f_oflags & O_ACCMODE) == O_RDONLY)
     {
       return OK;
     }

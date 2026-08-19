@@ -48,77 +48,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: host_oflags_convert
- ****************************************************************************/
-
-static int host_oflags_convert(int flags)
-{
-  int mapflags = 0;
-
-  if ((flags & NUTTX_O_RDWR) == NUTTX_O_RDWR)
-    {
-      mapflags = O_RDWR;
-    }
-  else if (flags & NUTTX_O_RDONLY)
-    {
-      mapflags = O_RDONLY;
-    }
-  else if (flags & NUTTX_O_WRONLY)
-    {
-      mapflags = O_WRONLY;
-    }
-
-  if (flags & NUTTX_O_APPEND)
-    {
-      mapflags |= O_APPEND;
-    }
-
-  if (flags & NUTTX_O_CREAT)
-    {
-      mapflags |= O_CREAT;
-    }
-
-  if (flags & NUTTX_O_EXCL)
-    {
-      mapflags |= O_EXCL;
-    }
-
-  if (flags & NUTTX_O_TRUNC)
-    {
-      mapflags |= O_TRUNC;
-    }
-
-  if (flags & NUTTX_O_NONBLOCK)
-    {
-      mapflags |= O_NONBLOCK;
-    }
-
-  if (flags & NUTTX_O_SYNC)
-    {
-      mapflags |= O_SYNC;
-    }
-
-#ifdef O_DIRECT
-  if (flags & NUTTX_O_DIRECT)
-    {
-      mapflags |= O_DIRECT;
-    }
-#endif
-
-  if (flags & NUTTX_O_CLOEXEC)
-    {
-      mapflags |= O_CLOEXEC;
-    }
-
-  if (flags & NUTTX_O_DIRECTORY)
-    {
-      mapflags |= O_DIRECTORY;
-    }
-
-  return mapflags;
-}
-
-/****************************************************************************
  * Name: host_flock_type_convert
  ****************************************************************************/
 
@@ -307,7 +236,71 @@ static void host_stat_convert(struct stat *hostbuf, struct nuttx_stat_s *buf)
 
 int host_open(const char *pathname, int flags, int mode)
 {
-  int mapflags = host_oflags_convert(flags);
+  int mapflags = 0;
+
+  /* Perform flag mapping */
+
+  switch (flags & NUTTX_O_ACCMODE)
+    {
+      case NUTTX_O_RDONLY:
+        mapflags = O_RDONLY;
+        break;
+
+      case NUTTX_O_WRONLY:
+        mapflags = O_WRONLY;
+        break;
+
+      case NUTTX_O_RDWR:
+        mapflags = O_RDWR;
+        break;
+    }
+
+  if (flags & NUTTX_O_APPEND)
+    {
+      mapflags |= O_APPEND;
+    }
+
+  if (flags & NUTTX_O_CREAT)
+    {
+      mapflags |= O_CREAT;
+    }
+
+  if (flags & NUTTX_O_EXCL)
+    {
+      mapflags |= O_EXCL;
+    }
+
+  if (flags & NUTTX_O_TRUNC)
+    {
+      mapflags |= O_TRUNC;
+    }
+
+  if (flags & NUTTX_O_NONBLOCK)
+    {
+      mapflags |= O_NONBLOCK;
+    }
+
+  if (flags & NUTTX_O_SYNC)
+    {
+      mapflags |= O_SYNC;
+    }
+
+#ifdef O_DIRECT
+  if (flags & NUTTX_O_DIRECT)
+    {
+      mapflags |= O_DIRECT;
+    }
+#endif
+
+  if (flags & NUTTX_O_CLOEXEC)
+    {
+      mapflags |= O_CLOEXEC;
+    }
+
+  if (flags & NUTTX_O_DIRECTORY)
+    {
+      mapflags |= O_DIRECTORY;
+    }
 
   int ret = host_uninterruptible(open, pathname, mapflags, mode);
   if (ret == -1)

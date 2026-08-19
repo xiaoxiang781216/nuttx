@@ -191,7 +191,8 @@ static int lrofs_open(FAR struct file *filep, FAR const char *relpath,
 
   nxrmutex_lock(&lm->lm_lock);
 
-  if (oflags & (O_WRONLY | O_APPEND | O_TRUNC | O_CREAT))
+  if ((oflags & O_ACCMODE) != O_RDONLY ||
+      (oflags & (O_APPEND | O_TRUNC | O_CREAT)))
     {
       nxrmutex_unlock(&lm->lm_lock);
       nxsem_wait_uninterruptible(&lm->lm_sem);
@@ -320,18 +321,12 @@ static int lrofs_open(FAR struct file *filep, FAR const char *relpath,
         }
     }
 
-  /* If the file is only created for read */
-
-  if ((oflags & (O_WRONLY | O_APPEND | O_TRUNC | O_CREAT)) == O_CREAT)
-    {
-      nxsem_post(&lm->lm_sem);
-    }
-
   nxrmutex_unlock(&lm->lm_lock);
   return ret;
 
 errout_with_sem:
-  if (oflags & (O_WRONLY | O_APPEND | O_TRUNC | O_CREAT))
+  if ((oflags & O_ACCMODE) != O_RDONLY ||
+      (oflags & (O_APPEND | O_TRUNC | O_CREAT)))
     {
       nxsem_post(&lm->lm_sem);
     }
@@ -380,7 +375,8 @@ static int lrofs_close(FAR struct file *filep)
 
   lm->lm_refs--;
 
-  if (filep->f_oflags & (O_WRONLY | O_APPEND | O_TRUNC))
+  if ((filep->f_oflags & O_ACCMODE) != O_RDONLY ||
+      (filep->f_oflags & (O_APPEND | O_TRUNC | O_CREAT)))
     {
       nxsem_post(&lm->lm_sem);
     }

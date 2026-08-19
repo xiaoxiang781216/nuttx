@@ -39,8 +39,8 @@
 
 #define POSIX_TO_T32_FLAGS(pf)                                               \
     (                                                                        \
-      (((pf) & O_RDWR)   ? T32_TERM_O_RDWR  :                                \
-       ((pf) & O_WRONLY) ? T32_TERM_O_WRONLY : T32_TERM_O_RDONLY)            \
+      (((pf) & O_ACCMODE) == O_RDONLY ? T32_TERM_O_RDONLY :                  \
+       ((pf) & O_ACCMODE) == O_WRONLY ? T32_TERM_O_WRONLY : T32_TERM_O_RDWR) \
     | (((pf) & O_CREAT) && ((pf) & O_TRUNC)  ? T32_TERM_O_CREATE_TRUNC  : 0) \
     | (((pf) & O_CREAT) && ((pf) & O_APPEND) ? T32_TERM_O_CREATE_APPEND : 0) \
     | (((pf) & O_BINARY) ? T32_TERM_O_BINARY : T32_TERM_O_ASCII)             \

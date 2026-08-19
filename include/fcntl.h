@@ -36,54 +36,50 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* open flag settings for open() (and related APIs) */
+/* Open flag settings for open() (and related APIs) */
 
-#define O_RDONLY     (1U << 0)       /* Open for read access (only) */
-#define O_WRONLY     (1U << 1)       /* Open for write access (only) */
-#define O_RDWR       (3U << 0)       /* Open for both read & write access */
-#define O_CREAT      (1U << 2)       /* Create file/sem/mq object */
-#define O_EXCL       (1U << 3)       /* Name must not exist when opened  */
-#define O_APPEND     (1U << 4)       /* Keep contents, append to end */
-#define O_TRUNC      (1U << 5)       /* Delete contents */
-#define O_NONBLOCK   (1U << 6)       /* Don't wait for data */
-#define O_NDELAY     O_NONBLOCK      /* Synonym for O_NONBLOCK */
-#define O_SYNC       (1U << 7)       /* Synchronize output on write */
-#define O_DSYNC      O_SYNC          /* Equivalent to OSYNC in NuttX */
-#define O_TEXT       (1U << 8)       /* Open the file in text (translated) mode. */
-#define O_DIRECT     (1U << 9)       /* Avoid caching, write directly to hardware */
-#define O_CLOEXEC    (1U << 10)      /* Close on execute */
-#define O_DIRECTORY  (1U << 11)      /* Must be a directory */
-#define O_NOFOLLOW   (1U << 12)      /* Don't follow links */
-#define O_LARGEFILE  (1U << 13)      /* Large File */
-#define O_RESERVE14  (1U << 14)      /* reserved and used by mount flag : MS_NOSUID in mount.h */
-#define O_RESERVE15  (1U << 15)      /* reserved and used by mount flag : MS_NODEV in mount.h */
-#define O_RESERVE16  (1U << 16)      /* reserved and used by mount flag : MS_DIRSYNC in mount.h */
-#define O_RESERVE17  (1U << 17)      /* reserved and used by mount flag : MS_REMOUNT in mount.h */
+#define O_RDONLY     (0U << 0)       /* Open for read access (only) */
+#define O_WRONLY     (1U << 0)       /* Open for write access (only) */
+#define O_RDWR       (2U << 0)       /* Open for both read & write access */
+#define O_ACCMODE    (3U << 0)       /* Mask for access mode */
+#define O_TEXT       (1U << 5)       /* Open the file in text (translated) mode. */
+#define O_CREAT      (1U << 6)       /* Create file/sem/mq object */
+#define O_EXCL       (1U << 7)       /* Name must not exist when opened  */
+#define O_NOCTTY     (1U << 8)       /* Don't assign a controlling terminal */
+#define O_TRUNC      (1U << 9)       /* Delete contents */
+#define O_APPEND     (1U << 10)      /* Keep contents, append to end */
+#define O_NONBLOCK   (1U << 11)      /* Don't wait for data */
+#define O_DSYNC      (1U << 12)      /* Synchronize data on write */
+#define O_ASYNC      (1U << 13)      /* Enable signal-driven I/O */
+#define O_DIRECT     (1U << 14)      /* Avoid caching, write directly to hardware */
+#define O_LARGEFILE  (1U << 15)      /* Large File */
+#define O_DIRECTORY  (1U << 16)      /* Must be a directory */
+#define O_NOFOLLOW   (1U << 17)      /* Don't follow links */
 #define O_NOATIME    (1U << 18)      /* Don't update the file last access time */
-#define O_RESERVE19  (1U << 19)      /* reserved and used by mount flag : MS_MANDLOCK in mount.h */
-#define O_RESERVE20  (1U << 20)      /* reserved and used by mount flag : MS_NOEXEC in mount.h */
-#define O_RESERVE21  (1U << 21)      /* reserved and used by mount flag : MS_PATHCACHE in mount.h */
+#define O_CLOEXEC    (1U << 19)      /* Close on execute */
+#define __O_SYNC     (1U << 20)      /* Synchronize file (data+metadata) */
+#define O_PATH       (1U << 21)      /* Obtain a path-only fd (no I/O) */
+#define __O_TMPFILE  (1U << 22)      /* Create an unnamed temporary file */
 
-/* Unsupported, but required open flags */
-
-#define O_RSYNC     O_SYNC          /* Synchronize input on read */
-#define O_ACCMODE   O_RDWR          /* Mask for access mode */
-#define O_NOCTTY    0               /* Required by POSIX */
-#define O_BINARY    0               /* Open the file in binary (untranslated) mode. */
+#define O_NDELAY     O_NONBLOCK                  /* Synonym for O_NONBLOCK */
+#define O_SYNC       (__O_SYNC | O_DSYNC)        /* Synchronize output on write */
+#define O_RSYNC      O_SYNC                      /* Synchronize input on read */
+#define O_TMPFILE    (__O_TMPFILE | O_DIRECTORY) /* Create a temporary file */
+#define O_BINARY     0                           /* Open the file in binary mode */
 
 /* This is the highest bit number used in the open flags bitset.  Bits above
  * this bit number may be used within NuttX for other, internal purposes.
  */
 
-#define _O_MAXBIT   8
+#define _O_MAXBIT   22
 
 /* Synonyms historically used as F_SETFL flags (BSD). */
 
-#define FNDELAY     O_NONBLOCK        /* Don't wait for data */
-#define FNONBLOCK   O_NONBLOCK        /* Don't wait for data */
-#define FAPPEND     O_APPEND          /* Keep contents, append to end */
-#define FSYNC       O_SYNC            /* Synchronize output on write */
-#define FASYNC      0                 /* No counterpart in NuttX */
+#define FNDELAY     O_NONBLOCK       /* Don't wait for data */
+#define FNONBLOCK   O_NONBLOCK       /* Don't wait for data */
+#define FAPPEND     O_APPEND         /* Keep contents, append to end */
+#define FSYNC       O_SYNC           /* Synchronize output on write */
+#define FASYNC      O_ASYNC          /* No counterpart in NuttX */
 
 /* FFCNTL is all the bits that may be set via fcntl. */
 

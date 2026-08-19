@@ -144,7 +144,7 @@ ssize_t file_readv(FAR struct file *filep,
   DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  if ((filep->f_oflags & O_RDONLY) == 0)
+  if ((filep->f_oflags & O_ACCMODE) == O_WRONLY)
     {
       /* No.. File is not read-able */
 

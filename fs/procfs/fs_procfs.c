@@ -503,9 +503,9 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
            */
 
           if (mode != 0 &&
-              ((((oflags & O_RDONLY) && !(mode & S_IRUSR)) &&
+              ((((oflags & O_ACCMODE) != O_WRONLY) && !(mode & S_IRUSR) &&
                 !g_procfs_entries[x].ops->read) ||
-               (((oflags & O_WRONLY) && !(mode & S_IWUSR)) &&
+               (((oflags & O_ACCMODE) != O_RDONLY) && !(mode & S_IWUSR) &&
                 !g_procfs_entries[x].ops->write)))
             {
               return -EACCES;
