@@ -77,7 +77,7 @@ int lib_flushall_unlocked(FAR struct streamlist *list)
            * the pending write data in the stream.
            */
 
-          if ((stream->fs_oflags & O_WROK) != 0)
+          if ((stream->fs_oflags & O_WRONLY) != 0)
             {
               /* Flush the writable FILE */
 
@@ -130,7 +130,7 @@ int lib_flushall(FAR struct streamlist *list)
            * the pending write data in the stream.
            */
 
-          if ((stream->fs_oflags & O_WROK) != 0)
+          if ((stream->fs_oflags & O_WRONLY) != 0)
             {
               /* Flush the writable FILE */
 

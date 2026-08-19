@@ -750,7 +750,7 @@ sensor_rpmsg_alloc_stub(FAR struct sensor_rpmsg_dev_s *dev,
   stub->ept = ept;
   stub->cookie = cookie;
   ret = file_open(&stub->file, dev->path,
-                  O_RDOK | O_NONBLOCK | O_CLOEXEC | SENSOR_REMOTE);
+                  O_RDONLY | O_NONBLOCK | O_CLOEXEC | SENSOR_REMOTE);
   if (ret < 0)
     {
       kmm_free(stub);
@@ -796,7 +796,7 @@ static int sensor_rpmsg_open(FAR struct sensor_lowerhalf_s *lower,
     }
 
   sensor_rpmsg_lock(dev);
-  if (filep->f_oflags & O_WROK)
+  if (filep->f_oflags & O_WRONLY)
     {
       if (filep->f_oflags & SENSOR_PERSIST)
         {
@@ -810,7 +810,7 @@ static int sensor_rpmsg_open(FAR struct sensor_lowerhalf_s *lower,
         }
     }
 
-  if (filep->f_oflags & O_RDOK)
+  if (filep->f_oflags & O_RDONLY)
     {
       /* Send broadcast subscribed info if dev isn't
        * physical sensor to avoid waking up remote core.
@@ -859,7 +859,7 @@ static int sensor_rpmsg_close(FAR struct sensor_lowerhalf_s *lower,
     }
 
   sensor_rpmsg_lock(dev);
-  if (filep->f_oflags & O_WROK)
+  if (filep->f_oflags & O_WRONLY)
     {
       if (dev->nadvertisers == 1)
         {
@@ -873,7 +873,7 @@ static int sensor_rpmsg_close(FAR struct sensor_lowerhalf_s *lower,
       dev->nadvertisers--;
     }
 
-  if (filep->f_oflags & O_RDOK)
+  if (filep->f_oflags & O_RDONLY)
     {
       /* Send broadcast unsubscribed info if dev isn't
        * physical sensor to avoid waking up remote core.

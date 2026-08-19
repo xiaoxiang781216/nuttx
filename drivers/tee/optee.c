@@ -1023,7 +1023,7 @@ optee_ioctl_shm_alloc(FAR struct optee_priv_data *priv,
     }
 
   ret = file_allocate_from_inode(&g_optee_shm_inode,
-                                 O_CLOEXEC | O_RDOK | O_WROK, 0, shm, 0);
+                                 O_CLOEXEC | O_RDONLY | O_WRONLY, 0, shm, 0);
 
   if (ret < 0)
     {

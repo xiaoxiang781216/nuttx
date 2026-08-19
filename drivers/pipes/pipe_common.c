@@ -162,7 +162,7 @@ int pipecommon_open(FAR struct file *filep)
    * instance.
    */
 
-  if ((filep->f_oflags & O_WROK) != 0)
+  if ((filep->f_oflags & O_WRONLY) != 0)
     {
       dev->d_nwriters++;
 
@@ -217,7 +217,7 @@ int pipecommon_open(FAR struct file *filep)
    * instance.
    */
 
-  if ((filep->f_oflags & O_RDOK) != 0)
+  if ((filep->f_oflags & O_RDONLY) != 0)
     {
       dev->d_nreaders++;
 
@@ -306,7 +306,7 @@ int pipecommon_close(FAR struct file *filep)
        * writers on the pipe instance.
        */
 
-      if ((filep->f_oflags & O_WROK) != 0)
+      if ((filep->f_oflags & O_WRONLY) != 0)
         {
           /* If there are no longer any writers on the pipe, then notify all
            * of the waiting readers that they must return end-of-file.
@@ -326,7 +326,7 @@ int pipecommon_close(FAR struct file *filep)
        * instance.
        */
 
-      if ((filep->f_oflags & O_RDOK) != 0)
+      if ((filep->f_oflags & O_RDONLY) != 0)
         {
           if (--dev->d_nreaders <= 0)
             {
@@ -672,7 +672,7 @@ int pipecommon_poll(FAR struct file *filep, FAR struct pollfd *fds,
        */
 
       eventset = 0;
-      if ((filep->f_oflags & O_WROK) &&
+      if ((filep->f_oflags & O_WRONLY) &&
           nbytes < (dev->d_bufsize - dev->d_polloutthrd))
         {
           eventset |= POLLOUT;
@@ -680,7 +680,7 @@ int pipecommon_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       /* Notify the POLLIN event if buffer used exceeds poll threshold */
 
-      if ((filep->f_oflags & O_RDOK) && (nbytes > dev->d_pollinthrd))
+      if ((filep->f_oflags & O_RDONLY) && (nbytes > dev->d_pollinthrd))
         {
           eventset |= POLLIN;
         }
