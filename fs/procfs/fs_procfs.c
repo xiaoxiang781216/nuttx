@@ -1495,6 +1495,7 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
                       buf->st_mode = entry->mode;
                       buf->st_mode |= entry->type ==
                           PROCFS_DIR_TYPE ? S_IFDIR : S_IFREG;
+                      buf->st_size = entry->size;
                       ret = OK;
                     }
                   else if (entry->ops && entry->ops->stat)

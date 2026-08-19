@@ -103,6 +103,7 @@ struct procfs_entry_s
   FAR const struct procfs_operations *ops;
   uint8_t type;
   mode_t mode;
+  off_t size;
   struct dq_entry_s node;
 };
 

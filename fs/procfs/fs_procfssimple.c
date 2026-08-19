@@ -217,7 +217,7 @@ procfs_create_var(FAR const char *path, mode_t mode, FAR void *value,
   FAR struct simple_file_s *file;
   int ret;
 
-  file = (FAR struct simple_file_s *)fs_heap_malloc(sizeof(*file));
+  file = (FAR struct simple_file_s *)fs_heap_zalloc(sizeof(*file));
   if (file == NULL)
     {
       ferr("ERROR: Failed to allocate simple_file_s\n");

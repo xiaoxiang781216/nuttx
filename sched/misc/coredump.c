@@ -1638,6 +1638,7 @@ static void coredump_procfs_register(FAR const struct coredump_info_s *info,
   ctx->entry.ops = &g_coredump_procfs_ops;
   ctx->entry.type = PROCFS_FILE_TYPE;
   ctx->entry.mode = 0600;
+  ctx->entry.size = size;
 
   procfs_register(&ctx->entry);
 }
