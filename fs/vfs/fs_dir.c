@@ -207,8 +207,20 @@ static int open_pseudodir(FAR struct inode *inode,
 
   *dir              = &pdir->dir;
   pdir->dir.fd_root = inode;          /* Save the inode where we start */
-  pdir->next        = inode->i_child; /* This next node for readdir */
-  inode_addref(inode->i_child);
+
+  /* Take the first child inode and a reference on it under the inode
+   * tree lock.  On SMP, a concurrent inode_insert()/inode_unlink() on
+   * this directory could otherwise change i_child between the read and
+   * the addref, leaving pdir->next pointing at an inode we never
+   * addref'd; a concurrent inode_remove() could then free it, causing
+   * a use-after-free in the next readdir().
+   */
+
+  inode_lock();
+  pdir->next = inode->i_child;        /* The next node for readdir */
+  inode_addref(pdir->next);
+  inode_unlock();
+
   return 0;
 }
 
@@ -250,10 +262,20 @@ static off_t seek_pseudodir(FAR struct file *filep, off_t offset)
   FAR struct inode *prev;
   off_t pos;
 
-  /* Determine a starting point for the seek. If the seek
-   * is "forward" from the current position, then we will
-   * start at the current position. Otherwise, we will
-   * "rewind" to the root dir.
+  /* Traverse the peer list starting at the 'root' of the
+   * the list until we find the node at 'offset". If devices
+   * are being registered and unregistered, then this can
+   * be a very unpredictable operation.
+   */
+
+  inode_lock();
+
+  /* Determine a starting point for the seek. If the seek is "forward" from
+   * the current position, then we will start at the current position.
+   * Otherwise, we will "rewind" to the root dir.  The starting inode is
+   * read under the lock: fd_root->i_child has no reference of its own, so
+   * on SMP a concurrent inode_remove() could free it before we acquire the
+   * lock if it were read unlocked.
    */
 
   if (offset < filep->f_pos)
@@ -266,14 +288,6 @@ static off_t seek_pseudodir(FAR struct file *filep, off_t offset)
       pos  = filep->f_pos;
       curr = pdir->next;
     }
-
-  /* Traverse the peer list starting at the 'root' of the
-   * the list until we find the node at 'offset". If devices
-   * are being registered and unregistered, then this can
-   * be a very unpredictable operation.
-   */
-
-  inode_lock();
 
   for (; curr != NULL && pos != offset; pos++, curr = curr->i_peer)
     {
