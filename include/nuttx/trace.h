@@ -1735,9 +1735,16 @@
 /* Helper: capture backtrace into buffer, no-op if unsupported.
  * The buffer is cleared before capturing so that unused slots are
  * guaranteed to be NULL instead of holding stale stack data.
+ *
+ * CONFIG_ARCH_HAVE_BACKTRACE must not be used as the guard here: it only
+ * advertises that the architecture is able to unwind (it is selected
+ * unconditionally by ARCH_ARM and friends), while the up_backtrace()
+ * implementation is only compiled in when CONFIG_SCHED_BACKTRACE is
+ * enabled.  Keying on CONFIG_SCHED_BACKTRACE keeps this macro in sync
+ * with the source files that actually provide the symbol.
  */
 
-#if defined(CONFIG_ARCH_HAVE_BACKTRACE) && defined(CONFIG_DIAG)
+#if defined(CONFIG_SCHED_BACKTRACE) && defined(CONFIG_DIAG)
 #  define DIAG_BACKTRACE(tcb, buf, size) \
      do \
        { \
