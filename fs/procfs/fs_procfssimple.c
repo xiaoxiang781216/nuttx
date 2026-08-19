@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <debug.h>
+#include <string.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/kmalloc.h>
@@ -114,6 +115,29 @@ static const struct procfs_operations g_simple_operations =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: proc_simple_refresh_size
+ ****************************************************************************/
+
+static void proc_simple_refresh_size(FAR struct simple_file_s *file)
+{
+  struct file tmpfile;
+  char buf[32];
+  ssize_t len;
+
+  if (file->read == NULL)
+    {
+      return;
+    }
+
+  memset(&tmpfile, 0, sizeof(tmpfile));
+  len = file->read(&tmpfile, buf, sizeof(buf), file->value);
+  if (len > 0)
+    {
+      file->entry.size = len;
+    }
+}
+
+/****************************************************************************
  * Name: proc_simple_open
  ****************************************************************************/
 
@@ -169,6 +193,7 @@ static ssize_t proc_simple_write(FAR struct file *filep,
                                  size_t buflen)
 {
   FAR struct simple_file_s *entry;
+  ssize_t ret;
 
   DEBUGASSERT(filep != NULL);
 
@@ -180,7 +205,16 @@ static ssize_t proc_simple_write(FAR struct file *filep,
   entry = (FAR struct simple_file_s *)filep->f_priv;
   DEBUGASSERT(entry != NULL);
 
-  return entry->write(filep, buffer, buflen, entry->value);
+  ret = entry->write(filep, buffer, buflen, entry->value);
+
+  /* Update size after write so stat reflects the new value length */
+
+  if (ret > 0)
+    {
+      proc_simple_refresh_size(entry);
+    }
+
+  return ret;
 }
 
 PROCFS_DEFINE_READ(u8, uint8_t, "%" PRIu8)
@@ -231,6 +265,10 @@ procfs_create_var(FAR const char *path, mode_t mode, FAR void *value,
   file->entry.type = PROCFS_FILE_TYPE;
   file->entry.mode = mode;
   file->entry.ops = &g_simple_operations;
+
+  /* Compute initial size from read callback so stat reports it */
+
+  proc_simple_refresh_size(file);
 
   ret = procfs_register(&file->entry);
   if (ret < 0)
