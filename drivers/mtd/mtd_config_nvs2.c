@@ -649,7 +649,10 @@ static inline int nvs_flash_ate_wrt(FAR struct nvs_fs *fs,
 #endif
 
   rc = nvs_flash_wrt(fs, fs->ate_wra, entry, ate_size);
-  fs->ate_wra -= ate_size;
+  if (rc != -EACCES)
+    {
+      fs->ate_wra -= ate_size;
+    }
 
   return rc;
 }
@@ -664,7 +667,10 @@ static inline int nvs_flash_data_wrt(FAR struct nvs_fs *fs,
   int rc;
 
   rc = nvs_flash_wrt(fs, fs->data_wra, data, len);
-  fs->data_wra += len;
+  if (rc != -EACCES)
+    {
+      fs->data_wra += len;
+    }
 
   return rc;
 }
@@ -3139,6 +3145,25 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
         {
           FAR uint32_t *count = (FAR uint32_t *)arg;
           *count = fs->write_cnt;
+        }
+        break;
+
+      case MTDIOC_PROTECT:
+      case MTDIOC_UNPROTECT:
+        {
+          FAR struct mtd_protect_s *prot = (FAR struct mtd_protect_s *)arg;
+
+          if (prot)
+            {
+              prot->startblock = 0;
+              prot->nblocks    = fs->blocksize * fs->nblocks /
+                                 fs->progsize;
+              rc = MTD_IOCTL(fs->mtd, cmd, arg);
+            }
+          else
+            {
+              rc = -EINVAL;
+            }
         }
         break;
 
