@@ -137,11 +137,6 @@ static int virtio_9p_create(FAR struct v9fs_transport_s **transport,
 
   if (ret < 0)
     {
-      /* Remove driver from bus before freeing to avoid dangling node
-       * in g_virtio_bus.driver list (use-after-free).
-       */
-
-      virtio_unregister_driver(&priv->vdrv);
       fs_heap_free(priv);
     }
 
