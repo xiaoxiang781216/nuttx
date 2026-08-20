@@ -33,4 +33,18 @@
 
 #define QEMU_RV_APLIC_NR_IRQ      0x60
 
+/* IMSIC identity space domain boundaries:
+ *   [1, APLIC_IRQ_END]               wire devices via APLIC
+ *   [APLIC_IRQ_END+1, NR_PLIC_IRQS)  PCI MSI direct to IMSIC
+ */
+
+#define QEMU_RV_APLIC_IRQ_END     QEMU_RV_APLIC_NR_IRQ
+
+/* PCIe legacy INTx uses APLIC sources 32-35.  Defined by QEMU virt
+ * machine (PCIE_IRQ = 0x20), reflected in DTB interrupt-map as
+ * sources 0x20-0x23.
+ */
+
+#define QEMU_RV_PCIE_INTX_BASE    32
+
 #endif /* __ARCH_RISCV_SRC_QEMU_RV_HARDWARE_QEMU_RV_APLIC_H */

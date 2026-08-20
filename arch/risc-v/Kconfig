@@ -854,6 +854,15 @@ config ARCH_RV_USE_IMSIC_IPI
 		target hart's IMSIC MMIO page, and received via the external
 		interrupt path.
 
+config ARCH_RV_IMSIC_PCI
+	bool "Use IMSIC for PCI MSI"
+	default n
+	depends on ARCH_RV_HAVE_IMSIC && PCI
+	---help---
+		Use IMSIC as the MSI controller for PCI devices. MSI identities
+		are allocated from the range above APLIC wire IRQs and written
+		directly to the IMSIC MMIO page by PCI devices.
+
 endif # ARCH_RV_EXT_AIA
 
 choice

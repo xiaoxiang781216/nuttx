@@ -107,6 +107,10 @@ if(CONFIG_ARCH_RV_HAVE_IMSIC)
   list(APPEND SRCS riscv_imsic.c)
 endif()
 
+if(CONFIG_ARCH_RV_IMSIC_PCI)
+  list(APPEND SRCS riscv_imsic_pci.c)
+endif()
+
 if(CONFIG_RISCV_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS riscv_semihost.S riscv_hostfs.c)
 endif()

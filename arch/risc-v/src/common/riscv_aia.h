@@ -198,6 +198,12 @@ static inline void riscv_imsic_local_eie_disable(unsigned long base_id)
 
 void riscv_imsic_send_ipi(int cpu);
 
+/* IMSIC PCI MSI */
+
+#ifdef CONFIG_ARCH_RV_IMSIC_PCI
+int riscv_imsic_pci_init(int id_start, int id_count);
+#endif
+
 /* APLIC */
 
 static inline int riscv_aplic_set_delegate(uintptr_t base,

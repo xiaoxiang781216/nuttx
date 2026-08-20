@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
+#include <errno.h>
 #include <debug.h>
 
 #include <nuttx/arch.h>
@@ -36,6 +37,10 @@
 #include "riscv_ipi.h"
 #include "riscv_aia.h"
 #include "chip.h"
+
+#ifdef CONFIG_PCI
+#  include <nuttx/pci/pci.h>
+#endif
 
 #ifdef CONFIG_RPTUN
 #include "qemu_rv_rptun.h"
@@ -102,6 +107,14 @@ void up_irqinitialize(void)
     }
 
   riscv_aplic_init_msi(QEMU_RV_APLIC_BASE, QEMU_RV_IMSIC_BASE, 0, 3, 0, 0);
+
+#ifdef CONFIG_ARCH_RV_IMSIC_PCI
+  /* Initialize PCI MSI allocator for identities above APLIC wire range */
+
+  riscv_imsic_pci_init(QEMU_RV_APLIC_IRQ_END + 1,
+                       NR_PLIC_IRQS - QEMU_RV_APLIC_IRQ_END - 1);
+#endif
+
 #elif defined(CONFIG_ARCH_RV_HAVE_APLIC)
   /* Set default IRQ target hart index to 0 and priority */
 
@@ -217,10 +230,18 @@ void up_disable_irq(int irq)
           modifyreg32(QEMU_RV_PLIC_ENABLE1 + (4 * (extirq / 32)),
                       1 << (extirq % 32), 0);
 #else
-          riscv_aplic_disable_irq(QEMU_RV_APLIC_BASE, extirq);
-#endif
+          /* Wire IRQs (<=APLIC_IRQ_END): disable via APLIC.
+           * MSI IRQs (>APLIC_IRQ_END): bypass APLIC, IMSIC EIE only.
+           */
+
+          if (extirq <= QEMU_RV_APLIC_IRQ_END)
+            {
+              riscv_aplic_disable_irq(QEMU_RV_APLIC_BASE, extirq);
+            }
+
 #ifdef CONFIG_ARCH_RV_HAVE_IMSIC
           riscv_imsic_local_eie_disable(extirq);
+#endif
 #endif
         }
       else
@@ -284,13 +305,21 @@ void up_enable_irq(int irq)
           modifyreg32(QEMU_RV_PLIC_ENABLE1 + (4 * (extirq / 32)),
                       0, 1 << (extirq % 32));
 #else
-          riscv_aplic_configure_irq(QEMU_RV_APLIC_BASE, extirq,
-                                    RISCV_APLIC_SOURCECFG_SM_EDGE_RISE,
-                                    riscv_mhartid());
+          /* Wire IRQs (<=APLIC_IRQ_END): configure and enable via APLIC.
+           * MSI IRQs (>APLIC_IRQ_END): bypass APLIC, IMSIC EIE only.
+           */
+
+          if (extirq <= QEMU_RV_APLIC_IRQ_END)
+            {
+              riscv_aplic_configure_irq(QEMU_RV_APLIC_BASE, extirq,
+                                        RISCV_APLIC_SOURCECFG_SM_EDGE_RISE,
+                                        riscv_mhartid());
+              riscv_aplic_enable_irq(QEMU_RV_APLIC_BASE, extirq);
+            }
+
 #ifdef CONFIG_ARCH_RV_HAVE_IMSIC
           riscv_imsic_local_eie_enable(extirq);
 #endif
-          riscv_aplic_enable_irq(QEMU_RV_APLIC_BASE, extirq);
 #endif
         }
       else
@@ -348,5 +377,35 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
     }
 
   UNUSED(cpuset);
+}
+#endif
+
+/****************************************************************************
+ * Name: up_get_legacy_irq
+ *
+ * Description:
+ *   Get legacy PCI INTx interrupt number by applying the standard PCI
+ *   swizzle to the platform-defined INTx base IRQ.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PCI
+int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
+{
+  UNUSED(line);
+
+  /* Standard PCI interrupt swizzle (PCI Local Bus Spec 2.2.6):
+   * Each device's INTx pin is rotated by its slot number so that
+   * adjacent slots don't share the same interrupt line.
+   * Formula: irq = base + (slot + pin - 1) % 4
+   */
+
+  if (pin >= PCI_INTERRUPT_INTA && pin <= PCI_INTERRUPT_INTD)
+    {
+      return RISCV_IRQ_EXT + QEMU_RV_PCIE_INTX_BASE +
+             (PCI_SLOT(devfn) + pin - 1) % 4;
+    }
+
+  return -ENOTSUP;
 }
 #endif

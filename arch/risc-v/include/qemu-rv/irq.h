@@ -29,9 +29,17 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* QEMU riscv/virt.h has 96 IRQs, add it to RISCV_IRQ_EXT */
+/* When IMSIC is enabled, NR_PLIC_IRQS covers the full identity space
+ * (QEMU virt DTB riscv,num-ids=255, plus slot 0 unused = 256).
+ * Otherwise use QEMU virt's 96 external IRQs.
+ */
 
-#define NR_PLIC_IRQS       96
+#ifdef CONFIG_ARCH_RV_HAVE_IMSIC
+#  define NR_PLIC_IRQS     256
+#else
+#  define NR_PLIC_IRQS     96
+#endif
+
 #define NR_IRQS            (RISCV_IRQ_EXT + NR_PLIC_IRQS)
 
 #endif /* __ARCH_RISCV_INCLUDE_QEMU_RV_IRQ_H */
