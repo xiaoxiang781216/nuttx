@@ -34,6 +34,16 @@
 
 #define CCTRL_COUNT_ENABLE (1 << 1)
 
+/* CCNT is a 31-bit counter (bits 0-30); bit 31 is the sticky overflow flag
+ * (SOVF).  perf_gettime() combines `now` with the overflow count via
+ * `now | (overflow << CONFIG_ARCH_PERF_COUNT_BITWIDTH)`, so `now` must fit
+ * in the low CONFIG_ARCH_PERF_COUNT_BITWIDTH bits.  The mask is derived
+ * from the same width to always match the overflow extension bit.
+ */
+
+#define CCNT_VALUE_MASK ((1UL << CONFIG_ARCH_PERF_COUNT_BITWIDTH) - \
+                         1UL)
+
 #ifdef CONFIG_ARCH_PERF_EVENTS
 
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
@@ -96,7 +106,19 @@ void up_perf_convert(clock_t elapsed, struct timespec *ts)
 
 clock_t noinstrument_function up_perf_gettime(void)
 {
-  return tricore_mfcr(CPU_CCNT);
+  /* CCNT is a 31-bit counter (bits 0-30).  Bit 31 is the sticky overflow
+   * flag (SOVF): it is set when the counter wraps and stays set until the
+   * counter is cleared, so the raw 32-bit value is NOT a pure 31-bit
+   * counter.  perf_gettime() uses CONFIG_ARCH_PERF_COUNT_BITWIDTH to
+   * combine `now` with the overflow count via
+   * `now | (overflow << CONFIG_ARCH_PERF_COUNT_BITWIDTH)`; if SOVF
+   * (bit 31) leaked into `now`, it would collide with the overflow
+   * extension bit and the combined timestamp would go backwards at every
+   * wrap, producing negative elapsed times in critmon.  Mask SOVF off so
+   * `now` is the bare 31-bit count.
+   */
+
+  return tricore_mfcr(CPU_CCNT) & CCNT_VALUE_MASK;
 }
 
 #endif
