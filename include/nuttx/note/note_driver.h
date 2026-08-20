@@ -383,27 +383,27 @@
 #define NOTE_MODE_READ_ASCII             0
 #define NOTE_MODE_READ_BINARY            1
 
-/* npt_meta field layout accessors. The argument type slots occupy the low
- * 46 bits (2 bits each, up to 23 args), with a PRINTF_TERM(3) sentinel in
- * bits [47:46] marking the end. The sentinel is always present and nonzero,
- * so the type word is never zero in strip mode.
+/* npt_meta field layout accessors. The argument type slots occupy 48
+ * bits (2 bits each, up to 23 args plus a PRINTF_TERM(3) sentinel), in
+ * the upper part of the word. The low 16 bits hold the syslog priority
+ * (tag << 8 | level) so the packed meta can be passed straight to
+ * syslog_is_enabled() without unpacking.
  *
- *   tag [63..56]   level [55..48]   sentinel[47:46]   type slots [45..0]
+ *   type slots + sentinel [63..16]   tag [15..8]   level [7..0]
  */
 
+#define NOTE_META_TAG_SHIFT   8
+#define NOTE_META_TYPE_SHIFT  16
 #define NOTE_META_TYPE_MASK   0x0000ffffffffffffull
-#define NOTE_META_LEVEL_SHIFT 48
-#define NOTE_META_TAG_SHIFT   56
 #define NOTE_META_MAX_ARGS    23
 
 #define NOTE_META_PACK(tag, level, type) \
-        (((uint64_t)(type) & NOTE_META_TYPE_MASK) | \
-         ((uint64_t)((level) & 0xff) << NOTE_META_LEVEL_SHIFT) | \
-         ((uint64_t)((tag) & 0xff) << NOTE_META_TAG_SHIFT))
+          (((uint8_t)(level)) | ((uint8_t)(tag) << NOTE_META_TAG_SHIFT) | \
+           (((uint64_t)(type) & NOTE_META_TYPE_MASK) << NOTE_META_TYPE_SHIFT))
 
+#define NOTE_META_LEVEL(m) ((uint8_t)(m))
 #define NOTE_META_TAG(m)   ((uint8_t)((m) >> NOTE_META_TAG_SHIFT))
-#define NOTE_META_LEVEL(m) ((uint8_t)((m) >> NOTE_META_LEVEL_SHIFT))
-#define NOTE_META_TYPE(m)  ((uint64_t)((m) & NOTE_META_TYPE_MASK))
+#define NOTE_META_TYPE(m)  (((m) >> NOTE_META_TYPE_SHIFT) & NOTE_META_TYPE_MASK)
 
 /****************************************************************************
  * Public Types
