@@ -38,6 +38,10 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/spinlock.h>
 
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
+#  include <nuttx/fs/procfs.h>
+#endif
+
 #ifdef CONFIG_MM_HEAP_FORBID_HOOK
 #  include <nuttx/board.h>
 #endif
@@ -56,6 +60,7 @@ struct mm_heap_s
 {
   FAR const char  *name;        /* Heap name for diagnostics */
   FAR char        *next;        /* Next allocation address */
+  unsigned long    aordblks;    /* Number of successful allocations */
   struct mm_bump_region_s regions[CONFIG_MM_REGIONS];
 #if CONFIG_MM_REGIONS > 1
   int              nregions;    /* Number of registered regions */
@@ -63,6 +68,9 @@ struct mm_heap_s
 #endif
 #ifndef CONFIG_MM_HEAP_FORBID_NONE
   atomic_t         forbid;      /* Non-zero forbids allocation */
+#endif
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
+  FAR struct procfs_meminfo_entry_s *procfs; /* procfs meminfo handle */
 #endif
   spinlock_t       lock;        /* IRQ-safe spinlock */
 };
@@ -167,6 +175,17 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
   /* Register the initial usable region */
 
   mm_addregion(h, region_start, region_size);
+
+  /* Register with procfs so that the heap shows up in /proc/meminfo
+   * (i.e. the NSH "free" command). The bump allocator implements
+   * mm_mallinfo, so the default handlers are used.
+   */
+
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
+#  if !defined(CONFIG_BUILD_KERNEL) || defined(__KERNEL__)
+  h->procfs = procfs_register_meminfo(config->name, h, NULL, NULL);
+#  endif
+#endif
 }
 
 /****************************************************************************
@@ -198,6 +217,11 @@ void mm_initialize_pool(FAR const struct mm_heap_config_s *config,
 
 void mm_uninitialize(FAR struct mm_heap_s *heap)
 {
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
+#  if !defined(CONFIG_BUILD_KERNEL) || defined(__KERNEL__)
+  procfs_unregister_meminfo(heap->procfs);
+#  endif
+#endif
   UNUSED(heap);
 }
 
@@ -303,6 +327,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap,
           if (size <= remaining)
             {
               heap->next = aligned + size;
+              heap->aordblks++;
 
               spin_unlock_irqrestore(&heap->lock, flags);
               return aligned;
@@ -478,6 +503,13 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
   int i;
 #endif
 
+  /* Zero all fields first: the bump allocator does not track every
+   * mallinfo field, and returning uninitialized stack data would show
+   * up as garbage in /proc/meminfo (e.g. the "free" command).
+   */
+
+  memset(&info, 0, sizeof(info));
+
   flags = spin_lock_irqsave(&heap->lock);
 
 #if CONFIG_MM_REGIONS > 1
@@ -526,6 +558,14 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
   info.uordblks = used;
   info.fordblks = arena - used;
   info.mxordblk = largest;
+
+  /* The bump allocator only grows, so the current usage is also the peak
+   * usage (usmblks). aordblks is the running count of successful
+   * allocations tracked in heap->aordblks.
+   */
+
+  info.usmblks  = used;
+  info.aordblks = heap->aordblks;
 #if CONFIG_MM_REGIONS > 1
   info.ordblks  = heap->nregions - heap->region;
 #else
