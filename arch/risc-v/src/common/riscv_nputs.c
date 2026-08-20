@@ -39,7 +39,7 @@
 
 void up_nputs(const char *str, size_t len)
 {
-  while (len-- > 0 && *str)
+  while (len-- > 0)
     {
       up_putc(*str++);
     }
