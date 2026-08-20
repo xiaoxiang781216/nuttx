@@ -72,7 +72,7 @@ static int intel64_getplaneinfo(struct fb_vtable_s *vtable,
 
 /* Helpers */
 
-static uint8_t intel64_fb_getfmt(uint8_t bpp, uint8_t type);
+static int intel64_fb_getfmt(uint8_t bpp, uint8_t type);
 static void intel64_fb_clear(void);
 
 /****************************************************************************
@@ -141,14 +141,14 @@ static int intel64_getplaneinfo(struct fb_vtable_s *vtable,
  * Name: intel64_fb_getfmt
  ****************************************************************************/
 
-static uint8_t intel64_fb_getfmt(uint8_t bpp, uint8_t type)
+static int intel64_fb_getfmt(uint8_t bpp, uint8_t type)
 {
   if (type != MULTIBOOT_FRAMEBUFFER_TYPE_RGB)
     {
       /* Only RGB type supported */
 
       gerr("ERROR: not supported type=%d\n", type);
-      PANIC();
+      return -ENOTSUP;
     }
 
   switch (bpp)
@@ -171,7 +171,7 @@ static uint8_t intel64_fb_getfmt(uint8_t bpp, uint8_t type)
       default:
         {
           gerr("ERROR: not supported BPP=%d\n", bpp);
-          PANIC();
+          return -ENOTSUP;
         }
     }
 }
@@ -215,6 +215,7 @@ int up_fbinitialize(int display)
   struct multiboot_tag_framebuffer *fbt = g_mb_fb_tag;
   struct multiboot_fb_s            *fb  = &g_fb;
   uint64_t map_size;
+  int ret;
 
   UNUSED(display);
 
@@ -231,11 +232,17 @@ int up_fbinitialize(int display)
 
   /* Get video info */
 
+  ret = intel64_fb_getfmt(fbt->common.framebuffer_bpp,
+                          fbt->common.framebuffer_type);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   fb->videoinfo.xres    = fbt->common.framebuffer_width;
   fb->videoinfo.yres    = fbt->common.framebuffer_height;
   fb->videoinfo.nplanes = 1;
-  fb->videoinfo.fmt     = intel64_fb_getfmt(fbt->common.framebuffer_bpp,
-                                            fbt->common.framebuffer_type);
+  fb->videoinfo.fmt     = ret;
 
   /* Get plane info */
 
@@ -261,9 +268,13 @@ int up_fbinitialize(int display)
                   HUGE_PAGE_SIZE_1G;
     }
 
-  up_map_region(fb->baseaddr, map_size,
-                X86_PAGE_WR | X86_PAGE_PRESENT |
-                X86_PAGE_NOCACHE | X86_PAGE_GLOBAL);
+  ret = up_map_region(fb->baseaddr, map_size,
+                      X86_PAGE_WR | X86_PAGE_PRESENT |
+                      X86_PAGE_NOCACHE | X86_PAGE_GLOBAL);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
   /* Clear frambufer */
 
