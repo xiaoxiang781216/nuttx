@@ -623,7 +623,7 @@ struct audio_enc_spx_s
 
 struct audio_enc_opus_s
 {
-  uint32_t application;
+  char     application[16];
   uint32_t compression_level;
   float    frame_duration;
 };
