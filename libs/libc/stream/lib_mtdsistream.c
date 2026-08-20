@@ -152,10 +152,14 @@ static ssize_t mtdsistream_gets(FAR struct lib_sistream_s *self,
           size_t copyout = nblock * blocksize;
 
           ret = MTD_BREAD(mtd, block, nblock, ptr);
-          if (ret < 0)
+          if (ret != nblock)
             {
-              return ptr - (FAR unsigned char *)buf > 0 ?
-                     ptr - (FAR unsigned char *)buf : ret;
+              if (ptr - (FAR unsigned char *)buf > 0)
+                {
+                  return ptr - (FAR unsigned char *)buf;
+                }
+
+              return ret < 0 ? ret : -EIO;
             }
 
           ptr        += copyout;

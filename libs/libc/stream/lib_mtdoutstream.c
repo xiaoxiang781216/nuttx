@@ -86,9 +86,9 @@ static ssize_t mtdoutstream_bwrite(FAR struct lib_mtdoutstream_s *stream,
     }
 
   ret = MTD_BWRITE(mtd, sblock, nblock, buf);
-  if (ret < 0)
+  if (ret != nblock)
     {
-      return ret;
+      return ret < 0 ? ret : -EIO;
     }
 
   return ret;
@@ -159,9 +159,9 @@ static ssize_t mtdoutstream_puts(FAR struct lib_sostream_s *self,
         }
 
       ret = MTD_WRITE(mtd, self->nput, len, buf);
-      if (ret < 0)
+      if (ret != len)
         {
-          return ret;
+          return ret < 0 ? ret : -EIO;
         }
 
       self->nput += len;
