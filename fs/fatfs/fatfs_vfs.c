@@ -1357,24 +1357,43 @@ static int fatfs_unbind(FAR void *handle, FAR struct inode **driver,
   path[0] = '0' + fs->pdrv;
   path[1] = ':';
   path[2] = '\0';
-  ret = fatfs_convert_result(f_unmount(path));
 
-  /* We hold a reference to the driver but should not but
-   * mucking with inodes in this context. So, we will just return
-   * our contained reference to the driver inode and let the
-   * umount logic dispose of it.
+  /* Serialize against in-flight file operations (open/read/write/ioctl)
+   * that hold fs->lock.  Without this lock, a concurrent operation can
+   * be mid-flight, still holding fs->lock, when we destroy the mutex and
+   * free fs below; its nxmutex_unlock() would then touch freed memory
+   * (use-after-free, e.g. during a force-unmount on reboot).
    */
 
-  *driver = fatfs_free_slot(fs->pdrv);
-  if ((*driver)->u.i_bops->close)
+  ret = nxmutex_lock(&fs->lock);
+  if (ret < 0)
     {
-      (*driver)->u.i_bops->close(*driver);
+      return ret;
     }
 
-  /* Release the mountpoint private data */
+  ret = fatfs_convert_result(f_unmount(path));
+  nxmutex_unlock(&fs->lock);
 
-  nxmutex_destroy(&fs->lock);
-  fs_heap_free(fs);
+  if (ret >= 0)
+    {
+      /* We hold a reference to the driver but should not but
+       * mucking with inodes in this context. So, we will just return
+       * our contained reference to the driver inode and let the
+       * umount logic dispose of it.
+       */
+
+      *driver = fatfs_free_slot(fs->pdrv);
+      if ((*driver)->u.i_bops->close)
+        {
+          (*driver)->u.i_bops->close(*driver);
+        }
+
+      /* Release the mountpoint private data */
+
+      nxmutex_destroy(&fs->lock);
+      fs_heap_free(fs);
+    }
+
   return ret;
 }
 
