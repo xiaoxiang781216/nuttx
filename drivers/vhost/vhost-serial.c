@@ -327,7 +327,7 @@ static int vhost_serial_probe(FAR struct vhost_device *hdev)
   argv[0] = arg0;
   argv[1] = NULL;
 
-  name = lib_get_pathbuffer();
+  name = lib_get_tempbuffer(PATH_MAX);
   if (name == NULL)
     {
       ret = -ENOMEM;
@@ -356,13 +356,13 @@ static int vhost_serial_probe(FAR struct vhost_device *hdev)
       goto err_tx_thread;
     }
 
-  lib_put_pathbuffer(name);
+  lib_put_tempbuffer(name);
   return ret;
 
 err_tx_thread:
   kthread_delete(priv->pidrx);
 err_rx_thread:
-  lib_put_pathbuffer(name);
+  lib_put_tempbuffer(name);
 err_init_name:
   vhost_delete_virtqueues(hdev);
 err_init_vq:
