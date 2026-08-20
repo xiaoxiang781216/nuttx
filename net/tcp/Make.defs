@@ -69,6 +69,12 @@ ifeq ($(CONFIG_NET_TCP_CC_NEWRENO),y)
 NET_CSRCS += tcp_cc.c
 endif
 
+# TCP SACK-based loss recovery (RFC 6675 scoreboard)
+
+ifeq ($(CONFIG_NET_TCP_SELECTIVE_ACK),y)
+NET_CSRCS += tcp_sack.c
+endif
+
 # TCP debug
 
 ifeq ($(CONFIG_DEBUG_FEATURES),y)

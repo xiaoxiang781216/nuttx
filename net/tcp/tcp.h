@@ -309,12 +309,12 @@ struct tcp_conn_s
 #endif
 
 #ifdef CONFIG_NET_TCP_SELECTIVE_ACK
-  /* SACK ranges received from the peer's latest ACK.
-   * Parsed in tcp_input and consumed by psock_send_eventhandler.
-   */
+  /* Sender-side scoreboard (RFC 6675) */
 
-  uint8_t nsacks;
-  struct tcp_sack_s sack_ranges[TCP_SACK_RANGES_MAX];
+  bool     newsack;                                   /* New SACK info merged in this ACK */
+  uint8_t  nsacks;                                    /* Active entry count */
+  struct tcp_sack_s sack_ranges[TCP_SACK_RANGES_MAX]; /* Sorted by left_edge */
+  uint32_t highrxt;                                   /* Highest seq retransmitted */
 #endif
 
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
@@ -2406,6 +2406,97 @@ void tcp_cc_update(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp);
 void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp,
                      uint32_t flags);
 #endif
+
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+
+/****************************************************************************
+ * Name: tcp_sack_update
+ *
+ * Description:
+ *   Update the sender-side scoreboard with SACK blocks from an ACK.
+ *   Inserts new ranges and merges overlapping/adjacent entries.
+ *
+ * Input Parameters:
+ *   conn   - The TCP connection
+ *   sacks  - Array of SACK ranges parsed from the ACK
+ *   nsacks - Number of SACK ranges
+ *
+ * Returned Value:
+ *   true if new information was merged into the scoreboard
+ *
+ ****************************************************************************/
+
+bool tcp_sack_update(FAR struct tcp_conn_s *conn,
+                     FAR const struct tcp_sack_s *sacks,
+                     uint8_t nsacks);
+
+/****************************************************************************
+ * Name: tcp_sack_advance
+ *
+ * Description:
+ *   Advance the scoreboard when the cumulative ACK moves forward.
+ *   Removes entries fully below highack and trims partial entries.
+ *
+ * Input Parameters:
+ *   conn    - The TCP connection
+ *   highack - The new cumulative acknowledgment number
+ *
+ ****************************************************************************/
+
+void tcp_sack_advance(FAR struct tcp_conn_s *conn, uint32_t highack);
+
+/****************************************************************************
+ * Name: tcp_sack_reset
+ *
+ * Description:
+ *   Completely reset the scoreboard (called on RTO).
+ *
+ * Input Parameters:
+ *   conn - The TCP connection
+ *
+ ****************************************************************************/
+
+void tcp_sack_reset(FAR struct tcp_conn_s *conn);
+
+/****************************************************************************
+ * Name: tcp_sack_islost
+ *
+ * Description:
+ *   Determine if a segment at the given sequence number is lost per
+ *   RFC 6675 IsLost: true if DupThresh (3) or more SACK ranges have
+ *   left_edge strictly greater than seqno.
+ *
+ * Input Parameters:
+ *   conn  - The TCP connection
+ *   seqno - Start sequence number of the segment
+ *
+ * Returned Value:
+ *   true if the segment is considered lost
+ *
+ ****************************************************************************/
+
+bool tcp_sack_islost(FAR const struct tcp_conn_s *conn, uint32_t seqno);
+
+/****************************************************************************
+ * Name: tcp_sack_issacked
+ *
+ * Description:
+ *   Check if a segment is fully covered by the scoreboard (already SACKed).
+ *
+ * Input Parameters:
+ *   conn  - The TCP connection
+ *   seqno - Start sequence number of the segment
+ *   len   - Length of the segment in bytes
+ *
+ * Returned Value:
+ *   true if the segment is completely covered by a SACK range
+ *
+ ****************************************************************************/
+
+bool tcp_sack_issacked(FAR const struct tcp_conn_s *conn,
+                       uint32_t seqno, uint16_t len);
+
+#endif /* CONFIG_NET_TCP_SELECTIVE_ACK */
 
 #ifdef __cplusplus
 }

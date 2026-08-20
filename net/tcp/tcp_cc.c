@@ -26,6 +26,7 @@
 
 #include <debug.h>
 
+#include "devif/devif.h"
 #include "tcp/tcp.h"
 
 /****************************************************************************
@@ -199,6 +200,71 @@ void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp,
 {
   uint32_t ackno = tcp_getsequence(tcp->ackno);
 
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+  /* RFC 6675 DupACK: ACK with new SACK info counts as DupACK
+   * regardless of whether cumulative ACK advances.
+   */
+
+  if ((conn->flags & TCP_SACK) && conn->newsack)
+    {
+      /* If cumulative ACK advanced, reset dupacks first,
+       * then count this as DupAcks=1 if new SACK info present.
+       */
+
+      if (TCP_SEQ_GT(ackno, conn->last_ackno))
+        {
+          conn->dupacks = 0;
+        }
+
+      conn->dupacks++;
+
+      if (conn->dupacks > TCP_FAST_RETRANSMISSION_THRESH)
+        {
+          /* Inflate the congestion window */
+
+          CC_CWND_INC(conn->cwnd, conn->mss);
+        }
+
+      if (conn->dupacks >= TCP_FAST_RETRANSMISSION_THRESH &&
+          !(conn->flags & TCP_INFR))
+        {
+          /* Condition (a): DupACK >= DupThresh triggers loss recovery */
+
+          conn->flags |= TCP_INFT;
+          conn->fr_recover = conn->sndseq_max;
+        }
+
+      /* Condition (b): IsLost(HighACK) = true also triggers loss
+       * recovery.  Even if DupACK count hasn't reached DupThresh,
+       * if the scoreboard shows the segment at cumulative ACK is
+       * lost (DupThresh SACK ranges above it, or > 2*MSS bytes
+       * SACKed above), enter recovery.
+       */
+
+      if (!(conn->flags & TCP_INFR) &&
+          conn->nsacks > 0 &&
+          tcp_sack_islost(conn, ackno))
+        {
+          conn->flags |= TCP_INFT;
+          conn->fr_recover = conn->sndseq_max;
+        }
+
+      /* If cumulative ACK did NOT advance, we are done. */
+
+      if (TCP_SEQ_LTE(ackno, conn->last_ackno))
+        {
+          return;
+        }
+
+      /* Cumulative ACK advanced: fall through to handle recovery exit
+       * and cwnd updates. dupacks was already handled above (reset to
+       * 0, then incremented to 1). last_ackno will be updated below.
+       */
+
+      goto ack_advance;
+    }
+#endif
+
   /* Its only a duplicate ack if:
    * 1) It doesn't ACK new data
    * 2) There is outstanding unacknowledged data
@@ -256,11 +322,14 @@ void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp,
     {
       /* We come here when the ACK acknowledges new data. */
 
-      uint32_t acked = TCP_SEQ_SUB(ackno, conn->last_ackno);
-
-      /* Reset dupacks and update last_ackno. */
+      uint32_t acked;
 
       conn->dupacks = 0;
+
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+ack_advance:
+#endif
+      acked = TCP_SEQ_SUB(ackno, conn->last_ackno);
       conn->last_ackno = ackno;
 
       /* When the ackno covers more than the fr_recover, exit the
@@ -277,6 +346,12 @@ void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp,
 
               conn->flags &= ~TCP_INFR;
               conn->cwnd = conn->ssthresh;
+
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+              /* Exit Loss Recovery: reset highrxt */
+
+              conn->highrxt = 0;
+#endif
             }
           else
             {

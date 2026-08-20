@@ -242,6 +242,10 @@ static void retransmit_segment(FAR struct tcp_conn_s *conn,
       ninfo("REXMIT: Moving wrb=%p nrtx=%u\n",
             wrb, TCP_WBNRTX(wrb));
 
+#if defined(CONFIG_NET_TCP_FAST_RETRANSMIT) && !defined(CONFIG_NET_TCP_CC_NEWRENO)
+      TCP_WBNACK(wrb) = 0;
+#endif
+
       psock_insert_segment(wrb, &conn->write_q);
     }
 }
@@ -476,17 +480,15 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 #ifdef CONFIG_NET_TCP_CC_NEWRENO
               if (conn->dupacks >= TCP_FAST_RETRANSMISSION_THRESH)
 #elif defined(CONFIG_NET_TCP_FAST_RETRANSMIT)
-              /* Fast Retransmit (RFC 5681): an acknowledgment is considered
-               * a "duplicate" when (a) the receiver of the ACK has
-               * outstanding data, (b) the incoming acknowledgment carries
-               * no data, (c) the SYN and FIN bits are both off, (d) the
-               * acknowledgment number is equal to the greatest
-               * acknowledgment received on the given connection and
-               * (e) the advertised window in the incoming acknowledgment
-               * equals the advertised window in the last incoming
-               * acknowledgment.
-               */
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+              /* RFC 6675: new SACK info counts as DupACK */
 
+              if ((conn->flags & TCP_SACK) && conn->newsack)
+                {
+                  ++TCP_WBNACK(wrb);
+                }
+              else
+#endif
               if (conn->tx_unacked > 0 &&
                   (flags & TCP_NEWDATA) == 0 &&
                   conn->snd_wnd == conn->snd_prev_wnd)
@@ -494,29 +496,11 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                   ++TCP_WBNACK(wrb);
                 }
 
-              /* Retransmit data if need */
-
-              if (TCP_WBNACK(wrb) == TCP_FAST_RETRANSMISSION_THRESH)
+              if (TCP_WBNACK(wrb) >= TCP_FAST_RETRANSMISSION_THRESH)
 #endif
                 {
-                  /* Fast retransmission has been triggered */
-
-#if defined(CONFIG_NET_TCP_FAST_RETRANSMIT) && !defined(CONFIG_NET_TCP_CC_NEWRENO)
-                  /* Reset counter */
-
-                  TCP_WBNACK(wrb) = 0;
-#endif
-
 #ifdef CONFIG_NET_TCP_SELECTIVE_ACK
-                  if (conn->nsacks > 0)
-                    {
-                      /* SACK was already parsed in tcp_input */
-
-                      flags |= TCP_REXMIT;
-                    }
-#ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
-                  else
-#endif
+                  if (!(conn->flags & TCP_SACK))
 #endif
                     {
 #ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
@@ -690,70 +674,85 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
 #ifdef CONFIG_NET_TCP_SELECTIVE_ACK
 
-  /* Check if we are being asked to retransmit s-ack data */
+  /* RFC 6675: Retransmit segments determined lost by the scoreboard. */
 
-  if (conn->nsacks > 0)
+  if (conn->newsack)
     {
       FAR struct tcp_wrbuffer_s *wrb;
       FAR sq_entry_t *entry;
       FAR sq_entry_t *next;
-      uint32_t right;
-      int i;
+      uint32_t seqno;
+      uint16_t pktlen;
 
-      /* Dump s-ack edge */
+      conn->newsack = false;
 
-      for (i = 0, right = 0; i < conn->nsacks; i++)
-        {
-          ninfo("TCP SACK [%d]"
-                "[%" PRIu32 " : %" PRIu32 " : %" PRIu32 "]\n",
-                i, conn->sack_ranges[i].left, conn->sack_ranges[i].right,
-                TCP_SEQ_SUB(conn->sack_ranges[i].right,
-                            conn->sack_ranges[i].left));
-        }
+      /* Iterate unacked_q, retransmit lost segments */
 
       for (entry = sq_peek(&conn->unacked_q); entry; entry = next)
         {
           wrb  = (FAR struct tcp_wrbuffer_s *)entry;
           next = sq_next(entry);
 
-          for (i = 0, right = 0; i < conn->nsacks; i++)
+          seqno  = TCP_WBSEQNO(wrb);
+          pktlen = TCP_WBPKTLEN(wrb);
+
+          /* Skip already SACKed segments */
+
+          if (tcp_sack_issacked(conn, seqno, pktlen))
             {
-              /* Wrb seqno out of s-ack edge ? do retransmit ! */
-
-              if (TCP_SEQ_LT(TCP_WBSEQNO(wrb),
-                             conn->sack_ranges[i].left) &&
-                  TCP_SEQ_GTE(TCP_WBSEQNO(wrb), right))
-                {
-                  ninfo("TCP REXMIT "
-                        "[%" PRIu32 " : %" PRIu32 " : %d]\n",
-                        TCP_WBSEQNO(wrb),
-                        TCP_SEQ_ADD(TCP_WBSEQNO(wrb), TCP_WBPKTLEN(wrb)),
-                        TCP_WBPKTLEN(wrb));
-                  sq_rem(entry, &conn->unacked_q);
-                  retransmit_segment(conn, (FAR void *)entry, false);
-                  break;
-                }
-
-              right = conn->sack_ranges[i].right;
+              continue;
             }
+
+          /* Skip segments not determined lost.
+           * Also retransmit if DupACK threshold was reached —
+           * covers the case where SACK ranges merge into one entry.
+           */
+
+          if (!tcp_sack_islost(conn, seqno)
+#ifdef CONFIG_NET_TCP_CC_NEWRENO
+              && !(conn->flags & TCP_INFT)
+#elif defined(CONFIG_NET_TCP_FAST_RETRANSMIT)
+              && TCP_WBNACK(wrb) < TCP_FAST_RETRANSMISSION_THRESH
+#endif
+             )
+            {
+              continue;
+            }
+
+          /* Skip segments already retransmitted in this cycle */
+
+          if (conn->highrxt != 0 &&
+              TCP_SEQ_LTE(seqno, conn->highrxt))
+            {
+              continue;
+            }
+
+          ninfo("TCP SACK REXMIT "
+                "[%" PRIu32 " : %" PRIu32 " : %d]\n",
+                seqno, TCP_SEQ_ADD(seqno, pktlen), pktlen);
+
+          /* Retransmit - do NOT increment wb_nrtx */
+
+          sq_rem(entry, &conn->unacked_q);
+          retransmit_segment(conn, wrb, false);
+
+          /* Update highrxt */
+
+          conn->highrxt = TCP_SEQ_ADD(seqno, pktlen);
         }
 
 #ifdef CONFIG_NET_TCP_CC_NEWRENO
-          /* After Fast retransmitted, set ssthresh to the maximum of
-           * the unacked and the 2*SMSS, and enter to Fast Recovery.
-           * ssthresh = max (FlightSize / 2, 2*SMSS) referring to rfc5681
-           * cwnd=ssthresh + 3*SMSS  referring to rfc5681
-           */
+      /* After Fast retransmitted, set ssthresh to the maximum of
+       * the unacked and the 2*SMSS, and enter to Fast Recovery.
+       * ssthresh = max (FlightSize / 2, 2*SMSS) referring to rfc5681
+       * cwnd=ssthresh + 3*SMSS  referring to rfc5681
+       */
 
-          if (conn->flags & TCP_INFT)
-            {
-              tcp_cc_update(conn, NULL);
-            }
+      if (conn->flags & TCP_INFT)
+        {
+          tcp_cc_update(conn, NULL);
+        }
 #endif
-
-      /* Consumed - clear to prevent stale use by poll path */
-
-      conn->nsacks = 0;
     }
   else
 #endif
@@ -766,6 +765,21 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       FAR sq_entry_t *entry;
 
       ninfo("REXMIT: %" PRIx32 "\n", flags);
+
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+      /* RTO: clear scoreboard and reset highrxt */
+
+      tcp_sack_reset(conn);
+#endif
+
+#ifdef CONFIG_NET_TCP_CC_NEWRENO
+      /* RTO: exit Loss Recovery if active */
+
+      if (conn->flags & TCP_INFR)
+        {
+          conn->flags &= ~TCP_INFR;
+        }
+#endif
 
       /* If there is a partially sent write buffer at the head of the
        * write_q?  Has anything been sent from that write buffer?

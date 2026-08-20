@@ -86,6 +86,12 @@ if(CONFIG_NET_TCP AND NOT CONFIG_NET_TCP_NO_STACK)
     list(APPEND SRCS tcp_cc.c)
   endif()
 
+  # TCP SACK-based loss recovery (RFC 6675 scoreboard)
+
+  if(CONFIG_NET_TCP_SELECTIVE_ACK)
+    list(APPEND SRCS tcp_sack.c)
+  endif()
+
   # TCP debug
 
   if(CONFIG_DEBUG_FEATURES)

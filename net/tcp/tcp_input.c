@@ -656,17 +656,16 @@ static void tcp_parse_option(FAR struct net_driver_s *dev,
  * Name: tcp_parse_sack
  *
  * Description:
- *   Parse SACK options from incoming TCP header and store the results
- *   in conn->sack_ranges[].  Called from tcp_input before invoking the
- *   send callback so that psock_send_eventhandler can use the parsed
- *   SACK information without re-accessing the packet buffer.
+ *   Parse SACK options from incoming TCP header into a stack-local
+ *   temporary array, then merge them into the sender-side scoreboard
+ *   via tcp_sack_update().
  *
  * Input Parameters:
  *   conn - The TCP connection of interest
  *   tcp  - Pointer to the TCP header containing options
  *
  * Returned Value:
- *   Number of SACK blocks parsed (stored in conn->nsacks)
+ *   None
  *
  * Assumptions:
  *   The network device is locked.
@@ -674,11 +673,12 @@ static void tcp_parse_option(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 #ifdef CONFIG_NET_TCP_SELECTIVE_ACK
-static int tcp_parse_sack(FAR struct tcp_conn_s *conn,
-                          FAR struct tcp_hdr_s *tcp)
+static void tcp_parse_sack(FAR struct tcp_conn_s *conn,
+                           FAR struct tcp_hdr_s *tcp)
 {
+  struct tcp_sack_s tmp[TCP_SACK_RANGES_MAX];
   FAR struct tcp_sack_s *sacks;
-  int nsack = 0;
+  uint8_t nsack = 0;
   uint8_t opt;
   int i;
 
@@ -687,8 +687,8 @@ static int tcp_parse_sack(FAR struct tcp_conn_s *conn,
   if ((conn->flags & TCP_SACK) == 0 ||
       (tcp->tcpoffset & 0xf0) <= 0x50)
     {
-      conn->nsacks = 0;
-      return 0;
+      conn->newsack = false;
+      return;
     }
 
   for (i = 0; i < ((tcp->tcpoffset >> 4) - 5) << 2; )
@@ -723,9 +723,9 @@ static int tcp_parse_sack(FAR struct tcp_conn_s *conn,
 
           for (i = 0; i < nsack; i++)
             {
-              conn->sack_ranges[i].left =
+              tmp[i].left =
                 tcp_getsequence((FAR uint8_t *)&sacks[i]);
-              conn->sack_ranges[i].right =
+              tmp[i].right =
                 tcp_getsequence((FAR uint8_t *)&sacks[i] + 4);
             }
 
@@ -751,31 +751,16 @@ static int tcp_parse_sack(FAR struct tcp_conn_s *conn,
       i += *(tcp->optdata + 1 + i);
     }
 
-  conn->nsacks = nsack;
-
-  /* Sort SACK ranges by left edge for efficient retransmission */
-
-  if (nsack > 1)
+  if (nsack > 0)
     {
-      struct tcp_sack_s tmp;
-      int j;
+      /* Merge parsed SACK ranges into the scoreboard */
 
-      for (i = 0; i < nsack - 1; i++)
-        {
-          for (j = 0; j < nsack - 1 - i; j++)
-            {
-              if (TCP_SEQ_GT(conn->sack_ranges[j].left,
-                             conn->sack_ranges[j + 1].left))
-                {
-                  tmp = conn->sack_ranges[j];
-                  conn->sack_ranges[j] = conn->sack_ranges[j + 1];
-                  conn->sack_ranges[j + 1] = tmp;
-                }
-            }
-        }
+      conn->newsack = tcp_sack_update(conn, tmp, nsack);
     }
-
-  return nsack;
+  else
+    {
+      conn->newsack = false;
+    }
 }
 #endif /* CONFIG_NET_TCP_SELECTIVE_ACK */
 
@@ -1514,7 +1499,7 @@ found:
 
 #ifdef CONFIG_NET_TCP_SELECTIVE_ACK
       /* Parse SACK options once here so that send callbacks can use
-       * conn->sack_ranges without re-accessing the packet buffer.
+       * the scoreboard without re-accessing the packet buffer.
        */
 
       tcp_parse_sack(conn, tcp);
@@ -1530,6 +1515,11 @@ found:
 
       if (conn->tx_unacked < lasttxunacked)
         {
+#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
+          tcp_sack_advance(conn, ackseq);
+          conn->highrxt = 0;
+#endif
+
           if (conn->tx_unacked == 0)
             {
               timeout = 0;
