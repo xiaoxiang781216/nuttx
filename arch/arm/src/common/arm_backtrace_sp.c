@@ -271,6 +271,7 @@ int up_backtrace(struct tcb_s *tcb,
 
       if (up_interrupt_context())
         {
+          unsigned long usp = up_getusrsp(running_regs());
           unsigned long top =
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
             up_get_intstackbase(this_cpu()) + INTSTACK_SIZE;
@@ -279,12 +280,12 @@ int up_backtrace(struct tcb_s *tcb,
                            rtcb->adj_stack_size;
 #endif
           ret = backtrace_branch(top, sp, buffer, size, &skip);
-          if (ret < size)
+          if (ret < size && usp != 0)
             {
               ret += backtrace_branch((unsigned long)
                                       rtcb->stack_base_ptr +
                                       rtcb->adj_stack_size,
-                                      ((uint32_t *)running_regs())[REG_SP],
+                                      usp,
                                       &buffer[ret],
                                       size - ret, &skip);
             }
