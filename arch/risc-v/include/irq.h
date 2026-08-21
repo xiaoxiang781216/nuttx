@@ -34,6 +34,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <stdbool.h>
 
 /* arch/arch.h must be included before nuttx/percpu.h so that
  * up_this_cpu_var (defined in arch.h) is visible when percpu.h
