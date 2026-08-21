@@ -99,13 +99,6 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((uint32_t *)((regs) ? (regs) : running_regs()))[REG_PC])
-
 #endif /* __ASSEMBLY__ */
 
 #undef EXTERN

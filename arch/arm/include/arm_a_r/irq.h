@@ -500,6 +500,14 @@ static inline_function uintptr_t up_getusrsp(void *regs)
   return ptr != NULL ? ptr[REG_SP] : 0u;
 }
 
+/* Return the interrupted PC.  arm_a_r has no separate hardware exception
+ * frame to recover from, so when regs is NULL fall back to the saved
+ * context of the running task.
+ */
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : running_regs()))[REG_PC])
+
 noinstrument_function
 static inline_function void up_set_interrupt_context(bool flag)
 {

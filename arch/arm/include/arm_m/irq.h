@@ -651,6 +651,18 @@ static inline_function uintptr_t up_getusrsp(void *regs)
     }
 }
 
+/* Return the interrupted PC.  When regs is NULL (e.g. a peripheral IRQ
+ * dispatched via exception_direct() that never software-saved the
+ * context), fall back to the hardware-stacked exception frame at PSP.
+ * PSP points to the auto-saved area, which maps to &regs[SW_XCPT_REGS],
+ * so REG_PC is offset by -SW_XCPT_REGS to index into it.
+ */
+
+#define up_getusrpc(regs) \
+  ((regs) != NULL ? \
+   ((uint32_t *)(regs))[REG_PC] : \
+   ((uint32_t *)getpsp())[REG_PC - SW_XCPT_REGS])
+
 static inline_function bool up_interrupt_context(void)
 {
   return getipsr() != 0;
