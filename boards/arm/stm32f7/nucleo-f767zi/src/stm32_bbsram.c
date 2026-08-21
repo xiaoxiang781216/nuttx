@@ -416,7 +416,7 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
    * fault.
    */
 
-  pdump->info.current_regs = (uintptr_t)running_regs();
+  pdump->info.current_regs = (uintptr_t)regs;
 
   /* Save Context */
 
@@ -429,8 +429,7 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
       pdump->info.stacks.interrupt.sp = sp;
       pdump->info.flags |= (REGS_PRESENT | USERSTACK_PRESENT |
                             INTSTACK_PRESENT);
-      memcpy(pdump->info.regs, running_regs(),
-             sizeof(pdump->info.regs));
+      memcpy(pdump->info.regs, regs, sizeof(pdump->info.regs));
       pdump->info.stacks.user.sp = pdump->info.regs[REG_R13];
     }
   else
