@@ -150,7 +150,7 @@ int file_close(FAR struct file *filep)
 #if defined(CONFIG_FS_NOTIFY) || defined(CONFIG_FS_PATHCACHE)
       if (path != NULL)
         {
-          lib_put_pathbuffer(path);
+          lib_put_tempbuffer(path);
         }
 #endif
 
