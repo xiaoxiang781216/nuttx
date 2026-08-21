@@ -102,6 +102,26 @@
 #  define CONFIG_NET_SLIP_NINTERFACES 1
 #endif
 
+/* Maximum number of RX/TX iterations performed by a single run of
+ * slip_interrupt_work().  The TTY and rxbuf have to be drained in a loop
+ * because slip_receive() consumes only one SLIP frame per call and the TTY
+ * reports POLLIN only when new bytes arrive.
+ *
+ * A pause on the wire ends the loop by itself: the TTY is opened O_NONBLOCK,
+ * so file_read() fails with EAGAIN and the iteration makes no progress.  The
+ * limit covers the opposite case, a producer fast enough to refill the TTY
+ * as it is drained (a PTY or an rpmsg backed TTY, not a real UART), where
+ * every read succeeds and the run would last as long as the traffic does.
+ * That is unfair rather than incorrect: netdev_lock() is held for the whole
+ * run, and slip_txdone() queues slip_txavail_work() on SLIPWORK, the queue
+ * this work item occupies, so TX waits for the run to end.
+ *
+ * So cap the run and re-queue the remainder, the way a NAPI budget does:
+ * nothing is dropped and the thread is given back.
+ */
+
+#define SLIP_MAX_DRAIN_LOOPS 8
+
 /*  SLIP special character codes ********************************************/
 
 #define SLIP_END      0300    /* Indicates end of packet */
@@ -737,7 +757,9 @@ static void slip_txdone(FAR struct slip_driver_s *self)
 static void slip_interrupt_work(FAR void *arg)
 {
   FAR struct slip_driver_s *self = (FAR struct slip_driver_s *)arg;
+  bool progress;
   ssize_t ssz;
+  int loops = 0;
 
   if (!self->bifup)
     {
@@ -752,50 +774,82 @@ static void slip_interrupt_work(FAR void *arg)
 
   netdev_lock(&self->dev);
 
-  /* Process pending Ethernet interrupts */
-
-  /* Get and clear interrupt status bits */
-
-  /* Handle interrupts according to status bit settings */
-
-  if (self->rxlen < sizeof(self->rxbuf))
-    {
-      ssz = file_read(&self->tty,
-                      &self->rxbuf[self->rxlen],
-                      sizeof(self->rxbuf) - self->rxlen);
-      if (ssz > 0)
-        {
-          self->rxlen += (size_t)ssz;
-        }
-    }
-
-  if (self->txsent < self->txlen)
-    {
-      ssz = file_write(&self->tty,
-                       &self->txbuf[self->txsent],
-                       self->txlen - self->txsent);
-      if (ssz > 0)
-        {
-          self->txsent += (size_t)ssz;
-        }
-    }
-
-  /* Check if we received an incoming packet, if so, call slip_receive() */
-
-  if (self->rxlen == sizeof(self->rxbuf) ||
-      memchr(self->rxbuf, SLIP_END, self->rxlen))
-    {
-      slip_receive(self);
-    }
-
-  /* Check if a packet transmission just completed.  If so, call skel_txdone.
-   * This may disable further Tx interrupts if there are no pending
-   * transmissions.
+  /* Drain the TTY and rxbuf in a bounded loop.  slip_receive() consumes at
+   * most one SLIP frame per call, and a single file_read() may pull in
+   * several frames or leave bytes behind in the TTY.  Nothing brings us
+   * back for those leftovers: the bytes already copied into rxbuf are
+   * invisible to poll, and the TTY raises POLLIN only when new bytes
+   * arrive (see uart_datareceived()).  A single pass would therefore hold
+   * the pending frames until the peer happens to send more data, so keep
+   * going while progress is being made.
+   *
+   * "Progress" deliberately means "bytes were moved or a frame was
+   * consumed", not "the RX buffer is non-empty": SLIP is a byte stream, so
+   * holding an incomplete frame is the normal state, and slip_receive()
+   * leaves such a frame untouched in rxbuf.  Looping on a non-empty rxbuf
+   * would spin here (and re-queue itself) until the rest of the frame
+   * arrives, starving every other user of the shared LPWORK queue.
    */
 
-  if (self->txlen > 0 && self->txsent == self->txlen)
+  do
     {
-      slip_txdone(self);
+      progress = false;
+
+      if (self->rxlen < sizeof(self->rxbuf))
+        {
+          ssz = file_read(&self->tty,
+                          &self->rxbuf[self->rxlen],
+                          sizeof(self->rxbuf) - self->rxlen);
+          if (ssz > 0)
+            {
+              self->rxlen += ssz;
+              progress = true;
+            }
+        }
+
+      if (self->txsent < self->txlen)
+        {
+          ssz = file_write(&self->tty,
+                           &self->txbuf[self->txsent],
+                           self->txlen - self->txsent);
+          if (ssz > 0)
+            {
+              self->txsent += ssz;
+              progress = true;
+            }
+        }
+
+      /* Check if we received an incoming packet, if so, call
+       * slip_receive()
+       */
+
+      if (self->rxlen == sizeof(self->rxbuf) ||
+          memchr(self->rxbuf, SLIP_END, self->rxlen))
+        {
+          slip_receive(self);
+          progress = true;
+        }
+
+      /* Check if a packet transmission just completed.  If so, call
+       * slip_txdone().  This also polls the network for more TX data.
+       */
+
+      if (self->txlen > 0 && self->txsent == self->txlen)
+        {
+          slip_txdone(self);
+        }
+    }
+  while (progress && ++loops < SLIP_MAX_DRAIN_LOOPS);
+
+  /* Re-schedule only when the loop was cut short by the iteration limit
+   * while data was still flowing.  Never re-schedule merely because rxbuf
+   * holds a partial frame: there is nothing to do until more bytes arrive,
+   * and POLLIN will report them.
+   */
+
+  if (progress && work_available(&self->irqwork))
+    {
+      work_queue(SLIPWORK, &self->irqwork, slip_interrupt_work, self, 0);
     }
 
   netdev_unlock(&self->dev);
