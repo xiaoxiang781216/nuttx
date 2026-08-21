@@ -99,16 +99,28 @@
 
 #if XCHAL_HAVE_S32C1I != 0
 #  define REG_SCOMPARE1       (_REG_EXTRA_START + 0)
-#  define _REG_BR_START       (_REG_EXTRA_START + 1)
+#  define _REG_NCP_START      (_REG_EXTRA_START + 1)
 #else
-#  define _REG_BR_START       _REG_EXTRA_START
+#  define _REG_NCP_START      _REG_EXTRA_START
 #endif
 
 #if XCHAL_HAVE_BOOLEANS != 0
-#  define REG_BR              (_REG_BR_START + 0)
-#  define _REG_LOOPS_START    (_REG_BR_START + 1)
+#  define REG_BR              (_REG_NCP_START + 0)
+#  define _REG_MAC16_START    (_REG_NCP_START + 1)
 #else
-#  define _REG_LOOPS_START    _REG_BR_START
+#  define _REG_MAC16_START    _REG_NCP_START
+#endif
+
+#if XCHAL_HAVE_MAC16 != 0
+#  define REG_ACCLO           (_REG_MAC16_START + 0)
+#  define REG_ACCHI           (_REG_MAC16_START + 1)
+#  define REG_M0              (_REG_MAC16_START + 2)
+#  define REG_M1              (_REG_MAC16_START + 3)
+#  define REG_M2              (_REG_MAC16_START + 4)
+#  define REG_M3              (_REG_MAC16_START + 5)
+#  define _REG_LOOPS_START    (_REG_MAC16_START + 6)
+#else
+#  define _REG_LOOPS_START    _REG_MAC16_START
 #endif
 
 #if XCHAL_HAVE_LOOPS != 0

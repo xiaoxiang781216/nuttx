@@ -148,6 +148,21 @@ _xtensa_context_save:
 	s32i	a3, sp, (4 * REG_BR)
 #endif
 
+#if XCHAL_HAVE_MAC16 != 0
+	rsr		a3, ACCLO
+	s32i	a3, sp, (4 * REG_ACCLO)
+	rsr		a3, ACCHI
+	s32i	a3, sp, (4 * REG_ACCHI)
+	rsr		a3, M0
+	s32i	a3, sp, (4 * REG_M0)
+	rsr		a3, M1
+	s32i	a3, sp, (4 * REG_M1)
+	rsr		a3, M2
+	s32i	a3, sp, (4 * REG_M2)
+	rsr		a3, M3
+	s32i	a3, sp, (4 * REG_M3)
+#endif
+
 #if XCHAL_HAVE_LOOPS != 0
 	rsr		a3, LBEG
 	s32i	a3, sp, (4 * REG_LBEG)
@@ -288,6 +303,21 @@ _xtensa_context_restore:
 #if XCHAL_HAVE_BOOLEANS != 0
 	l32i  a3, a2, (4 * REG_BR)
 	wsr   a3, BR
+#endif
+
+#if XCHAL_HAVE_MAC16 != 0
+	l32i  a3, a2, (4 * REG_ACCLO)
+	wsr   a3, ACCLO
+	l32i  a3, a2, (4 * REG_ACCHI)
+	wsr   a3, ACCHI
+	l32i  a3, a2, (4 * REG_M0)
+	wsr   a3, M0
+	l32i  a3, a2, (4 * REG_M1)
+	wsr   a3, M1
+	l32i  a3, a2, (4 * REG_M2)
+	wsr   a3, M2
+	l32i  a3, a2, (4 * REG_M3)
+	wsr   a3, M3
 #endif
 
 	l32i	a3, a2, (4 * REG_SAR)

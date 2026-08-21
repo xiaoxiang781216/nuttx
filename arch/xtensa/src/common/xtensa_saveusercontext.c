@@ -87,6 +87,20 @@ int up_saveusercontext(void *saveregs)
           "   rsr  a2, BR\n"
           "   s32i a2, %0, (4 * " STRINGIFY(REG_BR) ")\n"
 #endif
+#if XCHAL_HAVE_MAC16 != 0
+          "   rsr  a2, ACCLO\n"
+          "   s32i a2, %0, (4 * " STRINGIFY(REG_ACCLO) ")\n"
+          "   rsr  a2, ACCHI\n"
+          "   s32i a2, %0, (4 * " STRINGIFY(REG_ACCHI) ")\n"
+          "   rsr  a2, M0\n"
+          "   s32i a2, %0, (4 * " STRINGIFY(REG_M0) ")\n"
+          "   rsr  a2, M1\n"
+          "   s32i a2, %0, (4 * " STRINGIFY(REG_M1) ")\n"
+          "   rsr  a2, M2\n"
+          "   s32i a2, %0, (4 * " STRINGIFY(REG_M2) ")\n"
+          "   rsr  a2, M3\n"
+          "   s32i a2, %0, (4 * " STRINGIFY(REG_M3) ")\n"
+#endif
 #if XCHAL_HAVE_LOOPS != 0
           "   rsr  a2, LBEG\n"
           "   s32i a2, %0, (4 * " STRINGIFY(REG_LBEG) ")\n"
