@@ -330,8 +330,13 @@ def parse_call_graph(prefix, elf, machine):
     )
 
     for line in proc.stdout:
-        # Function boundary: "0000abcd <func_name>:"
-        m = re.match(r"^[0-9a-f]+ <(.+)>:\s*$", line)
+        # Function boundary: "0000abcd <func_name>:".  The (?!\.)
+        # lookahead rejects local labels (".L1729", ".LBB0_1") that some
+        # toolchains (TASKING) emit before nearly every basic block; they
+        # are not function boundaries and would hijack current_func,
+        # breaking the call graph.  Real function symbols never start
+        # with ".".
+        m = re.match(r"^[0-9a-f]+ <(?!\.)(.+)>:\s*$", line)
         if m:
             current_func = m.group(1)
             graph.setdefault(current_func, set())
