@@ -387,7 +387,7 @@ static ssize_t critmon_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get the status for each CPU  */
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       ssize_t nbytes = critmon_read_cpu(attr, buffer + ret, buflen - ret,
                                         &offset, cpu);

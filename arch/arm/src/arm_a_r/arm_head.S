@@ -297,7 +297,7 @@ __start:
 	bxeq		r1
 #  endif
 #  if CONFIG_NCPUS > 8
-#    error This logic needs to extended for CONFIG_SMP_NCPUS > 8
+#    error This logic needs to extended for CONFIG_NCPUS > 8
 #  endif
 
 __cpu0_start:

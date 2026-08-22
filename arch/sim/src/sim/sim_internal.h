@@ -55,8 +55,17 @@
 #  define SIM_RPTUN_NOBOOT (0 << 1)  /* As the master but not boot the slave */
 #endif
 
-#ifndef CONFIG_SMP_NCPUS
-#  define CONFIG_SMP_NCPUS 1
+/* The host side objects (sim_host*.c) do not see nuttx/include, so the
+ * CPU_SETSIZE from sys/types.h is out of reach.  config.h is available,
+ * so repeat the same rule here.
+ */
+
+#ifndef CPU_SETSIZE
+#  ifdef CONFIG_SMP
+#    define CPU_SETSIZE CONFIG_NCPUS
+#  else
+#    define CPU_SETSIZE 1
+#  endif
 #endif
 
 #ifndef CONFIG_SIM_NETDEV_NUMBER

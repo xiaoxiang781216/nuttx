@@ -338,7 +338,7 @@ void up_irqinitialize(void)
    * disabled during a SPI flash operation
    */
 
-  for (int i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (int i = 0; i < CPU_SETSIZE; i++)
     {
       non_iram_int_mask[i] = UINT32_MAX;
     }
@@ -765,7 +765,7 @@ void esp_intr_noniram_enable(void)
 
 bool esp_irq_noniram_status(int cpu)
 {
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 
   return !non_iram_int_disabled_flag[cpu];
 }

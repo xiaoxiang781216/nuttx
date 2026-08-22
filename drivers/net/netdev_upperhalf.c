@@ -1338,7 +1338,7 @@ static void netdev_upper_exit_thread(FAR struct netdev_upperhalf_s *upper)
   switch (upper->lower->rxtype)
     {
       case NETDEV_RX_THREAD_RSS:
-        cpu = CONFIG_SMP_NCPUS;
+        cpu = CPU_SETSIZE;
       case NETDEV_RX_THREAD:
         while (--cpu >= 0)
           {
@@ -1374,7 +1374,7 @@ static int netdev_upper_ifup(FAR struct net_driver_s *dev)
   switch (upper->lower->rxtype)
     {
       case NETDEV_RX_THREAD_RSS:
-        cpu = CONFIG_SMP_NCPUS;
+        cpu = CPU_SETSIZE;
       case NETDEV_RX_THREAD:
 
         /* Try to bring up a dedicated thread for work. */
@@ -1597,8 +1597,8 @@ int netdev_lower_register(FAR struct netdev_lowerhalf_s *dev,
         cpu = 1;
         break;
       case NETDEV_RX_THREAD_RSS:
-        extra_size = sizeof(struct netdev_thread_s) * CONFIG_SMP_NCPUS;
-        cpu = CONFIG_SMP_NCPUS;
+        extra_size = sizeof(struct netdev_thread_s) * CPU_SETSIZE;
+        cpu = CPU_SETSIZE;
         break;
       default:
         nerr("ERROR: Unrecognized device rxtype: %d\n", dev->rxtype);
@@ -1698,7 +1698,7 @@ int netdev_lower_unregister(FAR struct netdev_lowerhalf_s *dev)
   switch (dev->rxtype)
     {
       case NETDEV_RX_THREAD_RSS:
-        cpu = CONFIG_SMP_NCPUS;
+        cpu = CPU_SETSIZE;
       case NETDEV_RX_THREAD:
         netdev_upper_exit_thread(upper);
         while (--cpu >= 0)

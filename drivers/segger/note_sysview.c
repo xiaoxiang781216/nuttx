@@ -46,7 +46,7 @@
 struct note_sysview_driver_s
 {
   struct note_driver_s driver;
-  unsigned int irq[CONFIG_SMP_NCPUS];
+  unsigned int irq[CPU_SETSIZE];
 };
 
 /****************************************************************************

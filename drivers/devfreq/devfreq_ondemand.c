@@ -82,7 +82,7 @@ static uint32_t devfreq_gov_ondemand_cpuload(void)
   uint32_t idleload = 0;
   int cpu;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       clock_cpuload(cpu, &loadavg);
       idleload += loadavg.active * 100 / loadavg.total;

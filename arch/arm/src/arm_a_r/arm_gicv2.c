@@ -55,7 +55,7 @@
  * Private Data
  ****************************************************************************/
 
-#if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
 static atomic_t g_gic_init_done;
 #endif
 
@@ -68,12 +68,12 @@ static atomic_t g_gic_init_done;
  *
  * Description:
  *   Indicates gic init done, and only cpu0 need wait the gic initialize
- *   done. Because cpu1 ~ (CONFIG_SMP_NCPUS - 1) may not response the
+ *   done. Because cpu1 ~ (CPU_SETSIZE - 1) may not response the
  *   interrupt request by cpu0 when the gic not initialize done.
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
 static void arm_gic_init_done(void)
 {
   atomic_or(&g_gic_init_done, 1 << this_cpu());

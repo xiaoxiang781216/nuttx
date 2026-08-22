@@ -452,7 +452,7 @@ void perf_swevent_purge(FAR struct perf_event_s *event)
 {
   int cpu;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       FAR struct swevent_manger_s *mgr = &per_cpu_var_smp(g_swevent, cpu);
       FAR struct perf_event_s *node;
@@ -489,7 +489,7 @@ void perf_pmu_builtin_register(void)
 {
   int i;
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       list_initialize(&per_cpu_var_smp(g_swevent, i).list_swevent);
       spin_lock_init(&per_cpu_var_smp(g_swevent, i).lock);

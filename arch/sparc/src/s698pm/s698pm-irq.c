@@ -44,7 +44,7 @@
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 
 #if defined(CONFIG_SMP)
-#  define INTSTACK_ALLOC (CONFIG_SMP_NCPUS * INTSTACK_SIZE)
+#  define INTSTACK_ALLOC (CPU_SETSIZE * INTSTACK_SIZE)
 #else
 #  define INTSTACK_ALLOC (INTSTACK_SIZE)
 #endif
@@ -78,22 +78,18 @@ static uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3];
 
 /* These definitions provide the "top" of the push-down stacks. */
 
-uintptr_t g_cpu_intstack_top[CONFIG_SMP_NCPUS] =
+uintptr_t g_cpu_intstack_top[CPU_SETSIZE] =
 {
   (uintptr_t)g_intstack_alloc + INTSTACK_SIZE,
-#if defined(CONFIG_SMP)
-
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
   (uintptr_t)g_intstack_alloc + (2 * INTSTACK_SIZE),
-#if CONFIG_SMP_NCPUS > 2
+#if CPU_SETSIZE > 2
   (uintptr_t)g_intstack_alloc + (3 * INTSTACK_SIZE),
-#if CONFIG_SMP_NCPUS > 3
+#if CPU_SETSIZE > 3
   (uintptr_t)g_intstack_alloc + (4 * INTSTACK_SIZE),
-#endif /* CONFIG_SMP_NCPUS > 3 */
-#endif /* CONFIG_SMP_NCPUS > 2 */
-#endif /* CONFIG_SMP_NCPUS > 1 */
-
-#endif /* defined(CONFIG_SMP) */
+#endif /* CPU_SETSIZE > 3 */
+#endif /* CPU_SETSIZE > 2 */
+#endif /* CPU_SETSIZE > 1 */
 };
 #endif /* if CONFIG_ARCH_INTERRUPTSTACK > 7 */
 
@@ -172,7 +168,7 @@ int s698pm_cpuint_initialize(void)
   /* Which CPU are we initializing */
 
   cpu = this_cpu();
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 #endif
 
   /* get Interrupt_Mask reg address of cpu */
@@ -245,7 +241,7 @@ int s698pm_setup_irq(int cpu, int irq, int priority)
     }
 
   DEBUGASSERT(cpuint >= 0 && cpuint < S698PM_CPUINT_MAX);
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 
   g_irqmap[irq] = IRQ_MKMAP(cpu, cpuint);
   (void)up_prioritize_irq(irq, priority);
@@ -303,7 +299,7 @@ void up_disable_irq(int irq)
     }
 
   DEBUGASSERT(cpuint >= 0 && cpuint < S698PM_CPUINT_MAX);
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 
   if ((irq >= S698PM_IRQ_FIRST_INT && irq <= S698PM_IRQ_LAST_INT) ||
       (irq > S698PM_IRQ_LAST && irq < NR_IRQS))
@@ -342,7 +338,7 @@ void up_enable_irq(int irq)
     }
 
   DEBUGASSERT(cpuint >= 0 && cpuint < S698PM_CPUINT_MAX);
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 
   if ((irq >= S698PM_IRQ_FIRST_INT && irq <= S698PM_IRQ_LAST_INT) ||
       (irq > S698PM_IRQ_LAST && irq < NR_IRQS))
@@ -389,7 +385,7 @@ bool sparc_pending_irq(int irq)
     }
 
   DEBUGASSERT(cpuint >= 0 && cpuint < S698PM_CPUINT_MAX);
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 
   if ((irq >= S698PM_IRQ_FIRST_INT && irq <= S698PM_IRQ_LAST_INT) ||
       (irq > S698PM_IRQ_LAST && irq < NR_IRQS))

@@ -137,7 +137,7 @@ static inline void nxsched_process_scheduler(void)
 
   /* Perform scheduler operations on all CPUs */
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       nxsched_cpu_scheduler(i);
     }

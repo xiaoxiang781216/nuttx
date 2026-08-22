@@ -730,7 +730,7 @@ bsp_done:
 	/* TSS (IST) for 64 bit long mode will be filled in up_irq. */
 	.align(16)
 g_ist64_low:
-	.fill   X86_TSS_SIZE * CONFIG_SMP_NCPUS, 1, 0
+	.fill   X86_TSS_SIZE * CPU_SETSIZE, 1, 0
 
 	/* GDT for 64 bit long mode */
 	.align(16)
@@ -749,7 +749,7 @@ g_gdt64_low:
 
 g_gdt64_ist_low:
 	/* TSS segment low + segment high per CPU */
-	.fill   CONFIG_SMP_NCPUS * 16, 1, 0
+	.fill   CPU_SETSIZE * 16, 1, 0
 
 g_gdt64_low_end:
 

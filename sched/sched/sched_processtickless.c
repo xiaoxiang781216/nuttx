@@ -255,7 +255,7 @@ clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
 
   /* Perform scheduler operations on all CPUs */
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       timeslice = nxsched_cpu_scheduler(i, ticks, elapsed, noswitches);
       minslice  = MIN(timeslice, minslice);

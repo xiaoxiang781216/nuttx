@@ -186,11 +186,11 @@ void xtensa_appcpu_start(void)
  *   initialized.
  *
  *   The OS initialization logic calls this function repeatedly until each
- *   CPU has been started, 1 through (CONFIG_SMP_NCPUS-1).
+ *   CPU has been started, 1 through (CPU_SETSIZE-1).
  *
  * Input Parameters:
  *   cpu - The index of the CPU being started.  This will be a numeric
- *         value in the range of one to (CONFIG_SMP_NCPUS-1).
+ *         value in the range of one to (CPU_SETSIZE-1).
  *         (CPU 0 is already active)
  *
  * Returned Value:
@@ -200,7 +200,7 @@ void xtensa_appcpu_start(void)
 
 int up_cpu_start(int cpu)
 {
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS && cpu != this_cpu());
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE && cpu != this_cpu());
 
   if (!g_appcpu_started)
     {

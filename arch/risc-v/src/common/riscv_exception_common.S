@@ -375,7 +375,7 @@ riscv_jump_to_user:
 
 /* Total required interrupt stack size */
 
-#define STACK_ALLOC_SIZE (INT_STACK_SIZE * CONFIG_SMP_NCPUS)
+#define STACK_ALLOC_SIZE (INT_STACK_SIZE * CPU_SETSIZE)
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
   .bss

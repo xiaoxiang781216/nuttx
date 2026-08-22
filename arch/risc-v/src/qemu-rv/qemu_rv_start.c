@@ -118,7 +118,7 @@ static void qemu_boot_secondary(int mhartid, uintptr_t dtb)
 {
   int i;
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       if (i == mhartid)
         {

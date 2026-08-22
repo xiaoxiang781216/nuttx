@@ -47,7 +47,7 @@
    NVIC_SYSH_PRIORITY_DEFAULT << 8  | NVIC_SYSH_PRIORITY_DEFAULT)
 
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-#  define INTSTACK_ALLOC (CONFIG_SMP_NCPUS * INTSTACK_SIZE)
+#  define INTSTACK_ALLOC (CPU_SETSIZE * INTSTACK_SIZE)
 #endif
 
 /****************************************************************************
@@ -72,12 +72,12 @@ static uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3];
 
 /* These definitions provide the "top" of the push-down stacks. */
 
-const uint32_t g_cpu_intstack_top[CONFIG_SMP_NCPUS] =
+const uint32_t g_cpu_intstack_top[CPU_SETSIZE] =
 {
   (uint32_t)g_intstack_alloc + INTSTACK_SIZE,
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
   (uint32_t)g_intstack_alloc + (2 * INTSTACK_SIZE),
-#endif /* CONFIG_SMP_NCPUS > 1 */
+#endif /* CPU_SETSIZE > 1 */
 };
 #endif /* defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7 */
 

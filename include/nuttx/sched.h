@@ -216,7 +216,7 @@
 #define running_regs()               ((FAR void **)(g_running_task->xcp.regs))
 
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-#  define is_idle_task(t)            ((t)->pid < CONFIG_SMP_NCPUS)
+#  define is_idle_task(t)            ((t)->pid < CPU_SETSIZE)
 #else
 #  define is_idle_task(t)            false
 #endif

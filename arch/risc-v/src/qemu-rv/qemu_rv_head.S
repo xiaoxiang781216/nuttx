@@ -52,7 +52,7 @@ __start_s:
   /* Preserve a0 as it has mhartid */
 
   /* Load the number of CPUs that the kernel supports */
-  li   t1, CONFIG_SMP_NCPUS
+  li   t1, CPU_SETSIZE
 
   /* If a0 (mhartid) >= t1 (the number of CPUs), stop here */
 

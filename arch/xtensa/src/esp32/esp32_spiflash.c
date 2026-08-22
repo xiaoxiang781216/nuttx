@@ -2465,7 +2465,7 @@ int spiflash_init_spi_flash_op_block_task(int cpu)
                        argv);
   if (pid > 0)
     {
-      if (cpu < CONFIG_SMP_NCPUS)
+      if (cpu < CPU_SETSIZE)
         {
           CPU_ZERO(&cpuset);
           CPU_SET(cpu, &cpuset);
@@ -2576,7 +2576,7 @@ int esp32_spiflash_init(void)
 #ifdef CONFIG_SMP
   sched_lock();
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       nxsem_init(
         &per_cpu_var_smp(g_disable_non_iram_isr_on_core, cpu), 0, 0);

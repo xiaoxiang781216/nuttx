@@ -323,7 +323,7 @@ int IRAM_ATTR cache_dbus_mmu_map(int vaddr, int paddr, int num)
   uint32_t regval;
   irqstate_t flags;
   uint32_t actual_mapped_len;
-  uint32_t cache_state[CONFIG_SMP_NCPUS];
+  uint32_t cache_state[CPU_SETSIZE];
   int cpu = this_cpu();
 #ifdef CONFIG_SMP
   bool smp_start = OSINIT_OS_READY();

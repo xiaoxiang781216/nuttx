@@ -54,7 +54,7 @@ int sched_cpucount(FAR const cpu_set_t *set)
   int count;
   int cpu;
 
-  for (cpu = 0, count = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0, count = 0; cpu < CPU_SETSIZE; cpu++)
     {
       if ((*set & (1 << cpu)) != 0)
         {

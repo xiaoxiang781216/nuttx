@@ -185,7 +185,7 @@ DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_stoppedtasks);
 /* This is the value of the last process ID assigned to a task */
 
 #undef g_lastpid
-DEFINE_PER_CPU_BMP(volatile pid_t, g_lastpid) = CONFIG_SMP_NCPUS - 1;
+DEFINE_PER_CPU_BMP(volatile pid_t, g_lastpid) = CPU_SETSIZE - 1;
 #define g_lastpid this_cpu_var_bmp(g_lastpid)
 
 /* The following hash table is used for two things:
@@ -370,7 +370,7 @@ static void idle_task_initialize(void)
   FAR struct tcb_s *tcb;
   int i;
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       tcb             = &per_cpu_var_smp(g_idletcb, i);
       tcb->pid        = i;
@@ -459,7 +459,7 @@ static void idle_group_initialize(void)
 
   /* Assign the process ID(s) of ZERO to the idle task(s) */
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       tcb = &per_cpu_var_smp(g_idletcb, i);
 
@@ -643,8 +643,8 @@ static void memory_initialize(void)
   /* Initialize the logic that determine unique process IDs. */
 
   i = CONFIG_PID_INITIAL_COUNT;
-#if CONFIG_SMP_NCPUS > CONFIG_PID_INITIAL_COUNT
-  while (i <= CONFIG_SMP_NCPUS)
+#if CPU_SETSIZE > CONFIG_PID_INITIAL_COUNT
+  while (i <= CPU_SETSIZE)
     {
       i <<= 1;
     }
@@ -816,7 +816,7 @@ void nx_start(void)
   DEBUGVERIFY(group_setupidlefiles());
 
 #ifdef CONFIG_SMP
-  for (i = 1; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 1; i < CPU_SETSIZE; i++)
     {
       /* Clone stdout, stderr, stdin from the CPU0 IDLE task. */
 

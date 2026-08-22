@@ -202,10 +202,10 @@ static ssize_t cpuload_read(FAR struct file *filep, FAR char *buffer,
        * for the IDLE thread.
        */
 #ifdef CONFIG_SMP
-      struct cpuload_s cpuloads[CONFIG_SMP_NCPUS];
+      struct cpuload_s cpuloads[CPU_SETSIZE];
       uint32_t i;
 
-      for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+      for (i = 0; i < CPU_SETSIZE; i++)
         {
           DEBUGVERIFY(clock_cpuload(i, &cpuloads[i]));
           active += cpuloads[i].active;

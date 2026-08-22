@@ -34,10 +34,10 @@
 
 #ifdef CONFIG_SMP
 
-#  define PM_SMP_ALL_CPUS        ((1 << CONFIG_SMP_NCPUS) - 1)
-#  define PM_SMP_CPU_DOMAIN(cpu) (CONFIG_PM_NDOMAINS - CONFIG_SMP_NCPUS + (cpu))
+#  define PM_SMP_ALL_CPUS        ((1 << CPU_SETSIZE) - 1)
+#  define PM_SMP_CPU_DOMAIN(cpu) (CONFIG_PM_NDOMAINS - CPU_SETSIZE + (cpu))
 
-static_assert(CONFIG_PM_NDOMAINS >= (CONFIG_SMP_NCPUS + 1),
+static_assert(CONFIG_PM_NDOMAINS >= (CPU_SETSIZE + 1),
               "No enough domain for PM SMP to occupy");
 
 /****************************************************************************
@@ -102,7 +102,7 @@ static bool pm_idle_checkstate(int cpu)
   int i;
 
   CPU_ZERO(&cpus);
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       if (i == cpu)
         {

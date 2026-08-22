@@ -62,7 +62,7 @@ int x86_64_tlb_handler(int irq, void *c, void *arg)
 
 void x86_64_tlb_shootdown(void)
 {
-  cpu_set_t cpuset = ((1 << CONFIG_SMP_NCPUS) - 1);
+  cpu_set_t cpuset = ((1 << CPU_SETSIZE) - 1);
 
   CPU_CLR(this_cpu(), &cpuset);
 

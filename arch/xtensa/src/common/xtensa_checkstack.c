@@ -60,7 +60,7 @@ void xtensa_color_intstack(void)
 {
   int cpu;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       xtensa_stack_color((void *)up_get_intstackbase(cpu), INTSTACK_SIZE);
     }

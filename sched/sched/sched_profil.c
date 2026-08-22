@@ -101,7 +101,7 @@ static uint64_t profil_timer_handler(FAR const hrtimer_t *timer,
                                 struct profinfo_s, timer);
 
 #ifdef CONFIG_SMP
-  cpu_set_t cpus = (1 << CONFIG_SMP_NCPUS) - 1;
+  cpu_set_t cpus = (1 << CPU_SETSIZE) - 1;
   CPU_CLR(this_cpu(), &cpus);
   nxsched_cpu_call_async(cpus, &g_call_data);
 #endif

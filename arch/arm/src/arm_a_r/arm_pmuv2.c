@@ -117,7 +117,7 @@ struct armv7_pmu_s
   int (*map_event)(FAR struct perf_event_s *event);
 
   int num_events;
-  struct pmu_hw_events_s hw_events[CONFIG_SMP_NCPUS];
+  struct pmu_hw_events_s hw_events[CPU_SETSIZE];
 };
 
 /****************************************************************************
@@ -587,7 +587,7 @@ static void armv7pmu_cycle_reserve(FAR struct armv7_pmu_s *armv7pmu)
 {
   int cpu;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       set_bit(ARMV7_IDX_CYCLE_COUNTER,
               &armv7pmu->hw_events[cpu].used_mask);
@@ -950,7 +950,7 @@ static int armv7pmu_common_init(FAR struct armv7_pmu_s *cpu_pmu,
   cpu_pmu->name             = name;
   cpu_pmu->map_event        = armv7pmu_map_cpu_event;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       FAR struct pmu_hw_events_s *events;
 

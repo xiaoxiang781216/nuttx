@@ -124,7 +124,7 @@ static void riscv_percpu_init(void)
   g_initialized = true;
 
 #ifdef CONFIG_PERCPU_SECTION
-  for (int cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (int cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
              (void *)_ldata_percpu,

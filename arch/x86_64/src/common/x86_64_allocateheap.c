@@ -86,7 +86,7 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   board_autoled_on(LED_HEAPALLOCATE);
 
-  topstack = x86_64_idle_topstack(CONFIG_SMP_NCPUS - 1);
+  topstack = x86_64_idle_topstack(CPU_SETSIZE - 1);
 
   /* Calculate the end of .bss section */
 

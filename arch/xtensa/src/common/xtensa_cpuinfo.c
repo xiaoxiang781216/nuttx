@@ -89,7 +89,7 @@ ssize_t up_show_cpuinfo(char *buf, size_t buf_size, off_t file_off)
                  "CPU count\t: %u\n"
                  "vendor_id\t: Tensilica\n"
                  "model\t\t: Xtensa " XCHAL_HW_VERSION_NAME "\n",
-                 CONFIG_SMP_NCPUS);
+                 CPU_SETSIZE);
 
   procfs_sprintf(buf, buf_size, &file_off,
                  "core ID\t\t: " XCHAL_CORE_ID "\n"

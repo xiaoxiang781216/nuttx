@@ -52,7 +52,7 @@
  *
  * Description:
  *   This is the common start-up logic for the IDLE task for CPUs 1 through
- *   (CONFIG_SMP_NCPUS-1).  Having a start-up function such as this for the
+ *   (CPU_SETSIZE-1).  Having a start-up function such as this for the
  *   IDLE is not really an architectural necessity.  It is used only for
  *   symmetry with how other threads are started (see nxtask_start() and
  *   pthread_start()).
@@ -129,7 +129,7 @@ int nx_smp_start(void)
 
   /* Start all of the other CPUs.  CPU0 is already running. */
 
-  for (cpu = 1; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 1; cpu < CPU_SETSIZE; cpu++)
     {
       /* Start the CPU */
 

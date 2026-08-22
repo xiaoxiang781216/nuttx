@@ -132,7 +132,7 @@ void __k210_start(uint32_t mhartid)
 cpu1:
   showprogress('a');
 
-#if defined(CONFIG_SMP) && (CONFIG_SMP_NCPUS == 2)
+#if CPU_SETSIZE == 2
   riscv_cpu_boot(mhartid);
 #endif
 

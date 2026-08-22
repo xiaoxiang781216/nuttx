@@ -194,7 +194,7 @@ void x86_64_ap_boot(void)
 
   /* Revoke the lower memory if all CPUs are up */
 
-  if (x86_64_cpu_count_get() >= CONFIG_SMP_NCPUS)
+  if (x86_64_cpu_count_get() >= CPU_SETSIZE)
     {
       __revoke_low_memory();
     }
@@ -229,11 +229,11 @@ void x86_64_ap_boot(void)
  *   initialized.
  *
  *   The OS initialization logic calls this function repeatedly until each
- *   CPU has been started, 1 through (CONFIG_SMP_NCPUS-1).
+ *   CPU has been started, 1 through (CPU_SETSIZE-1).
  *
  * Input Parameters:
  *   cpu - The index of the CPU being started.  This will be a numeric
- *         value in the range of one to (CONFIG_SMP_NCPUS-1).
+ *         value in the range of one to (CPU_SETSIZE-1).
  *         (CPU 0 is already active)
  *
  * Returned Value:

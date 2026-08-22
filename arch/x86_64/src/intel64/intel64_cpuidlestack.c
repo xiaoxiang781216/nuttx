@@ -81,13 +81,13 @@
 
 int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 {
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
   uintptr_t stack_alloc;
 #  ifdef CONFIG_ARCH_SAFE_STACK
   size_t unsafe_size = UNSAFE_SIZE(stack_size);
 #  endif
 
-  DEBUGASSERT(cpu > 0 && cpu < CONFIG_SMP_NCPUS && tcb != NULL &&
+  DEBUGASSERT(cpu > 0 && cpu < CPU_SETSIZE && tcb != NULL &&
               stack_size <= CONFIG_IDLETHREAD_STACKSIZE);
 
 #  ifdef CONFIG_ARCH_SAFE_STACK

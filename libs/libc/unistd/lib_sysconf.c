@@ -255,7 +255,7 @@ long sysconf(int name)
 
       case _SC_NPROCESSORS_CONF:
       case _SC_NPROCESSORS_ONLN:
-        return CONFIG_SMP_NCPUS;
+        return CPU_SETSIZE;
 
       case _SC_MONOTONIC_CLOCK:
         return 1;

@@ -181,7 +181,7 @@ void weak_function up_allocate_kheap(void **heap_start, size_t *heap_size)
 
   /* Reserved space for mmu kernel table */
 
-  size -= PGTABLE_SIZE * CONFIG_SMP_NCPUS;
+  size -= PGTABLE_SIZE * CPU_SETSIZE;
 # else
   /* CONFIG_BUILD_KERNEL && !CONFIG_ARCH_PGPOOL_PBASE */
 

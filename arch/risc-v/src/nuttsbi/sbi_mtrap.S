@@ -149,7 +149,7 @@ machine_trap:
  *
  ****************************************************************************/
 
-#define STACK_ALLOC_SIZE (MMODE_IRQSTACK * CONFIG_SMP_NCPUS)
+#define STACK_ALLOC_SIZE (MMODE_IRQSTACK * CPU_SETSIZE)
 
   .bss
   .balign 16

@@ -328,7 +328,7 @@ void perf_init_cpu_contexts(void)
 {
   int i;
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       perf_init_context(&per_cpu_var_smp(g_perf_cpu_ctx, i));
     }

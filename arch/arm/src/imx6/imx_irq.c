@@ -38,7 +38,7 @@
 
 /* Size of the interrupt stack allocation */
 
-#define INTSTACK_ALLOC (CONFIG_SMP_NCPUS * INTSTACK_SIZE)
+#define INTSTACK_ALLOC (CPU_SETSIZE * INTSTACK_SIZE)
 
 /****************************************************************************
  * Public Data
@@ -61,30 +61,30 @@ uint64_t g_fiqstack_alloc[INTSTACK_ALLOC >> 3];
 
 /* These are arrays that point to the top of each interrupt stack */
 
-uintptr_t g_irqstack_top[CONFIG_SMP_NCPUS] =
+uintptr_t g_irqstack_top[CPU_SETSIZE] =
 {
   (uintptr_t)g_irqstack_alloc + INTSTACK_SIZE,
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
   (uintptr_t)g_irqstack_alloc + (2 * INTSTACK_SIZE),
 #endif
-#if CONFIG_SMP_NCPUS > 2
+#if CPU_SETSIZE > 2
   (uintptr_t)g_irqstack_alloc + (3 * INTSTACK_SIZE),
 #endif
-#if CONFIG_SMP_NCPUS > 3
+#if CPU_SETSIZE > 3
   (uintptr_t)g_irqstack_alloc + (4 * INTSTACK_SIZE)
 #endif
 };
 
-uintptr_t g_fiqstack_top[CONFIG_SMP_NCPUS] =
+uintptr_t g_fiqstack_top[CPU_SETSIZE] =
 {
   (uintptr_t)g_fiqstack_alloc + INTSTACK_SIZE,
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
   (uintptr_t)g_fiqstack_alloc + 2 * INTSTACK_SIZE,
 #endif
-#if CONFIG_SMP_NCPUS > 2
+#if CPU_SETSIZE > 2
   (uintptr_t)g_fiqstack_alloc + 3 * INTSTACK_SIZE,
 #endif
-#if CONFIG_SMP_NCPUS > 3
+#if CPU_SETSIZE > 3
   (uintptr_t)g_fiqstack_alloc + 4 * INTSTACK_SIZE
 #endif
 };

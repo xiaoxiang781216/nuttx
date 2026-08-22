@@ -59,9 +59,7 @@
  */
 
 #define CPULOAD_TIMECONSTANT \
-     (CONFIG_SMP_NCPUS * \
-      CONFIG_SCHED_CPULOAD_TIMECONSTANT * \
-      CPULOAD_TICKSPERSEC)
+     (CPU_SETSIZE * CONFIG_SCHED_CPULOAD_TIMECONSTANT * CPULOAD_TICKSPERSEC)
 
 /* The sampling period in system timer ticks */
 
@@ -223,7 +221,7 @@ void nxsched_process_cpuload_ticks(clock_t ticks)
   /* Perform scheduler operations on all CPUs. */
 
   flags = enter_critical_section();
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       FAR struct tcb_s *rtcb = current_task(i);
       nxsched_process_taskload_ticks(rtcb, ticks);

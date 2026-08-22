@@ -903,7 +903,7 @@ struct note_dump_stream_s
   uint32_t                   pos;
   bool                       binary;
   struct note_max_s          note;
-  struct note_dump_context_s ctx[CONFIG_SMP_NCPUS];
+  struct note_dump_context_s ctx[CPU_SETSIZE];
 };
 
 /****************************************************************************

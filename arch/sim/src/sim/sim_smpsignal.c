@@ -123,11 +123,11 @@ void host_cpu_started(void)
  *   initialized.
  *
  *   The OS initialization logic calls this function repeatedly until each
- *   CPU has been started, 1 through (CONFIG_SMP_NCPUS-1).
+ *   CPU has been started, 1 through (CPU_SETSIZE-1).
  *
  * Input Parameters:
  *   cpu - The index of the CPU being started.  This will be a numeric
- *         value in the range of from one to (CONFIG_SMP_NCPUS-1).  (CPU
+ *         value in the range of from one to (CPU_SETSIZE-1).  (CPU
  *         0 is already active)
  *
  * Returned Value:

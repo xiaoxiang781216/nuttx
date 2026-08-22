@@ -55,7 +55,7 @@ static int IRAM_ATTR esp32s3_fromcpu_interrupt(int irq, void *context,
 {
   uintptr_t regaddr;
 
-  DEBUGASSERT((unsigned)fromcpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT((unsigned)fromcpu < CPU_SETSIZE);
   DEBUGASSERT(fromcpu != this_cpu());
 
   /* Clear the interrupt from the other CPU */
@@ -105,7 +105,7 @@ int IRAM_ATTR xtensa_intercpu_interrupt(int tocpu, int intcode)
 {
   int fromcpu;
 
-  DEBUGASSERT((unsigned)tocpu < CONFIG_SMP_NCPUS &&
+  DEBUGASSERT((unsigned)tocpu < CPU_SETSIZE &&
               (unsigned)intcode <= UINT8_MAX);
 
   fromcpu = this_cpu();

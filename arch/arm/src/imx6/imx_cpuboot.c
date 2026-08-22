@@ -46,22 +46,6 @@
  * Private Data
  ****************************************************************************/
 
-#if 0 /* Not used */
-static DEFINE_PER_CPU_SMP(const uint32_t, g_cpu_reset) =
-{
-    SRC_SCR_CORE0_RST
-#if CONFIG_SMP_NCPUS > 1
-  , SRC_SCR_CORE1_RST
-#endif
-#if CONFIG_SMP_NCPUS > 2
-  , SRC_SCR_CORE2_RST
-#endif
-#if CONFIG_SMP_NCPUS > 3
-  , SRC_SCR_CORE3_RST
-#endif
-};
-#endif
-
 static DEFINE_PER_CPU_SMP(const uint32_t, g_cpu_ctrl) =
 {
     0
@@ -117,29 +101,6 @@ extern uint8_t _vector_start[]; /* Beginning of vector block */
  ****************************************************************************/
 
 /****************************************************************************
- * Name: imx_cpu_reset
- *
- * Description:
- *   CPUn software reset
- *
- ****************************************************************************/
-
-#if 0 /* Not used */
-static void imx_cpu_reset(int cpu)
-{
-  uint32_t regval;
-
-  regval  = getreg32(IMX_SRC_SCR);
-  regval |= per_cpu_var_smp(g_cpu_reset, cpu);
-  putreg32(regval, IMX_SRC_SCR);
-}
-#endif
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
  * Name: imx_cpu_disable
  *
  * Description:
@@ -161,13 +122,13 @@ void imx_cpu_disable(void)
   uint32_t cpumask;
 
   cpumask  = 0;
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
   cpumask |= SRC_SCR_CORE1_ENABLE;
 #endif
-#if CONFIG_SMP_NCPUS > 2
+#if CPU_SETSIZE > 2
   cpumask |= SRC_SCR_CORE2_ENABLE;
 #endif
-#if CONFIG_SMP_NCPUS > 3
+#if CPU_SETSIZE > 3
   cpumask |= SRC_SCR_CORE3_ENABLE;
 #endif
 
@@ -200,7 +161,7 @@ void imx_cpu_enable(void)
   uint32_t regval;
   int cpu;
 
-  for (cpu = 1; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 1; cpu < CPU_SETSIZE; cpu++)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Copy cpu0 page table to each cpu. */

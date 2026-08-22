@@ -728,7 +728,7 @@ struct pmu_s
   struct list_node node;
   FAR const char *name;
   FAR struct pmu_ops_s *ops;
-  struct pmu_cpu_context_s cpu_pmu_ctx[CONFIG_SMP_NCPUS];
+  struct pmu_cpu_context_s cpu_pmu_ctx[CPU_SETSIZE];
 };
 
 /****************************************************************************

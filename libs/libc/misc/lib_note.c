@@ -40,11 +40,11 @@
  ****************************************************************************/
 
 /* Renumber idle task PIDs
- *  In NuttX, PID number less than CONFIG_SMP_NCPUS are idle tasks.
+ *  In NuttX, PID number less than CPU_SETSIZE are idle tasks.
  *  In Linux, there is only one idle task of PID 0.
  */
 
-#define get_pid(pid) ((pid) < CONFIG_SMP_NCPUS ? 0 : (pid))
+#define get_pid(pid) ((pid) < CPU_SETSIZE ? 0 : (pid))
 
 #define get_task_state(s)                                                    \
   ((s) == 0 ? 'X' : ((s) <= LAST_READY_TO_RUN_STATE ? 'R' : 'S'))
@@ -953,7 +953,7 @@ void note_dump_stream(FAR struct note_dump_stream_s *stream,
 
   /* Initialize the trace dump context */
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       stream->ctx[cpu].intr_nest = 0;
       stream->ctx[cpu].pendingswitch = false;

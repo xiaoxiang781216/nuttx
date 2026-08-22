@@ -49,7 +49,7 @@ __start:
 
   /* In case of single CPU config, stop here */
 
-#if !defined(CONFIG_SMP) || (CONFIG_SMP_NCPUS == 1)
+#if CPU_SETSIZE == 1
   beqz a0, 2f
   csrw CSR_MIE, zero
   wfi

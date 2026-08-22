@@ -82,7 +82,7 @@
 
 int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 {
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
   up_create_stack(tcb, stack_size, TCB_FLAG_TTYPE_KERNEL);
 #endif
   return OK;

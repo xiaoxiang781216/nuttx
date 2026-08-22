@@ -76,7 +76,7 @@ int nx_smp_start(void);
  * Name: nx_idle_trampoline
  *
  * Description:
- *   This is the common IDLE task for CPUs 1 through (CONFIG_SMP_NCPUS-1).
+ *   This is the common IDLE task for CPUs 1 through (CPU_SETSIZE-1).
  *   It is equivalent to the CPU 0 IDLE logic in nx_start.c
  *
  * Input Parameters:

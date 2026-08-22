@@ -46,7 +46,7 @@
 
 /* Size of the interrupt stack allocation */
 
-#define INTSTACK_ALLOC     (CONFIG_SMP_NCPUS * INTSTACK_SIZE)
+#define INTSTACK_ALLOC     (CPU_SETSIZE * INTSTACK_SIZE)
 
 /****************************************************************************
  * Private Functions

@@ -43,7 +43,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define IRQ_STACK_ALLOC (IRQ_STACK_SIZE * CONFIG_SMP_NCPUS)
+#define IRQ_STACK_ALLOC (IRQ_STACK_SIZE * CPU_SETSIZE)
 
 /****************************************************************************
  * Public Data
@@ -234,7 +234,7 @@ void x86_64_cpu_init(void)
 
   /* Map logical CPU to Local APIC IDs */
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       ret = acpi_lapic_get(i, &lapic);
       if (ret == OK)
@@ -288,7 +288,7 @@ uint8_t x86_64_loapic_to_cpu(uint8_t loapic)
 {
   int i;
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       if (per_cpu_var_smp(g_cpu_priv, i).loapic_id == loapic)
         {

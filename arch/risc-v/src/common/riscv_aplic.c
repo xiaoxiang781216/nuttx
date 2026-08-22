@@ -101,7 +101,7 @@ void riscv_aplic_init(void)
 
   /* Set IDC delivery and threshold for each hart */
 
-  for (id = 0; id < CONFIG_SMP_NCPUS; id++)
+  for (id = 0; id < CPU_SETSIZE; id++)
     {
       uintptr_t idc = RISCV_APLIC_IDC(RISCV_APLIC_BASE, id);
 

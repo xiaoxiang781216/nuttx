@@ -1812,7 +1812,7 @@ static int32_t esp_task_create_pinned_to_core(void *entry,
           *((int *)task_handle) = pid;
         }
 #ifdef CONFIG_SMP
-      if (core_id < CONFIG_SMP_NCPUS)
+      if (core_id < CPU_SETSIZE)
         {
           CPU_ZERO(&cpuset);
           CPU_SET(core_id, &cpuset);

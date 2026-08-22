@@ -590,9 +590,9 @@ int hrtimer_cancel_running(FAR hrtimer_t *timer)
    * more references to the timer may exist.
    */
 
-  unroll_loop(CONFIG_SMP_NCPUS) /* Tell the compiler to unroll the loop. */
+  unroll_loop(CPU_SETSIZE) /* Tell the compiler to unroll the loop. */
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       /* This is a faster implementation equivalent to
        * (g_hrtimer_running[cpu] & (~(uintptr_t)0x1u)) == timer,
@@ -641,7 +641,7 @@ static inline_function void hrtimer_wait(FAR hrtimer_t *timer)
 
   /* Wait until all references have been released. */
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       /* The timer should not be restarted again.
        * Or there will be ownership invariant violation.

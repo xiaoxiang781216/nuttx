@@ -120,11 +120,7 @@ struct mm_delayhead_s
 #endif
 };
 
-#ifdef CONFIG_SMP
-typedef struct mm_delayhead_s mm_delaylist_t[CONFIG_SMP_NCPUS];
-#else
-typedef struct mm_delayhead_s mm_delaylist_t;
-#endif
+typedef struct mm_delayhead_s mm_delaylist_t[CPU_SETSIZE];
 
 struct mm_heap_s
 {
@@ -391,11 +387,7 @@ static void memdump_backtrace(FAR struct mm_heap_s *heap,
 static inline_function
 FAR struct mm_delayhead_s *get_delayhead(FAR struct mm_heap_s *heap)
 {
-#ifdef CONFIG_SMP
-  return &heap->mm_delay[this_cpu()];
-#else
-  return &heap->mm_delay;
-#endif
+  return &heap->mm_delay[CPU_SETSIZE > 1 ? this_cpu() : 0];
 }
 
 /****************************************************************************

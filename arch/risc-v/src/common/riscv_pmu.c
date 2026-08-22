@@ -96,7 +96,7 @@ struct riscv_pmu_s
   unsigned long supported_cpus;
   FAR const char *name;
   int num_events;
-  struct pmu_hw_events_s hw_events[CONFIG_SMP_NCPUS];
+  struct pmu_hw_events_s hw_events[CPU_SETSIZE];
 };
 
 /****************************************************************************
@@ -526,7 +526,7 @@ static void riscvpmu_cycle_reserve(FAR struct riscv_pmu_s *riscvpmu)
 {
   int cpu;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       set_bit(RISCV_IDX_CYCLE_COUNTER,
               &riscvpmu->hw_events[cpu].used_mask);
@@ -554,7 +554,7 @@ int riscv_pmu_initialize(void)
 
   g_riscvpmu_ops.event_idx = riscvpmu_event_idx;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       riscvpmu->supported_cpus |= BIT(cpu);
     }

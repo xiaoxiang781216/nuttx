@@ -67,11 +67,7 @@ __start:
 
   /* Load the number of CPUs that the kernel supports */
 
-#ifdef CONFIG_SMP
-  li   t1, CONFIG_SMP_NCPUS
-#else
-  li   t1, 1
-#endif
+  li   t1, CPU_SETSIZE
 
   /* If a0 (mhartid) >= t1 (the number of CPUs), stop here */
 

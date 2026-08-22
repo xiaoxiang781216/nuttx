@@ -203,7 +203,7 @@ void riscv_set_tp(uintptr_t val);
 static inline void riscv_tp_boot(int cpu)
 {
   uintptr_t val = g_idle_topstack -
-                  SMP_STACK_SIZE * (CONFIG_SMP_NCPUS - cpu);
+                  SMP_STACK_SIZE * (CPU_SETSIZE - cpu);
 
   val += sizeof(struct tls_info_s) + ARCH_TP_OFFSET;
   riscv_set_tp(val);

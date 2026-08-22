@@ -53,7 +53,7 @@
  ***************************************************************************/
 
 #define FPU_CALLEE_REGS     (8)
-#define FPU_PROC_LINELEN    (64 * CONFIG_SMP_NCPUS)
+#define FPU_PROC_LINELEN    (64 * CPU_SETSIZE)
 
 /***************************************************************************
  * Private Types
@@ -222,7 +222,7 @@ static ssize_t arm64_fpu_procfs_read(struct file *filep, char *buffer,
   /* Traverse all FPU context */
 
   linesize = 0;
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       ctx = &per_cpu_var_smp(g_cpu_fpu_ctx, i);
       linesize += snprintf(attr->line + linesize,

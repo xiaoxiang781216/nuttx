@@ -217,7 +217,7 @@ void up_send_cpu_call(cpu_set_t cpuset)
 
 void up_send_irqreq(int idx, int irq, int cpu)
 {
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS && cpu != this_cpu());
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE && cpu != this_cpu());
 
   /* Set irq for the cpu */
 

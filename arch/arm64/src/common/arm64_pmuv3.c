@@ -151,7 +151,7 @@ struct arm64_pmu_s
 
   /* percpu hw_events */
 
-  struct        pmu_hw_events_s hw_events[CONFIG_SMP_NCPUS];
+  struct        pmu_hw_events_s hw_events[CPU_SETSIZE];
 };
 
 /****************************************************************************
@@ -1175,7 +1175,7 @@ static int pmuv3_common_pmu_init(FAR struct arm64_pmu_s *cpu_pmu, char *name,
   cpu_pmu->name               = name;
   cpu_pmu->map_event          = map_event;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       struct pmu_hw_events_s *events;
 
@@ -1237,7 +1237,7 @@ static void arm64_pmu_cycle_reserve(void)
 {
   int cpu;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       test_and_set_bit(PMU_IDX_CYCLE_COUNTER,
                        &g_arm64_pmu_dev.hw_events[cpu].used_mask);

@@ -56,7 +56,7 @@
 #define INTC_EN(n) (CXD56_INTC_BASE + 0x10 + (((n) >> 5) << 2))
 
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-#  define INTSTACK_ALLOC (CONFIG_SMP_NCPUS * INTSTACK_SIZE)
+#  define INTSTACK_ALLOC (CPU_SETSIZE * INTSTACK_SIZE)
 #endif
 
 /****************************************************************************
@@ -82,24 +82,24 @@ static uint64_t g_intstack_alloc[INTSTACK_ALLOC >> 3];
 
 /* These definitions provide the "top" of the push-down stacks. */
 
-const uint32_t g_cpu_intstack_top[CONFIG_SMP_NCPUS] =
+const uint32_t g_cpu_intstack_top[CPU_SETSIZE] =
 {
   (uint32_t)g_intstack_alloc + INTSTACK_SIZE,
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
   (uint32_t)g_intstack_alloc + (2 * INTSTACK_SIZE),
-#if CONFIG_SMP_NCPUS > 2
+#if CPU_SETSIZE > 2
   (uint32_t)g_intstack_alloc + (3 * INTSTACK_SIZE),
-#if CONFIG_SMP_NCPUS > 3
+#if CPU_SETSIZE > 3
   (uint32_t)g_intstack_alloc + (4 * INTSTACK_SIZE),
-#if CONFIG_SMP_NCPUS > 4
+#if CPU_SETSIZE > 4
   (uint32_t)g_intstack_alloc + (5 * INTSTACK_SIZE),
-#if CONFIG_SMP_NCPUS > 5
+#if CPU_SETSIZE > 5
   (uint32_t)g_intstack_alloc + (6 * INTSTACK_SIZE),
-#endif /* CONFIG_SMP_NCPUS > 5 */
-#endif /* CONFIG_SMP_NCPUS > 4 */
-#endif /* CONFIG_SMP_NCPUS > 3 */
-#endif /* CONFIG_SMP_NCPUS > 2 */
-#endif /* CONFIG_SMP_NCPUS > 1 */
+#endif /* CPU_SETSIZE > 5 */
+#endif /* CPU_SETSIZE > 4 */
+#endif /* CPU_SETSIZE > 3 */
+#endif /* CPU_SETSIZE > 2 */
+#endif /* CPU_SETSIZE > 1 */
 };
 #endif /* defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7 */
 

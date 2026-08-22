@@ -684,7 +684,7 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
 {
   uint32_t cpu;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       if (CPU_ISSET(cpu, &cpuset))
         {

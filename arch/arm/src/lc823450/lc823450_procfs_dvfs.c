@@ -176,7 +176,7 @@ static ssize_t dvfs_read(struct file *filep, char *buffer,
   size_t totalsize;
   off_t  offset = filep->f_pos;
   int    i;
-  uint64_t idletime[CONFIG_SMP_NCPUS];
+  uint64_t idletime[CPU_SETSIZE];
 
   finfo("buffer=%p buflen=%d\n", buffer, (int)buflen);
 
@@ -228,7 +228,7 @@ static ssize_t dvfs_read(struct file *filep, char *buffer,
 
   lc823450_dvfs_get_idletime(idletime);
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       linesize = snprintf(priv->line,
                           DVFS_LINELEN,

@@ -956,7 +956,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
       return -EINVAL;
     }
 
-  if (cpu != -1 && cpu >= CONFIG_SMP_NCPUS)
+  if (cpu != -1 && cpu >= CPU_SETSIZE)
     {
       serr("perf event cpu fail:%d\n", cpu);
       return -EINVAL;

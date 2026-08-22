@@ -40,7 +40,7 @@ ssize_t up_show_cpuinfo(char *buf, size_t buf_size, off_t file_off)
 {
   int i;
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       procfs_sprintf(buf, buf_size, &file_off, "processor\t: %d\n", i);
       procfs_sprintf(buf, buf_size, &file_off, "hart\t\t: %d\n", i);

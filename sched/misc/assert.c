@@ -521,7 +521,7 @@ static void dump_tasks(void)
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
 #  ifdef CONFIG_SMP
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
 #  endif
 #  ifdef CONFIG_STACK_COLORATION
@@ -668,7 +668,7 @@ static noreturn_function int pause_cpu_handler(FAR void *arg)
 
 static void pause_all_cpu(void)
 {
-  cpu_set_t cpuset = (1 << CONFIG_SMP_NCPUS) - 1;
+  cpu_set_t cpuset = (1 << CPU_SETSIZE) - 1;
   int delay = CONFIG_ASSERT_PAUSE_CPU_TIMEOUT;
   int ncpus = 0;
 
@@ -678,7 +678,7 @@ static void pause_all_cpu(void)
 
   /* Check if all CPUs paused with timeout */
 
-  while (delay-- > 0 && ncpus < CONFIG_SMP_NCPUS)
+  while (delay-- > 0 && ncpus < CPU_SETSIZE)
     {
       if (per_cpu_var_smp(g_cpu_paused, ncpus))
         {
@@ -783,7 +783,7 @@ static void dump_fatal_info(FAR struct tcb_s *rtcb,
 
   /* Dump other CPUs registers, running task stack and backtrace. */
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       if (cpu == this_cpu())
         {

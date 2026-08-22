@@ -54,7 +54,7 @@
 /* Interrupt stack definitions for SMP */
 
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
-#  define INTSTACK_ALLOC (CONFIG_SMP_NCPUS * INTSTACK_SIZE)
+#  define INTSTACK_ALLOC (CPU_SETSIZE * INTSTACK_SIZE)
 #endif
 
 /* IRQ to CPU and CPU interrupts mapping:
@@ -127,12 +127,12 @@ static uint32_t g_intstackalloc[INTSTACK_ALLOC >> 2];
 
 /* These definitions provide the "top" of the push-down stacks. */
 
-uintptr_t g_cpu_intstack_top[CONFIG_SMP_NCPUS] =
+uintptr_t g_cpu_intstack_top[CPU_SETSIZE] =
 {
   (uintptr_t)g_intstackalloc + INTSTACK_SIZE,
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
   (uintptr_t)g_intstackalloc + (2 * INTSTACK_SIZE),
-#endif /* CONFIG_SMP_NCPUS > 1 */
+#endif /* CPU_SETSIZE > 1 */
 };
 #endif /* defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15 */
 
@@ -267,7 +267,7 @@ static void esp32_intinfo(int cpu, int periphid,
                           uintptr_t *regaddr, uint8_t **intmap)
 {
 #ifdef CONFIG_SMP
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 
   if (cpu != 0)
     {
@@ -505,7 +505,7 @@ void up_irqinitialize(void)
    * disabled during a SPI flash operation
    */
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       per_cpu_var_smp(g_non_iram_int_mask, i) = UINT32_MAX;
     }
@@ -607,7 +607,7 @@ void up_disable_irq(int irq)
     }
 
   DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32_CPUINT_MAX);
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 
   if (irq < XTENSA_NIRQ_INTERNAL)
     {
@@ -710,7 +710,7 @@ void up_enable_irq(int irq)
           PANIC();
         }
 
-      DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+      DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 
       /* For peripheral interrupts, attach the interrupt to the peripheral;
        * the CPU interrupt was already enabled when allocated.
@@ -784,7 +784,7 @@ int esp32_cpuint_initialize(void)
   /* Which CPU are we initializing */
 
   cpu = this_cpu();
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 #endif
 
   /* Disable all CPU interrupts on this CPU */
@@ -1243,7 +1243,7 @@ void esp32_irq_noniram_enable(void)
 
 bool esp32_irq_noniram_status(int cpu)
 {
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+  DEBUGASSERT(cpu >= 0 && cpu < CPU_SETSIZE);
 
   return !per_cpu_var_smp(g_non_iram_int_disabled_flag, cpu);
 }

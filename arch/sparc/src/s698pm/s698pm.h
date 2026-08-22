@@ -111,18 +111,18 @@
  ****************************************************************************/
 
 extern uint32_t g_cpu0_idlestack[SMP_STACK_WORDS];
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
 extern uint32_t g_cpu1_idlestack[SMP_STACK_WORDS];
-#if CONFIG_SMP_NCPUS > 2
+#if CPU_SETSIZE > 2
 extern uint32_t g_cpu2_idlestack[SMP_STACK_WORDS];
-#if CONFIG_SMP_NCPUS > 3
+#if CPU_SETSIZE > 3
 extern uint32_t g_cpu3_idlestack[SMP_STACK_WORDS];
-#if CONFIG_SMP_NCPUS > 4
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 4
-#endif /* CONFIG_SMP_NCPUS > 4 */
-#endif /* CONFIG_SMP_NCPUS > 3 */
-#endif /* CONFIG_SMP_NCPUS > 2 */
-#endif /* CONFIG_SMP_NCPUS > 1 */
+#if CPU_SETSIZE > 4
+#  error This logic needs to extended for CPU_SETSIZE > 4
+#endif /* CPU_SETSIZE > 4 */
+#endif /* CPU_SETSIZE > 3 */
+#endif /* CPU_SETSIZE > 2 */
+#endif /* CPU_SETSIZE > 1 */
 #endif
 
 #undef EXTERN

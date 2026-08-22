@@ -107,7 +107,7 @@ int perf_pmu_register(FAR struct pmu_s *pmu, FAR const char *name)
 
   pmu->name = name;
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       FAR struct pmu_cpu_context_s *cpu_pmu_ctx = &pmu->cpu_pmu_ctx[i];
       perf_init_pmu_context(&cpu_pmu_ctx->pmuctx, pmu);

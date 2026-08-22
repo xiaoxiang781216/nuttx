@@ -107,7 +107,7 @@ int sysinfo(FAR struct sysinfo *info)
 #endif
 
       info->uptime   = (unsigned long)TICK2SEC(clock_systime_ticks());
-      info->procs    = CONFIG_SMP_NCPUS;
+      info->procs    = CPU_SETSIZE;
       info->mem_unit = 1;
     }
   else

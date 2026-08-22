@@ -132,11 +132,7 @@ struct mm_delayhead_s
 #endif
 };
 
-#ifdef CONFIG_SMP
-typedef struct mm_delayhead_s mm_delaylist_t[CONFIG_SMP_NCPUS];
-#else
-typedef struct mm_delayhead_s mm_delaylist_t;
-#endif
+typedef struct mm_delayhead_s mm_delaylist_t[CPU_SETSIZE];
 
 struct mm_heap_s
 {
@@ -291,11 +287,7 @@ static void *init_allocnode(struct mm_heap_s *heap, void *alloc_mem,
 static inline_function
 struct mm_delayhead_s *get_delayhead(struct mm_heap_s *heap)
 {
-#ifdef CONFIG_SMP
-  return &heap->delay[this_cpu()];
-#else
-  return &heap->delay;
-#endif
+  return &heap->delay[CPU_SETSIZE > 1 ? this_cpu() : 0];
 }
 
 static void add_delaylist(struct mm_heap_s *heap, void *mem, mm_delaycb_t cb)

@@ -46,7 +46,7 @@
  ****************************************************************************/
 
 const uintptr_t g_idle_topstack = (uintptr_t)_ebss +
-                                  SMP_STACK_SIZE * CONFIG_SMP_NCPUS;
+                                  SMP_STACK_SIZE * CPU_SETSIZE;
 
 /****************************************************************************
  * Public Functions
@@ -103,7 +103,7 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
   size_t shadow_size = (stack_size >> 7) * CONFIG_ARCH_STACK_SPLIT_RATIO;
 #endif
 
-  DEBUGASSERT(cpu > 0 && cpu < CONFIG_SMP_NCPUS && tcb != NULL &&
+  DEBUGASSERT(cpu > 0 && cpu < CPU_SETSIZE && tcb != NULL &&
               stack_size <= SMP_STACK_SIZE);
 
   /* Get the top of the stack */

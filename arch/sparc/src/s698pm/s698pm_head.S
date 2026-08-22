@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <arch/irq.h>
+#include <sys/types.h>
 
 #define RTRAP(_vector, _handler)  mov   %g0, %l0 ; sethi %hi(_handler), %l4 ; jmp %l4+%lo(_handler); mov _vector, %l3
 #define TRAP(_vector, _handler)   mov   %psr, %l0; sethi %hi(_handler), %l4 ; jmp %l4+%lo(_handler); mov _vector, %l3
@@ -69,7 +70,8 @@
   jmp   %l4+%lo(_handler); \
    sll  %l3, 1, %l4 ! l4 = WIM << 1
 
-#define S698PM_STACK_TOP       _end + (CONFIG_IDLETHREAD_STACKSIZE * CONFIG_SMP_NCPUS)
+#define S698PM_STACK_TOP \
+  _end + (CONFIG_IDLETHREAD_STACKSIZE * CPU_SETSIZE)
 
     .text
     .global _trap_table, _hardreset
@@ -634,8 +636,7 @@ g_cpu0_idlestack:
 .Lcpu0_stacktop:
 	.size	g_cpu0_idlestack, .Lcpu0_stacktop-g_cpu0_idlestack
 
-#ifdef CONFIG_SMP
-#if CONFIG_SMP_NCPUS > 1
+#if CPU_SETSIZE > 1
 	.align	8
 	.globl	g_cpu1_idlestack
 	.type	g_cpu1_idlestack, object
@@ -645,7 +646,7 @@ g_cpu1_idlestack:
 .Lcpu1_stacktop:
 	.size	g_cpu1_idlestack, .Lcpu1_stacktop-g_cpu1_idlestack
 
-#if CONFIG_SMP_NCPUS > 2
+#if CPU_SETSIZE > 2
 	.align	8
 	.globl	g_cpu2_idlestack
 	.type	g_cpu2_idlestack, object
@@ -655,7 +656,7 @@ g_cpu2_idlestack:
 .Lcpu2_stacktop:
 	.size	g_cpu2_idlestack, .Lcpu2_stacktop-g_cpu2_idlestack
 
-#if CONFIG_SMP_NCPUS > 3
+#if CPU_SETSIZE > 3
 	.align	8
 	.globl	g_cpu3_idlestack
 	.type	g_cpu3_idlestack, object
@@ -665,14 +666,13 @@ g_cpu3_idlestack:
 .Lcpu3_stacktop:
 	.size	g_cpu3_idlestack, .Lcpu3_stacktop-g_cpu3_idlestack
 
-#if CONFIG_SMP_NCPUS > 4
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 4
+#if CPU_SETSIZE > 4
+#  error This logic needs to extended for CPU_SETSIZE > 4
 
-#endif /* CONFIG_SMP_NCPUS > 4 */
-#endif /* CONFIG_SMP_NCPUS > 3 */
-#endif /* CONFIG_SMP_NCPUS > 2 */
-#endif /* CONFIG_SMP_NCPUS > 1 */
-#endif /* CONFIG_SMP */
+#endif /* CPU_SETSIZE > 4 */
+#endif /* CPU_SETSIZE > 3 */
+#endif /* CPU_SETSIZE > 2 */
+#endif /* CPU_SETSIZE > 1 */
 
 	.end
 

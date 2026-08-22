@@ -53,7 +53,7 @@
 
 int get_nprocs_conf(void)
 {
-  return CONFIG_SMP_NCPUS;
+  return CPU_SETSIZE;
 }
 
 /****************************************************************************
@@ -77,5 +77,5 @@ int get_nprocs_conf(void)
 
 int get_nprocs(void)
 {
-  return CONFIG_SMP_NCPUS;
+  return CPU_SETSIZE;
 }

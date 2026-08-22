@@ -61,7 +61,7 @@ void sparc_color_intstack(void)
 {
   int cpu;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
     {
       sparc_stack_color((void *)up_get_intstackbase(cpu), INTSTACK_SIZE);
     }

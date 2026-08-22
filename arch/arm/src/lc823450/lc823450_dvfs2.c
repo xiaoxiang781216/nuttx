@@ -141,7 +141,7 @@ static void lc823450_dvfs_update_lpm(int freq)
   /* TODO */
 }
 
-#if CONFIG_SMP_NCPUS == 2
+#if CPU_SETSIZE == 2
 static int _dvfs_another_cpu_state(int me)
 {
   if (0 == me)
@@ -380,10 +380,10 @@ static void lc823450_dvfs_change_idx(int up)
 
 static void lc823450_dvfs_do_auto(uint32_t idle[])
 {
-  uint32_t state[CONFIG_SMP_NCPUS];
+  uint32_t state[CPU_SETSIZE];
   int i;
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       if (UP_THRESHOLD >= idle[i])
         {
@@ -399,18 +399,18 @@ static void lc823450_dvfs_do_auto(uint32_t idle[])
         }
     }
 
-#if CONFIG_SMP_NCPUS == 1
+#if CPU_SETSIZE == 1
   if (FREQ_UP == state[0])
-#elif CONFIG_SMP_NCPUS == 2
+#elif CPU_SETSIZE == 2
   if (FREQ_UP == state[0] || FREQ_UP == state[1])
 #endif
     {
       lc823450_dvfs_change_idx(FREQ_UP);
     }
 
-#if CONFIG_SMP_NCPUS == 1
+#if CPU_SETSIZE == 1
   if (FREQ_DN == state[0])
-#elif CONFIG_SMP_NCPUS == 2
+#elif CPU_SETSIZE == 2
   if (FREQ_DN == state[0] && FREQ_DN == state[1])
 #endif
     {
@@ -433,12 +433,12 @@ void lc823450_dvfs_get_idletime(uint64_t idletime[])
 
   /* First, copy g_idle_totaltime to the caller */
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       idletime[i] = per_cpu_var_smp(g_idle_totaltime, i);
     }
 
-#if CONFIG_SMP_NCPUS == 2
+#if CPU_SETSIZE == 2
   int me = this_cpu();
 
   if (0 == _dvfs_another_cpu_state(me))
@@ -473,8 +473,8 @@ uint32_t lc823450_get_apb(void)
 
 void lc823450_dvfs_tick_callback(void)
 {
-  uint64_t tmp_idle_total[CONFIG_SMP_NCPUS];
-  uint32_t idle[CONFIG_SMP_NCPUS];
+  uint64_t tmp_idle_total[CPU_SETSIZE];
+  uint32_t idle[CPU_SETSIZE];
   int i;
 
   if (g_dvfs_enabled && g_dvfs_auto)
@@ -483,7 +483,7 @@ void lc823450_dvfs_tick_callback(void)
 
       /* Calculate idle ratio for each CPU */
 
-      for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+      for (i = 0; i < CPU_SETSIZE; i++)
         {
           idle[i] = 100 *
             (tmp_idle_total[i] - g_idle_totaltime0[i]) / NSEC_PER_TICK;
@@ -491,7 +491,7 @@ void lc823450_dvfs_tick_callback(void)
 
       /* Update g_idle_totaltime0 */
 
-      for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+      for (i = 0; i < CPU_SETSIZE; i++)
         {
           per_cpu_var_smp(g_idle_totaltime0, i) = tmp_idle_total[i];
         }
@@ -529,7 +529,7 @@ void lc823450_dvfs_enter_idle(void)
       goto exit_with_error;
     }
 
-#if CONFIG_SMP_NCPUS == 2
+#if CPU_SETSIZE == 2
   /* check if another core is still active */
 
   if (_dvfs_another_cpu_state(me))
@@ -573,7 +573,7 @@ void lc823450_dvfs_exit_idle(int irq)
       goto exit_with_error;
     }
 
-#if CONFIG_SMP_NCPUS == 2
+#if CPU_SETSIZE == 2
   /* Check if another core is already active */
 
   if (_dvfs_another_cpu_state(me))

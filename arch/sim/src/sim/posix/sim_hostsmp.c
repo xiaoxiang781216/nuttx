@@ -50,7 +50,7 @@ struct sim_cpuinfo_s
  ****************************************************************************/
 
 static pthread_key_t g_cpu_key;
-static pthread_t     g_cpu_thread[CONFIG_SMP_NCPUS];
+static pthread_t     g_cpu_thread[CPU_SETSIZE];
 
 /****************************************************************************
  * Private Functions
@@ -179,11 +179,11 @@ void host_cpu0_start(void)
  *   initialized.
  *
  *   The OS initialization logic calls this function repeatedly until each
- *   CPU has been started, 1 through (CONFIG_SMP_NCPUS-1).
+ *   CPU has been started, 1 through (CPU_SETSIZE-1).
  *
  * Input Parameters:
  *   cpu - The index of the CPU being started.  This will be a numeric
- *         value in the range of from one to (CONFIG_SMP_NCPUS-1).  (CPU
+ *         value in the range of from one to (CPU_SETSIZE-1).  (CPU
  *         0 is already active)
  *
  * Returned Value:

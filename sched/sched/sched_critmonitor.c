@@ -202,7 +202,7 @@ static void nxsched_critmon_cpuload(FAR struct tcb_s *tcb, clock_t current,
   /* Update the cpuload of threads running on other CPUs */
 
 #  ifdef CONFIG_SMP
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CPU_SETSIZE; i++)
     {
       FAR struct tcb_s *rtcb = current_task(i);
 
