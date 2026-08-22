@@ -504,19 +504,22 @@ config CPU_CALL_POOL_COUNT
 		SMP and UP builds do not use this pool; they rely on stack-
 		allocated cookies in the caller context.
 
-config SMP_NCPUS
-	int "Number of CPUs"
+config NCPUS
+	int "Number of CPUs we will use"
 	default 4 if !UP
 	default 1
 	range 1 32
 	---help---
-		This value identifies the number of CPUs supported by the processor
-		that will be used for SMP.
+		Number of physical CPU cores the image supports.
 
-		If CONFIG_DEBUG_FEATURES is enabled, then the value one is permitted
-		for CONFIG_SMP_NCPUS.  This is not normally a valid setting for an
-		SMP configuration.  However, running the SMP logic in a single CPU
-		configuration is useful during certain testing.
+		SMP    : a single scheduler drives all of them and tasks migrate
+		         freely between cores.
+		BMP    : each core runs an independent scheduler out of the same
+		         image, so a core never schedules work onto another one.
+		UP/AMP : a single core from this OS instance's point of view.
+
+		The number of *schedulable* cores is CPU_SETSIZE (sys/types.h): it
+		         equals CONFIG_NCPUS under SMP and 1 otherwise.
 
 config SMP_DEFAULT_CPUSET
 	hex "Default CPU bit set"

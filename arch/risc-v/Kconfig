@@ -620,7 +620,7 @@ config ARCH_RV_HARTID_BASE
 		- Global hart 203 -> Local hart 3
 
 		Key Points:
-		1. SMP_NCPUS defines the number of harts in this cluster
+		1. NCPUS defines the number of harts in this cluster
 		2. Global hart IDs within a cluster must be consecutive
 		3. Some chips like K230 don't use global mhartid numbering
 		4. The base value should match the starting mhartid of this cluster

@@ -215,7 +215,7 @@ if BLUETOOTH_TXCMD_PINNED_TO_CORE
 config BLUETOOTH_TXCMD_CORE
 	int "Tx command thread CPU core"
 	default 1
-	range 1 SMP_NCPUS
+	range 1 NCPUS
 	---help---
 		Select the core to pin the Tx command thread.
 
