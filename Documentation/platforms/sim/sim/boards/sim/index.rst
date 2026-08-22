@@ -303,7 +303,7 @@ SMP
 
     +CONFIG_SPINLOCK=y
     +CONFIG_SMP=y
-    +CONFIG_SMP_NCPUS=2
+    +CONFIG_NCPUS=2
 
   And you can enable some additional debug output with::
 
@@ -317,7 +317,7 @@ SMP
 
   The SMP configuration will run with::
 
-    CONFIG_SMP_NCPUS=1
+    CONFIG_NCPUS=1
 
   In this case there is, of course, no multi-CPU processing, but this does
   verify the correctness of some of the basic SMP logic.

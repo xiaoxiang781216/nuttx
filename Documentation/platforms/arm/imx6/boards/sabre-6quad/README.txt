@@ -70,7 +70,7 @@ Status
   At this point, I would say that the basic NSH port is complete.
 
 2016-05-18: Started looking at the SMP configuration.  Initially, I verfied
-  that the NSH configuration works with CONFIG_SMP_NCPUS=1.  Not a very
+  that the NSH configuration works with CONFIG_NCPUS=1.  Not a very
   interesting case, but this does exercise a lot of the basic SMP logic.
 
   When more than one CPU is configured, then there are certain failures that
@@ -93,8 +93,8 @@ Status
     -CONFIG_DEBUG_FULLOPT=y
     +CONFIG_DEBUG_NOOPT=y
 
-    -CONFIG_SMP_NCPUS=4
-    +CONFIG_SMP_NCPUS=2
+    -CONFIG_NCPUS=4
+    +CONFIG_NCPUS=2
 
     -CONFIG_RAMLOG=y
     -CONFIG_RAMLOG_SYSLOG=y
@@ -625,7 +625,7 @@ index b15becbb51..3ad4d13ad7 100644
    $ qemu-system-arm -M sabrelite -smp 4 -nographic -s -S
 
    NOTE: -smp 4 option should be used for both nsh configuration
-   (non-SMP) and smp configuration (regardless of CONFIG_SMP_NCPUS)
+   (non-SMP) and smp configuration (regardless of CONFIG_NCPUS)
 
    To quit QEMU, type Ctrl-A + X
 
@@ -668,7 +668,7 @@ be enabled with the following configuration settings:
   RTOS Features -> Tasks and Scheduling
     CONFIG_SPINLOCK=y
     CONFIG_SMP=y
-    CONFIG_SMP_NCPUS=4
+    CONFIG_NCPUS=4
 
 Open Issues:
 

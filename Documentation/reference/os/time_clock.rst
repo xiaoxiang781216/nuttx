@@ -710,17 +710,17 @@ The specific definitions of the states are as follows:
 been inserted into the hrtimer queue and is waiting to be executed.
 
 **HRTIMER_COMPLETED|private**: `hrtimer->func == NULL` ∧
-`∀c ∈ [0, CONFIG_SMP_NCPUS), (g_hrtimer_running[c] & ~(1u)) != hrtimer`
+`∀c ∈ [0, CPU_SETSIZE), (g_hrtimer_running[c] & ~(1u)) != hrtimer`
 That is, the hrtimer is not in a pending state, and no core is currently
 executing the hrtimer's callback function.
 
 **HRTIMER_RUNNING|shared**: `hrtimer->func == NULL` ∧
-`∃c ∈ [0, CONFIG_SMP_NCPUS), g_hrtimer_running[c] == hrtimer`.
+`∃c ∈ [0, CPU_SETSIZE), g_hrtimer_running[c] == hrtimer`.
 That is, the hrtimer is not in a pending state, and there exists at least one
 core that is currently executing the hrtimer’s callback function.
 
 **HRTIMER_CANCELED|half_shared**: `hrtimer->func == NULL` ∧
-`∀c ∈ [0, CONFIG_SMP_NCPUS), g_hrtimer_running[c] != hrtimer`.
+`∀c ∈ [0, CPU_SETSIZE), g_hrtimer_running[c] != hrtimer`.
 That is, the hrtimer is not in a pending state, and all cores have lost write
 ownership of the hrtimer—meaning they can no longer write to the
 hrtimer—though its callback function may still be in the process of being

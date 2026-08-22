@@ -84,7 +84,7 @@ And, for 64-bit configurations::
     $ qemu-system-riscv64 -semihosting -M virt,aclint=on -cpu rv64 -smp <cpu number> -bios none -kernel nuttx -nographic
 
 ``-smp`` option can be only used in smp build, and the ``cpu number`` needs
-to be set to the same value as ``CONFIG_SMP_NCPUS`` in the build config file.
+to be set to the same value as ``CONFIG_NCPUS`` in the build config file.
 
 If testing with S-mode build, remove the ``-bios none`` option. S-mode build
 requires SBI to function properly.

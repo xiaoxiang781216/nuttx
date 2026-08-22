@@ -156,7 +156,7 @@ Getting Started
    Note:
    1. Make sure the aarch64-none-elf toolchain install PATH has been added to environment variable
    2. To quit QEMU, type Ctrl + X
-   3. Nuttx default core number is 4, and Changing CONFIG_SMP_NCPUS > 4 and setting qemu command
+   3. Nuttx default core number is 4, and Changing CONFIG_NCPUS > 4 and setting qemu command
      option -smp will boot more core. For qemu, core limit is 32.
 
   3.4 SMP + Networking with hypervisor (GICv2)

@@ -721,7 +721,7 @@ architecture ports to assure a correct implementation of the OS. The default
 version is for a single CPU but can be modified for an SMP test by adding::
 
   CONFIG_SMP=y
-  CONFIG_SMP_NCPUS=2
+  CONFIG_NCPUS=2
   CONFIG_SPINLOCK=y
 
 pm
@@ -810,7 +810,7 @@ additional settings:
 SMP is enabled::
 
   CONFIG_SMP=y
-  CONFIG_SMP_NCPUS=2
+  CONFIG_NCPUS=2
   CONFIG_SPINLOCK=y
 
 The apps/testing/smp test is included::

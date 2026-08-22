@@ -180,7 +180,7 @@ You can enable SMP for ostest configuration by enabling:
 
     Add:     CONFIG_SPINLOCK=y
     Add:     CONFIG_SMP=y
-    Add:     CONFIG_SMP_NCPUS=2
+    Add:     CONFIG_NCPUS=2
     Add:     CONFIG_SMP_IDLETHREAD_STACKSIZE=2048
 
 You also must enable near-realtime-performance otherwise even long timeouts will expire before a CPU thread even has a chance to execute.
@@ -204,7 +204,7 @@ The SMP configuration will run with:
 
 .. code-block:: bash
 
-    CONFIG_SMP_NCPUS=1
+    CONFIG_NCPUS=1
 
 In this case there is, of course, no multi-CPU processing, but this does verify the correctness of some the basic SMP logic in a simpler environment.
 

@@ -24,6 +24,45 @@ For a technical description of the NuttX implementation of SMP,
 see the NuttX `SMP Wiki
 Page <https://cwiki.apache.org/confluence/display/NUTTX/SMP>`__.
 
+CPU counts: CONFIG_NCPUS versus CPU_SETSIZE
+-------------------------------------------
+
+NuttX supports three multi-processing models, and they differ in whether a
+task may move between cores:
+
+========  =============================  ====================================
+Model     Image                          Scheduling
+========  =============================  ====================================
+UP / AMP  one image per core             one core, one scheduler
+BMP       one image shared by all cores  one scheduler per core, no migration
+SMP       one image                      one scheduler across all cores
+========  =============================  ====================================
+
+Two distinct counts follow from that, and mixing them up is a common source
+of bugs:
+
+``CONFIG_NCPUS``
+  The number of physical cores the image supports.  Used for anything that
+  exists once per core in hardware or during bring-up: per-CPU data
+  (``DEFINE_PER_CPU``), idle and interrupt stacks, secondary CPU startup,
+  per-core heap partitioning, IOB pools and cross-CPU call queues.  Under
+  BMP this is greater than one even though each core schedules alone.
+
+``CPU_SETSIZE`` (``sys/types.h``)
+  The number of *schedulable* cores, that is how many cores this OS instance
+  may place a task on::
+
+    #ifdef CONFIG_SMP
+    #  define CPU_SETSIZE CONFIG_NCPUS
+    #else
+    #  define CPU_SETSIZE 1
+    #endif
+
+  Used for ``cpu_set_t`` masks and affinity, ready-to-run and assigned-task
+  arrays, idle task pid checks, per-CPU scheduling statistics and any
+  ``DEFINE_PER_CPU_SMP`` object.  It is 1 for UP, AMP and BMP, because each
+  of those OS instances owns exactly one core.
+
 .. c:function:: spinlock_t up_testset(volatile FAR spinlock_t *lock)
 
   Perform and atomic test and set operation on the provided spinlock.
@@ -39,11 +78,11 @@ Page <https://cwiki.apache.org/confluence/display/NUTTX/SMP>`__.
 
 .. c:function:: int up_cpu_index(void)
 
-  Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1)
+  Return an index in the range of 0 through (CONFIG_NCPUS-1)
   that corresponds to the currently executing CPU.
 
   :return: An integer index in the range of 0 through
-    (CONFIG_SMP_NCPUS-1) that corresponds to the
+    (CONFIG_NCPUS-1) that corresponds to the
     currently executing CPU.
 
 .. c:function:: int up_cpu_start(int cpu)
@@ -60,11 +99,11 @@ Page <https://cwiki.apache.org/confluence/display/NUTTX/SMP>`__.
   has also been allocated and initialized.
 
   The OS initialization logic calls this function repeatedly until
-  each CPU has been started, 1 through (CONFIG_SMP_NCPUS-1).
+  each CPU has been started, 1 through (CPU_SETSIZE-1).
 
   :param cpu: The index of the CPU being started. This will be a
     numeric value in the range of from one to
-    ``(CONFIG_SMP_NCPUS-1)``). (CPU 0 is already active).
+    ``(CPU_SETSIZE-1)``). (CPU 0 is already active).
 
   :return: Zero (OK) is returned on success; a negated errno value on failure.
 

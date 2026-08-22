@@ -596,7 +596,7 @@ additional settings:
 SMP is enabled::
 
   CONFIG_SMP=y
-  CONFIG_SMP_NCPUS=2
+  CONFIG_NCPUS=2
   CONFIG_SPINLOCK=y
 
 The apps/testing/smp test is included::
