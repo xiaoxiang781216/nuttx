@@ -68,8 +68,24 @@
 #define SEEK_CUR    1  /* From the current file offset */
 #define SEEK_END    2  /* From the end of the file */
 
-#ifndef CONFIG_SMP_NCPUS
-#  define CONFIG_SMP_NCPUS 1
+/* Maximum number of schedulable CPUs.
+ *
+ * This is not standard but is defined for Linux compatibility.
+ *
+ * SMP        : a single scheduler drives all CONFIG_NCPUS physical cores, so
+ *              a task may be assigned to any of them.
+ * UP/AMP/BMP : each OS instance schedules on exactly one core, so 1.
+ *
+ * CONFIG_NCPUS, the number of physical cores the image supports, is only
+ * needed by the BMP aware code paths: per-CPU data, idle and interrupt
+ * stacks, secondary CPU bringup, per-core heap split, IOB pools and
+ * cross-CPU call queues.
+ */
+
+#ifdef CONFIG_SMP
+#  define CPU_SETSIZE CONFIG_NCPUS
+#else
+#  define CPU_SETSIZE 1
 #endif
 
 /* Scheduling Priorities.
@@ -263,13 +279,11 @@ typedef uintptr_t    timer_t;        /* Represents one POSIX timer */
 typedef uint32_t     useconds_t;
 typedef int32_t      suseconds_t;
 
-/* This is the smallest integer type that will hold a bitset of all CPUs */
+/* Bitset of CPUs.  Kconfig caps CONFIG_NCPUS, and with it CPU_SETSIZE, at
+ * 32, so one uint32_t is always wide enough.
+ */
 
-#if (CONFIG_SMP_NCPUS <= 32)
 typedef volatile uint32_t cpu_set_t;
-#else
-#  error SMP: Extensions needed to support this number of CPUs
-#endif
 
 /* BSD types provided only to support porting to NuttX. */
 
