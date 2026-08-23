@@ -393,10 +393,10 @@ static bool free_delaylist(struct mm_heap_s *heap, bool force)
 }
 
 #ifdef CONFIG_MM_HEAP_FORBID_NONE
-#  define mm_skip_operation(heap, mem, size) false
+#  define skip_operation(heap, mem, size) false
 #else
-static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap,
-                                              FAR void *mem, size_t size)
+static inline_function bool skip_operation(FAR struct mm_heap_s *heap,
+                                           FAR void *mem, size_t size)
 {
   if (atomic_read(&heap->forbid) == 0)
     {
@@ -414,7 +414,8 @@ static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap,
 }
 #endif
 
-static void *reallocate(void *oldmem, size_t alignment, size_t size)
+static void *reallocate(FAR struct mm_heap_s *heap, void *oldmem,
+                        size_t alignment, size_t size)
 {
   size_t aligned_size;
   size_t padding_size;
@@ -424,7 +425,12 @@ static void *reallocate(void *oldmem, size_t alignment, size_t size)
   void *old_alloc_addr;
   void *mem = oldmem;
 
-  free_delaylist(g_mmheap, false);
+  if (skip_operation(heap, NULL, size))
+    {
+      return NULL;
+    }
+
+  free_delaylist(heap, false);
 
   /* NEW ALLOCATION (MALLOC/MEMALIGN) */
 
@@ -465,9 +471,9 @@ static void *reallocate(void *oldmem, size_t alignment, size_t size)
           return NULL;
         }
 
-      mem = init_allocnode(g_mmheap, new_alloc_addr, aligned_size,
+      mem = init_allocnode(heap, new_alloc_addr, aligned_size,
                            padding_size);
-      sched_note_heap_alloc(g_mmheap, mem, aligned_size, 0);
+      sched_note_heap_alloc(heap, mem, aligned_size, 0);
       return mem;
     }
 
@@ -486,7 +492,7 @@ static void *reallocate(void *oldmem, size_t alignment, size_t size)
   old_alloc_addr = old_node->allocmem;
   old_size = old_node->size;
 
-  update_stats(g_mmheap, oldmem, old_size, false);
+  update_stats(heap, oldmem, old_size, false);
 
   padding_size = ALIGN_UP_MASK(MM_ALLOCNODE_SIZE, MM_ALIGN - 1)
                  - MM_ALLOCNODE_SIZE;
@@ -497,7 +503,7 @@ static void *reallocate(void *oldmem, size_t alignment, size_t size)
     {
       mm_trace_diag(LOG_EMERG, DIAG_MM_ALLOC_FAIL,
                     "Size:%zu", size);
-      update_stats(g_mmheap, oldmem, old_size, true);
+      update_stats(heap, oldmem, old_size, true);
       return NULL;
     }
 
@@ -505,16 +511,53 @@ static void *reallocate(void *oldmem, size_t alignment, size_t size)
     {
       old_node->size = aligned_size;
       old_node->padding = padding_size;
-      MM_RECORD(g_mmheap, old_node);
-      update_stats(g_mmheap, oldmem, aligned_size, true);
-      sched_note_heap_alloc(g_mmheap, mem, aligned_size, 0);
+      MM_RECORD(heap, old_node);
+      update_stats(heap, oldmem, aligned_size, true);
+      sched_note_heap_alloc(heap, oldmem, aligned_size, 0);
       return oldmem;
     }
 
-  sched_note_heap_free(g_mmheap, oldmem, old_size, 0);
-  mem = init_allocnode(g_mmheap, new_alloc_addr, aligned_size, padding_size);
-  sched_note_heap_alloc(g_mmheap, mem, aligned_size, 0);
+  sched_note_heap_free(heap, oldmem, old_size, 0);
+  mem = init_allocnode(heap, new_alloc_addr, aligned_size, padding_size);
+  sched_note_heap_alloc(heap, mem, aligned_size, 0);
   return mem;
+}
+
+/****************************************************************************
+ * Name: mallinfo_callback
+ *
+ * Description:
+ *   mallinfo callback function of the procfs filesystem.
+ *
+ ****************************************************************************/
+
+static struct mallinfo mallinfo_callback(struct mm_heap_s *heap)
+{
+  struct mallinfo info;
+  memset(&info, 0, sizeof(struct mallinfo));
+
+  info.aordblks = atomic_read(&heap->aordblks);
+  info.ordblks  = 1;
+  info.uordblks = atomic_read(&heap->uordblks);
+  info.usmblks  = atomic_read(&heap->usmblks);
+  info.arena    = SIM_HEAP_SIZE;
+  info.fordblks = SIM_HEAP_SIZE - info.uordblks;
+  info.mxordblk = info.fordblks;
+
+  return info;
+}
+
+/****************************************************************************
+ * Name: memdump_callback
+ *
+ * Description:
+ *   memdump callback function of the procfs filesystem.
+ *
+ ****************************************************************************/
+
+static void memdump_callback(struct mm_heap_s *heap,
+                             const struct mm_memdump_s *dump)
+{
 }
 
 /****************************************************************************
@@ -555,12 +598,7 @@ void umm_addregion(void *heapstart, size_t heapsize)
 
 void *malloc(size_t size)
 {
-  if (mm_skip_operation(g_mmheap, NULL, size))
-    {
-      return NULL;
-    }
-
-  return reallocate(NULL, 1, size);
+  return reallocate(g_mmheap, NULL, 1, size);
 }
 
 /****************************************************************************
@@ -581,7 +619,7 @@ void free(void *mem)
       return;
     }
 
-  if (mm_skip_operation(g_mmheap, mem, 0))
+  if (skip_operation(g_mmheap, mem, 0))
     {
       return;
     }
@@ -612,7 +650,7 @@ void umm_delayfreecb(void *mem, mm_delaycb_t cb)
       return;
     }
 
-  if (mm_skip_operation(g_mmheap, mem, 0))
+  if (skip_operation(g_mmheap, mem, 0))
     {
       return;
     }
@@ -645,12 +683,7 @@ void umm_delayfreecb(void *mem, mm_delaycb_t cb)
 
 void *realloc(void *oldmem, size_t size)
 {
-  if (mm_skip_operation(g_mmheap, oldmem, size))
-    {
-      return NULL;
-    }
-
-  return reallocate(oldmem, 1, size);
+  return reallocate(g_mmheap, oldmem, 1, size);
 }
 
 /****************************************************************************
@@ -709,12 +742,7 @@ void *zalloc(size_t size)
 
 void *memalign(size_t alignment, size_t size)
 {
-  if (mm_skip_operation(g_mmheap, NULL, size))
-    {
-      return NULL;
-    }
-
-  return reallocate(NULL, alignment, size);
+  return reallocate(g_mmheap, NULL, alignment, size);
 }
 
 /****************************************************************************
@@ -766,30 +794,6 @@ void umm_extend(void *mem, size_t size, int region)
 }
 
 /****************************************************************************
- * Name: mallinfo_callback
- *
- * Description:
- *   mallinfo callback function of the procfs filesystem.
- *
- ****************************************************************************/
-
-struct mallinfo mallinfo_callback(struct mm_heap_s *heap)
-{
-  struct mallinfo info;
-  memset(&info, 0, sizeof(struct mallinfo));
-
-  info.aordblks = atomic_read(&heap->aordblks);
-  info.ordblks  = 1;
-  info.uordblks = atomic_read(&heap->uordblks);
-  info.usmblks  = atomic_read(&heap->usmblks);
-  info.arena    = SIM_HEAP_SIZE;
-  info.fordblks = SIM_HEAP_SIZE - info.uordblks;
-  info.mxordblk = info.fordblks;
-
-  return info;
-}
-
-/****************************************************************************
  * Name: mallinfo
  *
  * Description:
@@ -818,19 +822,6 @@ struct mallinfo_task mallinfo_task(const struct malltask *task)
     };
 
   return info;
-}
-
-/****************************************************************************
- * Name: memdump_callback
- *
- * Description:
- *   memdump callback function of the procfs filesystem.
- *
- ****************************************************************************/
-
-void memdump_callback(struct mm_heap_s *heap,
-                      const struct mm_memdump_s *dump)
-{
 }
 
 /****************************************************************************
@@ -908,8 +899,6 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 void umm_initialize(void *heap_start, size_t heap_size)
 {
   sched_note_heap_add(g_mmheap, heap_start, heap_size, 0);
-  UNUSED(heap_start);
-  UNUSED(heap_size);
 
   list_initialize(&g_mmheap->alloclist);
   spin_lock_init(&g_mmheap->lock);
