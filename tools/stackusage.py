@@ -27,7 +27,10 @@ Reports worst-case total stack depth through the call chain, flagging
 uncertain cases such as recursion and indirect calls (function pointers).
 
 Works with both GNU and LLVM toolchains (readelf/objdump/addr2line).
-No Python package dependencies required.
+No required Python dependencies.  The optional 'capstone' package
+enables a faster disassembly engine (--engine=capstone) for large
+ELFs where objdump -d is impractically slow; falls back to objdump
+if capstone is unavailable.
 """
 
 import argparse
@@ -379,6 +382,197 @@ def parse_call_graph(prefix, elf, machine):
     return graph, dynamic_funcs
 
 
+def _elf_class_endian(elf):
+    """Return (is_64bit, is_big_endian) from the ELF identification."""
+    with open(elf, "rb") as f:
+        f.seek(4)
+        ei_class, ei_data = f.read(2)
+    return ei_class == 2, ei_data == 2
+
+
+def _capstone_mode(machine, is_thumb, elf):
+    """Map a readelf Machine string to a Capstone (arch, mode) pair.
+
+    Returns None when the architecture is unsupported by Capstone (e.g.
+    Xtensa), needs a CPU model the ELF header does not carry (e.g. SH,
+    M68K), or only partial support exists (e.g. SPARC 32-bit; Capstone
+    only implements V9), so the caller can fall back to objdump.
+    """
+    import capstone
+
+    m = machine.upper()
+    is64, is_be = _elf_class_endian(elf)
+    be = capstone.CS_MODE_BIG_ENDIAN if is_be else 0
+
+    if "TRICORE" in m:
+        # CS_MODE_TRICORE_162 is a superset of older revisions.
+        return capstone.CS_ARCH_TRICORE, capstone.CS_MODE_TRICORE_162
+    if "AARCH64" in m or "ARM64" in m:
+        return capstone.CS_ARCH_ARM64, capstone.CS_MODE_ARM
+    if "ARM" in m:
+        mode = capstone.CS_MODE_THUMB if is_thumb else capstone.CS_MODE_ARM
+        return capstone.CS_ARCH_ARM, mode | be
+    if "RISCV" in m or "RISC-V" in m or "RISC_V" in m:
+        mode = capstone.CS_MODE_RISCV64 if is64 else capstone.CS_MODE_RISCV32
+        return capstone.CS_ARCH_RISCV, mode | be
+    if "80386" in m or "X86" in m or "AMD" in m:
+        mode = capstone.CS_MODE_64 if is64 else capstone.CS_MODE_32
+        return capstone.CS_ARCH_X86, mode
+    if "MIPS" in m:
+        mode = capstone.CS_MODE_MIPS64 if is64 else capstone.CS_MODE_MIPS32
+        return capstone.CS_ARCH_MIPS, mode | be
+    if "POWER" in m or "PPC" in m:
+        mode = capstone.CS_MODE_64 if is64 else capstone.CS_MODE_32
+        return capstone.CS_ARCH_PPC, mode | be
+    if "SPARC" in m and is64:
+        return capstone.CS_ARCH_SPARC, capstone.CS_MODE_V9 | be
+    return None
+
+
+def _build_section_map(prefix, elf):
+    """Return a sorted list of (vma, file_offset, size, name) for PROGBITS
+    sections, used to map a function VMA to its byte offset in the file.
+    """
+    out = subprocess.run(
+        [prefix + "readelf", "-SW", elf],
+        capture_output=True,
+        text=True,
+    )
+    if out.returncode != 0:
+        raise ValueError(
+            "readelf -SW failed (rc=%d): %s" % (out.returncode, out.stderr.strip())
+        )
+    secs = []
+    for line in out.stdout.splitlines():
+        m = re.match(
+            r"\[\s*\d+\]\s+(\S+)\s+PROGBITS\s+([0-9a-f]+)\s+([0-9a-f]+)"
+            r"\s+([0-9a-f]+)",
+            line.strip(),
+        )
+        if m:
+            name, vma, off, size = m.groups()
+            isize = int(size, 16)
+            if isize > 0:
+                secs.append((int(vma, 16), int(off, 16), isize, name))
+    secs.sort()
+    return secs
+
+
+def parse_call_graph_capstone(elf, addr_to_name, func_sizes, machine, is_thumb, prefix):
+    """Build a call graph by disassembling each function with Capstone.
+
+    This bypasses ``objdump -d``, whose per-instruction symbol annotation
+    makes it impractically slow on ELFs with very large symbol tables.
+    Function code bytes are read directly via the section VMA-to-offset
+    map, and call targets are resolved through the symbol table already
+    built in phase 1.  Returns (graph, dynamic_funcs) with the same shape
+    as parse_call_graph().
+    """
+    import bisect
+
+    import capstone
+
+    try:
+        cs_mode = _capstone_mode(machine, is_thumb, elf)
+    except AttributeError as exc:
+        raise ValueError("capstone mode unavailable: %s" % exc)
+    if cs_mode is None:
+        raise ValueError("capstone engine does not support architecture: %s" % machine)
+
+    arch, mode = cs_mode
+    secs = _build_section_map(prefix, elf)
+    sec_vmas = [s[0] for s in secs]
+
+    def section_offset(addr):
+        i = bisect.bisect_right(sec_vmas, addr) - 1
+        # Several sections can share a VMA (e.g. .init/.fini/.text all at
+        # the text base); bisect lands on the last by sort order, which
+        # may be an empty sibling rather than the code section.  Walk back
+        # over same-VMA sections until one covers the address.
+        while i >= 0:
+            vma, off, size, _ = secs[i]
+            if vma <= addr < vma + size:
+                return off + (addr - vma), size - (addr - vma)
+            if i == 0 or secs[i - 1][0] != vma:
+                break
+            i -= 1
+        return None, 0
+
+    sp_re = _sp_pattern(machine)
+    md = capstone.Cs(arch, mode)
+    md.detail = False
+    # Skip undecodable bytes (e.g. TriCore context-save instructions
+    # Capstone does not model) instead of aborting the whole function,
+    # which would lose every subsequent call edge.
+    md.skipdata = True
+
+    sorted_addrs = sorted(addr_to_name)
+    # High bytes present in the symbol table; used to restore absolute
+    # targets that Capstone truncates to 24 bits (e.g. TriCore 'calla').
+    addr_high_bytes = sorted(set(a >> 24 for a in sorted_addrs))
+
+    def resolve_callee(addr):
+        i = bisect.bisect_right(sorted_addrs, addr) - 1
+        if i >= 0:
+            return addr_to_name[sorted_addrs[i]]
+        # Capstone truncates some absolute call targets (e.g. TriCore
+        # 'calla') to 24 bits; restore each known high byte in turn.
+        if addr < 0x1000000:
+            for hb in addr_high_bytes:
+                full = (hb << 24) | addr
+                j = bisect.bisect_right(sorted_addrs, full) - 1
+                if j >= 0 and sorted_addrs[j] == full:
+                    return addr_to_name[full]
+        return None
+
+    graph = {}
+    dynamic_funcs = set()
+    call_re = re.compile(r"0x([0-9a-f]+)")
+
+    with open(elf, "rb") as f:
+        for addr, size in func_sizes.items():
+            name = addr_to_name.get(addr)
+            if name is None or size <= 0:
+                continue
+            edges = graph.setdefault(name, set())
+            file_off, avail = section_offset(addr)
+            if file_off is None:
+                continue
+            f.seek(file_off)
+            code = f.read(min(size, avail))
+            for insn in md.disasm(code, addr):
+                mn = insn.mnemonic.lower()
+                ops = insn.op_str
+                if mn in CALL_MNEMONICS:
+                    tm = call_re.search(ops)
+                    if tm:
+                        callee = resolve_callee(int(tm.group(1), 16))
+                        if callee and callee in ALLOCA_NAMES:
+                            dynamic_funcs.add(name)
+                        elif callee:
+                            edges.add((callee, False))
+                        else:
+                            edges.add((None, True))
+                    else:
+                        edges.add((None, True))
+                    continue
+                # Capstone does not decode TriCore 'calli' (indirect call
+                # through a register); 0xdc is its 16-bit opcode and shows
+                # up as a skipdata byte run.  Treat it as an indirect call.
+                if (
+                    mn == ".byte"
+                    and "TRICORE" in machine.upper()
+                    and insn.size >= 1
+                    and insn.bytes[0] == 0xDC
+                ):
+                    edges.add((None, True))
+                    continue
+                if _is_dynamic_sp_sub(mn, ops, sp_re):
+                    dynamic_funcs.add(name)
+
+    return graph, dynamic_funcs
+
+
 def compute_worst_stack(funcs, graph, recursion_depth):
     """Compute worst-case total stack for every function via memoized DFS.
 
@@ -634,6 +828,15 @@ def main():
         help="assumed recursion depth for stack estimation (default: 0). "
         "When > 0, recursive cycle cost is multiplied by this value.",
     )
+    parser.add_argument(
+        "--engine",
+        choices=["objdump", "capstone"],
+        default="objdump",
+        help="disassembly engine for the call-graph phase: 'objdump' "
+        "(default, no extra deps) or 'capstone' (much faster on large "
+        "ELFs; needs 'pip install capstone').  Falls back to objdump "
+        "if capstone is unavailable or the architecture is unsupported.",
+    )
     args = parser.parse_args()
 
     if not os.path.isfile(args.elf):
@@ -667,8 +870,34 @@ def main():
     # Phase 3: Source locations via addr2line
     resolve_sources(args.prefix, args.elf, funcs, name_to_addr)
 
-    # Phase 4: Call graph via objdump
-    graph, dynamic_funcs = parse_call_graph(args.prefix, args.elf, machine)
+    # Phase 4: Call graph
+    use_capstone = args.engine == "capstone"
+    if use_capstone:
+        try:
+            graph, dynamic_funcs = parse_call_graph_capstone(
+                args.elf,
+                addr_to_name,
+                func_sizes,
+                machine,
+                is_thumb,
+                args.prefix,
+            )
+        except ImportError:
+            print(
+                "[stackusage] capstone not installed; falling back to "
+                "objdump.  Install with: pip install capstone",
+                file=sys.stderr,
+            )
+            use_capstone = False
+        except ValueError as exc:
+            print(
+                "[stackusage] %s; falling back to objdump" % exc,
+                file=sys.stderr,
+            )
+            use_capstone = False
+
+    if not use_capstone:
+        graph, dynamic_funcs = parse_call_graph(args.prefix, args.elf, machine)
 
     # Mark functions with dynamic stack allocation (alloca/VLA)
     for name in dynamic_funcs:
