@@ -431,9 +431,9 @@ int virtio_crypto_get_alg(int alg)
       case CRYPTO_SHA2_256_HMAC:
         return VIRTIO_CRYPTO_MAC_HMAC_SHA_256;
       case CRYPTO_PBKDF2_HMAC_SHA1:
-        return VIRTIO_CRYPTO_MAC_HMAC_SHA1;
+        return VIRTIO_CRYPTO_MAC_PBKDF2_HMAC_SHA1;
       case CRYPTO_PBKDF2_HMAC_SHA256:
-        return VIRTIO_CRYPTO_MAC_HMAC_SHA_256;
+        return VIRTIO_CRYPTO_MAC_PBKDF2_HMAC_SHA256;
       case CRYPTO_SHA2_384_HMAC:
         return VIRTIO_CRYPTO_MAC_HMAC_SHA_384;
       case CRYPTO_SHA2_512_HMAC:
@@ -524,6 +524,10 @@ int virtio_crypto_get_mac_alg(int alg)
       return CRYPTO_SHA2_512_HMAC;
     case VIRTIO_CRYPTO_MAC_CMAC_AES:
       return CRYPTO_AES_128_CMAC;
+    case VIRTIO_CRYPTO_MAC_PBKDF2_HMAC_SHA1:
+      return CRYPTO_PBKDF2_HMAC_SHA1;
+    case VIRTIO_CRYPTO_MAC_PBKDF2_HMAC_SHA256:
+      return CRYPTO_PBKDF2_HMAC_SHA256;
   }
 
   return -EINVAL;

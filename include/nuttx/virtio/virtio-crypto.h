@@ -115,6 +115,8 @@
 #define VIRTIO_CRYPTO_MAC_CBCMAC_KASUMI_F9                  50
 #define VIRTIO_CRYPTO_MAC_XCBC_AES                          53
 #define VIRTIO_CRYPTO_MAC_ZUC_EIA3                          54
+#define VIRTIO_CRYPTO_MAC_PBKDF2_HMAC_SHA1                  55
+#define VIRTIO_CRYPTO_MAC_PBKDF2_HMAC_SHA256                56
 
 /* AEAD services */
 
