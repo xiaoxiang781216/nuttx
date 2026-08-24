@@ -184,9 +184,10 @@ static int notebuf_ioctl(FAR struct file *filep, int cmd,
     {
       case NOTE_CLEAR:
 #ifdef CONFIG_DRIVERS_NOTE_STATS
-        atomic_add(&driver->stats.drop_bytes, ring_reset(&buf->ring));
+        atomic_add(&driver->stats.drop_bytes,
+                   ring_mpmc_skip(&buf->ring, RING_SIZE_MAX));
 #else
-        ring_reset(&buf->ring);
+        ring_mpmc_skip(&buf->ring, RING_SIZE_MAX);
 #endif
         return OK;
 
