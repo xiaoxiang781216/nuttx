@@ -1044,7 +1044,7 @@ void _assert(FAR const char *filename, int linenum,
       DIAG_BACKTRACE(rtcb, bt, nitems(bt));
       sched_trace_diag(LOG_EMERG, DIAG_SCHED_ASSERT,
                        "FileName:%s,LineNum:%d,"
-                       "TaskName:%s,PC:%p,"
+                       "TaskName:%s,PC:0x%" PRIxPTR ","
                        "Backtrace:%p %p %p %p %p %p %p %p",
                        filename ? filename : "", linenum,
                        get_task_name(rtcb), up_getpc(),
