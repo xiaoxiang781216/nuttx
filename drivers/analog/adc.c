@@ -458,7 +458,15 @@ static int adc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
-  if (ret < 0)
+  /* -ENOTTY simply means the lower-half driver does not recognize this
+   * command. This is a normal, expected condition (e.g. generic VFS
+   * commands such as FIOC_FILEPATH probed on every close() when
+   * inotify/pathcache is enabled) rather than a hardware failure, so it
+   * must not be reported as an IOCTL failure. Otherwise every periodic
+   * open/read/close cycle on an ADC node floods the diagnostics.
+   */
+
+  if (ret < 0 && ret != -ENOTTY)
     {
       analog_trace_diag(LOG_WARNING, DIAG_ADC_IOCTL_FAIL,
                         "DevPath:%s,Cmd:0x%x,Errno:%d",
