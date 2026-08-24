@@ -201,7 +201,6 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
     }
 
   end_packed_struct *var;
-  FAR const char *prec = NULL;
   FAR const char *data = buf;
   char fmtstr[64];
   bool infmt = false;
@@ -381,15 +380,11 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
         }
       else if (c == 's')
         {
-          if (prec != NULL)
-            {
-              *offset += strtol(prec, NULL, 10);
-              prec = NULL;
-            }
-          else
-            {
-              *offset += strlen(var->s) + 1;
-            }
+          /* The producer always packs the string NUL terminated, whether or
+           * not a precision truncated it, so advance by the packed length.
+           */
+
+          *offset += strlen(var->s) + 1;
 
           ret += lib_sprintf(s, fmtstr, var->s);
           infmt = false;
@@ -413,10 +408,6 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
               *offset += get_arch_dependent_size('p', arch);
               ret += lib_sprintf(s, fmtstr, ptr_val);
             }
-        }
-      else if (c == '.')
-        {
-          prec = fmt;
         }
     }
 

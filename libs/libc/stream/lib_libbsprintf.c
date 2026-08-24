@@ -92,6 +92,7 @@ static ssize_t lib_bsprintf_args(FAR void *buffer, size_t size,
 
   FAR const char *p = fmt;
   bool infmt = false;
+  int prec = -1;
   char c;
 
   if (type != 0)
@@ -264,9 +265,25 @@ static ssize_t lib_bsprintf_args(FAR void *buffer, size_t size,
 
           infmt = false;
         }
+      else if (c == '.')
+        {
+          prec = 0;
+        }
+      else if (c >= '0' && c <= '9')
+        {
+          if (prec >= 0)
+            {
+              prec = prec * 10 + (c - '0');
+            }
+        }
       else if (c == '*')
         {
           var->i = va_arg(va, int);
+          if (prec >= 0)
+            {
+              prec = var->i;
+            }
+
           next += sizeof(var->i);
         }
       else if (c == 's')
@@ -278,7 +295,20 @@ static ssize_t lib_bsprintf_args(FAR void *buffer, size_t size,
               var->s = "null";
             }
 
-          len = strlen(var->s) + 1;
+          /* A precision (".", either "*" or a literal count) bounds the
+           * string, so the source need not be NUL terminated; strnlen then
+           * avoids reading past the caller's buffer for a raw chunk.
+           */
+
+          if (prec >= 0)
+            {
+              len = strnlen(var->s, prec) + 1;
+            }
+          else
+            {
+              len = strlen(var->s) + 1;
+            }
+
           if (next + len > length)
             {
               return -ENOMEM;
@@ -343,6 +373,15 @@ static ssize_t lib_bsprintf_args(FAR void *buffer, size_t size,
               var->p = va_arg(va, FAR void *);
               next += sizeof(var->p);
             }
+        }
+
+      /* Precision applies to a single directive, so drop it once the
+       * conversion has been consumed (infmt back to false).
+       */
+
+      if (!infmt)
+        {
+          prec = -1;
         }
     }
 
