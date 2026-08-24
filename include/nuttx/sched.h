@@ -254,6 +254,21 @@ DECLARE_PER_CPU_SMP(FAR struct tcb_s *, g_assignedtasks);
 
 #define running_task()               (up_interrupt_context() ? g_running_task : this_task())
 
+/* This macro is true while the scheduler has already selected a new task but
+ * the context switch has not completed yet: this_task() refers to the
+ * incoming task while g_running_task is still the task that is actually
+ * executing.  That is the window in which nxsched_suspend_scheduler() and
+ * nxsched_resume_scheduler() run their hooks, and in which the outgoing
+ * task's registers have not been saved (xcp.regs is still NULL).
+ *
+ * Code reachable from those hooks must therefore neither block nor take a
+ * mutex: gettid() already reports the incoming task, so a lock owner check
+ * would be made against the wrong task, and blocking in the middle of a
+ * switch would corrupt the switch itself.
+ */
+
+#define sched_switch_pending()       (g_running_task != this_task())
+
 #if defined(up_this_task)
 #  define this_task()                up_this_task()
 #elif !defined(CONFIG_SMP)

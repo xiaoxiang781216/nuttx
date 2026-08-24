@@ -60,9 +60,15 @@ static bool syslog_safe_to_block(void)
   FAR const struct tcb_s *rtcb;
 #endif
 
-  /* It's not safe to block in interrupts or when executing the idle loop */
+  /* It's not safe to block in interrupts, when executing the idle loop, or
+   * while a context switch is pending.  In the last case this_task() (and
+   * therefore gettid()) already reports the incoming task, so taking a
+   * mutex would check its owner against the wrong task; the critical
+   * section monitor logs from the scheduler switch hooks, which makes that
+   * a reachable path.
+   */
 
-  if (up_interrupt_context() || sched_idletask())
+  if (up_interrupt_context() || sched_idletask() || sched_switch_pending())
     {
       return false;
     }
