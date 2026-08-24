@@ -531,7 +531,13 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
   bool need_iv = !(crp->crp_desc->crd_flags & CRD_F_UPDATE);
   bool async = crp->crp_flags & CRYPTO_F_CBIMM;
   int remaining = crp->crp_ilen;
+  int blksize = virtio_crypto_get_blocksize(crp->crp_desc->crd_alg);
   int ret;
+
+  if (blksize < 0)
+    {
+      return blksize;
+    }
 
   if (crp->crp_dst == NULL)
     {
@@ -562,7 +568,8 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
           msg->data.op_flf.sym.op_type_flf.cipher.iv_len = 0;
         }
 
-      data_size = MIN(data_size, remaining);
+      data_size = ALIGN_DOWN(MIN(data_size, remaining), blksize);
+
       memcpy(buf, crp->crp_buf + offset, data_size);
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                    RPMSG_CRYPTO_PROCESS, crp->crp_reqid,

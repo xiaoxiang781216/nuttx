@@ -45,6 +45,9 @@
 #define VIRTIO_CRYPTO_CCM_TAG_LEN            16
 #define VIRTIO_CRYPTO_GCM_TAG_LEN            16
 #define VIRTIO_CRYPTO_CHACHAPOLY_TAG_LEN     16
+#define VIRTIO_CRYPTO_3DES_BLOCK_LEN         8
+#define VIRTIO_CRYPTO_AES_BLOCK_LEN          16
+#define VIRTIO_CRYPTO_CHACHA20_BLOCK_LEN     64
 
 #define VIRTIO_CRYPTO_KEYID                  0x01
 
@@ -303,6 +306,30 @@ int virtio_crypto_get_hash_result_len(int valg)
         return VIRTIO_CRYPTO_SHA384_HASH_LEN;
       case VIRTIO_CRYPTO_HASH_SHA_512:
         return VIRTIO_CRYPTO_SHA512_HASH_LEN;
+    }
+
+  return -EINVAL;
+}
+
+static inline_function
+int virtio_crypto_get_blocksize(int alg)
+{
+  switch (alg)
+    {
+      case CRYPTO_3DES_CBC:
+        return VIRTIO_CRYPTO_3DES_BLOCK_LEN;
+      case CRYPTO_AES_CBC:
+      case CRYPTO_AES_192_CBC:
+      case CRYPTO_AES_256_CBC:
+      case CRYPTO_AES_CTR:
+      case CRYPTO_AES_XTS:
+      case CRYPTO_AES_OFB:
+      case CRYPTO_AES_CFB_8:
+      case CRYPTO_AES_CFB_128:
+        return VIRTIO_CRYPTO_AES_BLOCK_LEN;
+      case CRYPTO_CHACHA20:
+      case CRYPTO_CHACHA20_POLY1305:
+        return VIRTIO_CRYPTO_CHACHA20_BLOCK_LEN;
     }
 
   return -EINVAL;
