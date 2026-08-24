@@ -61,6 +61,7 @@ struct noteram_driver_s
 {
   struct note_driver_s driver;
   atomic_t overwrite;
+  FAR struct ring_s *ring;
   atomic_t count_ref;       /* Reference count, init 1 at creation */
   bool dynamic;             /* true if dynamically allocated */
   struct ratelimit_state_s ratelimit;
@@ -70,7 +71,6 @@ struct noteram_driver_s
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
   struct wdog_s wdog;
 #endif
-  struct ring_s ring;
 };
 
 /* The structure to hold the context data of trace dump */
@@ -111,6 +111,8 @@ static char g_noteram_blob[CONFIG_DRIVERS_NOTERAM_BUFSIZE]
 locate_data(CONFIG_DRIVERS_NOTERAM_SECTION)
 #endif
 aligned_data(RING_BLOB_ALIGN);
+
+static struct ring_s g_noteram_ring;
 
 static const struct note_driver_ops_s g_noteram_ops =
 {
@@ -153,6 +155,7 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
 #else
   NOTE_MODE_OVERWRITE_ENABLE,
 #endif
+  &g_noteram_ring,
 };
 #define g_noteram_driver this_cpu_var_bmp(g_noteram_driver)
 
@@ -168,7 +171,7 @@ static void noteram_free(FAR struct noteram_driver_s *drv)
 {
   if (drv->dynamic)
     {
-      kmm_free(drv->ring.blob);
+      kmm_free(drv->ring->blob);
     }
 
   if (drv != &g_noteram_driver)
@@ -208,14 +211,14 @@ static int noteram_deinitialize_by_name(FAR const char *name)
 static uint32_t noteram_unread_length(FAR struct noteram_driver_s *drv,
                                       uint32_t read)
 {
-  return ring_mpmc_peek(&drv->ring, NULL, ring_capacity(&drv->ring), &read);
+  return ring_mpmc_peek(drv->ring, NULL, ring_capacity(drv->ring), &read);
 }
 
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
 static inline_function
 void noteram_timeout_reset(FAR struct noteram_driver_s *drv)
 {
-  if (dq_empty(&drv->poll_list) || ring_count(&drv->ring) == 0)
+  if (dq_empty(&drv->poll_list) || ring_count(drv->ring) == 0)
     {
       wd_cancel(&drv->wdog);
     }
@@ -275,7 +278,7 @@ static int noteram_open(FAR struct file *filep)
 
   if (drv == &g_noteram_driver)
     {
-      ring_mpmc_init(&drv->ring, g_noteram_blob, sizeof(g_noteram_blob), 0);
+      ring_mpmc_init(drv->ring, g_noteram_blob, sizeof(g_noteram_blob), 0);
     }
 
   atomic_add(&drv->count_ref, 1);
@@ -296,9 +299,9 @@ static int noteram_open(FAR struct file *filep)
 
   filep->f_priv = ctx;
 #ifdef CONFIG_DRIVERS_NOTE_TEXT_DUMP
-  note_dump_stream(&ctx->stream, &drv->ring, false);
+  note_dump_stream(&ctx->stream, drv->ring, false);
 #else
-  note_dump_stream(&ctx->stream, &drv->ring, true);
+  note_dump_stream(&ctx->stream, drv->ring, true);
 #endif
   return OK;
 }
@@ -374,9 +377,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
 #ifdef CONFIG_DRIVERS_NOTE_STATS
           atomic_add_relaxed(&drv->driver.stats.drop_bytes,
-                             ring_reset(&drv->ring));
+                             ring_reset(drv->ring));
 #else
-          ring_reset(&drv->ring);
+          ring_reset(drv->ring);
 #endif
           atomic_cmpxchg(&drv->overwrite, &expect,
                          NOTE_MODE_OVERWRITE_DISABLE);
@@ -512,7 +515,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            *(FAR unsigned int *)arg = ring_capacity(&drv->ring);
+            *(FAR unsigned int *)arg = ring_capacity(drv->ring);
             ret = OK;
           }
         break;
@@ -665,7 +668,7 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
 
   if (drv == &g_noteram_driver)
     {
-      ring_mpmc_init(&drv->ring, g_noteram_blob, sizeof(g_noteram_blob), 0);
+      ring_mpmc_init(drv->ring, g_noteram_blob, sizeof(g_noteram_blob), 0);
     }
 
   if (ratelimit_islimited(&drv->ratelimit))
@@ -679,7 +682,7 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
         return -ENOSPC;
 
       case NOTE_MODE_OVERWRITE_DISABLE:
-        added = ring_mpmc_enqueue(&drv->ring, note, notelen);
+        added = ring_mpmc_enqueue(drv->ring, note, notelen);
         if (added < notelen)
           {
             atomic_set(&drv->overwrite, NOTE_MODE_OVERWRITE_OVERFLOW);
@@ -689,16 +692,16 @@ static ssize_t noteram_add(FAR struct note_driver_s *driver,
       default:
         {
 #ifdef CONFIG_DRIVERS_NOTE_STATS
-          uint32_t evicted = ring_mpmc_overwrite(&drv->ring, note, notelen);
+          uint32_t evicted = ring_mpmc_overwrite(drv->ring, note, notelen);
 
           if (evicted != 0)
             {
               atomic_add_relaxed(&drv->driver.stats.drop_bytes, evicted);
             }
 #else
-          ring_mpmc_overwrite(&drv->ring, note, notelen);
+          ring_mpmc_overwrite(drv->ring, note, notelen);
 #endif
-          added = MIN(notelen, ring_capacity(&drv->ring));
+          added = MIN(notelen, ring_capacity(drv->ring));
         }
         break;
     }
@@ -765,29 +768,31 @@ noteram_initialize_with_buffer(FAR const char *devname,
                                bool overwrite, bool regnote)
 {
   FAR struct noteram_driver_s *drv;
-  size_t len = 0;
+  size_t len = 1;
   int ret;
 
   if (devname)
     {
-      len = strlen(devname) + 1;
+      len += strlen(devname);
     }
 
-  drv = kmm_zalloc(sizeof(*drv) + len);
+  drv = kmm_zalloc(sizeof(*drv) + sizeof(struct ring_s) + len);
   if (drv == NULL)
     {
       return NULL;
     }
 
+  drv->ring = (FAR struct ring_s *)(drv + 1);
+
   atomic_set(&drv->count_ref, 1);
 
   if (devname)
     {
-      memcpy(drv + 1, devname, len);
+      memcpy(drv->ring + 1, devname, len);
     }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  drv->driver.name = (FAR const char *)(drv + 1);
+  drv->driver.name = (FAR const char *)(drv->ring + 1);
   drv->driver.filter.mode.type_mask =
     CONFIG_DRIVERS_NOTERAM_FILTER_DEFAULT_MODE;
 
@@ -803,7 +808,7 @@ noteram_initialize_with_buffer(FAR const char *devname,
 
   drv->driver.ops = &g_noteram_ops;
 
-  ring_mpmc_init(&drv->ring, buffer, bufsize, 0);
+  ring_mpmc_init(drv->ring, buffer, bufsize, 0);
 
   atomic_set(&drv->overwrite, overwrite);
   dq_init(&drv->poll_list);
@@ -893,8 +898,6 @@ void noteram_deinitialize(struct note_driver_s *drv)
   noteram_drv = container_of(drv, struct noteram_driver_s, driver);
 
   note_driver_unregister(drv);
-
-  unregister_driver((char *)(noteram_drv + 1));
 
   if (atomic_sub(&noteram_drv->count_ref, 1) == 1)
     {
