@@ -77,6 +77,7 @@ static const struct note_driver_ops_s g_notenetdev_ops =
  * Public Data
  ****************************************************************************/
 
+#undef g_notenet
 DEFINE_PER_CPU_BMP(struct notenet_driver_s, g_notenet) =
 {
   {

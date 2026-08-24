@@ -84,6 +84,7 @@ static const struct note_driver_ops_s g_noterpmsg_ops =
   .ioctl = noterpmsg_ioctl,
 };
 
+#undef g_noterpmsg_driver
 DEFINE_PER_CPU_BMP(struct noterpmsg_driver_s, g_noterpmsg_driver) =
 {
   {

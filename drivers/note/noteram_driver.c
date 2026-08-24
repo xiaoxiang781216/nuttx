@@ -128,6 +128,7 @@ static const struct note_driver_ops_s g_noteram_ops =
  * Public Data
  ****************************************************************************/
 
+#undef g_noteram_driver
 DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
 {
   {

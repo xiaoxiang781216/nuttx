@@ -51,6 +51,7 @@ static const struct note_driver_ops_s g_notelowout_ops =
  * Public Data
  ****************************************************************************/
 
+#undef g_notelowout
 DEFINE_PER_CPU_BMP(struct note_driver_s, g_notelowout) =
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
@@ -72,6 +73,7 @@ DEFINE_PER_CPU_BMP(struct note_driver_s, g_notelowout) =
 #endif
   &g_notelowout_ops
 };
+#define g_notelowout this_cpu_var_bmp(g_notelowout)
 
 /****************************************************************************
  * Private Functions

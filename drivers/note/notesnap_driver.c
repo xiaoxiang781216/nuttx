@@ -80,6 +80,7 @@ static const struct note_driver_ops_s g_notesnap_ops =
  * Public Data
  ****************************************************************************/
 
+#undef g_notesnap
 DEFINE_PER_CPU_BMP(struct notesnap_s, g_notesnap) =
 {
   {

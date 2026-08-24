@@ -100,6 +100,7 @@ static const struct note_driver_ops_s g_notefdx_ops =
  * Public Data
  ****************************************************************************/
 
+#undef g_notefdx
 DEFINE_PER_CPU_BMP(struct notefdx_s, g_notefdx) =
 {
   {

@@ -143,6 +143,7 @@ static const struct note_driver_ops_s g_notelog_ops =
  * Public Data
  ****************************************************************************/
 
+#undef g_notelog_driver
 DEFINE_PER_CPU_BMP(struct note_driver_s, g_notelog_driver) =
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER

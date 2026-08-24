@@ -79,6 +79,7 @@ static const struct note_driver_ops_s g_notestream_ops =
  * Public Data
  ****************************************************************************/
 
+#undef g_notestream
 DEFINE_PER_CPU_BMP(struct notestream_s, g_notestream) =
 {
   {
@@ -102,6 +103,7 @@ DEFINE_PER_CPU_BMP(struct notestream_s, g_notestream) =
   },
   (FAR char *)CONFIG_DRIVERS_NOTESTREAM_PATH,
 };
+#define g_notestream this_cpu_var_bmp(g_notestream)
 
 /****************************************************************************
  * Private Functions

@@ -121,34 +121,42 @@ struct note_dump_stream_s
 
 #ifdef CONFIG_DRIVERS_NOTELOG
 DECLARE_PER_CPU_BMP(struct note_driver_s, g_notelog_driver);
+#define g_notelog_driver this_cpu_var_bmp(g_notelog_driver)
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTERAM
 DECLARE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver);
+#define g_noteram_driver this_cpu_var_bmp(g_noteram_driver)
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTERPMSG
 DECLARE_PER_CPU_BMP(struct noterpmsg_driver_s, g_noterpmsg_driver);
+#define g_noterpmsg_driver this_cpu_var_bmp(g_noterpmsg_driver)
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTELOWEROUT
 DECLARE_PER_CPU_BMP(struct note_driver_s, g_notelowout);
+#define g_notelowout this_cpu_var_bmp(g_notelowout)
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTET32FDX
 DECLARE_PER_CPU_BMP(struct notefdx_s, g_notefdx);
+#define g_notefdx this_cpu_var_bmp(g_notefdx)
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTESNAP
 DECLARE_PER_CPU_BMP(struct notesnap_s, g_notesnap);
+#define g_notesnap this_cpu_var_bmp(g_notesnap)
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTENET
 DECLARE_PER_CPU_BMP(struct notenet_driver_s, g_notenet);
+#define g_notenet this_cpu_var_bmp(g_notenet)
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTESTREAM
 DECLARE_PER_CPU_BMP(struct notestream_s, g_notestream);
+#define g_notestream this_cpu_var_bmp(g_notestream)
 #endif
 
 /****************************************************************************
