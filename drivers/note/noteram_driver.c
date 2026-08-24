@@ -378,9 +378,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
 #ifdef CONFIG_DRIVERS_NOTE_STATS
           atomic_add_relaxed(&drv->driver.stats.drop_bytes,
-                             ring_reset(drv->ring));
+                             ring_mpmc_skip(drv->ring, RING_SIZE_MAX));
 #else
-          ring_reset(drv->ring);
+          ring_mpmc_skip(drv->ring, RING_SIZE_MAX);
 #endif
           atomic_cmpxchg(&drv->overwrite, &expect,
                          NOTE_MODE_OVERWRITE_DISABLE);
