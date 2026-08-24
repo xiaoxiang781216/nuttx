@@ -213,6 +213,24 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen);
 
 /**
  * @brief
+ *   Remove a DNS server from the resolver.  Set the port number to zero to
+ *   match a server that was added with the default DNS server port.
+ *
+ *   No nameserver notification is generated, since the notification
+ *   interface cannot express the removal of a nameserver.
+ *
+ * @param addr    Address of the DNS server (sockaddr_in or sockaddr_in6).
+ * @param addrlen Length of the address structure.
+ *
+ * @return
+ *   0 on success; a negated errno value on failure.  -ENOENT is returned
+ *   if the address is not in the nameserver list.
+ */
+
+int dns_del_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen);
+
+/**
+ * @brief
  *   Reset the resolver to use only the default DNS server, if any.
  *
  * @return
