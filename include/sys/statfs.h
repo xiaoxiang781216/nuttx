@@ -52,6 +52,7 @@
 #define EXT2_OLD_SUPER_MAGIC  0xef51
 #define EXT2_SUPER_MAGIC      0xef53
 #define EXT3_SUPER_MAGIC      0xef53
+#define EXT4_SUPER_MAGIC      0xef53
 #define HFS_SUPER_MAGIC       0x4244
 #define HPFS_SUPER_MAGIC      0xf995e849
 #define HUGETLBFS_MAGIC       0x958458f6

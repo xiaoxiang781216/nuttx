@@ -1,0 +1,96 @@
+############################################################################
+# fs/lwext4/Make.defs
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+############################################################################
+
+ifeq ($(CONFIG_FS_LWEXT4),y)
+
+# Add VFS adapter layer
+
+CSRCS += lwext4_vfs.c
+
+# Add lwext4 library sources
+
+CSRCS += ext4.c
+CSRCS += ext4_balloc.c
+CSRCS += ext4_bcache.c
+CSRCS += ext4_bitmap.c
+CSRCS += ext4_block_group.c
+CSRCS += ext4_blockdev.c
+CSRCS += ext4_crc32.c
+CSRCS += ext4_debug.c
+CSRCS += ext4_dir.c
+CSRCS += ext4_dir_idx.c
+CSRCS += ext4_extent.c
+CSRCS += ext4_fs.c
+CSRCS += ext4_hash.c
+CSRCS += ext4_ialloc.c
+CSRCS += ext4_inode.c
+CSRCS += ext4_journal.c
+CSRCS += ext4_mbr.c
+CSRCS += ext4_mkfs.c
+CSRCS += ext4_super.c
+CSRCS += ext4_trans.c
+CSRCS += ext4_xattr.c
+
+# Add include paths
+
+CFLAGS += ${INCDIR_PREFIX}lwext4
+CFLAGS += ${INCDIR_PREFIX}lwext4/lwext4/include
+
+# Pull in the lwext4 configuration through the library's own hook: with
+# CONFIG_USE_DEFAULT_CFG=0, ext4_config.h includes "generated/ext4_config.h"
+# (resolved from this -I path to fs/lwext4/generated/ext4_config.h) before
+# applying its #ifndef defaults.  That header maps the NuttX Kconfig options
+# (HAVE_OWN_OFLAGS, debug level, journal, xattr, block cache, large file, ...)
+# onto the lwext4 CONFIG_* macros.  USE_DEFAULT_CFG itself must stay a -D
+# because it gates that include, i.e. it is tested before the header is read.
+
+CFLAGS += ${DEFINE_PREFIX}CONFIG_USE_DEFAULT_CFG=0
+
+# Suppress upstream lwext4 warnings on the specific vendored sources that
+# emit them (per-file, so the flags do not leak to the rest of fs/).  These
+# are the files observed to warn with the current toolchain; -Wno-format only
+# applies where ext4_dbg() prints uint32_t with %x (debug builds).
+
+lwext4/lwext4/src/ext4.c_CFLAGS += -Wno-shadow
+lwext4/lwext4/src/ext4_balloc.c_CFLAGS += -Wno-shadow
+lwext4/lwext4/src/ext4_dir_idx.c_CFLAGS += -Wno-shadow
+lwext4/lwext4/src/ext4_fs.c_CFLAGS += -Wno-shadow
+lwext4/lwext4/src/ext4_mkfs.c_CFLAGS += -Wno-format
+
+# Add lwext4 source path
+
+VPATH += :lwext4/lwext4/src
+DEPPATH += --dep-path lwext4/lwext4/src
+
+# Add current directory
+
+VPATH += :lwext4
+DEPPATH += --dep-path lwext4
+
+# Clone master branch if lwext4 directory doesn't exist
+ifeq ($(wildcard lwext4/lwext4/.git),)
+context::
+	$(Q) git clone -b master https://github.com/gkostka/lwext4.git lwext4/lwext4
+
+distclean::
+	$(call DELDIR, lwext4/lwext4)
+endif
+
+endif # CONFIG_FS_LWEXT4

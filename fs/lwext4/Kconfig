@@ -1,0 +1,46 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+menuconfig FS_LWEXT4
+	bool "lwext4 File System"
+	default n
+	depends on !DISABLE_MOUNTPOINT
+	---help---
+		Build the lwext4 (ext2/3/4) file system support.
+		This is a lightweight implementation of ext2/3/4 filesystem
+		suitable for embedded systems.
+		https://github.com/gkostka/lwext4
+
+if FS_LWEXT4
+
+config LWEXT4_BCACHE_BLOCKS
+	int "Number of cached blocks"
+	default 64
+	---help---
+		Number of blocks to cache. Each block size depends on the
+		filesystem block size (typically 1KB or 4KB), so the cache
+		memory upper bound is this count times the filesystem block
+		size.
+
+		This cache is only valid for metadata (inode, extent, directory,
+		bitmap and superblock blocks). File data bypasses the cache and
+		is read/written directly to the user buffer.
+
+config LWEXT4_ENABLE_JOURNAL
+	bool "Enable journaling support"
+	default y
+	---help---
+		Enable journal (JBD2) for data consistency. Disabling this
+		improves performance but may cause data loss on power failure.
+
+config LWEXT4_MAX_MOUNTPOINTS
+	int "Maximum number of mount points"
+	default 4
+	range 1 10
+	---help---
+		Maximum number of ext4 filesystems that can be mounted
+		simultaneously.
+
+endif # FS_LWEXT4

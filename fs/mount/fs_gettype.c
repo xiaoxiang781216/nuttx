@@ -185,6 +185,12 @@ FAR const char *fs_gettype(FAR struct statfs *statbuf)
         break;
 #endif
 
+#ifdef CONFIG_FS_LWEXT4
+      case EXT4_SUPER_MAGIC:
+        fstype = "ext4";
+        break;
+#endif
+
       default:
         fstype = "Unrecognized";
         break;

@@ -70,6 +70,7 @@ include mnemofs/Make.defs
 include v9fs/Make.defs
 include fuse/Make.defs
 include lrofs/Make.defs
+include lwext4/Make.defs
 endif
 
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)fs
