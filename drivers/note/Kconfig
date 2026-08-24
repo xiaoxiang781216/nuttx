@@ -74,6 +74,7 @@ config DRIVERS_NOTE_DEFAULT_LEVEL
 
 config DRIVERS_NOTE_STRIP_FORMAT
 	bool "Strip sched_note_printf format string"
+	depends on !STREAM_BSPRINTF_EMBED_FORMAT
 	---help---
 		Strip sched_note_printf format string.
 
