@@ -76,6 +76,7 @@ struct fuse_dev_s
  * Private Function Prototypes
  ****************************************************************************/
 
+static void    fuse_dev_unref(FAR struct fuse_dev_s *dev);
 static int     fuse_dev_request(FAR struct fuse_conn_s *conn,
                                 FAR struct fuse_req_s *req);
 static void    fuse_dev_destroy(FAR struct fuse_conn_s *conn);
@@ -97,6 +98,14 @@ static const struct file_operations g_fuse_dev_fops =
   fuse_dev_readv,  /* readv */
   fuse_dev_writev, /* writev */
 };
+
+/* /dev/cuse is registered with the same file operations as /dev/fuse;  the
+ * channel open/close hook distinguishes it through this inode-private tag.
+ */
+
+#ifdef CONFIG_FS_CUSE
+static int g_fuse_dev_cuse_tag;
+#endif
 
 static const struct fuse_transport_ops_s g_fuse_dev_transport =
 {
@@ -189,6 +198,26 @@ int fuse_dev_open(FAR struct file *filep)
   dev->crefs = 1;
 
   filep->f_priv = dev;
+
+  /* The /dev/cuse channel attaches a connection and queues its CUSE_INIT
+   * handshake at open time;  /dev/fuse waits for the mount's "fd=" option
+   * to attach one instead.
+   */
+
+#ifdef CONFIG_FS_CUSE
+  if (filep->f_inode->i_private == &g_fuse_dev_cuse_tag)
+    {
+      int ret = cuse_channel_open(filep);
+
+      if (ret < 0)
+        {
+          fuse_dev_unref(dev);
+          filep->f_priv = NULL;
+          return ret;
+        }
+    }
+#endif
+
   return 0;
 }
 
@@ -224,10 +253,21 @@ int fuse_dev_close(FAR struct file *filep)
 {
   FAR struct fuse_dev_s *dev = filep->f_priv;
 
-  /* The server is gone: abort in-flight requests and wake any reader */
+  /* A /dev/cuse channel owns its connection and the frontend device node
+   * it created;  tear them down before the generic channel cleanup.
+   */
 
-  fuse_dev_abort(dev);
-  fuse_dev_unref(dev);
+#ifdef CONFIG_FS_CUSE
+  if (filep->f_inode->i_private == &g_fuse_dev_cuse_tag)
+    {
+      cuse_channel_close(filep);
+    }
+  else
+#endif
+    {
+      fuse_dev_abort(dev);
+      fuse_dev_unref(dev);
+    }
 
   filep->f_priv = NULL;
   return 0;
@@ -402,7 +442,6 @@ ssize_t fuse_dev_writev(FAR struct file *filep, FAR struct uio *uio)
   size_t datalen;
   size_t need;
   size_t done;
-  size_t off;
   size_t i;
   int idx;
 
@@ -446,14 +485,14 @@ ssize_t fuse_dev_writev(FAR struct file *filep, FAR struct uio *uio)
             {
               /* Gather the notify payload (bytes after the header) */
 
-              size_t done = 0;
-              size_t skip = sizeof(hout);
-              int idx;
+              size_t ndone = 0;
+              size_t skip  = sizeof(hout);
+              int    nidx;
 
-              for (idx = 0; idx < uio->uio_iovcnt && done < plen; idx++)
+              for (nidx = 0; nidx < uio->uio_iovcnt && ndone < plen; nidx++)
                 {
-                  FAR const char *base = uio->uio_iov[idx].iov_base;
-                  size_t len = uio->uio_iov[idx].iov_len;
+                  FAR const char *base = uio->uio_iov[nidx].iov_base;
+                  size_t len = uio->uio_iov[nidx].iov_len;
 
                   if (skip >= len)
                     {
@@ -465,9 +504,9 @@ ssize_t fuse_dev_writev(FAR struct file *filep, FAR struct uio *uio)
                   len  -= skip;
                   skip  = 0;
 
-                  len = MIN(len, plen - done);
-                  memcpy(payload + done, base, len);
-                  done += len;
+                  len = MIN(len, plen - ndone);
+                  memcpy(payload + ndone, base, len);
+                  ndone += len;
                 }
 
               conn->ext->notify(conn, hout.error, payload, plen);
@@ -509,8 +548,6 @@ ssize_t fuse_dev_writev(FAR struct file *filep, FAR struct uio *uio)
     {
       datalen = uio->uio_resid - sizeof(hout);
     }
-
-  off = sizeof(hout);
 
   /* Gather the reply payload linearly (skip the header bytes), then
    * scatter into the request reply buffers.
@@ -809,5 +846,23 @@ int fuse_dev_connect(FAR struct fuse_conn_s *conn, FAR const char *options)
 
 int fuse_dev_initialize(void)
 {
-  return register_driver("/dev/fuse", &g_fuse_dev_fops, 0600, NULL);
+  int ret;
+
+  ret = register_driver("/dev/fuse", &g_fuse_dev_fops, 0600, NULL);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+#ifdef CONFIG_FS_CUSE
+  /* The /dev/cuse control channel speaks the same request/reply protocol
+   * as /dev/fuse;  only the connection lifecycle differs (set up at open
+   * instead of by a mount).  The inode-private tag selects the behavior.
+   */
+
+  ret = register_driver("/dev/cuse", &g_fuse_dev_fops, 0600,
+                        &g_fuse_dev_cuse_tag);
+#endif
+
+  return ret;
 }

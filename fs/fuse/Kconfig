@@ -24,6 +24,17 @@ config FS_FUSE_DEV
 		FUSE server (for example libfuse) opens /dev/fuse and mounts a
 		filesystem with the "fd=<n>" mount option to drive the FUSE core.
 
+config FS_CUSE
+	bool "CUSE (Character device in Userspace)"
+	default n
+	depends on FS_FUSE_DEV
+	---help---
+		Register the /dev/cuse control channel.  A userspace server opens
+		/dev/cuse and answers the CUSE_INIT handshake with DEVNAME=<name>;
+		the kernel then registers /dev/<name> and forwards the character
+		device operations (open/read/write/ioctl/poll/close) to the server
+		over the FUSE wire protocol.
+
 config FS_VIRTIOFS
 	bool "virtio-fs guest transport"
 	default n

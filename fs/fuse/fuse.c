@@ -29,6 +29,7 @@
 #include <limits.h>
 #include <string.h>
 #include <poll.h>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 
@@ -801,11 +802,20 @@ static size_t fuse_uio_slice(FAR struct uio *uio, FAR struct iovec *iov,
  * Name: fuse_readv
  ****************************************************************************/
 
-static ssize_t fuse_readv(FAR struct file *filep, FAR struct uio *uio)
+/****************************************************************************
+ * Name: fuse_file_readv
+ *
+ * Description:
+ *   Shared FUSE_READ engine for both the mountpoint file operations and
+ *   the CUSE frontend:  transfer in rounds bounded by maxbytes, scattering
+ *   each reply directly into the caller's uio buffers.
+ *
+ ****************************************************************************/
+
+ssize_t fuse_file_readv(FAR struct fuse_conn_s *conn, uint64_t nodeid,
+                        uint64_t fh, FAR struct file *filep,
+                        FAR struct uio *uio, size_t maxbytes)
 {
-  FAR struct inode *inode = filep->f_inode;
-  FAR struct fuse_conn_s *conn = inode->i_private;
-  FAR struct fuse_file_s *fp = filep->f_priv;
   struct fuse_read_in rin;
   struct fuse_req_s req;
   struct iovec vout[FUSE_IOV_SEGS];
@@ -813,9 +823,9 @@ static ssize_t fuse_readv(FAR struct file *filep, FAR struct uio *uio)
   size_t total = 0;
   ssize_t ret = 0;
 
-  /* Transfer in rounds:  each one is sized by the transport capacity
-   * (unlimited on non bouncing transports) and by the slice segment
-   * array, scattering the reply directly into the caller's buffers.
+  /* Transfer in rounds:  each one is sized by maxbytes and by the slice
+   * segment array, scattering the reply directly into the caller's
+   * buffers.
    */
 
   while (uio->uio_resid > 0)
@@ -824,8 +834,7 @@ static ssize_t fuse_readv(FAR struct file *filep, FAR struct uio *uio)
       size_t chunk;
       size_t count;
 
-      count = fuse_uio_slice(uio, vout, FUSE_IOV_SEGS,
-                             fuse_maxbuf(conn), &chunk);
+      count = fuse_uio_slice(uio, vout, FUSE_IOV_SEGS, maxbytes, &chunk);
       if (chunk == 0)
         {
           ret = -ENOMEM;
@@ -836,9 +845,9 @@ static ssize_t fuse_readv(FAR struct file *filep, FAR struct uio *uio)
       memset(&rin, 0, sizeof(rin));
 
       req.hin.opcode = FUSE_READ;
-      req.hin.nodeid = fp->nodeid;
+      req.hin.nodeid = nodeid;
 
-      rin.fh     = fp->fh;
+      rin.fh     = fh;
       rin.offset = filep->f_pos;
       rin.size   = chunk;
 
@@ -882,14 +891,34 @@ static ssize_t fuse_readv(FAR struct file *filep, FAR struct uio *uio)
 }
 
 /****************************************************************************
- * Name: fuse_writev
+ * Name: fuse_readv
  ****************************************************************************/
 
-static ssize_t fuse_writev(FAR struct file *filep, FAR struct uio *uio)
+static ssize_t fuse_readv(FAR struct file *filep, FAR struct uio *uio)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct fuse_conn_s *conn = inode->i_private;
   FAR struct fuse_file_s *fp = filep->f_priv;
+
+  return fuse_file_readv(conn, fp->nodeid, fp->fh, filep, uio,
+                         fuse_maxbuf(conn));
+}
+
+/****************************************************************************
+ * Name: fuse_file_writev
+ *
+ * Description:
+ *   Shared FUSE_WRITE engine for both the mountpoint file operations and
+ *   the CUSE frontend:  transfer in rounds bounded by the smaller of
+ *   maxbytes and the negotiated max_write, gathering from the caller's uio
+ *   cursor.
+ *
+ ****************************************************************************/
+
+ssize_t fuse_file_writev(FAR struct fuse_conn_s *conn, uint64_t nodeid,
+                         uint64_t fh, FAR struct file *filep,
+                         FAR struct uio *uio, size_t maxbytes)
+{
   struct fuse_write_out wout;
   struct fuse_write_in win;
   struct fuse_req_s req;
@@ -900,14 +929,12 @@ static ssize_t fuse_writev(FAR struct file *filep, FAR struct uio *uio)
 
   while (uio->uio_resid > 0)
     {
-      size_t maxbytes = fuse_maxbuf(conn);
       size_t chunk;
       size_t count;
 
       /* Each round carries what the smaller of the negotiated max_write
-       * and the transport capacity allows, gathered from the uio cursor;
-       * uio_advance below keeps the cursor in sync with the bytes the
-       * server accepted.
+       * and maxbytes allows, gathered from the uio cursor;  uio_advance
+       * below keeps the cursor in sync with the bytes the server accepted.
        */
 
       if (maxbytes > conn->max_write)
@@ -927,9 +954,9 @@ static ssize_t fuse_writev(FAR struct file *filep, FAR struct uio *uio)
       memset(&wout, 0, sizeof(wout));
 
       req.hin.opcode = FUSE_WRITE;
-      req.hin.nodeid = fp->nodeid;
+      req.hin.nodeid = nodeid;
 
-      win.fh     = fp->fh;
+      win.fh     = fh;
       win.offset = filep->f_pos;
       win.size   = chunk;
 
@@ -965,6 +992,20 @@ static ssize_t fuse_writev(FAR struct file *filep, FAR struct uio *uio)
     }
 
   return total;
+}
+
+/****************************************************************************
+ * Name: fuse_writev
+ ****************************************************************************/
+
+static ssize_t fuse_writev(FAR struct file *filep, FAR struct uio *uio)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct fuse_conn_s *conn = inode->i_private;
+  FAR struct fuse_file_s *fp = filep->f_priv;
+
+  return fuse_file_writev(conn, fp->nodeid, fp->fh, filep, uio,
+                          fuse_maxbuf(conn));
 }
 
 /****************************************************************************
@@ -1224,23 +1265,21 @@ static int fuse_filepath(FAR struct file *filep, FAR char *path)
 }
 
 /****************************************************************************
- * Name: fuse_poll
+ * Name: fuse_file_poll
  *
  * Description:
- *   Poll support for FUSE files.  On setup a FUSE_POLL request asks the
- *   server for the pending events and, with FUSE_POLL_SCHEDULE_NOTIFY,
- *   hands it a kernel handle it can echo back through FUSE_NOTIFY_POLL to
- *   wake this waiter asynchronously.  When the server has no poll handler
- *   the request fails and the VFS default applies (regular files are
- *   always readable/writable).
+ *   Shared FUSE_POLL engine for the mountpoint poll operation and the
+ *   CUSE frontend.  On setup a FUSE_POLL request asks the server for the
+ *   pending events and, with FUSE_POLL_SCHEDULE_NOTIFY, hands it a kernel
+ *   handle it can echo back through FUSE_NOTIFY_POLL to wake this waiter
+ *   asynchronously.  When the server has no poll handler the request
+ *   fails and the VFS default applies (always ready).
  *
  ****************************************************************************/
 
-static int fuse_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                     bool setup)
+int fuse_file_poll(FAR struct fuse_conn_s *conn, uint64_t nodeid,
+                   uint64_t fh, FAR struct pollfd *fds, bool setup)
 {
-  FAR struct fuse_file_s *fp = filep->f_priv;
-  FAR struct fuse_conn_s *conn = filep->f_inode->i_private;
   FAR struct fuse_poller_s *poller;
   struct fuse_poll_in  pin;
   struct fuse_poll_out pout;
@@ -1275,8 +1314,8 @@ static int fuse_poll(FAR struct file *filep, FAR struct pollfd *fds,
   nxmutex_lock(&conn->nlock);
   poller->kh     = ++conn->next_ph;
   poller->fds    = fds;
-  poller->nodeid = fp->nodeid;
-  poller->fh     = fp->fh;
+  poller->nodeid = nodeid;
+  poller->fh     = fh;
   sq_addlast(&poller->entry, &conn->pollers);
   nxmutex_unlock(&conn->nlock);
 
@@ -1288,9 +1327,9 @@ static int fuse_poll(FAR struct file *filep, FAR struct pollfd *fds,
   memset(&pout, 0, sizeof(pout));
 
   req.hin.opcode = FUSE_POLL;
-  req.hin.nodeid = fp->nodeid;
+  req.hin.nodeid = nodeid;
 
-  pin.fh     = fp->fh;
+  pin.fh     = fh;
   pin.kh     = poller->kh;
   pin.flags  = FUSE_POLL_SCHEDULE_NOTIFY;
   pin.events = fds->events;
@@ -1325,6 +1364,23 @@ static int fuse_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
   return OK;
+}
+
+/****************************************************************************
+ * Name: fuse_poll
+ *
+ * Description:
+ *   Poll support for FUSE files.  Thin wrapper over fuse_file_poll.
+ *
+ ****************************************************************************/
+
+static int fuse_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                     bool setup)
+{
+  FAR struct fuse_file_s *fp = filep->f_priv;
+  FAR struct fuse_conn_s *conn = filep->f_inode->i_private;
+
+  return fuse_file_poll(conn, fp->nodeid, fp->fh, fds, setup);
 }
 
 /****************************************************************************
@@ -1518,12 +1574,13 @@ static void fuse_notify_retrieve(FAR struct fuse_conn_s *conn,
  *
  * Description:
  *   Handle FUSE_NOTIFY_POLL:  wake the poll waiter whose kernel handle the
- *   server echoes back.
+ *   server echoes back.  Shared by the mountpoint notify handler and the
+ *   CUSE frontend.
  *
  ****************************************************************************/
 
-static void fuse_notify_poll_wakeup(FAR struct fuse_conn_s *conn,
-                                    FAR const char *payload, size_t len)
+void fuse_notify_poll_wakeup(FAR struct fuse_conn_s *conn,
+                             FAR const char *payload, size_t len)
 {
   struct fuse_notify_poll_wakeup_out npw;
   FAR sq_entry_t *entry;
@@ -1602,6 +1659,31 @@ static const struct fuse_conn_ext_s g_fuse_fs_ext =
   NULL,           /* reply_done */
   fuse_fs_notify, /* notify */
 };
+
+/****************************************************************************
+ * Name: fuse_poll_free_all
+ *
+ * Description:
+ *   Drop every poll waiter registered on the connection.  Called when a
+ *   /dev/fuse or /dev/cuse channel is torn down without going through the
+ *   mountpoint unbind path (CUSE channels have no mount).
+ *
+ ****************************************************************************/
+
+void fuse_poll_free_all(FAR struct fuse_conn_s *conn)
+{
+  nxmutex_lock(&conn->nlock);
+  while (!sq_empty(&conn->pollers))
+    {
+      FAR struct fuse_poller_s *poller =
+        container_of(sq_remfirst(&conn->pollers), struct fuse_poller_s,
+                     entry);
+
+      fs_heap_free(poller);
+    }
+
+  nxmutex_unlock(&conn->nlock);
+}
 
 /****************************************************************************
  * Name: fuse_ioctl
@@ -2581,8 +2663,861 @@ static int fuse_lstat(FAR struct inode *mountpt, FAR const char *relpath,
 #endif /* CONFIG_FS_LINKS */
 
 /****************************************************************************
+ * CUSE: Character device in Userspace
+ *
+ * Derived from Linux fs/fuse/cuse.c.  A userspace server opens /dev/cuse
+ * (the "channel"), answers the CUSE_INIT handshake with DEVNAME=<name> in
+ * the init info and the kernel registers /dev/<name> as a character
+ * device.  All operations on the created device are forwarded to the
+ * server as ordinary FUSE requests (OPEN/READ/WRITE/FLUSH/RELEASE/FSYNC/
+ * IOCTL/POLL) with nodeid 0 over the same request/reply protocol that
+ * /dev/fuse speaks.
+ *
+ * The channel shares the fuse_dev file operations in fs/fuse/fuse_dev.c;
+ * only open and close differ (connection setup/teardown instead of mount
+ * attachment) and dispatch to the cuse_channel_open/close hooks below.
+ *
+ * Limitations compared to Linux:
+ * - dev_major/dev_minor from the init reply are accepted but unused:
+ *   NuttX registers character devices by path, not by device number.
+ * - Unrestricted ioctl gathers/scatters raw caller addresses; this relies
+ *   on a flat address space between caller and kernel (flat and sim
+ *   builds; protected builds would need address validation).
+ * - FUSE_NOTIFY_POLL wakes pollers with POLLIN|POLLOUT as a hint; the
+ *   exact revents are re-queried on the next poll.
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_CUSE
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define CUSE_IOCTL_MAX_IOV   8
+#define CUSE_IOCTL_RETRY_MAX 8
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+/* Heap container for the asynchronous CUSE_INIT request:  the request,
+ * its iovec arrays and the reply buffers must outlive the open call.
+ */
+
+struct cuse_init_req_s
+{
+  struct fuse_req_s    req;
+  struct iovec         vin[1];
+  struct iovec         vout[2];
+  struct cuse_init_in  fin;
+  struct cuse_init_out fout;
+  char                 info[CUSE_INIT_INFO_MAX];
+};
+
+/* A CUSE connection: owns one /dev/cuse channel and the character device
+ * created from its CUSE_INIT reply.
+ */
+
+struct cuse_conn_s
+{
+  struct fuse_conn_s fc;                /* Base connection (first member) */
+  mutex_t   lock;                       /* Protects files/dead */
+  sq_queue_t files;                     /* Open frontend files */
+  atomic_t  refs;                       /* Channel + open frontend files */
+  uint32_t  flags;                      /* Negotiated CUSE flags */
+  bool      dead;                       /* Channel closed: no new opens */
+  bool      registered;                 /* Frontend device node registered */
+  FAR struct cuse_init_req_s *initreq;  /* In-flight CUSE_INIT request */
+  char      devname[NAME_MAX + 1];      /* Frontend device name */
+};
+
+/* Per-open state of the frontend character device */
+
+struct cuse_file_s
+{
+  FAR struct cuse_conn_s *cc;
+  sq_entry_t entry;                     /* Open-file list linkage */
+  uint64_t   fh;                        /* Server file handle */
+};
+
+/****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
+
+static bool    cuse_reply_done(FAR struct fuse_conn_s *conn,
+                               FAR struct fuse_req_s *req);
+static void    cuse_notify(FAR struct fuse_conn_s *conn, int code,
+                           FAR const char *payload, size_t len);
+
+static int     cuse_dev_open(FAR struct file *filep);
+static int     cuse_dev_close(FAR struct file *filep);
+static ssize_t cuse_dev_readv(FAR struct file *filep, FAR struct uio *uio);
+static ssize_t cuse_dev_writev(FAR struct file *filep, FAR struct uio *uio);
+static off_t   cuse_dev_seek(FAR struct file *filep, off_t offset,
+                             int whence);
+static int     cuse_dev_ioctl(FAR struct file *filep, int cmd,
+                              unsigned long arg);
+static int     cuse_dev_poll(FAR struct file *filep,
+                             FAR struct pollfd *fds, bool setup);
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static const struct fuse_conn_ext_s g_cuse_conn_ext =
+{
+  cuse_reply_done,  /* reply_done */
+  cuse_notify       /* notify */
+};
+
+/* File operations of the character device created by a CUSE server */
+
+static const struct file_operations g_cuse_frontend_fops =
+{
+  cuse_dev_open,   /* open */
+  cuse_dev_close,  /* close */
+  NULL,            /* read  (readv only) */
+  NULL,            /* write (writev only) */
+  cuse_dev_seek,   /* seek */
+  cuse_dev_ioctl,  /* ioctl */
+  NULL,            /* truncate */
+  cuse_dev_poll,   /* poll */
+  cuse_dev_readv,  /* readv */
+  cuse_dev_writev  /* writev */
+};
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: cuse_conn_unref
+ *
+ * Description:
+ *   Drop a connection reference and free the connection when the last one
+ *   is gone.
+ *
+ ****************************************************************************/
+
+static void cuse_conn_unref(FAR struct cuse_conn_s *cc)
+{
+  if (atomic_sub(&cc->refs, 1) == 1)
+    {
+      nxmutex_destroy(&cc->lock);
+      fs_heap_free(cc);
+    }
+}
+
+/****************************************************************************
+ * Name: cuse_process_init
+ *
+ * Description:
+ *   Finish the CUSE_INIT handshake:  validate the protocol version, record
+ *   the negotiated limits, parse DEVNAME=<name> from the init info blob
+ *   and register /dev/<name> with the frontend file operations.
+ *
+ ****************************************************************************/
+
+static void cuse_process_init(FAR struct cuse_conn_s *cc,
+                              FAR struct cuse_init_req_s *ireq)
+{
+  FAR struct cuse_init_out *out = &ireq->fout;
+  FAR const char *devname = NULL;
+  size_t devnamelen = 0;
+  size_t infolen;
+  FAR const char *info;
+  FAR const char *end;
+  char path[NAME_MAX + 6];
+
+  if (out->major != FUSE_KERNEL_VERSION ||
+      out->minor < 11)
+    {
+      return;
+    }
+
+  cc->flags = out->flags;
+  cc->fc.max_write = out->max_write > 0 ?
+                     out->max_write : FUSE_MAX_WRITE_BUFFER;
+  cc->fc.max_read  = out->max_read > 0 ?
+                     out->max_read : FUSE_MAX_WRITE_BUFFER;
+
+  /* The init info is a series of NUL-terminated "KEY=value" strings */
+
+  infolen = ireq->req.hout.len >
+            sizeof(ireq->req.hout) + sizeof(*out) ?
+            ireq->req.hout.len - sizeof(ireq->req.hout) - sizeof(*out) : 0;
+  info = ireq->info;
+  end  = info + infolen;
+
+  while (info < end)
+    {
+      size_t len = strnlen(info, end - info);
+
+      if (len == 0 || info + len >= end)
+        {
+          break;
+        }
+
+      if (strncmp(info, "DEVNAME=", 8) == 0)
+        {
+          devname    = info + 8;
+          devnamelen = len - 8;
+        }
+
+      info += len + 1;
+    }
+
+  if (devname == NULL || devnamelen == 0 || devnamelen > NAME_MAX ||
+      strchr(devname, '/') != NULL)
+    {
+      return;
+    }
+
+  strlcpy(cc->devname, devname, sizeof(cc->devname));
+  snprintf(path, sizeof(path), "/dev/%s", devname);
+
+  if (register_driver(path, &g_cuse_frontend_fops, 0666, cc) >= 0)
+    {
+      cc->registered = true;
+    }
+}
+
+/****************************************************************************
+ * Name: cuse_reply_done
+ *
+ * Description:
+ *   Connection extension hook invoked by the channel write path after a
+ *   reply payload has been scattered.  Only the CUSE_INIT reply is
+ *   consumed here (its request lives on the heap and has no waiter);
+ *   everything else is completed normally.
+ *
+ ****************************************************************************/
+
+static bool cuse_reply_done(FAR struct fuse_conn_s *conn,
+                            FAR struct fuse_req_s *req)
+{
+  FAR struct cuse_conn_s *cc = (FAR struct cuse_conn_s *)conn;
+  FAR struct cuse_init_req_s *ireq;
+
+  if (req->hin.opcode != CUSE_INIT)
+    {
+      return false;
+    }
+
+  ireq = container_of(req, struct cuse_init_req_s, req);
+  cc->initreq = NULL;
+
+  if (req->hout.error == 0)
+    {
+      cuse_process_init(cc, ireq);
+    }
+
+  nxsem_destroy(&req->wait);
+  fs_heap_free(ireq);
+  return true;
+}
+
+/****************************************************************************
+ * Name: cuse_notify
+ *
+ * Description:
+ *   Dispatch a server-initiated notification.  FUSE_NOTIFY_POLL wakes the
+ *   matching frontend poll waiter through the shared poll registry.
+ *
+ ****************************************************************************/
+
+static void cuse_notify(FAR struct fuse_conn_s *conn, int code,
+                        FAR const char *payload, size_t len)
+{
+  if (code == FUSE_NOTIFY_POLL)
+    {
+      fuse_notify_poll_wakeup(conn, payload, len);
+    }
+}
+
+/****************************************************************************
+ * Name: cuse_dev_open
+ ****************************************************************************/
+
+static int cuse_dev_open(FAR struct file *filep)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct cuse_conn_s *cc = inode->i_private;
+  FAR struct cuse_file_s *cf;
+  struct fuse_open_out oout;
+  struct fuse_open_in oin;
+  struct fuse_req_s req;
+  struct iovec vout[1];
+  struct iovec vin[1];
+  int ret;
+
+  if (cc == NULL)
+    {
+      return -ENODEV;
+    }
+
+  nxmutex_lock(&cc->lock);
+  if (cc->dead)
+    {
+      nxmutex_unlock(&cc->lock);
+      return -ENODEV;
+    }
+
+  atomic_add(&cc->refs, 1);
+  nxmutex_unlock(&cc->lock);
+
+  cf = fs_heap_zalloc(sizeof(*cf));
+  if (cf == NULL)
+    {
+      cuse_conn_unref(cc);
+      return -ENOMEM;
+    }
+
+  memset(&req, 0, sizeof(req));
+  memset(&oin, 0, sizeof(oin));
+  memset(&oout, 0, sizeof(oout));
+
+  req.hin.opcode = FUSE_OPEN;
+  req.hin.nodeid = 0;
+
+  oin.flags = filep->f_oflags;
+
+  vin[0].iov_base = &oin;
+  vin[0].iov_len  = sizeof(oin);
+
+  vout[0].iov_base = &oout;
+  vout[0].iov_len  = sizeof(oout);
+
+  ret = fuse_request(&cc->fc, &req, vin, 1, vout, 1);
+  if (ret < 0)
+    {
+      fs_heap_free(cf);
+      cuse_conn_unref(cc);
+      return ret;
+    }
+
+  cf->cc = cc;
+  cf->fh = oout.fh;
+
+  nxmutex_lock(&cc->lock);
+  sq_addlast(&cf->entry, &cc->files);
+  nxmutex_unlock(&cc->lock);
+
+  filep->f_priv = cf;
+  return 0;
+}
+
+/****************************************************************************
+ * Name: cuse_dev_close
+ ****************************************************************************/
+
+static int cuse_dev_close(FAR struct file *filep)
+{
+  FAR struct cuse_file_s *cf = filep->f_priv;
+  FAR struct cuse_conn_s *cc = cf->cc;
+  struct fuse_release_in rin;
+  struct fuse_flush_in flin;
+  struct fuse_req_s req;
+  struct iovec vin[1];
+
+  /* Flush (best effort), then release the server file handle */
+
+  memset(&req, 0, sizeof(req));
+  memset(&flin, 0, sizeof(flin));
+
+  req.hin.opcode = FUSE_FLUSH;
+  req.hin.nodeid = 0;
+
+  flin.fh = cf->fh;
+
+  vin[0].iov_base = &flin;
+  vin[0].iov_len  = sizeof(flin);
+
+  fuse_request(&cc->fc, &req, vin, 1, NULL, 0);
+
+  memset(&req, 0, sizeof(req));
+  memset(&rin, 0, sizeof(rin));
+
+  req.hin.opcode = FUSE_RELEASE;
+  req.hin.nodeid = 0;
+
+  rin.fh = cf->fh;
+
+  vin[0].iov_base = &rin;
+  vin[0].iov_len  = sizeof(rin);
+
+  fuse_request(&cc->fc, &req, vin, 1, NULL, 0);
+
+  nxmutex_lock(&cc->lock);
+  sq_rem(&cf->entry, &cc->files);
+  nxmutex_unlock(&cc->lock);
+
+  fs_heap_free(cf);
+  filep->f_priv = NULL;
+
+  cuse_conn_unref(cc);
+  return 0;
+}
+
+/****************************************************************************
+ * Name: cuse_dev_readv
+ ****************************************************************************/
+
+static ssize_t cuse_dev_readv(FAR struct file *filep, FAR struct uio *uio)
+{
+  FAR struct cuse_file_s *cf = filep->f_priv;
+  FAR struct fuse_conn_s *conn = &cf->cc->fc;
+
+  /* Transfer in rounds bounded by the negotiated maximum read size */
+
+  return fuse_file_readv(conn, 0, cf->fh, filep, uio, conn->max_read);
+}
+
+/****************************************************************************
+ * Name: cuse_dev_writev
+ ****************************************************************************/
+
+static ssize_t cuse_dev_writev(FAR struct file *filep, FAR struct uio *uio)
+{
+  FAR struct cuse_file_s *cf = filep->f_priv;
+  FAR struct fuse_conn_s *conn = &cf->cc->fc;
+
+  return fuse_file_writev(conn, 0, cf->fh, filep, uio, conn->max_write);
+}
+
+/****************************************************************************
+ * Name: cuse_dev_seek
+ *
+ * Description:
+ *   Local seek on the file position (the Linux frontend uses noop_llseek
+ *   and never forwards FUSE_LSEEK).  SEEK_END is unsupported:  a CUSE
+ *   device has no kernel-known size.
+ *
+ ****************************************************************************/
+
+static off_t cuse_dev_seek(FAR struct file *filep, off_t offset, int whence)
+{
+  switch (whence)
+    {
+      case SEEK_SET:
+        filep->f_pos = offset;
+        break;
+
+      case SEEK_CUR:
+        filep->f_pos += offset;
+        break;
+
+      default:
+        return -EINVAL;
+    }
+
+  return filep->f_pos;
+}
+
+/****************************************************************************
+ * Name: cuse_dev_ioctl
+ *
+ * Description:
+ *   Forward an ioctl as FUSE_IOCTL.  NuttX command words carry no
+ *   direction/size encoding, so when the server negotiated
+ *   CUSE_UNRESTRICTED_IOCTL the request is always sent unrestricted:
+ *   the server declares the buffers it wants with FUSE_IOCTL_RETRY and
+ *   iovecs pointing into the caller address space, the kernel gathers
+ *   the inputs, re-issues the request with the data and finally scatters
+ *   the reply payload into the saved output targets.
+ *
+ ****************************************************************************/
+
+static int cuse_dev_ioctl(FAR struct file *filep, int cmd,
+                          unsigned long arg)
+{
+  FAR struct cuse_file_s *cf = filep->f_priv;
+  FAR struct fuse_conn_s *conn = &cf->cc->fc;
+  struct fuse_ioctl_iovec outiov[CUSE_IOCTL_MAX_IOV];
+  struct fuse_ioctl_out iout;
+  struct fuse_ioctl_in iin;
+  struct fuse_req_s req;
+  struct iovec vout[2];
+  struct iovec vin[2];
+  FAR char *bounce = NULL;
+  FAR char *inbuf = NULL;
+  size_t bouncesz;
+  size_t datalen;
+  size_t inlen = 0;
+  size_t outlen = 0;
+  unsigned int flags = 0;
+  unsigned int nout = 0;
+  unsigned int i;
+  int retries = 0;
+  int ret;
+
+  if ((cf->cc->flags & CUSE_UNRESTRICTED_IOCTL) != 0)
+    {
+      flags |= FUSE_IOCTL_UNRESTRICTED;
+    }
+
+  /* Declare the ioctl ABI width at the kernel/userspace boundary:  the
+   * caller's native pointer is passed as arg.  On 32-bit targets mark
+   * it FUSE_IOCTL_32BIT so a 32-bit libfuse server does not classify
+   * the request as a 64-bit ioctl (which it cannot handle);  on 64-bit
+   * targets the flag stays clear and the 64-bit ABI applies.
+   */
+
+#ifndef CONFIG_ARCH_64BIT
+  flags |= FUSE_IOCTL_32BIT;
+#endif
+
+  /* The bounce buffer carries the retry iovec list in and the reply
+   * payload out;  it is sized to hold both the largest ioctl argument
+   * block (the fioc_rw_arg style structure plus its data) and the iovec
+   * list.  FUSE_MAX_WRITE_BUFFER covers the libfuse examples.
+   */
+
+  bouncesz = 4 * FUSE_MAX_WRITE_BUFFER;
+  bounce = fs_heap_malloc(bouncesz);
+  if (bounce == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  for (; ; )
+    {
+      memset(&req, 0, sizeof(req));
+      memset(&iin, 0, sizeof(iin));
+      memset(&iout, 0, sizeof(iout));
+
+      req.hin.opcode = FUSE_IOCTL;
+      req.hin.nodeid = 0;
+
+      iin.fh       = cf->fh;
+      iin.flags    = flags;
+      iin.cmd      = cmd;
+      iin.arg      = (uint64_t)(uintptr_t)arg;
+      iin.in_size  = inlen;
+      iin.out_size = outlen;
+
+      vin[0].iov_base = &iin;
+      vin[0].iov_len  = sizeof(iin);
+      vin[1].iov_base = inbuf;
+      vin[1].iov_len  = inlen;
+
+      vout[0].iov_base = &iout;
+      vout[0].iov_len  = sizeof(iout);
+      vout[1].iov_base = bounce;
+      vout[1].iov_len  = bouncesz;
+
+      ret = fuse_request(conn, &req, vin, inlen > 0 ? 2 : 1, vout, 2);
+      if (ret < 0 || (iout.flags & FUSE_IOCTL_RETRY) == 0)
+        {
+          break;
+        }
+
+      /* The server asks to gather in_iovs from the caller address space
+       * and to remember out_iovs for the final scatter.
+       */
+
+      if (++retries > CUSE_IOCTL_RETRY_MAX ||
+          iout.in_iovs > CUSE_IOCTL_MAX_IOV ||
+          iout.out_iovs > CUSE_IOCTL_MAX_IOV ||
+          (size_t)(iout.in_iovs + iout.out_iovs) *
+          sizeof(struct fuse_ioctl_iovec) > bouncesz)
+        {
+          ret = -EIO;
+          break;
+        }
+
+      /* Save the output targets for the final scatter.  The reply payload
+       * carries the iovec list, so capture it before gathering (the gather
+       * may exceed the bounce buffer).
+       */
+
+      nout = iout.out_iovs;
+      if (nout > CUSE_IOCTL_MAX_IOV)
+        {
+          ret = -EIO;
+          break;
+        }
+
+      outlen = 0;
+      for (i = 0; i < nout; i++)
+        {
+          FAR const struct fuse_ioctl_iovec *iov =
+            (FAR const struct fuse_ioctl_iovec *)bounce + iout.in_iovs + i;
+
+          outiov[i]  = *iov;
+          outlen    += iov->len;
+        }
+
+      /* Gather the requested input from the caller address space */
+
+      fs_heap_free(inbuf);
+      inbuf = NULL;
+      inlen = 0;
+
+      if (iout.in_iovs > 0)
+        {
+          size_t off = 0;
+
+          for (i = 0; i < iout.in_iovs; i++)
+            {
+              inlen += ((FAR const struct fuse_ioctl_iovec *)bounce)[i].len;
+            }
+
+          inbuf = fs_heap_malloc(inlen > 0 ? inlen : 1);
+          if (inbuf == NULL)
+            {
+              ret = -ENOMEM;
+              break;
+            }
+
+          for (i = 0; i < iout.in_iovs; i++)
+            {
+              FAR const struct fuse_ioctl_iovec *iov =
+                (FAR const struct fuse_ioctl_iovec *)bounce + i;
+
+              memcpy(inbuf + off, (FAR const void *)(uintptr_t)iov->base,
+                     iov->len);
+              off += iov->len;
+            }
+        }
+
+      flags &= ~FUSE_IOCTL_RETRY;
+    }
+
+  if (ret >= 0)
+    {
+      size_t off = 0;
+
+      /* Scatter the reply payload into the saved output targets */
+
+      ret     = iout.result;
+      datalen = req.hout.len > sizeof(req.hout) + sizeof(iout) ?
+                req.hout.len - sizeof(req.hout) - sizeof(iout) : 0;
+
+      for (i = 0; i < nout && off < datalen; i++)
+        {
+          size_t chunk = outiov[i].len < datalen - off ?
+                         (size_t)outiov[i].len : datalen - off;
+
+          memcpy((FAR void *)(uintptr_t)outiov[i].base, bounce + off,
+                 chunk);
+          off += chunk;
+        }
+    }
+
+  fs_heap_free(inbuf);
+  fs_heap_free(bounce);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: cuse_dev_poll
+ ****************************************************************************/
+
+static int cuse_dev_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                         bool setup)
+{
+  FAR struct cuse_file_s *cf = filep->f_priv;
+  FAR struct fuse_conn_s *conn = &cf->cc->fc;
+
+  return fuse_file_poll(conn, 0, cf->fh, fds, setup);
+}
+
+/****************************************************************************
+ * Public Functions (channel hooks called from fuse_dev.c)
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: cuse_channel_open
+ *
+ * Description:
+ *   Set up a freshly opened /dev/cuse control channel:  attach a new
+ *   connection and queue the CUSE_INIT handshake asynchronously (the
+ *   server answers it from its read loop, which only starts after this
+ *   open returns).  Called from fuse_dev_open() for the /dev/cuse node;
+ *   the channel state was already created there.
+ *
+ ****************************************************************************/
+
+int cuse_channel_open(FAR struct file *filep)
+{
+  FAR struct cuse_conn_s *cc;
+  FAR struct cuse_init_req_s *ireq;
+  int ret;
+
+  cc = fs_heap_zalloc(sizeof(*cc));
+  if (cc == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  nxmutex_init(&cc->lock);
+  sq_init(&cc->files);
+  atomic_set(&cc->refs, 1);
+
+  /* The frontend shares the mountpoint poll registry (conn->pollers) */
+
+  nxmutex_init(&cc->fc.nlock);
+  sq_init(&cc->fc.pollers);
+  cc->fc.next_ph = 0;
+
+  /* CUSE connections are initialized explicitly by the CUSE_INIT
+   * handshake below; skip the lazy FUSE_INIT in fuse_request.
+   */
+
+  atomic_set(&cc->fc.initialized, 1);
+  cc->fc.ext = &g_cuse_conn_ext;
+
+  ret = fuse_dev_attach(filep, &cc->fc);
+  if (ret < 0)
+    {
+      nxmutex_destroy(&cc->lock);
+      fs_heap_free(cc);
+      return ret;
+    }
+
+  ireq = fs_heap_zalloc(sizeof(*ireq));
+  if (ireq == NULL)
+    {
+      cc->fc.transport->destroy(&cc->fc);
+      cuse_conn_unref(cc);
+      return -ENOMEM;
+    }
+
+  ireq->req.hin.opcode = CUSE_INIT;
+  ireq->req.hin.nodeid = 0;
+
+  ireq->fin.major = FUSE_KERNEL_VERSION;
+  ireq->fin.minor = FUSE_KERNEL_MINOR_VERSION;
+  ireq->fin.flags = CUSE_UNRESTRICTED_IOCTL;
+
+  ireq->vin[0].iov_base = &ireq->fin;
+  ireq->vin[0].iov_len  = sizeof(ireq->fin);
+
+  ireq->vout[0].iov_base = &ireq->fout;
+  ireq->vout[0].iov_len  = sizeof(ireq->fout);
+  ireq->vout[1].iov_base = ireq->info;
+  ireq->vout[1].iov_len  = sizeof(ireq->info);
+
+  cc->initreq = ireq;
+
+  ret = fuse_request_submit(&cc->fc, &ireq->req, ireq->vin, 1,
+                            ireq->vout, 2);
+  if (ret < 0)
+    {
+      cc->initreq = NULL;
+      nxsem_destroy(&ireq->req.wait);
+      fs_heap_free(ireq);
+      cc->fc.transport->destroy(&cc->fc);
+      cuse_conn_unref(cc);
+      return ret;
+    }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: cuse_channel_close
+ *
+ * Description:
+ *   Tear down the /dev/cuse control channel's connection:  remove the
+ *   frontend device node (its name is unlinked and the inode dies with
+ *   its last open file) and release the connection once the last
+ *   frontend file is gone.  Called from fuse_dev_close();  the generic
+ *   channel cleanup (abort in-flight requests, drop the channel state)
+ *   is done by the caller.
+ *
+ ****************************************************************************/
+
+void cuse_channel_close(FAR struct file *filep)
+{
+  FAR struct fuse_conn_s *conn = fuse_dev_file_conn(filep);
+  FAR struct cuse_conn_s *cc = (FAR struct cuse_conn_s *)conn;
+
+  if (cc == NULL)
+    {
+      return;
+    }
+
+  nxmutex_lock(&cc->lock);
+  cc->dead = true;
+  nxmutex_unlock(&cc->lock);
+
+  if (cc->registered)
+    {
+      char path[NAME_MAX + 6];
+
+      snprintf(path, sizeof(path), "/dev/%s", cc->devname);
+      unregister_driver(path);
+    }
+
+  conn->transport->destroy(conn);
+
+  /* Drop leftover frontend poll waiters from the shared registry */
+
+  fuse_poll_free_all(conn);
+
+  /* A CUSE_INIT request that never got its reply is no longer queued at
+   * this point (the destroy above drained the queues):  free it here.
+   */
+
+  if (cc->initreq != NULL)
+    {
+      FAR struct cuse_init_req_s *ireq = cc->initreq;
+
+      cc->initreq = NULL;
+      nxsem_destroy(&ireq->req.wait);
+      fs_heap_free(ireq);
+    }
+
+  nxmutex_destroy(&conn->nlock);
+  cuse_conn_unref(cc);
+}
+
+#endif /* CONFIG_FS_CUSE */
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: fuse_request_submit
+ ****************************************************************************/
+
+int fuse_request_submit(FAR struct fuse_conn_s *conn,
+                        FAR struct fuse_req_s *req,
+                        FAR const struct iovec *vin, size_t vin_cnt,
+                        FAR const struct iovec *vout, size_t vout_cnt)
+{
+  irqstate_t flags;
+  size_t i;
+
+  /* The total request length is the header plus all request arguments */
+
+  req->hin.len = sizeof(req->hin);
+  for (i = 0; i < vin_cnt; i++)
+    {
+      req->hin.len += vin[i].iov_len;
+    }
+
+  flags = spin_lock_irqsave(&conn->lock);
+  req->hin.unique = ++conn->unique;
+  spin_unlock_irqrestore(&conn->lock, flags);
+
+  req->hin.uid = geteuid();
+  req->hin.gid = getegid();
+  req->hin.pid = getpid();
+
+  req->vin      = vin;
+  req->vin_cnt  = vin_cnt;
+  req->vout     = vout;
+  req->vout_cnt = vout_cnt;
+
+  /* Submit through the transport.  The completion path posts req->wait. */
+
+  nxsem_init(&req->wait, 0, 0);
+  return conn->transport->request(conn, req);
+}
 
 /****************************************************************************
  * Name: fuse_request
@@ -2592,8 +3527,6 @@ int fuse_request(FAR struct fuse_conn_s *conn, FAR struct fuse_req_s *req,
                  FAR const struct iovec *vin, size_t vin_cnt,
                  FAR const struct iovec *vout, size_t vout_cnt)
 {
-  irqstate_t flags;
-  size_t i;
   int ret;
 
   /* Lazily perform the FUSE_INIT handshake on the first non-INIT request so
@@ -2625,33 +3558,7 @@ int fuse_request(FAR struct fuse_conn_s *conn, FAR struct fuse_req_s *req,
       nxmutex_unlock(&conn->initlock);
     }
 
-  /* The total request length is the header plus all request arguments */
-
-  req->hin.len = sizeof(req->hin);
-  for (i = 0; i < vin_cnt; i++)
-    {
-      req->hin.len += vin[i].iov_len;
-    }
-
-  flags = spin_lock_irqsave(&conn->lock);
-  req->hin.unique = ++conn->unique;
-  spin_unlock_irqrestore(&conn->lock, flags);
-
-  req->hin.uid = geteuid();
-  req->hin.gid = getegid();
-  req->hin.pid = getpid();
-
-  req->vin      = vin;
-  req->vin_cnt  = vin_cnt;
-  req->vout     = vout;
-  req->vout_cnt = vout_cnt;
-
-  /* Submit through the transport and wait for the reply.  The completion
-   * path posts req->wait.
-   */
-
-  nxsem_init(&req->wait, 0, 0);
-  ret = conn->transport->request(conn, req);
+  ret = fuse_request_submit(conn, req, vin, vin_cnt, vout, vout_cnt);
   if (ret >= 0)
     {
       nxsem_wait_uninterruptible(&req->wait);

@@ -78,7 +78,10 @@ void fs_initialize(void)
 #endif
 
 #ifdef CONFIG_FS_FUSE_DEV
-  /* Register the /dev/fuse transport device */
+  /* Register the /dev/fuse transport device (and /dev/cuse when
+   * CONFIG_FS_CUSE is enabled;  both are registered by
+   * fuse_dev_initialize).
+   */
 
   fuse_dev_initialize();
 #endif

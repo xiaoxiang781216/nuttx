@@ -30,6 +30,7 @@
 #include <nuttx/config.h>
 
 #include <sys/uio.h>
+#include <poll.h>
 #include <stdbool.h>
 
 #include <nuttx/atomic.h>
@@ -162,6 +163,30 @@ int fuse_request(FAR struct fuse_conn_s *conn, FAR struct fuse_req_s *req,
                  FAR const struct iovec *vin, size_t vin_cnt,
                  FAR const struct iovec *vout, size_t out_cnt);
 
+/* Shared FUSE_READ / FUSE_WRITE engines, used by both the mountpoint file
+ * operations and the CUSE frontend.  maxbytes bounds one request round.
+ */
+
+ssize_t fuse_file_readv(FAR struct fuse_conn_s *conn, uint64_t nodeid,
+                        uint64_t fh, FAR struct file *filep,
+                        FAR struct uio *uio, size_t maxbytes);
+ssize_t fuse_file_writev(FAR struct fuse_conn_s *conn, uint64_t nodeid,
+                         uint64_t fh, FAR struct file *filep,
+                         FAR struct uio *uio, size_t maxbytes);
+
+/* Shared FUSE_POLL engine and its FUSE_NOTIFY_POLL wakeup, used by both
+ * the mountpoint poll operation and the CUSE frontend.
+ */
+
+int  fuse_file_poll(FAR struct fuse_conn_s *conn, uint64_t nodeid,
+                    uint64_t fh, FAR struct pollfd *fds, bool setup);
+void fuse_notify_poll_wakeup(FAR struct fuse_conn_s *conn,
+                             FAR const char *payload, size_t len);
+
+/* Drop every poll waiter on the connection (channel teardown) */
+
+void fuse_poll_free_all(FAR struct fuse_conn_s *conn);
+
 #ifdef CONFIG_FS_FUSE_DEV
 /* Implemented by fs/fuse/fuse_dev.c.  The open/close/read/write/poll
  * operations are also reused by the /dev/cuse control channel, which
@@ -186,12 +211,17 @@ FAR struct fuse_conn_s *fuse_dev_file_conn(FAR struct file *filep);
 
 int fuse_dev_connect(FAR struct fuse_conn_s *conn, FAR const char *options);
 int fuse_dev_initialize(void);
-#endif
 
 #ifdef CONFIG_FS_CUSE
-/* Implemented by fs/fuse/cuse.c */
+/* Implemented by fs/fuse/fuse.c (CUSE section).  fuse_dev_open/close call
+ * these hooks for the /dev/cuse channel (selected by the inode-private tag
+ * at register time):  set up the connection and queue CUSE_INIT at open,
+ * tear down the connection and its frontend device node at close.
+ */
 
-int cuse_initialize(void);
+int  cuse_channel_open(FAR struct file *filep);
+void cuse_channel_close(FAR struct file *filep);
+#endif
 #endif
 
 #ifdef CONFIG_FS_VIRTIOFS
