@@ -20,6 +20,11 @@
 #
 # ##############################################################################
 
-if(CONFIG_FS_FUSE)
-  target_sources(c PRIVATE lib_fuse.c)
+if(CONFIG_LIBC_FS_FUSE)
+  target_sources(
+    c PRIVATE lib_buffer.c lib_fuse.c lib_fuse_loop.c lib_fuse_loop_mt.c
+              lib_fuse_lowlevel.c lib_fuse_opt.c)
+  if(CONFIG_FS_CUSE)
+    target_sources(c PRIVATE lib_cuse_lowlevel.c)
+  endif()
 endif()

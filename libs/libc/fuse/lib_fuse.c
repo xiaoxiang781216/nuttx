@@ -5,10 +5,10 @@
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -24,310 +24,109 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#include <sys/mount.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
-
-#include <errno.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <nuttx/fuse.h>
-
 #include <fuse.h>
 #include <fuse_lowlevel.h>
+
+#include <nuttx/lib/lib.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define FUSE_LL_MAX_WRITE  (64 * 1024)
-#define FUSE_LL_BUFSIZE    (FUSE_LL_MAX_WRITE + FUSE_MIN_READ_BUFFER)
+#define PACKAGE_VERSION "3.19.0-rc0"
 
 /****************************************************************************
- * Private Types
+ * Private Type Definitions
  ****************************************************************************/
 
-struct fuse_req
+struct node
 {
-  FAR struct fuse_session *se;
-  uint64_t                 unique;
-  struct fuse_ctx          ctx;
-};
-
-struct fuse_session
-{
-  int                                 fd;
-  FAR const struct fuse_lowlevel_ops *op;
-  FAR void                           *userdata;
-  bool                                exited;
-  uint32_t                            max_write;
-  FAR char                           *mountpoint;
-  FAR char                           *buf;
-  size_t                              bufsize;
-};
-
-/* High level inode/path node */
-
-struct fuse_node
-{
-  FAR struct fuse_node *next;
-  uint64_t              nodeid;
-  uint64_t              refs;
-  FAR char             *path;
+  FAR struct node *next;
+  fuse_ino_t nodeid;
+  FAR char *path;
+  uint64_t nlookup;
 };
 
 struct fuse
 {
   FAR struct fuse_session *se;
-  struct fuse_operations   op;
-  FAR void                *private_data;
-  FAR struct fuse_node    *nodes;
-  uint64_t                 next_nodeid;
+  FAR struct node *nodes;
+  fuse_ino_t ctr;
+  struct fuse_config conf;
+  struct fuse_operations op;
+  FAR void *private_data;
 };
 
-/* readdir filler context */
-
-struct fuse_dirbuf
+struct fuse_dh
 {
   fuse_req_t req;
-  FAR char  *buf;
-  size_t     size;
-  size_t     pos;
-  off_t      want_off;
-  off_t      index;
+  FAR char *buf;
+  size_t size;
+  size_t pos;
+  off_t want_off;
+  off_t index;
+  bool cookie_mode;
 };
 
 /****************************************************************************
- * Private Data
+ * High level bridge: nodeid to path table
  ****************************************************************************/
 
-static struct fuse_context g_fuse_context;
+/* Forward declarations for the high level bridge */
 
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
+static FAR const char *node_path(FAR struct fuse *f, fuse_ino_t id);
 
-/****************************************************************************
- * Name: fuse_send
- *
- * Description:
- *   Send a single FUSE reply (out header followed by an optional payload)
- *   to the kernel through /dev/fuse.
- *
- ****************************************************************************/
+/* Publish the request context in tls_info_s::tl_fuse before entering a
+ * fuse_operations callback (upstream: req_fuse_prepare).
+ */
 
-static int fuse_send(FAR struct fuse_session *se, uint64_t unique,
-                     int error, FAR const void *data, size_t datalen)
+static FAR struct fuse *hl_prepare(fuse_req_t req)
 {
-  FAR struct fuse_out_header *oh;
-  FAR char *msg;
-  size_t msglen;
-  ssize_t n;
+  FAR struct fuse *f = req->se->userdata;
+  FAR struct tls_info_s *tls = tls_get_info();
 
-  msglen = sizeof(*oh) + datalen;
-  msg = malloc(msglen);
-  if (msg == NULL)
+  if (tls != NULL)
     {
-      return -ENOMEM;
+      FAR const struct fuse_ctx *ctx = fuse_req_ctx(req);
+
+      tls->tl_fuse.fuse         = f;
+      tls->tl_fuse.uid          = ctx->uid;
+      tls->tl_fuse.gid          = ctx->gid;
+      tls->tl_fuse.pid          = ctx->pid;
+      tls->tl_fuse.private_data = f->private_data;
+      tls->tl_fuse.umask        = ctx->umask;
     }
 
-  oh         = (FAR struct fuse_out_header *)msg;
-  oh->len    = msglen;
-  oh->error  = error;
-  oh->unique = unique;
-  if (datalen > 0)
+  return f;
+}
+
+/* High-level operations report errors by returning -errno (a positive
+ * or zero return means success); translate to the errno value the
+ * reply helpers expect, EIO for unexpected positive codes.
+ */
+
+static int hl_retcode(int ret)
+{
+  if (ret == 0)
     {
-      memcpy(msg + sizeof(*oh), data, datalen);
+      return 0;
     }
 
-  n = write(se->fd, msg, msglen);
-  free(msg);
-  return n < 0 ? -errno : 0;
-}
-
-/****************************************************************************
- * Name: fuse_stat_to_attr
- ****************************************************************************/
-
-static void fuse_stat_to_attr(FAR const struct stat *st,
-                              FAR struct fuse_attr *a)
-{
-  memset(a, 0, sizeof(*a));
-  a->ino       = st->st_ino;
-  a->size      = st->st_size;
-  a->blocks    = st->st_blocks;
-  a->blksize   = st->st_blksize;
-  a->mode      = st->st_mode;
-  a->nlink     = st->st_nlink ? st->st_nlink : 1;
-  a->uid       = st->st_uid;
-  a->gid       = st->st_gid;
-  a->rdev      = st->st_rdev;
-  a->atime     = st->st_atim.tv_sec;
-  a->atimensec = st->st_atim.tv_nsec;
-  a->mtime     = st->st_mtim.tv_sec;
-  a->mtimensec = st->st_mtim.tv_nsec;
-  a->ctime     = st->st_ctim.tv_sec;
-  a->ctimensec = st->st_ctim.tv_nsec;
-}
-
-/****************************************************************************
- * Public Functions: reply helpers
- ****************************************************************************/
-
-int fuse_reply_err(fuse_req_t req, int err)
-{
-  return fuse_send(req->se, req->unique, -err, NULL, 0);
-}
-
-void fuse_reply_none(fuse_req_t req)
-{
-  UNUSED(req);
-}
-
-int fuse_reply_entry(fuse_req_t req, FAR const struct fuse_entry_param *e)
-{
-  struct fuse_entry_out out;
-
-  memset(&out, 0, sizeof(out));
-  out.nodeid           = e->ino;
-  out.generation       = e->generation;
-  out.entry_valid      = (uint64_t)e->entry_timeout;
-  out.attr_valid       = (uint64_t)e->attr_timeout;
-  fuse_stat_to_attr(&e->attr, &out.attr);
-
-  return fuse_send(req->se, req->unique, 0, &out, sizeof(out));
-}
-
-int fuse_reply_create(fuse_req_t req, FAR const struct fuse_entry_param *e,
-                      FAR const struct fuse_file_info *fi)
-{
-  struct
-  {
-    struct fuse_entry_out entry;
-    struct fuse_open_out  open;
-  } out;
-
-  memset(&out, 0, sizeof(out));
-  out.entry.nodeid      = e->ino;
-  out.entry.generation  = e->generation;
-  out.entry.entry_valid = (uint64_t)e->entry_timeout;
-  out.entry.attr_valid  = (uint64_t)e->attr_timeout;
-  fuse_stat_to_attr(&e->attr, &out.entry.attr);
-  out.open.fh           = fi->fh;
-
-  return fuse_send(req->se, req->unique, 0, &out, sizeof(out));
-}
-
-int fuse_reply_attr(fuse_req_t req, FAR const struct stat *attr,
-                    double attr_timeout)
-{
-  struct fuse_attr_out out;
-
-  memset(&out, 0, sizeof(out));
-  out.attr_valid = (uint64_t)attr_timeout;
-  fuse_stat_to_attr(attr, &out.attr);
-
-  return fuse_send(req->se, req->unique, 0, &out, sizeof(out));
-}
-
-int fuse_reply_readlink(fuse_req_t req, FAR const char *link)
-{
-  return fuse_send(req->se, req->unique, 0, link, strlen(link));
-}
-
-int fuse_reply_open(fuse_req_t req, FAR const struct fuse_file_info *fi)
-{
-  struct fuse_open_out out;
-
-  memset(&out, 0, sizeof(out));
-  out.fh = fi->fh;
-
-  return fuse_send(req->se, req->unique, 0, &out, sizeof(out));
-}
-
-int fuse_reply_write(fuse_req_t req, size_t count)
-{
-  struct fuse_write_out out;
-
-  memset(&out, 0, sizeof(out));
-  out.size = count;
-
-  return fuse_send(req->se, req->unique, 0, &out, sizeof(out));
-}
-
-int fuse_reply_buf(fuse_req_t req, FAR const char *buf, size_t size)
-{
-  return fuse_send(req->se, req->unique, 0, buf, size);
-}
-
-int fuse_reply_statfs(fuse_req_t req, FAR const struct statvfs *stbuf)
-{
-  struct fuse_statfs_out out;
-
-  memset(&out, 0, sizeof(out));
-  out.st.blocks  = stbuf->f_blocks;
-  out.st.bfree   = stbuf->f_bfree;
-  out.st.bavail  = stbuf->f_bavail;
-  out.st.files   = stbuf->f_files;
-  out.st.ffree   = stbuf->f_ffree;
-  out.st.bsize   = stbuf->f_bsize;
-  out.st.namelen = stbuf->f_namemax;
-  out.st.frsize  = stbuf->f_frsize;
-
-  return fuse_send(req->se, req->unique, 0, &out, sizeof(out));
-}
-
-size_t fuse_add_direntry(fuse_req_t req, FAR char *buf, size_t bufsize,
-                         FAR const char *name, FAR const struct stat *stbuf,
-                         off_t off)
-{
-  size_t namelen = strlen(name);
-  size_t entlen  = FUSE_NAME_OFFSET + namelen;
-  size_t entsize = FUSE_DIRENT_ALIGN(entlen);
-
-  UNUSED(req);
-
-  if (entsize <= bufsize)
+  if (ret < 0)
     {
-      FAR struct fuse_dirent *de = (FAR struct fuse_dirent *)buf;
-
-      de->ino     = stbuf != NULL ? stbuf->st_ino : 0;
-      de->off     = off;
-      de->namelen = namelen;
-      de->type    = stbuf != NULL ? (stbuf->st_mode >> 12) : 0;
-      memcpy(de->name, name, namelen);
-      if (entsize > entlen)
-        {
-          memset(buf + entlen, 0, entsize - entlen);
-        }
+      return -ret;
     }
 
-  return entsize;
+  return EIO;
 }
 
-FAR void *fuse_req_userdata(fuse_req_t req)
+static FAR struct node *node_find(FAR struct fuse *f, fuse_ino_t id)
 {
-  return req->se->userdata;
-}
-
-FAR const struct fuse_ctx *fuse_req_ctx(fuse_req_t req)
-{
-  return &req->ctx;
-}
-
-/****************************************************************************
- * Private Functions: high level node management
- ****************************************************************************/
-
-static FAR struct fuse_node *node_find_id(FAR struct fuse *f, uint64_t id)
-{
-  FAR struct fuse_node *n;
+  FAR struct node *n;
 
   for (n = f->nodes; n != NULL; n = n->next)
     {
@@ -340,132 +139,336 @@ static FAR struct fuse_node *node_find_id(FAR struct fuse *f, uint64_t id)
   return NULL;
 }
 
-static FAR const char *node_path(FAR struct fuse *f, uint64_t id)
+static FAR const char *node_path(FAR struct fuse *f, fuse_ino_t id)
 {
-  FAR struct fuse_node *n = node_find_id(f, id);
+  FAR struct node *n;
+
+  if (id == FUSE_ROOT_ID)
+    {
+      return "/";
+    }
+
+  n = node_find(f, id);
   return n != NULL ? n->path : NULL;
 }
 
-static FAR struct fuse_node *node_get(FAR struct fuse *f,
-                                      FAR const char *path)
+/* Build the full path of (parent, name) into buf; high-level callbacks
+ * receive full paths, never bare names.  Returns NULL when the buffer
+ * is too small or the parent is unknown.
+ */
+
+static FAR const char *node_join(FAR struct fuse *f, fuse_ino_t parent,
+                                  FAR const char *name,
+                                  FAR char *buf, size_t buflen)
 {
-  FAR struct fuse_node *n;
+  FAR const char *pp;
+  size_t len;
 
-  for (n = f->nodes; n != NULL; n = n->next)
+  if (parent == FUSE_ROOT_ID)
     {
-      if (strcmp(n->path, path) == 0)
-        {
-          n->refs++;
-          return n;
-        }
-    }
-
-  n = malloc(sizeof(*n));
-  if (n == NULL)
-    {
-      return NULL;
-    }
-
-  n->path = strdup(path);
-  if (n->path == NULL)
-    {
-      free(n);
-      return NULL;
-    }
-
-  n->nodeid   = f->next_nodeid++;
-  n->refs     = 1;
-  n->next     = f->nodes;
-  f->nodes    = n;
-  return n;
-}
-
-static void node_forget(FAR struct fuse *f, uint64_t id, uint64_t nlookup)
-{
-  FAR struct fuse_node *n;
-  FAR struct fuse_node *prev = NULL;
-
-  for (n = f->nodes; n != NULL; prev = n, n = n->next)
-    {
-      if (n->nodeid != id)
-        {
-          continue;
-        }
-
-      if (n->refs > nlookup)
-        {
-          n->refs -= nlookup;
-          return;
-        }
-
-      if (prev != NULL)
-        {
-          prev->next = n->next;
-        }
-      else
-        {
-          f->nodes = n->next;
-        }
-
-      free(n->path);
-      free(n);
-      return;
-    }
-}
-
-static FAR char *build_path(FAR const char *parent, FAR const char *name)
-{
-  bool rootp = parent[0] == '/' && parent[1] == '\0';
-  size_t len = strlen(parent) + 1 + strlen(name) + 1;
-  FAR char *p = malloc(len);
-
-  if (p == NULL)
-    {
-      return NULL;
-    }
-
-  if (rootp)
-    {
-      snprintf(p, len, "/%s", name);
+      pp = "/";
     }
   else
     {
-      snprintf(p, len, "%s/%s", parent, name);
+      pp = node_path(f, parent);
+      if (pp == NULL)
+        {
+          return NULL;
+        }
     }
 
-  return p;
+  len = strlen(pp) + strlen(name) + 2;
+  if (len > buflen)
+    {
+      return NULL;
+    }
+
+  if (pp[strlen(pp) - 1] == '/')
+    {
+      snprintf(buf, buflen, "%s%s", pp, name);
+    }
+  else
+    {
+      snprintf(buf, buflen, "%s/%s", pp, name);
+    }
+
+  return buf;
 }
 
-static void hl_setcontext(fuse_req_t req, FAR struct fuse *f)
+static FAR struct node *node_get(FAR struct fuse *f, fuse_ino_t parent,
+                                 FAR const char *name)
 {
-  FAR const struct fuse_ctx *ctx = fuse_req_ctx(req);
+  FAR struct node *n;
+  FAR char *path;
+  size_t len;
 
-  g_fuse_context.fuse         = f;
-  g_fuse_context.private_data = f->private_data;
-  g_fuse_context.uid          = ctx->uid;
-  g_fuse_context.gid          = ctx->gid;
-  g_fuse_context.pid          = ctx->pid;
-  g_fuse_context.umask        = ctx->umask;
+  if (parent == FUSE_ROOT_ID)
+    {
+      if (name[0] == '\0')
+        {
+          return NULL;
+        }
+
+      len = strlen(name) + 2;
+      path = lib_malloc(len);
+      if (path == NULL)
+        {
+          return NULL;
+        }
+
+      snprintf(path, len, "/%s", name);
+    }
+  else
+    {
+      FAR const char *pp = node_path(f, parent);
+
+      if (pp == NULL)
+        {
+          return NULL;
+        }
+
+      len = strlen(pp) + strlen(name) + 2;
+      path = lib_malloc(len);
+      if (path == NULL)
+        {
+          return NULL;
+        }
+
+      snprintf(path, len, "%s/%s", pp, name);
+    }
+
+  n = lib_malloc(sizeof(*n));
+  if (n == NULL)
+    {
+      lib_free(path);
+      return NULL;
+    }
+
+  n->nodeid = ++f->ctr;
+  n->nlookup = 0;
+  n->path   = path;
+  n->next   = f->nodes;
+  f->nodes  = n;
+  return n;
+}
+
+static void node_forget(FAR struct fuse *f, fuse_ino_t id,
+                        uint64_t nlookup)
+{
+  FAR struct node *n;
+  FAR struct node *prev = NULL;
+
+  for (n = f->nodes; n != NULL; prev = n, n = n->next)
+    {
+      if (n->nodeid == id)
+        {
+          break;
+        }
+    }
+
+  if (n == NULL)
+    {
+      return;
+    }
+
+  if (n->nlookup >= nlookup)
+    {
+      n->nlookup -= nlookup;
+    }
+  else
+    {
+      n->nlookup = 0;
+    }
+
+  if (n->nlookup == 0)
+    {
+      if (prev == NULL)
+        {
+          f->nodes = n->next;
+        }
+      else
+        {
+          prev->next = n->next;
+        }
+
+      lib_free(n->path);
+      lib_free(n);
+    }
+}
+
+/* Drop the node cache entry for a path (after unlink/rmdir).  Children
+ * of a removed directory are dropped as well; the server would otherwise
+ * answer lookups for them from a stale cache.
+ */
+
+static void node_forget_path(FAR struct fuse *f, FAR const char *path)
+{
+  FAR struct node *n;
+  FAR struct node *prev = NULL;
+  size_t plen = strlen(path);
+
+  for (n = f->nodes; n != NULL; )
+    {
+      bool drop = strcmp(n->path, path) == 0 ||
+                  (strncmp(n->path, path, plen) == 0 &&
+                   n->path[plen] == '/');
+
+      if (drop)
+        {
+          FAR struct node *next = n->next;
+
+          if (prev == NULL)
+            {
+              f->nodes = next;
+            }
+          else
+            {
+              prev->next = next;
+            }
+
+          lib_free(n->path);
+          lib_free(n);
+          n = next;
+        }
+      else
+        {
+          prev = n;
+          n = n->next;
+        }
+    }
+}
+
+/* Update the node cache after a successful rename: re-path the node and
+ * every descendant.
+ */
+
+static void node_rename_path(FAR struct fuse *f, FAR const char *oldpath,
+                             FAR const char *newpath)
+{
+  FAR struct node *n;
+  size_t olen = strlen(oldpath);
+
+  for (n = f->nodes; n != NULL; n = n->next)
+    {
+      if (strcmp(n->path, oldpath) == 0)
+        {
+          FAR char *p = strdup(newpath);
+
+          if (p != NULL)
+            {
+              lib_free(n->path);
+              n->path = p;
+            }
+        }
+      else if (strncmp(n->path, oldpath, olen) == 0 &&
+               n->path[olen] == '/')
+        {
+          char joined[PATH_MAX];
+
+          if (snprintf(joined, sizeof(joined), "%s%s", newpath,
+                       n->path + olen) < (int)sizeof(joined))
+            {
+              FAR char *p = strdup(joined);
+
+              if (p != NULL)
+                {
+                  lib_free(n->path);
+                  n->path = p;
+                }
+            }
+        }
+    }
 }
 
 /****************************************************************************
- * Private Functions: high level operations (built-in low level ops)
+ * High level bridge: readdir filler
+ ****************************************************************************/
+
+static int hl_filler(FAR void *buf, FAR const char *name,
+                     FAR const struct stat *st, off_t off,
+                     enum fuse_fill_dir_flags flags)
+{
+  FAR struct fuse_dh *db = buf;
+  struct stat dummy;
+  size_t len;
+
+  UNUSED(flags);
+
+  /* Callers may pass a NULL stat: synthesize a minimal regular-file
+   * one so the entry still reaches the kernel.
+   */
+
+  if (st == NULL)
+    {
+      memset(&dummy, 0, sizeof(dummy));
+      dummy.st_ino   = 0;
+      dummy.st_mode  = S_IFREG;
+      st = &dummy;
+    }
+
+  if (db->cookie_mode || off != 0)
+    {
+      /* Cookie mode: the callback seeks by offset, so entries arrive
+       * from the right position - collect from here on.  One callback
+       * must not mix both modes.
+       */
+
+      db->cookie_mode = true;
+      len = fuse_add_direntry(db->req, db->buf + db->pos,
+                              db->size - db->pos, name, st, off);
+    }
+  else if (db->want_off != 0 && db->index != db->want_off)
+    {
+      /* Legacy mode: the callback always fills from the start, skip
+       * the prefix below the requested offset.
+       */
+
+      db->index++;
+      return 0;
+    }
+  else
+    {
+      db->index++;
+      len = fuse_add_direntry(db->req, db->buf + db->pos,
+                              db->size - db->pos, name, st, db->index);
+    }
+
+  if (len == 0)
+    {
+      return 1;
+    }
+
+  db->pos += len;
+  return 0;
+}
+
+/****************************************************************************
+ * High level bridge: lowlevel ops
  ****************************************************************************/
 
 static void hl_init(FAR void *userdata, FAR struct fuse_conn_info *conn)
 {
   FAR struct fuse *f = userdata;
+  FAR struct tls_info_s *tls = tls_get_info();
+  FAR void *ret = NULL;
+
+  if (tls != NULL)
+    {
+      tls->tl_fuse.fuse         = f;
+      tls->tl_fuse.private_data = f->private_data;
+    }
 
   if (f->op.init != NULL)
     {
-      struct fuse_config cfg;
-      FAR void *pd;
-
-      memset(&cfg, 0, sizeof(cfg));
-      pd = f->op.init(conn, &cfg);
-      if (pd != NULL)
+      ret = f->op.init(conn, &f->conf);
+      if (ret != NULL)
         {
-          f->private_data = pd;
+          f->private_data = ret;
+
+          if (tls != NULL)
+            {
+              tls->tl_fuse.private_data = ret;
+            }
         }
     }
 }
@@ -473,6 +476,12 @@ static void hl_init(FAR void *userdata, FAR struct fuse_conn_info *conn)
 static void hl_destroy(FAR void *userdata)
 {
   FAR struct fuse *f = userdata;
+  FAR struct tls_info_s *tls = tls_get_info();
+
+  if (tls != NULL)
+    {
+      tls->tl_fuse.fuse = f;
+    }
 
   if (f->op.destroy != NULL)
     {
@@ -480,280 +489,560 @@ static void hl_destroy(FAR void *userdata)
     }
 }
 
-static void hl_lookup(fuse_req_t req, uint64_t parent, FAR const char *name)
+static void hl_lookup(fuse_req_t req, fuse_ino_t parent,
+                      FAR const char *name)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *ppath;
-  FAR struct fuse_node *node;
+  FAR struct fuse *f = hl_prepare(req);
   struct fuse_entry_param e;
-  struct stat st;
-  FAR char *cpath;
-  int ret;
-
-  hl_setcontext(req, f);
-
-  ppath = node_path(f, parent);
-  if (ppath == NULL)
-    {
-      fuse_reply_err(req, ENOENT);
-      return;
-    }
-
-  cpath = build_path(ppath, name);
-  if (cpath == NULL)
-    {
-      fuse_reply_err(req, ENOMEM);
-      return;
-    }
-
-  ret = f->op.getattr != NULL ? f->op.getattr(cpath, &st, NULL) : -ENOSYS;
-  if (ret < 0)
-    {
-      free(cpath);
-      fuse_reply_err(req, -ret);
-      return;
-    }
-
-  node = node_get(f, cpath);
-  free(cpath);
-  if (node == NULL)
-    {
-      fuse_reply_err(req, ENOMEM);
-      return;
-    }
+  FAR struct node *n;
+  char pathbuf[PATH_MAX];
+  FAR const char *path;
 
   memset(&e, 0, sizeof(e));
-  e.ino           = node->nodeid;
-  e.generation    = 1;
-  e.attr          = st;
   e.attr_timeout  = 1.0;
   e.entry_timeout = 1.0;
-  fuse_reply_entry(req, &e);
+
+  path = node_join(f, parent, name, pathbuf, sizeof(pathbuf));
+  if (path != NULL && f->op.getattr != NULL &&
+      f->op.getattr(path, &e.attr, NULL) == 0)
+    {
+      n = node_get(f, parent, name);
+      if (n != NULL)
+        {
+          n->nlookup++;
+          e.ino = n->nodeid;
+          fuse_reply_entry(req, &e);
+          return;
+        }
+
+      fuse_reply_err(req, ENOMEM);
+      return;
+    }
+
+  fuse_reply_err(req, ENOENT);
 }
 
-static void hl_forget(fuse_req_t req, uint64_t ino, uint64_t nlookup)
+static void hl_forget(fuse_req_t req, fuse_ino_t ino, uint64_t nlookup)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
-
-  node_forget(f, ino, nlookup);
-  fuse_reply_none(req);
+  node_forget(hl_prepare(req), ino, nlookup);
 }
 
-static void hl_getattr(fuse_req_t req, uint64_t ino,
+static void hl_getattr(fuse_req_t req, fuse_ino_t ino,
                        FAR struct fuse_file_info *fi)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *path;
+  FAR struct fuse *f = hl_prepare(req);
+  FAR const char *path = node_path(f, ino);
   struct stat st;
   int ret;
 
-  hl_setcontext(req, f);
-
-  path = node_path(f, ino);
-  if (path == NULL)
+  if (path == NULL || f->op.getattr == NULL)
     {
       fuse_reply_err(req, ENOENT);
       return;
     }
 
-  memset(&st, 0, sizeof(st));
-  ret = f->op.getattr != NULL ? f->op.getattr(path, &st, fi) : -ENOSYS;
-  if (ret < 0)
+  ret = f->op.getattr(path, &st, fi);
+  if (ret != 0)
     {
-      fuse_reply_err(req, -ret);
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
     }
-  else
-    {
-      fuse_reply_attr(req, &st, 1.0);
-    }
+
+  st.st_ino = ino;
+  fuse_reply_attr(req, &st, 1.0);
 }
 
-static void hl_setattr(fuse_req_t req, uint64_t ino, FAR struct stat *attr,
-                       int to_set, FAR struct fuse_file_info *fi)
+static void hl_setattr(fuse_req_t req, fuse_ino_t ino,
+                       FAR struct stat *attr, int to_set,
+                       FAR struct fuse_file_info *fi)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
+  FAR struct fuse *f = hl_prepare(req);
   FAR const char *path;
   struct stat st;
-  int ret = 0;
-
-  hl_setcontext(req, f);
+  struct timespec tv[2];
+  int err = 0;
 
   path = node_path(f, ino);
+
   if (path == NULL)
     {
       fuse_reply_err(req, ENOENT);
       return;
     }
 
-  if ((to_set & FATTR_SIZE) != 0 && f->op.truncate != NULL)
+  if ((to_set & FATTR_MODE) != 0 && f->op.chmod != NULL)
     {
-      ret = f->op.truncate(path, attr->st_size, fi);
+      err = f->op.chmod(path, attr->st_mode, fi);
     }
 
-  if (ret >= 0 && (to_set & FATTR_MODE) != 0 && f->op.chmod != NULL)
-    {
-      ret = f->op.chmod(path, attr->st_mode, fi);
-    }
-
-  if (ret >= 0 && (to_set & (FATTR_UID | FATTR_GID)) != 0 &&
+  if (err == 0 && (to_set & (FATTR_UID | FATTR_GID)) != 0 &&
       f->op.chown != NULL)
     {
-      ret = f->op.chown(path, attr->st_uid, attr->st_gid, fi);
+      err = f->op.chown(path,
+                        (to_set & FATTR_UID) != 0 ? attr->st_uid : (uid_t)-1,
+                        (to_set & FATTR_GID) != 0 ? attr->st_gid : (gid_t)-1,
+                        fi);
     }
 
-  if (ret >= 0 && (to_set & (FATTR_ATIME | FATTR_MTIME)) != 0 &&
+  if (err == 0 && (to_set & FATTR_SIZE) != 0 && f->op.truncate != NULL)
+    {
+      err = f->op.truncate(path, attr->st_size, fi);
+    }
+
+  if (err == 0 && (to_set & (FATTR_ATIME | FATTR_MTIME)) != 0 &&
       f->op.utimens != NULL)
     {
-      struct timespec tv[2];
-
       tv[0].tv_sec  = attr->st_atim.tv_sec;
       tv[0].tv_nsec = attr->st_atim.tv_nsec;
       tv[1].tv_sec  = attr->st_mtim.tv_sec;
       tv[1].tv_nsec = attr->st_mtim.tv_nsec;
-      ret = f->op.utimens(path, tv, fi);
+      err = f->op.utimens(path, tv, fi);
     }
 
-  if (ret < 0)
+  if (err != 0)
     {
-      fuse_reply_err(req, -ret);
+      fuse_reply_err(req, hl_retcode(err));
       return;
     }
 
-  memset(&st, 0, sizeof(st));
-  ret = f->op.getattr != NULL ? f->op.getattr(path, &st, fi) : -ENOSYS;
-  if (ret < 0)
+  /* Re-read the attributes */
+
+  if (f->op.getattr != NULL && f->op.getattr(path, &st, fi) == 0)
     {
-      fuse_reply_err(req, -ret);
-    }
-  else
-    {
+      st.st_ino = ino;
       fuse_reply_attr(req, &st, 1.0);
     }
-}
-
-static void hl_open(fuse_req_t req, uint64_t ino,
-                    FAR struct fuse_file_info *fi)
-{
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *path;
-  int ret = 0;
-
-  hl_setcontext(req, f);
-
-  path = node_path(f, ino);
-  if (path == NULL)
-    {
-      fuse_reply_err(req, ENOENT);
-      return;
-    }
-
-  if (f->op.open != NULL)
-    {
-      ret = f->op.open(path, fi);
-    }
-
-  if (ret < 0)
-    {
-      fuse_reply_err(req, -ret);
-    }
   else
     {
-      fuse_reply_open(req, fi);
+      fuse_reply_err(req, ENOENT);
     }
 }
 
-static void hl_read(fuse_req_t req, uint64_t ino, size_t size, off_t off,
-                    FAR struct fuse_file_info *fi)
+static void hl_readlink(fuse_req_t req, fuse_ino_t ino)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
+  FAR struct fuse *f = hl_prepare(req);
   FAR const char *path;
-  FAR char *buf;
+  char buf[PATH_MAX];
   int ret;
 
-  hl_setcontext(req, f);
-
   path = node_path(f, ino);
+
+  if (path == NULL || f->op.readlink == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  ret = f->op.readlink(path, buf, sizeof(buf));
+  if (ret != 0)
+    {
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
+    }
+
+  fuse_reply_readlink(req, buf);
+}
+
+static void hl_mknod(fuse_req_t req, fuse_ino_t parent,
+                     FAR const char *name, mode_t mode, dev_t rdev)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  char pathbuf[PATH_MAX];
+  FAR const char *path;
+  int ret;
+
+  if (f->op.mknod == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  path = node_join(f, parent, name, pathbuf, sizeof(pathbuf));
   if (path == NULL)
     {
       fuse_reply_err(req, ENOENT);
       return;
     }
 
-  buf = malloc(size);
+  ret = f->op.mknod(path, mode, rdev);
+  if (ret != 0)
+    {
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
+    }
+
+  hl_lookup(req, parent, name);
+}
+
+static void hl_mkdir(fuse_req_t req, fuse_ino_t parent,
+                     FAR const char *name, mode_t mode)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  char pathbuf[PATH_MAX];
+  FAR const char *path;
+  int ret;
+
+  if (f->op.mkdir == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  path = node_join(f, parent, name, pathbuf, sizeof(pathbuf));
+  if (path == NULL)
+    {
+      fuse_reply_err(req, ENOENT);
+      return;
+    }
+
+  ret = f->op.mkdir(path, mode);
+  if (ret != 0)
+    {
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
+    }
+
+  hl_lookup(req, parent, name);
+}
+
+static void hl_unlink(fuse_req_t req, fuse_ino_t parent,
+                      FAR const char *name)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  char pathbuf[PATH_MAX];
+  FAR const char *path;
+  int ret;
+
+  if (f->op.unlink == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  path = node_join(f, parent, name, pathbuf, sizeof(pathbuf));
+  if (path == NULL)
+    {
+      fuse_reply_err(req, ENOENT);
+      return;
+    }
+
+  ret = f->op.unlink(path);
+  node_forget_path(f, path);
+  fuse_reply_err(req, hl_retcode(ret));
+}
+
+static void hl_rmdir(fuse_req_t req, fuse_ino_t parent,
+                     FAR const char *name)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  char pathbuf[PATH_MAX];
+  FAR const char *path;
+  int ret;
+
+  if (f->op.rmdir == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  path = node_join(f, parent, name, pathbuf, sizeof(pathbuf));
+  if (path == NULL)
+    {
+      fuse_reply_err(req, ENOENT);
+      return;
+    }
+
+  ret = f->op.rmdir(path);
+  node_forget_path(f, path);
+  fuse_reply_err(req, hl_retcode(ret));
+}
+
+static void hl_symlink(fuse_req_t req, FAR const char *link,
+                       fuse_ino_t parent, FAR const char *name)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  char pathbuf[PATH_MAX];
+  FAR const char *path;
+  int ret;
+
+  if (f->op.symlink == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  path = node_join(f, parent, name, pathbuf, sizeof(pathbuf));
+  if (path == NULL)
+    {
+      fuse_reply_err(req, ENOENT);
+      return;
+    }
+
+  ret = f->op.symlink(link, path);
+  if (ret != 0)
+    {
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
+    }
+
+  hl_lookup(req, parent, name);
+}
+
+static void hl_rename(fuse_req_t req, fuse_ino_t parent,
+                      FAR const char *name, fuse_ino_t newparent,
+                      FAR const char *newname, unsigned int flags)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  char oldbuf[PATH_MAX];
+  char newbuf[PATH_MAX];
+  FAR const char *oldpath;
+  FAR const char *newpath;
+  int ret;
+
+  if (f->op.rename == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  oldpath = node_join(f, parent, name, oldbuf, sizeof(oldbuf));
+  newpath = node_join(f, newparent, newname, newbuf, sizeof(newbuf));
+  if (oldpath == NULL || newpath == NULL)
+    {
+      fuse_reply_err(req, ENOENT);
+      return;
+    }
+
+  ret = f->op.rename(oldpath, newpath, flags);
+  if (ret == 0)
+    {
+      node_rename_path(f, oldpath, newpath);
+    }
+
+  fuse_reply_err(req, hl_retcode(ret));
+}
+
+static void hl_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
+                    FAR const char *newname)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  char newbuf[PATH_MAX];
+  FAR const char *oldpath;
+  FAR const char *newpath;
+  int ret;
+
+  oldpath = node_path(f, ino);
+
+  if (oldpath == NULL || f->op.link == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  newpath = node_join(f, newparent, newname, newbuf, sizeof(newbuf));
+  if (newpath == NULL)
+    {
+      fuse_reply_err(req, ENOENT);
+      return;
+    }
+
+  ret = f->op.link(oldpath, newpath);
+  if (ret != 0)
+    {
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
+    }
+
+  hl_lookup(req, newparent, newname);
+}
+
+static void hl_open(fuse_req_t req, fuse_ino_t ino,
+                    FAR struct fuse_file_info *fi)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  FAR const char *path;
+  int ret;
+
+  path = node_path(f, ino);
+
+  if (path == NULL || f->op.open == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  ret = f->op.open(path, fi);
+  if (ret != 0)
+    {
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
+    }
+
+  fuse_reply_open(req, fi);
+}
+
+static void hl_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
+                    FAR struct fuse_file_info *fi)
+{
+  FAR struct fuse *f = hl_prepare(req);
+
+  FAR const char *path = node_path(f, ino);
+  FAR struct fuse_bufvec *bufv = NULL;
+  FAR char *buf;
+  ssize_t n = -ENOSYS;
+
+  if (path == NULL)
+    {
+      fuse_reply_err(req, ENOENT);
+      return;
+    }
+
+  if (f->op.read_buf != NULL)
+    {
+      n = f->op.read_buf(path, &bufv, size, off, fi);
+      if (n == 0)
+        {
+          fuse_reply_data(req, bufv, 0);
+          return;
+        }
+
+      fuse_reply_err(req, (int)-n);
+      return;
+    }
+
+  if (f->op.read == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  buf = lib_malloc(size);
   if (buf == NULL)
     {
       fuse_reply_err(req, ENOMEM);
       return;
     }
 
-  ret = f->op.read != NULL ? f->op.read(path, buf, size, off, fi) : -ENOSYS;
-  if (ret < 0)
+  n = f->op.read(path, buf, size, off, fi);
+  if (n < 0)
     {
-      fuse_reply_err(req, -ret);
+      fuse_reply_err(req, (int)-n);
     }
   else
     {
-      fuse_reply_buf(req, buf, ret);
+      fuse_reply_buf(req, buf, n);
     }
 
-  free(buf);
+  lib_free(buf);
 }
 
-static void hl_write(fuse_req_t req, uint64_t ino, FAR const char *buf,
+static void hl_write(fuse_req_t req, fuse_ino_t ino, FAR const char *buf,
                      size_t size, off_t off, FAR struct fuse_file_info *fi)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *path;
-  int ret;
+  FAR struct fuse *f = hl_prepare(req);
 
-  hl_setcontext(req, f);
+  FAR const char *path = node_path(f, ino);
+  ssize_t n;
 
-  path = node_path(f, ino);
-  if (path == NULL)
+  if (path == NULL || f->op.write == NULL)
     {
-      fuse_reply_err(req, ENOENT);
+      fuse_reply_err(req, ENOSYS);
       return;
     }
 
-  ret = f->op.write != NULL ?
-        f->op.write(path, buf, size, off, fi) : -ENOSYS;
-  if (ret < 0)
+  n = f->op.write(path, buf, size, off, fi);
+  if (n < 0)
     {
-      fuse_reply_err(req, -ret);
+      fuse_reply_err(req, (int)-n);
     }
   else
     {
-      fuse_reply_write(req, ret);
+      fuse_reply_write(req, n);
     }
 }
 
-static void hl_flush(fuse_req_t req, uint64_t ino,
+static void hl_write_buf(fuse_req_t req, fuse_ino_t ino,
+                         FAR struct fuse_bufvec *bufv, off_t off,
+                         FAR struct fuse_file_info *fi)
+{
+  FAR struct fuse *f = hl_prepare(req);
+
+  FAR const char *path = node_path(f, ino);
+  ssize_t n;
+
+  if (path == NULL || (f->op.write_buf == NULL && f->op.write == NULL))
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  if (f->op.write_buf != NULL)
+    {
+      n = f->op.write_buf(path, bufv, off, fi);
+    }
+  else
+    {
+      /* Fall back to the buffered write callback:
+       * copy the buffer vector into a linear scratch buffer,
+       * so write()-only filesystems keep working when the
+       * kernel (or our lowlevel dispatcher) prefers write_buf.
+       */
+
+      size_t len = fuse_buf_size(bufv);
+      FAR struct fuse_bufvec dst = FUSE_BUFVEC_INIT(len);
+      FAR char *scratch;
+
+      if (len == 0)
+        {
+          fuse_reply_write(req, 0);
+          return;
+        }
+
+      scratch = lib_malloc(len);
+      if (scratch == NULL)
+        {
+          fuse_reply_err(req, ENOMEM);
+          return;
+        }
+
+      dst.buf[0].mem = scratch;
+      n = fuse_buf_copy(&dst, bufv, 0) == (ssize_t)len ?
+          f->op.write(path, scratch, len, off, fi) : -ENOMEM;
+      lib_free(scratch);
+    }
+
+  if (n < 0)
+    {
+      fuse_reply_err(req, (int)-n);
+    }
+  else
+    {
+      fuse_reply_write(req, n);
+    }
+}
+
+static void hl_flush(fuse_req_t req, fuse_ino_t ino,
                      FAR struct fuse_file_info *fi)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *path;
-  int ret = 0;
+  FAR struct fuse *f = hl_prepare(req);
+  FAR const char *path = node_path(f, ino);
 
-  hl_setcontext(req, f);
-
-  path = node_path(f, ino);
-  if (path != NULL && f->op.flush != NULL)
+  if (path == NULL || f->op.flush == NULL)
     {
-      ret = f->op.flush(path, fi);
+      fuse_reply_err(req, 0);
+      return;
     }
 
-  fuse_reply_err(req, ret < 0 ? -ret : 0);
+  fuse_reply_err(req, hl_retcode(f->op.flush(path, fi)));
 }
 
-static void hl_release(fuse_req_t req, uint64_t ino,
+static void hl_release(fuse_req_t req, fuse_ino_t ino,
                        FAR struct fuse_file_info *fi)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *path;
+  FAR struct fuse *f = hl_prepare(req);
 
-  hl_setcontext(req, f);
+  FAR const char *path = node_path(f, ino);
 
-  path = node_path(f, ino);
   if (path != NULL && f->op.release != NULL)
     {
       f->op.release(path, fi);
@@ -762,135 +1051,100 @@ static void hl_release(fuse_req_t req, uint64_t ino,
   fuse_reply_err(req, 0);
 }
 
-static void hl_fsync(fuse_req_t req, uint64_t ino, int datasync,
+static void hl_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
                      FAR struct fuse_file_info *fi)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *path;
-  int ret = 0;
+  FAR struct fuse *f = hl_prepare(req);
+  FAR const char *path = node_path(f, ino);
 
-  hl_setcontext(req, f);
-
-  path = node_path(f, ino);
-  if (path != NULL && f->op.fsync != NULL)
+  if (path == NULL || f->op.fsync == NULL)
     {
-      ret = f->op.fsync(path, datasync, fi);
-    }
-
-  fuse_reply_err(req, ret < 0 ? -ret : 0);
-}
-
-static void hl_opendir(fuse_req_t req, uint64_t ino,
-                       FAR struct fuse_file_info *fi)
-{
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *path;
-  int ret = 0;
-
-  hl_setcontext(req, f);
-
-  path = node_path(f, ino);
-  if (path == NULL)
-    {
-      fuse_reply_err(req, ENOENT);
+      fuse_reply_err(req, ENOSYS);
       return;
     }
 
-  if (f->op.opendir != NULL)
-    {
-      ret = f->op.opendir(path, fi);
-    }
-
-  if (ret < 0)
-    {
-      fuse_reply_err(req, -ret);
-    }
-  else
-    {
-      fuse_reply_open(req, fi);
-    }
+  fuse_reply_err(req, hl_retcode(f->op.fsync(path, datasync, fi)));
 }
 
-static int hl_filler(FAR void *buf, FAR const char *name,
-                     FAR const struct stat *stbuf, off_t off,
-                     enum fuse_fill_dir_flags flags)
-{
-  FAR struct fuse_dirbuf *dh = buf;
-  off_t entoff;
-  size_t entsize;
-
-  UNUSED(flags);
-
-  dh->index++;
-  entoff = off != 0 ? off : dh->index;
-  if (entoff <= dh->want_off)
-    {
-      return 0;
-    }
-
-  entsize = fuse_add_direntry(dh->req, dh->buf + dh->pos,
-                              dh->size - dh->pos, name, stbuf, entoff);
-  if (entsize > dh->size - dh->pos)
-    {
-      return 1;
-    }
-
-  dh->pos += entsize;
-  return 0;
-}
-
-static void hl_readdir(fuse_req_t req, uint64_t ino, size_t size, off_t off,
+static void hl_opendir(fuse_req_t req, fuse_ino_t ino,
                        FAR struct fuse_file_info *fi)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
+  FAR struct fuse *f = hl_prepare(req);
   FAR const char *path;
-  struct fuse_dirbuf dh;
   int ret;
 
-  hl_setcontext(req, f);
-
   path = node_path(f, ino);
-  if (path == NULL)
+
+  /* opendir is optional: with no handler the open succeeds */
+
+  if (f->op.opendir == NULL || path == NULL)
     {
-      fuse_reply_err(req, ENOENT);
+      fuse_reply_open(req, fi);
       return;
     }
 
-  dh.req      = req;
-  dh.buf      = malloc(size);
-  dh.size     = size;
-  dh.pos      = 0;
-  dh.want_off = off;
-  dh.index    = 0;
-  if (dh.buf == NULL)
+  ret = f->op.opendir(path, fi);
+  if (ret != 0)
+    {
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
+    }
+
+  fuse_reply_open(req, fi);
+}
+
+static void hl_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
+                       off_t off, FAR struct fuse_file_info *fi)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  FAR const char *path;
+  struct fuse_dh db;
+  int ret;
+
+  path = node_path(f, ino);
+
+  if (path == NULL || f->op.readdir == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  db.req      = req;
+  db.buf      = lib_malloc(size);
+  db.size     = size;
+  db.pos      = 0;
+  db.want_off    = off;
+  db.index       = 0;
+  db.cookie_mode = false;
+
+  if (db.buf == NULL)
     {
       fuse_reply_err(req, ENOMEM);
       return;
     }
 
-  ret = f->op.readdir != NULL ?
-        f->op.readdir(path, &dh, hl_filler, off, fi, 0) : -ENOSYS;
-  if (ret < 0)
+  ret = f->op.readdir(path, &db, hl_filler, off, fi, 0);
+  if (ret != 0)
     {
-      fuse_reply_err(req, -ret);
-    }
-  else
-    {
-      fuse_reply_buf(req, dh.buf, dh.pos);
+      lib_free(db.buf);
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
     }
 
-  free(dh.buf);
+  fuse_reply_buf(req, db.buf, db.pos);
+  lib_free(db.buf);
 }
 
-static void hl_releasedir(fuse_req_t req, uint64_t ino,
+static void hl_releasedir(fuse_req_t req, fuse_ino_t ino,
                           FAR struct fuse_file_info *fi)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
+  FAR struct fuse *f = hl_prepare(req);
   FAR const char *path;
 
-  hl_setcontext(req, f);
-
   path = node_path(f, ino);
+
+  /* releasedir is optional */
+
   if (path != NULL && f->op.releasedir != NULL)
     {
       f->op.releasedir(path, fi);
@@ -899,664 +1153,220 @@ static void hl_releasedir(fuse_req_t req, uint64_t ino,
   fuse_reply_err(req, 0);
 }
 
-static void hl_create(fuse_req_t req, uint64_t parent, FAR const char *name,
-                      mode_t mode, FAR struct fuse_file_info *fi)
+static void hl_fsyncdir(fuse_req_t req, fuse_ino_t ino, int datasync,
+                        FAR struct fuse_file_info *fi)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *ppath;
-  FAR struct fuse_node *node;
-  struct fuse_entry_param e;
-  struct stat st;
-  FAR char *cpath;
-  int ret;
+  FAR struct fuse *f = hl_prepare(req);
+  FAR const char *path = node_path(f, ino);
 
-  hl_setcontext(req, f);
-
-  ppath = node_path(f, parent);
-  if (ppath == NULL)
+  if (path == NULL || f->op.fsyncdir == NULL)
     {
-      fuse_reply_err(req, ENOENT);
+      fuse_reply_err(req, ENOSYS);
       return;
     }
 
-  cpath = build_path(ppath, name);
-  if (cpath == NULL)
-    {
-      fuse_reply_err(req, ENOMEM);
-      return;
-    }
-
-  ret = f->op.create != NULL ? f->op.create(cpath, mode, fi) : -ENOSYS;
-  if (ret < 0)
-    {
-      free(cpath);
-      fuse_reply_err(req, -ret);
-      return;
-    }
-
-  node = node_get(f, cpath);
-  if (node == NULL)
-    {
-      free(cpath);
-      fuse_reply_err(req, ENOMEM);
-      return;
-    }
-
-  memset(&st, 0, sizeof(st));
-  if (f->op.getattr != NULL)
-    {
-      f->op.getattr(cpath, &st, fi);
-    }
-  else
-    {
-      st.st_mode = S_IFREG | mode;
-    }
-
-  free(cpath);
-
-  memset(&e, 0, sizeof(e));
-  e.ino           = node->nodeid;
-  e.generation    = 1;
-  e.attr          = st;
-  e.attr_timeout  = 1.0;
-  e.entry_timeout = 1.0;
-  fuse_reply_create(req, &e, fi);
+  fuse_reply_err(req, hl_retcode(f->op.fsyncdir(path, datasync, fi)));
 }
 
-static void hl_mkdir(fuse_req_t req, uint64_t parent, FAR const char *name,
-                     mode_t mode)
+static void hl_statfs(fuse_req_t req, fuse_ino_t ino)
 {
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR const char *ppath;
-  FAR struct fuse_node *node;
-  struct fuse_entry_param e;
-  struct stat st;
-  FAR char *cpath;
-  int ret;
-
-  hl_setcontext(req, f);
-
-  ppath = node_path(f, parent);
-  if (ppath == NULL)
-    {
-      fuse_reply_err(req, ENOENT);
-      return;
-    }
-
-  cpath = build_path(ppath, name);
-  if (cpath == NULL)
-    {
-      fuse_reply_err(req, ENOMEM);
-      return;
-    }
-
-  ret = f->op.mkdir != NULL ? f->op.mkdir(cpath, mode) : -ENOSYS;
-  if (ret < 0)
-    {
-      free(cpath);
-      fuse_reply_err(req, -ret);
-      return;
-    }
-
-  node = node_get(f, cpath);
-  if (node == NULL)
-    {
-      free(cpath);
-      fuse_reply_err(req, ENOMEM);
-      return;
-    }
-
-  memset(&st, 0, sizeof(st));
-  if (f->op.getattr != NULL)
-    {
-      f->op.getattr(cpath, &st, NULL);
-    }
-  else
-    {
-      st.st_mode = S_IFDIR | mode;
-    }
-
-  free(cpath);
-
-  memset(&e, 0, sizeof(e));
-  e.ino           = node->nodeid;
-  e.generation    = 1;
-  e.attr          = st;
-  e.attr_timeout  = 1.0;
-  e.entry_timeout = 1.0;
-  fuse_reply_entry(req, &e);
-}
-
-static void hl_remove(fuse_req_t req, uint64_t parent, FAR const char *name,
-                      bool isdir)
-{
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR struct fuse_node *node;
-  FAR const char *ppath;
-  FAR char *cpath;
-  int ret;
-
-  hl_setcontext(req, f);
-
-  ppath = node_path(f, parent);
-  if (ppath == NULL)
-    {
-      fuse_reply_err(req, ENOENT);
-      return;
-    }
-
-  cpath = build_path(ppath, name);
-  if (cpath == NULL)
-    {
-      fuse_reply_err(req, ENOMEM);
-      return;
-    }
-
-  if (isdir)
-    {
-      ret = f->op.rmdir != NULL ? f->op.rmdir(cpath) : -ENOSYS;
-    }
-  else
-    {
-      ret = f->op.unlink != NULL ? f->op.unlink(cpath) : -ENOSYS;
-    }
-
-  if (ret >= 0)
-    {
-      for (node = f->nodes; node != NULL; node = node->next)
-        {
-          if (strcmp(node->path, cpath) == 0)
-            {
-              node_forget(f, node->nodeid, node->refs);
-              break;
-            }
-        }
-    }
-
-  free(cpath);
-  fuse_reply_err(req, ret < 0 ? -ret : 0);
-}
-
-static void hl_unlink(fuse_req_t req, uint64_t parent, FAR const char *name)
-{
-  hl_remove(req, parent, name, false);
-}
-
-static void hl_rmdir(fuse_req_t req, uint64_t parent, FAR const char *name)
-{
-  hl_remove(req, parent, name, true);
-}
-
-static void hl_rename(fuse_req_t req, uint64_t parent, FAR const char *name,
-                      uint64_t newparent, FAR const char *newname,
-                      unsigned int flags)
-{
-  FAR struct fuse *f = fuse_req_userdata(req);
-  FAR struct fuse_node *node;
-  FAR const char *oppath;
-  FAR const char *nppath;
-  FAR char *oldpath;
-  FAR char *newpath;
-  int ret;
-
-  hl_setcontext(req, f);
-
-  oppath = node_path(f, parent);
-  nppath = node_path(f, newparent);
-  if (oppath == NULL || nppath == NULL)
-    {
-      fuse_reply_err(req, ENOENT);
-      return;
-    }
-
-  oldpath = build_path(oppath, name);
-  newpath = build_path(nppath, newname);
-  if (oldpath == NULL || newpath == NULL)
-    {
-      free(oldpath);
-      free(newpath);
-      fuse_reply_err(req, ENOMEM);
-      return;
-    }
-
-  ret = f->op.rename != NULL ?
-        f->op.rename(oldpath, newpath, flags) : -ENOSYS;
-  if (ret >= 0)
-    {
-      for (node = f->nodes; node != NULL; node = node->next)
-        {
-          if (strcmp(node->path, oldpath) == 0)
-            {
-              FAR char *dup = strdup(newpath);
-              if (dup != NULL)
-                {
-                  free(node->path);
-                  node->path = dup;
-                }
-
-              break;
-            }
-        }
-    }
-
-  free(oldpath);
-  free(newpath);
-  fuse_reply_err(req, ret < 0 ? -ret : 0);
-}
-
-static void hl_statfs(fuse_req_t req, uint64_t ino)
-{
-  FAR struct fuse *f = fuse_req_userdata(req);
+  FAR struct fuse *f = hl_prepare(req);
   FAR const char *path;
-  struct statvfs sv;
+  struct statvfs vl;
   int ret;
-
-  hl_setcontext(req, f);
 
   path = node_path(f, ino);
-  if (path == NULL)
+
+  if (path == NULL || f->op.statfs == NULL)
     {
-      path = "/";
+      fuse_reply_err(req, ENOSYS);
+      return;
     }
 
-  memset(&sv, 0, sizeof(sv));
-  ret = f->op.statfs != NULL ? f->op.statfs(path, &sv) : -ENOSYS;
+  ret = f->op.statfs(path, &vl);
+  if (ret != 0)
+    {
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
+    }
+
+  fuse_reply_statfs(req, &vl);
+}
+
+static void hl_create(fuse_req_t req, fuse_ino_t parent,
+                      FAR const char *name, mode_t mode,
+                      FAR struct fuse_file_info *fi)
+{
+  FAR struct fuse *f = hl_prepare(req);
+  FAR struct node *n;
+  FAR const char *path;
+  struct fuse_entry_param e;
+  char pathbuf[PATH_MAX];
+  int ret;
+
+  if (f->op.create == NULL)
+    {
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  path = node_join(f, parent, name, pathbuf, sizeof(pathbuf));
+  if (path == NULL)
+    {
+      fuse_reply_err(req, ENOENT);
+      return;
+    }
+
+  ret = f->op.create(path, mode, fi);
+  if (ret != 0)
+    {
+      fuse_reply_err(req, hl_retcode(ret));
+      return;
+    }
+
+  /* Reply entry + open in one shot, mirroring fuse_reply_create */
+
+  n = node_get(f, parent, name);
+  memset(&e, 0, sizeof(e));
+  e.attr_timeout  = 1.0;
+  e.entry_timeout = 1.0;
+
+  if (f->op.getattr != NULL)
+    {
+      f->op.getattr(path, &e.attr, fi);
+    }
+
+  if (n != NULL)
+    {
+      n->nlookup++;
+      e.ino = n->nodeid;
+      fuse_reply_create(req, &e, fi);
+    }
+  else
+    {
+      fuse_reply_err(req, ENOMEM);
+    }
+}
+
+static void hl_access(fuse_req_t req, fuse_ino_t ino, int mask)
+{
+  FAR struct fuse *f = hl_prepare(req);
+
+  FAR const char *path = node_path(f, ino);
+
+  if (f->op.access == NULL)
+    {
+      /* Upstream default: permit when no access handler is present */
+
+      fuse_reply_err(req, 0);
+      return;
+    }
+
+  fuse_reply_err(req, hl_retcode(f->op.access(path, mask)));
+}
+
+static void hl_poll(fuse_req_t req, fuse_ino_t ino,
+                    FAR struct fuse_file_info *fi,
+                    FAR struct fuse_pollhandle *ph)
+{
+  FAR struct fuse *f = hl_prepare(req);
+
+  FAR const char *path = node_path(f, ino);
+  unsigned revents = 0;
+
+  if (f->op.poll != NULL)
+    {
+      if (f->op.poll(path, fi, ph, &revents) != 0)
+        {
+          fuse_pollhandle_destroy(ph);
+          fuse_reply_err(req, EIO);
+          return;
+        }
+    }
+
+  fuse_reply_poll(req, revents);
+}
+
+static void hl_ioctl(fuse_req_t req, fuse_ino_t ino, unsigned int cmd,
+                     FAR void *arg, FAR struct fuse_file_info *fi,
+                     unsigned int flags, FAR const void *in_buf,
+                     size_t in_bufsz, size_t out_bufsz)
+{
+  FAR struct fuse *f = hl_prepare(req);
+
+  FAR const char *path = node_path(f, ino);
+  int ret;
+
+  if (path == NULL || f->op.ioctl == NULL)
+    {
+      fuse_pollhandle_destroy(NULL);
+      fuse_reply_err(req, ENOSYS);
+      return;
+    }
+
+  ret = f->op.ioctl(path, cmd, arg, fi, flags, (FAR void *)in_buf);
   if (ret < 0)
     {
       fuse_reply_err(req, -ret);
     }
   else
     {
-      fuse_reply_statfs(req, &sv);
+      fuse_reply_ioctl(req, ret, in_buf, out_bufsz);
     }
 }
 
 static const struct fuse_lowlevel_ops g_fuse_hl_ops =
 {
-  hl_init,        /* init */
-  hl_destroy,     /* destroy */
-  hl_lookup,      /* lookup */
-  hl_forget,      /* forget */
-  hl_getattr,     /* getattr */
-  hl_setattr,     /* setattr */
-  NULL,           /* readlink */
-  hl_mkdir,       /* mkdir */
-  hl_unlink,      /* unlink */
-  hl_rmdir,       /* rmdir */
-  NULL,           /* symlink */
-  hl_rename,      /* rename */
-  NULL,           /* link */
-  hl_open,        /* open */
-  hl_read,        /* read */
-  hl_write,       /* write */
-  hl_flush,       /* flush */
-  hl_release,     /* release */
-  hl_fsync,       /* fsync */
-  hl_opendir,     /* opendir */
-  hl_readdir,     /* readdir */
-  hl_releasedir,  /* releasedir */
-  hl_statfs,      /* statfs */
-  hl_create       /* create */
+  .init       = hl_init,
+  .destroy    = hl_destroy,
+  .lookup     = hl_lookup,
+  .forget     = hl_forget,
+  .getattr    = hl_getattr,
+  .setattr    = hl_setattr,
+  .readlink   = hl_readlink,
+  .mknod      = hl_mknod,
+  .mkdir      = hl_mkdir,
+  .unlink     = hl_unlink,
+  .rmdir      = hl_rmdir,
+  .symlink    = hl_symlink,
+  .rename     = hl_rename,
+  .link       = hl_link,
+  .open       = hl_open,
+  .read       = hl_read,
+  .write      = hl_write,
+  .write_buf  = hl_write_buf,
+  .flush      = hl_flush,
+  .release    = hl_release,
+  .fsync      = hl_fsync,
+  .opendir    = hl_opendir,
+  .readdir    = hl_readdir,
+  .releasedir = hl_releasedir,
+  .fsyncdir   = hl_fsyncdir,
+  .statfs     = hl_statfs,
+  .create     = hl_create,
+  .access     = hl_access,
+  .ioctl      = hl_ioctl,
+  .poll       = hl_poll,
 };
 
 /****************************************************************************
- * Private Functions: session request dispatch
+ * Public Functions
  ****************************************************************************/
 
-static void fuse_do_init(FAR struct fuse_session *se,
-                         FAR struct fuse_in_header *ih, FAR void *body)
+void fuse_lib_help(FAR struct fuse_args *args)
 {
-  FAR struct fuse_init_in *in = body;
-  struct fuse_init_out out;
-
-  memset(&out, 0, sizeof(out));
-  out.major         = FUSE_KERNEL_VERSION;
-  out.minor         = FUSE_KERNEL_MINOR_VERSION;
-  out.max_readahead = in->max_readahead;
-  out.max_write     = se->max_write;
-
-  if (se->op->init != NULL)
-    {
-      struct fuse_conn_info conn;
-
-      memset(&conn, 0, sizeof(conn));
-      conn.proto_major   = in->major;
-      conn.proto_minor   = in->minor;
-      conn.max_write     = se->max_write;
-      conn.max_readahead = in->max_readahead;
-      se->op->init(se->userdata, &conn);
-      se->max_write  = conn.max_write != 0 ? conn.max_write : se->max_write;
-      out.max_write  = se->max_write;
-    }
-
-  fuse_send(se, ih->unique, 0, &out, sizeof(out));
-}
-
-static void fuse_dispatch(FAR struct fuse_session *se, size_t len)
-{
-  FAR struct fuse_in_header *ih = (FAR struct fuse_in_header *)se->buf;
-  FAR void *body = se->buf + sizeof(*ih);
-  FAR const struct fuse_lowlevel_ops *op = se->op;
-  struct fuse_req reqobj;
-  fuse_req_t req = &reqobj;
-  uint64_t nodeid = ih->nodeid;
-  struct fuse_file_info fi;
-
-  if (len < sizeof(*ih))
-    {
-      return;
-    }
-
-  reqobj.se         = se;
-  reqobj.unique     = ih->unique;
-  reqobj.ctx.uid    = ih->uid;
-  reqobj.ctx.gid    = ih->gid;
-  reqobj.ctx.pid    = ih->pid;
-  reqobj.ctx.umask  = 0;
-
-  memset(&fi, 0, sizeof(fi));
-
-  switch (ih->opcode)
-    {
-      case FUSE_INIT:
-        fuse_do_init(se, ih, body);
-        break;
-
-      case FUSE_DESTROY:
-        if (op->destroy != NULL)
-          {
-            op->destroy(se->userdata);
-          }
-
-        fuse_reply_err(req, 0);
-        break;
-
-      case FUSE_LOOKUP:
-        op->lookup(req, nodeid, (FAR const char *)body);
-        break;
-
-      case FUSE_FORGET:
-        {
-          FAR struct fuse_forget_in *in = body;
-          op->forget(req, nodeid, in->nlookup);
-        }
-        break;
-
-      case FUSE_GETATTR:
-        op->getattr(req, nodeid, NULL);
-        break;
-
-      case FUSE_SETATTR:
-        {
-          FAR struct fuse_setattr_in *in = body;
-          struct stat st;
-
-          memset(&st, 0, sizeof(st));
-          st.st_mode          = in->mode;
-          st.st_uid           = in->uid;
-          st.st_gid           = in->gid;
-          st.st_size          = in->size;
-          st.st_atim.tv_sec   = in->atime;
-          st.st_atim.tv_nsec  = in->atimensec;
-          st.st_mtim.tv_sec   = in->mtime;
-          st.st_mtim.tv_nsec  = in->mtimensec;
-          if ((in->valid & FATTR_FH) != 0)
-            {
-              fi.fh = in->fh;
-              op->setattr(req, nodeid, &st, in->valid, &fi);
-            }
-          else
-            {
-              op->setattr(req, nodeid, &st, in->valid, NULL);
-            }
-        }
-        break;
-
-      case FUSE_OPEN:
-        {
-          FAR struct fuse_open_in *in = body;
-          fi.flags = in->flags;
-          op->open(req, nodeid, &fi);
-        }
-        break;
-
-      case FUSE_READ:
-        {
-          FAR struct fuse_read_in *in = body;
-          fi.fh = in->fh;
-          op->read(req, nodeid, in->size, in->offset, &fi);
-        }
-        break;
-
-      case FUSE_WRITE:
-        {
-          FAR struct fuse_write_in *in = body;
-          fi.fh = in->fh;
-          op->write(req, nodeid, (FAR const char *)body + sizeof(*in),
-                    in->size, in->offset, &fi);
-        }
-        break;
-
-      case FUSE_FLUSH:
-        {
-          FAR struct fuse_flush_in *in = body;
-          fi.fh = in->fh;
-          op->flush(req, nodeid, &fi);
-        }
-        break;
-
-      case FUSE_RELEASE:
-        {
-          FAR struct fuse_release_in *in = body;
-          fi.fh = in->fh;
-          op->release(req, nodeid, &fi);
-        }
-        break;
-
-      case FUSE_FSYNC:
-        {
-          FAR struct fuse_fsync_in *in = body;
-          fi.fh = in->fh;
-          op->fsync(req, nodeid, in->fsync_flags & 1, &fi);
-        }
-        break;
-
-      case FUSE_OPENDIR:
-        {
-          FAR struct fuse_open_in *in = body;
-          fi.flags = in->flags;
-          op->opendir(req, nodeid, &fi);
-        }
-        break;
-
-      case FUSE_READDIR:
-        {
-          FAR struct fuse_read_in *in = body;
-          fi.fh = in->fh;
-          op->readdir(req, nodeid, in->size, in->offset, &fi);
-        }
-        break;
-
-      case FUSE_RELEASEDIR:
-        {
-          FAR struct fuse_release_in *in = body;
-          fi.fh = in->fh;
-          op->releasedir(req, nodeid, &fi);
-        }
-        break;
-
-      case FUSE_CREATE:
-        {
-          FAR struct fuse_create_in *in = body;
-          fi.flags = in->flags;
-          op->create(req, nodeid, (FAR const char *)body + sizeof(*in),
-                     in->mode, &fi);
-        }
-        break;
-
-      case FUSE_MKDIR:
-        {
-          FAR struct fuse_mkdir_in *in = body;
-          op->mkdir(req, nodeid, (FAR const char *)body + sizeof(*in),
-                    in->mode);
-        }
-        break;
-
-      case FUSE_UNLINK:
-        op->unlink(req, nodeid, (FAR const char *)body);
-        break;
-
-      case FUSE_RMDIR:
-        op->rmdir(req, nodeid, (FAR const char *)body);
-        break;
-
-      case FUSE_RENAME:
-        {
-          FAR struct fuse_rename_in *in = body;
-          FAR const char *oldname = (FAR const char *)body + sizeof(*in);
-          FAR const char *newname = oldname + strlen(oldname) + 1;
-          op->rename(req, nodeid, oldname, in->newdir, newname, 0);
-        }
-        break;
-
-      case FUSE_STATFS:
-        op->statfs(req, nodeid);
-        break;
-
-      default:
-        fuse_reply_err(req, ENOSYS);
-        break;
-    }
-}
-
-/****************************************************************************
- * Public Functions: session
- ****************************************************************************/
-
-FAR struct fuse_session *
-fuse_session_new(FAR struct fuse_args *args,
-                 FAR const struct fuse_lowlevel_ops *op, size_t op_size,
-                 FAR void *userdata)
-{
-  FAR struct fuse_session *se;
-
   UNUSED(args);
-  UNUSED(op_size);
-
-  se = calloc(1, sizeof(*se));
-  if (se == NULL)
-    {
-      return NULL;
-    }
-
-  se->fd        = -1;
-  se->op        = op;
-  se->userdata  = userdata;
-  se->max_write = FUSE_LL_MAX_WRITE;
-  se->bufsize   = FUSE_LL_BUFSIZE;
-  se->buf       = malloc(se->bufsize);
-  if (se->buf == NULL)
-    {
-      free(se);
-      return NULL;
-    }
-
-  return se;
+  printf("FUSE library version: %s\n", PACKAGE_VERSION);
 }
-
-int fuse_session_mount(FAR struct fuse_session *se,
-                       FAR const char *mountpoint)
-{
-  char options[32];
-  int ret;
-
-  se->fd = open("/dev/fuse", O_RDWR);
-  if (se->fd < 0)
-    {
-      return -errno;
-    }
-
-  snprintf(options, sizeof(options), "fd=%d", se->fd);
-  ret = mount(NULL, mountpoint, "fuse", 0, options);
-  if (ret < 0)
-    {
-      ret = -errno;
-      close(se->fd);
-      se->fd = -1;
-      return ret;
-    }
-
-  se->mountpoint = strdup(mountpoint);
-  return 0;
-}
-
-int fuse_session_loop(FAR struct fuse_session *se)
-{
-  ssize_t n;
-
-  while (!se->exited)
-    {
-      n = read(se->fd, se->buf, se->bufsize);
-      if (n < 0)
-        {
-          if (errno == EINTR)
-            {
-              continue;
-            }
-
-          return -errno;
-        }
-
-      if (n == 0)
-        {
-          break;
-        }
-
-      fuse_dispatch(se, (size_t)n);
-    }
-
-  return 0;
-}
-
-void fuse_session_exit(FAR struct fuse_session *se)
-{
-  se->exited = true;
-}
-
-void fuse_session_unmount(FAR struct fuse_session *se)
-{
-  if (se->mountpoint != NULL)
-    {
-      umount(se->mountpoint);
-      free(se->mountpoint);
-      se->mountpoint = NULL;
-    }
-
-  if (se->fd >= 0)
-    {
-      close(se->fd);
-      se->fd = -1;
-    }
-}
-
-void fuse_session_destroy(FAR struct fuse_session *se)
-{
-  free(se->buf);
-  free(se);
-}
-
-/****************************************************************************
- * Public Functions: high level
- ****************************************************************************/
 
 FAR struct fuse *fuse_new(FAR struct fuse_args *args,
                           FAR const struct fuse_operations *op,
                           size_t op_size, FAR void *private_data)
 {
+  FAR struct fuse_session *se;
   FAR struct fuse *f;
-  FAR struct fuse_node *root;
 
-  f = calloc(1, sizeof(*f));
+  f = lib_calloc(1, sizeof(*f));
   if (f == NULL)
     {
       return NULL;
@@ -1564,36 +1374,28 @@ FAR struct fuse *fuse_new(FAR struct fuse_args *args,
 
   memcpy(&f->op, op, op_size < sizeof(f->op) ? op_size : sizeof(f->op));
   f->private_data = private_data;
-  f->next_nodeid  = FUSE_ROOT_ID + 1;
+  f->ctr          = FUSE_ROOT_ID;
 
-  root = malloc(sizeof(*root));
-  if (root == NULL)
+  se = fuse_session_new(args, &g_fuse_hl_ops, sizeof(g_fuse_hl_ops), f);
+  if (se == NULL)
     {
-      free(f);
+      lib_free(f);
       return NULL;
     }
 
-  root->nodeid = FUSE_ROOT_ID;
-  root->refs   = 1;
-  root->path   = strdup("/");
-  root->next   = NULL;
-  f->nodes     = root;
-
-  f->se = fuse_session_new(args, &g_fuse_hl_ops, sizeof(g_fuse_hl_ops), f);
-  if (f->se == NULL)
-    {
-      free(root->path);
-      free(root);
-      free(f);
-      return NULL;
-    }
-
+  f->se = se;
   return f;
 }
 
 int fuse_mount(FAR struct fuse *f, FAR const char *mountpoint)
 {
   return fuse_session_mount(f->se, mountpoint);
+}
+
+int fuse_mount_custom(FAR struct fuse *f,
+                      FAR const struct fuse_custom_io *io, int fd)
+{
+  return fuse_session_custom_io(f->se, io, sizeof(*io), fd);
 }
 
 void fuse_unmount(FAR struct fuse *f)
@@ -1606,121 +1408,354 @@ int fuse_loop(FAR struct fuse *f)
   return fuse_session_loop(f->se);
 }
 
+int fuse_loop_mt(FAR struct fuse *f, FAR struct fuse_loop_config *config)
+{
+  return fuse_session_loop_mt(f->se, config);
+}
+
+void fuse_exit(FAR struct fuse *f)
+{
+  fuse_session_exit(f->se);
+}
+
 void fuse_destroy(FAR struct fuse *f)
 {
-  FAR struct fuse_node *n;
-  FAR struct fuse_node *next;
+  FAR struct node *n;
+  FAR struct node *next;
+  FAR struct tls_info_s *tls = tls_get_info();
+
+  /* Drop the context of this instance so a later fuse_get_context()
+   * does not report freed memory.
+   */
+
+  if (tls != NULL && tls->tl_fuse.fuse == f)
+    {
+      tls->tl_fuse.fuse = NULL;
+    }
 
   for (n = f->nodes; n != NULL; n = next)
     {
       next = n->next;
-      free(n->path);
-      free(n);
+      lib_free(n->path);
+      lib_free(n);
     }
 
   fuse_session_destroy(f->se);
-  free(f);
+  lib_free(f);
 }
 
-FAR struct fuse_context *fuse_get_context(void)
+struct fuse_context *fuse_get_context(void)
 {
-  return &g_fuse_context;
-}
+  FAR struct tls_info_s *tls = tls_get_info();
 
-int fuse_main_real(int argc, FAR char *argv[],
-                   FAR const struct fuse_operations *op, size_t op_size,
-                   FAR void *private_data)
-{
-  struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
-  FAR struct fuse *f;
-  FAR const char *mountpoint = NULL;
-  int ret;
-  int i;
-
-  /* The mountpoint is the last non-option argument */
-
-  for (i = 1; i < argc; i++)
+  if (tls == NULL || tls->tl_fuse.fuse == NULL)
     {
-      if (argv[i][0] != '-')
+      return NULL;
+    }
+
+  return &tls->tl_fuse;
+}
+
+FAR struct fuse_session *fuse_get_session(FAR struct fuse *f)
+{
+  return f->se;
+}
+
+int fuse_invalidate_path(FAR struct fuse *f, FAR const char *path)
+{
+  FAR struct node *n;
+  FAR const char *base;
+
+  for (n = f->nodes; n != NULL; n = n->next)
+    {
+      if (strcmp(n->path, path) == 0)
         {
-          mountpoint = argv[i];
+          break;
         }
     }
 
-  if (mountpoint == NULL)
+  if (n == NULL)
     {
-      return -EINVAL;
+      return -ENOENT;
     }
 
-  f = fuse_new(&args, op, op_size, private_data);
-  if (f == NULL)
+  fuse_lowlevel_notify_inval_inode(f->se, n->nodeid, 0, 0);
+
+  base = strrchr(path, '/');
+  if (base != NULL && base[1] != '\0')
     {
-      return -ENOMEM;
+      FAR struct node *parent;
+      FAR char *dir = strdup(path);
+
+      if (dir != NULL)
+        {
+          dir[base - path] = '\0';
+          parent = node_find(f, 0);
+          for (parent = f->nodes; parent != NULL; parent = parent->next)
+            {
+              if (strcmp(parent->path, dir) == 0)
+                {
+                  break;
+                }
+            }
+
+          if (parent != NULL)
+            {
+              fuse_lowlevel_notify_inval_entry(f->se, parent->nodeid,
+                                               base + 1,
+                                               strlen(base + 1));
+            }
+
+          free(dir);
+        }
     }
 
-  ret = fuse_mount(f, mountpoint);
-  if (ret < 0)
-    {
-      fuse_destroy(f);
-      return ret;
-    }
-
-  ret = fuse_loop(f);
-
-  fuse_unmount(f);
-  fuse_destroy(f);
-  return ret;
-}
-
-/****************************************************************************
- * Public Functions: fuse_opt
- ****************************************************************************/
-
-int fuse_opt_add_arg(FAR struct fuse_args *args, FAR const char *arg)
-{
-  FAR char **argv;
-  FAR char *dup;
-
-  dup = strdup(arg);
-  if (dup == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  argv = realloc(args->argv, (args->argc + 2) * sizeof(FAR char *));
-  if (argv == NULL)
-    {
-      free(dup);
-      return -ENOMEM;
-    }
-
-  argv[args->argc++] = dup;
-  argv[args->argc]   = NULL;
-  args->argv         = argv;
-  args->allocated    = 1;
   return 0;
 }
 
-void fuse_opt_free_args(FAR struct fuse_args *args)
+int fuse_notify_poll(FAR struct fuse_pollhandle *ph)
 {
-  int i;
+  return fuse_lowlevel_notify_poll(ph);
+}
 
-  if (args == NULL)
+int fuse_main(int argc, FAR char *argv[],
+              FAR const struct fuse_operations *op,
+              FAR void *private_data)
+{
+  struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+  struct fuse_cmdline_opts opts;
+  FAR struct fuse *f;
+  int ret;
+
+  if (fuse_parse_cmdline(&args, &opts) != 0)
     {
-      return;
+      return 1;
     }
 
-  if (args->allocated && args->argv != NULL)
+  if (opts.show_help)
     {
-      for (i = 0; i < args->argc; i++)
-        {
-          free(args->argv[i]);
-        }
-
-      free(args->argv);
+      fuse_cmdline_help();
+      return 0;
     }
 
-  args->argv      = NULL;
-  args->argc      = 0;
-  args->allocated = 0;
+  if (opts.show_version)
+    {
+      printf("FUSE library version: %s\n", fuse_pkgversion());
+      return 0;
+    }
+
+  if (opts.mountpoint == NULL)
+    {
+      fprintf(stderr, "error: no mountpoint specified\n");
+      return 1;
+    }
+
+  f = fuse_new(&args, op, sizeof(*op), private_data);
+  if (f == NULL)
+    {
+      return 1;
+    }
+
+  if (fuse_mount(f, opts.mountpoint) != 0)
+    {
+      fprintf(stderr, "error: failed to mount %s\n", opts.mountpoint);
+      fuse_destroy(f);
+      return 1;
+    }
+
+  ret = fuse_loop(f);
+  fuse_unmount(f);
+  fuse_destroy(f);
+  lib_free(opts.mountpoint);
+  return ret != 0 ? 1 : 0;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+struct fuse_fs
+{
+  struct fuse_operations op;
+  FAR void *user_data;
+};
+
+struct fuse_fs *fuse_fs_new(FAR const struct fuse_operations *op,
+                            size_t op_size, FAR void *private_data)
+{
+  FAR struct fuse_fs *fs = lib_calloc(1, sizeof(*fs));
+
+  if (fs == NULL)
+    {
+      return NULL;
+    }
+
+  memcpy(&fs->op, op, op_size < sizeof(fs->op) ? op_size : sizeof(fs->op));
+  fs->user_data = private_data;
+  return fs;
+}
+
+void fuse_fs_destroy(FAR struct fuse_fs *fs)
+{
+  lib_free(fs);
+}
+
+void fuse_fs_init(FAR struct fuse_fs *fs, FAR struct fuse_conn_info *conn,
+                  FAR struct fuse_config *cfg)
+{
+  if (fs->op.init != NULL)
+    {
+      fs->user_data = fs->op.init(conn, cfg);
+    }
+}
+
+#define FUSE_FS_WRAPPER(name, call, rettype, failval, args...)        \
+rettype fuse_fs_##name(FAR struct fuse_fs *fs, args)                  \
+{                                                                     \
+  if (fs->op.name == NULL)                                            \
+    {                                                                 \
+      return failval;                                                 \
+    }                                                                 \
+                                                                       \
+  return fs->op.name call;                                            \
+}
+
+FUSE_FS_WRAPPER(getattr, (path, buf, fi), int, -ENOSYS,
+                FAR const char *path, FAR struct stat *buf,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(rename, (oldpath, newpath, flags), int, -ENOSYS,
+                FAR const char *oldpath, FAR const char *newpath,
+                unsigned int flags)
+FUSE_FS_WRAPPER(unlink, (path), int, -ENOSYS, FAR const char *path)
+FUSE_FS_WRAPPER(rmdir, (path), int, -ENOSYS, FAR const char *path)
+FUSE_FS_WRAPPER(symlink, (linkname, path), int, -ENOSYS,
+                FAR const char *linkname, FAR const char *path)
+FUSE_FS_WRAPPER(link, (oldpath, newpath), int, -ENOSYS,
+                FAR const char *oldpath, FAR const char *newpath)
+FUSE_FS_WRAPPER(release, (path, fi), int, -ENOSYS,
+                FAR const char *path, FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(open, (path, fi), int, -ENOSYS,
+                FAR const char *path, FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(flush, (path, fi), int, -ENOSYS,
+                FAR const char *path, FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(fsync, (path, isdatasync, fi), int, -ENOSYS,
+                FAR const char *path, int isdatasync,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(statfs, (path, buf), int, -ENOSYS,
+                FAR const char *path, FAR struct statvfs *buf)
+FUSE_FS_WRAPPER(opendir, (path, fi), int, -ENOSYS,
+                FAR const char *path, FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(readdir, (path, buf, filler, offset, fi, flags), int,
+                -ENOSYS, FAR const char *path, FAR void *buf,
+                fuse_fill_dir_t filler, off_t offset,
+                FAR struct fuse_file_info *fi,
+                enum fuse_readdir_flags flags)
+FUSE_FS_WRAPPER(releasedir, (path, fi), int, -ENOSYS,
+                FAR const char *path, FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(fsyncdir, (path, isdatasync, fi), int, -ENOSYS,
+                FAR const char *path, int isdatasync,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(create, (path, mode, fi), int, -ENOSYS,
+                FAR const char *path, mode_t mode,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(lock, (path, fi, cmd, lock), int, -ENOSYS,
+                FAR const char *path, FAR struct fuse_file_info *fi,
+                int cmd, FAR struct flock *lock)
+FUSE_FS_WRAPPER(flock, (path, fi, op), int, -ENOSYS,
+                FAR const char *path, FAR struct fuse_file_info *fi, int op)
+FUSE_FS_WRAPPER(chmod, (path, mode, fi), int, -ENOSYS,
+                FAR const char *path, mode_t mode,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(chown, (path, uid, gid, fi), int, -ENOSYS,
+                FAR const char *path, uid_t uid, gid_t gid,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(truncate, (path, size, fi), int, -ENOSYS,
+                FAR const char *path, off_t size,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(utimens, (path, tv, fi), int, -ENOSYS,
+                FAR const char *path, FAR const struct timespec tv[2],
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(access, (path, mask), int, -ENOSYS,
+                FAR const char *path, int mask)
+FUSE_FS_WRAPPER(readlink, (path, buf, len), int, -ENOSYS,
+                FAR const char *path, FAR char *buf, size_t len)
+FUSE_FS_WRAPPER(mknod, (path, mode, dev), int, -ENOSYS,
+                FAR const char *path, mode_t mode, dev_t dev)
+FUSE_FS_WRAPPER(mkdir, (path, mode), int, -ENOSYS,
+                FAR const char *path, mode_t mode)
+FUSE_FS_WRAPPER(setxattr, (path, name, value, size, flags), int, -ENOSYS,
+                FAR const char *path, FAR const char *name,
+                FAR const char *value, size_t size, int flags)
+FUSE_FS_WRAPPER(getxattr, (path, name, value, size), int, -ENOSYS,
+                FAR const char *path, FAR const char *name,
+                FAR char *value, size_t size)
+FUSE_FS_WRAPPER(listxattr, (path, list, size), int, -ENOSYS,
+                FAR const char *path, FAR char *list, size_t size)
+FUSE_FS_WRAPPER(removexattr, (path, name), int, -ENOSYS,
+                FAR const char *path, FAR const char *name)
+FUSE_FS_WRAPPER(bmap, (path, blocksize, idx), int, -ENOSYS,
+                FAR const char *path, size_t blocksize, FAR uint64_t *idx)
+FUSE_FS_WRAPPER(lseek, (path, off, whence, fi), off_t, -ENOSYS,
+                FAR const char *path, off_t off, int whence,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(fallocate, (path, mode, offset, length, fi), int, -ENOSYS,
+                FAR const char *path, int mode, off_t offset, off_t length,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(statx, (path, stx, request_mask, flags, fi), int, -ENOSYS,
+                FAR const char *path, FAR struct statx *stx,
+                unsigned int request_mask, unsigned int flags,
+                FAR struct fuse_file_info *fi)
+FUSE_FS_WRAPPER(syncfs, (path, fi), int, -ENOSYS,
+                FAR const char *path, FAR struct fuse_file_info *fi)
+
+/* read/write/copy_file_range return ssize_t */
+
+ssize_t fuse_fs_read(FAR struct fuse_fs *fs, FAR const char *path,
+                     FAR char *buf, size_t size, off_t off,
+                     FAR struct fuse_file_info *fi)
+{
+  if (fs->op.read == NULL)
+    {
+      return -ENOSYS;
+    }
+
+  return fs->op.read(path, buf, size, off, fi);
+}
+
+ssize_t fuse_fs_write(FAR struct fuse_fs *fs, FAR const char *path,
+                      FAR const char *buf, size_t size, off_t off,
+                      FAR struct fuse_file_info *fi)
+{
+  if (fs->op.write == NULL)
+    {
+      return -ENOSYS;
+    }
+
+  return fs->op.write(path, buf, size, off, fi);
+}
+
+ssize_t fuse_fs_copy_file_range(FAR struct fuse_fs *fs,
+                                FAR const char *path_in,
+                                FAR struct fuse_file_info *fi_in,
+                                off_t offset_in, FAR const char *path_out,
+                                FAR struct fuse_file_info *fi_out,
+                                off_t offset_out, size_t size, int flags)
+{
+  if (fs->op.copy_file_range == NULL)
+    {
+      return -ENOSYS;
+    }
+
+  return fs->op.copy_file_range(path_in, fi_in, offset_in, path_out,
+                                fi_out, offset_out, size, flags);
+}
+
+int fuse_version(void)
+{
+  return FUSE_VERSION;
+}
+
+FAR const char *fuse_pkgversion(void)
+{
+  return PACKAGE_VERSION;
 }

@@ -20,11 +20,16 @@
 #
 ############################################################################
 
-ifeq ($(CONFIG_FS_FUSE),y)
+ifeq ($(CONFIG_LIBC_FS_FUSE),y)
 
 # Add the internal C files to the build
 
-CSRCS += lib_fuse.c
+CSRCS += lib_buffer.c lib_fuse.c lib_fuse_loop.c lib_fuse_loop_mt.c
+CSRCS += lib_fuse_lowlevel.c lib_fuse_opt.c
+
+ifeq ($(CONFIG_FS_CUSE),y)
+CSRCS += lib_cuse_lowlevel.c
+endif
 
 # Add the fuse directory to the build
 

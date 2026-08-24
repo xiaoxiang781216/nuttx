@@ -1,0 +1,33 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config LIBC_FS_FUSE
+	bool "FUSE/CUSE userspace library"
+	default n
+	depends on FS_FUSE
+	---help---
+		The in-tree libfuse-compatible userspace library:  a from-scratch
+		high-level (fuse_operations) and low-level (fuse_lowlevel_ops)
+		implementation plus CUSE support, driving the kernel FUSE core
+		through /dev/fuse and /dev/cuse.  The same engine also serves
+		the vhost-fs host driver (CONFIG_DRIVERS_VHOST_FS) through the
+		fuse_custom_io transport.
+
+if LIBC_FS_FUSE
+
+config LIBC_FS_FUSE_MAX_WRITE
+	int "FUSE/CUSE write buffer size"
+	default 4096
+	---help---
+		The maximum payload in one write transaction
+
+config LIBC_FS_FUSE_STACKSIZE
+	int "FUSE/CUSE worker thread stack size"
+	default PTHREAD_STACK_DEFAULT
+	depends on !DISABLE_PTHREAD && EVENT_FD_POLL
+	---help---
+		Stack size of the worker threads created by fuse_session_loop_mt().
+
+endif

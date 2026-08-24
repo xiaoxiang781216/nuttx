@@ -32,6 +32,9 @@
 #include <nuttx/compiler.h>
 #include <nuttx/sched.h>
 
+#include <sys/types.h>
+#include <stdbool.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -124,6 +127,26 @@ struct tls_cleanup_s
  *  Task data is a pointer that pointed to a user space memory region.
  */
 
+#ifdef CONFIG_LIBC_FS_FUSE
+/* Context of the FUSE request in flight on this thread; defined here
+ * because tls_info_s embeds it by value and the fuse API headers cannot
+ * be included from here.  A NULL fuse field means no request is in
+ * flight.
+ */
+
+struct fuse;
+
+struct fuse_context
+{
+  FAR struct fuse *fuse;
+  uid_t uid;
+  gid_t gid;
+  pid_t pid;
+  FAR void *private_data;
+  mode_t umask;
+};
+#endif
+
 struct tls_info_s
 {
   FAR struct task_info_s     *tl_task;
@@ -163,6 +186,9 @@ struct tls_info_s
 #if defined(CONFIG_CXX_EXCEPTION) && !defined(CONFIG_SCHED_THREAD_LOCAL)
   FAR void                   *tl_eh_globals;           /* __cxa_eh_globals */
   void                      (*tl_eh_free)(FAR void *); /* Destructor       */
+#endif
+#ifdef CONFIG_LIBC_FS_FUSE
+  struct fuse_context         tl_fuse;    /* FUSE request in flight */
 #endif
 };
 
