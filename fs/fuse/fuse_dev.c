@@ -37,6 +37,8 @@
 #include "fs_heap.h"
 #include "fuse.h"
 
+#include <nuttx/fs/uio.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -74,15 +76,6 @@ struct fuse_dev_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int     fuse_dev_open(FAR struct file *filep);
-static int     fuse_dev_close(FAR struct file *filep);
-static ssize_t fuse_dev_read(FAR struct file *filep, FAR char *buffer,
-                             size_t buflen);
-static ssize_t fuse_dev_write(FAR struct file *filep,
-                              FAR const char *buffer, size_t buflen);
-static int     fuse_dev_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                             bool setup);
-
 static int     fuse_dev_request(FAR struct fuse_conn_s *conn,
                                 FAR struct fuse_req_s *req);
 static void    fuse_dev_destroy(FAR struct fuse_conn_s *conn);
@@ -95,12 +88,14 @@ static const struct file_operations g_fuse_dev_fops =
 {
   fuse_dev_open,   /* open */
   fuse_dev_close,  /* close */
-  fuse_dev_read,   /* read */
-  fuse_dev_write,  /* write */
+  NULL,            /* read  (readv only) */
+  NULL,            /* write (writev only) */
   NULL,            /* seek */
   NULL,            /* ioctl */
   NULL,            /* truncate */
-  fuse_dev_poll    /* poll */
+  fuse_dev_poll,   /* poll */
+  fuse_dev_readv,  /* readv */
+  fuse_dev_writev, /* writev */
 };
 
 static const struct fuse_transport_ops_s g_fuse_dev_transport =
@@ -177,7 +172,7 @@ static void fuse_dev_abort(FAR struct fuse_dev_s *dev)
  * Name: fuse_dev_open
  ****************************************************************************/
 
-static int fuse_dev_open(FAR struct file *filep)
+int fuse_dev_open(FAR struct file *filep)
 {
   FAR struct fuse_dev_s *dev;
 
@@ -225,7 +220,7 @@ static void fuse_dev_unref(FAR struct fuse_dev_s *dev)
  * Name: fuse_dev_close
  ****************************************************************************/
 
-static int fuse_dev_close(FAR struct file *filep)
+int fuse_dev_close(FAR struct file *filep)
 {
   FAR struct fuse_dev_s *dev = filep->f_priv;
 
@@ -247,12 +242,22 @@ static int fuse_dev_close(FAR struct file *filep)
  *
  ****************************************************************************/
 
-static ssize_t fuse_dev_read(FAR struct file *filep, FAR char *buffer,
-                             size_t buflen)
+/****************************************************************************
+ * Name: fuse_dev_readv
+ *
+ * Description:
+ *   Read one FUSE request (fuse_in_header followed by the request
+ *   arguments) into a scatter list.  This is the sole request-delivery
+ *   path, there is no single-buffer read().
+ *
+ ****************************************************************************/
+
+ssize_t fuse_dev_readv(FAR struct file *filep, FAR struct uio *uio)
 {
   FAR struct fuse_dev_s *dev = filep->f_priv;
   FAR struct fuse_req_s *req = NULL;
   FAR sq_entry_t *entry;
+  size_t resid;
   size_t off;
   size_t i;
   int ret;
@@ -289,9 +294,10 @@ static ssize_t fuse_dev_read(FAR struct file *filep, FAR char *buffer,
         }
     }
 
-  /* The buffer must be large enough for the whole request */
+  /* The scatter list must hold the whole request */
 
-  if (buflen < req->hin.len)
+  resid = uio->uio_resid;
+  if (resid < req->hin.len)
     {
       /* Fail the request like Linux does and tell the server that its
        * read buffer is too small.
@@ -305,42 +311,150 @@ static ssize_t fuse_dev_read(FAR struct file *filep, FAR char *buffer,
       return -EINVAL;
     }
 
-  memcpy(buffer, &req->hin, sizeof(req->hin));
-  off = sizeof(req->hin);
+  {
+    struct fuse_in_header snap = req->hin;
+    FAR char *dst = uio->uio_iov[0].iov_base;
 
-  for (i = 0; i < req->vin_cnt; i++)
-    {
-      memcpy(buffer + off, req->vin[i].iov_base, req->vin[i].iov_len);
-      off += req->vin[i].iov_len;
-    }
+    /* Scatter directly into the caller's iovs.  (The FUSE server always
+     * passes a single big read buffer;  walk it plus any extra iovs.)
+     */
+
+    memcpy(dst, &snap, sizeof(snap));
+    off = sizeof(snap);
+
+    for (i = 0; i < req->vin_cnt; i++)
+      {
+        size_t chunk = req->vin[i].iov_len;
+        size_t copied = 0;
+
+        while (copied < chunk)
+          {
+            size_t navail;
+            size_t n;
+
+            while (off >= uio->uio_iov[0].iov_len &&
+                   0 < uio->uio_iovcnt - 1)
+              {
+                /* advance to the next iov (iov[0] window exhausted) */
+
+                off -= uio->uio_iov[0].iov_len;
+                uio->uio_iov++;
+                uio->uio_iovcnt--;
+              }
+
+            navail = uio->uio_iov[0].iov_len - off;
+            n = MIN(chunk - copied, navail);
+            memcpy((FAR char *)uio->uio_iov[0].iov_base + off,
+                   (FAR const char *)req->vin[i].iov_base + copied, n);
+            off    += n;
+            copied += n;
+          }
+      }
+
+    off = req->hin.len;
+  }
 
   return off;
 }
 
 /****************************************************************************
- * Name: fuse_dev_write
+ * Name: fuse_dev_writev
  *
  * Description:
- *   The server writes one FUSE reply (fuse_out_header followed by the reply
- *   payload) per call.  The matching request is found by unique id.
+ *   The server writes one FUSE reply (a scatter list of fuse_out_header
+ *   followed by the reply payload) per call.  The matching request is found
+ *   by unique id.  A write with unique == 0 and a positive notify code in
+ *   error is a server-initiated notification and is dispatched to the
+ *   connection extension instead.  This is the sole reply path:  there is
+ *   no single-buffer write().
  *
  ****************************************************************************/
 
-static ssize_t fuse_dev_write(FAR struct file *filep,
-                              FAR const char *buffer, size_t buflen)
+ssize_t fuse_dev_writev(FAR struct file *filep, FAR struct uio *uio)
 {
-  FAR const struct fuse_out_header *hout =
-    (FAR const struct fuse_out_header *)buffer;
+  struct fuse_out_header hout;
   FAR struct fuse_dev_s *dev = filep->f_priv;
+  FAR struct fuse_conn_s *conn;
   FAR struct fuse_req_s *req = NULL;
   FAR sq_entry_t *entry;
   size_t datalen;
   size_t off;
   size_t i;
 
-  if (buflen < sizeof(*hout))
+  if (uio->uio_resid < sizeof(hout))
     {
       return -EINVAL;
+    }
+
+  /* Gather the reply header (first sizeof(hout) bytes across the iovs) */
+
+  {
+    FAR char *dst = (FAR char *)&hout;
+    size_t need = sizeof(hout);
+    size_t done = 0;
+    int idx;
+
+    for (idx = 0; idx < uio->uio_iovcnt && done < need; idx++)
+      {
+        size_t n = MIN(need - done, uio->uio_iov[idx].iov_len);
+
+        memcpy(dst + done, uio->uio_iov[idx].iov_base, n);
+        done += n;
+      }
+  }
+
+
+  /* A notification carries unique == 0 and a positive notify code in
+   * error; it does not match any in-flight request.  (libfuse sends
+   * out.error = +notify_code, matching the Linux kernel FUSE convention.)
+   */
+
+  if (hout.unique == 0 && hout.error > 0)
+    {
+      nxmutex_lock(&dev->lock);
+      conn = dev->conn;
+      nxmutex_unlock(&dev->lock);
+
+      if (conn != NULL && conn != FUSE_DEV_DEAD &&
+          conn->ext != NULL && conn->ext->notify != NULL)
+        {
+          size_t plen = uio->uio_resid - sizeof(hout);
+          FAR char *payload = fs_heap_malloc(plen);
+
+          if (payload != NULL)
+            {
+              /* Gather the notify payload (bytes after the header) */
+
+              size_t done = 0;
+              size_t skip = sizeof(hout);
+              int idx;
+
+              for (idx = 0; idx < uio->uio_iovcnt && done < plen; idx++)
+                {
+                  FAR const char *base = uio->uio_iov[idx].iov_base;
+                  size_t len = uio->uio_iov[idx].iov_len;
+
+                  if (skip >= len)
+                    {
+                      skip -= len;
+                      continue;
+                    }
+
+                  base += skip;
+                  len  -= skip;
+                  skip  = 0;
+
+                  len = MIN(len, plen - done);
+                  memcpy(payload + done, base, len);
+                  done += len;
+                }
+
+              conn->ext->notify(conn, hout.error, payload, plen);
+              fs_heap_free(payload);
+            }
+        }
+
+      return uio->uio_resid;
     }
 
   /* Find and detach the matching in-flight request */
@@ -350,7 +464,7 @@ static ssize_t fuse_dev_write(FAR struct file *filep,
     {
       FAR struct fuse_req_s *tmp = container_of(entry, struct fuse_req_s,
                                                 entry);
-      if (tmp->hin.unique == hout->unique)
+      if (tmp->hin.unique == hout.unique)
         {
           req = tmp;
           sq_rem(&req->entry, &dev->processing);
@@ -365,35 +479,96 @@ static ssize_t fuse_dev_write(FAR struct file *filep,
       return -ENOENT;
     }
 
-  memcpy(&req->hout, hout, sizeof(*hout));
+  memcpy(&req->hout, &hout, sizeof(hout));
 
   /* Scatter the reply payload into the request reply buffers */
 
-  datalen = hout->len > sizeof(*hout) ? hout->len - sizeof(*hout) : 0;
-  if (datalen > buflen - sizeof(*hout))
+  datalen = hout.len > sizeof(hout) ? hout.len - sizeof(hout) : 0;
+  if (datalen > uio->uio_resid - sizeof(hout))
     {
-      datalen = buflen - sizeof(*hout);
+      datalen = uio->uio_resid - sizeof(hout);
     }
 
-  off = sizeof(*hout);
-  for (i = 0; i < req->vout_cnt && datalen > 0; i++)
+  off = sizeof(hout);
+  {
+    /* Gather the reply payload linearly (skip the header bytes), then
+     * scatter into the request reply buffers.
+     */
+
+    size_t plen = datalen;
+    FAR char *lin = NULL;
+
+    if (plen > 0)
+      {
+        size_t done = 0;
+        size_t skip = sizeof(hout);
+        int idx;
+
+        lin = fs_heap_malloc(plen);
+        if (lin == NULL)
+          {
+            return -ENOMEM;
+          }
+
+        for (idx = 0; idx < uio->uio_iovcnt && done < plen; idx++)
+          {
+            FAR const char *base = uio->uio_iov[idx].iov_base;
+            size_t len = uio->uio_iov[idx].iov_len;
+
+            if (skip >= len)
+              {
+                skip -= len;
+                continue;
+              }
+
+            base += skip;
+            len  -= skip;
+            skip  = 0;
+
+            len = MIN(len, plen - done);
+            memcpy(lin + done, base, len);
+            done += len;
+          }
+
+        /* Scatter into the request reply buffers */
+
+        done = 0;
+        for (i = 0; i < req->vout_cnt && plen > 0; i++)
+          {
+            size_t chunk = MIN(req->vout[i].iov_len, plen);
+
+            memcpy(req->vout[i].iov_base, lin + done, chunk);
+            done += chunk;
+            plen -= chunk;
+          }
+
+        fs_heap_free(lin);
+      }
+  }
+
+  /* Give connection extensions (CUSE) a chance to consume the request */
+
+  nxmutex_lock(&dev->lock);
+  conn = dev->conn;
+  nxmutex_unlock(&dev->lock);
+
+  if (conn != NULL && conn != FUSE_DEV_DEAD &&
+      conn->ext != NULL && conn->ext->reply_done != NULL &&
+      conn->ext->reply_done(conn, req))
     {
-      size_t chunk = MIN(req->vout[i].iov_len, datalen);
-      memcpy(req->vout[i].iov_base, buffer + off, chunk);
-      off     += chunk;
-      datalen -= chunk;
+      return uio->uio_resid;
     }
 
   nxsem_post(&req->wait);
-  return buflen;
+  return uio->uio_resid;
 }
 
 /****************************************************************************
  * Name: fuse_dev_poll
  ****************************************************************************/
 
-static int fuse_dev_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                         bool setup)
+int fuse_dev_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                  bool setup)
 {
   FAR struct fuse_dev_s *dev = filep->f_priv;
   pollevent_t eventset;
@@ -455,6 +630,11 @@ static int fuse_dev_request(FAR struct fuse_conn_s *conn,
 {
   FAR struct fuse_dev_s *dev = conn->priv;
 
+  if (dev == NULL)
+    {
+      return -ENOTCONN;
+    }
+
   nxmutex_lock(&dev->lock);
 
   /* Refuse unless this connection is still the one attached here */
@@ -495,6 +675,66 @@ static void fuse_dev_destroy(FAR struct fuse_conn_s *conn)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: fuse_dev_attach
+ *
+ * Description:
+ *   Attach a connection to the channel owned by filep.  Used by the
+ *   "fd=<n>" mount option and by /dev/cuse, which attaches its
+ *   connection at open time.
+ *
+ ****************************************************************************/
+
+int fuse_dev_attach(FAR struct file *filep, FAR struct fuse_conn_s *conn)
+{
+  FAR struct fuse_dev_s *dev = filep->f_priv;
+
+  nxmutex_lock(&dev->lock);
+
+  /* Only a fresh, never attached instance accepts a connection */
+
+  if (dev->conn != NULL)
+    {
+      nxmutex_unlock(&dev->lock);
+      return -EBUSY;
+    }
+
+  dev->conn = conn;
+  dev->crefs++;
+  nxmutex_unlock(&dev->lock);
+
+  conn->priv      = dev;
+  conn->transport = &g_fuse_dev_transport;
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: fuse_dev_file_conn
+ *
+ * Description:
+ *   Return the connection attached to the channel owned by filep, or NULL
+ *   if none is attached (or it already went away).
+ *
+ ****************************************************************************/
+
+FAR struct fuse_conn_s *fuse_dev_file_conn(FAR struct file *filep)
+{
+  FAR struct fuse_dev_s *dev = filep->f_priv;
+  FAR struct fuse_conn_s *conn;
+
+  if (dev == NULL)
+    {
+      return NULL;
+    }
+
+  nxmutex_lock(&dev->lock);
+  conn = dev->conn != FUSE_DEV_DEAD ? dev->conn : NULL;
+  nxmutex_unlock(&dev->lock);
+
+  return conn;
+}
+
+/****************************************************************************
  * Name: fuse_dev_connect
  *
  * Description:
@@ -505,7 +745,6 @@ static void fuse_dev_destroy(FAR struct fuse_conn_s *conn)
 
 int fuse_dev_connect(FAR struct fuse_conn_s *conn, FAR const char *options)
 {
-  FAR struct fuse_dev_s *dev;
   FAR struct file *filep;
   FAR const char *opt;
   int ret;
@@ -534,28 +773,11 @@ int fuse_dev_connect(FAR struct fuse_conn_s *conn, FAR const char *options)
       return -EINVAL;
     }
 
-  dev = filep->f_priv;
-  nxmutex_lock(&dev->lock);
-
-  /* Only a fresh, never attached instance accepts a connection */
-
-  if (dev->conn != NULL)
-    {
-      nxmutex_unlock(&dev->lock);
-      file_put(filep);
-      return -EBUSY;
-    }
-
-  dev->conn = conn;
-  dev->crefs++;
-  nxmutex_unlock(&dev->lock);
+  ret = fuse_dev_attach(filep, conn);
 
   file_put(filep);
 
-  conn->priv      = dev;
-  conn->transport = &g_fuse_dev_transport;
-
-  return 0;
+  return ret;
 }
 
 /****************************************************************************

@@ -33,6 +33,7 @@
 #include <stdbool.h>
 
 #include <nuttx/atomic.h>
+#include <nuttx/fs/fs.h>
 #include <nuttx/fuse.h>
 #include <nuttx/mutex.h>
 #include <nuttx/queue.h>
@@ -77,6 +78,20 @@ struct fuse_req_s
   sq_entry_t              entry; /* Pending/processing queue linkage */
 };
 
+/* Optional connection extension hooks.  CUSE channels use reply_done to
+ * complete the asynchronous CUSE_INIT handshake (a true return means the
+ * hook consumed the request and the reply path must not post req->wait)
+ * and notify to dispatch server-initiated notifications.
+ */
+
+struct fuse_conn_ext_s
+{
+  CODE bool (*reply_done)(FAR struct fuse_conn_s *conn,
+                          FAR struct fuse_req_s *req);
+  CODE void (*notify)(FAR struct fuse_conn_s *conn, int code,
+                      FAR const char *payload, size_t len);
+};
+
 /* A FUSE connection (one per mountpoint) */
 
 struct fuse_conn_s
@@ -88,11 +103,33 @@ struct fuse_conn_s
   uint32_t   max_write;   /* Negotiated maximum write size */
   mutex_t    initlock;    /* Serializes the lazy FUSE_INIT */
   atomic_t   initialized; /* FUSE_INIT handshake completed */
+  FAR const struct fuse_conn_ext_s *ext;  /* Optional extension hooks */
 };
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: fuse_request_submit
+ *
+ * Description:
+ *   Fill the request header and submit it through the connection
+ *   transport without waiting for the reply.  The completion path posts
+ *   req->wait, or a connection extension hook may consume the request
+ *   instead.  Callers that do not wait must keep the request and its
+ *   iovecs alive until the reply arrives.
+ *
+ * Returned Value:
+ *   Zero on successful submission, or a negated errno on transport
+ *   failure.
+ *
+ ****************************************************************************/
+
+int fuse_request_submit(FAR struct fuse_conn_s *conn,
+                        FAR struct fuse_req_s *req,
+                        FAR const struct iovec *vin, size_t vin_cnt,
+                        FAR const struct iovec *vout, size_t vout_cnt);
 
 /****************************************************************************
  * Name: fuse_request
@@ -114,10 +151,35 @@ int fuse_request(FAR struct fuse_conn_s *conn, FAR struct fuse_req_s *req,
                  FAR const struct iovec *vout, size_t out_cnt);
 
 #ifdef CONFIG_FS_FUSE_DEV
-/* Implemented by fs/fuse/fuse_dev.c */
+/* Implemented by fs/fuse/fuse_dev.c.  The open/close/read/write/poll
+ * operations are also reused by the /dev/cuse control channel, which
+ * speaks the same request/reply protocol on its file descriptor.
+ */
+
+int      fuse_dev_open(FAR struct file *filep);
+int      fuse_dev_close(FAR struct file *filep);
+int      fuse_dev_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                       bool setup);
+ssize_t  fuse_dev_readv(FAR struct file *filep, FAR struct uio *uio);
+ssize_t  fuse_dev_writev(FAR struct file *filep, FAR struct uio *uio);
+
+/* Attach a connection to the /dev/fuse-style channel owned by filep */
+
+int      fuse_dev_attach(FAR struct file *filep,
+                         FAR struct fuse_conn_s *conn);
+
+/* Return the connection attached to the channel owned by filep */
+
+FAR struct fuse_conn_s *fuse_dev_file_conn(FAR struct file *filep);
 
 int fuse_dev_connect(FAR struct fuse_conn_s *conn, FAR const char *options);
 int fuse_dev_initialize(void);
+#endif
+
+#ifdef CONFIG_FS_CUSE
+/* Implemented by fs/fuse/cuse.c */
+
+int cuse_initialize(void);
 #endif
 
 #ifdef CONFIG_FS_VIRTIOFS
