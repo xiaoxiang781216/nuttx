@@ -104,7 +104,7 @@ static void arm_cpu_sgi(int sgi, unsigned int cpuset)
            GIC_ICDSGIR_TGTFILTER_LIST;
 
 #if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
-  if (sgi >= GIC_IRQ_SGI0 && sgi <= GIC_IRQ_SGI7)
+  if (IGROUPR_SGI_SECURE_VAL & BIT(sgi))
 #endif
     {
       /* Set NSATT be 1: forward the SGI specified in the SGIINTID field to a

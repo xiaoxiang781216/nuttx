@@ -51,6 +51,15 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* SGI group assignment bitmask:
+ *   IGROUPR_SGI_SECURE_VAL bit=1 -> Group 1 (non-secure)
+ *   IGROUPR_SGI_SECURE_VAL bit=0 -> Group 0 (secure)
+ *
+ * Default: SGI0-11 are non-secure (0xFFF), SGI12-15 are secure.
+ */
+
+#define IGROUPR_SGI_SECURE_VAL 0x00000fffu
+
 /* GIC Distributor / Redistributor Register Interface Base Addresses */
 
 #define MPCORE_ICD_VBASE CONFIG_GICD_BASE
@@ -898,7 +907,7 @@ static void arm64_gic_init(void)
    * decide whether to ask for Group 1 delivery.
    */
 
-  putreg32(0x00000fff, GIC_ICDISR(0));
+  putreg32(IGROUPR_SGI_SECURE_VAL, GIC_ICDISR(0));
 #else
   putreg32(0x00000000, GIC_ICDISR(0));      /* SGIs and PPIs secure */
 #endif
@@ -1421,7 +1430,7 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
 #endif
 
 #if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
-      if (irq >= GIC_IRQ_SGI0 && irq <= GIC_IRQ_SGI11)
+      if (IGROUPR_SGI_SECURE_VAL & BIT(irq))
 #endif
         {
           /* Set NSATT be 1: forward the SGI specified in the SGIINTID field
