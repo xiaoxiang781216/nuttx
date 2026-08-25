@@ -255,8 +255,10 @@ int fuse_dev_close(FAR struct file *filep)
 ssize_t fuse_dev_readv(FAR struct file *filep, FAR struct uio *uio)
 {
   FAR struct fuse_dev_s *dev = filep->f_priv;
+  struct fuse_in_header snap;
   FAR struct fuse_req_s *req = NULL;
   FAR sq_entry_t *entry;
+  FAR char *dst;
   size_t resid;
   size_t off;
   size_t i;
@@ -275,7 +277,11 @@ ssize_t fuse_dev_readv(FAR struct file *filep, FAR struct uio *uio)
       if (entry != NULL)
         {
           req = container_of(entry, struct fuse_req_s, entry);
-          sq_addlast(&req->entry, &dev->processing);
+          if (!req->no_reply)
+            {
+              sq_addlast(&req->entry, &dev->processing);
+            }
+
           nxmutex_unlock(&dev->lock);
           break;
         }
@@ -303,6 +309,12 @@ ssize_t fuse_dev_readv(FAR struct file *filep, FAR struct uio *uio)
        * read buffer is too small.
        */
 
+      if (req->no_reply)
+        {
+          fs_heap_free(req);
+          return -EINVAL;
+        }
+
       nxmutex_lock(&dev->lock);
       sq_rem(&req->entry, &dev->processing);
       nxmutex_unlock(&dev->lock);
@@ -311,48 +323,57 @@ ssize_t fuse_dev_readv(FAR struct file *filep, FAR struct uio *uio)
       return -EINVAL;
     }
 
-  {
-    struct fuse_in_header snap = req->hin;
-    FAR char *dst = uio->uio_iov[0].iov_base;
+  /* Scatter directly into the caller's iovs.  (The FUSE server always
+   * passes a single big read buffer;  walk it plus any extra iovs.)
+   */
 
-    /* Scatter directly into the caller's iovs.  (The FUSE server always
-     * passes a single big read buffer;  walk it plus any extra iovs.)
-     */
+  snap = req->hin;
+  dst  = uio->uio_iov[0].iov_base;
 
-    memcpy(dst, &snap, sizeof(snap));
-    off = sizeof(snap);
+  memcpy(dst, &snap, sizeof(snap));
+  off = sizeof(snap);
 
-    for (i = 0; i < req->vin_cnt; i++)
-      {
-        size_t chunk = req->vin[i].iov_len;
-        size_t copied = 0;
+  for (i = 0; i < req->vin_cnt; i++)
+    {
+      size_t chunk = req->vin[i].iov_len;
+      size_t copied = 0;
 
-        while (copied < chunk)
-          {
-            size_t navail;
-            size_t n;
+      while (copied < chunk)
+        {
+          size_t navail;
+          size_t n;
 
-            while (off >= uio->uio_iov[0].iov_len &&
-                   0 < uio->uio_iovcnt - 1)
-              {
-                /* advance to the next iov (iov[0] window exhausted) */
+          while (off >= uio->uio_iov[0].iov_len &&
+                 0 < uio->uio_iovcnt - 1)
+            {
+              /* advance to the next iov (iov[0] window exhausted) */
 
-                off -= uio->uio_iov[0].iov_len;
-                uio->uio_iov++;
-                uio->uio_iovcnt--;
-              }
+              off -= uio->uio_iov[0].iov_len;
+              uio->uio_iov++;
+              uio->uio_iovcnt--;
+            }
 
-            navail = uio->uio_iov[0].iov_len - off;
-            n = MIN(chunk - copied, navail);
-            memcpy((FAR char *)uio->uio_iov[0].iov_base + off,
-                   (FAR const char *)req->vin[i].iov_base + copied, n);
-            off    += n;
-            copied += n;
-          }
-      }
+          navail = uio->uio_iov[0].iov_len - off;
+          n = MIN(chunk - copied, navail);
+          memcpy((FAR char *)uio->uio_iov[0].iov_base + off,
+                 (FAR const char *)req->vin[i].iov_base + copied, n);
+          off    += n;
+          copied += n;
+        }
+    }
 
-    off = req->hin.len;
-  }
+  off = req->hin.len;
+
+  /* A fire-and-forget message (e.g. a kernel-initiated FUSE_NOTIFY_REPLY
+   * answering FUSE_NOTIFY_RETRIEVE) is never answered by the server, so it
+   * must not occupy the processing queue:  release it right after delivery.
+   * Such requests are heap-allocated by their sender.
+   */
+
+  if (req->no_reply)
+    {
+      fs_heap_free(req);
+    }
 
   return off;
 }
@@ -377,9 +398,13 @@ ssize_t fuse_dev_writev(FAR struct file *filep, FAR struct uio *uio)
   FAR struct fuse_conn_s *conn;
   FAR struct fuse_req_s *req = NULL;
   FAR sq_entry_t *entry;
+  FAR char *dst;
   size_t datalen;
+  size_t need;
+  size_t done;
   size_t off;
   size_t i;
+  int idx;
 
   if (uio->uio_resid < sizeof(hout))
     {
@@ -388,21 +413,17 @@ ssize_t fuse_dev_writev(FAR struct file *filep, FAR struct uio *uio)
 
   /* Gather the reply header (first sizeof(hout) bytes across the iovs) */
 
-  {
-    FAR char *dst = (FAR char *)&hout;
-    size_t need = sizeof(hout);
-    size_t done = 0;
-    int idx;
+  dst  = (FAR char *)&hout;
+  need = sizeof(hout);
+  done = 0;
 
-    for (idx = 0; idx < uio->uio_iovcnt && done < need; idx++)
-      {
-        size_t n = MIN(need - done, uio->uio_iov[idx].iov_len);
+  for (idx = 0; idx < uio->uio_iovcnt && done < need; idx++)
+    {
+      size_t n = MIN(need - done, uio->uio_iov[idx].iov_len);
 
-        memcpy(dst + done, uio->uio_iov[idx].iov_base, n);
-        done += n;
-      }
-  }
-
+      memcpy(dst + done, uio->uio_iov[idx].iov_base, n);
+      done += n;
+    }
 
   /* A notification carries unique == 0 and a positive notify code in
    * error; it does not match any in-flight request.  (libfuse sends
@@ -490,61 +511,59 @@ ssize_t fuse_dev_writev(FAR struct file *filep, FAR struct uio *uio)
     }
 
   off = sizeof(hout);
-  {
-    /* Gather the reply payload linearly (skip the header bytes), then
-     * scatter into the request reply buffers.
-     */
 
-    size_t plen = datalen;
-    FAR char *lin = NULL;
+  /* Gather the reply payload linearly (skip the header bytes), then
+   * scatter into the request reply buffers.
+   */
 
-    if (plen > 0)
-      {
-        size_t done = 0;
-        size_t skip = sizeof(hout);
-        int idx;
+  size_t plen = datalen;
+  FAR char *lin = NULL;
 
-        lin = fs_heap_malloc(plen);
-        if (lin == NULL)
-          {
-            return -ENOMEM;
-          }
+  if (plen > 0)
+    {
+      size_t skip = sizeof(hout);
 
-        for (idx = 0; idx < uio->uio_iovcnt && done < plen; idx++)
-          {
-            FAR const char *base = uio->uio_iov[idx].iov_base;
-            size_t len = uio->uio_iov[idx].iov_len;
+      done = 0;
+      lin  = fs_heap_malloc(plen);
+      if (lin == NULL)
+        {
+          return -ENOMEM;
+        }
 
-            if (skip >= len)
-              {
-                skip -= len;
-                continue;
-              }
+      for (idx = 0; idx < uio->uio_iovcnt && done < plen; idx++)
+        {
+          FAR const char *base = uio->uio_iov[idx].iov_base;
+          size_t len = uio->uio_iov[idx].iov_len;
 
-            base += skip;
-            len  -= skip;
-            skip  = 0;
+          if (skip >= len)
+            {
+              skip -= len;
+              continue;
+            }
 
-            len = MIN(len, plen - done);
-            memcpy(lin + done, base, len);
-            done += len;
-          }
+          base += skip;
+          len  -= skip;
+          skip  = 0;
 
-        /* Scatter into the request reply buffers */
+          len = MIN(len, plen - done);
+          memcpy(lin + done, base, len);
+          done += len;
+        }
 
-        done = 0;
-        for (i = 0; i < req->vout_cnt && plen > 0; i++)
-          {
-            size_t chunk = MIN(req->vout[i].iov_len, plen);
+      /* Scatter into the request reply buffers */
 
-            memcpy(req->vout[i].iov_base, lin + done, chunk);
-            done += chunk;
-            plen -= chunk;
-          }
+      done = 0;
+      for (i = 0; i < req->vout_cnt && plen > 0; i++)
+        {
+          size_t chunk = MIN(req->vout[i].iov_len, plen);
 
-        fs_heap_free(lin);
-      }
-  }
+          memcpy(req->vout[i].iov_base, lin + done, chunk);
+          done += chunk;
+          plen -= chunk;
+        }
+
+      fs_heap_free(lin);
+    }
 
   /* Give connection extensions (CUSE) a chance to consume the request */
 

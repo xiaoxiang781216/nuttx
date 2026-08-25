@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <string.h>
+#include <poll.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 
@@ -75,6 +76,38 @@ struct fuse_file_s
   char     relpath[];
 };
 
+/* One async poll waiter registered with the server through FUSE_POLL.  The
+ * server echoes kh back in FUSE_NOTIFY_POLL when the file becomes ready.
+ */
+
+struct fuse_poller_s
+{
+  sq_entry_t         entry;
+  FAR struct pollfd *fds;
+  uint64_t           kh;
+  uint64_t           nodeid;
+  uint64_t           fh;
+};
+
+/* One NOTIFY_STORE payload kept on behalf of the server.  NuttX FUSE has no
+ * page cache;  this small per-connection store exists so that a server can
+ * push data with FUSE_NOTIFY_STORE and ask for it back with
+ * FUSE_NOTIFY_RETRIEVE (used by the libfuse notify_store_retrieve example).
+ * Regular reads still always go to the server.
+ */
+
+#define FUSE_STORE_MAX_ENTRIES 8
+#define FUSE_STORE_MAX_DATA    4096
+
+struct fuse_store_s
+{
+  sq_entry_t entry;
+  uint64_t   nodeid;
+  uint64_t   offset;
+  uint32_t   size;
+  char       data[];
+};
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -88,6 +121,10 @@ static off_t   fuse_seek(FAR struct file *filep, off_t offset, int whence);
 static int     fuse_ioctl(FAR struct file *filep, int cmd,
                           unsigned long arg);
 static int     fuse_truncate(FAR struct file *filep, off_t length);
+static int     fuse_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                         bool setup);
+static void    fuse_fs_notify(FAR struct fuse_conn_s *conn, int code,
+                              FAR const char *payload, size_t len);
 static int     fuse_sync(FAR struct file *filep);
 static int     fuse_dup(FAR const struct file *oldp, FAR struct file *newp);
 static int     fuse_fstat(FAR const struct file *filep,
@@ -125,6 +162,13 @@ static int     fuse_chstat(FAR struct inode *mountpt,
                            FAR const char *relpath,
                            FAR const struct stat *buf, int flags);
 static int     fuse_syncfs(FAR struct inode *mountpt);
+
+/* Filesystem-side connection extension:  dispatches server-initiated
+ * notifications (FUSE_NOTIFY_*) arriving on the /dev/fuse channel.
+ */
+
+static const struct fuse_conn_ext_s g_fuse_fs_ext;
+
 #ifdef CONFIG_FS_LINKS
 static int     fuse_link(FAR struct inode *mountpt,
                          FAR const char *relpath1,
@@ -152,7 +196,7 @@ const struct mountpt_operations g_fuse_operations =
   fuse_seek,      /* seek */
   fuse_ioctl,     /* ioctl */
   fuse_truncate,  /* truncate */
-  NULL,           /* poll */
+  fuse_poll,      /* poll */
   fuse_readv,     /* readv */
   fuse_writev,    /* writev */
 #ifdef CONFIG_FS_FILEMAP
@@ -1180,6 +1224,386 @@ static int fuse_filepath(FAR struct file *filep, FAR char *path)
 }
 
 /****************************************************************************
+ * Name: fuse_poll
+ *
+ * Description:
+ *   Poll support for FUSE files.  On setup a FUSE_POLL request asks the
+ *   server for the pending events and, with FUSE_POLL_SCHEDULE_NOTIFY,
+ *   hands it a kernel handle it can echo back through FUSE_NOTIFY_POLL to
+ *   wake this waiter asynchronously.  When the server has no poll handler
+ *   the request fails and the VFS default applies (regular files are
+ *   always readable/writable).
+ *
+ ****************************************************************************/
+
+static int fuse_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                     bool setup)
+{
+  FAR struct fuse_file_s *fp = filep->f_priv;
+  FAR struct fuse_conn_s *conn = filep->f_inode->i_private;
+  FAR struct fuse_poller_s *poller;
+  struct fuse_poll_in  pin;
+  struct fuse_poll_out pout;
+  struct fuse_req_s    req;
+  struct iovec         vin[1];
+  struct iovec         vout[1];
+  pollevent_t          events;
+  int                  ret;
+
+  if (!setup)
+    {
+      poller = fds->priv;
+      if (poller != NULL)
+        {
+          nxmutex_lock(&conn->nlock);
+          sq_rem(&poller->entry, &conn->pollers);
+          nxmutex_unlock(&conn->nlock);
+
+          fs_heap_free(poller);
+          fds->priv = NULL;
+        }
+
+      return OK;
+    }
+
+  poller = fs_heap_zalloc(sizeof(*poller));
+  if (poller == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  nxmutex_lock(&conn->nlock);
+  poller->kh     = ++conn->next_ph;
+  poller->fds    = fds;
+  poller->nodeid = fp->nodeid;
+  poller->fh     = fp->fh;
+  sq_addlast(&poller->entry, &conn->pollers);
+  nxmutex_unlock(&conn->nlock);
+
+  fds->priv = poller;
+
+  /* Ask the server for the events already pending */
+
+  memset(&req, 0, sizeof(req));
+  memset(&pout, 0, sizeof(pout));
+
+  req.hin.opcode = FUSE_POLL;
+  req.hin.nodeid = fp->nodeid;
+
+  pin.fh     = fp->fh;
+  pin.kh     = poller->kh;
+  pin.flags  = FUSE_POLL_SCHEDULE_NOTIFY;
+  pin.events = fds->events;
+
+  vin[0].iov_base  = &pin;
+  vin[0].iov_len   = sizeof(pin);
+  vout[0].iov_base = &pout;
+  vout[0].iov_len  = sizeof(pout);
+
+  ret = fuse_request(conn, &req, vin, 1, vout, 1);
+  if (ret < 0)
+    {
+      /* No server-side poll support:  report always-ready like the VFS
+       * does for mount points without a poll handler, and drop the
+       * waiter (no notification will ever arrive for it).
+       */
+
+      nxmutex_lock(&conn->nlock);
+      sq_rem(&poller->entry, &conn->pollers);
+      nxmutex_unlock(&conn->nlock);
+      fs_heap_free(poller);
+      fds->priv = NULL;
+
+      poll_notify(&fds, 1, POLLIN | POLLOUT);
+      return OK;
+    }
+
+  events = pout.revents & (fds->events | POLLERR | POLLHUP);
+  if (events != 0)
+    {
+      poll_notify(&fds, 1, events);
+    }
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: fuse_store_lookup
+ *
+ * Description:
+ *   Find the store-cache entry covering (nodeid, offset).  Caller holds
+ *   conn->nlock.
+ *
+ ****************************************************************************/
+
+static FAR struct fuse_store_s *
+fuse_store_lookup(FAR struct fuse_conn_s *conn, uint64_t nodeid,
+                  uint64_t offset)
+{
+  FAR sq_entry_t *entry;
+
+  sq_for_every(&conn->storecache, entry)
+    {
+      FAR struct fuse_store_s *store =
+        container_of(entry, struct fuse_store_s, entry);
+
+      if (store->nodeid == nodeid && offset >= store->offset &&
+          offset < store->offset + store->size)
+        {
+          return store;
+        }
+    }
+
+  return NULL;
+}
+
+/****************************************************************************
+ * Name: fuse_notify_store
+ *
+ * Description:
+ *   Handle FUSE_NOTIFY_STORE:  stash the pushed data in the per-connection
+ *   store cache (replacing any overlapping entry for the same range start).
+ *
+ ****************************************************************************/
+
+static void fuse_notify_store(FAR struct fuse_conn_s *conn,
+                              FAR const char *payload, size_t len)
+{
+  struct fuse_notify_store_out sin;
+  FAR struct fuse_store_s *store;
+  FAR sq_entry_t *entry;
+  FAR sq_entry_t *next;
+
+  if (len < sizeof(sin))
+    {
+      return;
+    }
+
+  memcpy(&sin, payload, sizeof(sin));
+  payload += sizeof(sin);
+  len     -= sizeof(sin);
+
+  if (sin.size > len || sin.size > FUSE_STORE_MAX_DATA)
+    {
+      return;
+    }
+
+  store = fs_heap_malloc(sizeof(*store) + sin.size);
+  if (store == NULL)
+    {
+      return;
+    }
+
+  store->nodeid = sin.nodeid;
+  store->offset = sin.offset;
+  store->size   = sin.size;
+  memcpy(store->data, payload, sin.size);
+
+  nxmutex_lock(&conn->nlock);
+
+  /* Replace an existing entry for the same (nodeid, offset) */
+
+  sq_for_every_safe(&conn->storecache, entry, next)
+    {
+      FAR struct fuse_store_s *old =
+        container_of(entry, struct fuse_store_s, entry);
+
+      if (old->nodeid == sin.nodeid && old->offset == sin.offset)
+        {
+          sq_rem(&old->entry, &conn->storecache);
+          fs_heap_free(old);
+          break;
+        }
+    }
+
+  /* Bound the cache:  drop the oldest entry when full */
+
+  if (sq_count(&conn->storecache) >= FUSE_STORE_MAX_ENTRIES)
+    {
+      entry = sq_remfirst(&conn->storecache);
+      fs_heap_free(container_of(entry, struct fuse_store_s, entry));
+    }
+
+  sq_addlast(&store->entry, &conn->storecache);
+  nxmutex_unlock(&conn->nlock);
+}
+
+/****************************************************************************
+ * Name: fuse_notify_retrieve
+ *
+ * Description:
+ *   Handle FUSE_NOTIFY_RETRIEVE:  answer with a kernel-initiated
+ *   FUSE_NOTIFY_REPLY message carrying the data previously pushed with
+ *   FUSE_NOTIFY_STORE.  The reply is fire-and-forget (the server does not
+ *   answer it) and matched server-side by the notify_unique cookie.
+ *
+ ****************************************************************************/
+
+static void fuse_notify_retrieve(FAR struct fuse_conn_s *conn,
+                                 FAR const char *payload, size_t len)
+{
+  struct fuse_notify_retrieve_out rout;
+  FAR struct fuse_notify_retrieve_in *rinp;
+  FAR struct fuse_store_s *store;
+  FAR struct fuse_req_s *req;
+  FAR struct iovec *vin;
+  FAR char *data;
+  size_t size;
+
+  if (len < sizeof(rout))
+    {
+      return;
+    }
+
+  memcpy(&rout, payload, sizeof(rout));
+
+  /* The request is delivered asynchronously when the server reads the
+   * channel (after this function has returned), so the iovec array, the
+   * retrieve_in header and the payload must all live in the heap-allocated
+   * request block - stack or store-cache memory would be stale by then.
+   */
+
+  nxmutex_lock(&conn->nlock);
+  store = fuse_store_lookup(conn, rout.nodeid, rout.offset);
+  if (store == NULL)
+    {
+      nxmutex_unlock(&conn->nlock);
+      return;
+    }
+
+  size = store->size - (rout.offset - store->offset);
+  if (size > rout.size)
+    {
+      size = rout.size;
+    }
+
+  req  = fs_heap_zalloc(sizeof(*req) + 2 * sizeof(*vin) + sizeof(*rinp) +
+                        size);
+  if (req == NULL)
+    {
+      nxmutex_unlock(&conn->nlock);
+      return;
+    }
+
+  vin  = (FAR struct iovec *)(req + 1);
+  rinp = (FAR struct fuse_notify_retrieve_in *)(vin + 2);
+  data = (FAR char *)(rinp + 1);
+
+  rinp->offset = rout.offset;
+  rinp->size   = size;
+  memcpy(data, store->data + (rout.offset - store->offset), size);
+  nxmutex_unlock(&conn->nlock);
+
+  req->hin.opcode = FUSE_NOTIFY_REPLY;
+  req->hin.unique = rout.notify_unique;
+  req->hin.nodeid = rout.nodeid;
+  req->hin.len    = sizeof(req->hin) + sizeof(*rinp) + size;
+  req->no_reply   = true;
+  req->vin        = vin;
+  req->vin_cnt    = 2;
+
+  vin[0].iov_base = rinp;
+  vin[0].iov_len  = sizeof(*rinp);
+  vin[1].iov_base = data;
+  vin[1].iov_len  = size;
+
+  if (conn->transport->request(conn, req) < 0)
+    {
+      fs_heap_free(req);
+    }
+}
+
+/****************************************************************************
+ * Name: fuse_notify_poll_wakeup
+ *
+ * Description:
+ *   Handle FUSE_NOTIFY_POLL:  wake the poll waiter whose kernel handle the
+ *   server echoes back.
+ *
+ ****************************************************************************/
+
+static void fuse_notify_poll_wakeup(FAR struct fuse_conn_s *conn,
+                                    FAR const char *payload, size_t len)
+{
+  struct fuse_notify_poll_wakeup_out npw;
+  FAR sq_entry_t *entry;
+
+  if (len < sizeof(npw))
+    {
+      return;
+    }
+
+  memcpy(&npw, payload, sizeof(npw));
+
+  /* poll_notify under the lock, mirroring fuse_dev_notify:  the poller is
+   * removed under the same lock by fuse_poll teardown, so the fds pointer
+   * cannot be freed while we hold it.
+   */
+
+  nxmutex_lock(&conn->nlock);
+  sq_for_every(&conn->pollers, entry)
+    {
+      FAR struct fuse_poller_s *poller =
+        container_of(entry, struct fuse_poller_s, entry);
+
+      if (poller->kh == npw.kh)
+        {
+          poll_notify(&poller->fds, 1, POLLIN);
+          break;
+        }
+    }
+
+  nxmutex_unlock(&conn->nlock);
+}
+
+/****************************************************************************
+ * Name: fuse_fs_notify
+ *
+ * Description:
+ *   Connection extension hook:  dispatch server-initiated notifications.
+ *   Cache invalidation codes are accepted as no-ops because this client
+ *   keeps no dentry/attribute/page caches - every operation already goes
+ *   straight to the server, so there is nothing stale to drop.
+ *
+ ****************************************************************************/
+
+static void fuse_fs_notify(FAR struct fuse_conn_s *conn, int code,
+                           FAR const char *payload, size_t len)
+{
+  switch (code)
+    {
+      case FUSE_NOTIFY_POLL:
+        fuse_notify_poll_wakeup(conn, payload, len);
+        break;
+
+      case FUSE_NOTIFY_STORE:
+        fuse_notify_store(conn, payload, len);
+        break;
+
+      case FUSE_NOTIFY_RETRIEVE:
+        fuse_notify_retrieve(conn, payload, len);
+        break;
+
+      case FUSE_NOTIFY_INVAL_INODE:
+      case FUSE_NOTIFY_INVAL_ENTRY:
+      case FUSE_NOTIFY_DELETE:
+      case FUSE_NOTIFY_INC_EPOCH:
+      case FUSE_NOTIFY_PRUNE:
+      default:
+
+        /* No client-side caches to invalidate (see above) */
+
+        break;
+    }
+}
+
+static const struct fuse_conn_ext_s g_fuse_fs_ext =
+{
+  NULL,           /* reply_done */
+  fuse_fs_notify, /* notify */
+};
+
+/****************************************************************************
  * Name: fuse_ioctl
  ****************************************************************************/
 
@@ -1634,6 +2058,11 @@ static int fuse_bind(FAR struct inode *blkdriver, FAR const void *data,
    * server is still starting its read loop.
    */
 
+  nxmutex_init(&conn->nlock);
+  sq_init(&conn->pollers);
+  sq_init(&conn->storecache);
+  conn->ext     = &g_fuse_fs_ext;
+
   nxmutex_init(&conn->initlock);
   *handle = conn;
 
@@ -1662,8 +2091,33 @@ static int fuse_unbind(FAR void *handle, FAR struct inode **blkdriver,
       fuse_request(conn, &req, NULL, 0, NULL, 0);
     }
 
-  nxmutex_destroy(&conn->initlock);
+  /* Drop leftover poll waiters and the notify store cache.  The transport
+   * is destroyed first so no new notification can arrive afterwards.
+   */
+
   conn->transport->destroy(conn);
+
+  nxmutex_lock(&conn->nlock);
+  while (!sq_empty(&conn->pollers))
+    {
+      FAR struct fuse_poller_s *poller =
+        container_of(sq_remfirst(&conn->pollers), struct fuse_poller_s,
+                     entry);
+      fs_heap_free(poller);
+    }
+
+  while (!sq_empty(&conn->storecache))
+    {
+      FAR struct fuse_store_s *store =
+        container_of(sq_remfirst(&conn->storecache), struct fuse_store_s,
+                     entry);
+      fs_heap_free(store);
+    }
+
+  nxmutex_unlock(&conn->nlock);
+
+  nxmutex_destroy(&conn->nlock);
+  nxmutex_destroy(&conn->initlock);
   fs_heap_free(conn);
 
   return 0;

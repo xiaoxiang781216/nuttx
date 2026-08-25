@@ -75,7 +75,9 @@ struct fuse_req_s
   size_t                  vin_cnt;
   FAR const struct iovec *vout;  /* Reply buffers (received from server) */
   size_t                  vout_cnt;
-  sq_entry_t              entry; /* Pending/processing queue linkage */
+  sq_entry_t              entry;    /* Pending/processing queue linkage */
+  bool                    no_reply; /* Fire-and-forget: freed after
+                                     * delivery */
 };
 
 /* Optional connection extension hooks.  CUSE channels use reply_done to
@@ -104,6 +106,16 @@ struct fuse_conn_s
   mutex_t    initlock;    /* Serializes the lazy FUSE_INIT */
   atomic_t   initialized; /* FUSE_INIT handshake completed */
   FAR const struct fuse_conn_ext_s *ext;  /* Optional extension hooks */
+
+  /* Filesystem-side extension state (local /dev/fuse mounts only, see
+   * fs/fuse/fuse.c):  async poll waiters woken by FUSE_NOTIFY_POLL and a
+   * small store cache backing FUSE_NOTIFY_STORE / FUSE_NOTIFY_RETRIEVE.
+   */
+
+  mutex_t    nlock;          /* Serializes pollers and storecache */
+  sq_queue_t pollers;        /* struct fuse_poller_s list */
+  sq_queue_t storecache;     /* struct fuse_store_s list */
+  uint64_t   next_ph;        /* Poll handle id generator */
 };
 
 /****************************************************************************
