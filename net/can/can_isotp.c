@@ -67,11 +67,16 @@
 #  define ISOTP_FRAME_SIZE     CAN_MTU
 #endif
 
-#define ISOTP_FC_WAIT_MS       15000
-#define ISOTP_CR_WAIT_MS       1000
-#define ISOTP_RX_STMIN_MS      1
-#define ISOTP_OPTS_FLAGS       CAN_ISOTP_WAIT_TX_DONE
-#define ISOTP_CANID_MASK       (CAN_EFF_FLAG | CAN_EFF_MASK)
+/* ISO 15765-2 network layer timing parameters.  See net/can/Kconfig for the
+ * meaning of each one and the constraints between them.
+ */
+
+#define ISOTP_N_BS_MS     CONFIG_NET_CAN_ISOTP_N_BS_MS
+#define ISOTP_N_CR_MS     CONFIG_NET_CAN_ISOTP_N_CR_MS
+#define ISOTP_N_CS_MS     CONFIG_NET_CAN_ISOTP_N_CS_MS
+#define ISOTP_RX_STMIN_MS 0
+#define ISOTP_OPTS_FLAGS  CAN_ISOTP_WAIT_TX_DONE
+#define ISOTP_CANID_MASK  (CAN_EFF_FLAG | CAN_EFF_MASK)
 
 /****************************************************************************
  * Private Types
@@ -379,7 +384,10 @@ isotp_rx_input_fc(FAR struct isotp_conn_s *isotp,
           (data[0] & ISOTP_FC_FS_MASK) == ISOTP_FC_CTS)
         {
           isotp->tx_bs_remaining = data[1];
-          isotp->tx_stmin_ms     = data[2];
+
+          /* Honor the peer's STmin, but never exceed our own N_Cs limit. */
+
+          isotp->tx_stmin_ms     = MIN(data[2], ISOTP_N_CS_MS);
           isotp->tx_last_send    = clock_systime_ticks();
           isotp->tx_state        = ISOTP_TX_SENDING;
           wd_cancel(&isotp->tx_wdog);
@@ -632,7 +640,7 @@ static void isotp_tx_nbs_timeout(wdparm_t arg)
 static inline_function void isotp_tx_wait_fc(FAR struct isotp_conn_s *isotp)
 {
   isotp->tx_state = ISOTP_TX_WAIT_FC;
-  wd_start(&isotp->tx_wdog, MSEC2TICK(ISOTP_FC_WAIT_MS),
+  wd_start(&isotp->tx_wdog, MSEC2TICK(ISOTP_N_BS_MS),
            isotp_tx_nbs_timeout, (wdparm_t)isotp);
 }
 
@@ -1126,11 +1134,11 @@ static int isotp_setup(FAR struct socket *psock)
     }
 
   can_conn_init(&conn->conn);
-  conn->crefs      = 1;
-  conn->conn.match = isotp_match;
-  conn->conn.input = isotp_input;
-  conn->ll.mtu     = CAN_MTU;
-  conn->ll.tx_dl   = CAN_MAX_DLEN;
+  conn->crefs       = 1;
+  conn->conn.match  = isotp_match;
+  conn->conn.input  = isotp_input;
+  conn->ll.mtu      = CAN_MTU;
+  conn->ll.tx_dl    = CAN_MAX_DLEN;
   conn->rx_fc.stmin = ISOTP_RX_STMIN_MS;
   nxmutex_init(&conn->rx_lock);
   nxsem_init(&conn->tx_sem, 0, 1);
@@ -1611,7 +1619,7 @@ static ssize_t isotp_recvmsg(FAR struct socket *psock,
     {
       ret = isotp_rx_recv(isotp, &iob,
                           nonblock && first,
-                          first ? timeout : ISOTP_CR_WAIT_MS);
+                          first ? timeout : ISOTP_N_CR_MS);
       if (ret < 0)
         {
           if (!first && (ret == -ETIMEDOUT || ret == -EAGAIN))

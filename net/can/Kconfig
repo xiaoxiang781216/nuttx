@@ -219,5 +219,60 @@ config NET_CAN_ISOTP_MAX_CONNS
 		(NET_CAN_ISOTP_ALLOC_CONNS > 0), this will limit the number of
 		connections that can be allocated.
 
+if NET_CAN_ISOTP
+
+config NET_CAN_ISOTP_N_AS_MS
+	int "N_As timeout (ms)"
+	default 75
+	---help---
+		N_As: time for the sender to transmit a single frame (FF/CF), from
+		handing the frame to the data link layer until the TX confirmation
+		is reported back to the network layer.
+
+		This is a timeout: exceeding it aborts the transfer.  It detects
+		data link layer stalls such as persistently lost arbitration, a
+		full TX mailbox or a bus-off condition.
+
+config NET_CAN_ISOTP_N_BS_MS
+	int "N_Bs timeout (ms)"
+	default 150
+	---help---
+		N_Bs: time the sender waits for a flow control (FC) frame after
+		transmitting a First Frame or the last Consecutive Frame of a
+		block.
+
+		This is a timeout: exceeding it aborts the transfer with -ECOMM.
+		It detects a receiver that never answers, for instance because it
+		is unpowered or its FC frame was lost on the bus.
+
+config NET_CAN_ISOTP_N_CS_MS
+	int "N_Cs maximum separation time (ms)"
+	default 75
+	---help---
+		N_Cs: maximum interval the sender may leave between two
+		Consecutive Frames, measured from the FC indication (or the
+		previous CF confirmation) until the next CF is handed to the data
+		link layer.
+
+		This is a performance requirement rather than a timeout: it bounds
+		our own pacing.  The actual interval must also honour the STmin
+		requested by the receiver in its FC frame, so the effective delay
+		is min(N_Cs, max(STmin, ...)).  Values received from the peer that
+		exceed this limit are clamped.
+
+		Must satisfy N_Cs + N_As < 0.9 * N_Cr on the peer side.
+
+config NET_CAN_ISOTP_N_CR_MS
+	int "N_Cr timeout (ms)"
+	default 150
+	---help---
+		N_Cr: time the receiver waits for the next Consecutive Frame after
+		sending a flow control frame or after receiving the previous CF.
+
+		This is a timeout: exceeding it aborts the reassembly with -ECOMM.
+		It detects a sender that stopped mid-transfer.
+
+endif # NET_CAN_ISOTP
+
 endif # NET_CAN
 endmenu # CAN Socket Support
