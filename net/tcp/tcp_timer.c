@@ -424,10 +424,11 @@ void tcp_set_zero_probe(FAR struct tcp_conn_s *conn, uint32_t flags)
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
       !(sq_empty(&conn->write_q)) &&
 #endif
-      !conn->timeout && !conn->zero_probe)
+      !conn->timeout && conn->zero_probe == 0)
     {
-      tcp_update_retrantimer(conn, TCP_RTO_MIN);
-      conn->zero_probe = true;
+      conn->zero_probe = TCP_ZERO_PROBE_MIN;
+      conn->nrtx = 0;
+      tcp_update_retrantimer(conn, conn->zero_probe);
     }
 }
 
@@ -823,7 +824,7 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
            * Zero window probe enabled?
            */
 
-          if (conn->zero_probe)
+          if (conn->zero_probe != 0)
             {
               if (conn->timer > hsec)
                 {
@@ -833,29 +834,40 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
                 }
               else
                 {
-                  /* Yes.. Has the retry count expired? */
+                  /* Check how many probes have been sent since the last
+                   * ACK.  Do this before transmitting so the last probe gets
+                   * a full response interval.
+                   */
 
                   if (conn->nrtx >= TCP_MAXRTX)
                     {
-                      /* Yes... stop the network monitor, closing the
-                       * connection and all sockets associated with the
-                       * connection.
-                       */
+                      conn->zero_probe = 0;
+                      conn->nrtx = 0;
+                      conn->timer = 0;
+                      conn->tcpstateflags = TCP_CLOSED;
+                      ninfo("TCP state: TCP_CLOSED\n");
 
-                      conn->zero_probe = false;
-                      tcp_stop_monitor(conn, TCP_ABORT);
+                      /* Notify the peer and application of the timeout. */
+
+                      tcp_send(dev, conn, TCP_RST | TCP_ACK, hdrlen);
+                      tcp_callback(dev, conn, TCP_TIMEDOUT);
+                      goto done;
                     }
-                  else
+
+                  tcp_xmit_probe(dev, conn);
+                  conn->nrtx++;
+
+                  /* Back off the persist interval independently from the
+                   * unanswered probe count.
+                   */
+
+                  if (conn->zero_probe < TCP_RTO_MAX)
                     {
-                      tcp_xmit_probe(dev, conn);
-
-                      /* Update for the next probe */
-
-                      conn->nrtx++;
-                      conn->timer = MIN((TCP_RTO_MIN << conn->nrtx),
-                                        TCP_RTO_MAX);
+                      conn->zero_probe =
+                        MIN(conn->zero_probe << 1, TCP_RTO_MAX);
                     }
 
+                  conn->timer = conn->zero_probe;
                   goto done;
                 }
             }

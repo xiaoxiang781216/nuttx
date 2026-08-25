@@ -673,16 +673,20 @@ static void tcp_parse_option(FAR struct net_driver_s *dev,
 static void tcp_clear_zero_probe(FAR struct tcp_conn_s *conn,
                                  FAR struct tcp_hdr_s *tcp)
 {
-  /* If the receive window is not 0,
-   * the zero window probe timer needs to be cleared
+  /* A nonzero window ends persist mode.  A zero-window ACK proves that
+   * the peer is responsive, so clear only the unanswered probe count while
+   * retaining the current probe interval.
    */
 
-  if ((tcp->wnd[0] || tcp->wnd[1]) && conn->zero_probe &&
-      (tcp->flags & TCP_ACK) != 0)
+  if (conn->zero_probe != 0 && (tcp->flags & TCP_ACK) != 0)
     {
-      conn->zero_probe = false;
       conn->nrtx = 0;
-      conn->timer = 0;
+
+      if (tcp->wnd[0] || tcp->wnd[1])
+        {
+          conn->zero_probe = 0;
+          conn->timer = 0;
+        }
     }
 }
 

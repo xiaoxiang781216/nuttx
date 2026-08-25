@@ -126,8 +126,9 @@
 
 #define TCP_FAST_RETRANSMISSION_THRESH 3
 
-#define TCP_RTO_MAX 240 /* 120s,The unit is half a second */
-#define TCP_RTO_MIN 1   /* 0.5s */
+#define TCP_RTO_MAX        240 /* 120s,The unit is half a second */
+#define TCP_RTO_MIN        1   /* 0.5s */
+#define TCP_ZERO_PROBE_MIN 2   /* 1s, The unit is half a second */
 
 /****************************************************************************
  * Public Type Definitions
@@ -230,8 +231,8 @@ struct tcp_conn_s
   struct   work_s work;   /* TCP timer handle */
   bool     timeout;       /* Trigger from timer expiry */
   uint8_t  timer;         /* The retransmission timer (units: half-seconds) */
-  int8_t   nrtx;          /* The number of retransmissions for the last
-                           * segment sent */
+  int8_t   nrtx;          /* Number of retransmissions or zero-window
+                           * probes */
 #ifdef CONFIG_NET_TCP_DELAYED_ACK
   uint8_t  rx_unackseg;   /* Number of un-ACKed received segments */
   uint8_t  rx_acktimer;   /* The delayed ACK timer (units: half-seconds) */
@@ -357,7 +358,7 @@ struct tcp_conn_s
 #if defined(CONFIG_NET_SENDFILE) && defined(CONFIG_NET_TCP_WRITE_BUFFERS)
   bool       sendfile;    /* True if sendfile operation is in progress */
 #endif
-  bool       zero_probe;   /* TCP zero window probe timer */
+  uint8_t    zero_probe;  /* Zero-window probe interval (half-seconds) */
 
   /* connevents is a list of callbacks for each socket the uses this
    * connection (there can be more that one in the event that the the socket
