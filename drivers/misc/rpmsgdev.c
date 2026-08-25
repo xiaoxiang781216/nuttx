@@ -51,6 +51,7 @@
 #include <nuttx/power/battery_ioctl.h>
 #include <nuttx/input/mouse.h>
 #include <nuttx/mtd/configdata.h>
+#include <nuttx/mtd/mtd.h>
 #include <nuttx/trace.h>
 
 #include "rpmsgdev.h"
@@ -706,6 +707,8 @@ static ssize_t rpmsgdev_ioctl_arglen(int cmd, unsigned long arg)
                ((FAR struct config_data_s *)(uintptr_t)arg)->len;
       case CFGDIOC_DELCONFIG:
         return sizeof(struct config_data_s);
+      case MTDIOC_SWITCH_BOOT:
+        return strlen((FAR const char *)(uintptr_t)arg) + 1;
       case RPMSGDEV_PRIVATE_IOCTL:
         return sizeof(struct rpmsgdev_private_ioctl) +
                ((FAR struct rpmsgdev_private_ioctl *)(uintptr_t)arg)->len;

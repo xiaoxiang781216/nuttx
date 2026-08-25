@@ -92,6 +92,10 @@
                                              *      the block range on which to
                                              *      enable or disable ECC traps.
                                              * OUT: None */
+#define MTDIOC_SWITCH_BOOT  _MTDIOC(0x0011) /* IN:  FAR const char * naming the
+                                             *      boot system updated or
+                                             *      specified
+                                             * OUT: None */
 
 /* Macros to hide implementation */
 
