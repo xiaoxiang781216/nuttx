@@ -161,6 +161,7 @@ static int     mmcsd_get_r1(FAR struct mmcsd_state_s *priv,
 static int     mmcsd_verifystate(FAR struct mmcsd_state_s *priv,
                                  uint32_t status);
 static int     mmcsd_switch(FAR struct mmcsd_state_s *priv, uint32_t arg);
+static int     mmcsd_flush_cache(FAR struct mmcsd_state_s *priv);
 
 /* Transfer helpers *********************************************************/
 
@@ -1154,6 +1155,46 @@ static int mmcsd_switch(FAR struct mmcsd_state_s *priv, uint32_t arg)
   mmcsd_sendcmdpoll(priv, MMCSD_CMD6, arg);
   priv->wrbusy = true;
   return mmcsd_recv_r1(priv, MMCSD_CMD6);
+}
+
+/****************************************************************************
+ * Name: mmcsd_flush_cache
+ *
+ * Description:
+ *   Explicitly flush the eMMC device cache using MMC SWITCH (CMD6), then
+ *   wait until the card returns to TRAN state.
+ *
+ ****************************************************************************/
+
+static int mmcsd_flush_cache(FAR struct mmcsd_state_s *priv)
+{
+#ifdef CONFIG_MMCSD_MMCSUPPORT
+  int ret;
+
+  DEBUGASSERT(priv != NULL);
+
+  if (!IS_MMC(priv->type))
+    {
+      return IS_EMPTY(priv) ? -ENODEV : OK;
+    }
+
+  ret = mmcsd_switch(priv, MMC_CMD6_FLUSH_CACHE());
+  if (ret != OK)
+    {
+      ferr("ERROR: mmcsd_switch(FLUSH_CACHE) failed: %d\n", ret);
+      return ret;
+    }
+
+  ret = mmcsd_transferready(priv);
+  if (ret != OK)
+    {
+      ferr("ERROR: mmcsd_transferready after FLUSH_CACHE failed: %d\n", ret);
+    }
+
+  return ret;
+#else
+  return -ENOSYS;
+#endif
 }
 
 /****************************************************************************
@@ -2611,6 +2652,18 @@ static int mmcsd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
 
   switch (cmd)
     {
+    case BIOC_FLUSH: /* Flush eMMC device cache */
+      {
+        finfo("BIOC_FLUSH\n");
+
+        ret = mmcsd_flush_cache(priv);
+        if (ret != OK)
+          {
+            ferr("ERROR: mmcsd_flush_cache failed: %d\n", ret);
+          }
+      }
+      break;
+
     case BIOC_PROBE: /* Check for media in the slot */
       {
         finfo("BIOC_PROBE\n");

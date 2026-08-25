@@ -63,6 +63,8 @@
 #define EXT_CSD_PART_CONF           179     /* R/W */
 #define EXT_CSD_BUS_WIDTH           183     /* WO */
 #define EXT_CSD_HS_TIMING           185     /* R/W */
+#define EXT_CSD_CACHE_CTRL          33      /* R/W */
+#define EXT_CSD_FLUSH_CACHE         32      /* WO */
 
 /* EXT_CSD_BUS_WIDTH */
 #define EXT_CSD_BUS_WIDTH_1         (0x00)  /* Card is in 1 bit mode */
@@ -83,6 +85,10 @@
 
 #define MMC_CMD6_HS_TIMING(timing)  (MMC_CMD6_VALUE(timing) | \
                                      MMC_CMD6_INDEX(EXT_CSD_HS_TIMING) | \
+                                     MMC_CMD6_MODE(MMC_CMD6_MODE_WRITE_BYTE))
+
+#define MMC_CMD6_FLUSH_CACHE()      (MMC_CMD6_VALUE(1) | \
+                                     MMC_CMD6_INDEX(EXT_CSD_FLUSH_CACHE) | \
                                      MMC_CMD6_MODE(MMC_CMD6_MODE_WRITE_BYTE))
 
 /* Partition type */
