@@ -29,6 +29,8 @@
 
 #include <nuttx/config.h>
 
+#include <debug.h>
+#include <nuttx/trace.h>
 #include <sys/types.h>
 
 /****************************************************************************
@@ -52,6 +54,18 @@
 
 #define CYPHER_ENCRYPT 1
 #define CYPHER_DECRYPT 0
+
+/* Report a crypto fault to syslog and the DFX record.  fmt must be a string
+ * literal with no trailing newline; the macro appends one for syslog.
+ */
+
+#define crypto_diag(id, fmt, ...) \
+  do \
+    { \
+      crypterr(fmt "\n", ##__VA_ARGS__); \
+      crypto_trace_diag(LOG_EMERG, id, fmt, ##__VA_ARGS__); \
+    } \
+  while (0)
 
 /****************************************************************************
  * Public Data

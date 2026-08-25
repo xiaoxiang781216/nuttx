@@ -26,6 +26,7 @@
 
 #include <debug.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <string.h>
 #include <sys/endian.h>
 #include <sys/param.h>
@@ -36,6 +37,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/crypto/crypto.h>
 
 #include "rpmsg_crypto.h"
 
@@ -44,8 +46,6 @@
  ****************************************************************************/
 
 #if CONFIG_CRYPTO_RPMSG_DATA_POOL_COUNT > 0
-#  define rpmsg_crypto_data_alloc()                                        \
-     mempool_zallocate(&g_rpmsg_crypto_data_pool, 0)
 #  define rpmsg_crypto_data_free(p)                                        \
      do                                                                    \
        {                                                                   \
@@ -54,8 +54,6 @@
        }                                                                   \
      while (0)
 #else
-#  define rpmsg_crypto_data_alloc()                                        \
-     kmm_zalloc(sizeof(struct rpmsg_crypto_server_data_s))
 #  define rpmsg_crypto_data_free(p)                                        \
      do                                                                    \
        {                                                                   \
@@ -162,6 +160,57 @@ static const rpmsg_ept_cb g_rpmsg_crypto_handler[] =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: rpmsg_crypto_data_alloc
+ *
+ * Description:
+ *   Allocate a per-call server data context (from the mempool when enabled,
+ *   otherwise the heap) and report exhaustion to the DFX record.
+ *
+ ****************************************************************************/
+
+static FAR struct rpmsg_crypto_server_data_s *
+rpmsg_crypto_data_alloc(void)
+{
+  FAR struct rpmsg_crypto_server_data_s *p;
+
+#if CONFIG_CRYPTO_RPMSG_DATA_POOL_COUNT > 0
+  p = mempool_zallocate(&g_rpmsg_crypto_data_pool, 0);
+#else
+  p = kmm_zalloc(sizeof(struct rpmsg_crypto_server_data_s));
+#endif
+  if (p == NULL)
+    {
+      crypto_diag(DIAG_CRYPTO_SERVER_GETDATA_FAIL,
+                  "Stage:ServerAllocData,Reason:NoSpace");
+    }
+
+  return p;
+}
+
+/****************************************************************************
+ * Name: rpmsg_crypto_server_get_tx_payload_buffer
+ *
+ * Description:
+ *   Get a tx payload buffer for the response and report exhaustion to the
+ *   DFX record.
+ *
+ ****************************************************************************/
+
+static FAR void *
+rpmsg_crypto_server_get_tx_payload_buffer(FAR struct rpmsg_endpoint *ept,
+                                          FAR uint32_t *len)
+{
+  FAR void *buf = rpmsg_get_tx_payload_buffer(ept, len, true);
+  if (buf == NULL)
+    {
+      crypto_diag(DIAG_CRYPTO_SERVER_GETBUFFER_FAIL,
+                  "Stage:ServerGetBuffer,Reason:NoSpace");
+    }
+
+  return buf;
+}
 
 /****************************************************************************
  * Name: rpmsg_crypto_done_cb
@@ -323,7 +372,6 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
   rcsdata = rpmsg_crypto_data_alloc();
   if (rcsdata == NULL)
     {
-      rpmsgerr("Failed to get new session data\n");
       msg->header.result = -ENOMEM;
       goto out;
     }
@@ -441,6 +489,9 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
                                          &crie : &cria, 1);
   if (msg->header.result != 0)
     {
+      crypto_diag(DIAG_CRYPTO_SERVER_NEWSESSION_FAIL,
+                  "Stage:ServerNewSession,Reason:CreateFail,"
+                  "ErrorCode:%" PRIi32, msg->header.result);
       rpmsg_crypto_data_free(rcsdata);
       goto out;
     }
@@ -463,10 +514,9 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_endpoint *ept,
   uint32_t ivlen = msg->data.op_flf.sym.op_type_flf.cipher.iv_len;
   uint32_t space;
 
-  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  rsp = rpmsg_crypto_server_get_tx_payload_buffer(ept, &space);
   if (rsp == NULL)
     {
-      rpmsgerr("get tx payload failed or no enough space\n");
       return -ENOMEM;
     }
 
@@ -533,10 +583,9 @@ rpmsg_crypto_process_hash(FAR struct rpmsg_endpoint *ept,
     {
       /* output result */
 
-      rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+      rsp = rpmsg_crypto_server_get_tx_payload_buffer(ept, &space);
       if (rsp == NULL)
         {
-          rpmsgerr("get tx payload failed or no enough space\n");
           return -ENOMEM;
         }
 
@@ -598,10 +647,9 @@ rpmsg_crypto_process_mac(FAR struct rpmsg_endpoint *ept,
     {
       /* output result */
 
-      rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+      rsp = rpmsg_crypto_server_get_tx_payload_buffer(ept, &space);
       if (rsp == NULL)
         {
-          rpmsgerr("get tx payload failed or no enough space\n");
           return -ENOMEM;
         }
 
@@ -710,10 +758,9 @@ static int rpmsg_crypto_process_aead_update(
 
   /* Get tx payload buffer for response */
 
-  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  rsp = rpmsg_crypto_server_get_tx_payload_buffer(ept, &space);
   if (rsp == NULL)
     {
-      rpmsgerr("get tx payload failed or no enough space\n");
       return -ENOMEM;
     }
 
@@ -780,10 +827,9 @@ rpmsg_crypto_process_aead_final(
 
   /* FINAL - get tag result */
 
-  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  rsp = rpmsg_crypto_server_get_tx_payload_buffer(ept, &space);
   if (rsp == NULL)
     {
-      rpmsgerr("get tx payload failed\n");
       return -ENOMEM;
     }
 
@@ -1066,15 +1112,13 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   rcsdata = rpmsg_crypto_data_alloc();
   if (rcsdata == NULL)
     {
-      rpmsgerr("Failed to allocate kprocess context\n");
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
 
-  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  rsp = rpmsg_crypto_server_get_tx_payload_buffer(ept, &space);
   if (rsp == NULL)
     {
-      rpmsgerr("get tx payload failed or no enough space\n");
       rpmsg_crypto_data_free(rcsdata);
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
@@ -1244,15 +1288,13 @@ rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
   rcsdata = rpmsg_crypto_data_alloc();
   if (rcsdata == NULL)
     {
-      rpmsgerr("Failed to allocate kprocess context\n");
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
 
-  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  rsp = rpmsg_crypto_server_get_tx_payload_buffer(ept, &space);
   if (rsp == NULL)
     {
-      rpmsgerr("get tx payload failed or no enough space\n");
       rpmsg_crypto_data_free(rcsdata);
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
@@ -1437,15 +1479,13 @@ rpmsg_crypto_kprocess_ecdh(FAR struct rpmsg_endpoint *ept,
   rcsdata = rpmsg_crypto_data_alloc();
   if (rcsdata == NULL)
     {
-      rpmsgerr("Failed to allocate kprocess context\n");
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }
 
-  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  rsp = rpmsg_crypto_server_get_tx_payload_buffer(ept, &space);
   if (rsp == NULL)
     {
-      rpmsgerr("get tx payload failed or no enough space\n");
       rpmsg_crypto_data_free(rcsdata);
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
@@ -1588,10 +1628,9 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
   struct cryptkop krp;
   uint32_t space;
 
-  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  rsp = rpmsg_crypto_server_get_tx_payload_buffer(ept, &space);
   if (rsp == NULL)
     {
-      rpmsgerr("get tx payload failed or no enough space\n");
       msg->header.result = -ENOMEM;
       return rpmsg_send(ept, &msg->header, sizeof(msg->header));
     }

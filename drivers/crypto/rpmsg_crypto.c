@@ -34,6 +34,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/crypto/crypto.h>
 
 #include "rpmsg_crypto.h"
 
@@ -128,6 +129,7 @@ rpmsg_crypto_get_tx_payload_buffer(FAR struct rpmsg_crypto_s *priv,
                                    FAR uint32_t *len)
 {
   int sval = 0;
+  FAR void *buf;
 
   nxsem_get_value(&priv->wait, &sval);
   if (sval <= 0)
@@ -140,13 +142,22 @@ rpmsg_crypto_get_tx_payload_buffer(FAR struct rpmsg_crypto_s *priv,
                            CONFIG_CRYPTO_RPMSG_CONNECT_TIMEOUT_MS)) < 0)
 #endif
         {
+          crypto_diag(DIAG_CRYPTO_CLIENT_GETBUFFER_FAIL,
+                      "Stage:GetBuffer,Reason:WaitTimeout");
           return NULL;
         }
 
       rpmsg_post(&priv->ept, &priv->wait);
     }
 
-  return rpmsg_get_tx_payload_buffer(&priv->ept, len, true);
+  buf = rpmsg_get_tx_payload_buffer(&priv->ept, len, true);
+  if (buf == NULL)
+    {
+      crypto_diag(DIAG_CRYPTO_CLIENT_GETBUFFER_FAIL,
+                  "Stage:GetBuffer,Reason:NoSpace");
+    }
+
+  return buf;
 }
 
 /****************************************************************************
@@ -186,6 +197,8 @@ static int rpmsg_crypto_send_recv(FAR struct rpmsg_crypto_s *priv,
   if (ret < 0)
     {
       rpmsg_release_tx_buffer(&priv->ept, msg);
+      crypto_diag(DIAG_CRYPTO_CLIENT_SEND_FAIL,
+                  "Stage:SendRecv,Reason:SendFail,ErrorCode:%d", ret);
       return ret;
     }
 
@@ -260,6 +273,8 @@ static int rpmsg_crypto_get_session(FAR struct rpmsg_crypto_s *rdev)
   if (i == rdev->sesnum)
     {
       nxmutex_unlock(&rdev->lock);
+      crypto_diag(DIAG_CRYPTO_CLIENT_GETSESSION_FAIL,
+                  "Stage:GetSession,Reason:NoSlot");
       return -ENOMEM;
     }
 
@@ -384,7 +399,6 @@ static int rpmsg_crypto_newsession(FAR uint32_t *sid,
   ret = rpmsg_crypto_get_session(rdev);
   if (ret < 0)
     {
-      rpmsgerr("No available session slot\n");
       return ret;
     }
 
@@ -392,7 +406,6 @@ static int rpmsg_crypto_newsession(FAR uint32_t *sid,
   msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
   if (msg == NULL)
     {
-      rpmsgerr("No space for payload\n");
       ret = -ENOMEM;
       goto fail;
     }
@@ -418,7 +431,6 @@ static int rpmsg_crypto_newsession(FAR uint32_t *sid,
                                len, true);
   if (ret < 0)
     {
-      rpmsgerr("Rpmsg Crypto newsession send failed, ret=%d\n", ret);
       goto fail;
     }
 
@@ -557,7 +569,6 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
                                    header_size + data_size, !async);
       if (ret < 0)
         {
-          rpmsgerr("Rpmsg Crypto process failed, ret=%d\n", ret);
           return ret;
         }
 
@@ -628,7 +639,6 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
                                    !(flags & CRD_F_UPDATE) && !async);
       if (ret < 0)
         {
-          rpmsgerr("Rpmsg Crypto process failed, ret=%d\n", ret);
           return ret;
         }
 
@@ -714,7 +724,6 @@ rpmsg_crypto_process_aead_update_aad(
                                    len, false);
       if (ret < 0)
         {
-          rpmsgerr("Rpmsg Crypto AEAD update_aad failed, ret=%d\n", ret);
           return ret;
         }
     }
@@ -781,7 +790,6 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
                                    len, !async);
       if (ret < 0)
         {
-          rpmsgerr("Rpmsg Crypto AEAD update failed, ret=%d\n", ret);
           return ret;
         }
 
@@ -830,7 +838,6 @@ rpmsg_crypto_process_aead_final(FAR struct rpmsg_crypto_s *rdev,
                                sizeof(*msg), !async);
   if (ret < 0)
     {
-      rpmsgerr("Rpmsg Crypto AEAD final failed, ret=%d\n", ret);
       return ret;
     }
 
@@ -969,7 +976,6 @@ static int rpmsg_crypto_freesession(uint64_t tid)
   msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
   if (msg == NULL)
     {
-      rpmsgerr("No space for payload\n");
       return -ENOMEM;
     }
 
@@ -978,11 +984,6 @@ static int rpmsg_crypto_freesession(uint64_t tid)
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                RPMSG_CRYPTO_FREESESSION, 0,
                                sizeof(*msg), true);
-  if (ret < 0)
-    {
-      rpmsgerr("Send msg failed\n");
-    }
-
   rpmsg_crypto_put_session(rdev, sid);
   return ret;
 }
@@ -1023,7 +1024,6 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
   if (msg == NULL)
     {
-      rpmsgerr("No space for payload\n");
       return -ENOMEM;
     }
 
@@ -1046,7 +1046,6 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   ret = rpmsg_crypto_get_session(rdev);
   if (ret < 0)
     {
-      rpmsgerr("No available session slot\n");
       rpmsg_release_tx_buffer(&rdev->ept, msg);
       return ret;
     }
@@ -1129,7 +1128,8 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
 
   if (sizeof(*msg) + data_len > space)
     {
-      rpmsgerr("No share memory space for key\n");
+      crypto_diag(DIAG_CRYPTO_CLIENT_GETBUFFER_FAIL,
+                  "Stage:Rsa,Reason:NoShmSpace");
       rpmsg_crypto_put_session(rdev, sid);
       rpmsg_release_tx_buffer(&rdev->ept, msg);
       return -ENOMEM;
@@ -1173,7 +1173,6 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
                                !(krp->krp_flags & CRYPTO_F_CBIMM));
   if (ret < 0)
     {
-      rpmsgerr("Send msg failed\n");
       rpmsg_crypto_put_session(rdev, sid);
       return ret;
     }
@@ -1214,7 +1213,6 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
   msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
   if (msg == NULL)
     {
-      rpmsgerr("No space for payload\n");
       return -ENOMEM;
     }
 
@@ -1224,7 +1222,6 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
   ret = rpmsg_crypto_get_session(rdev);
   if (ret < 0)
     {
-      rpmsgerr("No available session slot\n");
       rpmsg_release_tx_buffer(&rdev->ept, msg);
       return ret;
     }
@@ -1327,7 +1324,6 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
                                !(krp->krp_flags & CRYPTO_F_CBIMM));
   if (ret < 0)
     {
-      rpmsgerr("Send msg failed\n");
       rpmsg_crypto_put_session(rdev, sid);
       return ret;
     }
@@ -1365,7 +1361,6 @@ static int rpmsg_crypto_ecdh_process(FAR struct cryptkop *krp)
   msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
   if (msg == NULL)
     {
-      rpmsgerr("No space for payload\n");
       return -ENOMEM;
     }
 
@@ -1375,7 +1370,6 @@ static int rpmsg_crypto_ecdh_process(FAR struct cryptkop *krp)
   ret = rpmsg_crypto_get_session(rdev);
   if (ret < 0)
     {
-      rpmsgerr("No available session slot\n");
       rpmsg_release_tx_buffer(&rdev->ept, msg);
       return ret;
     }
@@ -1465,7 +1459,6 @@ static int rpmsg_crypto_ecdh_process(FAR struct cryptkop *krp)
                                !(krp->krp_flags & CRYPTO_F_CBIMM));
   if (ret < 0)
     {
-      rpmsgerr("Send msg failed\n");
       rpmsg_crypto_put_session(rdev, sid);
       return ret;
     }
@@ -1527,14 +1520,12 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
   msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
   if (msg == NULL)
     {
-      rpmsgerr("No space for payload\n");
       return -ENOMEM;
     }
 
   ret = rpmsg_crypto_get_session(rdev);
   if (ret < 0)
     {
-      rpmsgerr("No available session slot\n");
       rpmsg_release_tx_buffer(&rdev->ept, msg);
       return ret;
     }
@@ -1589,7 +1580,6 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
                                !(krp->krp_flags & CRYPTO_F_CBIMM));
   if (ret < 0)
     {
-      rpmsgerr("Send msg failed\n");
       rpmsg_crypto_put_session(rdev, sid);
       return ret;
     }

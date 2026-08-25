@@ -1886,6 +1886,37 @@
 #define DIAG_SYSTEM_FS_BASE              (DIAG_SYSTEM_BASE + 1100)    /* 961011100 */
 #define DIAG_FS_MOUNT_FAIL               (DIAG_SYSTEM_FS_BASE + 0)    /* 961011100 */
 
+#define DIAG_SYSTEM_CRYPTO_BASE          (DIAG_SYSTEM_BASE + 1200)    /* 961011200 */
+
+/* Crypto DFX fault codes.  +0..+199 reserved for crypto.  Only layer-unique
+ * faults are instrumented: backend reports algorithm execution failures,
+ * framework reports dispatch failures, client/server report their own
+ * resource exhaustion.  No fault is recorded twice across layers.
+ */
+
+/* Framework dispatch fail: kinvoke (asymmetric) vs invoke (symmetric). */
+#define DIAG_CRYPTO_KINVOKE_FAIL         (DIAG_SYSTEM_CRYPTO_BASE + 10)  /* 961011210 */
+#define DIAG_CRYPTO_INVOKE_FAIL          (DIAG_SYSTEM_CRYPTO_BASE + 11)  /* 961011211 */
+
+/* Algorithm-level fails, backends without own DFX (BASE + 20..89). */
+#define DIAG_CRYPTO_CIPHER_FAIL          (DIAG_SYSTEM_CRYPTO_BASE + 20)  /* 961011220 */
+#define DIAG_CRYPTO_HASH_FAIL            (DIAG_SYSTEM_CRYPTO_BASE + 30)  /* 961011230 */
+#define DIAG_CRYPTO_AEAD_FAIL            (DIAG_SYSTEM_CRYPTO_BASE + 40)  /* 961011240 */
+#define DIAG_CRYPTO_RSA_FAIL             (DIAG_SYSTEM_CRYPTO_BASE + 50)  /* 961011250 */
+#define DIAG_CRYPTO_ECDSA_FAIL           (DIAG_SYSTEM_CRYPTO_BASE + 60)  /* 961011260 */
+#define DIAG_CRYPTO_ECDH_FAIL            (DIAG_SYSTEM_CRYPTO_BASE + 70)  /* 961011270 */
+#define DIAG_CRYPTO_KEY_FAIL             (DIAG_SYSTEM_CRYPTO_BASE + 80)  /* 961011280 */
+
+/* RPMSG crypto client fails (BASE + 90..99). */
+#define DIAG_CRYPTO_CLIENT_GETSESSION_FAIL  (DIAG_SYSTEM_CRYPTO_BASE + 91) /* 961011291 */
+#define DIAG_CRYPTO_CLIENT_GETBUFFER_FAIL   (DIAG_SYSTEM_CRYPTO_BASE + 92) /* 961011292 */
+#define DIAG_CRYPTO_CLIENT_SEND_FAIL        (DIAG_SYSTEM_CRYPTO_BASE + 93) /* 961011293 */
+
+/* RPMSG crypto server fails (BASE + 110..119). */
+#define DIAG_CRYPTO_SERVER_NEWSESSION_FAIL (DIAG_SYSTEM_CRYPTO_BASE + 110) /* 961011310 */
+#define DIAG_CRYPTO_SERVER_GETBUFFER_FAIL  (DIAG_SYSTEM_CRYPTO_BASE + 111) /* 961011311 */
+#define DIAG_CRYPTO_SERVER_GETDATA_FAIL    (DIAG_SYSTEM_CRYPTO_BASE + 112) /* 961011312 */
+
 #define DIAG_SYSTEM_DRIVER_BASE          (DIAG_SYSTEM_BASE + 1400)    /* 961011400 */
 
 /* Diagnostic sub-IDs for I2C driver framework

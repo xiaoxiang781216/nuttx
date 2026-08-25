@@ -554,6 +554,8 @@ int crypto_kinvoke(FAR struct cryptkop *krp)
 
   if (hid == crypto_drivers_num)
     {
+      crypto_diag(DIAG_CRYPTO_KINVOKE_FAIL,
+                  "Stage:Kinvoke,Reason:NoDriver");
       krp->krp_status = -ENODEV;
       nxmutex_unlock(&g_crypto_lock);
       return 0;
@@ -628,11 +630,16 @@ int crypto_invoke(FAR struct cryptop *crp)
         {
           /* Unregister driver and migrate session. */
 
+          crypto_diag(DIAG_CRYPTO_INVOKE_FAIL,
+                      "Stage:Invoke,Reason:DriverRestart");
           crypto_unregister(hid, CRYPTO_ALGORITHM_MAX + 1);
           goto migrate;
         }
       else
         {
+          crypto_diag(DIAG_CRYPTO_INVOKE_FAIL,
+                      "Stage:Invoke,Reason:ProcessFail,ErrorCode:%d",
+                      error);
           crp->crp_etype = error;
         }
     }
