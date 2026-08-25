@@ -42,6 +42,9 @@
 
 #ifdef CONFIG_NET_CAN
 #  include <nuttx/can.h>
+#  ifdef CONFIG_NET_CAN_ISOTP
+#    include <nuttx/can/isotp.h>
+#  endif
 #endif
 
 /****************************************************************************

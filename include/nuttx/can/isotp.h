@@ -32,6 +32,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/socket.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -101,9 +102,68 @@
 #define ISOTP_MAKE_CF(sn)    (ISOTP_PCI_TYPE_CF | ((sn) & ISOTP_CF_SN_MASK))
 #define ISOTP_MAKE_FC(fs)    (ISOTP_PCI_TYPE_FC | ((fs) & ISOTP_FC_FS_MASK))
 
+/* CAN_ISOTP socket option numbers (SOL_CAN_ISOTP level) */
+
+#define CAN_ISOTP_OPTS         (__SO_PROTOCOL + 0) /* ISO-TP options */
+#define CAN_ISOTP_LL_OPTS      (__SO_PROTOCOL + 1) /* Link-layer options */
+#define CAN_ISOTP_RECV_FC      (__SO_PROTOCOL + 2) /* RX flow-control opts */
+
+/* CAN_ISOTP option flags */
+
+#define CAN_ISOTP_WAIT_TX_DONE 0x0400
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
+/* struct can_isotp_options - ISO-TP socket options
+ * flags:          ISO-TP behavior flags.
+ * frame_txtime:   Frame transmission time (not used yet).
+ * ext_address:    Extended address (not used yet).
+ * txpad_content:  TX padding content (not used yet).
+ * rxpad_content:  RX padding content (not used yet).
+ * rx_ext_address: RX extended address (not used yet).
+ */
+
+struct can_isotp_options
+{
+  uint32_t flags;
+  uint32_t frame_txtime;
+  uint8_t  ext_address;
+  uint8_t  txpad_content;
+  uint8_t  rxpad_content;
+  uint8_t  rx_ext_address;
+};
+
+/* struct can_isotp_ll_options - ISO-TP link-layer options
+ * mtu:   CAN_MTU (16) for classic CAN, CANFD_MTU (72) for CAN FD.
+ * tx_dl: Maximum TX data length.  Valid values: 8 for classic CAN,
+ *        8..64 for CAN FD (must be a valid CAN FD DLC length).
+ */
+
+struct can_isotp_ll_options
+{
+  uint8_t mtu;
+  uint8_t tx_dl;
+  uint8_t tx_flags;
+};
+
+/* struct can_isotp_fc_options - ISO-TP flow-control options advertised by a
+ * receiver in the flow-control (FC) frame it sends back to the sender.
+ * bs:     Block size: number of consecutive frames the sender may transmit
+ *         before waiting for the next FC.  0 means send the whole message
+ *         without further flow control (fastest).
+ * stmin:  Minimum separation time the sender must leave between consecutive
+ *         frames, in milliseconds (0..127).  0 means no delay (fastest).
+ * wftmax: Maximum number of FC.WAIT frames (reserved; not used yet).
+ */
+
+struct can_isotp_fc_options
+{
+  uint8_t bs;
+  uint8_t stmin;
+  uint8_t wftmax;
+};
 
 /* ISO-TP length type. Messages up to 4095 bytes fit the classic 12-bit
  * FF_DL field; longer ones need 32 bits and the FF_DL escape, which is only
