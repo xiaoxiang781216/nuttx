@@ -143,7 +143,7 @@ int netdev_gdbstub_init(FAR struct netdev_lowerhalf_s *dev)
 
       /* ISO-TP reassembles multi-frame messages up to 4095 bytes.
        * Netpoll's per-frame maxlen (8 or 64) would truncate gdb packets.
-       * 0 tells gdbstub to use CONFIG_LIB_GDBSTUB_PKTSIZE.
+       * 0 tells gdbstub to use CONFIG_LIBC_GDBSTUB_PKTSIZE.
        */
     }
   else

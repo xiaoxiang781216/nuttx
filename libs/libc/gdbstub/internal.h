@@ -41,7 +41,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_LIB_GDBSTUB_DEBUG
+#ifdef CONFIG_LIBC_GDBSTUB_DEBUG
 #  define GDB_DEBUG(state, ...) \
           lib_sprintf((FAR struct lib_outstream_s *)&(state)->stream, \
                       ##__VA_ARGS__)
@@ -63,7 +63,7 @@
 struct gdb_state_s
 {
   uint8_t running_regs[XCPTCONTEXT_SIZE]; /* Registers of running thread */
-#ifdef CONFIG_LIB_GDBSTUB_DEBUG
+#ifdef CONFIG_LIBC_GDBSTUB_DEBUG
   struct lib_syslograwstream_s stream;
 #endif
   gdb_send_func_t send;                   /* Send buffer to gdb */

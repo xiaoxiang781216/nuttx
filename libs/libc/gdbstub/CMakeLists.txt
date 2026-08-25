@@ -20,7 +20,7 @@
 #
 # ##############################################################################
 
-if(CONFIG_LIB_GDBSTUB)
+if(CONFIG_LIBC_GDBSTUB)
   set(SRCS lib_gdbstub.c pkt.c cmd.c debugpoint.c)
 
   target_sources(c PRIVATE ${SRCS})

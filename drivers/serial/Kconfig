@@ -52,7 +52,7 @@ config SERIAL_CONSOLE
 
 config SERIAL_GDBSTUB
 	bool "GDBSTUB Serial support"
-	depends on LIB_GDBSTUB
+	depends on LIBC_GDBSTUB
 	default n
 
 if SERIAL_GDBSTUB
@@ -80,7 +80,7 @@ config SERIAL_GDBSTUB_WAIT_CONNECT
 
 config SERIAL_GDBSTUB_PKTSIZE
 	int "GDBSTUB Serial packet size"
-	default LIB_GDBSTUB_PKTSIZE
+	default LIBC_GDBSTUB_PKTSIZE
 	---help---
 		Serial gdbstub packet size.
 

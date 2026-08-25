@@ -243,7 +243,7 @@ int gdb_putchar(FAR struct gdb_state_s *state, int ch, FAR char *csum)
 
   if (state->tx_pos >= state->tx_size)
     {
-#ifdef CONFIG_LIB_GDBSTUB_DEBUG
+#ifdef CONFIG_LIBC_GDBSTUB_DEBUG
       GDB_DEBUG(state, "Tx buffer overflow\n");
 #endif
       return -EOVERFLOW;
@@ -345,7 +345,7 @@ int gdb_send_packet(FAR struct gdb_state_s *state)
       return ret;
     }
 
-#ifdef CONFIG_LIB_GDBSTUB_DEBUG
+#ifdef CONFIG_LIBC_GDBSTUB_DEBUG
     {
       size_t p;
       GDB_DEBUG(state, "-> ");
@@ -554,7 +554,7 @@ int gdb_recv_packet(FAR struct gdb_state_s *state)
 
   buf[1] = ret;
 
-#ifdef CONFIG_LIB_GDBSTUB_DEBUG
+#ifdef CONFIG_LIBC_GDBSTUB_DEBUG
     {
       size_t p;
       GDB_DEBUG(state, "<- ");

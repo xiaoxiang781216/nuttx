@@ -829,7 +829,7 @@ endif # NET_IGC
 
 config GDBSTUB_NETDEV
 	bool "GDBSTUB to netdev"
-	depends on LIB_GDBSTUB && NETDEVICES && NET_NETPOLL
+	depends on LIBC_GDBSTUB && NETDEVICES && NET_NETPOLL
 	depends on NET_UDP || NET_CAN
 	default n
 	---help---

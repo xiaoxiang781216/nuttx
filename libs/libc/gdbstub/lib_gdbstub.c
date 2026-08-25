@@ -133,7 +133,7 @@ FAR struct gdb_state_s *gdb_state_init(
     FAR const struct gdb_state_init_s *init)
 {
   size_t pkt_size = init->pkt_size ? init->pkt_size :
-                                      CONFIG_LIB_GDBSTUB_PKTSIZE;
+                                      CONFIG_LIBC_GDBSTUB_PKTSIZE;
   size_t alloc_size = sizeof(struct gdb_state_s) + pkt_size;
   FAR struct gdb_state_s *state;
 
@@ -170,7 +170,7 @@ FAR struct gdb_state_s *gdb_state_init(
       panic_notifier_chain_register(&state->nb);
     }
 
-#ifdef CONFIG_LIB_GDBSTUB_DEBUG
+#ifdef CONFIG_LIBC_GDBSTUB_DEBUG
   lib_syslograwstream_open(&state->stream);
 #endif
 
