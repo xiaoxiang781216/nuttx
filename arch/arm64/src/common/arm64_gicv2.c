@@ -776,6 +776,34 @@ static void arm_gic0_initialize(void)
   unsigned int nlines = arm_gic_nlines();
   unsigned int irq;
 
+  /* Wipe stale GIC state left by a previous boot that died mid-IRQ: the
+   * running priority (APRn) and the distributor active/pending bits
+   * survive a warm reset, and an elevated running priority blocks all
+   * lower-priority interrupts, hanging the next boot.
+   */
+
+  /* Secure APR: Group0 interrupts. */
+
+  putreg32(0, GIC_ICCAPR1);
+  putreg32(0, GIC_ICCAPR2);
+  putreg32(0, GIC_ICCAPR3);
+  putreg32(0, GIC_ICCAPR4);
+
+  /* Non-secure APR: Group1 interrupts. */
+
+  putreg32(0, GIC_ICCNSAPR1);
+  putreg32(0, GIC_ICCNSAPR2);
+  putreg32(0, GIC_ICCNSAPR3);
+  putreg32(0, GIC_ICCNSAPR4);
+
+  /* Distributor clear-active / clear-pending. */
+
+  for (irq = 0; irq < nlines; irq += 32)
+    {
+      putreg32(0xffffffff, GIC_ICDCAR(irq));
+      putreg32(0xffffffff, GIC_ICDICPR(irq));
+    }
+
   /* Initialize SPIs.  The following should be done only by CPU0. */
 
   /* A processor in Secure State sets:
@@ -1094,6 +1122,7 @@ uint64_t *arm64_decodefiq(uint64_t *regs)
 #else
   putreg32(regval, GIC_ICCEOIR);
 #endif
+
   return regs;
 }
 
