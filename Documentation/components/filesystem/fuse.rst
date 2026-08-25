@@ -66,3 +66,29 @@ Configuration
 
 See also ``CONFIG_FS_FUSE_DEV`` for the local ``/dev/fuse`` transport and
 ``CONFIG_FS_VIRTIOFS`` for the virtio-fs transport.
+
+Testing
+=======
+
+The ``qemu-armv7a:fuse`` configuration exercises the core together with the
+``/dev/fuse`` local transport, the virtio-fs transport and the official
+libfuse userspace library (``CONFIG_LIB_FUSE``) on the qemu-armv7a target::
+
+    tools/configure.sh qemu-armv7a:fuse
+    make
+    qemu-system-arm -M virt -kernel nuttx -nographic
+
+At the NSH prompt run the passthrough test from ``apps/testing/fs/fuse``::
+
+    nsh> fuse_test
+    fuse_test: PASSED
+
+The test mounts a libfuse passthrough server over ``/dev/fuse`` backed by a
+tmpfs directory and exercises create/write/read/mkdir/readdir/stat/unlink/
+rmdir before unmounting.
+
+The same configuration also builds the ported upstream libfuse example
+programs (``CONFIG_LIB_FUSE_EXAMPLES``):  ``fuse_hello`` and
+``fuse_hello_ll`` mount a minimal read-only filesystem over ``/dev/fuse``,
+and ``fuse_cuse`` plus ``fuse_cuse_client`` run a ram-backed userspace
+character device over ``/dev/cuse``.
