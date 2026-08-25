@@ -30,7 +30,6 @@
 #include <nuttx/trace.h>
 
 #include <sys/types.h>
-#include <sys/param.h>
 #include <sched.h>
 #include <assert.h>
 #include <debug.h>
@@ -113,22 +112,14 @@
          if (!is_idle_task(tcb) && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD) \
            { \
-             FAR void *_bt[8]; \
-             DIAG_BACKTRACE(tcb, _bt, nitems(_bt)); \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_THREAD_TIMEOUT, \
                                "Type:THREAD,Pid:%d,Name:%s," \
-                               "Elapsed:%ju,Threshold:%ju," \
-                               "Backtrace:%p %p %p %p" \
-                               " %p %p %p %p", \
+                               "Elapsed:%ju,Threshold:%ju", \
                                (tcb)->pid, get_task_name(tcb), \
                                (uintmax_t)elapsed, \
                                (uintmax_t) \
-                               CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD, \
-                               _bt[0], _bt[1], \
-                               _bt[2], _bt[3], \
-                               _bt[4], _bt[5], \
-                               _bt[6], _bt[7]); \
+                               CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD); \
            } \
        } \
      while (0)
