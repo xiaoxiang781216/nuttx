@@ -41,9 +41,9 @@ struct notertt_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static void notertt_add(FAR struct note_driver_s *drv,
-                        FAR const void *note, size_t len,
-                        bool noswitches);
+static int notertt_add(FAR struct note_driver_s *drv,
+                       FAR const void *note, size_t len,
+                       bool noswitches);
 
 /****************************************************************************
  * Private Data
@@ -91,12 +91,13 @@ struct notertt_s g_notertt =
  *
  ****************************************************************************/
 
-static void notertt_add(FAR struct note_driver_s *drv,
-                        FAR const void *buf, size_t notelen,
-                        bool noswitches)
+static int notertt_add(FAR struct note_driver_s *drv,
+                       FAR const void *buf, size_t notelen,
+                       bool noswitches)
 {
   FAR struct notertt_s *note = (FAR struct notertt_s *)drv;
   lib_stream_puts(&note->stream, buf, notelen);
+  return 0;
 }
 
 /****************************************************************************
