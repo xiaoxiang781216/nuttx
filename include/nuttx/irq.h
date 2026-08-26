@@ -309,8 +309,9 @@ int irq_attach_thread_with_stack(int irq, xcpt_t isr, xcpt_t isrthread,
  *   a work queue thread. Work queues are shared per priority: if a work
  *   queue with the same priority already exists, it will be reused.
  *   Otherwise, a new work queue will be created.
- *   If stack_addr is NULL, the static per-CPU stack pool is used.
- *   Otherwise, the caller-provided stack buffer is used.
+ *   If stack_addr is NULL, the stack for a newly created queue is
+ *   allocated from the kernel heap. Otherwise, the caller-provided stack
+ *   buffer is used.
  *
  *   Because queues are shared per priority, a caller-provided stack can
  *   only take effect when a new work queue is created. If a queue with the
@@ -327,8 +328,8 @@ int irq_attach_thread_with_stack(int irq, xcpt_t isr, xcpt_t isrthread,
  *   isrwork    - Called in thread context. If NULL, the ISR is detached.
  *   arg        - Private data
  *   priority   - isrwork priority
- *   stack_addr - Stack buffer provided by the caller, or NULL to use
- *                the static per-CPU stack pool
+ *   stack_addr - Stack buffer provided by the caller, or NULL to allocate
+ *                from the kernel heap
  *   stack_size - Size of the stack buffer in bytes (ignored when
  *                stack_addr is NULL)
  *
@@ -337,8 +338,8 @@ int irq_attach_thread_with_stack(int irq, xcpt_t isr, xcpt_t isrthread,
  *     -EINVAL - stack_addr is non-NULL but stack_size is not positive
  *     -EEXIST - a queue with the same priority already exists and the
  *               caller-provided stack cannot be used
- *     -ENOMEM - no free queue slot, no static stack pool available, or
- *               work queue creation failed
+ *     -ENOMEM - no free queue slot, heap allocation failed, or work queue
+ *               creation failed
  *
  ****************************************************************************/
 

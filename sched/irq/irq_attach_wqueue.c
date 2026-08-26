@@ -28,12 +28,14 @@
 
 #include <debug.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/tls.h>
 #include <nuttx/mutex.h>
+#include <nuttx/kmalloc.h>
 
 #include "irq/irq.h"
 #include "sched/sched.h"
@@ -74,19 +76,6 @@ g_irq_work_vector[NR_IRQS]);
 #endif
 #define g_irq_work_vector this_cpu_var_bmp(g_irq_work_vector)
 
-#if CONFIG_IRQ_WORK_STACKSIZE > 0
-typedef uint8_t irq_work_stack_t[CONFIG_IRQ_WORK_STACKSIZE];
-typedef irq_work_stack_t irq_nwork_stack_t[CONFIG_IRQ_NWORKS];
-
-static aligned_data(STACK_ALIGNMENT)
-  DEFINE_PER_CPU_BSS_BMP(irq_nwork_stack_t, g_irq_work_stack)
-#  ifdef IRQ_WORK_SECTION
-  locate_data(CONFIG_IRQ_WORK_SECTION)
-#  endif
-  ;
-#  define g_irq_work_stack this_cpu_var_bmp(g_irq_work_stack)
-#endif /* CONFIG_IRQ_WORK_STACKSIZE > 0 */
-
 static
 DEFINE_PER_CPU_BMP(mutex_t, g_irq_wqueue_lock) = NXMUTEX_INITIALIZER;
 static DEFINE_PER_CPU_BSS_BMP(irq_nworkq_t, g_irq_wqueue);
@@ -105,8 +94,12 @@ static DEFINE_PER_CPU_BSS_BMP(irq_nworkq_t, g_irq_wqueue);
  *   Get or create a work queue with the specified priority and return it
  *   through 'wqueue'. Work queues are shared per priority: if a work queue
  *   with the same priority already exists, it is reused. Otherwise a new
- *   one is created. When stack_addr is NULL, the static per-CPU stack pool
- *   is used; otherwise the caller-provided stack buffer is used.
+ *   one is created.
+ *
+ *   When stack_addr is non-NULL, the caller-provided stack buffer is used
+ *   for a newly created queue. When stack_addr is NULL, the stack for a
+ *   newly created queue is allocated from the kernel heap
+ *   (CONFIG_IRQ_WORK_STACKSIZE bytes).
  *
  *   Because queues are shared per priority, a caller-provided stack can
  *   only take effect when a new queue is created. If a queue with the same
@@ -116,8 +109,8 @@ static DEFINE_PER_CPU_BSS_BMP(irq_nworkq_t, g_irq_wqueue);
  *
  * Input Parameters:
  *   priority   - Work queue thread priority
- *   stack_addr - Caller-provided stack buffer, or NULL to use the static
- *                per-CPU stack pool
+ *   stack_addr - Caller-provided stack buffer, or NULL to allocate from
+ *                the kernel heap
  *   stack_size - Size of the stack buffer in bytes (ignored when
  *                stack_addr is NULL)
  *   wqueue     - Location to return the work queue on success
@@ -127,8 +120,8 @@ static DEFINE_PER_CPU_BSS_BMP(irq_nworkq_t, g_irq_wqueue);
  *     -EINVAL - stack_addr is non-NULL but stack_size is not positive
  *     -EEXIST - a queue with the same priority already exists and the
  *               caller-provided stack cannot be used
- *     -ENOMEM - no free queue slot, no static stack pool available, or
- *               work queue creation failed
+ *     -ENOMEM - no free queue slot, heap allocation failed, or work queue
+ *               creation failed
  *
  ****************************************************************************/
 
@@ -138,13 +131,11 @@ static int irq_get_wqueue(int priority, FAR void *stack_addr,
 {
   FAR struct kwork_wqueue_s *queue;
   int wqueue_priority;
+  bool alloced = false;
   int ret = OK;
   int i;
 
-  /* A caller-provided stack must have a valid non-zero size. When
-   * stack_addr is NULL, stack_size is don't-care (the static pool size
-   * is used, or the request is rejected when no pool is compiled in).
-   */
+  /* A caller-provided stack must have a valid non-zero size. */
 
   if (stack_addr != NULL && stack_size <= 0)
     {
@@ -186,21 +177,33 @@ static int irq_get_wqueue(int priority, FAR void *stack_addr,
       return -ENOMEM;
     }
 
+  /* Determine the stack for the new work queue. A caller-provided stack
+   * (stack_addr != NULL) takes precedence. Otherwise the stack is
+   * allocated from the kernel heap.
+   */
+
   if (stack_addr == NULL)
     {
-#if CONFIG_IRQ_WORK_STACKSIZE > 0
-      stack_addr = g_irq_work_stack[i];
+      stack_addr = kmm_memalign(STACK_ALIGNMENT, CONFIG_IRQ_WORK_STACKSIZE);
+      if (stack_addr == NULL)
+        {
+          nxmutex_unlock(&g_irq_wqueue_lock);
+          return -ENOMEM;
+        }
+
       stack_size = CONFIG_IRQ_WORK_STACKSIZE;
-#else
-      nxmutex_unlock(&g_irq_wqueue_lock);
-      return -ENOMEM;
-#endif
+      alloced = true;
     }
 
   queue = work_queue_create("isrwork", priority,
                             stack_addr, stack_size, 1u);
   if (queue == NULL)
     {
+      if (alloced)
+        {
+          kmm_free(stack_addr);
+        }
+
       nxmutex_unlock(&g_irq_wqueue_lock);
       return -ENOMEM;
     }
@@ -253,8 +256,9 @@ static int irq_default_handler(int irq, FAR void *context, FAR void *arg)
  *   Configure the IRQ subsystem so that IRQ number 'irq' is dispatched to
  *   a work queue thread. If a work queue with the same priority already
  *   exists, it will be reused. Otherwise, a new work queue will be created.
- *   When stack_addr is NULL, the static per-CPU stack pool is used.
- *   Otherwise, the caller-provided stack buffer is used.
+ *   When stack_addr is NULL, the stack for a newly created queue is
+ *   allocated from the kernel heap. Otherwise, the caller-provided stack
+ *   buffer is used.
  *
  * Input Parameters:
  *   irq        - Irq num
@@ -263,8 +267,8 @@ static int irq_default_handler(int irq, FAR void *context, FAR void *arg)
  *   isrwork    - Called in thread context. If NULL, the ISR is detached.
  *   arg        - Private data
  *   priority   - isrwork priority
- *   stack_addr - Stack buffer provided by the caller, or NULL to use
- *                the static per-CPU stack pool
+ *   stack_addr - Stack buffer provided by the caller, or NULL to allocate
+ *                from the kernel heap
  *   stack_size - Size of the stack buffer in bytes (ignored when
  *                stack_addr is NULL)
  *
