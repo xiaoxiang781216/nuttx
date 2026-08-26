@@ -884,14 +884,20 @@ static void pmuv3_start(FAR struct arm64_pmu_s *cpu_pmu)
 {
   /* Enable LC (64-bit PMCCNTR overflow) and LP (64-bit PMEVCNTRn, PMUv3.5+).
    * LP is RES0 on older PMU versions.
+   *
+   * Composed from scratch rather than read-modify-written: PMCR_EL0 is
+   * only written by this driver, so the read only cost time in the
+   * interrupt path.
    */
 
-  pmuv3_pmcr_write(read_pmcr() | PMU_PMCR_E | PMU_PMCR_LC | PMU_PMCR_LP);
+  pmuv3_pmcr_write(PMU_PMCR_E | PMU_PMCR_LC | PMU_PMCR_LP);
 }
 
 static void pmuv3_stop(FAR struct arm64_pmu_s *cpu_pmu)
 {
-  pmuv3_pmcr_write(read_pmcr() & ~PMU_PMCR_E);
+  /* Same as pmuv3_start(): keep LC/LP, clear E.  */
+
+  pmuv3_pmcr_write(PMU_PMCR_LC | PMU_PMCR_LP);
 }
 
 static int pmuv3_handle_irq(FAR struct arm64_pmu_s *cpu_pmu)
