@@ -84,14 +84,10 @@
 #  define CONFIG_HAVE_ZERO_SIZE_ARRAY 1
 #endif
 
-/* Keyword about _Atomic
- *
- * C++ and clang do not use the C11 _Atomic type specifier here.  The Green
- * Hills (GHS) C compiler does not support the C11 _Atomic keyword either, so
- * it must fall back to the plain type as well.
- */
+/* Keyword about _Atomic */
 
-#if defined(__cplusplus) || defined(__clang__) || defined(__ghs__)
+#if defined(__cplusplus) || defined(__clang__) || \
+    !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L
 #  define __Atomic(t) t
 #else
 #  define __Atomic(t) _Atomic(t)
