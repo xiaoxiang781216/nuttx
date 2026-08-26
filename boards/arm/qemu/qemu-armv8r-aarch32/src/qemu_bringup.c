@@ -123,6 +123,44 @@ static void register_devices_from_fdt(void)
     }
 #endif
 
+  /* The peripherals below are mounted by the same hw/arm/virt.c board file
+   * for both armv8-a and armv8-r, so armv8-r discovers them from the DTB
+   * exactly like armv8-a does (see boards/arm64/qemu/qemu-armv8a).
+   */
+
+#ifdef CONFIG_IOEXPANDER_PL061
+  ret = fdt_pl061_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "fdt_pl061_devices_register failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_CAN_CTUCANFD
+  ret = fdt_ctucanfd_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "fdt_ctucanfd_devices_register failed, ret=%d\n", ret);
+    }
+#endif
+
+#if defined(CONFIG_TIMER) && defined(CONFIG_TIMER_SP804)
+  ret = fdt_sp804_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "fdt_sp804_devices_register failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_WATCHDOG_CMSDK
+  ret = fdt_cmsdk_wdt_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "fdt_cmsdk_wdt_devices_register failed, ret=%d\n",
+             ret);
+    }
+#endif
+
   UNUSED(ret);
 }
 
