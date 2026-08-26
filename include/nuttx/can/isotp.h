@@ -33,6 +33,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/socket.h>
+#include <nuttx/can.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -105,12 +106,47 @@
 /* CAN_ISOTP socket option numbers (SOL_CAN_ISOTP level) */
 
 #define CAN_ISOTP_OPTS         (__SO_PROTOCOL + 0) /* ISO-TP options */
-#define CAN_ISOTP_LL_OPTS      (__SO_PROTOCOL + 1) /* Link-layer options */
-#define CAN_ISOTP_RECV_FC      (__SO_PROTOCOL + 2) /* RX flow-control opts */
+#define CAN_ISOTP_RECV_FC      (__SO_PROTOCOL + 1) /* RX flow-control opts */
+#define CAN_ISOTP_TX_STMIN     (__SO_PROTOCOL + 2) /* force TX stmin (ns) */
+#define CAN_ISOTP_RX_STMIN     (__SO_PROTOCOL + 3) /* force RX stmin (ns) */
+#define CAN_ISOTP_LL_OPTS      (__SO_PROTOCOL + 4) /* Link-layer options */
 
-/* CAN_ISOTP option flags */
+/* CAN_ISOTP behavior flags (set in can_isotp_options.flags) */
 
-#define CAN_ISOTP_WAIT_TX_DONE 0x0400
+#define CAN_ISOTP_LISTEN_MODE   0x0001
+#define CAN_ISOTP_EXTEND_ADDR   0x0002
+#define CAN_ISOTP_TX_PADDING    0x0004
+#define CAN_ISOTP_RX_PADDING    0x0008
+#define CAN_ISOTP_CHK_PAD_LEN   0x0010
+#define CAN_ISOTP_CHK_PAD_DATA  0x0020
+#define CAN_ISOTP_HALF_DUPLEX   0x0040
+#define CAN_ISOTP_FORCE_TXSTMIN 0x0080
+#define CAN_ISOTP_FORCE_RXSTMIN 0x0100
+#define CAN_ISOTP_RX_EXT_ADDR   0x0200
+#define CAN_ISOTP_WAIT_TX_DONE  0x0400
+#define CAN_ISOTP_SF_BROADCAST  0x0800
+#define CAN_ISOTP_CF_BROADCAST  0x1000
+#define CAN_ISOTP_DYN_FC_PARMS  0x2000
+
+/* Protocol machine default values */
+
+#define CAN_ISOTP_DEFAULT_FLAGS        0
+#define CAN_ISOTP_DEFAULT_EXT_ADDRESS  0x00
+#define CAN_ISOTP_DEFAULT_PAD_CONTENT  0xCC
+#define CAN_ISOTP_DEFAULT_FRAME_TXTIME 50000
+#define CAN_ISOTP_DEFAULT_RECV_BS      0
+#define CAN_ISOTP_DEFAULT_RECV_STMIN   0x00
+#define CAN_ISOTP_DEFAULT_RECV_WFTMAX  0
+
+/* Link layer default values (Classical CAN) */
+
+#define CAN_ISOTP_DEFAULT_LL_MTU       CAN_MTU
+#define CAN_ISOTP_DEFAULT_LL_TX_DL     CAN_MAX_DLEN
+#define CAN_ISOTP_DEFAULT_LL_TX_FLAGS  0
+
+/* Set frame_txtime to this value to force N_As = 0 */
+
+#define CAN_ISOTP_FRAME_TXTIME_ZERO    0xFFFFFFFF
 
 /****************************************************************************
  * Public Types
