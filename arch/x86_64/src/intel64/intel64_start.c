@@ -93,8 +93,9 @@ static void x86_64_mb2_config(void)
 
           case MULTIBOOT_TAG_TYPE_ACPI_OLD:
             {
-              struct multiboot_tag_old_acpi *acpi
-                  = (struct multiboot_tag_old_acpi *)tag;
+              struct multiboot_tag_old_acpi *acpi =
+                (struct multiboot_tag_old_acpi *)tag;
+
               g_acpi_rsdp = (uintptr_t)acpi->rsdp;
               break;
             }
@@ -103,6 +104,7 @@ static void x86_64_mb2_config(void)
             {
               struct multiboot_tag_new_acpi *acpi =
                 (struct multiboot_tag_new_acpi *)tag;
+
               g_acpi_rsdp = (uintptr_t)acpi->rsdp;
               break;
             }
