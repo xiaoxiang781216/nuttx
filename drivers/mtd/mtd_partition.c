@@ -480,27 +480,34 @@ static int part_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
       case MTDIOC_PROTECT:
       case MTDIOC_UNPROTECT:
         {
-          /* Bound the range to this partition, then shift it by the
-           * partition offset before passing to the parent.
+          /* Shift the range by the partition offset; a NULL arg means
+           * the whole partition.
            */
 
           FAR struct mtd_protect_s *prot =
             (FAR struct mtd_protect_s *)arg;
+          struct mtd_protect_s tmp;
 
-          if (prot != NULL && prot->nblocks > 0)
+          if (prot == NULL)
             {
-              if (part_blockcheck(priv,
-                    prot->startblock + prot->nblocks - 1))
-                {
-                  prot->startblock += priv->firstblock;
-                  ret = priv->parent->ioctl(priv->parent, cmd, arg);
-                }
-              else
-                {
-                  ferr("ERROR: [Un]protect beyond the end of "
-                       "the partition\n");
-                  ret = -ENXIO;
-                }
+              prot = &tmp;
+              prot->startblock = 0;
+              prot->nblocks    = priv->geo.neraseblocks *
+                                 priv->blkpererase;
+              prot->mode       = MTD_PROT_TEMPORARY;
+            }
+
+          if (part_blockcheck(priv, prot->startblock + prot->nblocks - 1))
+            {
+              prot->startblock += priv->firstblock;
+              ret = priv->parent->ioctl(priv->parent, cmd,
+                                        (unsigned long)prot);
+            }
+          else
+            {
+              ferr("ERROR: [Un]protect beyond the end of "
+                   "the partition\n");
+              ret = -ENXIO;
             }
         }
         break;
