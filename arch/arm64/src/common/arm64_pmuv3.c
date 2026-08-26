@@ -22,6 +22,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <strings.h>
+
 #include <nuttx/perf.h>
 
 #include <arm64_pmuv3.h>
@@ -759,11 +761,6 @@ static inline void pmuv3_pmcr_write(uint32_t val)
   UP_ISB();
 }
 
-static inline int pmuv3_counter_has_overflowed(uint32_t pmovsr, int idx)
-{
-  return pmovsr & BIT(PMU_IDX_TO_COUNTER(idx));
-}
-
 static inline void pmuv3_write_event_type(
                      FAR struct perf_event_s *event)
 {
@@ -900,6 +897,7 @@ static void pmuv3_stop(FAR struct arm64_pmu_s *cpu_pmu)
 static int pmuv3_handle_irq(FAR struct arm64_pmu_s *cpu_pmu)
 {
   uint32_t pmovsr;
+  uint32_t used_ovf;
   FAR struct pmu_hw_events_s *cpuc = &cpu_pmu->hw_events[this_cpu()];
   irqstate_t flags;
   int idx;
@@ -925,18 +923,28 @@ static int pmuv3_handle_irq(FAR struct arm64_pmu_s *cpu_pmu)
 
   flags = spin_lock_irqsave(&cpuc->lock);
 
-  /* Iterate over the overflow counter and update the data */
+  /* Walk only the overflowed counters instead of testing every slot up to
+   * num_events.  PMOVSCLR has the cycle counter in bit 31 and event counter
+   * n in bit n, while the internal index maps them to 0 and n + 1
+   * (PMU_IDX_TO_COUNTER).
+   */
 
-  for (idx = 0; idx < cpu_pmu->num_events; ++idx)
+  used_ovf = (pmovsr & ((1u << (cpu_pmu->num_events - 1)) - 1)) <<
+             PMU_IDX_COUNTER0;
+  if (pmovsr & BIT(PMU_IDX_TO_COUNTER(PMU_IDX_CYCLE_COUNTER)))
     {
-      struct perf_event_s *event = cpuc->events[idx];
+      used_ovf |= 1u << PMU_IDX_CYCLE_COUNTER;
+    }
 
+  while (used_ovf != 0)
+    {
+      struct perf_event_s *event;
+
+      idx = ffs(used_ovf) - 1;
+      used_ovf &= ~(1u << idx);
+
+      event = cpuc->events[idx];
       if (!event)
-        {
-          continue;
-        }
-
-      if (!pmuv3_counter_has_overflowed(pmovsr, idx))
         {
           continue;
         }
