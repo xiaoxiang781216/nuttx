@@ -59,8 +59,6 @@ struct irq_work_info_s
   FAR struct kwork_wqueue_s *wqueue;   /* Work queue. */
 };
 
-typedef uint8_t irq_work_stack_t[CONFIG_IRQ_WORK_STACKSIZE];
-typedef irq_work_stack_t irq_nwork_stack_t[CONFIG_IRQ_NWORKS];
 typedef FAR struct kwork_wqueue_s *irq_nworkq_t[CONFIG_IRQ_NWORKS];
 
 /****************************************************************************
@@ -76,33 +74,85 @@ g_irq_work_vector[NR_IRQS]);
 #endif
 #define g_irq_work_vector this_cpu_var_bmp(g_irq_work_vector)
 
+#if CONFIG_IRQ_WORK_STACKSIZE > 0
+typedef uint8_t irq_work_stack_t[CONFIG_IRQ_WORK_STACKSIZE];
+typedef irq_work_stack_t irq_nwork_stack_t[CONFIG_IRQ_NWORKS];
+
+static aligned_data(STACK_ALIGNMENT)
+  DEFINE_PER_CPU_BSS_BMP(irq_nwork_stack_t, g_irq_work_stack)
+#  ifdef IRQ_WORK_SECTION
+  locate_data(CONFIG_IRQ_WORK_SECTION)
+#  endif
+  ;
+#  define g_irq_work_stack this_cpu_var_bmp(g_irq_work_stack)
+#endif /* CONFIG_IRQ_WORK_STACKSIZE > 0 */
+
+static
+DEFINE_PER_CPU_BMP(mutex_t, g_irq_wqueue_lock) = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BSS_BMP(irq_nworkq_t, g_irq_wqueue);
+
+#define g_irq_wqueue_lock this_cpu_var_bmp(g_irq_wqueue_lock)
+#define g_irq_wqueue this_cpu_var_bmp(g_irq_wqueue)
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static
-inline_function FAR struct kwork_wqueue_s *irq_get_wqueue(int priority)
+/****************************************************************************
+ * Name: irq_get_wqueue
+ *
+ * Description:
+ *   Get or create a work queue with the specified priority and return it
+ *   through 'wqueue'. Work queues are shared per priority: if a work queue
+ *   with the same priority already exists, it is reused. Otherwise a new
+ *   one is created. When stack_addr is NULL, the static per-CPU stack pool
+ *   is used; otherwise the caller-provided stack buffer is used.
+ *
+ *   Because queues are shared per priority, a caller-provided stack can
+ *   only take effect when a new queue is created. If a queue with the same
+ *   priority already exists, the caller-provided stack cannot be honored;
+ *   in that case -EEXIST is returned and the caller retains ownership of
+ *   the stack buffer (it is not referenced by the work queue).
+ *
+ * Input Parameters:
+ *   priority   - Work queue thread priority
+ *   stack_addr - Caller-provided stack buffer, or NULL to use the static
+ *                per-CPU stack pool
+ *   stack_size - Size of the stack buffer in bytes (ignored when
+ *                stack_addr is NULL)
+ *   wqueue     - Location to return the work queue on success
+ *
+ * Returned Value:
+ *   Zero (OK) on success. On failure a negated errno value:
+ *     -EINVAL - stack_addr is non-NULL but stack_size is not positive
+ *     -EEXIST - a queue with the same priority already exists and the
+ *               caller-provided stack cannot be used
+ *     -ENOMEM - no free queue slot, no static stack pool available, or
+ *               work queue creation failed
+ *
+ ****************************************************************************/
+
+static int irq_get_wqueue(int priority, FAR void *stack_addr,
+                          int stack_size,
+                          FAR struct kwork_wqueue_s **wqueue)
 {
-  static aligned_data(STACK_ALIGNMENT)
-  DEFINE_PER_CPU_BSS_BMP(irq_nwork_stack_t, g_irq_work_stack)
-#ifdef IRQ_WORK_SECTION
-  locate_data(CONFIG_IRQ_WORK_SECTION)
-#endif
-  ;
-
-  static
-  DEFINE_PER_CPU_BMP(mutex_t, g_irq_wqueue_lock) = NXMUTEX_INITIALIZER;
-  static DEFINE_PER_CPU_BSS_BMP(irq_nworkq_t, g_irq_wqueue);
-
-#define g_irq_work_stack this_cpu_var_bmp(g_irq_work_stack)
-#define g_irq_wqueue_lock this_cpu_var_bmp(g_irq_wqueue_lock)
-#define g_irq_wqueue this_cpu_var_bmp(g_irq_wqueue)
-
-  FAR struct kwork_wqueue_s *queue = NULL;
+  FAR struct kwork_wqueue_s *queue;
   int wqueue_priority;
+  int ret = OK;
   int i;
 
+  /* A caller-provided stack must have a valid non-zero size. When
+   * stack_addr is NULL, stack_size is don't-care (the static pool size
+   * is used, or the request is rejected when no pool is compiled in).
+   */
+
+  if (stack_addr != NULL && stack_size <= 0)
+    {
+      return -EINVAL;
+    }
+
   nxmutex_lock(&g_irq_wqueue_lock);
+
   for (i = 0; i < CONFIG_IRQ_NWORKS && g_irq_wqueue[i] != NULL; i++)
     {
       wqueue_priority = work_queue_priority_wq(g_irq_wqueue[i]);
@@ -111,22 +161,55 @@ inline_function FAR struct kwork_wqueue_s *irq_get_wqueue(int priority)
 
       if (wqueue_priority == priority)
         {
+          /* A queue with this priority already exists. It can be reused
+           * only when the caller does not require its own stack, since
+           * the queue's stack was fixed at creation time.
+           */
+
+          if (stack_addr != NULL)
+            {
+              ret = -EEXIST;
+            }
+          else
+            {
+              *wqueue = g_irq_wqueue[i];
+            }
+
           nxmutex_unlock(&g_irq_wqueue_lock);
-          queue = g_irq_wqueue[i];
-          break;
+          return ret;
         }
     }
 
-  if (i < CONFIG_IRQ_NWORKS && queue == NULL)
+  if (i >= CONFIG_IRQ_NWORKS)
     {
-      queue = work_queue_create("isrwork", priority, g_irq_work_stack[i],
-                                CONFIG_IRQ_WORK_STACKSIZE, 1u);
-
-      g_irq_wqueue[i] = queue;
       nxmutex_unlock(&g_irq_wqueue_lock);
+      return -ENOMEM;
     }
 
-  return queue;
+  if (stack_addr == NULL)
+    {
+#if CONFIG_IRQ_WORK_STACKSIZE > 0
+      stack_addr = g_irq_work_stack[i];
+      stack_size = CONFIG_IRQ_WORK_STACKSIZE;
+#else
+      nxmutex_unlock(&g_irq_wqueue_lock);
+      return -ENOMEM;
+#endif
+    }
+
+  queue = work_queue_create("isrwork", priority,
+                            stack_addr, stack_size, 1u);
+  if (queue == NULL)
+    {
+      nxmutex_unlock(&g_irq_wqueue_lock);
+      return -ENOMEM;
+    }
+
+  g_irq_wqueue[i] = queue;
+  *wqueue = queue;
+
+  nxmutex_unlock(&g_irq_wqueue_lock);
+  return OK;
 }
 
 /* Default interrupt handler for worked interrupts.
@@ -164,29 +247,35 @@ static int irq_default_handler(int irq, FAR void *context, FAR void *arg)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: irq_attach_wqueue
+ * Name: irq_attach_wqueue_with_stack
  *
  * Description:
  *   Configure the IRQ subsystem so that IRQ number 'irq' is dispatched to
- *   'wqueue'
+ *   a work queue thread. If a work queue with the same priority already
+ *   exists, it will be reused. Otherwise, a new work queue will be created.
+ *   When stack_addr is NULL, the static per-CPU stack pool is used.
+ *   Otherwise, the caller-provided stack buffer is used.
  *
  * Input Parameters:
- *   irq - Irq num
- *   isr - Function to be called when the IRQ occurs, called in interrupt
- *   context.
- *   If isr is NULL, isrthread will be called.
- *   isrwork - called in thread context, If the isrwork is NULL,
- *   then the ISR is being detached.
- *   arg - privdate data
- *   priority - isrwork pri
+ *   irq        - Irq num
+ *   isr        - Function to be called when the IRQ occurs (interrupt ctx).
+ *                If NULL the default handler is installed.
+ *   isrwork    - Called in thread context. If NULL, the ISR is detached.
+ *   arg        - Private data
+ *   priority   - isrwork priority
+ *   stack_addr - Stack buffer provided by the caller, or NULL to use
+ *                the static per-CPU stack pool
+ *   stack_size - Size of the stack buffer in bytes (ignored when
+ *                stack_addr is NULL)
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
-                      FAR void *arg, int priority)
+int irq_attach_wqueue_with_stack(int irq, xcpt_t isr, xcpt_t isrwork,
+                                 FAR void *arg, int priority,
+                                 FAR void *stack_addr, int stack_size)
 {
   FAR struct irq_work_info_s *info;
   int ret = OK;
@@ -198,8 +287,6 @@ int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
     }
   else
     {
-      /* If the isrwork is NULL, then the ISR is being detached. */
-
       info = &g_irq_work_vector[ndx];
 
       if (isrwork == NULL)
@@ -218,10 +305,14 @@ int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
           info->irq     = irq;
           if (info->wqueue == NULL)
             {
-              info->wqueue = irq_get_wqueue(priority);
+              ret = irq_get_wqueue(priority, stack_addr, stack_size,
+                                   &info->wqueue);
             }
 
-          irq_attach(irq, irq_default_handler, info);
+          if (ret >= 0)
+            {
+              irq_attach(irq, irq_default_handler, info);
+            }
         }
     }
 #endif /* NR_IRQS */

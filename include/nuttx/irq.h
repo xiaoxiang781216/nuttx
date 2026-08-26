@@ -270,55 +270,84 @@ static inline_function void irq_restore(irqstate_t flags)
 int irq_attach(int irq, xcpt_t isr, FAR void *arg);
 
 /****************************************************************************
- * Name: irq_attach_thread
+ * Name: irq_attach_thread_with_stack
  *
  * Description:
  *   Configure the IRQ subsystem so that IRQ number 'irq' is dispatched to
- *   'isrthread'
+ *   'isrthread'. If stack_addr is NULL, a kernel thread will be created
+ *   using system heap with the specified stack_size. Otherwise, the
+ *   caller-provided stack buffer is used.
  *
  * Input Parameters:
- *   irq - Irq num
- *   isr - Function to be called when the IRQ occurs, called in interrupt
- *   context.
- *   If isr is NULL the default handler is installed(irq_default_handler).
- *   isrthread - called in thread context, If the isrthread is NULL,
- *   then the ISR is being detached.
- *   arg - privdate data
+ *   irq        - Irq num
+ *   isr        - Function to be called when the IRQ occurs (interrupt ctx).
+ *                If NULL the default handler is installed.
+ *   isrthread  - Called in thread context. If NULL, the ISR is detached.
+ *   arg        - Private data
  *   priority   - Priority of the new task
- *   stack_size - size (in bytes) of the stack needed
+ *   stack_addr - Stack buffer provided by the caller, or NULL to use heap
+ *   stack_size - Size of the stack buffer in bytes
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
-                      int priority, int stack_size);
+int irq_attach_thread_with_stack(int irq, xcpt_t isr, xcpt_t isrthread,
+                                 FAR void *arg, int priority,
+                                 FAR void *stack_addr, int stack_size);
+
+#define irq_attach_thread(irq, isr, isrthread, arg, priority, stack_size) \
+    irq_attach_thread_with_stack(irq, isr, isrthread, arg, priority, \
+                                 NULL, stack_size)
 
 /****************************************************************************
- * Name: irq_attach_wqueue
+ * Name: irq_attach_wqueue_with_stack
  *
  * Description:
  *   Configure the IRQ subsystem so that IRQ number 'irq' is dispatched to
- *   'wqueue'
+ *   a work queue thread. Work queues are shared per priority: if a work
+ *   queue with the same priority already exists, it will be reused.
+ *   Otherwise, a new work queue will be created.
+ *   If stack_addr is NULL, the static per-CPU stack pool is used.
+ *   Otherwise, the caller-provided stack buffer is used.
+ *
+ *   Because queues are shared per priority, a caller-provided stack can
+ *   only take effect when a new work queue is created. If a queue with the
+ *   same priority already exists, the caller-provided stack cannot be
+ *   honored and -EEXIST is returned. On any failure the caller retains
+ *   ownership of stack_addr and is responsible for releasing it; on
+ *   success the buffer is owned by the work queue and must not be released
+ *   or reused by the caller.
  *
  * Input Parameters:
- *   irq - Irq num
- *   isr - Function to be called when the IRQ occurs, called in interrupt
- *   context.
- *   If isr is NULL the default handler is installed(irq_default_handler).
- *   isrwork - called in thread context, If the isrwork is NULL,
- *   then the ISR is being detached.
- *   arg - privdate data
- *   priority - isrwork pri
+ *   irq        - Irq num
+ *   isr        - Function to be called when the IRQ occurs (interrupt ctx).
+ *                If NULL the default handler is installed.
+ *   isrwork    - Called in thread context. If NULL, the ISR is detached.
+ *   arg        - Private data
+ *   priority   - isrwork priority
+ *   stack_addr - Stack buffer provided by the caller, or NULL to use
+ *                the static per-CPU stack pool
+ *   stack_size - Size of the stack buffer in bytes (ignored when
+ *                stack_addr is NULL)
  *
  * Returned Value:
- *   Zero on success; a negated errno value on failure.
+ *   Zero on success. On failure a negated errno value:
+ *     -EINVAL - stack_addr is non-NULL but stack_size is not positive
+ *     -EEXIST - a queue with the same priority already exists and the
+ *               caller-provided stack cannot be used
+ *     -ENOMEM - no free queue slot, no static stack pool available, or
+ *               work queue creation failed
  *
  ****************************************************************************/
 
-int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
-                      FAR void *arg, int priority);
+int irq_attach_wqueue_with_stack(int irq, xcpt_t isr, xcpt_t isrwork,
+                                 FAR void *arg, int priority,
+                                 FAR void *stack_addr, int stack_size);
+
+#define irq_attach_wqueue(irq, isr, isrwork, arg, priority) \
+    irq_attach_wqueue_with_stack(irq, isr, isrwork, arg, priority, NULL, 0)
 
 /****************************************************************************
  * Name: irq_sched_wqueue

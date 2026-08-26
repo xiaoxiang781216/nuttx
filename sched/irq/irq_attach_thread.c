@@ -57,6 +57,15 @@ struct irq_thread_info_s
 typedef pid_t irq_thread_pid_t[NR_IRQS];
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+#if NR_IRQS > 0
+static DEFINE_PER_CPU_BSS_BMP(irq_thread_pid_t, g_irq_thread_pid);
+#  define g_irq_thread_pid this_cpu_var_bmp(g_irq_thread_pid)
+#endif
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -123,36 +132,35 @@ static int isr_thread_main(int argc, FAR char *argv[])
  ****************************************************************************/
 
 /****************************************************************************
- * Name: irq_attach_thread
+ * Name: irq_attach_thread_with_stack
  *
  * Description:
  *   Configure the IRQ subsystem so that IRQ number 'irq' is dispatched to
  *   'isrthread' and up_enable_irq will be invoked after isrthread started.
+ *   If stack_addr is NULL, the thread is created with system heap using
+ *   stack_size. Otherwise, the caller-provided stack buffer is used.
  *
  * Input Parameters:
- *   irq - Irq num
- *   isr - Function to be called when the IRQ occurs, called in interrupt
- *   context.
- *   If isr is NULL, isrthread will be called.
- *   isrthread - called in thread context, If the isrthread is NULL,
- *   then the ISR is being detached.
- *   arg - privdate data
+ *   irq        - Irq num
+ *   isr        - Function to be called when the IRQ occurs (interrupt ctx).
+ *                If NULL the default handler is installed.
+ *   isrthread  - Called in thread context. If NULL, the ISR is detached.
+ *   arg        - Private data
  *   priority   - Priority of the new task
- *   stack_size - size (in bytes) of the stack needed
+ *   stack_addr - Stack buffer provided by the caller, or NULL to use heap
+ *   stack_size - Size of the stack buffer in bytes
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
-                      int priority, int stack_size)
+int irq_attach_thread_with_stack(int irq, xcpt_t isr, xcpt_t isrthread,
+                                 FAR void *arg, int priority,
+                                 FAR void *stack_addr, int stack_size)
 {
   int ret = OK;
 #if NR_IRQS > 0
-  static DEFINE_PER_CPU_BSS_BMP(irq_thread_pid_t, g_irq_thread_pid);
-#  define g_irq_thread_pid this_cpu_var_bmp(g_irq_thread_pid)
-
   FAR char *argv[5];
   char arg1[32];  /* irq */
   char arg2[32];  /* isr */
@@ -164,7 +172,7 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
     {
       ret = ndx;
     }
-  else if(isrthread == NULL)
+  else if (isrthread == NULL)
     {
       /* If the isrthread is NULL, then the ISR is being detached. */
 
@@ -173,8 +181,14 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
       kthread_delete(g_irq_thread_pid[ndx]);
       g_irq_thread_pid[ndx] = 0;
     }
-  else if(g_irq_thread_pid[ndx] != 0)
+  else if (g_irq_thread_pid[ndx] != 0)
     {
+      ret = -EINVAL;
+    }
+  else if (stack_addr != NULL && stack_size <= 0)
+    {
+      /* A caller-provided stack must have a valid non-zero size. */
+
       ret = -EINVAL;
     }
   else
@@ -189,14 +203,26 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
       argv[3] = arg4;
       argv[4] = NULL;
 
-      pid = kthread_create("isr_thread", priority, stack_size,
-                            isr_thread_main, argv);
+      if (stack_addr != NULL)
+        {
+          pid = kthread_create_with_stack("isr_thread", priority,
+                                          stack_addr, stack_size,
+                                          isr_thread_main, argv);
+        }
+      else
+        {
+          pid = kthread_create("isr_thread", priority, stack_size,
+                                isr_thread_main, argv);
+        }
+
       if (pid < 0)
         {
           ret = pid;
         }
-
-      g_irq_thread_pid[ndx] = pid;
+      else
+        {
+          g_irq_thread_pid[ndx] = pid;
+        }
     }
 #endif /* NR_IRQS */
 
