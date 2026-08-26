@@ -92,11 +92,11 @@ static int host_flags_to_mode(int flags)
     O_WRONLY | O_CREAT | O_APPEND,
     O_RDWR | O_CREAT | O_APPEND | O_TEXT,
     O_RDWR | O_CREAT | O_APPEND,
-    0,
+    -1,
   };
 
   int i;
-  for (i = 0; modeflags[i] != 0; i++)
+  for (i = 0; modeflags[i] != -1; i++)
     {
       if ((modemasks & flags) == modeflags[i])
         {
