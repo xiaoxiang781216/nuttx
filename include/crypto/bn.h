@@ -71,7 +71,7 @@
 
 /* Size of big-numbers in bytes */
 
-#define BN_ARRAY_SIZE         (512 / WORD_SIZE)
+#define BN_ARRAY_SIZE         (520 / WORD_SIZE)
 
 /* Data type of array in structure */
 

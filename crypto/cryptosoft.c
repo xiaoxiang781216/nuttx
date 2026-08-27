@@ -2532,12 +2532,12 @@ static int swcr_rsa_pss_sign(FAR struct cryptkop *krp)
   sha256update(&sha_ctx, m_prime, sizeof(m_prime));
   sha256final(hash_output, &sha_ctx);
 
-  /* DB = PS || 0x01 || salt (in BE, but we build in LE position) */
+  /* DB = salt || 0x01 || PS (built in LE position) */
 
   data_block = encoded_msg + 1 + hash_len;
   memset(data_block, 0, data_block_len);
-  data_block[data_block_len - salt_len - 1] = 0x01;
-  memcpy(data_block + data_block_len - salt_len, salt, salt_len);
+  memcpy(data_block, salt, salt_len);
+  data_block[salt_len] = 0x01;
 
   /* mask = MGF1(H, dbLen) and maskedDB = DB XOR mask */
 
@@ -2700,7 +2700,7 @@ static int swcr_rsa_pss_verify(struct cryptkop *krp)
       return -EINVAL;
     }
 
-  encoded_msg_len = (n->crp_nbits + 7) / 8;
+  encoded_msg_len = bnn.length;
   if (encoded_msg_len < hash_len + salt_len + 2)
     {
       return -EINVAL;
@@ -2736,9 +2736,9 @@ static int swcr_rsa_pss_verify(struct cryptkop *krp)
       data_block[data_block_len - 1] &= 0x7f;
     }
 
-  /* Check DB padding: PS || 0x01 || salt */
+  /* Check DB padding: salt || 0x01 || PS */
 
-  for (i = 0; i < data_block_len - salt_len - 1; i++)
+  for (i = salt_len + 1; i < data_block_len; i++)
     {
       if (data_block[i] != 0)
         {
@@ -2746,12 +2746,12 @@ static int swcr_rsa_pss_verify(struct cryptkop *krp)
         }
     }
 
-  if (data_block[data_block_len - salt_len - 1] != 0x01)
+  if (data_block[salt_len] != 0x01)
     {
       return -EINVAL;
     }
 
-  memcpy(salt, data_block + data_block_len - salt_len, salt_len);
+  memcpy(salt, data_block, salt_len);
 
   /* Calculate H' = Hash(M') */
 
