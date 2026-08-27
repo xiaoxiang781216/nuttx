@@ -64,9 +64,9 @@
        { \
          clock_t start; \
          clock_t elapsed; \
-         start = perf_gettime(); \
+         start = perf_gettime_raw(); \
          worker(arg); \
-         elapsed = perf_gettime() - start; \
+         elapsed = perf_gettime_raw() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
            { \
              FAR struct tcb_s *wtcb = this_task(); \

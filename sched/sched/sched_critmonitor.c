@@ -236,7 +236,7 @@ static void nxsched_critmon_cpuload(FAR struct tcb_s *tcb, clock_t current,
 void nxsched_critmon_preemption(FAR struct tcb_s *tcb, bool state,
                                 FAR void *caller)
 {
-  clock_t current = perf_gettime();
+  clock_t current = perf_gettime_raw();
   irqstate_t flags;
 
   flags = spin_lock_irqsave_notrace(&g_crimonitor_lock);
@@ -309,9 +309,9 @@ void nxsched_critmon_irqdisable(bool state, bool force, FAR void *caller)
       return;
     }
 
-  /* Call perf_gettime only tcb->irqdis_count == 0, prevent recursion. */
+  /* Call perf_gettime_raw only tcb->irqdis_count == 0, prevent recursion. */
 
-  current = perf_gettime();
+  current = perf_gettime_raw();
 
   /* Are we disabling or enabling interrupts? */
 
@@ -362,7 +362,7 @@ void nxsched_critmon_irqdisable(bool state, bool force, FAR void *caller)
 void nxsched_critmon_busywait(bool state, FAR void *caller)
 {
   FAR struct tcb_s *tcb = this_task();
-  clock_t current       = perf_gettime();
+  clock_t current       = perf_gettime_raw();
 
   /* Are we busy waiting for a spinlock? */
 
@@ -420,7 +420,7 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
   static clock_t threshold = CLOCK_MAX;
 #endif
 
-  clock_t current = perf_gettime();
+  clock_t current = perf_gettime_raw();
   clock_t elapsed = current - tcb->run_start;
 
 #ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
@@ -515,7 +515,7 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
 
 void nxsched_resume_critmon(FAR struct tcb_s *tcb)
 {
-  clock_t current = perf_gettime();
+  clock_t current = perf_gettime_raw();
 
   UNUSED(current);
 
@@ -551,7 +551,7 @@ void nxsched_resume_critmon(FAR struct tcb_s *tcb)
 void nxsched_update_critmon(FAR struct tcb_s *tcb)
 {
   irqstate_t flags = enter_critical_section();
-  clock_t current = perf_gettime();
+  clock_t current = perf_gettime_raw();
   clock_t elapsed = current - tcb->run_start;
 
   if (tcb->task_state == TSTATE_TASK_RUNNING)

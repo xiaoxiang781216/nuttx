@@ -104,9 +104,9 @@
                { \
                  clock_t start; \
                  clock_t elapsed; \
-                 start = perf_gettime(); \
+                 start = perf_gettime_raw(); \
                  vector(irq, context, arg); \
-                 elapsed = perf_gettime() - start; \
+                 elapsed = perf_gettime_raw() - start; \
                  if (elapsed > g_irqvector[ndx].time) \
                    { \
                      g_irqvector[ndx].time = elapsed; \
@@ -377,7 +377,7 @@ int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
 
   /* Calculate elapsed perf ticks since last reset */
 
-  elapsed = perf_gettime() - g_irqvector[ndx].start;
+  elapsed = perf_gettime_raw() - g_irqvector[ndx].start;
   elapsed = elapsed ? elapsed : 1;
 
   /* freq = count * perf_getfreq() / elapsed
@@ -402,7 +402,7 @@ int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
 
   if (reset)
     {
-      g_irqvector[ndx].start = perf_gettime();
+      g_irqvector[ndx].start = perf_gettime_raw();
       g_irqvector[ndx].time  = 0;
       atomic_set(&g_irqvector[ndx].count, 0);
 #ifdef CONFIG_ARCH_IRQPRIO
