@@ -257,12 +257,15 @@ typedef int64_t sclock_t;
 typedef int32_t sclock_t;
 #endif
 
+#ifdef CONFIG_PERF_CORRECTION
 struct perf_s
 {
   seqcount_t lock;
   unsigned long last;
   unsigned long overflow;
+  clock_t offset;
 };
+#endif
 
 /****************************************************************************
  * Public Data
@@ -277,7 +280,8 @@ extern "C"
 #endif
 
 #if defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__) && \
-    defined(CONFIG_PERF_OVERFLOW_CORRECTION)
+    defined(CONFIG_PERF_CORRECTION) && \
+    defined(CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS)
 #  define g_perf (*(USERSPACE->us_data->us_perf))
 #else
 DECLARE_PER_CPU_BMP(struct perf_s, g_perf);

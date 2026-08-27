@@ -51,6 +51,7 @@
 
 #ifdef CONFIG_BMP
 #  undef g_mmheap
+#  undef g_perf
 #endif
 
 /****************************************************************************
@@ -60,7 +61,7 @@
 static struct userspace_data_s g_userspace_data =
 {
   .us_heap = &g_mmheap,
-#if defined(CONFIG_PERF_OVERFLOW_CORRECTION) && \
+#if defined(CONFIG_PERF_CORRECTION) && \
     defined(CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS)
   .us_perf = &g_perf,
 #endif

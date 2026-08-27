@@ -121,7 +121,7 @@ struct perf_s;    /* Forward reference */
 struct userspace_data_s
 {
   FAR struct mm_heap_s **us_heap;
-#if defined(CONFIG_PERF_OVERFLOW_CORRECTION) && \
+#if defined(CONFIG_PERF_CORRECTION) && \
     defined(CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS)
   FAR struct perf_s    *us_perf;
 #endif

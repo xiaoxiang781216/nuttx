@@ -284,16 +284,35 @@ config PREALLOC_TIMERS
 		pool of preallocated timer structures to minimize dynamic allocations.  Set to
 		zero for all dynamic allocations.
 
+config PERF_CORRECTION
+	bool
+	---help---
+		Internal option automatically selected when either
+		PERF_OVERFLOW_CORRECTION or PERF_OFFSET_CORRECTION is enabled.
+		Guards g_perf definition and userspace perf data access.
+
 config PERF_OVERFLOW_CORRECTION
 	bool "Compensate perf count overflow"
 	depends on !ARCH_64BIT && SYSTEM_TIME64 && ARCH_PERF_EVENTS
 	depends on BUILD_FLAT || ARCH_HAVE_PERF_EVENTS_USER_ACCESS
+	select PERF_CORRECTION
 	default y
 	---help---
 		If this option is enabled, then the perf event will be enabled
 		by default.
 		When enabled, it will always return an increasing count value to
 		avoid overflow on 32-bit platforms.
+
+config PERF_OFFSET_CORRECTION
+	bool "Offset perf_gettime to CLOCK_REALTIME"
+	select PERF_CORRECTION
+	default n
+	---help---
+		When enabled, perf_gettime() returns up_perf_gettime() +
+		g_perf.realtime_offset so that the value is aligned to
+		CLOCK_REALTIME instead of the raw boot counter.  The offset
+		is maintained by the clock framework and updated on
+		clock_settime(CLOCK_REALTIME).
 
 endmenu # Clocks and Timers
 

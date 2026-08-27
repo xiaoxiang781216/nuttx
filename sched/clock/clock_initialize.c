@@ -259,7 +259,7 @@ void clock_initialize(void)
 
   /* perf settup here */
 
-#ifdef CONFIG_PERF_OVERFLOW_CORRECTION
+#ifdef CONFIG_PERF_CORRECTION
   perf_setup();
 #endif
 }

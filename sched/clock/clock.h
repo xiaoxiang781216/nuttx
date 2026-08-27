@@ -111,6 +111,8 @@ static inline_function clock_t clock_timer(void)
 void cpuload_init(void);
 #endif
 
+#ifdef CONFIG_PERF_CORRECTION
 void perf_setup(void);
+#endif
 
 #endif /* __SCHED_CLOCK_CLOCK_H */
