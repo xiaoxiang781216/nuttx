@@ -36,13 +36,6 @@ config DRIVERS_NOTE_CPUID
 		in the note data, this option can be used to set a
 		specific value as the CPU ID.
 
-config DRIVERS_NOTE_CLOCKID
-	int "Select ClockId to display timestamp in notecomm"
-	default -1
-	---help---
-		If -1 means disable timestamp add note comm.
-		CLOCK_REALTIME, CLOCK_MONOTONIC etc. clockID
-
 config DRIVERS_NOTE_RATELIMIT_INTERVAL
 	int "NOTE rate limiting interval"
 	default 0
