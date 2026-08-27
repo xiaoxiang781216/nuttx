@@ -3148,27 +3148,8 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
         }
         break;
 
-      case MTDIOC_PROTECT:
-      case MTDIOC_UNPROTECT:
-        {
-          FAR struct mtd_protect_s *prot = (FAR struct mtd_protect_s *)arg;
-
-          if (prot)
-            {
-              prot->startblock = 0;
-              prot->nblocks    = fs->blocksize * fs->nblocks /
-                                 fs->progsize;
-              rc = MTD_IOCTL(fs->mtd, cmd, arg);
-            }
-          else
-            {
-              rc = -EINVAL;
-            }
-        }
-        break;
-
       default:
-        rc = -ENOTTY;
+        rc = MTD_IOCTL(fs->mtd, cmd, arg);
         break;
     }
 
