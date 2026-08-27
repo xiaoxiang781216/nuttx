@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -2189,6 +2190,11 @@ int netdev_ifup(FAR struct net_driver_s *dev)
 
               dev->d_flags |= IFF_UP;
 
+              net_trace_diag(LOG_INFO, DIAG_NET_DEV_ON,
+                             "InterfaceInfo:%s/%u,Flags:0x%04" PRIx32,
+                             dev->d_ifname, dev->d_lltype,
+                             dev->d_flags);
+
               if (IFF_IS_MULTICAST(dev->d_flags))
                 {
 #ifdef CONFIG_NET_IGMP
@@ -2264,6 +2270,11 @@ int netdev_ifdown(FAR struct net_driver_s *dev)
               /* Mark the interface as down */
 
               dev->d_flags &= ~(IFF_UP | IFF_RUNNING);
+
+              net_trace_diag(LOG_INFO, DIAG_NET_DEV_OFF,
+                             "InterfaceInfo:%s/%u,Flags:0x%04" PRIx32,
+                             dev->d_ifname, dev->d_lltype,
+                             dev->d_flags);
 
               /* Update the driver status */
 

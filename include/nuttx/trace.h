@@ -2063,6 +2063,8 @@
 #define DIAG_NET_NIC_START_FAIL          (DIAG_NET_BASE + 10) /* 961030010 */
 #define DIAG_NET_DNS_LATENCY_HIGH        (DIAG_NET_BASE + 13) /* 961030013 */
 #define DIAG_NET_TCP_LATENCY_HIGH        (DIAG_NET_BASE + 14) /* 961030014 */
+#define DIAG_NET_DEV_ON                  (DIAG_NET_BASE + 31) /* 961030031 */
+#define DIAG_NET_DEV_OFF                 (DIAG_NET_BASE + 32) /* 961030032 */
 
 /* DIAG_NET_DHCP_FAIL (961030001) ErrorCode definitions */
 
