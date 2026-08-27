@@ -117,7 +117,9 @@ static int backtrace_branch(unsigned long top, unsigned long sp,
                             void **buffer, int size, int *skip)
 {
   unsigned long addr;
+#ifdef CONFIG_ARM_UNWINDER_STACK_POINTER_INSTRUCTION_CHECK
   uint16_t ins16;
+#endif
   int i;
   irqstate_t flags;
 
@@ -137,6 +139,7 @@ static int backtrace_branch(unsigned long top, unsigned long sp,
           continue;
         }
 
+#ifdef CONFIG_ARM_UNWINDER_STACK_POINTER_INSTRUCTION_CHECK
       ins16 = *(uint16_t *)addr;
       if (INSTR_IS(ins16, T_BLX))
         {
@@ -170,6 +173,12 @@ static int backtrace_branch(unsigned long top, unsigned long sp,
                 }
             }
         }
+#else
+      if ((*skip)-- <= 0)
+        {
+          buffer[i++] = (void *)addr;
+        }
+#endif
     }
 
   leave_critical_section(flags);

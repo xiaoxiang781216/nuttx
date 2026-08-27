@@ -1575,6 +1575,16 @@ config ARM_UNWINDER_LIBUNWIND
 
 endchoice # Choose ARM unwinder
 
+config ARM_UNWINDER_STACK_POINTER_INSTRUCTION_CHECK
+	bool "Check stack pointer unwind instructions"
+	default n
+	depends on ARM_UNWINDER_STACK_POINTER
+	---help---
+		This option validates candidate return addresses by reading Thumb
+		instructions from code regions. Enable it only after all executable
+		code regions are configured and can be safely read as data. Leave it
+		disabled to avoid memory faults while probing code addresses.
+
 config ARM_STACKCHECK
 	bool "Check for stack overflow on each function call"
 	default n
