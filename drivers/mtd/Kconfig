@@ -322,6 +322,17 @@ config MTDLOG_IOCTL
 		commands. Disable to reduce code size if only read/write
 		access is needed.
 
+config MTDLOG_BREAD_FALLBACK
+	bool "MTD LOG MTD_BREAD fallback for byte-level read"
+	default y
+	depends on MTDLOG
+	---help---
+		Some MTD drivers do not provide a byte-level .read method.
+		Keep this enabled to fall back to MTD_BREAD in that case.
+		If your MTD driver always provides a byte-level .read method
+		(e.g. Aurix flash), disable this to remove the MTD_BREAD
+		fallback code and reduce code size.
+
 comment "MTD Device Drivers"
 
 menuconfig MTD_NAND
