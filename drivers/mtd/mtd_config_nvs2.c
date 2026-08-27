@@ -68,6 +68,12 @@
 
 #define NVS_HASH_INITIAL_VALUE          2166136261
 
+#if defined(CONFIG_MTD_CONFIG_CACHE_SIZE) && CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#  define NVS_CACHE_ENABLED             1
+#else
+#  define NVS_CACHE_ENABLED             0
+#endif
+
 #if CONFIG_MTD_CONFIG_BUFFER_SIZE > 0
 #  define NVS_BUFFER_SIZE(fs)           CONFIG_MTD_CONFIG_BUFFER_SIZE
 #  define NVS_ATE(name, size) \
@@ -121,7 +127,7 @@ struct nvs_fs
   mutex_t               nvs_lock;
   uint32_t              write_cnt;     /* Block write counter */
   bool                  initialized;   /* NVS initialization flag */
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   struct nvs_cache      cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
 #endif
 #ifdef CONFIG_MTD_CONFIG_FULL_CACHE
@@ -211,7 +217,7 @@ static int nvs_compare_cache(FAR const void *a, FAR const void *b)
  * Name: nvs_invalid_cache
  ****************************************************************************/
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
 static void nvs_invalid_cache(FAR struct nvs_fs *fs, uint32_t block)
 {
   FAR struct nvs_cache *cache_entry = fs->cache;
@@ -616,7 +622,7 @@ static inline int nvs_flash_ate_wrt(FAR struct nvs_fs *fs,
 {
   size_t ate_size = nvs_ate_size(fs);
   int rc;
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   FAR struct nvs_cache *cache_entry;
 
   /* 0xFFFFFFFF is a special-purpose identifier. Exclude it from the cache */
@@ -1038,7 +1044,7 @@ static int nvs_flash_block_erase(FAR struct nvs_fs *fs, uint64_t addr)
 {
   int rc;
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   nvs_invalid_cache(fs, addr >> NVS_ADDR_BLOCK_SHIFT);
 #endif
 
@@ -1884,7 +1890,7 @@ static int nvs_flash_block_reset(FAR struct nvs_fs *fs, uint64_t addr)
  * Name: nvs_rebuild_cache
  ****************************************************************************/
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
 static int nvs_rebuild_cache(FAR struct nvs_fs *fs)
 {
   uint32_t prev_block = NVS_INVALID_BLOCK;
@@ -1959,7 +1965,7 @@ static int nvs_rebuild_cache(FAR struct nvs_fs *fs)
 #  endif
   return 0;
 }
-#endif /* CONFIG_MTD_CONFIG_CACHE_SIZE */
+#endif /* NVS_CACHE_ENABLED */
 
 /****************************************************************************
  * Name: nvs_find_ate_with_key
@@ -2143,7 +2149,7 @@ static int nvs_gc(FAR struct nvs_fs *fs)
           continue;
         }
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
       wlk_addr = nvs_lookup_addr(fs, gc_ate->id);
       if (wlk_addr == NVS_CACHE_NO_ADDR)
 #endif
@@ -2238,7 +2244,7 @@ static int nvs_clear(FAR struct nvs_fs *fs)
         }
     }
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   memset(fs->cache, 0xff, sizeof(fs->cache));
 #endif
 
@@ -2519,7 +2525,7 @@ static int nvs_init(FAR struct nvs_fs *fs)
           fs->ate_wra &= NVS_ADDR_BLOCK_MASK;
           fs->ate_wra += (fs->blocksize - 3 * ate_size);
           fs->data_wra = (fs->ate_wra & NVS_ADDR_BLOCK_MASK);
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
           memset(fs->cache, 0xff, sizeof(fs->cache));
 #endif
 
@@ -2531,7 +2537,7 @@ static int nvs_init(FAR struct nvs_fs *fs)
         }
     }
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   rc = nvs_rebuild_cache(fs);
   if (rc)
     {
@@ -2591,7 +2597,7 @@ static int nvs_read(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
   size_t key_len = sizeof(pdata->id) + sizeof(pdata->instance);
 #endif
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   uint32_t hash_id = nvs_fnv_hash_id(nvs_fnv_hash(key, key_len));
   wlk_addr = nvs_lookup_addr(fs, hash_id);
   if (wlk_addr == NVS_CACHE_NO_ADDR)
@@ -2698,7 +2704,7 @@ static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata,
 
   if (!force)
     {
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
       wlk_addr = nvs_lookup_addr(fs, hash_id);
       if (wlk_addr != NVS_CACHE_NO_ADDR)
 #endif
@@ -2882,7 +2888,7 @@ static int nvs_next(FAR struct nvs_fs *fs, FAR struct file *filep,
           nvs_ate_valid_different_block(fs, step_ate, cycle_cnt) &&
           step_ate->ate_key_len <= NVS_MAX_KEY_LEN)
         {
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
           wlk_addr = nvs_lookup_addr(fs, step_ate->id);
           if (wlk_addr == NVS_CACHE_NO_ADDR)
 #endif

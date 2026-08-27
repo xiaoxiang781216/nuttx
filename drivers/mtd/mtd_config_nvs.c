@@ -63,6 +63,12 @@
 
 #define NVS_HASH_INITIAL_VALUE          2166136261
 
+#if defined(CONFIG_MTD_CONFIG_CACHE_SIZE) && CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#  define NVS_CACHE_ENABLED             1
+#else
+#  define NVS_CACHE_ENABLED             0
+#endif
+
 #if CONFIG_MTD_CONFIG_BUFFER_SIZE > 0
 #  define NVS_BUFFER_SIZE(fs)           CONFIG_MTD_CONFIG_BUFFER_SIZE
 #  define NVS_ATE(name, size) \
@@ -99,7 +105,7 @@ struct nvs_fs
   uint32_t              step_addr;     /* For traverse */
   mutex_t               nvs_lock;
   uint32_t              write_cnt;     /* Block write counter */
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   uint32_t              cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
 #endif
   FAR struct pollfd     *fds;
@@ -169,7 +175,7 @@ static const struct file_operations g_mtdnvs_fops =
  * Name: nvs_cache_index
  ****************************************************************************/
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
 static inline size_t nvs_cache_index(uint32_t id)
 {
   return id % CONFIG_MTD_CONFIG_CACHE_SIZE;
@@ -193,7 +199,7 @@ static void nvs_invalid_cache(struct nvs_fs *fs, uint32_t sector)
         }
     }
 }
-#endif /* CONFIG_MTD_CONFIG_CACHE_SIZE */
+#endif /* NVS_CACHE_ENABLED */
 
 /****************************************************************************
  * Name: nvs_fnv_hash_part
@@ -452,7 +458,7 @@ static int nvs_flash_ate_wrt(FAR struct nvs_fs *fs,
   size_t ate_size = nvs_ate_size(fs);
   int rc;
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
 
   /* 0xFFFF is a special-purpose identifier. Exclude it from the cache */
 
@@ -697,7 +703,7 @@ static int nvs_flash_erase_block(FAR struct nvs_fs *fs, uint32_t addr)
 
   finfo("Erasing addr %" PRIx32 "\n", addr);
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   nvs_invalid_cache(fs, addr >> NVS_ADDR_BLOCK_SHIFT);
 #endif
 
@@ -1581,7 +1587,7 @@ static int nvs_startup(FAR struct nvs_fs *fs)
    * We need to set old entry expired.
    */
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   memset(fs->cache, 0xff, sizeof(fs->cache));
 #endif
 
@@ -1610,7 +1616,7 @@ static int nvs_startup(FAR struct nvs_fs *fs)
                 last_addr, last_ate->id, last_ate->ate_key_len,
                 last_ate->offset);
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
           fs->cache[nvs_cache_index(last_ate->id)] = last_addr;
 #endif
           while (1)
@@ -1625,7 +1631,7 @@ static int nvs_startup(FAR struct nvs_fs *fs)
               if (nvs_ate_valid(fs, second_ate)
                   && !nvs_ate_expired(fs, second_ate))
                 {
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
                   fs->cache[nvs_cache_index(second_ate->id)] = second_addr;
 #endif
                   if (second_ate->id == last_ate->id)
@@ -1730,7 +1736,7 @@ static ssize_t nvs_read_entry(FAR struct nvs_fs *fs, FAR const uint8_t *key,
   int rc;
 
   hash_id = nvs_fnv_hash_id(nvs_fnv_hash(key, key_size));
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   wlk_addr = fs->cache[nvs_cache_index(hash_id)];
   if (wlk_addr == NVS_CACHE_NO_ADDR)
 #endif
@@ -1900,7 +1906,7 @@ static ssize_t nvs_write(FAR struct nvs_fs *fs,
 
   /* Find latest entry with same id. */
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+#if NVS_CACHE_ENABLED
   wlk_addr = fs->cache[nvs_cache_index(hash_id)];
   if (wlk_addr == NVS_CACHE_NO_ADDR)
 #endif
