@@ -91,6 +91,14 @@
 #  define DUMP_FORMAT " %016" PRIxPTR
 #endif
 
+/* up_puts() bypasses SYSLOG, so prepend the prefix here */
+
+#ifdef CONFIG_SYSLOG_PREFIX
+#  define DUMP_PREFIX "[" CONFIG_SYSLOG_PREFIX_STRING "] "
+#else
+#  define DUMP_PREFIX ""
+#endif
+
 /* Architecture can overwrite the default XCPTCONTEXT alignment */
 
 #ifndef XCPTCONTEXT_ALIGN
@@ -861,7 +869,7 @@ static void dump_mini_info(FAR uintptr_t *regs)
   ssize_t offset = 0;
   int col = 0;
 
-  up_puts("Reset board on recursive assert:\r\n");
+  up_puts(DUMP_PREFIX "Reset board on recursive assert:\r\n");
 
   for (i = 0; i < g_tcbinfo.regs_num; i++)
     {
@@ -880,6 +888,11 @@ static void dump_mini_info(FAR uintptr_t *regs)
 
           val = 0;
           memcpy(&val, (FAR const uint8_t *)regs + offset, r->size);
+
+          if (col == 0)
+            {
+              up_puts(DUMP_PREFIX);
+            }
 
           snprintf(out, sizeof(out),
                    "%s:" DUMP_FORMAT " ", r->name, val);
@@ -900,13 +913,14 @@ static void dump_mini_info(FAR uintptr_t *regs)
       up_puts("\r\n");
     }
 #else
-  up_puts("Reset board on recursive assert:\r\n");
+  up_puts(DUMP_PREFIX "Reset board on recursive assert:\r\n");
 
   for (i = 0; i < XCPTCONTEXT_REGS; i++)
     {
       if ((i & 7) == 0)
         {
-          snprintf(out, sizeof(out), "\r\n%p:", (void *)&regs[i]);
+          up_puts("\r\n" DUMP_PREFIX);
+          snprintf(out, sizeof(out), "%p:", (void *)&regs[i]);
           up_puts(out);
         }
 
