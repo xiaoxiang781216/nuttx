@@ -84,9 +84,9 @@
                                                    alignsize, \
                                                    alloc_func, \
                                                    free_func, ...) \
+  MEMPOOL_LOCATE_DATA(__VA_ARGS__) aligned_data(alignsize) \
   static char CONCATENATE(name, _buffer) \
-  [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE] \
-  aligned_data(alignsize) MEMPOOL_LOCATE_DATA(__VA_ARGS__); \
+  [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE]; \
   static struct mempool_s name = \
     { \
       CONCATENATE(name, _buffer), \
@@ -136,9 +136,9 @@
                                                        alignsize, \
                                                        alloc_func, \
                                                        free_func, ...) \
+  MEMPOOL_LOCATE_DATA(__VA_ARGS__) aligned_data(alignsize) \
   static DEFINE_PER_CPU_BSS_BMP(char, CONCATENATE(name, _buffer) \
-  [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE]) \
-  aligned_data(alignsize) MEMPOOL_LOCATE_DATA(__VA_ARGS__); \
+  [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE]); \
   static DEFINE_PER_CPU_BMP(struct mempool_s, name) = \
     { \
       CONCATENATE(name, _buffer), \
