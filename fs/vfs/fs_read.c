@@ -139,10 +139,22 @@ ssize_t file_readv(FAR struct file *filep,
                    FAR const struct iovec *iov, int iovcnt)
 {
   FAR struct inode *inode;
-  ssize_t ret = -EBADF;
+  ssize_t ret;
 
   DEBUGASSERT(filep);
   inode = filep->f_inode;
+
+  /* Are all iov_base accessible? */
+
+  for (ret = 0; ret < iovcnt; ret++)
+    {
+      if (iov[ret].iov_base == NULL && iov[ret].iov_len != 0)
+        {
+          return -EFAULT;
+        }
+    }
+
+  ret = -EBADF;
 
   if ((filep->f_oflags & O_ACCMODE) == O_WRONLY)
     {
