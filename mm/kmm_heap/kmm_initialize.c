@@ -24,6 +24,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+#include <assert.h>
+#include <sys/param.h>
 #include <nuttx/mm/mm.h>
 
 /****************************************************************************
@@ -60,10 +63,17 @@ void kmm_initialize(FAR void *heap_start, size_t heap_size)
 {
   struct mm_heap_config_s config;
 #ifdef CONFIG_MM_POOL_PARAM_KERNEL
-  const struct mm_pool_config_s pool_config =
+  /* Array of mm_pool_config_s, indexed by this_cpu().
+   * Each element is wrapped in {}. npools=0 means no pool for that CPU.
+   * CPUs beyond the array size pass NULL to skip pool initialization.
+   */
+
+  const struct mm_pool_config_s pool_configs[] =
     {
       CONFIG_MM_POOL_PARAM_KERNEL
     };
+
+  unsigned int cpu = this_cpu();
 #endif
 
   memset(&config, 0, sizeof(config));
@@ -72,7 +82,8 @@ void kmm_initialize(FAR void *heap_start, size_t heap_size)
   config.size  = heap_size;
 
 #ifdef CONFIG_MM_POOL_PARAM_KERNEL
-  mm_initialize_pool(&config, &pool_config, &g_kmmheap);
+  DEBUGASSERT(cpu < nitems(pool_configs));
+  mm_initialize_pool(&config, &pool_configs[cpu], &g_kmmheap);
 #else
   mm_initialize_pool(&config, NULL, &g_kmmheap);
 #endif

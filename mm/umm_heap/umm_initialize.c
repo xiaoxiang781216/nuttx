@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
+#include <sys/param.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
@@ -100,10 +101,17 @@ void umm_initialize(FAR void *heap_start, size_t heap_size)
 #endif
   struct mm_heap_config_s config;
 #ifdef CONFIG_MM_POOL_PARAM
-  const struct mm_pool_config_s pool_config =
+  /* Array of mm_pool_config_s, indexed by this_cpu().
+   * Each element is wrapped in {}. npools=0 means no pool for that CPU.
+   * CPUs beyond the array size pass NULL to skip pool initialization.
+   */
+
+  const struct mm_pool_config_s pool_configs[] =
     {
       CONFIG_MM_POOL_PARAM
     };
+
+  unsigned int cpu = this_cpu();
 #endif
 
   memset(&config, 0, sizeof(config));
@@ -114,7 +122,8 @@ void umm_initialize(FAR void *heap_start, size_t heap_size)
 #endif
 
 #ifdef CONFIG_MM_POOL_PARAM
-  mm_initialize_pool(&config, &pool_config, heap);
+  DEBUGASSERT(cpu < nitems(pool_configs));
+  mm_initialize_pool(&config, &pool_configs[cpu], heap);
 #else
   mm_initialize_pool(&config, NULL, heap);
 #endif
