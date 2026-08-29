@@ -302,6 +302,25 @@ static bool virtio_serial_txready(FAR struct uart_dev_s *dev)
       nexthead = 0;
     }
 
+  if (nexthead == dev->xmit.tail)
+    {
+      FAR struct virtio_serial_priv_s *priv = dev->priv;
+      FAR struct virtqueue *vq =
+        priv->vdev->vrings_info[VIRTIO_SERIAL_TX].vq;
+      irqstate_t flags = uart_spinlock(dev, true);
+
+      if (dev->dmatx.length == 0)
+        {
+          uart_dmatxavail(dev);
+        }
+      else
+        {
+          virtio_serial_txdone(vq);
+        }
+
+      uart_spinunlock(dev, true, flags);
+    }
+
   return nexthead != dev->xmit.tail;
 }
 
@@ -470,10 +489,13 @@ static void virtio_serial_txdone(FAR struct virtqueue *vq)
   /* Call uart_xmitchars_done to notify the upperhalf */
 
   len = (uintptr_t)virtqueue_get_buffer(vq, NULL, NULL);
+  if (len != 0)
+    {
+      udev->dmatx.nbytes = len;
+      uart_xmitchars_done(udev);
+      uart_dmatxavail(udev);
+    }
 
-  udev->dmatx.nbytes = len;
-  uart_xmitchars_done(udev);
-  uart_dmatxavail(udev);
   uart_spinunlock(udev, true, flags);
 }
 
