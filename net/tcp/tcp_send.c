@@ -141,10 +141,39 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
 
   /* Set the TCP window */
 
-  if (work_available(&conn->work) && conn->tx_unacked != 0)
+#ifdef CONFIG_NET_TCP_DELAYED_ACK
+  /* Piggyback any pending delayed ACK on this outgoing packet.
+   * If the delayed ACK timer is the sole occupant of conn->work
+   * (timer == 0 means no retransmit timer), also cancel the work
+   * so that work_available() returns true and the retransmit timer
+   * can be started below.
+   */
+
+  if (conn->rx_unackseg != 0)
     {
-      conn->timeout = false;
-      tcp_update_retrantimer(conn, conn->rto);
+      if (conn->timer == 0 && !work_available(&conn->work))
+        {
+          work_cancel(LPWORK, &conn->work);
+        }
+
+      conn->rx_unackseg = 0;
+      conn->rx_acktimer = 0;
+    }
+#endif
+
+  if (work_available(&conn->work))
+    {
+      if (conn->tx_unacked != 0)
+        {
+          conn->timeout = false;
+          tcp_update_retrantimer(conn, conn->rto);
+        }
+#ifdef CONFIG_NET_TCP_KEEPALIVE
+      else if (conn->keepalive && conn->keeptimer > 0)
+        {
+          tcp_update_keeptimer(conn, conn->keeptimer);
+        }
+#endif
     }
 
   /* Update the TCP received window based on I/O buffer availability */
@@ -249,14 +278,6 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
 
       net_incr32(conn->sndseq, 1);
     }
-
-#ifdef CONFIG_NET_TCP_DELAYED_ACK
-  if (conn->rx_unackseg != 0)
-    {
-      conn->rx_unackseg = 0;
-      conn->rx_acktimer = 0;
-    }
-#endif
 }
 
 /****************************************************************************
