@@ -34,6 +34,7 @@ CSRCS += lib_fchownat.c lib_linkat.c lib_readlinkat.c lib_symlinkat.c
 CSRCS += lib_unlinkat.c lib_usleep.c lib_getpgrp.c lib_getpgid.c
 CSRCS += lib_getsid.c lib_getgroups.c lib_setpgid.c lib_setsid.c
 CSRCS += lib_lockf.c lib_flock.c lib_getpass.c lib_confstr.c lib_ulimit.c
+CSRCS += lib_truncate.c lib_posix_fallocate.c
 
 ifneq ($(CONFIG_SCHED_USER_IDENTITY),y)
 CSRCS += lib_setuid.c lib_setgid.c lib_getuid.c lib_getgid.c
@@ -46,10 +47,6 @@ endif
 
 ifeq ($(CONFIG_LIBC_EXECFUNCS),y)
 CSRCS += lib_execl.c lib_execle.c lib_execv.c
-endif
-
-ifneq ($(CONFIG_DISABLE_MOUNTPOINTS),y)
-CSRCS += lib_truncate.c lib_posix_fallocate.c
 endif
 
 ifeq ($(CONFIG_ARCH_HAVE_FORK),y)

@@ -71,7 +71,9 @@ set(SRCS
     lib_flock.c
     lib_getpass.c
     lib_confstr.c
-    lib_ulimit.c)
+    lib_ulimit.c
+    lib_truncate.c
+    lib_posix_fallocate.c)
 
 if(NOT CONFIG_SCHED_USER_IDENTITY)
   list(
@@ -93,10 +95,6 @@ endif()
 
 if(CONFIG_LIBC_EXECFUNCS)
   list(APPEND SRCS lib_execl.c lib_execle.c lib_execv.c)
-endif()
-
-if(NOT CONFIG_DISABLE_MOUNTPOINTS)
-  list(APPEND SRCS lib_truncate.c lib_posix_fallocate.c)
 endif()
 
 if(CONFIG_ARCH_HAVE_FORK)
