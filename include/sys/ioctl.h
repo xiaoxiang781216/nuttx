@@ -68,15 +68,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* The compatibility IOCTL definitions NuttX command words carry no
- * size/direction encoding, so _IOR/_IOW/_IOWR all reduce to the same
- * plain (type | nr) command.
- */
+/* The compatibility IOCTL definitions */
 
 #define _IO(type,nr)        _IOC((type),(nr))
-#define _IOR(type,nr,size)  _IOC((type),(nr))
-#define _IOW(type,nr,size)  _IOC((type),(nr))
-#define _IOWR(type,nr,size) _IOC((type),(nr))
 
 #define FS_IOC_GETFLAGS     FIOC_GETFLAGS
 #define FS_IOC_SETFLAGS     FIOC_SETFLAGS
