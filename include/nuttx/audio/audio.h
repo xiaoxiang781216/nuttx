@@ -548,7 +548,7 @@
 
 /* Cross-Core Codec Parameters **********************************************/
 
-#define AUDIO_CODEC_EXTRADATA_MAX   128
+#define AUDIO_CODEC_EXTRADATA_MAX   64
 
 /****************************************************************************
  * Public Types
