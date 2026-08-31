@@ -70,7 +70,10 @@
 
 /* The compatibility IOCTL definitions */
 
-#define _IO(type,nr)        _IOC((type),(nr))
+#define _IO(type,nr)        _IOC((type) << 8, nr)
+#define _IOR(type,nr,size)  _IOC((type) << 8, nr)
+#define _IOW(type,nr,size)  _IOC((type) << 8, nr)
+#define _IOWR(type,nr,size) _IOC((type) << 8, nr)
 
 #define FS_IOC_GETFLAGS     FIOC_GETFLAGS
 #define FS_IOC_SETFLAGS     FIOC_SETFLAGS
