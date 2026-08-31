@@ -20,14 +20,8 @@
 
 set(SRCS qemu_rv_head.S)
 
-list(
-  APPEND
-  SRCS
-  qemu_rv_start.c
-  qemu_rv_irq_dispatch.c
-  qemu_rv_irq.c
-  qemu_rv_timerisr.c
-  qemu_rv_allocateheap.c)
+list(APPEND SRCS qemu_rv_start.c qemu_rv_irq.c qemu_rv_timerisr.c
+     qemu_rv_allocateheap.c)
 
 if(CONFIG_BUILD_KERNEL)
   list(APPEND SRCS qemu_rv_mm_init.c)

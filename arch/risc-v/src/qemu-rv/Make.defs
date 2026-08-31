@@ -24,7 +24,7 @@ include common/Make.defs
 CHIP_ASRCS = qemu_rv_head.S
 
 # Specify our C code within this directory to be included
-CHIP_CSRCS  = qemu_rv_start.c qemu_rv_irq_dispatch.c qemu_rv_irq.c
+CHIP_CSRCS  = qemu_rv_start.c qemu_rv_irq.c
 CHIP_CSRCS += qemu_rv_timerisr.c qemu_rv_allocateheap.c
 
 ifeq ($(CONFIG_BUILD_KERNEL),y)

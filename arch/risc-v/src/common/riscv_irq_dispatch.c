@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/qemu-rv/qemu_rv_irq_dispatch.c
+ * arch/risc-v/src/common/riscv_irq_dispatch.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -29,19 +29,29 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <sys/types.h>
 
 #include "riscv_internal.h"
-#include "riscv_aia.h"
-#include "hardware/qemu_rv_memorymap.h"
-#include "hardware/qemu_rv_plic.h"
+
+#ifdef CONFIG_ARCH_RV_HAVE_APLIC
+#  include "riscv_aia.h"
+#endif
+
+#ifdef CONFIG_ARCH_RV_HAVE_PLIC
+#  include "riscv_plic.h"
+#endif
+
+#include "chip.h"
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Public Functions
+ * Name: riscv_dispatch_irq_ext
+ *
+ * Description:
+ *   Claim and dispatch external interrupts from IMSIC, APLIC IDC, or PLIC.
+ *
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_RV_HAVE_IMSIC
@@ -62,10 +72,10 @@ static void *riscv_dispatch_irq_ext(uintreg_t irq, uintreg_t *regs)
 {
   int extirq;
   int hartid = riscv_mhartid();
-  uintptr_t aplic_base = RISCV_APLIC_IDC(QEMU_RV_APLIC_BASE, hartid) +
-                            RISCV_APLIC_IDC_CLAIMI;
+  uintptr_t claimi = RISCV_APLIC_IDC(RISCV_APLIC_BASE, hartid) +
+                     RISCV_APLIC_IDC_CLAIMI;
 
-  while ((extirq = getreg32(aplic_base)) != 0)
+  while ((extirq = getreg32(claimi)) != 0)
     {
       extirq = (extirq >> RISCV_APLIC_IDC_TOPI_ID_SHIFT) + irq;
       regs = riscv_doirq(extirq, regs);
@@ -73,22 +83,31 @@ static void *riscv_dispatch_irq_ext(uintreg_t irq, uintreg_t *regs)
 
   return regs;
 }
-#else
+#elif defined(CONFIG_ARCH_RV_HAVE_PLIC)
 static void *riscv_dispatch_irq_ext(uintreg_t irq, uintreg_t *regs)
 {
   int extirq;
 
-  while ((extirq = getreg32(QEMU_RV_PLIC_CLAIM)) != 0)
+  while ((extirq = getreg32(RISCV_PLIC_CLAIM)) != 0)
     {
       regs = riscv_doirq(irq + extirq, regs);
-      putreg32(extirq, QEMU_RV_PLIC_CLAIM);
+      putreg32(extirq, RISCV_PLIC_CLAIM);
     }
 
   return regs;
 }
 #endif
 
-#ifdef CONFIG_ARCH_RV_EXT_AIA
+/****************************************************************************
+ * Name: riscv_dispatch_async_irq
+ *
+ * Description:
+ *   Top-level async interrupt dispatcher. IMSIC mode uses CSR_TOPI to
+ *   iterate pending interrupts; non-IMSIC uses mcause directly.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_RV_HAVE_IMSIC
 static void *riscv_dispatch_async_irq(uintreg_t irq, uintreg_t *regs)
 {
   while ((irq = READ_CSR(CSR_TOPI)) != 0)
@@ -124,6 +143,18 @@ static void *riscv_dispatch_async_irq(uintreg_t irq, uintreg_t *regs)
   return regs;
 }
 #endif
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: riscv_dispatch_irq
+ *
+ * Description:
+ *   Dispatch interrupts and exceptions from the trap vector.
+ *
+ ****************************************************************************/
 
 void *riscv_dispatch_irq(uintreg_t vector, uintreg_t *regs)
 {

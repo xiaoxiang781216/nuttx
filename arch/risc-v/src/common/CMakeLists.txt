@@ -107,6 +107,10 @@ if(CONFIG_ARCH_RV_HAVE_APLIC)
   list(APPEND SRCS riscv_aplic.c)
 endif()
 
+if(CONFIG_ARCH_RV_HAVE_PLIC OR CONFIG_ARCH_RV_HAVE_APLIC)
+  list(APPEND SRCS riscv_irq_dispatch.c)
+endif()
+
 if(CONFIG_ARCH_RV_HAVE_IMSIC)
   list(APPEND SRCS riscv_imsic.c)
 endif()
