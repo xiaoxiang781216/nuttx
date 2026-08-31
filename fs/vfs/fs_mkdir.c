@@ -88,22 +88,25 @@ int mkdir(const char *pathname, mode_t mode)
           goto errout_with_inode;
         }
 
-#ifndef CONFIG_DISABLE_MOUNTPOINT
-      /* Check if the inode is a valid mountpoint. */
-
-      if (!INODE_IS_MOUNTPT(inode) || !inode->u.i_mops)
+      if (INODE_IS_PSEUDODIR(desc.node))
         {
-          /* The inode is not a mountpoint */
+          inode_lock();
+          ret = inode_reserve(pathname, mode, &inode);
+          inode_unlock();
 
-          errcode = ENXIO;
-          goto errout_with_inode;
+          if (ret < 0)
+            {
+              errcode = -ret;
+              goto errout_with_search;
+            }
         }
 
+#ifndef CONFIG_DISABLE_MOUNTPOINT
       /* Perform the mkdir operation using the relative path
        * at the mountpoint.
        */
 
-      if (inode->u.i_mops->mkdir)
+      else if (INODE_IS_MOUNTPT(inode) && inode->u.i_mops->mkdir)
         {
           ret = inode->u.i_mops->mkdir(inode, desc.relpath, mode);
           if (ret < 0)
