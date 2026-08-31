@@ -56,29 +56,40 @@ static uint32_t tcp_shutdown_eventhandler(FAR struct net_driver_s *dev,
 
   ninfo("flags: %" PRIx32 "\n", flags);
 
-#ifdef CONFIG_NET_TCP_WRITE_BUFFERS
-  /* We don't need the send callback anymore. */
-
-  if (conn->sndcb != NULL)
-    {
-      conn->sndcb->flags = 0;
-      conn->sndcb->event = NULL;
-
-      /* The callback will be freed by tcp_free. */
-
-      conn->sndcb = NULL;
-    }
-#endif
-
-  dev->d_len = 0;
-  if ((conn->shutdown & SHUT_WR) != 0)
-    {
-      flags |= TCP_TXCLOSE;
-    }
-
   if ((conn->shutdown & SHUT_RD) != 0)
     {
+      dev->d_len = 0;
+      flags &= ~TCP_NEWDATA;
       flags |= TCP_RXCLOSE;
+    }
+
+  if ((conn->shutdown & SHUT_WR) != 0)
+    {
+#ifdef CONFIG_NET_TCP_WRITE_BUFFERS
+      /* Wait for all outstanding data to be acknowledged before sending
+       * FIN.  If we clear sndcb and send FIN while unacked_q still has
+       * segments, the retransmission logic (SACK, RTO) will be disabled
+       * and any holes reported by the peer can never be filled.
+       */
+
+      if (conn->tx_unacked != 0 || !sq_empty(&conn->write_q))
+        {
+          return flags;
+        }
+
+      /* All data acknowledged.  Remove the send callback — we will not
+       * be transmitting any new data after this point.
+       */
+
+      if (conn->sndcb != NULL)
+        {
+          conn->sndcb->flags = 0;
+          conn->sndcb->event = NULL;
+          conn->sndcb = NULL;
+        }
+#endif
+
+      flags |= TCP_TXCLOSE;
     }
 
   if (conn->shdcb != NULL)
@@ -136,7 +147,9 @@ static inline int tcp_send_fin(FAR struct socket *psock)
   if ((conn->tcpstateflags == TCP_ESTABLISHED ||
        conn->tcpstateflags == TCP_SYN_SENT ||
        conn->tcpstateflags == TCP_SYN_RCVD ||
-       conn->tcpstateflags == TCP_CLOSE_WAIT))
+       conn->tcpstateflags == TCP_CLOSE_WAIT ||
+       conn->tcpstateflags == TCP_FIN_WAIT_1 ||
+       conn->tcpstateflags == TCP_FIN_WAIT_2))
     {
       if ((conn->shdcb = tcp_callback_alloc(conn)) == NULL)
         {
@@ -146,7 +159,7 @@ static inline int tcp_send_fin(FAR struct socket *psock)
 
       /* Set up to receive TCP data event callbacks */
 
-      conn->shdcb->flags = TCP_POLL;
+      conn->shdcb->flags = TCP_POLL | TCP_ACKDATA;
       conn->shdcb->event = tcp_shutdown_eventhandler;
       conn->shdcb->priv  = conn; /* reference for event handler to free cb */
 
