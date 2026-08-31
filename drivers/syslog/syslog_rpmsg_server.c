@@ -55,9 +55,8 @@ struct syslog_rpmsg_server_s
   struct list_node      node;
 #endif
   struct rpmsg_endpoint ept;
-  FAR char              *tmpbuf;
+  char                  tmpbuf[SYSLOG_RPMSG_MAXLEN];
   unsigned int          nextpos;
-  unsigned int          alloced;
 };
 
 /****************************************************************************
@@ -188,7 +187,6 @@ static void syslog_rpmsg_ept_release(FAR struct rpmsg_endpoint *ept)
   nxmutex_unlock(&g_lock);
 #endif
 
-  kmm_free(priv->tmpbuf);
   kmm_free(priv);
 }
 
@@ -259,18 +257,20 @@ static int syslog_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
       if (copied != 0)
         {
           unsigned int newsize = priv->nextpos + copied;
-          if (newsize > priv->alloced)
+
+          /* The temporary buffer is fixed at SYSLOG_RPMSG_MAXLEN and is not
+           * allowed to grow. If the incoming data would overflow it, flag
+           * the error via DEBUGPANIC() and clamp the copy length so the
+           * memcpy below can never overrun the buffer.
+           */
+
+          if (newsize > SYSLOG_RPMSG_MAXLEN)
             {
-              FAR char *newbuf = kmm_realloc(priv->tmpbuf, newsize);
-              if (newbuf != NULL)
-                {
-                  priv->tmpbuf  = newbuf;
-                  priv->alloced = newsize;
-                }
-              else
-                {
-                  copied = priv->alloced - priv->nextpos;
-                }
+              /* Truncate to the remaining space so the memcpy below can
+               * never overflow the fixed buffer, then flag the overflow.
+               */
+
+              copied = SYSLOG_RPMSG_MAXLEN - priv->nextpos;
             }
 
           memcpy(priv->tmpbuf + priv->nextpos, msg->data + printed, copied);
