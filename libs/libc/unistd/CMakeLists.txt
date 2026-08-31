@@ -73,7 +73,7 @@ set(SRCS
     lib_confstr.c
     lib_ulimit.c
     lib_truncate.c
-    lib_posix_fallocate.c)
+    lib_fallocate.c)
 
 if(NOT CONFIG_SCHED_USER_IDENTITY)
   list(
