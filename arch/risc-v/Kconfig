@@ -253,6 +253,7 @@ config ARCH_CHIP_QEMU_RV
 	select ARCH_HAVE_MPU
 	select ARCH_MMU_TYPE_SV39 if ARCH_CHIP_QEMU_RV64
 	select ARCH_MMU_TYPE_SV32 if ARCH_CHIP_QEMU_RV32
+	select ARCH_RV_HAVE_PLIC if !ARCH_RV_EXT_AIA
 	select NUTTSBI_LATE_INIT if NUTTSBI
 	select ARCH_HAVE_ADDRENV
 	select ARCH_NEED_ADDRENV_MAPPING
@@ -813,8 +814,16 @@ config ARCH_RV_EXT_SSTC
 	default n
 	depends on ARCH_USE_S_MODE
 
+config ARCH_RV_HAVE_PLIC
+	bool
+	---help---
+		Hardware has a standard RISC-V PLIC. Enables compilation
+		of riscv_plic.c which provides riscv_plic_init() and the
+		common up_enable_irq, up_disable_irq, up_irq_enable. The
+		chip must define RISCV_PLIC_BASE in its hardware header.
+
 config ARCH_RV_HAVE_APLIC
-	bool "Enable RISC-V Advanced Platform-Level Interrupt Controller support"
+	bool
 	default n
 	---help---
 		Instead of PLIC, RISC-V also defines Advanced Platform-Level Interrupt
@@ -833,6 +842,7 @@ config ARCH_RV_HAVE_CLIC
 config ARCH_RV_EXT_AIA
 	bool "Enable RISC-V SxAIA support"
 	default n
+	select ARCH_RV_HAVE_APLIC
 	---help---
 		Advanced Interrupt Architecture defines necessary features that
 		impact the ISA at a hart. This should not be selected if the
@@ -841,13 +851,13 @@ config ARCH_RV_EXT_AIA
 if ARCH_RV_EXT_AIA
 
 config ARCH_RV_HAVE_IMSIC
-	bool "Enable RISC-V AIA Incoming Message Controller support"
+	bool
 	default n
 
-config ARCH_RV_USE_IMSIC_IPI
+config ARCH_RV_IMSIC_IPI
 	bool "Use IMSIC for inter-processor interrupts"
 	default n
-	depends on ARCH_RV_HAVE_IMSIC && SMP
+	depends on ARCH_RV_HAVE_IMSIC && !UP
 	---help---
 		Use IMSIC MSI mechanism for IPI instead of CLINT/ACLINT.
 		When enabled, IPI is sent by writing the IPI identity to the

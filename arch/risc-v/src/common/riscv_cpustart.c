@@ -86,7 +86,7 @@ void riscv_cpu_boot(int cpu)
 
   riscv_ipi_clear(cpu);
 
-#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+#ifdef CONFIG_ARCH_RV_IMSIC_IPI
   /* IMSIC IPI: enable external interrupt and IMSIC IPI identity
    * before waiting for the boot IPI from the primary core.
    */
@@ -109,7 +109,7 @@ void riscv_cpu_boot(int cpu)
     {
       asm("WFI");
     }
-#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+#ifdef CONFIG_ARCH_RV_IMSIC_IPI
   while (!(READ_CSR(CSR_IP) & IP_EIP));
 #else
   while (!(READ_CSR(CSR_IP) & IP_SIP));
@@ -147,7 +147,7 @@ void riscv_cpu_boot(int cpu)
 
   riscv_ipi_clear(cpu);
 
-#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+#ifdef CONFIG_ARCH_RV_IMSIC_IPI
   /* Claim the boot IPI that woke us up (clear IMSIC pending bit) */
 
   SWAP_CSR(CSR_TOPEI, 0);

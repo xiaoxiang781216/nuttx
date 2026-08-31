@@ -25,7 +25,7 @@
 #include "riscv_internal.h"
 #include "riscv_aia.h"
 
-#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+#ifdef CONFIG_ARCH_RV_IMSIC_IPI
 #  include "chip.h"
 #endif
 
@@ -75,7 +75,7 @@ void riscv_imsic_local_eix_update(unsigned long base_id,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+#ifdef CONFIG_ARCH_RV_IMSIC_IPI
 void riscv_imsic_send_ipi(int cpu)
 {
   uintptr_t hartid = riscv_cpuid_to_hartid(cpu);

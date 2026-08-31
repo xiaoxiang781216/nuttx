@@ -99,6 +99,10 @@ if(CONFIG_ARCH_RV_ISA_V)
   list(APPEND SRCS riscv_vpu.S)
 endif()
 
+if(CONFIG_ARCH_RV_HAVE_PLIC)
+  list(APPEND SRCS riscv_plic.c)
+endif()
+
 if(CONFIG_ARCH_RV_HAVE_APLIC)
   list(APPEND SRCS riscv_aplic.c)
 endif()

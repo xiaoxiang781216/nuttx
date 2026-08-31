@@ -273,20 +273,7 @@ static inline void riscv_aplic_disable_irqs(uintptr_t base,
  *
  ****************************************************************************/
 
-void riscv_aplic_init(uintptr_t base,
-                      uint32_t idelivery, uint32_t ithreshold);
-
-/****************************************************************************
- * Name: riscv_aplic_init
- *
- * Description:
- *   Init APLIC to msi mode
- *
- ****************************************************************************/
-
-void riscv_aplic_init_msi(uintptr_t base, uint64_t imsic_addr,
-                          uint32_t lhxs, uint32_t lhxw,
-                          uint32_t hhxs, uint32_t hhxw);
+void riscv_aplic_init(void);
 
 #undef EXTERN
 #ifdef __cplusplus

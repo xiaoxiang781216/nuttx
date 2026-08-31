@@ -42,6 +42,12 @@ config ARCH_CHIP_QEMU_RV_ISA_V
 	default n
 	select ARCH_RV_ISA_V
 
+config ARCH_CHIP_QEMU_RV_IMSIC
+	bool "Enable IMSIC support"
+	default n
+	depends on ARCH_RV_EXT_AIA
+	select ARCH_RV_HAVE_IMSIC
+
 config ARCH_CHIP_QEMU_RV_CLUSTER
 	bool "Enable cluster support"
 	default y if RPTUN

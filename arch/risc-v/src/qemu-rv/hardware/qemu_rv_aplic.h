@@ -47,4 +47,16 @@
 
 #define QEMU_RV_PCIE_INTX_BASE    32
 
+/* Common layer APLIC interface aliases */
+
+#define RISCV_APLIC_IRQ_END       QEMU_RV_APLIC_IRQ_END
+#define RISCV_APLIC_NR_IRQS       QEMU_RV_APLIC_NR_IRQ
+
+/* IMSIC MSI address configuration parameters (from QEMU virt DTS) */
+
+#define RISCV_APLIC_MSI_LHXS      0
+#define RISCV_APLIC_MSI_LHXW      3
+#define RISCV_APLIC_MSI_HHXS      0
+#define RISCV_APLIC_MSI_HHXW      0
+
 #endif /* __ARCH_RISCV_SRC_QEMU_RV_HARDWARE_QEMU_RV_APLIC_H */

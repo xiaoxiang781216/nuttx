@@ -44,6 +44,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Number of external interrupt sources */
+
+#define RISCV_NR_EXT_IRQS (NR_IRQS - RISCV_IRQ_EXT)
+
 #if defined(CONFIG_ARCH_QPFPU)
 #  define FLOAD     __STR(flq)
 #  define FSTORE    __STR(fsq)

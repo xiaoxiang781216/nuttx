@@ -100,6 +100,10 @@ ifeq ($(CONFIG_ARCH_RV_ISA_V),y)
 CMN_ASRCS += riscv_vpu.S
 endif
 
+ifeq ($(CONFIG_ARCH_RV_HAVE_PLIC),y)
+CMN_CSRCS += riscv_plic.c
+endif
+
 ifeq ($(CONFIG_ARCH_RV_HAVE_APLIC),y)
 CMN_CSRCS += riscv_aia.c
 endif
