@@ -36,6 +36,7 @@
 #include "riscv_internal.h"
 #include "riscv_ipi.h"
 #include "riscv_aia.h"
+#include "riscv_plic.h"
 #include "chip.h"
 
 #ifdef CONFIG_PCI
@@ -83,10 +84,9 @@ void up_irqinitialize(void)
   /* Disable all global interrupts */
 
 #ifndef CONFIG_ARCH_RV_HAVE_APLIC
-  putreg32(0x0, QEMU_RV_PLIC_ENABLE1);
-  putreg32(0x0, QEMU_RV_PLIC_ENABLE2);
+  riscv_plic_init();
 #else
-  riscv_aplic_disable_irqs(QEMU_RV_APLIC_BASE, QEMU_RV_APLIC_NR_IRQ);
+  riscv_aplic_init();
 #endif
 
   /* Colorize the interrupt stack for debug purposes */
@@ -94,49 +94,6 @@ void up_irqinitialize(void)
 #if defined(CONFIG_STACK_COLORATION) && CONFIG_ARCH_INTERRUPTSTACK > 15
   size_t intstack_size = (CONFIG_ARCH_INTERRUPTSTACK & ~15);
   riscv_stack_color(g_intstackalloc, intstack_size);
-#endif
-
-  int id;
-
-#ifdef CONFIG_ARCH_RV_HAVE_IMSIC
-  /* Set default IRQ target hart index to 0 and EIID */
-
-  for (id = 0; id < QEMU_RV_APLIC_NR_IRQ; id++)
-    {
-      riscv_aplic_configure_irq(QEMU_RV_APLIC_BASE, id + 1, 0, id + 1);
-    }
-
-  riscv_aplic_init_msi(QEMU_RV_APLIC_BASE, QEMU_RV_IMSIC_BASE, 0, 3, 0, 0);
-
-#ifdef CONFIG_ARCH_RV_IMSIC_PCI
-  /* Initialize PCI MSI allocator for identities above APLIC wire range */
-
-  riscv_imsic_pci_init(QEMU_RV_APLIC_IRQ_END + 1,
-                       NR_PLIC_IRQS - QEMU_RV_APLIC_IRQ_END - 1);
-#endif
-
-#elif defined(CONFIG_ARCH_RV_HAVE_APLIC)
-  /* Set default IRQ target hart index to 0 and priority */
-
-  for (id = 0; id < QEMU_RV_APLIC_NR_IRQ; id++)
-    {
-      riscv_aplic_configure_irq(QEMU_RV_APLIC_BASE, id + 1,
-                                RISCV_APLIC_DEFAULT_PRIORITY, 0);
-    }
-
-  riscv_aplic_init(QEMU_RV_APLIC_BASE, RISCV_APLIC_ENABLE_IDELIVERY,
-                                       RISCV_APLIC_ENABLE_ITHRESHOLD);
-#else
-  /* Set priority for all global interrupts to 1 (lowest) */
-
-  for (id = 1; id <= NR_PLIC_IRQS; id++)
-    {
-      putreg32(1, (uintptr_t)(QEMU_RV_PLIC_PRIORITY + 4 * id));
-    }
-
-  /* Set irq threshold to 0 (permits all global interrupts) */
-
-  putreg32(0, QEMU_RV_PLIC_THRESHOLD);
 #endif
 
   /* Attach the common interrupt handler */
@@ -154,7 +111,7 @@ void up_irqinitialize(void)
 
   riscv_ipi_clear(0);
 
-#ifdef CONFIG_ARCH_RV_USE_IMSIC_IPI
+#ifdef CONFIG_ARCH_RV_IMSIC_IPI
   /* IMSIC IPI: attach handler to external interrupt path (EIID=1),
    * and enable the IPI identity in this core's IMSIC.
    */
@@ -175,210 +132,6 @@ void up_irqinitialize(void)
   up_irq_enable();
 #endif
 }
-
-/****************************************************************************
- * Name: up_disable_irq
- *
- * Description:
- *   Disable the IRQ specified by 'irq'
- *
- ****************************************************************************/
-
-void up_disable_irq(int irq)
-{
-  int extirq;
-
-  if (irq == RISCV_IRQ_SOFT)
-    {
-      /* Read m/sstatus & clear machine software interrupt enable in m/sie */
-
-      CLEAR_CSR(CSR_IE, IE_SIE);
-    }
-  else if (irq == RISCV_IRQ_TIMER)
-    {
-      /* Read m/sstatus & clear timer interrupt enable in m/sie */
-
-      CLEAR_CSR(CSR_IE, IE_TIE);
-    }
-  else if (irq == RISCV_IRQ_EXT)
-    {
-      /* Read m/sstatus & clear external interrupt enable in m/sie */
-
-      CLEAR_CSR(CSR_IE, IE_EIE);
-
-#ifdef CONFIG_ARCH_RV_HAVE_IMSIC
-      /* Set IMSIC irq threshold to 0 (permits all global interrupts) */
-
-      riscv_imsic_csr_write(ISELECT_EITHRESHOLD,
-                            RISCV_IMSIC_DISABLE_EITHRESHOLD);
-
-      /* Enable irq delivery for IMSIC */
-
-      riscv_imsic_csr_write(ISELECT_EIDELIVERY,
-                            RISCV_IMSIC_DISABLE_EIDELIVERY);
-#endif
-    }
-  else if (irq > RISCV_IRQ_EXT)
-    {
-      extirq = irq - RISCV_IRQ_EXT;
-
-      /* Clear enable bit for the irq */
-
-      if (extirq < NR_PLIC_IRQS)
-        {
-#ifndef CONFIG_ARCH_RV_HAVE_APLIC
-          modifyreg32(QEMU_RV_PLIC_ENABLE1 + (4 * (extirq / 32)),
-                      1 << (extirq % 32), 0);
-#else
-          /* Wire IRQs (<=APLIC_IRQ_END): disable via APLIC.
-           * MSI IRQs (>APLIC_IRQ_END): bypass APLIC, IMSIC EIE only.
-           */
-
-          if (extirq <= QEMU_RV_APLIC_IRQ_END)
-            {
-              riscv_aplic_disable_irq(QEMU_RV_APLIC_BASE, extirq);
-            }
-
-#ifdef CONFIG_ARCH_RV_HAVE_IMSIC
-          riscv_imsic_local_eie_disable(extirq);
-#endif
-#endif
-        }
-      else
-        {
-          PANIC();
-        }
-    }
-}
-
-/****************************************************************************
- * Name: up_enable_irq
- *
- * Description:
- *   Enable the IRQ specified by 'irq'
- *
- ****************************************************************************/
-
-void up_enable_irq(int irq)
-{
-  int extirq;
-
-  if (irq == RISCV_IRQ_SOFT)
-    {
-      /* Read m/sstatus & set machine software interrupt enable in m/sie */
-
-      SET_CSR(CSR_IE, IE_SIE);
-    }
-  else if (irq == RISCV_IRQ_TIMER)
-    {
-      /* Read m/sstatus & set timer interrupt enable in m/sie */
-
-      SET_CSR(CSR_IE, IE_TIE);
-    }
-  else if (irq == RISCV_IRQ_EXT)
-    {
-      /* Read m/sstatus & set external interrupt enable in m/sie */
-
-      SET_CSR(CSR_IE, IE_EIE);
-
-#ifdef CONFIG_ARCH_RV_HAVE_IMSIC
-      /* Set IMSIC irq threshold to 0 (permits all global interrupts) */
-
-      riscv_imsic_csr_write(ISELECT_EITHRESHOLD,
-                            RISCV_IMSIC_ENABLE_EITHRESHOLD);
-
-      /* Enable irq delivery for IMSIC */
-
-      riscv_imsic_csr_write(ISELECT_EIDELIVERY,
-                            RISCV_IMSIC_ENABLE_EIDELIVERY);
-#endif
-    }
-  else if (irq > RISCV_IRQ_EXT)
-    {
-      extirq = irq - RISCV_IRQ_EXT;
-
-      /* Set enable bit for the irq */
-
-      if (extirq < NR_PLIC_IRQS)
-        {
-#ifndef CONFIG_ARCH_RV_HAVE_APLIC
-          modifyreg32(QEMU_RV_PLIC_ENABLE1 + (4 * (extirq / 32)),
-                      0, 1 << (extirq % 32));
-#else
-          /* Wire IRQs (<=APLIC_IRQ_END): configure and enable via APLIC.
-           * MSI IRQs (>APLIC_IRQ_END): bypass APLIC, IMSIC EIE only.
-           */
-
-          if (extirq <= QEMU_RV_APLIC_IRQ_END)
-            {
-              riscv_aplic_configure_irq(QEMU_RV_APLIC_BASE, extirq,
-                                        RISCV_APLIC_SOURCECFG_SM_EDGE_RISE,
-                                        riscv_mhartid());
-              riscv_aplic_enable_irq(QEMU_RV_APLIC_BASE, extirq);
-            }
-
-#ifdef CONFIG_ARCH_RV_HAVE_IMSIC
-          riscv_imsic_local_eie_enable(extirq);
-#endif
-#endif
-        }
-      else
-        {
-          PANIC();
-        }
-    }
-}
-
-irqstate_t up_irq_enable(void)
-{
-  irqstate_t oldstat;
-
-  /* Enable external interrupts (mie/sie) */
-
-  up_enable_irq(RISCV_IRQ_EXT);
-
-  /* Read and enable global interrupts (M/SIE) in m/sstatus */
-
-  oldstat = READ_AND_SET_CSR(CSR_STATUS, STATUS_IE);
-
-  /* Enable APLIC irq */
-#ifdef CONFIG_ARCH_RV_HAVE_IMSIC
-  modifyreg32(QEMU_RV_APLIC_BASE + RISCV_APLIC_DOMAINCFG, 0x0,
-              RISCV_APLIC_DOMAINCFG_IE | RISCV_APLIC_DOMAINCFG_DM);
-#elif defined(CONFIG_ARCH_RV_HAVE_APLIC)
-  modifyreg32(QEMU_RV_APLIC_BASE + RISCV_APLIC_DOMAINCFG, 0x0,
-              RISCV_APLIC_DOMAINCFG_IE);
-#endif
-
-  return oldstat;
-}
-
-#ifdef CONFIG_ARCH_IRQPRIO
-int up_prioritize_irq(int irq, int priority)
-{
-  if (RISCV_IRQ_EXT < irq && irq < NR_IRQS)
-    {
-      irq -= RISCV_IRQ_EXT;
-      putreg32(priority, (uintptr_t)(QEMU_RV_PLIC_PRIORITY + 4 * irq));
-      return OK;
-    }
-
-  return -EINVAL;
-}
-#endif
-
-#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
-void up_trigger_irq(int irq, cpu_set_t cpuset)
-{
-  if (RISCV_IRQ_EXT < irq && irq < NR_IRQS)
-    {
-      irq -= RISCV_IRQ_EXT;
-      modifyreg32(QEMU_RV_PLIC_PENDING + (irq >> 5) * 4, 0, BIT(irq & 31));
-    }
-
-  UNUSED(cpuset);
-}
-#endif
 
 /****************************************************************************
  * Name: up_get_legacy_irq
