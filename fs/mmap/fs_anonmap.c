@@ -30,6 +30,7 @@
 #include <nuttx/sched.h>
 #include <assert.h>
 #include <debug.h>
+#include <unistd.h>
 
 #include "sched/sched.h"
 #include "fs_heap.h"
@@ -127,15 +128,22 @@ int map_anonymous(FAR struct mm_map_entry_s *entry, bool kernel)
    * only purpose of MAP_ANONYMOUS:  To get non-heap memory.  In KERNEL
    * build, this could be accomplished using pgalloc(), provided that
    * you had logic in place to assign a virtual address to the mapping.
+   *
+   * The mapping is page aligned (matching the getpagesize() value) since
+   * some callers rely on the POSIX guarantee that mmap() returns
+   * page-aligned memory.
    */
 
   entry->vaddr = kernel ?
-    fs_heap_zalloc(entry->length) : kumm_zalloc(entry->length);
+    fs_heap_memalign(getpagesize(), entry->length) :
+    kumm_memalign(getpagesize(), entry->length);
   if (entry->vaddr == NULL)
     {
-      ferr("ERROR: kumm_alloc() failed, enable DEBUG_MM for info!\n");
+      ferr("ERROR: memalign failed, enable DEBUG_MM for info!\n");
       return -ENOMEM;
     }
+
+  memset(entry->vaddr, 0, entry->length);
 
   entry->munmap = unmap_anonymous;
   entry->priv.i = kernel;

@@ -35,7 +35,7 @@
 #ifdef CONFIG_MM_PGSIZE
 #  define DEFAULT_MM_PGSIZE CONFIG_MM_PGSIZE
 #else
-#  define DEFAULT_MM_PGSIZE CONFIG_PTHREAD_STACK_MIN
+#  define DEFAULT_MM_PGSIZE 4096  /* Common 4KB page size */
 #endif
 
 /****************************************************************************
