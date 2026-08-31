@@ -268,11 +268,11 @@ int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb)
  *              no:  The address environment can be dropped at once
  *
  * Returned Value:
- *   None.
+ *   true if the address environment was actually destroyed, false otherwise.
  *
  ****************************************************************************/
 
-void addrenv_drop(FAR struct addrenv_s *addrenv, bool deferred)
+bool addrenv_drop(FAR struct addrenv_s *addrenv, bool deferred)
 {
   /* If no more users, the address environment can be dropped */
 
@@ -290,5 +290,9 @@ void addrenv_drop(FAR struct addrenv_s *addrenv, bool deferred)
         {
           addrenv_destroy(addrenv);
         }
+
+      return true;
     }
+
+  return false;
 }

@@ -540,11 +540,11 @@ int addrenv_restore(FAR struct addrenv_s *addrenv)
  *              no:  The address environment can be dropped at once
  *
  * Returned Value:
- *   None.
+ *   true if the address environment was actually destroyed, false otherwise.
  *
  ****************************************************************************/
 
-void addrenv_drop(FAR struct addrenv_s *addrenv, bool deferred);
+bool addrenv_drop(FAR struct addrenv_s *addrenv, bool deferred);
 
 /****************************************************************************
  * Name: addrenv_leave
@@ -564,13 +564,17 @@ void addrenv_drop(FAR struct addrenv_s *addrenv, bool deferred);
 
 static inline_function int addrenv_leave(FAR struct tcb_s *tcb)
 {
-  int ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
   int ret;
 
   ret = up_addrenv_detach(tcb);
 
-  addrenv_drop(tcb->group->tg_addrenv_own, false);
-  if (ttype == TCB_FLAG_TTYPE_TASK)
+  /* Drop this TCB's reference to the shared address environment.
+   * addrenv_drop returns true when refs reach zero and the environment
+   * is destroyed; clear the group pointer only then so no other callback
+   * can observe a non-NULL pointer to a freed environment.
+   */
+
+  if (addrenv_drop(tcb->group->tg_addrenv_own, false))
     {
       tcb->group->tg_addrenv_own = NULL;
     }
