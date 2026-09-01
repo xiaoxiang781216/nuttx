@@ -37,17 +37,13 @@
 
 #include "sched/sched.h"
 
-#if CONFIG_RR_INTERVAL > 0
-
 #ifdef CONFIG_SMP
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
 static struct cpu_call_data_s g_call_data;
-#endif
 
 /****************************************************************************
  * Private Type Declarations
@@ -225,4 +221,54 @@ clock_t nxsched_process_roundrobin(FAR struct tcb_s *tcb, clock_t ticks,
   return ret;
 }
 
-#endif /* CONFIG_RR_INTERVAL > 0 */
+#ifdef CONFIG_SCHED_TICKLESS
+
+/****************************************************************************
+ * Name:  nxsched_suspend_roundrobin
+ *
+ * Description:
+ *   Called when a task using round-robin scheduling is being switched out.
+ *   Records the current time so that the elapsed time can be subtracted
+ *   from the timeslice when the task is resumed.
+ *
+ * Input Parameters:
+ *   tcb - The TCB of the thread that is being suspended.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void nxsched_suspend_roundrobin(FAR struct tcb_s *tcb)
+{
+  clock_t now     = clock_systime_ticks();
+  clock_t elapsed = now - tcb->rr_starttime;
+
+  nxsched_process_roundrobin(tcb, elapsed, true);
+  nxsched_timer_cancel();
+}
+
+/****************************************************************************
+ * Name:  nxsched_resume_roundrobin
+ *
+ * Description:
+ *   Called when a task using round-robin scheduling is being switched in.
+ *   Subtracts the elapsed suspension time from the task's timeslice so
+ *   that only actual CPU execution time is counted.
+ *
+ * Input Parameters:
+ *   tcb - The TCB of the thread that is being resumed.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void nxsched_resume_roundrobin(FAR struct tcb_s *tcb)
+{
+  clock_t now = clock_systime_ticks();
+  DEBUGASSERT(tcb->timeslice >= 0);
+  tcb->rr_starttime = now;
+  nxsched_timer_start(now, tcb->timeslice);
+}
+#endif

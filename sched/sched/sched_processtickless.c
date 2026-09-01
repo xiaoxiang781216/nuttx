@@ -32,11 +32,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#if CONFIG_RR_INTERVAL > 0
-#  include <sched.h>
-#  include <nuttx/arch.h>
-#endif
-
 #include "sched/sched.h"
 #include "wdog/wdog.h"
 #include "hrtimer/hrtimer.h"
@@ -78,30 +73,28 @@ DEFINE_PER_CPU_BMP(uint32_t, g_oneshot_maxticks) = UINT32_MAX;
 #if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
 static clock_t nxsched_cpu_scheduler(int cpu, clock_t ticks,
                                      clock_t elapsed, bool noswitches);
-#endif
 static clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
                                          bool noswitches);
-static clock_t nxsched_process_event(clock_t ticks, bool noswitches);
+#endif
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
+#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
 /* This is the tick that the timer was stopped.  All future times are
  * calculated against this time.  It must be valid at all times when
  * the timer is not running.
  */
 
 static DEFINE_PER_CPU_BSS_BMP(clock_t, g_timer_tick);
-#define g_timer_tick this_cpu_var_bmp(g_timer_tick)
+#  define g_timer_tick this_cpu_var_bmp(g_timer_tick)
 
 /* HRTimer for scheduler event. */
 
 static DEFINE_PER_CPU_BSS_BMP(hrtimer_t, g_sched_event);
-#define g_sched_event this_cpu_var_bmp(g_sched_event)
-
-static DEFINE_PER_CPU_BSS_BMP(bool, g_in_sched_expiration);
-#define g_in_sched_expiration this_cpu_var_bmp(g_in_sched_expiration)
+#  define g_sched_event this_cpu_var_bmp(g_sched_event)
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -118,41 +111,6 @@ int up_timer_gettick(FAR clock_t *ticks)
   return ret;
 }
 #endif
-
-static clock_t nxsched_process_event(clock_t ticks, bool noswitches)
-{
-  clock_t elapsed = 0u;
-
-  /* Ensure the g_timer_tick is monotonic. */
-
-  if (clock_compare(g_timer_tick, ticks))
-    {
-      /* Calculate the elapsed time and update clock tickbase. */
-
-      elapsed      = ticks - g_timer_tick;
-      g_timer_tick = ticks;
-    }
-
-  /* Process the timer ticks and set up the next interval (or not) */
-
-  return nxsched_process_scheduler(ticks, elapsed, noswitches);
-}
-
-static uint64_t nxsched_hrtimer_expiration(const hrtimer_t *timer,
-                                           uint64_t expired)
-{
-  clock_t    delay;
-  clock_t    now   = div_const(expired, NSEC_PER_TICK);
-  irqstate_t flags = enter_critical_section();
-
-  g_in_sched_expiration = true;
-  delay = nxsched_process_event(now, false);
-  g_in_sched_expiration = false;
-
-  leave_critical_section(flags);
-
-  return delay != CLOCK_MAX ? TICK2NSEC((uint64_t)delay) : 0u;
-}
 
 /****************************************************************************
  * Name:  nxsched_cpu_scheduler
@@ -188,7 +146,7 @@ static clock_t nxsched_cpu_scheduler(int cpu, clock_t ticks,
   FAR struct tcb_s *ntcb = current_task(cpu);
   clock_t ret = CLOCK_MAX;
 
-#if CONFIG_RR_INTERVAL > 0
+#  if CONFIG_RR_INTERVAL > 0
   /* Check if the currently executing task uses round robin scheduling. */
 
   if ((atomic_read(&rtcb->flags) & TCB_FLAG_POLICY_MASK) ==
@@ -198,11 +156,12 @@ static clock_t nxsched_cpu_scheduler(int cpu, clock_t ticks,
        * timeslice.
        */
 
+      rtcb->rr_starttime = ticks;
       ret = nxsched_process_roundrobin(rtcb, elapsed, noswitches);
     }
-#endif
+#  endif
 
-#ifdef CONFIG_SCHED_SPORADIC
+#  ifdef CONFIG_SCHED_SPORADIC
   /* Check if the currently executing task uses sporadic scheduling. */
 
   if ((atomic_read(&rtcb->flags) & TCB_FLAG_POLICY_MASK) ==
@@ -227,7 +186,7 @@ static clock_t nxsched_cpu_scheduler(int cpu, clock_t ticks,
 
       ret = nxsched_process_sporadic(rtcb, elapsed, noswitches);
     }
-#endif
+#  endif
 
   /* If a context switch occurred, then need to return delay remaining for
    * the new task at the head of the ready to run list.
@@ -248,7 +207,6 @@ static clock_t nxsched_cpu_scheduler(int cpu, clock_t ticks,
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: nxsched_process_scheduler
@@ -280,7 +238,6 @@ clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
                                   bool noswitches)
 {
   clock_t minslice = CLOCK_MAX;
-#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
   irqstate_t flags = enter_critical_section();
   clock_t timeslice;
   int i;
@@ -305,43 +262,10 @@ clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
     }
 
   leave_critical_section(flags);
-#endif
 
   return minslice;
 }
-
-/****************************************************************************
- * Name:  nxsched_timer_start
- *
- * Description:
- *   Start the interval timer.
- *
- * Input Parameters:
- *   ticks - The number of ticks defining the timer interval to setup.
- *   interval - The number of ticks to use when setting up the next timer.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static inline_function
-void nxsched_timer_start(clock_t ticks, clock_t interval)
-{
-  if (interval != CLOCK_MAX)
-    {
-      DEBUGASSERT((uint64_t)interval <= UINT32_MAX &&
-                  (uint64_t)interval <= HRTIMER_MAX_DELAY /
-                                        NSEC_PER_TICK);
-      hrtimer_start(&g_sched_event, nxsched_hrtimer_expiration,
-                    TICK2NSEC((uint64_t)ticks + interval),
-                    HRTIMER_MODE_ABS);
-    }
-  else
-    {
-      hrtimer_cancel(&g_sched_event);
-    }
-}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -362,13 +286,6 @@ void nxsched_timer_start(clock_t ticks, clock_t interval)
  *   Base code implementation assumes that this function is called from
  *   interrupt handling logic with interrupts disabled.
  *
- * Note:
- *   The current SCHED_RR implementation has an issue: if a round-robin task
- *   is preempted, its timeslice counter does not decrement properly.
- *   Therefore, we must trigger the scheduler on each timer expiration to
- *   minimize the occurrence of this problem.
- *   This workaround can be removed once the SCHED_RR behavior is fixed.
- *
  ****************************************************************************/
 
 void nxsched_process_timer(void)
@@ -383,15 +300,52 @@ void nxsched_process_timer(void)
   nsec = clock_time2nsec(&ts);
 
   hrtimer_process(nsec);
+}
 
-#  if CONFIG_RR_INTERVAL > 0
-  /* Workaround for SCHED_RR, see the note. */
+#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
 
-  clock_t    now   = div_const(nsec, NSEC_PER_TICK);
-  irqstate_t flags = enter_critical_section();
-  nxsched_timer_start(now, nxsched_process_event(now, true));
+/****************************************************************************
+ * Name:  nxsched_hrtimer_expiration
+ *
+ * Description:
+ *   The callback when scheduler timer expired.
+ *
+ * Input Parameters:
+ *   timer   - The scheduler timer.
+ *   expired - The expired time in nanoseconds.
+ *
+ * Returned Value:
+ *   The next expired delay in nanoseconds.
+ *
+ ****************************************************************************/
+
+static uint64_t nxsched_hrtimer_expiration(const hrtimer_t *timer,
+                                           uint64_t expired)
+{
+  clock_t    now     = div_const(expired, NSEC_PER_TICK);
+  irqstate_t flags   = enter_critical_section();
+  clock_t    elapsed = 0u;
+
+  /* Ensure the g_timer_tick is monotonic. */
+
+  if (clock_compare(g_timer_tick, now))
+    {
+      /* Calculate the elapsed time and update clock tickbase. */
+
+      elapsed      = now - g_timer_tick;
+      g_timer_tick = now;
+    }
+
+  /* We may update the g_sched_timer when processing the scheduler,
+   * which violates the invariant that the expiration timer is read-only.
+   * It is dangerous but here we can ensure the functional correctness.
+   */
+
+  nxsched_process_scheduler(now, elapsed, false);
+
   leave_critical_section(flags);
-#  endif
+
+  return 0u;
 }
 
 /****************************************************************************
@@ -433,17 +387,57 @@ void nxsched_process_timer(void)
 
 void nxsched_reassess_timer(void)
 {
-  clock_t next;
-  clock_t now;
-
-  up_timer_gettick(&now);
-  next = nxsched_process_event(now, true);
-
-  if (!g_in_sched_expiration)
-    {
-      nxsched_timer_start(now, next);
-    }
+  nxsched_hrtimer_expiration(&g_sched_event, clock_systime_nsec());
 }
+
+/****************************************************************************
+ * Name:  nxsched_timer_cancel
+ *
+ * Description:
+ *   Cancel the scheduler timer.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ * Note:
+ *   This function is called from the critical section
+ *
+ ****************************************************************************/
+
+void nxsched_timer_cancel(void)
+{
+  hrtimer_cancel(&g_sched_event);
+}
+
+/****************************************************************************
+ * Name:  nxsched_timer_start
+ *
+ * Description:
+ *   Start the interval timer for a round-robin task.  Called during
+ *   context switches to set up the timer for the newly running RR task's
+ *   remaining timeslice.
+ *
+ * Input Parameters:
+ *   tcb - The TCB of the RR task that is about to run.
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumption:
+ *   This function is called from the critical section.
+ *
+ ****************************************************************************/
+
+void nxsched_timer_start(clock_t now, clock_t delay)
+{
+  DEBUGASSERT((uint64_t)delay <= HRTIMER_MAX_DELAY / NSEC_PER_TICK);
+  hrtimer_start(&g_sched_event, nxsched_hrtimer_expiration,
+                TICK2NSEC((uint64_t)now + delay), HRTIMER_MODE_ABS);
+}
+#endif
 
 /****************************************************************************
  * Name:  nxsched_get_next_expired

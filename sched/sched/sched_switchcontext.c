@@ -223,6 +223,13 @@ __jumpfunc__ void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
     }
 #endif
 
+#if CONFIG_RR_INTERVAL > 0 && defined(CONFIG_SCHED_TICKLESS)
+  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_RR)
+    {
+      nxsched_suspend_roundrobin(tcb);
+    }
+#endif
+
   /* Indicate that the task has been suspended */
 
 #ifdef CONFIG_SCHED_CRITMONITOR
@@ -269,6 +276,13 @@ __jumpfunc__ void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
     }
 #endif
 
+#if CONFIG_RR_INTERVAL > 0 && defined(CONFIG_SCHED_TICKLESS)
+  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_RR)
+    {
+      nxsched_resume_roundrobin(tcb);
+    }
+#endif
+
   /* Indicate the task has been resumed */
 
 #ifdef CONFIG_SCHED_CRITMONITOR
@@ -290,18 +304,7 @@ __jumpfunc__ void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
 
 void nxsched_switch(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
 {
-  uint16_t count;
-
-#if defined(CONFIG_SCHED_TICKLESS) && CONFIG_RR_INTERVAL > 0
-  /* Before the context switch, we should set the timer for RR. */
-
-  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_RR)
-    {
-      nxsched_reassess_timer();
-    }
-#endif
-
-  count = RSPINLOCK_COUNT(g_schedlock.local_val);
+  uint16_t count = RSPINLOCK_COUNT(g_schedlock.local_val);
 
   nxsched_suspend_scheduler(rtcb);
   nxsched_resume_scheduler(tcb);
