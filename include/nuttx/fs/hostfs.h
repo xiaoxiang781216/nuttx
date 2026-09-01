@@ -181,6 +181,7 @@ struct nuttx_timespec
 struct nuttx_dirent_s
 {
   nuttx_ino_t  d_ino;
+  nuttx_off_t  d_off;
   uint8_t      d_type;                      /* type of file */
   char         d_name[CONFIG_NAME_MAX + 1]; /* filename */
 };

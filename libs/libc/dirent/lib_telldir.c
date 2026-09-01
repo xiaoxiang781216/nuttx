@@ -60,7 +60,7 @@ off_t telldir(FAR DIR *dirp)
 {
   if (dirp != NULL)
     {
-      return lseek(dirp->fd, 0, SEEK_CUR);
+      return dirp->entry.d_off;
     }
 
   set_errno(EBADF);

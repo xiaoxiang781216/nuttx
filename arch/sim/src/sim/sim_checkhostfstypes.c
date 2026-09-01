@@ -62,6 +62,8 @@
 
 /* dirent */
 
+STATIC_ASSERT_FILED(nuttx_dirent_s, dirent, d_ino);
+STATIC_ASSERT_FILED(nuttx_dirent_s, dirent, d_off);
 STATIC_ASSERT_FILED(nuttx_dirent_s, dirent, d_type);
 STATIC_ASSERT_FILED(nuttx_dirent_s, dirent, d_name);
 

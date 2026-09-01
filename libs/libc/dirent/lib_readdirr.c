@@ -74,8 +74,6 @@ int readdir_r(FAR DIR *dirp, FAR struct dirent *entry,
 {
   struct dirent *tmp;
 
-  /* NOTE: The following use or errno is *not* thread-safe */
-
   set_errno(0);
   tmp = readdir(dirp);
   if (!tmp)

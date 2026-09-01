@@ -124,9 +124,12 @@
  *          be fully rebuilt against this header.  Mixing old and new
  *          objects, including prebuilt libraries and cross-core rpmsgfs
  *          peers running different builds, produces corrupted d_type and
- *          d_name reads.
+ *          d_name reads.  Inserting d_off after d_ino grows the structure
+ *          once more and carries the same rebuild requirement.
  *
  * @var dirent::d_ino  File serial number, 0 if not provided.
+ * @var dirent::d_off  Offset of the next entry; valid only as a seekdir()
+ *                     cookie, not as a byte offset.
  * @var dirent::d_type Type of file (see DT_* / DTYPE_*).
  * @var dirent::d_name Null-terminated file name.
  */
@@ -134,6 +137,7 @@
 struct dirent
 {
   ino_t    d_ino;                 /* File serial number */
+  off_t    d_off;                 /* Offset of the next entry (cookie) */
   uint8_t  d_type;                /* Type of file */
   char     d_name[NAME_MAX + 1];  /* File name */
 };

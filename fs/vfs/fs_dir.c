@@ -539,6 +539,7 @@ static ssize_t dir_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen)
 {
   FAR struct fs_dirent_s *dir = filep->f_priv;
+  FAR struct dirent *entry = (FAR struct dirent *)buffer;
 #ifndef CONFIG_DISABLE_MOUNTPOINT
   FAR struct inode *inode = dir->fd_root;
 #endif
@@ -558,15 +559,14 @@ static ssize_t dir_read(FAR struct file *filep, FAR char *buffer,
 #ifndef CONFIG_DISABLE_MOUNTPOINT
   if (INODE_IS_MOUNTPT(inode))
     {
-      ret = inode->u.i_mops->readdir(inode, dir,
-                                     (FAR struct dirent *)buffer);
+      ret = inode->u.i_mops->readdir(inode, dir, entry);
     }
   else
 #endif
     {
       /* The node is part of the root pseudo file system */
 
-      ret = read_pseudodir(dir, (FAR struct dirent *)buffer);
+      ret = read_pseudodir(dir, entry);
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
       nxclock_gettime(CLOCK_REALTIME, &dir->fd_root->i_atime);
 #endif
@@ -584,7 +584,7 @@ static ssize_t dir_read(FAR struct file *filep, FAR char *buffer,
       return ret;
     }
 
-  filep->f_pos++;
+  entry->d_off = ++filep->f_pos;
   return sizeof(struct dirent);
 }
 
