@@ -113,9 +113,7 @@
 /* Special value for tv_nsec field of timespec */
 
 #define UTIME_NOW     ((1l << 30) - 1l)
-#ifndef __cplusplus
-#  define UTIME_OMIT  ((1l << 30) - 2l)
-#endif
+#define UTIME_OMIT    ((1l << 30) - 2l)
 
 #define STATX_TYPE            0x000001u /* Want/got stx_mode & S_IFMT */
 #define STATX_MODE            0x000002u /* Want/got stx_mode & ~S_IFMT */
