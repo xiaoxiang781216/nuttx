@@ -2684,7 +2684,7 @@ int uart_check_special(FAR uart_dev_t *dev, FAR const char *buf, size_t size)
               PANIC_WITH_REGS("Force panic by user.", NULL);
             }
 
-          return 0;
+          continue;
         }
       else
         {
@@ -2696,7 +2696,7 @@ int uart_check_special(FAR uart_dev_t *dev, FAR const char *buf, size_t size)
       if (buf[i] == CONFIG_TTY_LAUNCH_CHAR)
         {
           uart_launch();
-          return 0;
+          continue;
         }
 #endif
 
