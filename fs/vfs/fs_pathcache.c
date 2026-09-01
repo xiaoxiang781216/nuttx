@@ -182,7 +182,8 @@ static int pathcache_create(FAR struct file *filep, FAR char *abspath)
 
   /* Insert the entry into cache (internally locked) */
 
-  ret = lru_cache_insert(&g_pathcache, abspath, cached_file);
+  ret = lru_cache_insert(&g_pathcache, abspath, strlen(abspath) + 1,
+                         cached_file);
   if (ret < 0)
     {
       goto errout_with_cached_file;
@@ -219,8 +220,8 @@ errout_with_file:
 
 static int
 pathcache_is_match(FAR struct lru_cache_s *cache,
-                   FAR const char *key, FAR void *value,
-                   FAR void *arg)
+                   FAR const void *key, size_t keylen,
+                   FAR void *value, FAR void *arg)
 {
   /* Check if this file belongs to the unmounting mountpoint */
 
@@ -276,7 +277,8 @@ int pathcache_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Look up for cached entry (internally locked) */
 
-  cached_file = lru_cache_lookup(&g_pathcache, abspath);
+  cached_file = lru_cache_lookup(&g_pathcache, abspath,
+                                 strlen(abspath) + 1);
 
   /* Cache miss */
 
@@ -326,7 +328,7 @@ int pathcache_open(FAR struct file *filep, FAR const char *relpath,
       pathcache_put(cached_file);
       if ((oflags & O_ACCMODE) != O_RDONLY)
         {
-          lru_cache_remove(&g_pathcache, abspath);
+          lru_cache_remove(&g_pathcache, abspath, strlen(abspath) + 1);
         }
 
       /* If the file is opened with O_TRUNC, truncate it */
@@ -388,7 +390,7 @@ int pathcache_opendir(FAR struct inode *inode, FAR const char *relpath,
 
   /* Look up for cached entry (internally locked) */
 
-  cached_file = lru_cache_lookup(&g_pathcache, path);
+  cached_file = lru_cache_lookup(&g_pathcache, path, strlen(path) + 1);
 
   /* Cache miss */
 
@@ -444,7 +446,8 @@ int pathcache_opendir(FAR struct inode *inode, FAR const char *relpath,
 
       /* Insert the cached_file into cache (internally locked) */
 
-      if (lru_cache_insert(&g_pathcache, path, cached_file) < 0)
+      if (lru_cache_insert(&g_pathcache, path, strlen(path) + 1,
+                           cached_file) < 0)
         {
           goto errout_with_dir;
         }
@@ -540,7 +543,7 @@ int pathcache_remove_parent(FAR const char *path, bool drop_self)
 
   if (drop_self)
     {
-      lru_cache_remove(&g_pathcache, abspath);
+      lru_cache_remove(&g_pathcache, abspath, strlen(abspath) + 1);
     }
 
   /* Strip the last path component to obtain the parent directory.
@@ -569,7 +572,7 @@ int pathcache_remove_parent(FAR const char *path, bool drop_self)
 
   /* Invalidate the parent directory's cached listing */
 
-  lru_cache_remove(&g_pathcache, abspath);
+  lru_cache_remove(&g_pathcache, abspath, strlen(abspath) + 1);
 
 errout_with_pathbuffer:
   lib_put_tempbuffer(pathbuffer);
@@ -652,7 +655,7 @@ int pathcache_close(FAR struct file *filep, FAR const char *path)
    * captured a mid-write snapshot of the file state.
    */
 
-  lru_cache_remove(&g_pathcache, abspath);
+  lru_cache_remove(&g_pathcache, abspath, strlen(abspath) + 1);
 
 errout_with_pathbuffer:
   lib_put_tempbuffer(pathbuffer);

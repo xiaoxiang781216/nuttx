@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <string.h>
 
 #include <nuttx/lru_cache.h>
 #include <nuttx/lib/lib.h>
@@ -43,7 +44,8 @@ struct lru_cache_entry_s
   struct list_node lru_node;  /* LRU list node */
   hash_node_t      hash_node; /* Hash table node */
   FAR void        *value;     /* Pointer to the value */
-  char             key[];     /* Key */
+  size_t           keylen;    /* Key length in bytes (may contain NUL) */
+  char             key[];     /* Key (keylen bytes) */
 };
 
 /****************************************************************************
@@ -72,16 +74,20 @@ struct lru_cache_entry_s
  *
  ****************************************************************************/
 
-static inline_function uint32_t lru_cache_hash(FAR const char *key)
+static inline_function uint32_t lru_cache_hash(FAR const void *key,
+                                               size_t keylen)
 {
+  FAR const uint8_t *p = key;
   uint32_t hash = 5381;
   size_t i;
 
-  for (i = 0; key[i]; i++)
+  for (i = 0; i < keylen; i++)
     {
-      /* hash * 33 + c */
+      /* hash * 33 + c.  Iterate keylen bytes rather than stopping at NUL,
+       * so binary keys containing NUL bytes hash correctly.
+       */
 
-      hash = ((hash << 5) + hash) + key[i];
+      hash = ((hash << 5) + hash) + p[i];
     }
 
   return hash;
@@ -118,7 +124,7 @@ lru_cache_evict(FAR struct lru_cache_s *cache)
       /* Remove from hash table */
 
       entry = container_of(lru_node, struct lru_cache_entry_s, lru_node);
-      hash = lru_cache_hash(entry->key);
+      hash = lru_cache_hash(entry->key, entry->keylen);
       hashtable_delete_n(cache->hash_table, &entry->hash_node, hash,
                          cache->hash_size);
       cache->num_entries--;
@@ -145,14 +151,14 @@ lru_cache_evict(FAR struct lru_cache_s *cache)
 
 static FAR struct lru_cache_entry_s *
 lru_cache_lookup_entry(FAR const struct lru_cache_s *cache,
-                       FAR const char *key)
+                       FAR const void *key, size_t keylen)
 {
   FAR struct lru_cache_entry_s *entry;
   uint32_t hash;
 
   DEBUGASSERT(cache != NULL && key != NULL);
 
-  hash = lru_cache_hash(key);
+  hash = lru_cache_hash(key, keylen);
 
   /* Search the hash table for the entry */
 
@@ -160,7 +166,8 @@ lru_cache_lookup_entry(FAR const struct lru_cache_s *cache,
                                        cache->hash_size,
                                        struct lru_cache_entry_s, hash_node)
     {
-      if (strcmp(key, entry->key) == 0)
+      if (entry->keylen == keylen &&
+          memcmp(key, entry->key, keylen) == 0)
         {
           return entry;
         }
@@ -250,7 +257,7 @@ errout_with_hashtable:
  ****************************************************************************/
 
 FAR void *lru_cache_lookup(FAR struct lru_cache_s *cache,
-                           FAR const char *key)
+                           FAR const void *key, size_t keylen)
 {
   FAR struct lru_cache_entry_s *entry;
   FAR void *value = NULL;
@@ -258,7 +265,7 @@ FAR void *lru_cache_lookup(FAR struct lru_cache_s *cache,
   DEBUGASSERT(cache != NULL && key != NULL);
 
   nxmutex_lock(&cache->lock);
-  entry = lru_cache_lookup_entry(cache, key);
+  entry = lru_cache_lookup_entry(cache, key, keylen);
   if (entry != NULL)
     {
       value = entry->value;
@@ -287,21 +294,19 @@ FAR void *lru_cache_lookup(FAR struct lru_cache_s *cache,
  *
  ****************************************************************************/
 
-int lru_cache_insert(FAR struct lru_cache_s *cache, FAR const char *key,
-                     FAR void *value)
+int lru_cache_insert(FAR struct lru_cache_s *cache, FAR const void *key,
+                     size_t keylen, FAR void *value)
 {
   FAR struct lru_cache_entry_s *tmp = NULL;
   FAR struct lru_cache_entry_s *entry;
   FAR void *evicted = NULL;
   uint32_t hash;
   int ret = OK;
-  int len;
 
   DEBUGASSERT(cache != NULL && key != NULL && value != NULL);
 
-  len = strlen(key) + 1;
   nxmutex_lock(&cache->lock);
-  entry = lru_cache_lookup_entry(cache, key);
+  entry = lru_cache_lookup_entry(cache, key, keylen);
 
   /* If an entry with this key already exists */
 
@@ -333,7 +338,7 @@ int lru_cache_insert(FAR struct lru_cache_s *cache, FAR const char *key,
 
   /* Allocate or reallocate entry */
 
-  entry = lib_realloc(tmp, sizeof(*entry) + len);
+  entry = lib_realloc(tmp, sizeof(*entry) + keylen);
   if (entry == NULL)
     {
       /* Free the tmp entry if allocation fails */
@@ -343,13 +348,14 @@ int lru_cache_insert(FAR struct lru_cache_s *cache, FAR const char *key,
       goto errout_with_lock;
     }
 
-  memcpy(entry->key, key, len);
+  memcpy(entry->key, key, keylen);
+  entry->keylen = keylen;
   entry->value = value;
 
   /* Insert into hash table and LRU list */
 
   cache->ops->get_cb(value);
-  hash = lru_cache_hash(entry->key);
+  hash = lru_cache_hash(entry->key, entry->keylen);
   hashtable_add_n(cache->hash_table, &entry->hash_node, hash,
                   cache->hash_size);
   list_add_head(&cache->lru_list, &entry->lru_node);
@@ -392,7 +398,8 @@ errout_with_lock:
  *
  ****************************************************************************/
 
-int lru_cache_remove(FAR struct lru_cache_s *cache, FAR const char *key)
+int lru_cache_remove(FAR struct lru_cache_s *cache, FAR const void *key,
+                     size_t keylen)
 {
   FAR struct lru_cache_entry_s *entry;
   FAR void *value;
@@ -400,7 +407,7 @@ int lru_cache_remove(FAR struct lru_cache_s *cache, FAR const char *key)
   DEBUGASSERT(cache != NULL && key != NULL);
 
   nxmutex_lock(&cache->lock);
-  entry = lru_cache_lookup_entry(cache, key);
+  entry = lru_cache_lookup_entry(cache, key, keylen);
   if (entry == NULL)
     {
       nxmutex_unlock(&cache->lock);
@@ -410,7 +417,8 @@ int lru_cache_remove(FAR struct lru_cache_s *cache, FAR const char *key)
   value = entry->value;
   list_delete(&entry->lru_node);
   hashtable_delete_n(cache->hash_table, &entry->hash_node,
-                     lru_cache_hash(entry->key), cache->hash_size);
+                     lru_cache_hash(entry->key, entry->keylen),
+                     cache->hash_size);
 
   /* Add to free_list, num_entries remains unchanged */
 
@@ -503,7 +511,7 @@ int lru_cache_foreach(FAR struct lru_cache_s *cache, lru_cache_cb_t cb,
   list_for_every_entry(&cache->lru_list, entry,
                        struct lru_cache_entry_s, lru_node)
     {
-      ret = cb(cache, entry->key, entry->value, arg);
+      ret = cb(cache, entry->key, entry->keylen, entry->value, arg);
       if (ret <= 0)
         {
           break;
@@ -560,7 +568,7 @@ int lru_cache_remove_if(FAR struct lru_cache_s *cache,
     {
       /* Check if this entry matches the removal condition */
 
-      ret = match_cb(cache, entry->key, entry->value, arg);
+      ret = match_cb(cache, entry->key, entry->keylen, entry->value, arg);
       if (ret > 0)
         {
           /* Remove from lru_list and hash table, add to temp list */
@@ -568,7 +576,8 @@ int lru_cache_remove_if(FAR struct lru_cache_s *cache,
           cache->num_entries--;
           list_delete(&entry->lru_node);
           hashtable_delete_n(cache->hash_table, &entry->hash_node,
-                             lru_cache_hash(entry->key), cache->hash_size);
+                             lru_cache_hash(entry->key, entry->keylen),
+                             cache->hash_size);
           list_add_tail(&removed_list, &entry->lru_node);
         }
       else if (ret < 0)

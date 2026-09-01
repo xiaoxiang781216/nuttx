@@ -27,6 +27,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <stddef.h>
+
 #include <nuttx/hashtable.h>
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
@@ -51,8 +53,8 @@ typedef CODE void (*lru_cache_ops_cb_t)(FAR void *value);
  */
 
 typedef int (*lru_cache_cb_t)(FAR struct lru_cache_s *cache,
-                              FAR const char *key, FAR void *value,
-                              FAR void *args);
+                              FAR const void *key, size_t keylen,
+                              FAR void *value, FAR void *arg);
 
 /* Operations for reference counting */
 
@@ -107,11 +109,19 @@ extern "C"
 int lru_cache_init(FAR struct lru_cache_s *cache, size_t max_entries,
                    size_t hash_size, FAR const struct lru_cache_ops_s *ops);
 void lru_cache_uninit(FAR struct lru_cache_s *cache);
+
+/* All key-based operations take a (const void *key, size_t keylen) pair.
+ * The key is keylen raw bytes (may contain NUL).  Hashing iterates keylen
+ * bytes and comparison uses memcmp.  For string keys, pass strlen(s)+1 as
+ * keylen to include the terminator.
+ */
+
 FAR void *lru_cache_lookup(FAR struct lru_cache_s *cache,
-                           FAR const char *key);
-int lru_cache_insert(FAR struct lru_cache_s *cache, FAR const char *key,
-                     FAR void *value);
-int lru_cache_remove(FAR struct lru_cache_s *cache, FAR const char *key);
+                           FAR const void *key, size_t keylen);
+int lru_cache_insert(FAR struct lru_cache_s *cache, FAR const void *key,
+                     size_t keylen, FAR void *value);
+int lru_cache_remove(FAR struct lru_cache_s *cache, FAR const void *key,
+                     size_t keylen);
 int lru_cache_remove_if(FAR struct lru_cache_s *cache,
                         lru_cache_cb_t match_cb, FAR void *arg);
 int lru_cache_foreach(FAR struct lru_cache_s *cache, lru_cache_cb_t cb,
