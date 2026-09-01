@@ -78,6 +78,9 @@ add_link_options(-Wl,--entry=__start)
 add_link_options(-nostdlib)
 add_compile_options(-fno-common -Wall -Wshadow -Wundef -nostdlib)
 
+# Aggressive code reduction, use icf=safe if correctness is in question
+add_link_options(-Wl,--icf=all)
+
 if(CONFIG_DEBUG_CUSTOMOPT)
   add_compile_options(${CONFIG_DEBUG_OPTLEVEL})
 elseif(CONFIG_DEBUG_FULLOPT)
