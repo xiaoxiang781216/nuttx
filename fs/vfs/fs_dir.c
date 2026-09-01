@@ -635,6 +635,8 @@ static int dir_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   if (cmd == FIOC_FILEPATH)
     {
+      /* fd_path already carries the trailing '/' (see dir_allocate) */
+
       strlcpy((FAR char *)(uintptr_t)arg, dir->fd_path, PATH_MAX);
     }
   else if (cmd != BIOC_FLUSH)
@@ -719,7 +721,13 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
       inode->u.i_ops = &g_dir_fileops;
     }
 
-  /* Assign the pre-allocated absolute path to fd_path */
+  /* Assign the pre-allocated absolute path to fd_path.  lib_realpath()
+   * strips the trailing slash, but fd_path names a directory and is used
+   * as the base for dirfd-relative resolution (FIOC_FILEPATH), so keep
+   * the trailing '/' in the stored copy.
+   */
+
+  strlcat(tempbuf2, "/", PATH_MAX);
 
   dir->fd_path = fs_heap_strdup(tempbuf2);
   if (dir->fd_path == NULL)
