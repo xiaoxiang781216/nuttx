@@ -61,6 +61,7 @@
 #include <nuttx/lib/lib.h>
 
 #include "fs_heap.h"
+#include "inode/inode.h"
 #include "sched/sched.h"
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
@@ -104,6 +105,9 @@ enum proc_node_e
   PROC_GROUP,                         /* Group directory */
   PROC_GROUP_STATUS,                  /* Task group status */
   PROC_GROUP_FD                       /* Group file descriptors */
+#ifndef CONFIG_FS_PROCFS_EXCLUDE_FD
+  , PROC_FD                           /* Per-task file descriptor dir */
+#endif
 #if !defined(CONFIG_DISABLE_ENVIRON) && !defined(CONFIG_FS_PROCFS_EXCLUDE_ENVIRON)
   , PROC_GROUP_ENV                    /* Group environment variables */
 #endif
@@ -339,6 +343,13 @@ static const struct proc_node_s g_groupfd =
   "group/fd",     "fd",      PROC_GROUP_FD,     DTYPE_FILE        /* Group file descriptors */
 };
 
+#ifndef CONFIG_FS_PROCFS_EXCLUDE_FD
+static const struct proc_node_s g_fd =
+{
+  "fd",           "fd",      PROC_FD,           DTYPE_DIRECTORY   /* Task file descriptors */
+};
+#endif
+
 #if !defined(CONFIG_DISABLE_ENVIRON) && !defined(CONFIG_FS_PROCFS_EXCLUDE_ENVIRON)
 static const struct proc_node_s g_groupenv =
 {
@@ -369,6 +380,9 @@ static FAR const struct proc_node_s * const g_nodeinfo[] =
   &g_group,        /* Group directory */
   &g_groupstatus,  /* Task group status */
   &g_groupfd       /* Group file descriptors */
+#ifndef CONFIG_FS_PROCFS_EXCLUDE_FD
+  , &g_fd          /* Task file descriptors */
+#endif
 #if !defined(CONFIG_DISABLE_ENVIRON) && !defined(CONFIG_FS_PROCFS_EXCLUDE_ENVIRON)
   , &g_groupenv    /* Group environment variables */
 #endif
@@ -395,7 +409,10 @@ static const struct proc_node_s * const g_level0info[] =
   &g_heapcheck,    /* Task heap check flag */
 #endif
   &g_stack,        /* Task stack info */
-  &g_group,        /* Group directory */
+  &g_group         /* Group directory */
+#ifndef CONFIG_FS_PROCFS_EXCLUDE_FD
+  , &g_fd          /* Task file descriptors */
+#endif
 };
 #define PROC_NLEVEL0NODES (sizeof(g_level0info)/sizeof(FAR const struct proc_node_s * const))
 
@@ -1572,8 +1589,99 @@ static ssize_t proc_groupenv(FAR struct proc_file_s *procfile,
 #endif
 
 /****************************************************************************
- * Name: proc_open
+ * Name: proc_open_fd
  ****************************************************************************/
+
+#ifndef CONFIG_FS_PROCFS_EXCLUDE_FD
+static int proc_open_fd(FAR struct file *filep, pid_t pid,
+                        FAR char *ptr, int oflags)
+{
+  FAR struct file *srcfilep;
+  FAR struct tcb_s *tcb;
+  unsigned long fd;
+  int ret = OK;
+
+  if (ptr[0] != 'f' || ptr[1] != 'd' || ptr[2] != '/')
+    {
+      return -ENOENT;
+    }
+
+  /* The segment after "fd/" must be a decimal descriptor number */
+
+  errno = 0;
+  fd = strtoul(&ptr[3], &ptr, 10);
+  if (errno != 0 || ptr == NULL || *ptr != '\0' || fd > INT_MAX)
+    {
+      return -ENOENT;
+    }
+
+  /* Get the file structure from the descriptor list of the task named
+   * by the path.  fdlist_get2() takes a reference on the file structure
+   * under the list lock, so the result stays valid after the TCB hold
+   * is released.
+   */
+
+  tcb = nxsched_get_tcb(pid);
+  if (tcb == NULL)
+    {
+      return -ENOENT;
+    }
+
+  ret = fdlist_get2(&tcb->group->tg_fdlist, (int)fd, &srcfilep, NULL);
+  nxsched_put_tcb(tcb);
+
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Take a reference on the target inode and clone the open file state
+   * into the caller's file structure, following the pattern of
+   * file_dup2().
+   */
+
+  filep->f_inode = srcfilep->f_inode;
+  inode_addref(filep->f_inode);
+
+  filep->f_oflags = oflags;
+  filep->f_pos    = 0;
+  filep->f_priv   = NULL;
+
+#ifndef CONFIG_DISABLE_MOUNTPOINT
+  if (INODE_IS_MOUNTPT(filep->f_inode))
+    {
+      if (filep->f_inode->u.i_mops->dup != NULL)
+        {
+          ret = filep->f_inode->u.i_mops->dup(srcfilep, filep);
+        }
+      else
+        {
+          ret = -ENOSYS;
+        }
+    }
+  else
+#endif
+    {
+      /* (Re-)open the pseudo file or device driver */
+
+      filep->f_priv = srcfilep->f_priv;
+
+      if (filep->f_inode->u.i_ops != NULL &&
+          filep->f_inode->u.i_ops->open != NULL)
+        {
+          ret = filep->f_inode->u.i_ops->open(filep);
+        }
+    }
+
+  file_put(srcfilep);
+  if (ret < 0)
+    {
+      inode_release(filep->f_inode);
+    }
+
+  return ret;
+}
+#endif /* !CONFIG_FS_PROCFS_EXCLUDE_FD */
 
 static int proc_open(FAR struct file *filep, FAR const char *relpath,
                      int oflags, mode_t mode)
@@ -1630,6 +1738,19 @@ static int proc_open(FAR struct file *filep, FAR const char *relpath,
       ferr("ERROR: PID %d is no longer valid\n", pid);
       return -ENOENT;
     }
+
+#ifndef CONFIG_FS_PROCFS_EXCLUDE_FD
+  /* Opening "<pid>/fd/N" (or "self/fd/N") duplicates the referenced
+   * descriptor into this file structure;  the resulting file is not a
+   * procfs file at all, so it bypasses the procfs file bookkeeping
+   * below entirely.
+   */
+
+  if (proc_open_fd(filep, pid, ptr, oflags) == OK)
+    {
+      return OK;
+    }
+#endif
 
   /* The remaining segments of the relpath should be a well known node in
    * the task/thread tree.

@@ -66,6 +66,18 @@ config FS_PROCFS_EXCLUDE_PROCESS
 		This will reduce code space, but then giving access to process info
 		was kinda the whole point of procfs, but hey, whatever.
 
+config FS_PROCFS_EXCLUDE_FD
+	bool "Exclude <pid>/fd descriptor duplication"
+	depends on !FS_PROCFS_EXCLUDE_PROCESS
+	default DEFAULT_SMALL
+	---help---
+		Causes the /proc/<pid>/fd/N (and /proc/self/fd/N) open support, which
+		duplicates the referenced descriptor into the caller, to be excluded
+		from the procfs system.  This open path is required by the libfuse
+		passthrough_ll example, whose lo_open() re-opens an O_PATH dirfd
+		through /proc/self/fd/<fd>;  disable the exclusion when FUSE
+		support is enabled.
+
 config FS_PROCFS_INCLUDE_PROGMEM
 	bool "Include prog mem"
 	depends on ARCH_HAVE_PROGMEM && !FS_PROCFS_EXCLUDE_MEMINFO
