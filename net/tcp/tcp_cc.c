@@ -111,11 +111,11 @@ void tcp_cc_init(FAR struct tcp_conn_s *conn)
    * scaling and/or window auto-tuning where the initial advertised
    * window is very small and then grows rapidly once the connection
    * is established. To avoid these complications, we set ssthresh to
-   * the largest effective cwnd (amount of in-flight data) that the
-   * sender can have.
+   * an arbitrarily high value so that slow start can grow cwnd until
+   * the first loss event establishes a proper ssthresh.
    */
 
-  conn->ssthresh = 2 * TCP_IPV4_DEFAULT_MSS;
+  conn->ssthresh = INT32_MAX;
   conn->dupacks = 0;
 }
 
@@ -148,7 +148,14 @@ void tcp_cc_update(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp)
 
   if (conn->flags & TCP_INFT)
     {
-      conn->ssthresh = MAX(conn->tx_unacked / 2, 2 * conn->mss);
+      /* RFC 5681 Section 3.1: ssthresh = max(FlightSize / 2, 2*SMSS).
+       * Use cwnd as the FlightSize estimate since tx_unacked may have
+       * already shrunk due to delayed ACKs arriving between the loss
+       * event and entering recovery, producing an artificially low
+       * ssthresh that traps cwnd at minimal values.
+       */
+
+      conn->ssthresh = MAX(conn->cwnd / 2, 2 * conn->mss);
       conn->cwnd = conn->ssthresh + 3 * conn->mss;
 
       conn->flags &= ~TCP_INFT;
@@ -307,6 +314,12 @@ void tcp_cc_recv_ack(FAR struct tcp_conn_s *conn, FAR struct tcp_hdr_s *tcp,
               increase = MAX((conn->mss * conn->mss / conn->cwnd), 1);
 
               CC_CWND_INC(conn->cwnd, increase);
+
+              /* Track the receiver's current window as the upper bound
+               * so cwnd can grow when the peer advertises a larger window.
+               */
+
+              conn->max_cwnd = MAX(conn->max_cwnd, conn->snd_wnd);
               conn->cwnd = MIN(conn->cwnd, conn->max_cwnd);
               ninfo("update congestion avoidance cwnd to %u\n", conn->cwnd);
             }

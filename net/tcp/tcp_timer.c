@@ -740,10 +740,9 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 
                     conn->max_cwnd = (conn->max_cwnd + 7 * conn->cwnd) >> 3;
 
-                    /* reset cwnd and ssthresh, refers to RFC5861. */
+                    /* reset cwnd and ssthresh, refers to RFC5681. */
 
-                    conn->ssthresh =
-                                    MAX(conn->tx_unacked / 2, 2 * conn->mss);
+                    conn->ssthresh = MAX(conn->cwnd / 2, 2 * conn->mss);
                     conn->cwnd = conn->mss;
 #endif
                     goto done;
