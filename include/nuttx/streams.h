@@ -127,7 +127,7 @@
 #define PRINTF_TYPE(_, arg, index) \
         + (PRINTF_ARG_TYPE(arg) << (index) * 2)
 #define PRINTF_TYPES(...) \
-        FOREACH_ARG(PRINTF_TYPE, _, ##__VA_ARGS__)
+        0 FOREACH_ARG(PRINTF_TYPE, _, ##__VA_ARGS__)
 
 #define PRINTF_TAG(...) \
         ((PRINTF_TERM << (GET_ARG_COUNT(__VA_ARGS__) * 2)) + \
