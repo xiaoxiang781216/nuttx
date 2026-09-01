@@ -204,14 +204,7 @@ int up_addrenv_create(size_t textsize, size_t datasize, size_t heapsize,
 
   group_heap_initialize((struct mm_heap_s **)&addrenv->heap,
                         CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN, heapsize);
-  if (addrenv->heap != 0)
-    {
-      /* Initialize the memory manager */
-
-      mm_initialize("Module", (void *)addrenv->heap,
-                    CONFIG_MM_TASK_HEAP_DEFAULT_SIZE);
-    }
-  else
+  if (addrenv->heap == 0)
     {
       return -ENOMEM;
     }

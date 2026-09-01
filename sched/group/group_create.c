@@ -188,9 +188,10 @@ int group_allocate(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
 
               tcb->addrenv_curr = group->tg_addrenv_own;
               group->tg_addrenv_own->addrenv.heap =
-              (uintptr_t)group->tg_heap;
+                (uintptr_t)group->tg_heap;
               group->tg_addrenv_own->addrenv.heapsize =
-              group_heap_size(group->tg_heap);
+                group->tg_heap != GROUP_HEAP ?
+                group_heap_size(group->tg_heap) : 0;
 #  endif
             }
         }

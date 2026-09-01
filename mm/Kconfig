@@ -491,10 +491,12 @@ if MM_TASK_HEAP
 
 config MM_TASK_HEAP_DEFAULT_SIZE
 	int "Task heap default size"
-	default 65536
+	default 0
 	---help---
-		Use this option to set the default heap size for tasks. Zero means
-		use the default user heap.
+		Use this option to set the default task heap size.  The default
+		of zero means a task with no heapsize configured shares the user
+		heap without initializing a private one.  Set a nonzero value to
+		give such tasks a private heap of this size instead.
 
 config MM_TASK_HEAP_DEFAULT_ALIGN
 	int "Task heap default alignment"

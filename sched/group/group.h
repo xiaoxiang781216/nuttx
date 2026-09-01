@@ -73,9 +73,20 @@ static inline_function int
 group_heap_initialize(FAR struct mm_heap_s **heap,
                       size_t alignment, size_t heapsize)
 {
+  /* A heapsize of zero means use the default size, which may itself be
+   * zero to share the user heap.  The shared heap must never be
+   * uninitialized, see group_heap_uninitialize().
+   */
+
   if (heapsize == 0)
     {
       heapsize = CONFIG_MM_TASK_HEAP_DEFAULT_SIZE;
+    }
+
+  if (heapsize == 0)
+    {
+      *heap = GROUP_HEAP;
+      return OK;
     }
 
   if (alignment == 0)
@@ -104,10 +115,13 @@ static inline_function int group_heap_size(FAR struct mm_heap_s *heap)
 static inline_function
 void group_heap_uninitialize(FAR struct mm_heap_s *heap)
 {
-  mm_uninitialize(heap);
-  if (mm_heapmember(GROUP_HEAP, heap))
+  if (heap != GROUP_HEAP)
     {
-      mm_free(GROUP_HEAP, heap);
+      mm_uninitialize(heap);
+      if (mm_heapmember(GROUP_HEAP, heap))
+        {
+          mm_free(GROUP_HEAP, heap);
+        }
     }
 }
 

@@ -261,7 +261,8 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
            */
 
 #if defined(CONFIG_MM_TASK_HEAP) && !defined(CONFIG_BUILD_KERNEL)
-          heap_size = kumm_malloc_size(parent->group->tg_heap);
+          heap_size = parent->group->tg_heap != GROUP_HEAP ?
+                      kumm_malloc_size(parent->group->tg_heap) : 0;
 #else
           heap_size = 0;
 #endif

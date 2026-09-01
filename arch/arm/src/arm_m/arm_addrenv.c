@@ -122,6 +122,15 @@ static unsigned int g_addrenv_callee_region;
 static int addrenv_select_region(unsigned int *region,
                                  const arch_addrenv_t *addrenv)
 {
+  if (addrenv != NULL && addrenv->heap == (uintptr_t)GROUP_HEAP)
+    {
+      /* The task shares the user heap and no MPU heap region is
+       * needed.
+       */
+
+      return OK;
+    }
+
   if (*region == 0)
     {
       *region = mpu_allocregion();
@@ -234,14 +243,7 @@ int up_addrenv_create(size_t textsize, size_t datasize, size_t heapsize,
 
   group_heap_initialize((struct mm_heap_s **)&addrenv->heap,
                         CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN, heapsize);
-  if (addrenv->heap != 0)
-    {
-      /* Initialize the memory manager */
-
-      mm_initialize("Module", (void *)addrenv->heap,
-                    CONFIG_MM_TASK_HEAP_DEFAULT_SIZE);
-    }
-  else
+  if (addrenv->heap == 0)
     {
       return -ENOMEM;
     }
