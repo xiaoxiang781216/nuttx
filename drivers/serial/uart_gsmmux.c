@@ -499,19 +499,17 @@ static ssize_t gsmmux_uart_read(FAR struct gsmmux_s *gsmmux)
         }
       else
         {
-          unsigned int status;
-          ret = uart_receive(dev, &status);
-          if (ret < 0)
-            {
-              break;
-            }
+          /* Push-type RX-DMA driver: its ISR has already moved received
+           * data into dev->recv (advancing head via uart_recvchars_done).
+           * Reading the hardware again through uart_receive() would take
+           * the PIO getc path and trip the RX-DMA-enabled assertion.  So
+           * do not produce here - just account for the bytes already
+           * pending in dev->recv and let gsmmux_uart_pollin() below
+           * consume them.
+           */
 
-          recv += 1;
-          rxbuf->buffer[rxbuf->head] = ret;
-          if (++rxbuf->head >= rxbuf->size)
-            {
-              rxbuf->head = 0;
-            }
+          recv = gsmmux_uart_rxavailable(rxbuf);
+          break;
         }
     }
 
