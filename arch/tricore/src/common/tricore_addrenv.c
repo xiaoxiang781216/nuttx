@@ -571,7 +571,9 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
 
   if (tcb->addrenv_curr && tcb->addrenv_curr->addrenv.data)
     {
-      mpu_modify_region(MPU_APP_SET, g_addrenv_stack_region,
+      unsigned int mpu_set = tcb->addrenv_curr->addrenv.mpu_set ?
+                     tcb->addrenv_curr->addrenv.mpu_set : MPU_APP_SET;
+      mpu_modify_region(mpu_set, g_addrenv_stack_region,
                         0, 0, conf.flags[MPU_KSET]);
     }
 
