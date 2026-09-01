@@ -43,66 +43,66 @@
  ****************************************************************************/
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION > 0
-#  define CHECK_PREEMPTION(pid, elapsed) \
+#  define CHECK_PREEMPTION(tcb, elapsed) \
      do \
        { \
-         if (pid > 0 && \
+         if (!is_idle_task(tcb) && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION) \
            { \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_PREEMPTION_TIMEOUT, \
                                "Type:PREEMPTION,Pid:%d," \
                                "Elapsed:%ju,Threshold:%ju", \
-                               pid, (uintmax_t)elapsed, \
+                               (tcb)->pid, (uintmax_t)elapsed, \
                                (uintmax_t) \
                                CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION); \
            } \
        } \
      while (0)
 #else
-#  define CHECK_PREEMPTION(pid, elapsed)
+#  define CHECK_PREEMPTION(tcb, elapsed)
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE > 0
-#  define CHECK_IRQDIS(pid, elapsed) \
+#  define CHECK_IRQDIS(tcb, elapsed) \
      do \
        { \
-         if (pid > 0 && \
+         if (!is_idle_task(tcb) && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE) \
            { \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_IRQDISABLE_TIMEOUT, \
                                "Type:IRQDISABLE,Pid:%d," \
                                "Elapsed:%ju,Threshold:%ju", \
-                               pid, (uintmax_t)elapsed, \
+                               (tcb)->pid, (uintmax_t)elapsed, \
                                (uintmax_t) \
                                CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE); \
            } \
        } \
      while (0)
 #else
-#  define CHECK_IRQDIS(pid, elapsed)
+#  define CHECK_IRQDIS(tcb, elapsed)
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT > 0
-#  define CHECK_BUSYWAIT(pid, elapsed) \
+#  define CHECK_BUSYWAIT(tcb, elapsed) \
      do \
        { \
-         if (pid > 0 && \
+         if (!is_idle_task(tcb) && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT) \
            { \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_BUSYWAIT_TIMEOUT, \
                                "Type:BUSYWAIT,Pid:%d," \
                                "Elapsed:%ju,Threshold:%ju", \
-                               pid, (uintmax_t)elapsed, \
+                               (tcb)->pid, (uintmax_t)elapsed, \
                                (uintmax_t) \
                                CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT); \
            } \
        } \
      while (0)
 #else
-#  define CHECK_BUSYWAIT(pid, elapsed)
+#  define CHECK_BUSYWAIT(tcb, elapsed)
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD > 0
@@ -260,7 +260,7 @@ void nxsched_critmon_preemption(FAR struct tcb_s *tcb, bool state,
         {
           tcb->premp_max        = elapsed;
           tcb->premp_max_caller = tcb->premp_caller;
-          CHECK_PREEMPTION(tcb->pid, elapsed);
+          CHECK_PREEMPTION(tcb, elapsed);
         }
 
       /* Check for the global max elapsed time */
@@ -332,7 +332,7 @@ void nxsched_critmon_irqdisable(bool state, bool force, FAR void *caller)
         {
           tcb->irqdis_max        = elapsed;
           tcb->irqdis_max_caller = tcb->irqdis_caller;
-          CHECK_IRQDIS(tcb->pid, elapsed);
+          CHECK_IRQDIS(tcb, elapsed);
         }
 
       /* Check for the global max elapsed time */
@@ -383,7 +383,7 @@ void nxsched_critmon_busywait(bool state, FAR void *caller)
         {
           tcb->busywait_max        = elapsed;
           tcb->busywait_max_caller = tcb->busywait_caller;
-          CHECK_BUSYWAIT(tcb->pid, elapsed);
+          CHECK_BUSYWAIT(tcb, elapsed);
         }
 
       /* Check for the global max elapsed time */
@@ -464,7 +464,7 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
         {
           tcb->premp_max        = elapsed;
           tcb->premp_max_caller = tcb->premp_caller;
-          CHECK_PREEMPTION(tcb->pid, elapsed);
+          CHECK_PREEMPTION(tcb, elapsed);
         }
 
       if (elapsed > g_premp_max)
@@ -488,7 +488,7 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
         {
           tcb->irqdis_max        = elapsed;
           tcb->irqdis_max_caller = tcb->irqdis_caller;
-          CHECK_IRQDIS(tcb->pid, elapsed);
+          CHECK_IRQDIS(tcb, elapsed);
         }
 
       if (elapsed > g_irqdis_max)
