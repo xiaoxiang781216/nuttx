@@ -236,7 +236,7 @@ FAR struct pkt_conn_s *pkt_active(FAR struct net_driver_s *dev,
         }
 
       if (conn->type == HTONS(ETH_P_ALL) ||
-          (!loopback && conn->type == ethertype))
+          conn->type == ethertype)
         {
           /* Matching connection found.. return a reference to it */
 
