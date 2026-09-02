@@ -120,16 +120,34 @@
           while(0)
 #endif
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
-    defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
-void restore_critical_section(uint16_t count);
-#else
-#  ifdef CONFIG_SMP
-#    define restore_critical_section(count) rspin_restorelock(&g_schedlock, count)
-#  else
-#    define restore_critical_section(count)
-#  endif
-#endif
+/* Elapsed times are measured with the perf counter, but the monitor
+ * thresholds (SCHED_CRITMONITOR_MAXTIME_xxx and friends) are configured in
+ * microseconds.  The perf frequency is only known at runtime, so convert
+ * here instead of hard-coding counter units in the configuration.
+ *
+ * US2COUNT rounds up: a slow perf counter (e.g. 16.384kHz, ~61us per count)
+ * would otherwise truncate any sub-resolution threshold to 0 counts, which
+ * means "report every time" and would drown the log in false positives.
+ * Rounding up also keeps 0 reserved for the configured "always report"
+ * value.
+ */
+
+#define PERF_US2COUNT(us) \
+        div_round_up((clock_t)(us) * perf_getfreq(), USEC_PER_SEC)
+
+#define PERF_COUNT2US(count) \
+        ((uintmax_t)(count) * USEC_PER_SEC / perf_getfreq())
+
+/* True when at least one monitor needs a converted threshold. */
+
+#define CRITMONITOR_HAVE_MAXTIME \
+        (CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD > 0 || \
+         CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE > 0 || \
+         CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION > 0 || \
+         CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE > 0 || \
+         CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT > 0 || \
+         CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0 || \
+         CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG > 0)
 
 /****************************************************************************
  * Public Type Definitions
@@ -158,9 +176,51 @@ enum task_deliver_e
 
 typedef struct tasklist_s tasklist_table_t[NUM_TASK_STATES];
 
+/* One slot per enabled SCHED_CRITMONITOR_MAXTIME_xxx setting, converted to
+ * perf counter units by nxsched_critmon_initialize().  The slots carry the
+ * same "> 0" guard as the monitors that read them, so a disabled threshold
+ * costs neither RAM nor code.
+ */
+
+enum critmon_maxtime_e
+{
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD > 0
+  CRITMON_THREAD,
+#endif
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE > 0
+  CRITMON_WQUEUE,
+#endif
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION > 0
+  CRITMON_PREEMPTION,
+#endif
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE > 0
+  CRITMON_IRQDISABLE,
+#endif
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT > 0
+  CRITMON_BUSYWAIT,
+#endif
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0
+  CRITMON_IRQ,
+#endif
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG > 0
+  CRITMON_WDOG,
+#endif
+  CRITMON_MAXTIME_COUNT
+};
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
+
+/* Declared in sched_critmonitor.c ******************************************/
+
+/* The enabled SCHED_CRITMONITOR_MAXTIME_xxx thresholds, converted once to
+ * perf counter units by nxsched_critmon_initialize().
+ */
+
+#if CRITMONITOR_HAVE_MAXTIME
+extern clock_t g_critmon_maxtime[CRITMON_MAXTIME_COUNT];
+#endif
 
 /* Declared in nx_start.c ***************************************************/
 
@@ -411,6 +471,21 @@ void nxsched_critmon_preemption(FAR struct tcb_s *tcb, bool state,
                                 FAR void *caller);
 #else
 #  define nxsched_critmon_preemption(t, s, c)
+#endif
+
+#if CRITMONITOR_HAVE_MAXTIME
+void nxsched_critmon_initialize(void);
+#else
+#  define nxsched_critmon_initialize()
+#endif
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE >= 0 || \
+    defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
+void restore_critical_section(uint16_t count);
+#elif defined(CONFIG_SMP)
+#  define restore_critical_section(count) rspin_restorelock(&g_schedlock, count)
+#else
+#  define restore_critical_section(count)
 #endif
 
 /* Obtain TLS from kernel */

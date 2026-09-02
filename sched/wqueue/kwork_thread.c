@@ -67,19 +67,19 @@
          start = perf_gettime_raw(); \
          worker(arg); \
          elapsed = perf_gettime_raw() - start; \
-         if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
+         if (elapsed > g_critmon_maxtime[CRITMON_WQUEUE]) \
            { \
              FAR struct tcb_s *wtcb = this_task(); \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_WQUEUE_TIMEOUT, \
                                "Type:WQUEUE,Pid:%d,Name:%s," \
                                "State:%d,Waitobj:%p," \
-                               "Elapsed:%ju,Threshold:%ju", \
+                               "Elapsed:%juus,Threshold:%juus", \
                                wtcb->pid, \
                                get_task_name(wtcb), \
                                wtcb->task_state, \
                                wtcb->waitobj, \
-                               (uintmax_t)elapsed, \
+                               PERF_COUNT2US(elapsed), \
                                (uintmax_t) \
                                CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE); \
            } \

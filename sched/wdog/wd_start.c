@@ -64,14 +64,14 @@
          func(arg); \
          elapsed = perf_gettime() - start; \
          sched_note_wdog_leave(func, (FAR void *)arg); \
-         if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG) \
+         if (elapsed > g_critmon_maxtime[CRITMON_WDOG]) \
            { \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_WDOG_TIMEOUT, \
                                "Type:WDOG,Func:%p,Arg:%" PRIuPTR ",InIrq:%d," \
-                               "Duration:%ju,Expired:%ju", \
+                               "Duration:%juus,Expired:%juus", \
                                func, arg, up_interrupt_context(), \
-                               (uintmax_t)elapsed, \
+                               PERF_COUNT2US(elapsed), \
                                (uintmax_t) \
                                CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG); \
            } \

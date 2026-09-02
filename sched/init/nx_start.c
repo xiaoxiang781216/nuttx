@@ -700,6 +700,12 @@ static void hardware_initialize(void)
 
   clock_initialize();
 
+  /* perf_getfreq() is meaningful from here on, so the critical section
+   * monitor can convert its microsecond thresholds to counter units.
+   */
+
+  nxsched_critmon_initialize();
+
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
   timer_initialize();
 #endif

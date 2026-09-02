@@ -86,6 +86,27 @@
 #    define WAKEUP_COUNT(ndx)
 #  endif
 
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0
+#    define CHECK_IRQ(irq, vector, elapsed) \
+       do \
+         { \
+           if ((elapsed) > g_critmon_maxtime[CRITMON_IRQ]) \
+             { \
+               CRITMONITOR_PANIC(NXTAG_IRQ, \
+                                 DIAG_IRQ_HANDLER_TIMEOUT, \
+                                 "Type:IRQ,Irq:%d,Handler:%p," \
+                                 "Elapsed:%juus,Threshold:%juus", \
+                                 irq, vector, \
+                                 PERF_COUNT2US(elapsed), \
+                                 (uintmax_t) \
+                                 CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ); \
+             } \
+         } \
+       while (0)
+#  else
+#    define CHECK_IRQ(irq, vector, elapsed)
+#  endif
+
 /* CALL_VECTOR always collects the cheap statistics (interrupt count, nest
  * level and, when PM is enabled, the wakeup count) for any valid IRQ.  The
  * expensive timing statistics are only collected for IRQs that opted in via
@@ -111,17 +132,7 @@
                    { \
                      g_irqvector[ndx].time = elapsed; \
                    } \
-                 if (CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0 && \
-                     elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ) \
-                   { \
-                     CRITMONITOR_PANIC(NXTAG_IRQ, \
-                                       DIAG_IRQ_HANDLER_TIMEOUT, \
-                                       "Type:IRQ,Irq:%d,Handler:%p," \
-                                       "Elapsed:%ju,Threshold:%ju", \
-                                       irq, vector, (uintmax_t)elapsed, \
-                                       (uintmax_t) \
-                                       CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ); \
-                   } \
+                 CHECK_IRQ(irq, vector, elapsed); \
                } \
              else \
                { \

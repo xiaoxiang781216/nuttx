@@ -47,13 +47,13 @@
      do \
        { \
          if (!is_idle_task(tcb) && \
-             elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION) \
+             elapsed > g_critmon_maxtime[CRITMON_PREEMPTION]) \
            { \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_PREEMPTION_TIMEOUT, \
                                "Type:PREEMPTION,Pid:%d," \
-                               "Elapsed:%ju,Threshold:%ju", \
-                               (tcb)->pid, (uintmax_t)elapsed, \
+                               "Elapsed:%juus,Threshold:%juus", \
+                               (tcb)->pid, PERF_COUNT2US(elapsed), \
                                (uintmax_t) \
                                CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION); \
            } \
@@ -68,13 +68,13 @@
      do \
        { \
          if (!is_idle_task(tcb) && \
-             elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE) \
+             elapsed > g_critmon_maxtime[CRITMON_IRQDISABLE]) \
            { \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_IRQDISABLE_TIMEOUT, \
                                "Type:IRQDISABLE,Pid:%d," \
-                               "Elapsed:%ju,Threshold:%ju", \
-                               (tcb)->pid, (uintmax_t)elapsed, \
+                               "Elapsed:%juus,Threshold:%juus", \
+                               (tcb)->pid, PERF_COUNT2US(elapsed), \
                                (uintmax_t) \
                                CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE); \
            } \
@@ -89,13 +89,13 @@
      do \
        { \
          if (!is_idle_task(tcb) && \
-             elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT) \
+             elapsed > g_critmon_maxtime[CRITMON_BUSYWAIT]) \
            { \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_BUSYWAIT_TIMEOUT, \
                                "Type:BUSYWAIT,Pid:%d," \
-                               "Elapsed:%ju,Threshold:%ju", \
-                               (tcb)->pid, (uintmax_t)elapsed, \
+                               "Elapsed:%juus,Threshold:%juus", \
+                               (tcb)->pid, PERF_COUNT2US(elapsed), \
                                (uintmax_t) \
                                CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT); \
            } \
@@ -110,14 +110,14 @@
      do \
        { \
          if (!is_idle_task(tcb) && \
-             elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD) \
+             elapsed > g_critmon_maxtime[CRITMON_THREAD]) \
            { \
              CRITMONITOR_PANIC(NXTAG_SCHED, \
                                DIAG_SCHED_THREAD_TIMEOUT, \
                                "Type:THREAD,Pid:%d,Name:%s," \
-                               "Elapsed:%ju,Threshold:%ju", \
+                               "Elapsed:%juus,Threshold:%juus", \
                                (tcb)->pid, get_task_name(tcb), \
-                               (uintmax_t)elapsed, \
+                               PERF_COUNT2US(elapsed), \
                                (uintmax_t) \
                                CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD); \
            } \
@@ -156,6 +156,14 @@ DEFINE_PER_CPU_BSS(clock_t, g_busywait_max);
 #  define g_busywait_max this_cpu_var(g_busywait_max)
 DEFINE_PER_CPU_BSS(clock_t, g_busywait_total);
 #  define g_busywait_total this_cpu_var(g_busywait_total)
+#endif
+
+/* Report thresholds in perf counter units, indexed by enum
+ * critmon_maxtime_e, filled in by nxsched_critmon_initialize().
+ */
+
+#if CRITMONITOR_HAVE_MAXTIME
+clock_t g_critmon_maxtime[CRITMON_MAXTIME_COUNT];
 #endif
 
 /****************************************************************************
@@ -218,6 +226,60 @@ static void nxsched_critmon_cpuload(FAR struct tcb_s *tcb, clock_t current,
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: nxsched_critmon_initialize
+ *
+ * Description:
+ *   Convert the configured SCHED_CRITMONITOR_MAXTIME_xxx thresholds from
+ *   microseconds to perf counter units.  Done once at boot so that the
+ *   monitors, which sit on hot paths such as irq_dispatch() and the work
+ *   queue loop, only need a load and a compare.
+ *
+ * Assumptions:
+ *   Called from nx_start(), right after clock_initialize() has run
+ *   up_timer_initialize() and made perf_getfreq() meaningful.
+ *
+ ****************************************************************************/
+
+#if CRITMONITOR_HAVE_MAXTIME
+void nxsched_critmon_initialize(void)
+{
+  /* A slot only exists when its setting is positive, so PERF_US2COUNT()
+   * never sees the 0 ("disabled") or -1 ("not configured") sentinels, which
+   * its unsigned arithmetic would turn into a huge wrapped value.
+   */
+
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD > 0
+  g_critmon_maxtime[CRITMON_THREAD] =
+    PERF_US2COUNT(CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD);
+#  endif
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE > 0
+  g_critmon_maxtime[CRITMON_WQUEUE] =
+    PERF_US2COUNT(CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE);
+#  endif
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION > 0
+  g_critmon_maxtime[CRITMON_PREEMPTION] =
+    PERF_US2COUNT(CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION);
+#  endif
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE > 0
+  g_critmon_maxtime[CRITMON_IRQDISABLE] =
+    PERF_US2COUNT(CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQDISABLE);
+#  endif
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT > 0
+  g_critmon_maxtime[CRITMON_BUSYWAIT] =
+    PERF_US2COUNT(CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT);
+#  endif
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0
+  g_critmon_maxtime[CRITMON_IRQ] =
+    PERF_US2COUNT(CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ);
+#  endif
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG > 0
+  g_critmon_maxtime[CRITMON_WDOG] =
+    PERF_US2COUNT(CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG);
+#  endif
+}
+#endif
 
 /****************************************************************************
  * Name: nxsched_critmon_preemption
@@ -430,14 +492,13 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_THREADTIME
   if (threshold == CLOCK_MAX)
     {
-      threshold =
-        CONFIG_SCHED_INSTRUMENTATION_THREAD_RUNTIME_DURATION *
-        (clock_t)perf_getfreq() / USEC_PER_SEC;
+      threshold = PERF_US2COUNT(
+        CONFIG_SCHED_INSTRUMENTATION_THREAD_RUNTIME_DURATION);
     }
 
   if (!is_idle_task(tcb) && elapsed > threshold)
     {
-      clock_t us = elapsed * USEC_PER_SEC / perf_getfreq();
+      clock_t us = PERF_COUNT2US(elapsed);
       sched_note_threadtime(us);
     }
 #endif

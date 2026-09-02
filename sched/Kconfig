@@ -1115,15 +1115,17 @@ config SCHED_CRITMONITOR
 if SCHED_CRITMONITOR
 
 config SCHED_CRITMONITOR_MAXTIME_THREAD
-	int "THREAD max execution time"
+	int "THREAD max execution time (microseconds)"
 	default 0
 	---help---
 		Thread execution time should be smaller than
 		SCHED_CRITMONITOR_MAXTIME_THREAD, or system will give a warning.
+		The value is in microseconds; the monitor converts it to perf
+		counter units at runtime.
 		For debugging system latency, 0 means disabled.
 
 config SCHED_CRITMONITOR_MAXTIME_WQUEUE
-	int "WORK queue max execution time"
+	int "WORK queue max execution time (microseconds)"
 	default -1
 	---help---
 		Worker execution time (wall-clock, including any preemption
@@ -1131,51 +1133,63 @@ config SCHED_CRITMONITOR_MAXTIME_WQUEUE
 		SCHED_CRITMONITOR_MAXTIME_WQUEUE, or system will give a warning.
 		This is a stall/deadlock detector for the callback itself, not
 		a pure CPU-time measurement, and applies to HPWORK, LPWORK, and
-		any custom work queue created via work_queue_create().  For
-		debugging system latency, 0 means disabled, -1 means not
+		any custom work queue created via work_queue_create().
+		The value is in microseconds; the monitor converts it to perf
+		counter units at runtime.
+		For debugging system latency, 0 means disabled, -1 means not
 		configured (feature off).
 
 config SCHED_CRITMONITOR_MAXTIME_PREEMPTION
-	int "Pre-emption (sched_lock) max holding time"
+	int "Pre-emption (sched_lock) max holding time (microseconds)"
 	default SCHED_CRITMONITOR_MAXTIME_WQUEUE
 	---help---
 		Pre-emption holding time should be smaller than
 		SCHED_CRITMONITOR_MAXTIME_PREEMPTION, or system will give a warning.
+		The value is in microseconds; the monitor converts it to perf
+		counter units at runtime.
 		For debugging system latency, 0 means disabled.
 
 config SCHED_CRITMONITOR_MAXTIME_IRQDISABLE
-	int "IRQ disabled (irq_save/irq_restore) max holding time"
+	int "IRQ disabled (irq_save/irq_restore) max holding time (microseconds)"
 	default SCHED_CRITMONITOR_MAXTIME_PREEMPTION
 	---help---
 		IRQ disabled time (via irq_save/irq_restore, covering
 		enter_critical_section, spin_lock_irqsave,
 		rspin_lock_irqsave, etc.) should be smaller than
 		SCHED_CRITMONITOR_MAXTIME_IRQDISABLE, or system will give a warning.
+		The value is in microseconds; the monitor converts it to perf
+		counter units at runtime.
 		For debugging system latency, 0 means disabled.
 
 config SCHED_CRITMONITOR_MAXTIME_BUSYWAIT
-	int "Spinlock max busy waiting time"
+	int "Spinlock max busy waiting time (microseconds)"
 	default -1
 	---help---
 		Busy waiting time to acquire a spinlock should be smaller than
 		SCHED_CRITMONITOR_MAXTIME_BUSYWAIT, or system will give a warning.
+		The value is in microseconds; the monitor converts it to perf
+		counter units at runtime.
 		For debugging system latency, 0 means disabled, -1 means not
 		configured (feature off, no statistics collected).
 
 config SCHED_CRITMONITOR_MAXTIME_IRQ
-	int "IRQ max execution time"
+	int "IRQ max execution time (microseconds)"
 	default SCHED_CRITMONITOR_MAXTIME_IRQDISABLE
 	---help---
 		IRQ handler execution time should be smaller than
 		SCHED_CRITMONITOR_MAXTIME_IRQ, or system will give a warning.
+		The value is in microseconds; the monitor converts it to perf
+		counter units at runtime.
 		For debugging system latency, 0 means disabled.
 
 config SCHED_CRITMONITOR_MAXTIME_WDOG
-	int "WDOG callback max execution time"
+	int "WDOG callback max execution time (microseconds)"
 	default SCHED_CRITMONITOR_MAXTIME_IRQ
 	---help---
 		Wdog callback execution time should be smaller than
 		SCHED_CRITMONITOR_MAXTIME_WDOG, or system will give a warning.
+		The value is in microseconds; the monitor converts it to perf
+		counter units at runtime.
 		For debugging system latency, 0 means disabled.
 
 config SCHED_CRITMONITOR_PROCFS
