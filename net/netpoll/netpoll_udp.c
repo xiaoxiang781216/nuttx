@@ -212,6 +212,7 @@ ssize_t netpoll_udp_queue_send(FAR struct netpoll_s *np,
   while ((pkt = iob_remove_queue(pktq)) != NULL)
     {
       size_t pktlen = pkt->io_pktlen;
+      int    err;
 
       NETDEV_TXPACKETS(&lower->netdev);
 
@@ -219,9 +220,21 @@ ssize_t netpoll_udp_queue_send(FAR struct netpoll_s *np,
 
       netpoll_udp_build_header(np, pkt);
 
-      /* Transmit packet */
+      /* Transmit packet, retrying on -EBUSY after reclaiming completed
+       * TX descriptors via poll(NETPKT_TX).
+       */
 
-      int err = lower->ops->transmit(lower, pkt);
+      for (; ; )
+        {
+          err = lower->ops->transmit(lower, pkt);
+          if (err != -EBUSY)
+            {
+              break;
+            }
+
+          lower->ops->poll(lower, NETPKT_TX);
+        }
+
       if (err < 0)
         {
           NETDEV_TXERRORS(&lower->netdev);
