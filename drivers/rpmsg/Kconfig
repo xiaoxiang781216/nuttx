@@ -291,5 +291,13 @@ config RPMSG_VIRTIO_PM_AUTORELAX
 	---help---
 		use wd_timer to auto relax pm
 
+config RPMSG_VIRTIO_START_SYNC
+	bool "rpmsg virtio start devices synchronously"
+	default n
+	---help---
+		By default probe defers the rpmsg device bring-up to the rpmsg work
+		queue.  Enable this to run it inline instead, so the device is ready
+		when probe returns, at the cost of blocking the probe caller.
+
 endif # RPMSG_VIRTIO
 
