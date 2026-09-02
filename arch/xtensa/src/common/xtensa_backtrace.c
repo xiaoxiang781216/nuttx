@@ -310,10 +310,17 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
     {
       /* For non-current task, only check in stack. */
 
+      uint32_t *regs = (uint32_t *)tcb->xcp.regs;
+
+      if (regs == NULL)
+        {
+          return 0;
+        }
+
       ret = backtrace_stack(tcb->stack_base_ptr,
                             tcb->stack_base_ptr + tcb->adj_stack_size,
-                            (void *)tcb->xcp.regs[REG_A1],
-                            (void *)tcb->xcp.regs[REG_A0],
+                            (void *)regs[REG_A1],
+                            (void *)regs[REG_A0],
                             buffer, size, &skip);
     }
 

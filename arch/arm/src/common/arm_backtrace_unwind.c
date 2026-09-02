@@ -1005,10 +1005,17 @@ int up_backtrace(struct tcb_s *tcb,
     }
   else
     {
-      frame.fp = tcb->xcp.regs[REG_FP];
-      frame.sp = tcb->xcp.regs[REG_SP];
-      frame.lr = tcb->xcp.regs[REG_LR];
-      frame.pc = tcb->xcp.regs[REG_PC];
+      uint32_t *regs = (uint32_t *)tcb->xcp.regs;
+
+      if (regs == NULL)
+        {
+          return 0;
+        }
+
+      frame.fp = regs[REG_FP];
+      frame.sp = regs[REG_SP];
+      frame.lr = regs[REG_LR];
+      frame.pc = regs[REG_PC];
       frame.stack_base = (unsigned long)tcb->stack_base_ptr;
       frame.stack_top = frame.stack_base + tcb->adj_stack_size;
 

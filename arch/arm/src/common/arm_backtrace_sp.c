@@ -309,14 +309,21 @@ int up_backtrace(struct tcb_s *tcb,
     }
   else
     {
-      ret = 0;
+      uint32_t *regs = (uint32_t *)tcb->xcp.regs;
 
-      if (tcb->xcp.regs[REG_PC] && skip-- <= 0)
+      if (regs == NULL)
         {
-          buffer[ret++] = (void *)tcb->xcp.regs[REG_PC];
+          return 0;
         }
 
-      sp = tcb->xcp.regs[REG_SP];
+      ret = 0;
+
+      if (regs[REG_PC] && skip-- <= 0)
+        {
+          buffer[ret++] = (void *)regs[REG_PC];
+        }
+
+      sp = regs[REG_SP];
       ret += backtrace_branch((unsigned long)
                               tcb->stack_base_ptr +
                               tcb->adj_stack_size, sp,

@@ -209,10 +209,17 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
       else
 #endif
         {
+          uintreg_t *regs = (uintreg_t *)tcb->xcp.regs;
+
+          if (regs == NULL)
+            {
+              return 0;
+            }
+
           ret = backtrace(tcb->stack_base_ptr,
                           tcb->stack_base_ptr + tcb->adj_stack_size,
-                          (void *)tcb->xcp.regs[REG_FP],
-                          (void *)tcb->xcp.regs[REG_EPC],
+                          (void *)regs[REG_FP],
+                          (void *)regs[REG_EPC],
                           buffer, size, &skip);
         }
     }

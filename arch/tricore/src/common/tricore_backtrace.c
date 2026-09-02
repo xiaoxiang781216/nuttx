@@ -124,6 +124,11 @@ int up_backtrace(struct tcb_s *tcb,
     }
   else
     {
+      if (tcb->xcp.regs == NULL)
+        {
+          return 0;
+        }
+
       ret = backtrace(tcb->xcp.regs + TC_CONTEXT_REGS,
                       buffer, size, &skip);
     }
