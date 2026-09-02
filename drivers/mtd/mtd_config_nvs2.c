@@ -1476,6 +1476,12 @@ static int nvs_recover_last_ate(FAR struct nvs_fs *fs, FAR uint64_t *addr,
 
           found = true;
         }
+      else if (nvs_ate_cmp_const(end_ate, fs->erasestate, ate_size) ||
+               (nvs_ate_crc8_check(fs, end_ate) &&
+                end_ate->cycle_cnt != fs->cycle_cnt))
+        {
+          break;
+        }
 
       if (ate_end_addr < ate_size)
         {
