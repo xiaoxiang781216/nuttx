@@ -1356,11 +1356,6 @@ static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
           return OK;
         }
 
-      if (val == RPTUN_STATUS_PAUSE)
-        {
-          return OK;
-        }
-
       ret = -ETIMEDOUT;
       while (timeout-- > 0)
         {
