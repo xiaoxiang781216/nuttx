@@ -112,6 +112,14 @@ int sched_backtrace(pid_t tid, FAR void **buffer, int size, int skip)
       tcb = nxsched_get_tcb(tid);
       if (tcb != NULL)
         {
+          if (tcb->task_state == TSTATE_TASK_INVALID ||
+              (atomic_read(&tcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
+            {
+              nxsched_put_tcb(tcb);
+              leave_critical_section(flags);
+              return 0;
+            }
+
 #ifdef CONFIG_SMP
           if (!OSINIT_IS_PANIC() &&
               tcb->task_state == TSTATE_TASK_RUNNING)
