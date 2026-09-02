@@ -129,6 +129,7 @@ config RPTUN_PRIORITY
 
 config RPTUN_STACKSIZE
 	int "rptun stack size"
+	default 8192 if ARCH_64BIT
 	default 4096
 
 config RPTUN_STATUS_TIMEOUT_MS
