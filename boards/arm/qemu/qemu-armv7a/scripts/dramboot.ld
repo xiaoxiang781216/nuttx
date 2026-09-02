@@ -89,7 +89,7 @@ SECTIONS
       *(.rodata*)
       *(.data.rel.ro*)
       KEEP(*(SORT(.scattered_array*)));
-      . = ALIGN(4096);
+      . = ALIGN(4);
       _erodata = .;
   } > ROM
 
