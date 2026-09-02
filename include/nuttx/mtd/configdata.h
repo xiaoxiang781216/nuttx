@@ -35,6 +35,7 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 
+#include <stdbool.h>
 #include <sys/types.h>
 
 #include <nuttx/fs/ioctl.h>
@@ -75,6 +76,7 @@
 #define CFGDIOC_FIRSTCONFIG     _CFGDIOC(5)
 #define CFGDIOC_NEXTCONFIG      _CFGDIOC(6)
 #define CFGDIOC_SETCONFIG_FORCE _CFGDIOC(7)
+#define CFGDIOC_GETSTATE        _CFGDIOC(8)
 
 /****************************************************************************
  * Public Types
@@ -92,6 +94,15 @@ struct config_data_s
 #endif
   FAR uint8_t *configdata;  /* Pointer to the config data */
   size_t      len;          /* Length of the config data buffer */
+};
+
+/* This structure reports the runtime state of the config device.
+ * New fields can be appended later without adding a new ioctl.
+ */
+
+struct config_state_s
+{
+  bool gcing;               /* True while a garbage collection is running */
 };
 
 /****************************************************************************

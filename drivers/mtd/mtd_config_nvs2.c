@@ -127,6 +127,7 @@ struct nvs_fs
   mutex_t               nvs_lock;
   uint32_t              write_cnt;     /* Block write counter */
   bool                  initialized;   /* NVS initialization flag */
+  bool                  gcing;         /* True while nvs_gc runs */
 #if NVS_CACHE_ENABLED
   struct nvs_cache      cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
 #endif
@@ -2128,6 +2129,7 @@ static int nvs_gc(FAR struct nvs_fs *fs)
       goto gc_done;
     }
 
+  fs->gcing = true;
   fs->cycle_cnt = empty_ate->cycle_cnt;
 
   stop_addr = gc_addr - ate_size;
@@ -2139,13 +2141,14 @@ static int nvs_gc(FAR struct nvs_fs *fs)
       gc_prev_addr = gc_addr;
       if (nvs_is_different_block(gc_prev_addr, stop_addr))
         {
-          return -ERANGE;
+          rc = -ERANGE;
+          goto out;
         }
 
       rc = nvs_prev_ate(fs, &gc_addr, gc_ate);
       if (rc)
         {
-          return rc;
+          goto out;
         }
 
       if (!nvs_ate_valid(fs, gc_ate) || !gc_ate->ate_len ||
@@ -2175,7 +2178,7 @@ static int nvs_gc(FAR struct nvs_fs *fs)
         }
       else if (rc < 0)
         {
-          return rc;
+          goto out;
         }
       else if (rc == 0 || gc_prev_addr == wlk_addr)
         {
@@ -2189,7 +2192,7 @@ static int nvs_gc(FAR struct nvs_fs *fs)
             }
           else if (rc)
             {
-              return rc;
+              goto out;
             }
 
           gc_ate->cycle_cnt = prev_cycle;
@@ -2197,7 +2200,7 @@ static int nvs_gc(FAR struct nvs_fs *fs)
           rc = nvs_flash_ate_wrt(fs, gc_ate);
           if (rc)
             {
-              return rc;
+              goto out;
             }
         }
     }
@@ -2211,12 +2214,16 @@ gc_done:
   rc = nvs_add_gc_done_ate(fs);
   if (rc)
     {
-      return rc;
+      goto out;
     }
 
   /* Erase the gc'ed block */
 
-  return nvs_flash_block_reset(fs, sec_addr);
+  rc = nvs_flash_block_reset(fs, sec_addr);
+
+out:
+  fs->gcing = false;
+  return rc;
 }
 
 /****************************************************************************
@@ -3067,6 +3074,19 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
   FAR struct nvs_fs *fs = inode->i_private;
   FAR struct config_data_s *pdata = (FAR struct config_data_s *)arg;
   int rc;
+
+  if (cmd == CFGDIOC_GETSTATE)
+    {
+      FAR struct config_state_s *state = (FAR struct config_state_s *)arg;
+
+      if (state == NULL)
+        {
+          return -EINVAL;
+        }
+
+      state->gcing = fs->gcing;
+      return OK;
+    }
 
   if (cmd >= CFGDIOC_GETCONFIG && cmd <= CFGDIOC_SETCONFIG_FORCE &&
       (pdata == NULL || pdata->len > UINT16_MAX ||
