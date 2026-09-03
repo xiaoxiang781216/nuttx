@@ -61,6 +61,10 @@ ifneq ($(CONFIG_DISABLE_SIGNALS),y)
   CMN_CSRCS += arm_schedulesigaction.c
 endif
 
+ifeq ($(CONFIG_ARCH_HAVE_BOOT_ENTRY),y)
+  CMN_ASRCS += arm_boot_image.S
+endif
+
 ifeq ($(CONFIG_LIB_SYSCALL),y)
   CMN_ASRCS += arm_dispatch_syscall.S
 endif

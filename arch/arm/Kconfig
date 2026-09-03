@@ -1113,6 +1113,7 @@ config ARCH_ARMV8R
 config ARCH_ARMV8A
 	bool
 	default n
+	select ARCH_HAVE_BOOT_ENTRY
 	select ARCH_HAVE_CPUINFO
 	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_PERF_EVENTS_USER_ACCESS if !SMP

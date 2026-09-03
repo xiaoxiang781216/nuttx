@@ -30,6 +30,10 @@ if(CONFIG_ARCH_HAVE_DEBUG)
   list(APPEND CSRCS arm_hwdebug.c)
 endif()
 
+if(CONFIG_ARCH_HAVE_BOOT_ENTRY)
+  list(APPEND CSRCS arm_boot_image.S)
+endif()
+
 if(CONFIG_LIB_SYSCALL)
   list(APPEND CSRCS arm_dispatch_syscall.S)
 endif()
