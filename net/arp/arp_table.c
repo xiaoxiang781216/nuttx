@@ -75,8 +75,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ARP_MAXAGE_TICK SEC2TICK(10 * CONFIG_NET_ARP_MAXAGE)
-#define ARP_MAXAGE_UNREACHABLE_TICK SEC2TICK(10 * CONFIG_NET_ARP_MAXAGE_UNREACHABLE)
+#define ARP_MAXAGE_TICK SEC2TICK(CONFIG_NET_ARP_MAXAGE)
+#define ARP_MAXAGE_UNREACHABLE_TICK SEC2TICK(CONFIG_NET_ARP_MAXAGE_UNREACHABLE)
 #define ARP_INPROGRESS_TICK MSEC2TICK(CONFIG_ARP_SEND_MAXTRIES * CONFIG_ARP_SEND_DELAYMSEC)
 
 /****************************************************************************

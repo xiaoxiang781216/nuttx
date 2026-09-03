@@ -51,8 +51,8 @@ config NET_NEIGHBOR_MAXAGE_UNREACHABLE
 	default 1
 	---help---
 		The maximum age of unreachable Neighbor table entries measured in
-		deciseconds. During the unreachable period not send a retry
-		Neighbor solicitation for the same destination.
+		seconds. During the unreachable period, do not send a retry Neighbor
+		solicitation for the same destination.
 
 endif # NET_NEIGHBOR_SEND
 
