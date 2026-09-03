@@ -1120,6 +1120,7 @@ config ARCH_ARMV8A
 	select ARM_HAVE_WFE_SEV
 	select ARM_PMUV2 if PERF_EVENTS
 	select ARM_HAVE_EL3_MONITOR if ARCH_TRUSTZONE_SECURE
+	select ALARM_ARCH
 	---help---
 		ARMv8-A architecture running in AArch32 state. This is a superset
 		of ARMv7-A with additional features such as cryptography extensions
