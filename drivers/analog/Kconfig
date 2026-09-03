@@ -257,6 +257,16 @@ config ADC_MCP3008_DIFFERENTIAL
 
 endif # ADC_MCP3008
 
+config ADC_NPCM7XX
+	bool "Nuvoton NPCM7xx ADC support"
+	default n
+	---help---
+		Enable driver support for the Nuvoton NPCM7xx on-chip ADC
+		(memory-mapped, "nuvoton,npcm750-adc").  On the QEMU virt platform
+		the device is discovered from the device tree; external analog
+		inputs are injected over SILKit on the QEMU side.  Conversions are
+		driven by polling; no clock/regulator framework is required.
+
 endif # ADC
 
 config COMP
