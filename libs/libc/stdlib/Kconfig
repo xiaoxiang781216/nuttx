@@ -55,4 +55,13 @@ config LIBC_MAX_EXITFUNS
 		Configure the amount of exit functions for atexit/on_exit. The ANSI
 		default is 32, but most likely we don't need as many.
 
+config LIBC_QSORT_SMALL
+	bool "Use compact small qsort implementation"
+	default DEFAULT_SMALL
+	---help---
+		Select a small, non-recursive heapsort-based qsort() implementation
+		instead of the full Bentley-McIlroy quicksort.  Reduces static code
+		size at the cost of average-case performance (still O(n log n)
+		worst-case).  Intended for size-constrained systems.
+
 endmenu # stdlib Options
