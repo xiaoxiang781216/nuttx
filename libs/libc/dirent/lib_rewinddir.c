@@ -54,5 +54,5 @@
 
 void rewinddir(FAR DIR *dirp)
 {
-  return seekdir(dirp, 0);
+  seekdir(dirp, 0);
 }
