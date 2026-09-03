@@ -262,30 +262,6 @@ static uint64_t riscvpmu_read_counter(FAR struct perf_event_s *event)
   return 0;
 }
 
-static void riscvpmu_write_counter(FAR struct perf_event_s *event,
-                                   uint64_t value)
-{
-  int idx = event->hw.idx;
-
-  if (idx == RISCV_IDX_CYCLE_COUNTER)
-    {
-      WRITE_CSR(CSR_MCYCLE, (uintreg_t)value);
-#ifndef CONFIG_ARCH_RV64
-      WRITE_CSR(CSR_MCYCLEH, (uintreg_t)(value >> 32));
-#endif
-      return;
-    }
-
-  if (idx == RISCV_IDX_INSTRET_COUNTER)
-    {
-      WRITE_CSR(CSR_MINSTRET, (uintreg_t)value);
-#ifndef CONFIG_ARCH_RV64
-      WRITE_CSR(CSR_MINSTRETH, (uintreg_t)(value >> 32));
-#endif
-      return;
-    }
-}
-
 static void riscvpmu_enable_counter(int idx)
 {
   unsigned long bit = BIT(RISCV_IDX_TO_INHIBIT_BIT(idx));
