@@ -315,14 +315,17 @@ def _is_dynamic_sp_sub(mnemonic, operand_str, sp_re):
 def parse_call_graph(prefix, elf, machine):
     """Build call graph by parsing ``objdump -d`` output.
 
-    Returns (graph, dynamic_funcs) where:
+    Returns (graph, dynamic_funcs, svlcx_funcs) where:
       graph: dict mapping caller -> set of (callee_name_or_None, is_indirect).
       dynamic_funcs: set of function names with dynamic stack (alloca/VLA).
+      svlcx_funcs: set of functions emitting 'svlcx' (TriCore lower-context
+        save); populated for TriCore, empty for other architectures.
     """
 
     sp_re = _sp_pattern(machine)
     graph = {}
     dynamic_funcs = set()
+    svlcx_funcs = set()
     current_func = None
 
     proc = subprocess.Popen(
@@ -378,8 +381,14 @@ def parse_call_graph(prefix, elf, machine):
         if _is_dynamic_sp_sub(mnemonic, operand_str, sp_re):
             dynamic_funcs.add(current_func)
 
+        # TriCore SVLCX: save lower context (A2-A7, D0-D7, 64B).  Only
+        # functions that emit SVLCX pay this cost; objdump decodes the
+        # mnemonic directly so no opcode-byte match is needed.
+        if mnemonic == "svlcx":
+            svlcx_funcs.add(current_func)
+
     proc.wait()
-    return graph, dynamic_funcs
+    return graph, dynamic_funcs, svlcx_funcs
 
 
 def _elf_class_endian(elf):
@@ -465,8 +474,8 @@ def parse_call_graph_capstone(elf, addr_to_name, func_sizes, machine, is_thumb, 
     makes it impractically slow on ELFs with very large symbol tables.
     Function code bytes are read directly via the section VMA-to-offset
     map, and call targets are resolved through the symbol table already
-    built in phase 1.  Returns (graph, dynamic_funcs) with the same shape
-    as parse_call_graph().
+    built in phase 1.  Returns (graph, dynamic_funcs, svlcx_funcs) with
+    the same shape as parse_call_graph().
     """
     import bisect
 
@@ -527,6 +536,7 @@ def parse_call_graph_capstone(elf, addr_to_name, func_sizes, machine, is_thumb, 
 
     graph = {}
     dynamic_funcs = set()
+    svlcx_funcs = set()
     call_re = re.compile(r"0x([0-9a-f]+)")
 
     with open(elf, "rb") as f:
@@ -570,7 +580,12 @@ def parse_call_graph_capstone(elf, addr_to_name, func_sizes, machine, is_thumb, 
                 if _is_dynamic_sp_sub(mn, ops, sp_re):
                     dynamic_funcs.add(name)
 
-    return graph, dynamic_funcs
+                # TriCore SVLCX: decodes the mnemonic directly across all
+                # TRICORE modes; no opcode-byte match needed.
+                if mn == "svlcx":
+                    svlcx_funcs.add(name)
+
+    return graph, dynamic_funcs, svlcx_funcs
 
 
 def compute_worst_stack(funcs, graph, recursion_depth):
@@ -594,6 +609,7 @@ def compute_worst_stack(funcs, graph, recursion_depth):
 
         info = funcs.get(func)
         self_size = info["self"] if info else 0
+        csa_size = info["csa"] if info else 0
         self_reasons = set(info["reasons"]) if info else {"no DWARF data"}
         reasons = set(self_reasons)
         uncertain = bool(reasons)
@@ -621,7 +637,8 @@ def compute_worst_stack(funcs, graph, recursion_depth):
                 if recursion_depth > 0:
                     cycle_nodes = cycle[:-1]
                     cycle_cost = sum(
-                        funcs[c]["self"] if c in funcs else 0 for c in cycle_nodes
+                        (funcs[c]["self"] + funcs[c]["csa"]) if c in funcs else 0
+                        for c in cycle_nodes
                     )
                     cycle_total = cycle_cost * recursion_depth
                     if cycle_total > worst_callee:
@@ -643,7 +660,7 @@ def compute_worst_stack(funcs, graph, recursion_depth):
                 worst_callee = callee_total
                 best_substack = callee_stack
 
-        total = self_size + worst_callee
+        total = self_size + csa_size + worst_callee
         result = (
             total,
             uncertain,
@@ -663,6 +680,7 @@ def compute_worst_stack(funcs, graph, recursion_depth):
             continue
         results[func] = {
             "self": funcs[func]["self"] if func in funcs else 0,
+            "csa": funcs[func]["csa"] if func in funcs else 0,
             "total": total,
             "uncertain": uncertain,
             "reasons": list(reasons),
@@ -698,12 +716,13 @@ def reason_marker(reasons):
     return ""
 
 
-def frame_info(funcs, results, frame):
-    """Return (size_str, func_name, file:line) for one stack frame.
+def frame_info(funcs, results, frame, csa_enabled):
+    """Return (size_str, csa_str, func_name, file:line) for one frame.
 
     size_str is prefixed with a marker indicating the function's own
-    uncertainty type (see reason_marker).  func_name includes the code
-    size in parentheses when available, e.g. ``main(128)``.
+    uncertainty type (see reason_marker).  csa_str is the per-frame CSA
+    context-save cost ("-" when zero or disabled).  func_name includes
+    the code size in parentheses when available, e.g. ``main(128)``.
     """
 
     func, _note = frame
@@ -714,16 +733,24 @@ def frame_info(funcs, results, frame):
         prefix = reason_marker(self_reasons)
         code_size = info.get("code_size", 0)
         name = "%s(%d)" % (func, code_size) if code_size else func
+        csa = info.get("csa", 0)
+        csa_str = "%d" % csa if (csa_enabled and csa) else "-"
         return (
             "%s%d" % (prefix, info["self"]),
+            csa_str,
             name,
             "%s:%s" % (info["file"], info["line"]),
         )
-    return ("?", func, "?:?")
+    csa_str = "-" if csa_enabled else ""
+    return ("?", csa_str, func, "?:?")
 
 
-def format_text(results, funcs, rank):
-    """Format results as aligned table with deepest call stack frames."""
+def format_text(results, funcs, rank, csa_enabled=False):
+    """Format results as aligned table with deepest call stack frames.
+
+    When csa_enabled is True (TriCore), insert a CSA column between Self
+    and Backtrace showing the per-frame CSA context-save cost.
+    """
 
     # Compute common path prefix to shorten File:Line column
     paths = [
@@ -743,22 +770,26 @@ def format_text(results, funcs, rank):
     if rank > 0:
         items = items[:rank]
 
-    hdr = ("Total", "Self", "Backtrace", "File:Line")
+    if csa_enabled:
+        hdr = ("Total", "Self", "CSA", "Backtrace", "File:Line")
+    else:
+        hdr = ("Total", "Self", "Backtrace", "File:Line")
     w = list(map(len, hdr))
 
     rows = []
     for func, info in items:
-        frames = [frame_info(funcs, results, f) for f in info["stack"]]
+        frames = [frame_info(funcs, results, f, csa_enabled) for f in info["stack"]]
         # Strip common prefix from file paths
         if prefix:
             plen = len(prefix)
             frames = [
                 (
                     sz,
+                    csa,
                     fn,
                     loc[plen:] if loc.startswith(prefix) else loc,
                 )
-                for sz, fn, loc in frames
+                for sz, csa, fn, loc in frames
             ]
         # Derive Total marker from the displayed stack frames' own reasons,
         # not from all propagated reasons across every branch.
@@ -772,27 +803,43 @@ def format_text(results, funcs, rank):
         marker = reason_marker(stack_reasons) if info["uncertain"] else ""
         total_str = "%s%d" % (marker, info["total"])
         w[0] = max(w[0], len(total_str))
-        for sz, fn, loc in frames:
+        for sz, csa, fn, loc in frames:
             w[1] = max(w[1], len(sz))
-            w[2] = max(w[2], min(len(fn), maxname))
-            w[3] = max(w[3], len(loc))
+            if csa_enabled:
+                w[2] = max(w[2], len(csa))
+                w[3] = max(w[3], min(len(fn), maxname))
+                w[4] = max(w[4], len(loc))
+            else:
+                w[2] = max(w[2], min(len(fn), maxname))
+                w[3] = max(w[3], len(loc))
         rows.append((total_str, frames))
 
     def trunc(s):
         return s[: maxname - 3] + "..." if len(s) > maxname else s
 
-    fmt = "%%%ds  %%%ds  %%-%ds  %%s" % (w[0], w[1], w[2])
+    if csa_enabled:
+        fmt = "%%%ds  %%%ds  %%%ds  %%-%ds  %%s" % (w[0], w[1], w[2], w[3])
+    else:
+        fmt = "%%%ds  %%%ds  %%-%ds  %%s" % (w[0], w[1], w[2])
     lines = [fmt % hdr]
-    lines.append(fmt % ("-" * w[0], "-" * w[1], "-" * w[2], "-" * w[3]))
+    if csa_enabled:
+        lines.append(fmt % ("-" * w[0], "-" * w[1], "-" * w[2], "-" * w[3], "-" * w[4]))
+    else:
+        lines.append(fmt % ("-" * w[0], "-" * w[1], "-" * w[2], "-" * w[3]))
 
     for total_str, frames in rows:
-        for i, (sz, fn, loc) in enumerate(frames):
-            if i == 0:
-                lines.append(fmt % (total_str, sz, trunc(fn + "~"), loc))
+        for i, (sz, csa, fn, loc) in enumerate(frames):
+            fn_disp = trunc(fn + "~") if i == 0 else trunc(fn)
+            tot = total_str if i == 0 else ""
+            if csa_enabled:
+                lines.append(fmt % (tot, sz, csa, fn_disp, loc))
             else:
-                lines.append(fmt % ("", sz, trunc(fn), loc))
+                lines.append(fmt % (tot, sz, fn_disp, loc))
         if not frames:
-            lines.append(fmt % (total_str, "", "", ""))
+            if csa_enabled:
+                lines.append(fmt % (total_str, "", "", "", ""))
+            else:
+                lines.append(fmt % (total_str, "", "", ""))
 
     return "\n".join(lines)
 
@@ -837,6 +884,16 @@ def main():
         "ELFs; needs 'pip install capstone').  Falls back to objdump "
         "if capstone is unavailable or the architecture is unsupported.",
     )
+    parser.add_argument(
+        "--no-csa",
+        action="store_false",
+        dest="csa",
+        default=True,
+        help="disable TriCore CSA (Context Save Area) accounting. By "
+        "default each call frame adds 64B of upper-context CSA for "
+        "TriCore ELF (CALL auto-saves the upper context, 16 words = "
+        "64B); other architectures are unaffected.",
+    )
     args = parser.parse_args()
 
     if not os.path.isfile(args.elf):
@@ -870,11 +927,20 @@ def main():
     # Phase 3: Source locations via addr2line
     resolve_sources(args.prefix, args.elf, funcs, name_to_addr)
 
+    # Phase 3b: TriCore CSA context-save accounting.  Each CALL saves the
+    # upper context (16 words = 64B) into the CSA pool, which on NuttX
+    # TriCore shares memory with the task/IRQ stack, so SP-only totals
+    # undercount the real depth by depth*64B on deep chains.
+    csa_enabled = args.csa and "TRICORE" in machine.upper()
+    csa_per_frame = 64 if csa_enabled else 0
+    for name in funcs:
+        funcs[name]["csa"] = csa_per_frame
+
     # Phase 4: Call graph
     use_capstone = args.engine == "capstone"
     if use_capstone:
         try:
-            graph, dynamic_funcs = parse_call_graph_capstone(
+            graph, dynamic_funcs, svlcx_funcs = parse_call_graph_capstone(
                 args.elf,
                 addr_to_name,
                 func_sizes,
@@ -897,16 +963,28 @@ def main():
             use_capstone = False
 
     if not use_capstone:
-        graph, dynamic_funcs = parse_call_graph(args.prefix, args.elf, machine)
+        graph, dynamic_funcs, svlcx_funcs = parse_call_graph(
+            args.prefix, args.elf, machine
+        )
 
     # Mark functions with dynamic stack allocation (alloca/VLA)
     for name in dynamic_funcs:
         if name in funcs:
             funcs[name]["reasons"].append("dynamic stack (alloca/VLA)")
 
+    # Add lower-context CSA (64B) for TriCore functions emitting SVLCX.
+    # Phase 3b set the base 64B upper context per frame; SVLCX saves the
+    # lower context (A2-A7, D0-D7) on top of that, so those frames cost
+    # 128B total.  trap/IRQ 128B and the task-initial 128B remain
+    # unmodelled (async/task-level, not per-function).
+    if csa_enabled:
+        for name in svlcx_funcs:
+            if name in funcs:
+                funcs[name]["csa"] += 64
+
     results = compute_worst_stack(funcs, graph, args.recursion_depth)
 
-    print(format_text(results, funcs, args.rank))
+    print(format_text(results, funcs, args.rank, csa_enabled))
 
 
 if __name__ == "__main__":
