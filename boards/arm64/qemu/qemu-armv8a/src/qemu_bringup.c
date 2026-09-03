@@ -126,6 +126,10 @@ static void register_devices_from_fdt(void)
 #ifdef CONFIG_QEMU_FWCFG
   fdt_qemu_fwcfg_register(fdt);
 #endif
+
+#ifdef CONFIG_ADC_NPCM7XX
+  fdt_npcm_adc_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+#endif
 }
 
 #endif

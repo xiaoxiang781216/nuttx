@@ -161,6 +161,15 @@ static void register_devices_from_fdt(void)
     }
 #endif
 
+#ifdef CONFIG_ADC_NPCM7XX
+  ret = fdt_npcm_adc_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "fdt_npcm_adc_devices_register failed, ret=%d\n",
+             ret);
+    }
+#endif
+
   UNUSED(ret);
 }
 
