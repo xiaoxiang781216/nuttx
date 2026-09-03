@@ -89,7 +89,7 @@ EXTERN const syslog_channels_t g_syslog_channel;
  *
  * Description:
  *   Initialize to use the character device (or file) at
- *   CONFIG_SYSLOG_DEVPATH as the SYSLOG sink.
+ *   CONFIG_SYSLOG_CHAR_DEVPATH as the SYSLOG sink.
  *
  *   One power up, the SYSLOG facility is non-existent or limited to very
  *   low-level output.  This function may be called later in the
@@ -136,11 +136,11 @@ void syslog_dev_uninitialize(FAR syslog_channel_t *channel);
  *
  * Description:
  *   Configure to use the character device (or file) at
- *   CONFIG_SYSLOG_DEVPATH as the SYSLOG channel.
+ *   CONFIG_SYSLOG_CHAR_DEVPATH as the SYSLOG channel.
  *
  *   This tiny function is simply a wrapper around syslog_dev_initialize()
  *   and syslog_channel_register().  It calls syslog_dev_initialize() to
- *   configure the character device at CONFIG_SYSLOG_DEVPATH then calls
+ *   configure the character device at CONFIG_SYSLOG_CHAR_DEVPATH then calls
  *   syslog_channel_register() to use that device as the SYSLOG output
  *   channel.
  *

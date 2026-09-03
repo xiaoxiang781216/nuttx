@@ -863,7 +863,7 @@ void ramlog_syslog_register(void)
 
   /* Register the syslog character driver */
 
-  register_driver(CONFIG_SYSLOG_DEVPATH, &g_ramlogfops, 0666, &g_ramlog_dev);
+  register_driver(CONFIG_RAMLOG_DEVPATH, &g_ramlogfops, 0666, &g_ramlog_dev);
 }
 #endif
 

@@ -83,6 +83,19 @@ config SYSLOG_RATELIMIT_BURST
 if SYSLOG || BINARY_SYSLOG
 comment "SYSLOG options"
 
+config SYSLOG_CHARDEV
+	bool "SYSLOG character device"
+	default n
+	---help---
+		Enables support for a simple character driver at /dev/log whose
+		write() method will transfer data to the SYSLOG device.  This can be
+		useful if, for example, you want to redirect the output of a program
+		to the SYSLOG.
+
+		NOTE that unlike other syslog output, this data is unformatted raw
+		byte output with no time-stamping or any other SYSLOG features
+		supported.
+
 config SYSLOG_CRLF
 	bool "Syslog convert LF to CRLF"
 	default y
@@ -288,25 +301,23 @@ config SYSLOG_COLOR_OUTPUT
 
 comment "SYSLOG channels"
 
-config SYSLOG_DEVPATH
-	string "System log device"
-	default "/dev/kmsg" if RAMLOG_SYSLOG
-	default "/dev/ttyS1" if !RAMLOG_SYSLOG
-	---help---
-		The full path to the system logging device.  For the RAMLOG SYSLOG device,
-		this is normally "/dev/kmsg".  For character SYSLOG devices, it should be
-		some other existing character device (or file) supported by the configuration
-		(such as "/dev/ttyS1")/
-
-if !ARCH_SYSLOG
 config SYSLOG_CHAR
 	bool "Log to a character device"
 	default n
 	select SYSLOG_REGISTER
 	---help---
 		Enable the generic character device for the SYSLOG. The full path to the
-		SYSLOG device is provided by SYSLOG_DEVPATH. A valid character device (or
-		file) must exist at this path.  It will by opened by syslog_initialize.
+		SYSLOG device is provided by SYSLOG_CHAR_DEVPATH. A valid character device
+		(or file) must exist at this path.  It will by opened by syslog_initialize.
+
+config SYSLOG_CHAR_DEVPATH
+	string "SYSLOG character device path"
+	depends on SYSLOG_CHAR
+	default "/dev/ttyS1"
+	---help---
+		Full path to the character device (or file) that SYSLOG output is
+		written to when SYSLOG_CHAR is enabled.  It must exist at this path and
+		is opened by syslog_initialize().
 
 config RAMLOG_SYSLOG
 	bool "Use RAMLOG for SYSLOG"
@@ -325,19 +336,6 @@ config SYSLOG_RPMSG
 	default n
 	---help---
 		Use the RPMSG as a SYSLOG output device, send message to remote proc.
-
-config SYSLOG_RPMSG_BUFSIZE
-	int "RPMSG SYSLOG buffer size"
-	depends on SYSLOG_RPMSG
-	---help---
-		Size of the console RPMSG syslog.  Default: 0
-
-config SYSLOG_RPMSG_BUFFER_SECTION
-	string "The section where rpmsg syslog buffer is located"
-	depends on SYSLOG_RPMSG_BUFSIZE != 0
-	---help---
-		The section where rpmsg syslog buffer is located.
-		The section shall not be initialized on system boot.
 
 config SYSLOG_CDCACM
 	bool "Log to CDCACM"
@@ -377,9 +375,15 @@ config SYSLOG_DEFAULT
 		syslog() interfaces will be present, but all output will go to the
 		up_putc(ARCH_LOWPUTC == y) or bit-bucket(ARCH_LOWPUTC == n).
 
-endif
-
 if RAMLOG_SYSLOG
+
+config RAMLOG_DEVPATH
+	string "RAMLOG SYSLOG device"
+	default "/dev/kmsg"
+	---help---
+		Full path to the RAMLOG SYSLOG device, normally "/dev/kmsg".  It is
+		registered as a driver by ramlog_syslog_register() and can be viewed
+		from NSH using the 'dmesg' command.
 
 config RAMLOG_BUFFER_SECTION
 	string "The section where ramlog buffer is located"
@@ -441,6 +445,19 @@ config SYSLOG_DEFAULT_PANIC_ONLY
 endif # SYSLOG_DEFAULT
 
 if SYSLOG_RPMSG
+
+config SYSLOG_RPMSG_BUFSIZE
+	int "RPMSG SYSLOG buffer size"
+	depends on SYSLOG_RPMSG
+	---help---
+		Size of the console RPMSG syslog.  Default: 0
+
+config SYSLOG_RPMSG_BUFFER_SECTION
+	string "The section where rpmsg syslog buffer is located"
+	depends on SYSLOG_RPMSG_BUFSIZE != 0
+	---help---
+		The section where rpmsg syslog buffer is located.
+		The section shall not be initialized on system boot.
 
 config SYSLOG_RPMSG_SERVER_NAME
 	string "The name of Syslog RPMSG Server"

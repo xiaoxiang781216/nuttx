@@ -45,7 +45,7 @@
 /* CONFIG_SYSLOG_INTBUFFER - Enables an interrupt buffer that will be used
  *   to serialize debug output from interrupt handlers.
  * CONFIG_SYSLOG_INTBUFSIZE - The size of the interrupt buffer in bytes.
- * CONFIG_SYSLOG_DEVPATH - The full path to the system logging device
+ * CONFIG_SYSLOG_CHAR_DEVPATH - The full path to the character SYSLOG device
  *
  * In addition, some SYSLOG device must also be enabled that will provide
  * the syslog output channel.  As of this writing, there are two SYSLOG
@@ -61,15 +61,16 @@
  *      cannot handle debug output generated from interrupt level handlers.
  *
  * CONFIG_SYSLOG_CHAR - Enable the generic character device for the SYSLOG.
- *   The full path to the SYSLOG device is provided by CONFIG_SYSLOG_DEVPATH.
- *   A valid character device must exist at this path.  It will by opened
+ *   The full path to the SYSLOG device is provided by
+ *   CONFIG_SYSLOG_CHAR_DEVPATH.  A valid character device must exist at this
+ *   path.  It will by opened
  *   by logic in syslog_initialize() based on the current configuration.
  *
  *   NOTE:  No more than one SYSLOG device should be configured.
  */
 
-#if defined(CONFIG_SYSLOG_CHAR) && !defined(CONFIG_SYSLOG_DEVPATH)
-#  define CONFIG_SYSLOG_DEVPATH "/dev/ttyS1"
+#if defined(CONFIG_SYSLOG_CHAR) && !defined(CONFIG_SYSLOG_CHAR_DEVPATH)
+#  define CONFIG_SYSLOG_CHAR_DEVPATH "/dev/ttyS1"
 #endif
 
 #ifdef CONFIG_SYSLOG_INTBUFFER

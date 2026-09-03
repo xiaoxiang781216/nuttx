@@ -125,7 +125,7 @@ int ramlog_register(FAR const char *devpath,
  *
  * Description:
  *   Create the RAM logging device and register it at the specified path.
- *   Mostly likely this path will be CONFIG_SYSLOG_DEVPATH
+ *   Mostly likely this path will be CONFIG_RAMLOG_DEVPATH
  *
  ****************************************************************************/
 
