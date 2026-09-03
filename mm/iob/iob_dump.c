@@ -210,7 +210,7 @@ static void iob_dump_cb(FAR struct iob_s *iob, FAR void *arg)
    * IOB pointer to be printed later, after the lock has been released.
    */
 
-  if (*total < CONFIG_IOB_DUMP_MAX_ENTRIES)
+  if (*total >= 0 && *total < CONFIG_IOB_DUMP_MAX_ENTRIES)
     {
       g_iob_dump_record[*total] = iob;
     }
