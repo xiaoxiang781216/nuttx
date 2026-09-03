@@ -58,6 +58,10 @@ ifeq ($(CONFIG_QEMU_FWCFG),y)
   CSRCS += fdt_qemu_fwcfg.c
 endif
 
+ifeq ($(CONFIG_ADC_NPCM7XX),y)
+  CSRCS += fdt_npcm_adc.c
+endif
+
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)fdt$(DELIM)dtc$(DELIM)libfdt
 
 DEPPATH += --dep-path devicetree

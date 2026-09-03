@@ -613,4 +613,25 @@ int fdt_cmsdk_wdt_devices_register(FAR const void *fdt, int irqbase);
 #ifdef CONFIG_QEMU_FWCFG
 int fdt_qemu_fwcfg_register(FAR const void *fdt);
 #endif
+
+/****************************************************************************
+ * Name: fdt_npcm_adc_devices_register
+ *
+ * Description:
+ *   This function scans the device tree for nodes with compatible
+ *   "nuvoton,npcm750-adc" and registers each as an ADC character device
+ *   (/dev/adcN).
+ *
+ * Input Parameters:
+ *   fdt      - Device tree handle
+ *   irqbase  - Interrupt base number
+ *
+ * Returned Value:
+ *   Return 0 if success, negative if failed
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ADC) && defined(CONFIG_ADC_NPCM7XX)
+int fdt_npcm_adc_devices_register(FAR const void *fdt, int irqbase);
+#endif
 #endif /* __INCLUDE_NUTTX_FDT_H */
