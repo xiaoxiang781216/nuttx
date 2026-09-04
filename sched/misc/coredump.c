@@ -54,12 +54,6 @@
 #  define ELF_PAGESIZE    1024
 #endif
 
-#if defined(CONFIG_BOARD_COREDUMP_BLKDEV) || \
-    defined(CONFIG_BOARD_COREDUMP_MTDDEV) || \
-    defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-#  define CONFIG_BOARD_COREDUMP_DEV
-#endif
-
 #define PROGRAM_ALIGNMENT 64
 
 /* Architecture can overwrite the default XCPTCONTEXT alignment */
@@ -144,7 +138,7 @@ struct coredump_context_s
   struct lib_netpolloutstream_s netpollstream;
 #endif
 
-#ifdef CONFIG_BOARD_COREDUMP_DEVPATH
+#ifdef CONFIG_BOARD_COREDUMP_NSLOTS
   uint32_t seqno;
   off_t    next;
   off_t    devsize;
@@ -1087,13 +1081,31 @@ static void coredump_dump_syslog(FAR struct tcb_s *tcb)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_BOARD_COREDUMP_DEV
+#ifdef CONFIG_BOARD_COREDUMP_DEVPATH
 static void coredump_dump_dev(FAR struct tcb_s *tcb)
 {
   FAR struct lib_outstream_s *stream;
+  int ret;
+
+#  ifdef CONFIG_BOARD_COREDUMP_MEMDEV
+  uint8_t magic[EI_MAGIC_SIZE];
+
+  ret = file_read(&g_coredump.devstream.file, magic, sizeof(magic));
+#    ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+  if (ret >= 2 && magic[0] == 'Z' && magic[1] == 'V')
+#    else
+  if (ret == sizeof(magic) && memcmp(magic, ELFMAG, EI_MAGIC_SIZE) == 0)
+#    endif
+    {
+      _alert("Coredump: memdev already written, skip.\n");
+      return;
+    }
+
+  lib_stream_seek(&g_coredump.devstream, 0, SEEK_SET);
+  stream = (FAR struct lib_outstream_s *)&g_coredump.devstream;
+#  else
   struct lib_wrapsostream_s wrapstream;
   struct coredump_head_s head;
-  int ret;
 
   /* Wrap output in a stream that automatically wraps around
    * to the beginning when the device end is reached.
@@ -1105,16 +1117,15 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
 
   stream = (FAR struct lib_outstream_s *)&wrapstream;
 
-  /* Emit the plaintext head (magic + seqno) before the payload. */
-
   head.magic = COREDUMP_MAGIC;
   head.seqno = g_coredump.seqno++;
   lib_stream_puts(stream, &head, sizeof(head));
+#  endif
 
-# ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+#  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   lib_lzfoutstream(&g_lzfstream, stream);
   stream = &g_lzfstream;
-# endif
+#  endif
 
   ret = coredump_with_tcb(g_coredump.regions, stream, tcb);
   if (ret < 0)
@@ -1125,8 +1136,10 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
 
   lib_stream_flush(stream);
 
+#  ifdef CONFIG_BOARD_COREDUMP_NSLOTS
   g_coredump.next = ALIGN_UP(lib_stream_nput(&wrapstream),
                              g_coredump.align) % g_coredump.devsize;
+#  endif
 
   _emerg("Coredump finish, write %" PRIuOFF " bytes to %s\n",
          lib_stream_nput(stream), CONFIG_BOARD_COREDUMP_DEVPATH);
@@ -1637,14 +1650,13 @@ static void coredump_procfs_register(FAR const struct coredump_info_s *info,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_BOARD_COREDUMP_NSLOTS
 static void coredump_boot_scan(void)
 {
 #if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
   struct lib_blksistream_s scanstream;
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
   struct lib_mtdsistream_s scanstream;
-#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-  struct lib_filesistream_s scanstream;
 #endif
   struct lib_wrapsistream_s wrapstream;
   struct coredump_head_s head;
@@ -1659,10 +1671,6 @@ static void coredump_boot_scan(void)
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
   ret = lib_mtdsistream_open(&scanstream, CONFIG_BOARD_COREDUMP_DEVPATH);
   blkalign = scanstream.geo.erasesize;
-#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-  ret = lib_filesistream_open(&scanstream, CONFIG_BOARD_COREDUMP_DEVPATH,
-                              O_RDONLY | O_CLOEXEC, 0);
-  blkalign = 512;
 #endif
   if (ret < 0)
     {
@@ -1741,10 +1749,9 @@ static void coredump_boot_scan(void)
   lib_blksistream_close(&scanstream);
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
   lib_mtdsistream_close(&scanstream);
-#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-  lib_filesistream_close(&scanstream);
 #endif
 }
+#endif /* CONFIG_BOARD_COREDUMP_NSLOTS */
 
 #endif /* CONFIG_FS_PROCFS_REGISTER && CONFIG_BOARD_COREDUMP_DEVPATH */
 
@@ -1771,7 +1778,7 @@ int coredump_initialize(void)
       return ret;
     }
 
-#if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
+#if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_NSLOTS)
   coredump_boot_scan();
 #endif
 
@@ -1784,7 +1791,7 @@ int coredump_initialize(void)
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
   ret = lib_fileoutstream_open(&g_coredump.devstream,
                                CONFIG_BOARD_COREDUMP_DEVPATH,
-                               O_WRONLY, 0666);
+                               O_RDWR, 0666);
 #elif defined(CONFIG_BOARD_COREDUMP_NETPOLL)
   ret = lib_netpolloutstream_init(&g_coredump.netpollstream,
                                   CONFIG_BOARD_COREDUMP_NETPOLL_INTF,
@@ -1799,7 +1806,7 @@ int coredump_initialize(void)
     }
 #endif
 
-#ifdef CONFIG_BOARD_COREDUMP_DEV
+#ifdef CONFIG_BOARD_COREDUMP_DEVPATH
   if (ret < 0)
     {
       _emerg("%s Coredump device init failed:%d\n",
@@ -1841,7 +1848,7 @@ void coredump_dump(FAR struct tcb_s *tcb)
 #endif
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
   coredump_dump_syslog(tcb);
-#elif defined(CONFIG_BOARD_COREDUMP_DEV)
+#elif defined(CONFIG_BOARD_COREDUMP_DEVPATH)
   coredump_dump_dev(tcb);
 #elif defined(CONFIG_BOARD_COREDUMP_NETPOLL)
   coredump_dump_netpoll(tcb);
