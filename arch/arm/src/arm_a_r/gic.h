@@ -39,6 +39,13 @@
 #  include <sys/types.h>
 #  include <stdint.h>
 #  include <nuttx/bits.h>
+
+/* Pulled in for the GIC base addresses.  A chip may override them,
+ * and including it here keeps the override independent of the order
+ * in which a user includes chip.h and this header.
+ */
+
+#  include "chip.h"
 #endif
 
 #include "mpcore.h"
@@ -661,7 +668,26 @@
  * GIC architecture version 3 and version 4
  */
 
-#define GIC_DIST_BASE           CONFIG_GICD_BASE
+/* A chip may override these from its arch/chip/chip.h when the GIC
+ * location cannot be known at build time.  One such case is a
+ * multi-cluster SoC where every cluster owns a private GIC and the
+ * base is derived from the CPU's own PERIPHBASE at boot, so that a
+ * single image can run on any cluster.  An override may therefore be
+ * a variable rather than a constant: none of the register macros
+ * below is used in a preprocessor condition, in assembly or in a
+ * linker script.  An assembly translation unit never sees the
+ * override, since chip.h is not included there, and falls back to
+ * the constant for the same reason.
+ */
+
+#ifndef GIC_DIST_BASE
+#  define GIC_DIST_BASE         CONFIG_GICD_BASE
+#endif
+
+#ifndef GIC_RDIST_BASE
+#  define GIC_RDIST_BASE        CONFIG_GICR_BASE
+#endif
+
 #define GICD_CTLR               (GIC_DIST_BASE + 0x0)
 #define GICD_TYPER              (GIC_DIST_BASE + 0x4)
 #define GICD_IIDR               (GIC_DIST_BASE + 0x8)

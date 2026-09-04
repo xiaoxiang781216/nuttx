@@ -936,7 +936,7 @@ static void arm_gic_init(void)
 {
   int err;
 
-  g_gic_rdists = CONFIG_GICR_BASE + up_cpu_index() * CONFIG_GICR_OFFSET;
+  g_gic_rdists = GIC_RDIST_BASE + up_cpu_index() * CONFIG_GICR_OFFSET;
 
   err = gic_validate_redist_version();
   if (err)
