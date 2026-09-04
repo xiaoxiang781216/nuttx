@@ -87,6 +87,17 @@ config MCAL_PWM_DRIVER
 		module.  Board-level code provides per-channel mapping via
 		struct mcal_pwm_devinfo_s.
 
+config PWM_SIFIVE
+	bool "SiFive PWM lower-half driver"
+	default n
+	---help---
+		Enables the SiFive PWM lower-half driver (four compare channels,
+		PWMCFG/PWMCMPx registers).  The controller is described by the
+		"sifive,pwm0" device tree binding and is modelled by QEMU on the
+		virt platform.  The counter runs in its natural 16-bit wrap mode,
+		so the requested frequency is approximated by the SCALE prescaler
+		and all four compare registers act as duty outputs.
+
 endif # PWM
 
 config CAPTURE

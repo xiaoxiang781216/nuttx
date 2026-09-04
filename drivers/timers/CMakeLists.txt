@@ -97,6 +97,10 @@ if(CONFIG_PWM)
   list(APPEND SRCS pwm.c)
 endif()
 
+if(CONFIG_PWM_SIFIVE)
+  list(APPEND SRCS sifive_pwm.c)
+endif()
+
 if(CONFIG_MCAL_PWM_DRIVER)
   list(APPEND SRCS pwm_mcal.c)
 endif()
