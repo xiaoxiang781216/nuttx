@@ -65,9 +65,12 @@
  *     Invalid fd member (revents only).
  *
  *   POLLALWAYS
- *     Indicate that should ALWAYS call the poll callback whether the
- *     drvier notified the user expected event or not, and this value is
- *     used inside kernal only (events only).
+ *     Call the poll callback even when the notified event is not one the
+ *     user asked for.  Kernel internal.  Both sides must agree:  the
+ *     waiter sets it in events to accept a callback carrying no event
+ *     (epoll does, to re-run poll setup), and the driver sets it in the
+ *     notified eventset to ask for one, which only a driver whose poll
+ *     registration goes stale on an internal state change needs to do.
  */
 
 #define POLLIN       (0x01)  /* NuttX does not make priority distinctions */
