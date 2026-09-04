@@ -634,4 +634,24 @@ int fdt_qemu_fwcfg_register(FAR const void *fdt);
 #if defined(CONFIG_ADC) && defined(CONFIG_ADC_NPCM7XX)
 int fdt_npcm_adc_devices_register(FAR const void *fdt, int irqbase);
 #endif
+
+/****************************************************************************
+ * Name: fdt_sifive_pwm_devices_register
+ *
+ * Description:
+ *   This function scans the device tree for nodes with compatible
+ *   "sifive,pwm0" and registers each as a PWM character device
+ *   (/dev/pwmN).
+ *
+ * Input Parameters:
+ *   fdt - Device tree handle
+ *
+ * Returned Value:
+ *   Return 0 if success, negative if failed
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PWM_SIFIVE
+int fdt_sifive_pwm_devices_register(FAR const void *fdt);
+#endif
 #endif /* __INCLUDE_NUTTX_FDT_H */

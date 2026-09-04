@@ -62,6 +62,10 @@ ifeq ($(CONFIG_ADC_NPCM7XX),y)
   CSRCS += fdt_npcm_adc.c
 endif
 
+ifeq ($(CONFIG_PWM_SIFIVE),y)
+  CSRCS += fdt_sifive_pwm.c
+endif
+
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)fdt$(DELIM)dtc$(DELIM)libfdt
 
 DEPPATH += --dep-path devicetree
