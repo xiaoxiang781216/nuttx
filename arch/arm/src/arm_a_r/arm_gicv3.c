@@ -962,7 +962,15 @@ static void arm_gic_init(void)
 
 void arm_gic0_initialize(void)
 {
-  DEBUGASSERT(gic_validate_dist_version() == 0);
+  int err;
+
+  err = gic_validate_dist_version();
+  if (err < 0)
+    {
+      serr("no GICv3/v4 distributor at 0x%lx: %d\n",
+           (unsigned long)GIC_DIST_BASE, err);
+      PANIC();
+    }
 
   gicv3_dist_init();
 }
