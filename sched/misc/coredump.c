@@ -309,11 +309,6 @@ static int elf_emit_hdr(FAR struct elf_dumpinfo_s *cinfo)
   ehdr.e_ident[EI_VERSION] = EV_CURRENT;
   ehdr.e_ident[EI_OSABI]   = ELF_OSABI;
 
-#ifdef CONFIG_BOARD_COREDUMP_DEV
-  memcpy(&ehdr.e_ident[EI_PAD], &g_coredump.seqno, sizeof(uint32_t));
-  g_coredump.seqno++;
-#endif
-
   ehdr.e_type              = ET_CORE;
   ehdr.e_machine           = EM_ARCH;
   ehdr.e_version           = EV_CURRENT;
@@ -1097,6 +1092,7 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
 {
   FAR struct lib_outstream_s *stream;
   struct lib_wrapsostream_s wrapstream;
+  struct coredump_head_s head;
   int ret;
 
   /* Wrap output in a stream that automatically wraps around
@@ -1108,6 +1104,12 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
   lib_stream_seek(&wrapstream, g_coredump.next, SEEK_SET);
 
   stream = (FAR struct lib_outstream_s *)&wrapstream;
+
+  /* Emit the plaintext head (magic + seqno) before the payload. */
+
+  head.magic = COREDUMP_MAGIC;
+  head.seqno = g_coredump.seqno++;
+  lib_stream_puts(stream, &head, sizeof(head));
 
 # ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   lib_lzfoutstream(&g_lzfstream, stream);
@@ -1308,16 +1310,15 @@ int coredump_remove_memory_region(FAR const void *ptr, size_t size)
  * Name: coredump_get_info
  *
  * Description:
- *   Scan a device for a valid coredump and extract its metadata.
- *   Supports both raw ELF and LZF-compressed formats.
+ *   Read a stored coredump's metadata (size/time/uname) from the info
+ *   note.  base points at the payload, right after the plaintext head.
  *
  ****************************************************************************/
 
 static int coredump_get_info(FAR struct lib_sistream_s *stream,
                              off_t base,
                              FAR struct coredump_info_s *info,
-                             FAR bool *compressed,
-                             FAR uint32_t *seqno)
+                             FAR bool *compressed)
 {
 #ifdef CONFIG_LIBC_LZF
   struct lib_lzfsistream_s lzfstream;
@@ -1329,12 +1330,7 @@ static int coredump_get_info(FAR struct lib_sistream_s *stream,
   Elf_Nhdr nhdr;
   int ret;
 
-  /* Seek to the base offset before reading */
-
   lib_stream_seek(stream, base, SEEK_SET);
-
-  /* Detect format by reading the first 2 bytes */
-
   ret = lib_stream_gets(stream, magic, sizeof(magic));
   if (ret != sizeof(magic))
     {
@@ -1348,6 +1344,7 @@ static int coredump_get_info(FAR struct lib_sistream_s *stream,
     {
       *compressed = true;
 #ifdef CONFIG_LIBC_LZF
+      base = 0;
       lib_lzfsistream(&lzfstream, stream);
       stream = (FAR struct lib_sistream_s *)&lzfstream;
 #else
@@ -1366,27 +1363,11 @@ static int coredump_get_info(FAR struct lib_sistream_s *stream,
       return -EINVAL;
     }
 
-  /* Extract seqno from ELF header padding area */
-
-  if (seqno != NULL)
-    {
-      memcpy(seqno, &ehdr.e_ident[EI_PAD], sizeof(*seqno));
-    }
-
-  /* The last program header contains the info note.
-   * For uncompressed streams, offsets are device-absolute (base + offset).
-   * For compressed (LZF) streams, offsets are relative to decompressed
-   * content (base is already incorporated in the backend position).
-   */
-
-  if (*compressed)
-    {
-      base = 0;
-    }
+  /* The last program header contains the info note. */
 
   ret = lib_stream_seek(stream, base + ehdr.e_phoff +
-                       ehdr.e_phentsize * (ehdr.e_phnum - 1),
-                       SEEK_SET);
+                        ehdr.e_phentsize * (ehdr.e_phnum - 1),
+                        SEEK_SET);
   if (ret < 0)
     {
       return ret;
@@ -1488,7 +1469,12 @@ static int coredump_procfs_open(FAR struct file *filep,
 
   lib_wrapsistream_init(&file->wrapstream,
                         (FAR struct lib_sistream_s *)&file->instream);
-  lib_stream_seek(&file->wrapstream, ctx->offset, SEEK_SET);
+
+  /* Skip the plaintext head so consumers see only the ELF core image. */
+
+  lib_stream_seek(&file->wrapstream,
+                  ctx->offset + sizeof(struct coredump_head_s),
+                  SEEK_SET);
   filep->f_priv = file;
 
   return OK;
@@ -1541,9 +1527,9 @@ static ssize_t coredump_procfs_read(FAR struct file *filep,
  * Name: coredump_procfs_unlink
  *
  * Description:
- *   Handle unlink(2) on a coredump procfs entry.  Clears the ELF magic
- *   on the backing device to invalidate the dump, then frees the entry.
- *   Userspace calls: unlink("/proc/coredump/<name>")
+ *   Handle unlink(2) on a coredump procfs entry.  Clears the plaintext
+ *   head on the backing device to invalidate the dump, then frees the
+ *   entry.  Userspace calls: unlink("/proc/coredump/<name>")
  *
  ****************************************************************************/
 
@@ -1552,12 +1538,11 @@ static int coredump_procfs_unlink(FAR struct procfs_entry_s *entry,
 {
   FAR struct coredump_procfs_s *ctx =
     container_of(entry, struct coredump_procfs_s, entry);
-  char zero[EI_MAGIC_SIZE] =
-    {
-      0
-    };
+  struct coredump_head_s zero;
 
   int ret;
+
+  memset(&zero, 0, sizeof(zero));
 
 #if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
   struct lib_blkoutstream_s outstream;
@@ -1577,7 +1562,7 @@ static int coredump_procfs_unlink(FAR struct procfs_entry_s *entry,
     }
 
   lib_stream_seek(&outstream, ctx->offset, SEEK_SET);
-  lib_stream_puts(&outstream, zero, EI_MAGIC_SIZE);
+  lib_stream_puts(&outstream, &zero, sizeof(zero));
   lib_stream_flush(&outstream);
 
 #if defined(CONFIG_BOARD_COREDUMP_BLKDEV)
@@ -1662,7 +1647,7 @@ static void coredump_boot_scan(void)
   struct lib_filesistream_s scanstream;
 #endif
   struct lib_wrapsistream_s wrapstream;
-  char magic[EI_MAGIC_SIZE];
+  struct coredump_head_s head;
   off_t blkalign;
   int nslots;
   int ret;
@@ -1702,12 +1687,11 @@ static void coredump_boot_scan(void)
   lib_wrapsistream_init(&wrapstream,
                        (FAR struct lib_sistream_s *)&scanstream);
 
-  /* Scan each slot start position for a valid coredump magic */
+  /* Scan each slot start position for a valid coredump head */
 
   for (i = 0; i < nslots; i++)
     {
       struct coredump_info_s info;
-      uint32_t seqno;
       bool compressed;
       ssize_t nread;
       off_t pos;
@@ -1715,43 +1699,42 @@ static void coredump_boot_scan(void)
       pos = i * g_coredump.align;
       lib_stream_seek(&wrapstream, pos, SEEK_SET);
 
-      nread = lib_stream_gets(&wrapstream, magic, EI_MAGIC_SIZE);
-      if (nread < EI_MAGIC_SIZE)
+      /* Read and validate the plaintext head, then read its seqno. */
+
+      nread = lib_stream_gets(&wrapstream, &head, sizeof(head));
+      if (nread < (ssize_t)sizeof(head))
         {
           continue;
         }
 
-      if (memcmp(magic, ELFMAG, EI_MAGIC_SIZE) != 0
-#ifdef CONFIG_LIBC_LZF
-          && !(magic[0] == 'Z' && magic[1] == 'V')
-#endif
-         )
+      if (head.magic != COREDUMP_MAGIC)
         {
           continue;
         }
 
       ret = coredump_get_info(
               (FAR struct lib_sistream_s *)&wrapstream,
-              pos, &info, &compressed, &seqno);
+              pos + sizeof(head), &info, &compressed);
       if (ret < 0 || info.size == 0)
         {
           continue;
         }
 
-      coredump_procfs_register(&info, seqno, compressed,
+      coredump_procfs_register(&info, head.seqno, compressed,
                                pos, info.size);
 
-      if (seqno + 1 > g_coredump.seqno)
+      if (head.seqno + 1 > g_coredump.seqno)
         {
-          g_coredump.seqno = seqno + 1;
+          g_coredump.seqno = head.seqno + 1;
           g_coredump.next  =
-            ALIGN_UP(pos + info.size, g_coredump.align) %
+            ALIGN_UP(pos + sizeof(head) + info.size, g_coredump.align) %
             g_coredump.devsize;
         }
 
-      /* Skip slots occupied by this dump */
+      /* Skip slots occupied by this dump (head + payload) */
 
-      i += ALIGN_UP(info.size, g_coredump.align) / g_coredump.align - 1;
+      i += ALIGN_UP(sizeof(head) + info.size, g_coredump.align) /
+           g_coredump.align - 1;
     }
 
 #if defined(CONFIG_BOARD_COREDUMP_BLKDEV)

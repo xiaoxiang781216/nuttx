@@ -46,6 +46,14 @@
  * Public Types
  ****************************************************************************/
 
+/* Plaintext coredump head (8 bytes, host byte order). */
+
+struct coredump_head_s
+{
+  uint32_t magic;
+  uint32_t seqno;
+};
+
 /* Coredump information for block header */
 
 struct coredump_info_s
