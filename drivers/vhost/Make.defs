@@ -66,6 +66,10 @@ ifeq ($(CONFIG_DRIVERS_VHOST_NET),y)
   CSRCS += vhost-net.c
 endif
 
+ifeq ($(CONFIG_DRIVERS_VHOST_FS),y)
+  CSRCS += vhost-fs.c
+endif
+
 ifeq ($(CONFIG_DRIVERS_VHOST_RPMB),y)
   CSRCS += vhost-rpmb.c
 endif

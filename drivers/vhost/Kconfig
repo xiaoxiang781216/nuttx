@@ -144,4 +144,32 @@ config DRIVERS_VHOST_RPMB_STACKSIZE
 	int "vhost rpmb stack size"
 	default DEFAULT_TASK_STACKSIZE
 
-endif
+endif # DRIVERS_VHOST_RPMB
+
+config DRIVERS_VHOST_FS
+	bool "Virtual Host Filesystem Device Support"
+	default n
+	select DRIVERS_VHOST
+	depends on LIBC_FS_FUSE
+	---help---
+		Enable the vhost (device-side) VirtIO-Fs backend.  The FUSE
+		protocol carried over the request virtqueue is terminated by
+		the libc/fuse engine through a custom transport, and the
+		served tree is the local VFS rooted at the directory named
+		by the device tag.
+
+if DRIVERS_VHOST_FS
+
+config DRIVERS_VHOST_FS_PRIORITY
+	int "vhost fs thread priority"
+	default 100
+
+config DRIVERS_VHOST_FS_STACKSIZE
+	int "vhost fs stack size"
+	default DEFAULT_TASK_STACKSIZE
+
+config DRIVERS_VHOST_FS_MAX_INODES
+	int "vhost fs max inodes"
+	default 128
+
+endif # DRIVERS_VHOST_FS

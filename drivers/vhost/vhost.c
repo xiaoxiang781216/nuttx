@@ -48,6 +48,7 @@
 #include "vhost-serial.h"
 #include "vhost-net.h"
 #include "vhost-spi.h"
+#include "vhost-fs.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -744,6 +745,14 @@ void vhost_register_drivers(void)
   if (ret < 0)
     {
       vhosterr("vhost_register_crypto_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_VHOST_FS
+  ret = vhost_register_fs_driver();
+  if (ret < 0)
+    {
+      vhosterr("vhost_register_fs_driver failed, ret=%d\n", ret);
     }
 #endif
 

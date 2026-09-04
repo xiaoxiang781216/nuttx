@@ -69,5 +69,9 @@ if(CONFIG_DRIVERS_VHOST_RPMB)
   list(APPEND SRCS vhost-rpmb.c)
 endif()
 
+if(CONFIG_DRIVERS_VHOST_FS)
+  list(APPEND SRCS vhost-fs.c)
+endif()
+
 target_sources(drivers PRIVATE ${SRCS})
 target_include_directories(drivers PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
