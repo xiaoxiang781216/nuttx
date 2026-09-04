@@ -92,15 +92,6 @@ static DEFINE_PER_CPU_BSS(unsigned long, g_gic_rdists);
  * Private Functions
  ***************************************************************************/
 
-static inline void sys_set_bit(unsigned long addr, unsigned int bit)
-{
-  uint32_t temp;
-
-  temp = getreg32(addr);
-  temp = temp | (BIT(bit));
-  putreg32(temp, addr);
-}
-
 static inline void sys_clear_bit(unsigned long addr, unsigned int bit)
 {
   uint32_t temp;
@@ -108,14 +99,6 @@ static inline void sys_clear_bit(unsigned long addr, unsigned int bit)
   temp = getreg32(addr);
   temp = temp & ~(BIT(bit));
   putreg32(temp, addr);
-}
-
-static inline int sys_test_bit(unsigned long addr, unsigned int bit)
-{
-  uint32_t temp;
-
-  temp = getreg32(addr);
-  return (temp & BIT(bit));
 }
 
 static inline unsigned long gic_get_rdist(void)
@@ -555,21 +538,6 @@ static void gicv3_dist_init(void)
 
   putreg32(0, GICD_CTLR);
   gic_wait_rwp(GIC_SPI_INT_BASE);
-
-#ifndef CONFIG_ARCH_HAVE_TRUSTZONE
-
-  /* Before configuration, we need to check whether
-   * the GIC single security state mode is supported.
-   * Make sure GICD_CTRL_NS is 1.
-   */
-
-  sys_set_bit(GICD_CTLR, GICD_CTRL_DS);
-  if (!sys_test_bit(GICD_CTLR, GICD_CTRL_DS))
-    {
-      sinfo("Current GIC does not support single security state\n");
-      PANIC();
-    }
-#endif
 
   /* Default configuration of all SPIs */
 

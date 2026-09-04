@@ -98,16 +98,6 @@ static DEFINE_PER_CPU_BSS(unsigned long, g_gic_rdists);
  * Private Functions
  ***************************************************************************/
 
-unused_code static inline void sys_set_bit(unsigned long addr,
-                                           unsigned int bit)
-{
-  uint32_t temp;
-
-  temp = getreg32(addr);
-  temp = temp | (BIT(bit));
-  putreg32(temp, addr);
-}
-
 static inline void sys_clear_bit(unsigned long addr, unsigned int bit)
 {
   uint32_t temp;
@@ -115,15 +105,6 @@ static inline void sys_clear_bit(unsigned long addr, unsigned int bit)
   temp = getreg32(addr);
   temp = temp & ~(BIT(bit));
   putreg32(temp, addr);
-}
-
-unused_code static inline int sys_test_bit(unsigned long addr,
-                                           unsigned int bit)
-{
-  uint32_t temp;
-
-  temp = getreg32(addr);
-  return (temp & BIT(bit));
 }
 
 static inline unsigned long gic_get_rdist(void)
