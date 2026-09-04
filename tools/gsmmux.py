@@ -51,6 +51,7 @@ import pty
 import select
 import signal
 import stat
+import subprocess
 import sys
 import termios
 import threading
@@ -1581,6 +1582,9 @@ Examples:
   %(prog)s -d /dev/ttyUSB0 -n 2 -b 115200
   %(prog)s -d /dev/ttyUSB0 -n 2 -r raw_data.log
 
+  # Bring up the mux and open minicom on a virtual port in one step
+  %(prog)s -d /dev/ttyACM1 -n 3 -b 921600 --minicom /dev/ttyGSM2
+
   # Kernel mode (requires n_gsm kernel module)
   %(prog)s --mode kernel -d /dev/ttyUSB0 -n 3
   %(prog)s --mode kernel -d /dev/ttyUSB0 -n 3 -l 21
@@ -1658,6 +1662,24 @@ Examples:
         help="Enable debug mode and save messages to file (python mode only)",
     )
 
+    parser.add_argument(
+        "--minicom",
+        metavar="TTYGSM",
+        help="After the mux is up, launch 'minicom -D TTYGSM' in the "
+        "foreground on the given virtual port (e.g. /dev/ttyGSM2); the mux "
+        "keeps running in the background and stops when minicom exits. "
+        "Non-frame data (boot/panic logs) is auto-saved to gsmmux_raw.log "
+        "unless -r is given (python mode only)",
+    )
+
+    parser.add_argument(
+        "-C",
+        "--capture",
+        metavar="FILE",
+        help="With --minicom, also capture the channel's decoded output "
+        "(syslog/console text) to FILE via 'minicom -C FILE'",
+    )
+
     args = parser.parse_args()
 
     # Test mode (python only)
@@ -1691,12 +1713,18 @@ Examples:
         return 1
 
     baudrate = args.baudrate if args.baudrate > 0 else 115200
+
+    raw_log_file = args.raw_log
+    if args.minicom and not raw_log_file:
+        raw_log_file = "gsmmux_raw.log"
+        print(f"Non-frame data (boot/panic logs) is saved to {raw_log_file}")
+
     mux = GSMMultiplexer(
         args.device,
         args.number,
         baudrate,
         debug=bool(args.debug),
-        raw_log_file=args.raw_log,
+        raw_log_file=raw_log_file,
         hex_dump_file=args.hex_dump,
         show_raw_data=args.show_raw_data,
         debug_log_file=args.debug,
@@ -1712,8 +1740,27 @@ Examples:
 
     try:
         mux.start()
-        while mux.running:
-            time.sleep(1)
+
+        if args.minicom:
+            print(
+                f"\nLaunching minicom on {args.minicom} "
+                f"(mux keeps running in background)..."
+            )
+            minicom_cmd = ["minicom", "-D", args.minicom]
+            if args.capture:
+                minicom_cmd += ["-C", args.capture]
+                print(f"Capturing channel output to {args.capture}")
+            try:
+                subprocess.run(minicom_cmd)
+            except FileNotFoundError:
+                print(
+                    "Error: minicom not found, please install it "
+                    "(e.g. sudo apt install minicom)"
+                )
+            mux.running = False
+        else:
+            while mux.running:
+                time.sleep(1)
     except Exception as e:
         print(f"Error: {e}")
     finally:
