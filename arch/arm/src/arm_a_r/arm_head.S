@@ -770,10 +770,6 @@ __cpu0_start:
 	.size	.LCvstart, . -.LCvstart
 #endif /* CONFIG_ARCH_HAVE_MMU */
 
-.Lstackpointer:
-	.long	IDLE_STACK_TOP
-	.size	__start, .-__start
-
 #ifndef CONFIG_ARCH_HAVE_MMU
 #ifndef CONFIG_BOOT_SDRAM_DATA
 	/* Initialize .bss and .data assume that RAM is ready to use. */
@@ -885,7 +881,25 @@ __cpu0_start:
 
 	b		.Lvstart
 
-#endif /* CONFIG_ARCH_HAVE_MMU */
+#endif /* !CONFIG_ARCH_HAVE_MMU */
+
+	/* PC-relative literal holding the initial value of sp.
+	 *
+	 * Placed after every code path so that it is never fetched as an
+	 * instruction:  the MMU path ends with "mov pc, lr" and the MPU path
+	 * with "b .Lvstart", so neither can fall through here.  It must also
+	 * stay close enough to the "ldr sp, .Lstackpointer" instructions above
+	 * for the +-4KB PC-relative offset, and is kept before the .size
+	 * directive so that __start's extent covers it, as GCC does for its
+	 * own literal pools.
+	 */
+
+	.type	.Lstackpointer, %object
+.Lstackpointer:
+	.long	IDLE_STACK_TOP
+	.size	.Lstackpointer, . -.Lstackpointer
+
+	.size	__start, .-__start
 
 /****************************************************************************
  * Name: .Lvstart
@@ -1113,10 +1127,15 @@ hsctlr_initialize:
 #endif
 
 #ifdef CONFIG_ARM_HAVE_EL2
+	.type	.Lhypvectorstart, %object
 .Lhypvectorstart:
 	.long	_hyp_vector_start
+	.size	.Lhypvectorstart, . -.Lhypvectorstart
+
+	.type	.Lsysvectorstart, %object
 .Lsysvectorstart:
 	.long	_vector_start
+	.size	.Lsysvectorstart, . -.Lsysvectorstart
 #endif
 
 #ifdef CONFIG_BOOT_RUNFROMFLASH
