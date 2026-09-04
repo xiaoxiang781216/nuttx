@@ -66,6 +66,7 @@ struct littlefs_dir_s
 struct littlefs_file_s
 {
   struct lfs_file       file;
+  int                   refs;
   char                  relpath[1];
 };
 
@@ -349,6 +350,7 @@ static int littlefs_open(FAR struct file *filep, FAR const char *relpath,
     }
 
   memcpy(priv->relpath, relpath, len + 1);
+  priv->refs = 1;
 
   /* Lock */
 
@@ -456,12 +458,17 @@ static int littlefs_close(FAR struct file *filep)
       return ret;
     }
 
-  ret = littlefs_convert_result(lfs_file_close(&fs->lfs, &priv->file));
+  if (--priv->refs <= 0)
+    {
+      ret = littlefs_convert_result(lfs_file_close(&fs->lfs, &priv->file));
+    }
+
   nxmutex_unlock(&fs->lock);
+  if (priv->refs <= 0)
+    {
+      fs_heap_free(priv);
+    }
 
-  /* Free the file structure */
-
-  fs_heap_free(priv);
   return ret;
 }
 
@@ -712,108 +719,27 @@ static int littlefs_sync(FAR struct file *filep)
 static int littlefs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
   FAR struct littlefs_mountpt_s *fs;
+  FAR struct littlefs_file_s *priv;
   FAR struct inode *inode;
   int ret;
 
   /* Recover our private data from the struct file instance */
 
+  priv  = oldp->f_priv;
   inode = oldp->f_inode;
   fs    = inode->i_private;
 
-  /* Handle directory dup (from pathcache_opendir) */
-
-  if (oldp->f_oflags & O_DIRECTORY)
+  ret = nxmutex_lock(&fs->lock);
+  if (ret < 0)
     {
-      FAR struct littlefs_dir_s *olddir = oldp->f_priv;
-      FAR struct littlefs_dir_s *newdir;
-
-      newdir = fs_heap_zalloc(sizeof(struct littlefs_dir_s));
-      if (newdir == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      ret = nxmutex_lock(&fs->lock);
-      if (ret < 0)
-        {
-          fs_heap_free(newdir);
-          return ret;
-        }
-
-      /* lfs_dir_t has no dynamically allocated buffers,
-       * a plain memcpy is sufficient for deep copy.
-       */
-
-      memcpy(newdir, olddir, sizeof(struct littlefs_dir_s));
-
-      newp->f_priv = newdir;
-      nxmutex_unlock(&fs->lock);
-      return OK;
+      return ret;
     }
-  else
-    {
-      FAR struct littlefs_file_s *oldpriv = oldp->f_priv;
-      FAR struct littlefs_file_s *newpriv;
-      size_t len;
 
-      /* Allocate a new file structure for deep copy */
+  priv->refs++;
+  newp->f_priv = priv;
+  nxmutex_unlock(&fs->lock);
 
-      len = strlen(oldpriv->relpath);
-      newpriv = fs_heap_zalloc(sizeof(struct littlefs_file_s) + len);
-      if (newpriv == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      ret = nxmutex_lock(&fs->lock);
-      if (ret < 0)
-        {
-          fs_heap_free(newpriv);
-          return ret;
-        }
-
-      /* Deep copy: duplicate all fields from the old file structure */
-
-      memcpy(newpriv, oldpriv, sizeof(struct littlefs_file_s) + len);
-
-      /* Deep copy cache.buffer */
-
-      newpriv->file.cache.buffer = lfs_malloc(fs->lfs.cfg->cache_size);
-      if (!newpriv->file.cache.buffer)
-        {
-          nxmutex_unlock(&fs->lock);
-          fs_heap_free(newpriv);
-          return -ENOMEM;
-        }
-
-      newpriv->file.cache.block = (lfs_block_t)-1;
-
-      /* Update LFS internal flags for the new fd's open mode,
-       * preserving LFS_F_INLINE (file storage layout).
-       */
-
-      newpriv->file.flags = littlefs_convert_oflags(newp->f_oflags)
-                            | (oldpriv->file.flags & LFS_F_INLINE);
-
-      /* Reset file position to 0 for the new fd */
-
-      newpriv->file.pos = 0;
-      newpriv->file.off = 0;
-
-      /* Insert the new file into littlefs's mlist (file list).
-       * The next pointer needs to be updated to maintain the linked list.
-       */
-
-      newpriv->file.next = (FAR struct lfs_file *)fs->lfs.mlist;
-      fs->lfs.mlist = (FAR struct lfs_mlist *)&newpriv->file;
-
-      /* Set the private data in the new file descriptor */
-
-      newp->f_priv = newpriv;
-      nxmutex_unlock(&fs->lock);
-
-      return OK;
-    }
+  return ret;
 }
 
 /****************************************************************************
