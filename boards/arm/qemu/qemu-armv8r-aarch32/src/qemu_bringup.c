@@ -170,6 +170,15 @@ static void register_devices_from_fdt(void)
     }
 #endif
 
+#ifdef CONFIG_PWM_SIFIVE
+  ret = fdt_sifive_pwm_devices_register(fdt);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "fdt_sifive_pwm_devices_register failed, ret=%d\n",
+             ret);
+    }
+#endif
+
   UNUSED(ret);
 }
 

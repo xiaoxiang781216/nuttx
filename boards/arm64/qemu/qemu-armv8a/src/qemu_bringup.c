@@ -130,6 +130,10 @@ static void register_devices_from_fdt(void)
 #ifdef CONFIG_ADC_NPCM7XX
   fdt_npcm_adc_devices_register(fdt, QEMU_SPI_IRQ_BASE);
 #endif
+
+#ifdef CONFIG_PWM_SIFIVE
+  fdt_sifive_pwm_devices_register(fdt);
+#endif
 }
 
 #endif
