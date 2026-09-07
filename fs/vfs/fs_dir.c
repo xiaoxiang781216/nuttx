@@ -678,7 +678,7 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
   FAR struct fs_dirent_s *dir;
   FAR struct inode *inode = filep->f_inode;
   FAR char *tempbuf;
-  FAR char *tempbuf2;
+  size_t len;
   int ret;
 
   tempbuf = lib_get_tempbuffer(PATH_MAX);
@@ -693,19 +693,16 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
       goto errout_with_tempbuf;
     }
 
-  strlcat(tempbuf, relpath, PATH_MAX);
-  strlcat(tempbuf, "/", PATH_MAX);
-  tempbuf2 = lib_get_tempbuffer(PATH_MAX);
-  if (tempbuf2 == NULL)
+  if (*relpath != '\0')
     {
-      ret = -ENOMEM;
-      goto errout_with_tempbuf;
+      strlcat(tempbuf, relpath, PATH_MAX);
     }
 
-  if (lib_realpath(tempbuf, tempbuf2, true) == NULL)
+  len = strlen(tempbuf);
+  if (len == 0 || tempbuf[len - 1] != '/')
     {
-      ret = -ENOENT;
-      goto errout_with_tempbuf2;
+      tempbuf[len++] = '/';
+      tempbuf[len] = '\0';
     }
 
   /* Is this a node in the pseudo filesystem? Or a mountpoint? */
@@ -715,10 +712,10 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
     {
       /* Open the directory at the relative path */
 
-      ret = open_mountpoint(inode, relpath, &dir, tempbuf2);
+      ret = open_mountpoint(inode, relpath, &dir, tempbuf);
       if (ret < 0)
         {
-          goto errout_with_tempbuf2;
+          goto errout_with_tempbuf;
         }
 
       filep->f_inode = &g_dir_inode;
@@ -729,21 +726,13 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
       ret = open_pseudodir(inode, &dir);
       if (ret < 0)
         {
-          goto errout_with_tempbuf2;
+          goto errout_with_tempbuf;
         }
 
       inode->u.i_ops = &g_dir_fileops;
     }
 
-  /* Assign the pre-allocated absolute path to fd_path.  lib_realpath()
-   * strips the trailing slash, but fd_path names a directory and is used
-   * as the base for dirfd-relative resolution (FIOC_FILEPATH), so keep
-   * the trailing '/' in the stored copy.
-   */
-
-  strlcat(tempbuf2, "/", PATH_MAX);
-
-  dir->fd_path = fs_heap_strdup(tempbuf2);
+  dir->fd_path = fs_heap_strdup(tempbuf);
   if (dir->fd_path == NULL)
     {
       ret = -ENOMEM;
@@ -752,7 +741,6 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
 
   inode_addref(filep->f_inode);
   filep->f_priv = dir;
-  lib_put_tempbuffer(tempbuf2);
   lib_put_tempbuffer(tempbuf);
   return OK;
 
@@ -767,9 +755,6 @@ errout_with_dir:
     {
       close_pseudodir(dir);
     }
-
-errout_with_tempbuf2:
-  lib_put_tempbuffer(tempbuf2);
 
 errout_with_tempbuf:
   lib_put_tempbuffer(tempbuf);
