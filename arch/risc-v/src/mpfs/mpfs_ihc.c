@@ -910,7 +910,7 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
       rsc->carveout.pa              = FW_RSC_U32_ADDR_ANY;
       rsc->carveout.len             = VRING_SIZE * VRING_NR * VRINGS +
                                       0x1000;
-      memcpy(rsc->carveout.name, "vdev0buffer", 10);
+      memcpy(rsc->carveout.name, "vdev0buffer", 12);
     }
 
   /* It might be tempting to set this at mpfs_rptun_start(), but it's only

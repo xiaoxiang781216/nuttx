@@ -122,7 +122,7 @@ const struct rptun_rsc_s g_mx8mp_rsc_table =
         VRING_SIZE * RL_BUFFER_COUNT * NUM_VRINGS + 0x1000,
         0,
         0,
-        "rpmsg_shm"
+        "vdev0buffer"
     }
 };
 
