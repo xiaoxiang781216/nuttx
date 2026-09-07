@@ -190,6 +190,18 @@
 #    define __has_builtin(x) 0
 #  endif
 
+#  ifndef __has_feature
+#    define __has_feature(x) 0
+#  endif
+
+#  ifndef __has_extension
+#    define __has_extension(x) 0
+#  endif
+
+#  ifndef __has_keyword
+#    define __has_keyword(x) 0
+#  endif
+
 /* The <stddef.h> header shall define the following macros:
  *
  * offsetof(type, member-designator)
