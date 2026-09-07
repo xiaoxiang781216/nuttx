@@ -179,6 +179,15 @@ static void register_devices_from_fdt(void)
     }
 #endif
 
+#ifdef CONFIG_TIMER_IMX_GPT
+  ret = fdt_imx_gpt_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "fdt_imx_gpt_devices_register failed, ret=%d\n",
+             ret);
+    }
+#endif
+
   UNUSED(ret);
 }
 

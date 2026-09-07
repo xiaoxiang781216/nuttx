@@ -134,6 +134,10 @@ static void register_devices_from_fdt(void)
 #ifdef CONFIG_PWM_SIFIVE
   fdt_sifive_pwm_devices_register(fdt);
 #endif
+
+#ifdef CONFIG_TIMER_IMX_GPT
+  fdt_imx_gpt_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+#endif
 }
 
 #endif
