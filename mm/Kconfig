@@ -254,6 +254,25 @@ config MM_HEAP_FORBID_HOOK
 
 endchoice
 
+config MM_HEAP_FORBID_BEFORE_IDLE_LOOP
+	bool "Forbid the general heap before entering the idle loop"
+	default n
+	depends on !MM_HEAP_FORBID_NONE
+	---help---
+		Forbid dynamic allocation on the general-purpose heaps
+		(USR_HEAP, and KNR_HEAP when a separate kernel heap exists)
+		at the end of nx_start(), right before the idle loop starts.
+
+		By that point all tasks created during nx_bringup() have run
+		and blocked, so start-up allocations are complete. Any later
+		malloc/free on these heaps is then caught by the configured
+		forbid action (MM_HEAP_FORBID_PANIC or MM_HEAP_FORBID_HOOK).
+
+		The filesystem heap is a separate heap and is not affected.
+
+		On AMP targets each core runs nx_start() and thus seals its
+		own heaps independently.
+
 config MM_HEAP_MEMPOOL_THRESHOLD
 	int "Threshold for malloc size to use multi-level mempool"
 	default -1
