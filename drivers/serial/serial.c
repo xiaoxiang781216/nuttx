@@ -511,10 +511,20 @@ static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev,
 {
   size_t offset = 0;
 
+  /* OPOST is the POSIX master switch for output post-processing: when it
+   * is clear no O_* sub-flag applies and the payload must go out
+   * unmodified.  cfmakeraw() relies on this - it only clears OPOST.
+   */
+
+  if ((dev->tc_oflag & OPOST) == 0)
+    {
+      uart_putchars(dev, buffer, buflen);
+      return buflen;
+    }
+
   /* Do output post-processing: locate the next character that requires
    * translation (CR under OCRNL, NL under ONLCR/ONLRET), emit the run of
-   * ordinary bytes before it in one go, then emit the translation.  When no
-   * translation is enabled the whole buffer is written in a single call.
+   * ordinary bytes before it in one go, then emit the translation.
    */
 
   while (offset < buflen)
@@ -1726,15 +1736,18 @@ static ssize_t uart_writev(FAR struct file *filep, FAR struct uio *uio)
       nsent = seglen - nseg;
 
       /* Locate the next character in this segment that requires output
-       * post-processing.
+       * post-processing.  OPOST is the POSIX master switch: when it is
+       * clear no O_* sub-flag applies (cfmakeraw() only clears OPOST, so
+       * raw-mode payloads must go out unmodified).
        */
 
-      if ((dev->tc_oflag & OCRNL) != 0)
+      if ((dev->tc_oflag & (OPOST | OCRNL)) == (OPOST | OCRNL))
         {
           special = memchr(&segbuf[nseg], '\r', nsent);
         }
 
-      if ((dev->tc_oflag & (ONLCR | ONLRET)) != 0)
+      if ((dev->tc_oflag & OPOST) != 0 &&
+          (dev->tc_oflag & (ONLCR | ONLRET)) != 0)
         {
           FAR const char *nl = memchr(&segbuf[nseg], '\n', nsent);
           if (nl != NULL && (special == NULL || nl < special))
