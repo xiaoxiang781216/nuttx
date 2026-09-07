@@ -517,13 +517,33 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
                       g_procfs_entries[x].ops->open);
 
           filep->f_priv = (FAR void *)&g_procfs_entries[x];
-          ret = g_procfs_entries[x].ops->open(filep, relpath, oflags, mode);
+          ret = g_procfs_entries[x].ops->open(filep, relpath, oflags,
+                                               mode);
           if (ret == OK)
             {
               DEBUGASSERT(filep->f_priv);
 
-              ((FAR struct procfs_file_s *)filep->f_priv)->procfsentry =
-                                    &g_procfs_entries[x];
+              /* ops->open may replace the file state with something
+               * that is not a procfs file at all:  proc_open()
+               * redirects <pid>/fd/N to a duplicated descriptor of
+               * another file system.  Only write the procfs
+               * bookkeeping when f_priv is still the entry that was
+               * installed above or a freshly allocated (zeroed)
+               * procfs file container;  a foreign file state must not
+               * be touched here.
+               */
+
+              if (filep->f_priv == (FAR void *)&g_procfs_entries[x] ||
+                  ((FAR struct procfs_file_s *)
+                   filep->f_priv)->procfsentry == NULL)
+                {
+                  /* Direct the file to the entry ops */
+
+                  ((FAR struct procfs_file_s *)
+                   filep->f_priv)->procfsentry =
+                                      &g_procfs_entries[x];
+                }
+
               break;
             }
         }
@@ -545,8 +565,19 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
                 {
                   DEBUGASSERT(filep->f_priv);
 
-                  ((FAR struct procfs_file_s *)filep->f_priv)->procfsentry =
-                                        entry;
+                  /* See the comment in the static-entry loop above:
+                   * ops->open may replace the file state with a
+                   * duplicated descriptor (<pid>/fd/N);  only write
+                   * the procfs bookkeeping when f_priv is still a
+                   * procfs file container.
+                   */
+
+                  if (filep->f_priv == (FAR void *)entry)
+                    {
+                      ((FAR struct procfs_file_s *)
+                       filep->f_priv)->procfsentry = entry;
+                    }
+
                   break;
                 }
             }
