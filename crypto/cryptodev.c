@@ -268,6 +268,31 @@ MEMPOOL_DEFINE(g_cryptkop_pool, sizeof(struct cryptkop),
       }                                                             \
     while (0)
 
+#if CONFIG_CRYPTO_FCRYPT_POOL_COUNT > 0
+MEMPOOL_DEFINE(g_fcrypt_pool, sizeof(struct fcrypt),
+               CONFIG_CRYPTO_FCRYPT_POOL_COUNT,
+               CONFIG_CRYPTO_FCRYPT_POOL_COUNT, 0);
+#  define fcrypt_alloc()                                            \
+    ((FAR struct fcrypt *)mempool_zallocate(&g_fcrypt_pool, 0))
+#  define fcrypt_free(p)                                            \
+    do                                                              \
+      {                                                             \
+        explicit_bzero((p), sizeof(struct fcrypt));                 \
+        mempool_release(&g_fcrypt_pool, (p));                       \
+      }                                                             \
+    while (0)
+#else
+#  define fcrypt_alloc()                                            \
+    ((FAR struct fcrypt *)kmm_zalloc(sizeof(struct fcrypt)))
+#  define fcrypt_free(p)                                            \
+    do                                                              \
+      {                                                             \
+        explicit_bzero((p), sizeof(struct fcrypt));                 \
+        kmm_free((p));                                              \
+      }                                                             \
+    while (0)
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -327,7 +352,7 @@ static void fcrypt_put(FAR struct fcrypt *fcr)
       cryptkop_free(krp);
     }
 
-  kmm_free(fcr);
+  fcrypt_free(fcr);
 }
 
 static void cryptodevkey_cancel_dispatch(uint32_t reqid, u_int op)
@@ -1441,7 +1466,7 @@ static int cryptof_open(FAR struct file *filep)
    * generated session id.
    */
 
-  fcrd = kmm_zalloc(sizeof(struct fcrypt));
+  fcrd = fcrypt_alloc();
   if (fcrd == NULL)
     {
       return -ENOMEM;
@@ -1508,7 +1533,7 @@ bail:
       csefree(csed);
     }
 
-  kmm_free(fcrd);
+  fcrypt_free(fcrd);
   return ret;
 }
 
@@ -1543,7 +1568,7 @@ static int cryptoioctl(FAR struct file *filep, int cmd, unsigned long arg)
   switch (cmd)
     {
       case CRIOGET:
-        fcr = kmm_zalloc(sizeof(struct fcrypt));
+        fcr = fcrypt_alloc();
         if (fcr == NULL)
           {
             return -ENOMEM;
@@ -1560,7 +1585,7 @@ static int cryptoioctl(FAR struct file *filep, int cmd, unsigned long arg)
         fd = file_allocate_from_inode(&g_cryptoinode, 0, 0, fcr, 0);
         if (fd < 0)
           {
-            kmm_free(fcr);
+            fcrypt_free(fcr);
             return fd;
           }
 

@@ -126,6 +126,18 @@ config CRYPTO_CRYPTKOP_POOL_COUNT
 		back to kmm_zalloc. Each cryptkop is approximately
 		200 bytes.
 
+config CRYPTO_FCRYPT_POOL_COUNT
+	int "Static fcrypt pool size (0=use heap)"
+	default 0
+	depends on CRYPTO_CRYPTODEV
+	---help---
+		Number of pre-allocated fcrypt objects. Each open of
+		/dev/crypto (and each fd duplicated via CRIOGET or
+		cryptof_open) allocates one fcrypt. When > 0, fcrypt
+		objects are drawn from a static mempool with no
+		runtime heap allocation. 0 falls back to kmm_zalloc.
+		Each fcrypt is approximately 200 bytes.
+
 config CRYPTO_SW_AES
 	bool "Software AES library"
 	depends on ALLOW_BSD_COMPONENTS
