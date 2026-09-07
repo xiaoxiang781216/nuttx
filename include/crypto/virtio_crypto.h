@@ -413,6 +413,22 @@ int virtio_crypto_asym_get_alg(int kalg)
 }
 
 static inline_function
+int virtio_crypto_ecdsa_get_curve(int kalg)
+{
+  switch (kalg)
+    {
+      case CRK_ECDSA_SECP256R1_SIGN:
+      case CRK_ECDSA_SECP256R1_VERIFY:
+      case CRK_ECDSA_SECP256R1_GENKEY:
+      case CRK_ECDH_GEN_PUBLIC:
+      case CRK_ECDH_COMPUTE_SHARED:
+        return VIRTIO_CRYPTO_CURVE_NIST_P256;
+    }
+
+  return -EINVAL;
+}
+
+static inline_function
 int virtio_crypto_get_alg(int alg)
 {
   switch (alg)
@@ -550,6 +566,33 @@ int virtio_crypto_get_aead_alg(int alg)
       return CRYPTO_AES_GCM_16;
     case VIRTIO_CRYPTO_AEAD_CHACHA20_POLY1305:
       return CRYPTO_CHACHA20_POLY1305;
+  }
+
+  return -EINVAL;
+}
+
+/* Per-curve field element length in bytes, per the virtio-crypto spec's
+ * VIRTIO_CRYPTO_CURVE_* IDs. Only NIST_P256 has a backing cryptodev
+ * implementation today; the rest are wired up so adding a new curve is
+ * a matter of adding a case here plus the cryptodev/cryptosoft support,
+ * not hunting down every hardcoded 32.
+ */
+
+static inline_function
+int virtio_crypto_curve_get_len(uint32_t curve_id)
+{
+  switch (curve_id)
+  {
+    case VIRTIO_CRYPTO_CURVE_NIST_P192:
+      return 24;
+    case VIRTIO_CRYPTO_CURVE_NIST_P224:
+      return 28;
+    case VIRTIO_CRYPTO_CURVE_NIST_P256:
+      return 32;
+    case VIRTIO_CRYPTO_CURVE_NIST_P384:
+      return 48;
+    case VIRTIO_CRYPTO_CURVE_NIST_P521:
+      return 66;
   }
 
   return -EINVAL;
