@@ -1164,7 +1164,7 @@ static inline uint32_t arm_get_mpid(int cpu)
   return CORE_TO_MPID(cpu, 0);
 }
 #else
-#  define arm_get_mpid(cpu) GET_MPIDR()
+#  define arm_get_mpid(cpu) ((void)(cpu), GET_MPIDR())
 #endif /* CONFIG_SMP */
 
 #undef EXTERN
