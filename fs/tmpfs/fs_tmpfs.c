@@ -3328,6 +3328,7 @@ static void tmpfs_stat_common(FAR struct tmpfs_object_s *to,
 
   /* Fake the rest of the information */
 
+  buf->st_ino     = (ino_t)(uintptr_t)to;
   buf->st_size    = objsize;
   buf->st_blksize = CONFIG_FS_TMPFS_BLOCKSIZE;
   buf->st_blocks  = (objsize + CONFIG_FS_TMPFS_BLOCKSIZE - 1) /
