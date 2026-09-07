@@ -510,9 +510,139 @@ static int read_pseudodir(FAR struct fs_dirent_s *dir,
   return 0;
 }
 
+/* Re-open the directory stream described by the template dirent 'tmpl'
+ * (which belongs to the source file of a dup, e.g. /proc/<pid>/fd/N or
+ * file_dup2()) as an independent stream owned by 'filep'.  The rebuilt
+ * stream gets its own dirent allocation, its own copy of fd_path and its
+ * own reference on fd_root, so closing either file never touches the
+ * other.  The seek position of the new stream starts at 0, exactly like
+ * a fresh open of the same path.
+ *
+ * This is the counterpart of the i_mops->dup() method that mountpoints
+ * have:  the generic dup protocol hands the driver open file state in
+ * f_priv and re-invokes ->open(), and the VFS directory stream backend
+ * rebuilds its state from the template instead of sharing it.
+ */
+
+static int dir_reopen(FAR struct file *filep, FAR struct fs_dirent_s *tmpl)
+{
+#ifndef CONFIG_DISABLE_MOUNTPOINT
+  FAR struct inode *root = tmpl->fd_root;
+  struct inode_search_s desc;
+#endif
+  FAR struct fs_dirent_s *dir;
+  FAR char *path;
+  int ret;
+
+  /* fd_path is the canonical absolute path of the directory (it carries
+   * a trailing '/', see dir_allocate());  strdup it so each stream owns
+   * its copy.
+   */
+
+  path = fs_heap_strdup(tmpl->fd_path);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
+
+#ifndef CONFIG_DISABLE_MOUNTPOINT
+  if (INODE_IS_MOUNTPT(root))
+    {
+      /* fd_root is the mountpoint inode, but the template carries no
+       * relpath, and one cannot be derived from fd_path without a
+       * search.  Resolve fd_path through the normal VFS lookup:  the
+       * canonicalized buffer handed back by inode_find() yields the
+       * same relpath a fresh open of the same path would produce
+       * (symlinks along the way were already resolved when fd_path was
+       * built).
+       */
+
+      SETUP_SEARCH(&desc, path, true);
+      ret = inode_find(&desc);
+      if (ret >= 0)
+        {
+          inode_release(desc.node);
+        }
+
+      if (ret < 0 || desc.node != root)
+        {
+          /* The path no longer resolves to the same mountpoint (it may
+           * have been renamed, unmounted or shadowed by another mount);
+           * the stream cannot be rebuilt faithfully.
+           */
+
+          RELEASE_SEARCH(&desc);
+          fs_heap_free(path);
+          return -ENOENT;
+        }
+
+      /* desc.node == root:  the inode_find() reference was dropped
+       * above, so re-take it;  it is transferred to the rebuilt stream
+       * below (dir_close() releases fd_root), exactly like the
+       * inode_find() reference fs_open() holds when it calls
+       * dir_allocate() for a fresh open.
+       */
+
+      inode_addref(root);
+
+      ret = open_mountpoint(desc.node, desc.relpath, &dir, path);
+      RELEASE_SEARCH(&desc);
+      if (ret < 0)
+        {
+          inode_release(root);
+          fs_heap_free(path);
+          return ret;
+        }
+    }
+  else
+#endif
+    {
+      /* A pseudo directory:  fd_root is the pseudo tree node.  Reopen
+       * the stream at its first entry, like a fresh opendir(), and
+       * take the reference the stream will release on close.
+       */
+
+      inode_addref(tmpl->fd_root);
+      ret = open_pseudodir(tmpl->fd_root, &dir);
+      if (ret < 0)
+        {
+          inode_release(tmpl->fd_root);
+          fs_heap_free(path);
+          return ret;
+        }
+    }
+
+  /* Both filep->f_inode and its reference were set up by the dup caller
+   * (the source's f_inode, already addref'ed);  for mountpoint streams
+   * that is the per-CPU g_dir_inode exactly like dir_allocate()
+   * installs, so dir_close() symmetry is preserved.  For pseudo
+   * directory streams the caller-passed inode is the source's, whose
+   * u.i_ops already point at g_dir_fileops.
+   */
+
+  dir->fd_path = path;
+  filep->f_priv = dir;
+  filep->f_pos  = 0;
+  return OK;
+}
+
 static int dir_open(FAR struct file *filep)
 {
   FAR struct fs_dirent_s *dir = filep->f_priv;
+
+  /* When the file structure was duplicated (e.g. via /proc/<pid>/fd/N,
+   * file_dup2()), the dup path installs the source file's directory
+   * stream in f_priv and re-invokes this open method.  A directory
+   * stream cannot be shared:  its dirent owns a seek cursor and a
+   * caller-owned fd_root/fd_path pair, so a second close would release
+   * them twice.  Rebuild an independent stream from the template
+   * instead (the mountpoint counterpart of i_mops->dup()).
+   */
+
+  if (dir != NULL && dir->fd_root != NULL && dir->fd_path != NULL)
+    {
+      return dir_reopen(filep, dir);
+    }
 
   return dir_allocate(filep, dir ? dir->fd_path : "");
 }
