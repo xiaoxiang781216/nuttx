@@ -883,10 +883,8 @@ static int mmforbid_open(FAR struct file *filep,
                          FAR const char *relpath,
                          int oflags, mode_t mode)
 {
-  FAR struct procfs_meminfo_entry_s *entry;
   FAR struct meminfo_file_s *procfile;
-  irqstate_t flags;
-  bool allforbid = true;
+  bool allforbid;
 
   procfile = fs_heap_zalloc(sizeof(struct meminfo_file_s));
   if (procfile == NULL)
@@ -894,26 +892,16 @@ static int mmforbid_open(FAR struct file *filep,
       return -ENOMEM;
     }
 
-  /* Check if ALL registered heaps are in forbid state */
+  /* Report the forbid state of the general-purpose heaps only. These are
+   * the fixed USR_HEAP and, when a separate kernel heap exists, KNR_HEAP.
+   * Dedicated heaps (filesystem, loadable modules, device-specific, ...)
+   * are never sealed by mmforbid_write and so are not considered here.
+   */
 
-  flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
-  for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
-    {
-      if (!mm_heap_is_forbid(entry->heap))
-        {
-          allforbid = false;
-          break;
-        }
-    }
-
-  /* If no heap registered, report not forbidden */
-
-  if (g_procfs_meminfo == NULL)
-    {
-      allforbid = false;
-    }
-
-  spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
+  allforbid = mm_heap_is_forbid(USR_HEAP);
+#ifdef CONFIG_MM_KERNEL_HEAP
+  allforbid = allforbid && mm_heap_is_forbid(KNR_HEAP);
+#endif
 
   procfile->linesize = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
                                        "%d\n", allforbid ? 1 : 0);
@@ -941,8 +929,8 @@ static int mmforbid_close(FAR struct file *filep)
  * Name: mmforbid_read
  *
  * Description:
- *   Return the line prepared in mmforbid_open: "1\n" if all heaps are
- *   forbidden, "0\n" otherwise.
+ *   Return the line prepared in mmforbid_open: "1\n" if the general-purpose
+ *   heaps are forbidden, "0\n" otherwise.
  *
  ****************************************************************************/
 
@@ -972,32 +960,52 @@ static ssize_t mmforbid_read(FAR struct file *filep,
  * Name: mmforbid_write
  *
  * Description:
- *   Write "1" to forbid all heaps, "0" to allow dynamic memory operations
- *   on all registered heaps.
+ *   Write "1" to forbid dynamic memory operations, "0" to allow them
+ *   again. Only the general-purpose user/kernel heaps are affected;
+ *   dedicated heaps (filesystem, loadable modules, device-specific, ...)
+ *   are left untouched so that procfs/file operations and other
+ *   subsystems keep working while the general heap is sealed.
  *
  ****************************************************************************/
 
 static ssize_t mmforbid_write(FAR struct file *filep,
                               FAR const char *buffer, size_t buflen)
 {
-  FAR struct procfs_meminfo_entry_s *entry;
-  irqstate_t flags;
+  size_t i;
   bool forbid;
 
-  if (buflen == 0)
+  /* Skip leading whitespace/newlines. Shell redirection (e.g.
+   * "echo 1 > /proc/mmforbid") may split the payload into multiple writes,
+   * delivering the trailing '\n' as a separate call.
+   */
+
+  for (i = 0; i < buflen; i++)
     {
-      return 0;
+      if (buffer[i] != ' ' && buffer[i] != '\t' &&
+          buffer[i] != '\r' && buffer[i] != '\n')
+        {
+          break;
+        }
     }
 
-  forbid = (buffer[0] == '1');
-
-  flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
-  for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
+  if (i == buflen)
     {
-      mm_heap_forbid(entry->heap, forbid);
+      /* Whitespace-only (or empty) write: ignore, keep current state. */
+
+      return buflen;
     }
 
-  spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
+  forbid = (buffer[i] == '1');
+
+  /* Seal only the general-purpose heaps: the fixed USR_HEAP and, when a
+   * separate kernel heap exists, KNR_HEAP. Dedicated heaps (filesystem,
+   * loadable modules, device-specific, ...) are left untouched.
+   */
+
+  mm_heap_forbid(USR_HEAP, forbid);
+#ifdef CONFIG_MM_KERNEL_HEAP
+  mm_heap_forbid(KNR_HEAP, forbid);
+#endif
 
   return buflen;
 }
