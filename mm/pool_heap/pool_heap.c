@@ -364,6 +364,68 @@ void mm_initialize_pool(FAR const struct mm_heap_config_s *config,
 }
 
 /****************************************************************************
+ * Name: mm_uninitialize
+ *
+ * Description:
+ *   Uninitialize the selected heap data structures.
+ *
+ * Input Parameters:
+ *   heap - The heap to uninitialize
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void mm_uninitialize(FAR struct mm_heap_s *heap)
+{
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
+#  if !defined(CONFIG_BUILD_KERNEL) || defined(__KERNEL__)
+  procfs_unregister_meminfo(heap->mm_procfs);
+#  endif
+#endif
+
+  if (heap->mm_mpool != NULL)
+    {
+      mempool_multiple_deinit(heap->mm_mpool);
+    }
+
+  nxrmutex_destroy(&heap->mm_lock);
+}
+
+/****************************************************************************
+ * Name: mm_checkcorruption
+ *
+ * Description:
+ *   Stub -- the pool allocator relies on mempool integrity and exposes no
+ *   general free list to corrupt here.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DEBUG_MM
+void mm_checkcorruption(FAR struct mm_heap_s *heap)
+{
+  UNUSED(heap);
+}
+#endif
+
+/****************************************************************************
+ * Name: mm_notify_pressure
+ *
+ * Description:
+ *   Stub -- only compiled when CONFIG_FS_PROCFS_INCLUDE_PRESSURE is
+ *   enabled (matching the declaration in mm.h).
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_PROCFS_INCLUDE_PRESSURE
+void mm_notify_pressure(FAR struct mm_heap_s *heap)
+{
+  UNUSED(heap);
+}
+#endif
+
+/****************************************************************************
  * Name: mm_heapmember
  *
  * Description:
@@ -535,18 +597,33 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
 }
 
 /****************************************************************************
- * Name: mm_delayfree
+ * Name: mm_delayfreecb
  *
  * Description:
  *   Add mem to delaylist, mem will be freed after a while.
+ *   If cb is provided, cb(mem) is invoked before the memory is released so
+ *   that any resources associated with mem (e.g. a task stack) are cleaned
+ *   up. Unlike the bump allocator, the pool allocator actually reclaims mem,
+ *   so the callback must not be dropped.
  *
  ****************************************************************************/
 
-void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
+void mm_delayfreecb(FAR struct mm_heap_s *heap, FAR void *mem,
+                    mm_delaycb_t cb)
 {
+  if (mem == NULL)
+    {
+      return;
+    }
+
   if (mm_skip_operation(heap, mem, 0))
     {
       return;
+    }
+
+  if (cb != NULL)
+    {
+      cb(mem);
     }
 
   mm_free(heap, mem);
