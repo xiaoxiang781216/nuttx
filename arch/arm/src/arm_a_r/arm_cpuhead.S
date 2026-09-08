@@ -266,8 +266,20 @@ __cpu7_start:
  ****************************************************************************/
 
 __el1_boot:
+
+#ifdef CONFIG_ARCH_ARM_CPUID_MAP
+  /* Returns the dense logical number already, so do not mask it.  lr held
+   * the return address into here and is dead from this point on, so the bl
+   * is safe.  sp is not necessarily valid yet, which is why up_this_cpu()
+   * is assembly and uses no stack.
+   */
+
+  bl    up_this_cpu
+#else
   mrc   CP15_MPIDR(r0)      /* Get cpuindex */
   and   r0, r0, #0x7
+#endif
+
   cmp   r0, #1
   beq   __cpu1_boot
 

@@ -228,10 +228,19 @@
 __start:
 
 #if __ARM_ARCH >= 7 && CONFIG_NCPUS > 1
-	/* Get cpuindex, cpu0 continue boot, others wait event from cpu0 */
+	/* Get cpuindex, cpu0 continue boot, others wait event from cpu0.
+	 * lr is undefined at reset, so the bl below destroys nothing.
+	 */
 
+#ifdef CONFIG_ARCH_ARM_CPUID_MAP
+	/* Returns the dense logical number already, so do not mask it */
+
+	bl		up_this_cpu
+#else
 	mrc		CP15_MPIDR(r0)
 	and		r0, r0, #0x7
+#endif
+
 	cmp		r0, #0
 	beq		__cpu0_start
 

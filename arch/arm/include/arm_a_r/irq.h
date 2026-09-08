@@ -494,6 +494,21 @@ static inline_function uint32_t up_getsp(void)
   return sp;
 }
 
+/****************************************************************************
+ * Name: up_this_cpu
+ *
+ * Description:
+ *   Return the logical core number. Default implementation is 1:1 mapping,
+ *   i.e. physical=logical.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_ARM_CPUID_MAP
+int up_this_cpu(void);
+#else
+#define up_this_cpu() up_cpu_index()
+#endif /* CONFIG_ARCH_ARM_CPUID_MAP */
+
 static inline_function uintptr_t up_getusrsp(void *regs)
 {
   uint32_t *ptr = (uint32_t *)regs;

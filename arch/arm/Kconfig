@@ -1897,6 +1897,23 @@ config ARM_MONITOR_STACK_SIZE
 	---help---
 		The size of the monitor stack in armv7-a platform.
 
+config ARCH_ARM_CPUID_MAP
+	bool "Map MPIDR to a dense logical CPU number"
+	depends on ARCH_HAVE_CPUID_MAPPING
+	default n
+	---help---
+		Enable this on multi-cluster parts, where MPIDR.Aff0 restarts
+		from 0 in every cluster and therefore is not a unique CPU
+		number: Cluster0/Core0 and Cluster1/Core0 both read Aff0 == 0.
+		Per-CPU data, the idle stacks and the scheduler all index by a
+		dense 0..NCPUS-1 number, so they would collide.
+
+		When enabled, the chip must supply up_this_cpu(), which maps the
+		hardware CPU number onto that dense range; up_cpu_index() keeps
+		returning the raw hardware number.  Leave it disabled on
+		single-cluster parts, where the two are the same thing and
+		up_this_cpu() costs nothing.
+
 if ARCH_ARM_A_R
 source "arch/arm/src/arm_a_r/Kconfig"
 endif
