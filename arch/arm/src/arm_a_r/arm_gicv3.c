@@ -379,11 +379,9 @@ int arm_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
 
   while ((i = ffs(target_list)))
     {
-      cpu += (i - 1);
-
       target_list >>= i;
 
-      curr_mpidr = arm_get_mpid(cpu);
+      curr_mpidr = arm_get_mpid(cpu + (i - 1));
       curr_cluster_id = MPID_TO_CLUSTER_ID(curr_mpidr);
 
       if (pre_cluster_id != UINT64_MAX &&
@@ -392,7 +390,7 @@ int arm_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
           arm_gic_send_sgi(sgi_id, pre_cluster_id, tlist);
         }
 
-      tlist |= 1 << (curr_mpidr & MPIDR_AFFLVL_MASK);
+      tlist |= 1U << (curr_mpidr & MPIDR_AFFLVL_MASK);
 
       cpu += i;
       pre_cluster_id = curr_cluster_id;
