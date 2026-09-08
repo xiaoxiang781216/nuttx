@@ -193,6 +193,14 @@ void __start(void)
   mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
 #  endif
 
+  /* Map the whole ITCM (holding the vector table at address 0x0) as
+   * privileged read-only and executable. Reads and instruction fetches
+   * still work, but a write through a NULL pointer traps as a MemManage
+   * fault instead of silently hitting the default memory map.
+   */
+
+  mpu_priv_flash(MPS_ITCM_START, MPS_ITCM_SIZE);
+
   mpu_control(true, false, true);
 #endif
 
