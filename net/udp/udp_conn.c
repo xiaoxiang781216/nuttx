@@ -194,6 +194,101 @@ static FAR struct udp_conn_s *udp_find_conn(uint8_t domain,
 }
 
 /****************************************************************************
+ * Name: udp_ipv4_laddr_match
+ *
+ * Description:
+ *   Check the destination address of an incoming IPv4 datagram against the
+ *   local address a socket is bound to.
+ *
+ *   The IPv4 and the IPv6 members of union ip_binding_u overlap:
+ *   u.ipv4.laddr covers the first four bytes of u.ipv6.laddr and
+ *   u.ipv4.raddr the next four -- u.ipv4.raddr does not alias
+ *   u.ipv6.raddr at all.  Neither IPv4 member may therefore be read for a
+ *   PF_INET6 connection, so both this helper and udp_ipv4_raddr_match()
+ *   dispatch on conn->domain first.
+ *
+ * Assumptions:
+ *   This function must be called with the network locked.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_IPv4
+static bool udp_ipv4_laddr_match(FAR struct udp_conn_s *conn,
+                                 FAR struct ipv4_hdr_s *ip)
+{
+#ifdef CONFIG_NET_IPv6
+  if (conn->domain == PF_INET6)
+    {
+      /* A PF_INET6 socket receives IPv4 datagrams as IPv4-mapped IPv6
+       * addresses (see udp_callback()), but only while it is bound to the
+       * IPv6 unspecified address.  Bound to a specific IPv6 address it
+       * must not match IPv4 traffic at all.
+       */
+
+      return net_ipv6addr_cmp(conn->u.ipv6.laddr, g_ipv6_unspecaddr);
+    }
+#endif
+
+  /* The local port accepts any address on this port, or there is an exact
+   * match between destipaddr and the bound local address.  This catches
+   * the receipt of a broadcast when the socket is bound to INADDR_ANY.
+   */
+
+  return net_ipv4addr_cmp(conn->u.ipv4.laddr, INADDR_ANY) ||
+         net_ipv4addr_hdrcmp(ip->destipaddr, &conn->u.ipv4.laddr);
+}
+
+/****************************************************************************
+ * Name: udp_ipv4_raddr_match
+ *
+ * Description:
+ *   Check the source address of an incoming IPv4 datagram against the
+ *   remote address a connection-mode socket is connected to.
+ *
+ *   A PF_INET6 connection must be compared against u.ipv6.raddr, which
+ *   for an IPv4 source can only match when it holds an IPv4-mapped
+ *   address.
+ *
+ *   Note that udp_connect() maps an unspecified remote to the loopback
+ *   address, so a PF_INET6 connection-mode socket connected to a real
+ *   IPv6 peer never matches IPv4 traffic.
+ *
+ * Assumptions:
+ *   This function must be called with the network locked.
+ *
+ ****************************************************************************/
+
+static bool udp_ipv4_raddr_match(FAR struct udp_conn_s *conn,
+                                 FAR struct ipv4_hdr_s *ip)
+{
+#ifdef CONFIG_NET_IPv6
+  if (conn->domain == PF_INET6)
+    {
+      FAR struct in6_addr *raddr =
+        (FAR struct in6_addr *)conn->u.ipv6.raddr;
+      in_addr_t mapped;
+
+      if (!IN6_IS_ADDR_V4MAPPED(raddr))
+        {
+          return false;
+        }
+
+      mapped = ip6_get_ipv4addr(conn->u.ipv6.raddr);
+      return net_ipv4addr_hdrcmp(ip->srcipaddr, &mapped);
+    }
+#endif
+
+  /* If not connected to a remote address, or there is an exact match
+   * between the srcipaddr and the bound remote IP address, then the
+   * packet is accepted.
+   */
+
+  return net_ipv4addr_cmp(conn->u.ipv4.raddr, INADDR_ANY) ||
+         net_ipv4addr_hdrcmp(ip->srcipaddr, &conn->u.ipv4.raddr);
+}
+#endif /* CONFIG_NET_IPv4 */
+
+/****************************************************************************
  * Name: udp_ipv4_active
  *
  * Description:
@@ -272,15 +367,7 @@ udp_ipv4_active(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn,
        */
 
       if (conn->lport != 0 && udp->destport == conn->lport &&
-
-          /* Local port accepts any address on this port or there
-           * is an exact match in destipaddr and the bound local
-           * address.  This catches the receipt of a broadcast when
-           * the socket is bound to INADDR_ANY.
-           */
-
-          (net_ipv4addr_cmp(conn->u.ipv4.laddr, INADDR_ANY) ||
-           net_ipv4addr_hdrcmp(ip->destipaddr, &conn->u.ipv4.laddr)))
+          udp_ipv4_laddr_match(conn, ip))
         {
           /* Check if the socket is connection mode.  In this case, only
            * packets with source addresses from the connected remote peer
@@ -296,17 +383,16 @@ udp_ipv4_active(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn,
 
               if ((conn->rport == 0 || udp->srcport == conn->rport) &&
 
-              /* If (1) not connected to a remote address, or (2) a
-               * broadcast destipaddr was received, or (3) there is an
-               * exact match between the srcipaddr and the bound remote IP
-               * address, then accept the packet.
+              /* If (1) a broadcast destipaddr was received, or (2) the
+               * srcipaddr matches the remote address this socket is
+               * connected to, then accept the packet.
                */
 
-                  (net_ipv4addr_cmp(conn->u.ipv4.raddr, INADDR_ANY) ||
+                  (
 #ifdef CONFIG_NET_BROADCAST
                    net_ipv4addr_hdrcmp(ip->destipaddr, &bcast) ||
 #endif
-                   net_ipv4addr_hdrcmp(ip->srcipaddr, &conn->u.ipv4.raddr)))
+                   udp_ipv4_raddr_match(conn, ip)))
                 {
                   /* Matching connection found.. Break out of the loop and
                    * return this reference to it.
