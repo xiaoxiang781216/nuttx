@@ -130,6 +130,18 @@ static struct in6_rtmsg ghostrtm[CONFIG_SIM_NETDEV_NUMBER];
  ****************************************************************************/
 
 #ifdef TAPDEV_DEBUG
+
+/* Select the ethertype byte order for the dump line.  syslog() is a
+ * function-like macro, so a #ifdef inside its argument list is UB and MSVC
+ * rejects it; resolve the endianness choice here instead.
+ */
+
+#ifdef CONFIG_ENDIAN_BIG
+#  define TAPDEV_ETHTYPE_ARGS(b) (b)[13], (b)[12]
+#else
+#  define TAPDEV_ETHTYPE_ARGS(b) (b)[12], (b)[13]
+#endif
+
 static inline void dump_ethhdr(const char *msg, unsigned char *buf,
                                int buflen)
 {
@@ -138,11 +150,7 @@ static inline void dump_ethhdr(const char *msg, unsigned char *buf,
          "%02x:%02x:%02x:%02x:%02x:%02x %02x%02x\n",
          buf[0], buf[1], buf[2], buf[3], buf[4],  buf[5],
          buf[6], buf[7], buf[8], buf[9], buf[10], buf[11],
-#ifdef CONFIG_ENDIAN_BIG
-         buf[13], buf[12]
-#else
-         buf[12], buf[13]
-#endif
+         TAPDEV_ETHTYPE_ARGS(buf)
         );
 }
 #else

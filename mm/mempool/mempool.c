@@ -48,6 +48,29 @@
 #define MEMPOOL_MAGIC_FREE  0x55555555
 #define MEMPOOL_MAGIC_ALLOC 0xAAAAAAAA
 
+/* Paired format/argument macros for the optional dump columns.  syslog()
+ * is a function-like macro, so a #ifdef inside its argument list is UB and
+ * MSVC rejects it; keep the call sites free of preprocessor directives.
+ * DARG takes the value expression since the two dump sites read different
+ * PID fields (pid vs freepid); a disabled column drops the argument.
+ */
+
+#ifdef CONFIG_MM_RECORD_PID
+#  define MM_DUMP_PID_DFMT     "%6d"
+#  define MM_DUMP_PID_DARG(v)  (v),
+#else
+#  define MM_DUMP_PID_DFMT     ""
+#  define MM_DUMP_PID_DARG(v)
+#endif
+
+#ifdef CONFIG_MM_RECORD_SEQNO
+#  define MM_DUMP_SEQNO_DFMT     "%12lu"
+#  define MM_DUMP_SEQNO_DARG(v)  (v),
+#else
+#  define MM_DUMP_SEQNO_DFMT     ""
+#  define MM_DUMP_SEQNO_DARG(v)
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -240,21 +263,10 @@ static void mempool_memdump_callback(FAR void *blk, FAR void *arg)
 #  endif
 
       syslog(LOG_INFO,
-#  ifdef CONFIG_MM_RECORD_PID
-             "%6d"
-#  endif
-             "%12zu%9zu"
-#  ifdef CONFIG_MM_RECORD_SEQNO
-             "%12lu"
-#  endif
-             "%*p %s\n",
-#  ifdef CONFIG_MM_RECORD_PID
-             record->pid,
-#  endif
+             MM_DUMP_PID_DFMT "%12zu%9zu" MM_DUMP_SEQNO_DFMT "%*p %s\n",
+             MM_DUMP_PID_DARG(record->pid)
              blocksize, overhead,
-#  ifdef CONFIG_MM_RECORD_SEQNO
-             record->seqno,
-#  endif
+             MM_DUMP_SEQNO_DARG(record->seqno)
              BACKTRACE_PTR_FMT_WIDTH,
              ((FAR char *)record - ctx->pool->blocksize), tmp);
     }
@@ -281,13 +293,8 @@ static void mempool_memdump_free_callback(FAR void *blk, FAR void *arg)
   FAR const char *tmp = "";
 #  endif
   syslog(LOG_INFO,
-#  ifdef CONFIG_MM_RECORD_PID
-         "%6d"
-#  endif
-         "%12zu%9zu%*p %s\n",
-#  ifdef CONFIG_MM_RECORD_PID
-         record->freepid,
-#  endif
+         MM_DUMP_PID_DFMT "%12zu%9zu%*p %s\n",
+         MM_DUMP_PID_DARG(record->freepid)
          blocksize, overhead, BACKTRACE_PTR_FMT_WIDTH,
          blk, tmp);
 }

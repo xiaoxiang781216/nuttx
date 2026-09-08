@@ -41,6 +41,44 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Paired format/argument macros for the optional dump columns.  syslog()
+ * is a function-like macro, so a #ifdef inside its argument list is UB and
+ * MSVC rejects it; keep the call sites free of preprocessor directives.
+ * "D" macros feed the data row, "H" macros the header row.
+ */
+
+#ifdef CONFIG_MM_RECORD_PID
+#  define MM_DUMP_PID_DFMT    "%6d"
+#  define MM_DUMP_PID_DARG(n) (n)->pid,
+#  define MM_DUMP_PID_HFMT    "%6s"
+#  define MM_DUMP_PID_HARG    "PID",
+#else
+#  define MM_DUMP_PID_DFMT    ""
+#  define MM_DUMP_PID_DARG(n)
+#  define MM_DUMP_PID_HFMT    ""
+#  define MM_DUMP_PID_HARG
+#endif
+
+#ifdef CONFIG_MM_RECORD_SEQNO
+#  define MM_DUMP_SEQNO_DFMT    "%12lu"
+#  define MM_DUMP_SEQNO_DARG(n) (n)->seqno,
+#  define MM_DUMP_SEQNO_HFMT    "%12s"
+#  define MM_DUMP_SEQNO_HARG    "Sequence",
+#else
+#  define MM_DUMP_SEQNO_DFMT    ""
+#  define MM_DUMP_SEQNO_DARG(n)
+#  define MM_DUMP_SEQNO_HFMT    ""
+#  define MM_DUMP_SEQNO_HARG
+#endif
+
+#ifdef CONFIG_MM_RECORD_STACK
+#  define MM_DUMP_STACK_HFMT   "%s"
+#  define MM_DUMP_STACK_HARG   , " Backtrace"
+#else
+#  define MM_DUMP_STACK_HFMT   ""
+#  define MM_DUMP_STACK_HARG
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -79,21 +117,10 @@ static void memdump_allocnode(FAR struct mm_allocnode_s *node)
 #endif
 
   syslog(LOG_INFO,
-#ifdef CONFIG_MM_RECORD_PID
-         "%6d"
-#endif
-         "%12zu%9zu"
-#ifdef CONFIG_MM_RECORD_SEQNO
-         "%12lu"
-#endif
-         "%*p %s\n",
-#ifdef CONFIG_MM_RECORD_PID
-         node->pid,
-#endif
+         MM_DUMP_PID_DFMT "%12zu%9zu" MM_DUMP_SEQNO_DFMT "%*p %s\n",
+         MM_DUMP_PID_DARG(node)
          nodesize, overhead,
-#ifdef CONFIG_MM_RECORD_SEQNO
-         node->seqno,
-#endif
+         MM_DUMP_SEQNO_DARG(node)
          BACKTRACE_PTR_FMT_WIDTH,
          (FAR const char *)node + MM_SIZEOF_ALLOCNODE, buf);
 }
@@ -317,31 +344,15 @@ void mm_memdump(FAR struct mm_heap_s *heap,
   if (pid != PID_MM_FREE)
     {
       syslog(LOG_INFO,
-#ifdef CONFIG_MM_RECORD_PID
-                       "%6s"
-#endif
-                       "%12s%9s"
-#  ifdef CONFIG_MM_RECORD_SEQNO
-                       "%12s"
-#  endif
-                       "%*s "
-#ifdef CONFIG_MM_RECORD_STACK
-                       "%s"
-#endif
-                       "\n",
-#ifdef CONFIG_MM_RECORD_PID
-                       "PID",
-#endif
-                       "Size", "Overhead",
-#ifdef CONFIG_MM_RECORD_SEQNO
-                       "Sequence",
-#  endif
-                       BACKTRACE_PTR_FMT_WIDTH,
-                       "Address"
-#ifdef CONFIG_MM_RECORD_STACK
-                       , " Backtrace"
-#endif
-                      );
+             MM_DUMP_PID_HFMT "%12s%9s" MM_DUMP_SEQNO_HFMT "%*s "
+             MM_DUMP_STACK_HFMT "\n",
+             MM_DUMP_PID_HARG
+             "Size", "Overhead",
+             MM_DUMP_SEQNO_HARG
+             BACKTRACE_PTR_FMT_WIDTH,
+             "Address"
+             MM_DUMP_STACK_HARG
+            );
     }
   else
     {

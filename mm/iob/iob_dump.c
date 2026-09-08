@@ -45,6 +45,18 @@
 #define IOB_NITEMS   32                    /* 32 bytes displayed per line */
 #define IOB_LINESIZE (3 * IOB_NITEMS + 4)  /* 2 hex chars, ASCII char, 3 spaces, NUL */
 
+/* Select the owner string for the dump line.  syslog() is a function-like
+ * macro, so a #ifdef inside its argument list is UB and MSVC rejects it;
+ * resolve the CONFIG_DEBUG_IOB choice here instead.
+ */
+
+#ifdef CONFIG_DEBUG_IOB
+#  define IOB_OWNER_STR(iob) \
+     ((iob)->io_owner[0] != '\0' ? (iob)->io_owner : "(unowned)")
+#else
+#  define IOB_OWNER_STR(iob) "(n/a)"
+#endif
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -282,12 +294,7 @@ void iob_dump_all(FAR const char *fmt, ...)
              "  iob #%d %p pktlen=%u len=%u off=%u next=%p owner=[%s]\n",
              i, iob, iob->io_pktlen, iob->io_len,
              iob->io_offset, IOB_LINK_GET(iob),
-#ifdef CONFIG_DEBUG_IOB
-             iob->io_owner[0] != '\0' ? iob->io_owner : "(unowned)"
-#else
-             "(n/a)"
-#endif
-             );
+             IOB_OWNER_STR(iob));
     }
 
   if (total == 0)

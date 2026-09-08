@@ -63,6 +63,44 @@
 #  define MEMPOOL_NPOOLS (CONFIG_MM_HEAP_MEMPOOL_THRESHOLD / tlsf_align_size())
 #endif
 
+/* Paired format/argument macros for the optional dump columns.  syslog()
+ * is a function-like macro, so a #ifdef inside its argument list is UB and
+ * MSVC rejects it; keep the call sites free of preprocessor directives.
+ * "D" macros feed the data row, "H" macros the header row.
+ */
+
+#ifdef CONFIG_MM_RECORD_PID
+#  define MM_DUMP_PID_DFMT    "%6d"
+#  define MM_DUMP_PID_DARG(b) (b)->pid,
+#  define MM_DUMP_PID_HFMT    "%6s"
+#  define MM_DUMP_PID_HARG    "PID",
+#else
+#  define MM_DUMP_PID_DFMT    ""
+#  define MM_DUMP_PID_DARG(b)
+#  define MM_DUMP_PID_HFMT    ""
+#  define MM_DUMP_PID_HARG
+#endif
+
+#ifdef CONFIG_MM_RECORD_SEQNO
+#  define MM_DUMP_SEQNO_DFMT    "%12lu"
+#  define MM_DUMP_SEQNO_DARG(b) (b)->seqno,
+#  define MM_DUMP_SEQNO_HFMT    "%12s"
+#  define MM_DUMP_SEQNO_HARG    "Sequence",
+#else
+#  define MM_DUMP_SEQNO_DFMT    ""
+#  define MM_DUMP_SEQNO_DARG(b)
+#  define MM_DUMP_SEQNO_HFMT    ""
+#  define MM_DUMP_SEQNO_HARG
+#endif
+
+#ifdef CONFIG_MM_RECORD_STACK
+#  define MM_DUMP_STACK_HFMT   "%s"
+#  define MM_DUMP_STACK_HARG   , "Backtrace"
+#else
+#  define MM_DUMP_STACK_HFMT   ""
+#  define MM_DUMP_STACK_HARG
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -254,21 +292,10 @@ static void memdump_allocnode(FAR void *ptr, size_t size)
 #endif
 
   syslog(LOG_INFO,
-#ifdef CONFIG_MM_RECORD_PID
-         "%6d"
-#endif
-         "%12zu"
-#ifdef CONFIG_MM_RECORD_SEQNO
-         "%12lu"
-#endif
-         "%*p %s\n",
-#ifdef CONFIG_MM_RECORD_PID
-         buf->pid,
-#endif
+         MM_DUMP_PID_DFMT "%12zu" MM_DUMP_SEQNO_DFMT "%*p %s\n",
+         MM_DUMP_PID_DARG(buf)
          size,
-#ifdef CONFIG_MM_RECORD_SEQNO
-         buf->seqno,
-#endif
+         MM_DUMP_SEQNO_DARG(buf)
          BACKTRACE_PTR_FMT_WIDTH, ptr, tmp);
 }
 
@@ -1429,30 +1456,14 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 #endif
 
   syslog(LOG_INFO,
-#ifdef CONFIG_MM_RECORD_PID
-        "%6s"
-#endif
-        "%12s"
-#ifdef CONFIG_MM_RECORD_SEQNO
-        "%12s"
-#endif
-        "%*s "
-#ifdef CONFIG_MM_RECORD_STACK
-        "%s"
-#endif
-        "\n",
-#ifdef CONFIG_MM_RECORD_PID
-        "PID",
-#endif
-        "Size",
-#ifdef CONFIG_MM_RECORD_SEQNO
-        "Sequence",
-#endif
-        BACKTRACE_PTR_FMT_WIDTH, "Address"
-#ifdef CONFIG_MM_RECORD_STACK
-        , "Backtrace"
-#endif
-        );
+         MM_DUMP_PID_HFMT "%12s" MM_DUMP_SEQNO_HFMT "%*s "
+         MM_DUMP_STACK_HFMT "\n",
+         MM_DUMP_PID_HARG
+         "Size",
+         MM_DUMP_SEQNO_HARG
+         BACKTRACE_PTR_FMT_WIDTH, "Address"
+         MM_DUMP_STACK_HARG
+         );
 
   memdump_dump_pool(&priv, heap);
 

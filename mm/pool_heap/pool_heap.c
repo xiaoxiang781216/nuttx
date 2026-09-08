@@ -55,6 +55,36 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Paired format/argument macros for the optional dump header columns.
+ * syslog() is a function-like macro, so a #ifdef inside its argument list
+ * is UB and MSVC rejects it; keep the call site free of preprocessor
+ * directives.
+ */
+
+#ifdef CONFIG_MM_RECORD_PID
+#  define MM_DUMP_PID_HFMT    "%6s"
+#  define MM_DUMP_PID_HARG    "PID",
+#else
+#  define MM_DUMP_PID_HFMT    ""
+#  define MM_DUMP_PID_HARG
+#endif
+
+#ifdef CONFIG_MM_RECORD_SEQNO
+#  define MM_DUMP_SEQNO_HFMT   "%12s"
+#  define MM_DUMP_SEQNO_HARG   "Sequence",
+#else
+#  define MM_DUMP_SEQNO_HFMT   ""
+#  define MM_DUMP_SEQNO_HARG
+#endif
+
+#ifdef CONFIG_MM_RECORD_STACK
+#  define MM_DUMP_STACK_HFMT   "%s"
+#  define MM_DUMP_STACK_HARG   , " Backtrace"
+#else
+#  define MM_DUMP_STACK_HFMT   ""
+#  define MM_DUMP_STACK_HARG
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -800,31 +830,15 @@ void mm_memdump(FAR struct mm_heap_s *heap,
     }
 
   syslog(LOG_INFO,
-#ifdef CONFIG_MM_RECORD_PID
-                   "%6s"
-#endif
-                   "%12s%9s"
-#  ifdef CONFIG_MM_RECORD_SEQNO
-                   "%12s"
-#  endif
-                   "%*s "
-#ifdef CONFIG_MM_RECORD_STACK
-                   "%s"
-#endif
-                   "\n",
-#ifdef CONFIG_MM_RECORD_PID
-                   "PID",
-#endif
-                   "Size", "Overhead",
-#ifdef CONFIG_MM_RECORD_SEQNO
-                   "Sequence",
-#  endif
-                    BACKTRACE_PTR_FMT_WIDTH,
-                   "Address"
-#ifdef CONFIG_MM_RECORD_STACK
-                   , " Backtrace"
-#endif
-                  );
+         MM_DUMP_PID_HFMT "%12s%9s" MM_DUMP_SEQNO_HFMT "%*s "
+         MM_DUMP_STACK_HFMT "\n",
+         MM_DUMP_PID_HARG
+         "Size", "Overhead",
+         MM_DUMP_SEQNO_HARG
+         BACKTRACE_PTR_FMT_WIDTH,
+         "Address"
+         MM_DUMP_STACK_HARG
+        );
 
   if (info.aordblks > 0u)
     {

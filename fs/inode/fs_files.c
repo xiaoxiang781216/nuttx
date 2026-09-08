@@ -372,17 +372,29 @@ void fdlist_init(FAR struct fdlist *list)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_DUMP_FDLIST
+
+/* Optional backtrace column for the fd dump.  syslog() is a function-like
+ * macro, so a #ifdef inside its argument list is UB and MSVC rejects it;
+ * keep the call sites free of preprocessor directives.
+ */
+
+#ifdef CONFIG_FS_BACKTRACE
+#  define FS_DUMP_BT_HFMT    " BACKTRACE"
+#  define FS_DUMP_BT_DFMT    " %s"
+#  define FS_DUMP_BT_DARG    , buf
+#else
+#  define FS_DUMP_BT_HFMT    ""
+#  define FS_DUMP_BT_DFMT    ""
+#  define FS_DUMP_BT_DARG
+#endif
+
 void fdlist_dump(FAR struct fdlist *list)
 {
   FAR char *path;
   int count = fdlist_count(list);
   int i;
 
-  syslog(LOG_INFO, "%-4s%-4s%-8s%-5s%-10s%-14s"
-#ifdef CONFIG_FS_BACKTRACE
-        " BACKTRACE"
-#endif
-        "\n",
+  syslog(LOG_INFO, "%-4s%-4s%-8s%-5s%-10s%-14s" FS_DUMP_BT_HFMT "\n",
         "PID", "FD", "FLAGS", "TYPE", "POS", "PATH"
         );
 
@@ -423,17 +435,11 @@ void fdlist_dump(FAR struct fdlist *list)
         }
 #endif
 
-      syslog(LOG_INFO, "%-4d%-4d%-8d%-5x%-10ld%-14s"
-#ifdef CONFIG_FS_BACKTRACE
-            " %s"
-#endif
-            "\n", getpid(), i, filep->f_oflags,
+      syslog(LOG_INFO, "%-4d%-4d%-8d%-5x%-10ld%-14s" FS_DUMP_BT_DFMT "\n",
+            getpid(), i, filep->f_oflags,
             INODE_GET_TYPE(filep->f_inode),
             (long)filep->f_pos, path
-#ifdef CONFIG_FS_BACKTRACE
-            , buf
-#endif
-            );
+            FS_DUMP_BT_DARG);
 
       file_put(filep);
     }
