@@ -48,7 +48,7 @@
 struct tempbuffer_s
 {
   spinlock_t lock;           /* Lock for the buffer */
-  unsigned long free_bitmap; /* Bitmap of free buffer */
+  unsigned long used_bitmap; /* Bitmap of used buffer (0 = free) */
   char buffer[CONFIG_LIBC_MAX_TEMPBUFFER][TEMP_MAX_SIZE];
 };
 
@@ -56,11 +56,13 @@ struct tempbuffer_s
  * Private Data
  ****************************************************************************/
 
-static DEFINE_PER_CPU_BMP(struct tempbuffer_s, g_tempbuffer) =
-{
-  SP_UNLOCKED,
-  (1u << CONFIG_LIBC_MAX_TEMPBUFFER) - 1,
-};
+/* Zero-initialized so the whole structure lives in .bss instead of .data.
+ * A cleared used_bitmap means every slot is free and a zeroed spinlock is
+ * SP_UNLOCKED, so no explicit initializer is needed.  Keeping the 512-byte
+ * buffer out of .data saves that much flash.
+ */
+
+static DEFINE_PER_CPU_BSS_BMP(struct tempbuffer_s, g_tempbuffer);
 
 #define g_tempbuffer this_cpu_var_bmp(g_tempbuffer)
 
@@ -95,13 +97,17 @@ FAR void *lib_get_tempbuffer(size_t nbytes)
 
   if (nbytes <= TEMP_MAX_SIZE)
     {
-      /* Try to find a free buffer */
+      /* Try to find a free buffer.  A cleared bit means the slot is free,
+       * so invert the bitmap (masked to the valid slots) and take the
+       * lowest free slot.
+       */
 
       flags = spin_lock_irqsave(&g_tempbuffer.lock);
-      index = ffsl(g_tempbuffer.free_bitmap) - 1;
+      index = ffsl(~g_tempbuffer.used_bitmap &
+                   ((1ul << CONFIG_LIBC_MAX_TEMPBUFFER) - 1)) - 1;
       if (index >= 0 && index < CONFIG_LIBC_MAX_TEMPBUFFER)
         {
-          g_tempbuffer.free_bitmap &= ~(1u << index);
+          g_tempbuffer.used_bitmap |= 1ul << index;
           spin_unlock_irqrestore(&g_tempbuffer.lock, flags);
           return g_tempbuffer.buffer[index];
         }
@@ -142,10 +148,10 @@ void lib_put_tempbuffer(FAR void *buffer)
   index = ((FAR char *)buffer - &g_tempbuffer.buffer[0][0]) / TEMP_MAX_SIZE;
   if (index >= 0 && index < CONFIG_LIBC_MAX_TEMPBUFFER)
     {
-      /* Mark the corresponding bit as free */
+      /* Mark the corresponding bit as free (clear the used bit) */
 
       flags = spin_lock_irqsave(&g_tempbuffer.lock);
-      g_tempbuffer.free_bitmap |= 1u << index;
+      g_tempbuffer.used_bitmap &= ~(1ul << index);
       spin_unlock_irqrestore(&g_tempbuffer.lock, flags);
       return;
     }
