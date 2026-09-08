@@ -1121,21 +1121,15 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
         }
     }
 
-  if (crd->crd_alg == CRYPTO_AES_CBC)
-    {
-      /* AES-CBC need update IV */
-
-      bcopy(((FAR AES_CTX *)sw->sw_kschedule)->iv, crp->crp_iv, ivlen);
-    }
-  else if (crp->crp_iv && !exf->reinit)
+  if (crp->crp_iv && !exf->reinit)
     {
       /* Block-chaining modes without a reinit method track the running
        * IV in ivp and write it back so a follow-up request can continue
-       * the chain. Ciphers that provide reinit (AES-XTS/CTR, ChaCha20,
-       * ...) keep their IV/counter state inside the key schedule, so ivp
-       * still points at the caller-supplied input IV here; copying it
-       * back is a no-op and must be skipped, otherwise a caller passing a
-       * read-only IV buffer would fault.
+       * the chain. Ciphers that provide reinit (AES-CBC/XTS/CTR,
+       * ChaCha20, ...) keep their IV/counter state inside the key
+       * schedule, so ivp still points at the caller-supplied input IV
+       * here; copying it back is a no-op and must be skipped, otherwise
+       * a caller passing a read-only IV buffer would fault.
        */
 
       bcopy(ivp, crp->crp_iv, ivlen);
@@ -1573,6 +1567,8 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
             txf = &enc_xform_cast5;
             goto enccommon;
           case CRYPTO_AES_CBC:
+          case CRYPTO_AES_192_CBC:
+          case CRYPTO_AES_256_CBC:
             txf = &enc_xform_aes;
             goto enccommon;
           case CRYPTO_AES_CTR:
@@ -1906,6 +1902,8 @@ int swcr_freesession(uint64_t tid)
           case CRYPTO_BLF_CBC:
           case CRYPTO_CAST_CBC:
           case CRYPTO_RIJNDAEL128_CBC:
+          case CRYPTO_AES_192_CBC:
+          case CRYPTO_AES_256_CBC:
           case CRYPTO_AES_CTR:
           case CRYPTO_AES_XTS:
           case CRYPTO_AES_GCM_16:
@@ -2050,6 +2048,8 @@ int swcr_process(struct cryptop *crp)
           case CRYPTO_BLF_CBC:
           case CRYPTO_CAST_CBC:
           case CRYPTO_RIJNDAEL128_CBC:
+          case CRYPTO_AES_192_CBC:
+          case CRYPTO_AES_256_CBC:
           case CRYPTO_AES_CTR:
           case CRYPTO_AES_XTS:
           case CRYPTO_AES_OFB:
@@ -3116,6 +3116,8 @@ void swcr_init(void)
   algs[CRYPTO_SHA1_HMAC] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_RIPEMD160_HMAC] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_RIJNDAEL128_CBC] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_AES_192_CBC] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_AES_256_CBC] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_AES_CTR] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_AES_XTS] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_AES_GCM_16] = CRYPTO_ALG_FLAG_SUPPORTED;
