@@ -411,6 +411,9 @@ udp_ipv6_active(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn,
        */
 
       if ((conn->lport != 0 && udp->destport == conn->lport &&
+#ifdef CONFIG_NET_IPv4
+           conn->domain == PF_INET6 &&
+#endif
 
           /* Check if the local port accepts any address on this port or
            * that there is an exact match between the destipaddr and the
