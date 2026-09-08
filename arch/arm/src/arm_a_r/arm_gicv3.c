@@ -443,10 +443,6 @@ static void gicv3_cpuif_init(void)
 
   gic_wait_rwp(0);
 
-  /* Clear pending */
-
-  putreg32(INTBITS_ALL, ICPENDR(base, 0));
-
   /* Configure all SGIs/PPIs as G1S or G1NS depending on
    * is run in EL1S or EL1NS respectively.
    * All interrupts will be delivered as irq
