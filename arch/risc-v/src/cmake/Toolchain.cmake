@@ -149,6 +149,8 @@ if(CONFIG_DEBUG_CUSTOMOPT)
 elseif(CONFIG_DEBUG_FULLOPT)
   if(CONFIG_ARCH_TOOLCHAIN_CLANG)
     add_compile_options(-Oz)
+    # Aggressive size reduction, use icf=safe if correctness is in question
+    add_link_options(-Wl,--icf=all)
   else()
     add_compile_options(-Os)
   endif()
