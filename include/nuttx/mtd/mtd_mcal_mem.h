@@ -258,13 +258,9 @@ mtd_mcal_mem_register(FAR struct mtd_mcal_mem_dev_s *dev);
  *   Fill an MTD device's geometry (dev->geo, dev->base_addr,
  *   dev->erased_value) from a MemAcc address area, using ONLY the standard
  *   MemAcc API (MemAcc_GetMemoryInfo) -- no vendor configuration types.  The
- *   area's sub-address areas (SAAs) are walked by logical address: each query
- *   returns the SAA containing that address, and the walk steps to that SAA's
- *   end (LogicalStartAddress + MaxOffset), i.e. the next SAA's start, until
- *   the step walks off the end of the area (E_NOT_OK).  This is correct both
- *   for single-SAA areas (a UCB, DFLASH0) and for multi-SAA areas whose
- *   capacity is the sum of several flash modules (e.g. an AURIX PFLASH bank
- *   spanning six PFLASHxx sub-areas):
+ *   area's sub-address areas (SAAs) are walked by logical address, exactly
+ *   nsaa times, aggregating a multi-SAA area (e.g. an AURIX PFLASH bank of
+ *   six PFLASHxx sub-areas) as well as a single-SAA area (a UCB, DFLASH0):
  *
  *     blocksize    = SAA write page size   (required uniform across the area)
  *     erasesize    = SAA erase sector size (required uniform across the area)
@@ -279,17 +275,19 @@ mtd_mcal_mem_register(FAR struct mtd_mcal_mem_dev_s *dev);
  *
  * Input Parameters:
  *   area_id  - MemAcc address area id (1:1 with the MTD device).
+ *   nsaa     - Number of sub-address areas in the area (from the binding).
+ *              Bounds the SAA walk; zero yields false.
  *   dev      - Device whose geo / base_addr / erased_value are filled in.
  *   no_erase - true for a no-erase memory (RRAM): collapse erasesize to the
  *              write page size.
  *
  * Returned Value:
  *   true on success with the geometry populated; false if the area id is
- *   unknown or its SAA geometry is empty / inconsistent.
+ *   unknown, nsaa is zero, or its SAA geometry is empty / inconsistent.
  *
  ****************************************************************************/
 
-bool mtd_mcal_mem_geo_from_area(uint32_t area_id,
+bool mtd_mcal_mem_geo_from_area(uint32_t area_id, size_t nsaa,
                                 FAR struct mtd_mcal_mem_dev_s *dev,
                                 bool no_erase);
 

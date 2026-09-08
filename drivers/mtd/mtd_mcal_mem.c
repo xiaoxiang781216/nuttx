@@ -918,17 +918,15 @@ mtd_mcal_mem_register(FAR struct mtd_mcal_mem_dev_s *dev)
  * Name: mtd_mcal_mem_geo_from_area
  ****************************************************************************/
 
-bool mtd_mcal_mem_geo_from_area(uint32_t area_id,
+bool mtd_mcal_mem_geo_from_area(uint32_t area_id, size_t nsaa,
                                 FAR struct mtd_mcal_mem_dev_s *dev,
                                 bool no_erase)
 {
-  /* Upper bound on the SAA walk: a defensive cap so a malformed area (e.g. a
-   * zero-size SAA that would not advance the logical cursor) cannot spin
-   * forever.  Far above any real area's sub-area count (an AURIX PFLASH bank
-   * has six).
+  /* nsaa (from the binding) bounds the SAA walk so it never probes past the
+   * area end, which MemAcc would report as the DET
+   * MEMACC_E_PARAM_ADDRESS_LENGTH.  Zero nsaa yields an empty walk.
    */
 
-  const size_t max_saa = 64u;
   MemAcc_MemoryInfoType info;
   size_t   logical     = 0;
   size_t   base        = SIZE_MAX;
@@ -942,20 +940,15 @@ bool mtd_mcal_mem_geo_from_area(uint32_t area_id,
       return false;
     }
 
-  /* Walk the area's sub-address areas (SAAs) by logical address.
-   * MemAcc_GetMemoryInfo returns the SAA that contains the queried logical
-   * address (its LogicalStartAddress and its size in MaxOffset).  The SAAs of
-   * an area are laid out contiguously from logical 0, so stepping to the end
-   * of the SAA just visited -- LogicalStartAddress + MaxOffset -- lands on the
-   * start of the next one; querying that address returns the next SAA, and so
-   * on until the step walks off the end of the area (E_NOT_OK), which
-   * terminates the loop.  Stepping to the SAA end (rather than adding MaxOffset
-   * to the cursor) keeps the walk correct even if the queried address is not
-   * exactly at an SAA start.  This is what aggregates a multi-module area such
-   * as an AURIX PFLASH bank (six PFLASHxx SAAs) into one MTD capacity.
+  /* Walk the area's SAAs by logical address.  MemAcc_GetMemoryInfo returns
+   * the SAA containing the queried address (LogicalStartAddress + MaxOffset);
+   * stepping to that SAA's end lands on the next SAA's start, aggregating a
+   * multi-module area (e.g. an AURIX PFLASH bank of six PFLASHxx SAAs) into
+   * one MTD capacity.  An early query failure (malformed area) is caught by
+   * the count/total checks below.
    */
 
-  while (count < max_saa &&
+  while (count < nsaa &&
          MemAcc_GetMemoryInfo(area_id, logical, &info) == E_OK)
     {
       if (info.MaxOffset == 0 || info.EraseSectorSize == 0 ||
