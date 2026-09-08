@@ -51,17 +51,18 @@
   container_of(ivshmem_get_driver(dev), struct rptun_ivshmem_dev_s, drv)
 
 #define RPTUN_IVSHMEM_SHMEM_BAR   2
-#define RPTUN_IVSHMEM_SHMEM_SIZE  0x10000
 #define RPTUN_IVSHMEM_WDOG_DELAY  USEC2TICK(100)
 
 #ifdef CONFIG_DRIVERS_VHOST_RNG
 #  define RPTUN_IVSHMEM_RNG       1
+#  define RPTUN_IVSHMEM_RNG_SIZE  0x10000
 #else
 #  define RPTUN_IVSHMEM_RNG       0
 #endif
 
 #ifdef CONFIG_DRIVERS_VHOST_RPMSG
 #  define RPTUN_IVSHMEM_RPMSG     1
+#  define RPTUN_IVSHMEM_RPMSG_SIZE 0x10000
 #else
 #  define RPTUN_IVSHMEM_RPMSG     0
 #endif
@@ -110,7 +111,10 @@
                                    RPTUN_IVSHMEM_SPI + \
                                    RPTUN_IVSHMEM_RPMB + \
                                    RPTUN_IVSHMEM_CAN)
-#define RPTUN_IVSHMEM_RSC_NUM     (2 * RPTUN_IVSHMEM_VIRTIO_NUM)
+
+#define RPTUN_IVSHMEM_RSC_NUM     (RPTUN_IVSHMEM_VIRTIO_NUM + \
+                                   RPTUN_IVSHMEM_RNG + \
+                                   RPTUN_IVSHMEM_RPMSG + 1)
 
 /****************************************************************************
  * Private Types
@@ -120,56 +124,45 @@ struct aligned_data(8) rptun_ivshmem_rsc_s
 {
   struct resource_table        hdr;
   uint32_t                     offset[RPTUN_IVSHMEM_RSC_NUM];
-#ifdef CONFIG_DRIVERS_VHOST_RNG
+#if RPTUN_IVSHMEM_RNG
   struct fw_rsc_vdev           rng;
   struct fw_rsc_vdev_vring     rng_vring;
   struct fw_rsc_carveout       rng_carveout;
-  char                         rng_shm[RPTUN_IVSHMEM_SHMEM_SIZE];
+  char                         rng_shm[RPTUN_IVSHMEM_RNG_SIZE];
 #endif
-#ifdef CONFIG_DRIVERS_VHOST_RPMSG
+#if RPTUN_IVSHMEM_RPMSG
   struct fw_rsc_vdev           rpmsg;
   struct fw_rsc_vdev_vring     rpmsg_vring0;
   struct fw_rsc_vdev_vring     rpmsg_vring1;
   struct fw_rsc_config         rpmsg_config;
   struct fw_rsc_carveout       rpmsg_carveout;
-  char                         rpmsg_shm[RPTUN_IVSHMEM_SHMEM_SIZE];
 #endif
-#ifdef CONFIG_NET_VSOCK_VHOST
+#if RPTUN_IVSHMEM_VSOCK
   struct fw_rsc_vdev           vsock;
   struct fw_rsc_vdev_vring     vsock_vring0;
   struct fw_rsc_vdev_vring     vsock_vring1;
   struct fw_rsc_vdev_vring     vsock_vring2;
   struct virtio_vsock_config_s vsock_config;
-  struct fw_rsc_carveout       vsock_carveout;
-  char                         vsock_shm[8 * RPTUN_IVSHMEM_SHMEM_SIZE];
 #endif
-#ifdef CONFIG_DRIVERS_VHOST_NET
+#if RPTUN_IVSHMEM_NET
   struct fw_rsc_vdev           net;
   struct fw_rsc_vdev_vring     net_vring0;
   struct fw_rsc_vdev_vring     net_vring1;
-  struct fw_rsc_carveout       net_carveout;
-  char                         net_shm[RPTUN_IVSHMEM_SHMEM_SIZE];
 #endif
 #if RPTUN_IVSHMEM_I2C
   struct fw_rsc_vdev           i2c;
   struct fw_rsc_vdev_vring     i2c_vring;
   struct vhost_i2c_config_s    i2c_config;
-  struct fw_rsc_carveout       i2c_carveout;
-  char                         i2c_shm[RPTUN_IVSHMEM_SHMEM_SIZE];
 #endif
 #if RPTUN_IVSHMEM_SPI
   struct fw_rsc_vdev           spi;
   struct fw_rsc_vdev_vring     spi_vring;
   struct vhost_spi_config_s    spi_config;
-  struct fw_rsc_carveout       spi_carveout;
-  char                         spi_shm[RPTUN_IVSHMEM_SHMEM_SIZE];
 #endif
 #if RPTUN_IVSHMEM_RPMB
   struct fw_rsc_vdev           rpmb;
   struct fw_rsc_vdev_vring     rpmb_vring;
   struct vhost_rpmb_config_s   rpmb_config;
-  struct fw_rsc_carveout       rpmb_carveout;
-  char                         rpmb_shm[RPTUN_IVSHMEM_SHMEM_SIZE];
 #endif
 #if RPTUN_IVSHMEM_CAN
   struct fw_rsc_vdev           can;
@@ -177,9 +170,8 @@ struct aligned_data(8) rptun_ivshmem_rsc_s
   struct fw_rsc_vdev_vring     can_vring1;
   struct fw_rsc_vdev_vring     can_vring2;
   struct vhost_can_config_s    can_config;
-  struct fw_rsc_carveout       can_carveout;
-  char                         can_shm[RPTUN_IVSHMEM_SHMEM_SIZE];
 #endif
+  struct fw_rsc_carveout       carveout;
 };
 
 struct rptun_ivshmem_mem_s
@@ -262,41 +254,36 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
     },
   .offset =
     {
-#ifdef CONFIG_DRIVERS_VHOST_RNG
+#if RPTUN_IVSHMEM_RNG
       offsetof(struct rptun_ivshmem_rsc_s, rng),
       offsetof(struct rptun_ivshmem_rsc_s, rng_carveout),
 #endif
-#ifdef CONFIG_DRIVERS_VHOST_RPMSG
+#if RPTUN_IVSHMEM_RPMSG
       offsetof(struct rptun_ivshmem_rsc_s, rpmsg),
       offsetof(struct rptun_ivshmem_rsc_s, rpmsg_carveout),
 #endif
-#ifdef CONFIG_NET_VSOCK_VHOST
+#if RPTUN_IVSHMEM_VSOCK
       offsetof(struct rptun_ivshmem_rsc_s, vsock),
-      offsetof(struct rptun_ivshmem_rsc_s, vsock_carveout),
 #endif
-#ifdef CONFIG_DRIVERS_VHOST_NET
+#if RPTUN_IVSHMEM_NET
       offsetof(struct rptun_ivshmem_rsc_s, net),
-      offsetof(struct rptun_ivshmem_rsc_s, net_carveout),
 #endif
 #if RPTUN_IVSHMEM_I2C
       offsetof(struct rptun_ivshmem_rsc_s, i2c),
-      offsetof(struct rptun_ivshmem_rsc_s, i2c_carveout),
 #endif
 #if RPTUN_IVSHMEM_SPI
       offsetof(struct rptun_ivshmem_rsc_s, spi),
-      offsetof(struct rptun_ivshmem_rsc_s, spi_carveout),
 #endif
 #if RPTUN_IVSHMEM_RPMB
       offsetof(struct rptun_ivshmem_rsc_s, rpmb),
-      offsetof(struct rptun_ivshmem_rsc_s, rpmb_carveout),
 #endif
 #if RPTUN_IVSHMEM_CAN
       offsetof(struct rptun_ivshmem_rsc_s, can),
-      offsetof(struct rptun_ivshmem_rsc_s, can_carveout),
 #endif
+      offsetof(struct rptun_ivshmem_rsc_s, carveout),
     },
 
-#ifdef CONFIG_DRIVERS_VHOST_RNG
+#if RPTUN_IVSHMEM_RNG
   .rng =
     {
       .type       = RSC_VDEV,
@@ -322,11 +309,12 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
       .type = RSC_CARVEOUT,
       .da   = offsetof(struct rptun_ivshmem_rsc_s, rng_shm) +
               offsetof(struct rptun_ivshmem_mem_s, rsc_table),
-      .pa   = (uint32_t)METAL_BAD_PHYS,
+      .pa   = FW_RSC_U32_ADDR_ANY,
       .len  = sizeof(g_rsc_table.rng_shm),
+      .name = "vdev0buffer",
     },
 #endif
-#ifdef CONFIG_DRIVERS_VHOST_RPMSG
+#if RPTUN_IVSHMEM_RPMSG
   .rpmsg =
     {
       .type          = RSC_VDEV,
@@ -366,13 +354,17 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
   .rpmsg_carveout =
     {
       .type = RSC_CARVEOUT,
-      .da   = offsetof(struct rptun_ivshmem_rsc_s, rpmsg_shm) +
-              offsetof(struct rptun_ivshmem_mem_s, rsc_table),
-      .pa   = (uint32_t)METAL_BAD_PHYS,
-      .len  = sizeof(g_rsc_table.rpmsg_shm),
+      .da   = FW_RSC_U32_ADDR_ANY,
+      .pa   = FW_RSC_U32_ADDR_ANY,
+      .len  = RPTUN_IVSHMEM_RPMSG_SIZE,
+#  if RPTUN_IVSHMEM_RNG
+      .name = "vdev1buffer",
+#  else
+      .name = "vdev0buffer",
+#  endif
     },
 #endif
-#ifdef CONFIG_NET_VSOCK_VHOST
+#if RPTUN_IVSHMEM_VSOCK
   .vsock =
     {
       .type       = RSC_VDEV,
@@ -407,16 +399,8 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
       .notifyid = RSC_NOTIFY_ID_ANY,
       .da = FW_RSC_U32_ADDR_ANY
     },
-  .vsock_carveout =
-    {
-      .type = RSC_CARVEOUT,
-      .da   = offsetof(struct rptun_ivshmem_rsc_s, vsock_shm) +
-              offsetof(struct rptun_ivshmem_mem_s, rsc_table),
-      .pa   = (uint32_t)METAL_BAD_PHYS,
-      .len  = sizeof(g_rsc_table.vsock_shm),
-    },
 #endif
-#ifdef CONFIG_DRIVERS_VHOST_NET
+#if RPTUN_IVSHMEM_NET
   .net =
     {
       .type       = RSC_VDEV,
@@ -444,14 +428,6 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
       .notifyid  = RSC_NOTIFY_ID_ANY,
       .da        = FW_RSC_U32_ADDR_ANY,
     },
-  .net_carveout =
-    {
-      .type = RSC_CARVEOUT,
-      .da   = offsetof(struct rptun_ivshmem_rsc_s, net_shm) +
-              offsetof(struct rptun_ivshmem_mem_s, rsc_table),
-      .pa   = (uint32_t)METAL_BAD_PHYS,
-      .len  = sizeof(g_rsc_table.net_shm),
-    },
 #endif
 #if RPTUN_IVSHMEM_I2C
   .i2c =
@@ -478,14 +454,6 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
     {
       .path = "/dev/i2c0",    /* Local I2C device node on the device side */
     },
-  .i2c_carveout =
-    {
-      .type = RSC_CARVEOUT,
-      .da   = offsetof(struct rptun_ivshmem_rsc_s, i2c_shm) +
-              offsetof(struct rptun_ivshmem_mem_s, rsc_table),
-      .pa   = (uint32_t)METAL_BAD_PHYS,
-      .len  = sizeof(g_rsc_table.i2c_shm),
-    },
 #endif
 #if RPTUN_IVSHMEM_SPI
   .spi =
@@ -510,14 +478,6 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
   .spi_config =
     {
       .path = "/dev/spi0",    /* Local SPI device node on the device side */
-    },
-  .spi_carveout =
-    {
-      .type = RSC_CARVEOUT,
-      .da   = offsetof(struct rptun_ivshmem_rsc_s, spi_shm) +
-              offsetof(struct rptun_ivshmem_mem_s, rsc_table),
-      .pa   = (uint32_t)METAL_BAD_PHYS,
-      .len  = sizeof(g_rsc_table.spi_shm),
     },
 #endif
 #if RPTUN_IVSHMEM_RPMB
@@ -544,16 +504,6 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
   .rpmb_config =
     {
       .path = CONFIG_RPTUN_IVSHMEM_RPMB_PATH,
-    },
-  .rpmb_carveout =
-    {
-      .type = RSC_CARVEOUT,
-      .da   = ALIGN_UP(offsetof(struct rptun_ivshmem_rsc_s, rpmb_shm) +
-                       offsetof(struct rptun_ivshmem_mem_s, rsc_table), 8),
-      .pa   = (uint32_t)METAL_BAD_PHYS,
-      .len  = sizeof(g_rsc_table.rpmb_shm) -
-              (ALIGN_UP(offsetof(struct rptun_ivshmem_rsc_s, rpmb_shm), 8) -
-               offsetof(struct rptun_ivshmem_rsc_s, rpmb_shm)),
     },
 #endif
 #if RPTUN_IVSHMEM_CAN
@@ -597,15 +547,13 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
     {
       .ifname = "vcan0",
     },
-  .can_carveout =
+#endif
+  .carveout =
     {
       .type = RSC_CARVEOUT,
-      .da   = offsetof(struct rptun_ivshmem_rsc_s, can_shm) +
-              offsetof(struct rptun_ivshmem_mem_s, rsc_table),
-      .pa   = (uint32_t)METAL_BAD_PHYS,
-      .len  = sizeof(g_rsc_table.can_shm),
+      .pa   = FW_RSC_U32_ADDR_ANY,
+      .name = "vdevbuffer",
     },
-#endif
 };
 
 /****************************************************************************
@@ -651,48 +599,21 @@ rptun_ivshmem_get_resource(FAR struct rptun_dev_s *dev)
         {
           FAR struct rptun_ivshmem_rsc_s *rsc =
             (FAR struct rptun_ivshmem_rsc_s *)&priv->shmem->rsc_table;
-          int i = 0;
 
-#ifdef CONFIG_DRIVERS_VHOST_RNG
-          snprintf((FAR char *)rsc->rng_carveout.name, RPROC_MAX_NAME_LEN,
-                   "vdev%dbuffer", i++);
-#endif
-#ifdef CONFIG_DRIVERS_VHOST_RPMSG
-          snprintf((FAR char *)rsc->rpmsg_carveout.name, RPROC_MAX_NAME_LEN,
-                   "vdev%dbuffer", i++);
+#if RPTUN_IVSHMEM_RPMSG
           strlcpy((FAR char *)rsc->rpmsg_config.host_cpuname, priv->cpuname,
                   sizeof(rsc->rpmsg_config.host_cpuname));
 #endif
-#ifdef CONFIG_NET_VSOCK_VHOST
-          snprintf((FAR char *)rsc->vsock_carveout.name, RPROC_MAX_NAME_LEN,
-                   "vdev%dbuffer", i++);
+#if RPTUN_IVSHMEM_VSOCK
           strlcpy((FAR char *)&rsc->vsock_config.guest_cid,
                   priv->cpuname, 5);
           strlcpy((FAR char *)&rsc->vsock_config.host_cid,
                   CONFIG_RPMSG_LOCAL_CPUNAME, 5);
 #endif
-#ifdef CONFIG_DRIVERS_VHOST_NET
-          snprintf((FAR char *)rsc->net_carveout.name, RPROC_MAX_NAME_LEN,
-                   "vdev%dbuffer", i++);
-#endif
-#ifdef CONFIG_DRIVERS_VHOST_I2C
-          snprintf((FAR char *)rsc->i2c_carveout.name, RPROC_MAX_NAME_LEN,
-                   "vdev%dbuffer", i++);
-#endif
-#ifdef CONFIG_DRIVERS_VHOST_SPI
-          snprintf((FAR char *)rsc->spi_carveout.name, RPROC_MAX_NAME_LEN,
-                   "vdev%dbuffer", i++);
-#endif
-#ifdef CONFIG_DRIVERS_VHOST_RPMB
-          snprintf((FAR char *)rsc->rpmb_carveout.name, RPROC_MAX_NAME_LEN,
-                   "vdev%dbuffer", i++);
-#endif
-#ifdef CONFIG_DRIVERS_VHOST_CAN
-          snprintf((FAR char *)rsc->can_carveout.name, RPROC_MAX_NAME_LEN,
-                   "vdev%dbuffer", i++);
-#endif
-          UNUSED(rsc);
-          UNUSED(i);
+          rsc->carveout.da  = ALIGN_UP(sizeof(*rsc), 8) +
+                              offsetof(struct rptun_ivshmem_mem_s,
+                                       rsc_table);
+          rsc->carveout.len = priv->shmem_size - rsc->carveout.da;
         }
 
       priv->shmem->rsc_size = priv->rsc_size;
