@@ -8,9 +8,15 @@ menu "ICMP Networking Support"
 config NET_ICMP
 	bool "Enable ICMP networking"
 	default NET_IPv4
+	depends on NET_IPv4 || NET_ICMP_NO_STACK
 	---help---
 		Enable minimal ICMP support. Includes built-in support
 		for sending replies to received ECHO (ping) requests.
+
+		The in-kernel ICMP stack needs the in-kernel IPv4 stack, hence the
+		dependency on NET_IPv4.  It does not apply when the stack is not
+		built at all (NET_ICMP_NO_STACK), which is how ICMP sockets are
+		offloaded to a user-space daemon over usrsock.
 
 config NET_ICMP_NO_STACK
 	bool "Disable ICMP stack"

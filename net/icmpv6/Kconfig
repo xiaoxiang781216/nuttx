@@ -9,10 +9,15 @@ config NET_ICMPv6
 	bool "Enable ICMPv6 networking"
 	default n
 	select NET_MCASTGROUP
-	depends on NET
+	depends on NET_IPv6 || NET_ICMPv6_NO_STACK
 	---help---
 		Enable minimal ICMPv6 support. Includes built-in support
 		for sending replies to received ECHO (ping) requests.
+
+		The in-kernel ICMPv6 stack needs the in-kernel IPv6 stack, hence
+		the dependency on NET_IPv6.  It does not apply when the stack is
+		not built at all (NET_ICMPv6_NO_STACK), which is how ICMPv6
+		sockets are offloaded to a user-space daemon over usrsock.
 
 config NET_ICMPv6_NO_STACK
 	bool "Disable ICMPv6 stack"
