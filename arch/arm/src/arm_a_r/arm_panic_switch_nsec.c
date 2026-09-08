@@ -31,6 +31,7 @@
 #include <arch/syscall.h>
 
 #include "arm_internal.h"
+#include "gic.h"
 
 /****************************************************************************
  * Private Data
@@ -60,6 +61,8 @@ static int arm_panic_switch_nsec_callback(struct notifier_block *block,
   if (action == SYS_HALT)
     {
       struct arm_smccc_res res;
+
+      arm_gic_disable_irqs(true);
 
       /* Switch to non-secure world so the REE can finish coredump.
        * FOREIGN_INTR unconditionally resumes the saved NS context.

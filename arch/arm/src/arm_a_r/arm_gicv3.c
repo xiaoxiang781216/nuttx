@@ -951,6 +951,41 @@ static void arm_gic_init(void)
 #endif
 }
 
+/***************************************************************************
+ * Name: arm_gic_disable_irqs
+ *
+ * Description:
+ *   Disable the secure or the non-secure interrupts by clearing the
+ *   distributor control register enable bits of their groups.
+ *
+ * Input Parameters:
+ *   secure - True to disable the secure interrupts (Group0 and Group1
+ *            Secure), false to disable the non-secure ones.
+ *
+ * Returned Value:
+ *   None
+ *
+ ***************************************************************************/
+
+void arm_gic_disable_irqs(bool secure)
+{
+  uint32_t regval;
+  uint32_t groups;
+
+  if (secure)
+    {
+      groups = BIT(GICD_CTLR_ENABLE_G0) | BIT(GICD_CTLR_ENABLE_G1S);
+    }
+  else
+    {
+      groups = BIT(GICD_CTLR_ENABLE_G1NS);
+    }
+
+  regval  = getreg32(GICD_CTLR);
+  regval &= ~groups;
+  putreg32(regval, GICD_CTLR);
+}
+
 void arm_gic0_initialize(void)
 {
   int err;

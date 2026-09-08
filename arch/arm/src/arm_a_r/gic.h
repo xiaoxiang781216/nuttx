@@ -1029,6 +1029,27 @@ void arm_gic0_initialize(void);
 void arm_gic_initialize(void);
 
 /****************************************************************************
+ * Name: arm_gic_disable_irqs
+ *
+ * Description:
+ *   Disable the secure or the non-secure interrupts
+ *
+ * Input Parameters:
+ *   secure - True to disable the secure interrupts (Group0 and Group1
+ *            Secure), false to disable the non-secure ones.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#if CONFIG_ARM_GIC_VERSION >= 2
+void arm_gic_disable_irqs(bool secure);
+#else
+#  define arm_gic_disable_irqs(secure)
+#endif
+
+/****************************************************************************
  * Name: arm_decodeirq
  *
  * Description:

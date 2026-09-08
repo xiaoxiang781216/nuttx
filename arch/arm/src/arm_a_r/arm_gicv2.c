@@ -284,6 +284,39 @@ void arm_gic0_initialize(void)
 }
 
 /****************************************************************************
+ * Name: arm_gic_disable_irqs
+ *
+ * Description:
+ *   Disable the secure or the non-secure interrupts and clear their
+ *   pending state.  Every interrupt, including SGI and PPI, is configured
+ *   in the distributor of this GIC and the two sets are told apart by
+ *   their interrupt security registers.
+ *
+ * Input Parameters:
+ *   secure - True to disable the secure interrupts (Group0 and Group1
+ *            Secure), false to disable the non-secure ones.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void arm_gic_disable_irqs(bool secure)
+{
+  unsigned int nlines = arm_gic_nlines();
+  unsigned int irq;
+
+  for (irq = 0; irq < nlines; irq += GIC_NUM_INTR_PER_REG)
+    {
+      uint32_t isr  = getreg32(GIC_ICDISR(irq));
+      uint32_t mask = secure ? ~isr : isr;
+
+      putreg32(mask, GIC_ICDICER(irq));
+      putreg32(mask, GIC_ICDICPR(irq));
+    }
+}
+
+/****************************************************************************
  * Name: arm_gic_initialize
  *
  * Description:

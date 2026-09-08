@@ -49,6 +49,7 @@
 #include "arm64_fpu.h"
 #endif
 #include "arm64_internal.h"
+#include "arm64_gic.h"
 #include "chip.h"
 
 /****************************************************************************
@@ -120,6 +121,12 @@ static int arm64_panic_switch_nsec(struct notifier_block *block,
   if (action == SYS_HALT)
     {
       struct arm_smccc_res res;
+
+      /* Disable every secure interrupt (Group0 + Group1 Secure) so none of
+       * them can mask the Group1 non-secure doorbell from the REE.
+       */
+
+      arm64_gic_disable_irqs(true);
 
       /* Yield CPU to non-secure world via EL3. This is the same SMC
        * used in idle; EL3 will switch context to the REE.
