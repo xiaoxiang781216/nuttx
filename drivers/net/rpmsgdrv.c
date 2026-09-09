@@ -32,7 +32,6 @@
 #include <stdio.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
@@ -107,9 +106,6 @@ static int net_rpmsg_drv_ifup_handler(FAR struct rpmsg_endpoint *ept,
 static int net_rpmsg_drv_ifdown_handler(FAR struct rpmsg_endpoint *ept,
                                         FAR void *data, size_t len,
                                         uint32_t src, FAR void *priv);
-static int net_rpmsg_drv_sockioctl_handler(FAR struct rpmsg_endpoint *ept,
-                                           FAR void *data, size_t len,
-                                           uint32_t src, FAR void *priv);
 static int net_rpmsg_drv_transfer_handler(FAR struct rpmsg_endpoint *ept,
                                           FAR void *data, size_t len,
                                           uint32_t src, FAR void *priv);
@@ -168,7 +164,6 @@ static const rpmsg_ept_cb g_net_rpmsg_drv_handler[] =
   [NET_RPMSG_ADDMCAST]  = net_rpmsg_drv_default_handler,
   [NET_RPMSG_RMMCAST]   = net_rpmsg_drv_default_handler,
   [NET_RPMSG_DEVIOCTL]  = net_rpmsg_drv_default_handler,
-  [NET_RPMSG_SOCKIOCTL] = net_rpmsg_drv_sockioctl_handler,
   [NET_RPMSG_TRANSFER]  = net_rpmsg_drv_transfer_handler,
 };
 
@@ -179,7 +174,6 @@ static const rpmsg_ept_cb g_net_rpmsg_drv_response[] =
   [NET_RPMSG_ADDMCAST]  = net_rpmsg_drv_default_response,
   [NET_RPMSG_RMMCAST]   = net_rpmsg_drv_default_response,
   [NET_RPMSG_DEVIOCTL]  = net_rpmsg_drv_default_response,
-  [NET_RPMSG_SOCKIOCTL] = net_rpmsg_drv_default_response,
   [NET_RPMSG_TRANSFER]  = net_rpmsg_drv_default_response,
 };
 
@@ -410,88 +404,6 @@ static int net_rpmsg_drv_ifdown_handler(FAR struct rpmsg_endpoint *ept,
   return 0;
 }
 
-static int net_rpmsg_drv_sockioctl_task(int argc, FAR char *argv[])
-{
-  FAR struct net_rpmsg_ioctl_s *msg;
-  FAR struct rpmsg_endpoint *ept;
-  struct socket sock;
-
-  int domain   = NET_SOCK_FAMILY;
-  int type     = NET_SOCK_TYPE;
-  int protocol = NET_SOCK_PROTOCOL;
-
-  /* Restore pointers from argv */
-
-  ept = (FAR struct rpmsg_endpoint *)strtoul(argv[1], NULL, 16);
-  msg = (FAR struct net_rpmsg_ioctl_s *)strtoul(argv[2], NULL, 16);
-
-  /* We need a temporary sock for ioctl here */
-
-  if (msg->code == SIOCIFAUTOCONF)
-    {
-      domain   = PF_INET6;
-      type     = SOCK_DGRAM;
-      protocol = IPPROTO_ICMP6;
-    }
-
-  msg->header.result = psock_socket(domain, type, protocol, &sock);
-  if (msg->header.result >= 0)
-    {
-      msg->header.result = psock_ioctl(&sock, msg->code, msg->arg);
-      psock_close(&sock); /* Close the temporary sock */
-    }
-
-  /* Send the response only when cookie doesn't equal NULL */
-
-  if (msg->header.cookie)
-    {
-      rpmsg_send_response(ept, &msg->header, sizeof(*msg) + msg->length,
-                          msg->header.result);
-    }
-
-  rpmsg_release_rx_buffer(ept, msg);
-  return 0;
-}
-
-static int net_rpmsg_drv_sockioctl_handler(FAR struct rpmsg_endpoint *ept,
-                                           FAR void *data, size_t len,
-                                           uint32_t src, FAR void *priv)
-{
-  FAR char *argv[3];
-  char arg1[16];
-  char arg2[16];
-  int ret;
-
-  /* Save pointers into argv */
-
-  snprintf(arg1, sizeof(arg1), "%p", ept);
-  snprintf(arg2, sizeof(arg2), "%p", data);
-
-  argv[0] = arg1;
-  argv[1] = arg2;
-  argv[2] = NULL;
-
-  /* Move the action into a temp thread to avoid the deadlock */
-
-  rpmsg_hold_rx_buffer(ept, data);
-  ret = kthread_create("rpmsg-net", CONFIG_NET_RPMSG_PRIORITY,
-          CONFIG_NET_RPMSG_STACKSIZE, net_rpmsg_drv_sockioctl_task, argv);
-  if (ret < 0)
-    {
-      FAR struct net_rpmsg_ioctl_s *msg =
-                                        (FAR struct net_rpmsg_ioctl_s *)data;
-      if (msg->header.cookie)
-        {
-          rpmsg_send_response(ept, &msg->header, sizeof(*msg), ret);
-        }
-
-      rpmsg_release_rx_buffer(ept, data);
-      nerr("ERROR: Failed to create sockioctl task\n");
-    }
-
-  return 0;
-}
-
 /****************************************************************************
  * Name: net_rpmsg_drv_transfer_handler
  *
@@ -676,13 +588,13 @@ static int net_rpmsg_drv_ept_cb(FAR struct rpmsg_endpoint *ept, void *data,
 
   if (cmd < nitems(g_net_rpmsg_drv_handler))
     {
-      if (NET_RPMSG_IS_RESPONSE(header->command))
+      rpmsg_ept_cb cb;
+
+      cb = NET_RPMSG_IS_RESPONSE(header->command) ?
+           g_net_rpmsg_drv_response[cmd] : g_net_rpmsg_drv_handler[cmd];
+      if (cb != NULL)
         {
-          return g_net_rpmsg_drv_response[cmd](ept, data, len, src, priv);
-        }
-      else
-        {
-          return g_net_rpmsg_drv_handler[cmd](ept, data, len, src, priv);
+          return cb(ept, data, len, src, priv);
         }
     }
 

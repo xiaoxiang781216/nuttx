@@ -40,7 +40,6 @@
 #define NET_RPMSG_ADDMCAST              2 /* IP-->LINK */
 #define NET_RPMSG_RMMCAST               3 /* IP-->LINK */
 #define NET_RPMSG_DEVIOCTL              4 /* IP-->LINK */
-#define NET_RPMSG_SOCKIOCTL             5 /* IP<--LINK */
 #define NET_RPMSG_TRANSFER              6 /* IP<->LINK */
 
 #define NET_RPMSG_RESPONSE              (1 << 31)
