@@ -26,9 +26,14 @@ if(CONFIG_BCH)
     PRIVATE bchlib_setup.c
             bchlib_teardown.c
             bchlib_read.c
-            bchlib_write.c
             bchlib_cache.c
             bchdev_register.c
             bchdev_unregister.c
             bchdev_driver.c)
+
+  # Write support is dropped when the BCH device is read-only
+
+  if(NOT CONFIG_BCH_DEVICE_READONLY)
+    target_sources(drivers PRIVATE bchlib_write.c)
+  endif()
 endif()

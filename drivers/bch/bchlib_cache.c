@@ -108,16 +108,17 @@ static int bch_cypher(FAR struct bchlib_s *bch, int encrypt)
 
 int bchlib_flushsector(FAR struct bchlib_s *bch, bool discard)
 {
-  FAR struct inode *inode;
   ssize_t ret = OK;
 
+#ifndef CONFIG_BCH_DEVICE_READONLY
   /* Check if the sector has been modified and is out of synch with the
-   * media.
+   * media.  A read-only BCH device never marks the buffer dirty, so the
+   * write-back path is compiled out entirely.
    */
 
   if (bch->dirty && bch->buffer != NULL)
     {
-      inode = bch->inode;
+      FAR struct inode *inode = bch->inode;
 
 #if defined(CONFIG_BCH_ENCRYPTION)
       /* Encrypt data as necessary */
@@ -146,6 +147,7 @@ int bchlib_flushsector(FAR struct bchlib_s *bch, bool discard)
 
       bch->dirty = false;
     }
+#endif
 
   if (discard)
     {

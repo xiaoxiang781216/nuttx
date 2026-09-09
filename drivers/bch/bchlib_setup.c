@@ -64,6 +64,18 @@ int bchlib_setup(FAR const char *blkdev, int oflags, FAR void **handle)
 
   DEBUGASSERT(blkdev);
 
+#ifdef CONFIG_BCH_DEVICE_READONLY
+  /* This BCH build only supports read access.  Reject any open that
+   * requests write permission before allocating any resources.
+   */
+
+  if (!readonly)
+    {
+      ferr("ERROR: write access not supported (read-only BCH)\n");
+      return -EACCES;
+    }
+#endif
+
   /* Allocate the BCH state structure */
 
   bch = kmm_zalloc(sizeof(struct bchlib_s));

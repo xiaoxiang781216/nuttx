@@ -24,9 +24,15 @@ ifeq ($(CONFIG_BCH),y)
 
 # Include BCH driver
 
-CSRCS += bchlib_setup.c bchlib_teardown.c bchlib_read.c bchlib_write.c
+CSRCS += bchlib_setup.c bchlib_teardown.c bchlib_read.c
 CSRCS += bchlib_cache.c bchdev_register.c bchdev_unregister.c
 CSRCS += bchdev_driver.c
+
+# Write support is dropped when the BCH device is read-only
+
+ifneq ($(CONFIG_BCH_DEVICE_READONLY),y)
+CSRCS += bchlib_write.c
+endif
 
 # Include BCH driver build support
 

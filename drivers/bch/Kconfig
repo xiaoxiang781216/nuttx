@@ -32,6 +32,10 @@ config BCH_DEVICE_READONLY
 	bool "Set BCH device readonly"
 	default n
 	---help---
-		Set bch devices read-only
+		Set bch devices read-only.  In addition to rejecting write opens,
+		this compiles out the BCH write path entirely (bchlib_write.c, the
+		bch_write() file operation and the sector write-back in
+		bchlib_flushsector()) to save FLASH on read-only targets such as a
+		verified-boot image that only reads its partitions.
 
 endif # BCH

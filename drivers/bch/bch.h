@@ -54,7 +54,9 @@ struct bchlib_s
   size_t sector;           /* The current sector in the buffer */
   mutex_t lock;            /* For atomic accesses to this structure */
   uint8_t refs;            /* Number of references */
+#ifndef CONFIG_BCH_DEVICE_READONLY
   bool dirty;              /* true: Data has been written to the buffer */
+#endif
   bool readonly;           /* true: Only read operations are supported */
   bool unlinked;           /* true: The driver has been unlinked */
   FAR uint8_t *buffer;     /* One sector buffer */

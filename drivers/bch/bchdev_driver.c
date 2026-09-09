@@ -58,8 +58,10 @@ static int     bch_close(FAR struct file *filep);
 static off_t   bch_seek(FAR struct file *filep, off_t offset, int whence);
 static ssize_t bch_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen);
+#ifndef CONFIG_BCH_DEVICE_READONLY
 static ssize_t bch_write(FAR struct file *filep, FAR const char *buffer,
                          size_t buflen);
+#endif
 static int     bch_ioctl(FAR struct file *filep, int cmd,
                          unsigned long arg);
 static int     bch_poll(FAR struct file *filep, FAR struct pollfd *fds,
@@ -77,7 +79,11 @@ const struct file_operations g_bch_fops =
   bch_open,    /* open */
   bch_close,   /* close */
   bch_read,    /* read */
+#ifndef CONFIG_BCH_DEVICE_READONLY
   bch_write,   /* write */
+#else
+  NULL,        /* write */
+#endif
   bch_seek,    /* seek */
   bch_ioctl,   /* ioctl */
   NULL,        /* truncate */
@@ -323,6 +329,7 @@ static ssize_t bch_read(FAR struct file *filep, FAR char *buffer, size_t len)
  * Name: bch_write
  ****************************************************************************/
 
+#ifndef CONFIG_BCH_DEVICE_READONLY
 static ssize_t bch_write(FAR struct file *filep, FAR const char *buffer,
                          size_t len)
 {
@@ -352,6 +359,7 @@ static ssize_t bch_write(FAR struct file *filep, FAR const char *buffer,
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: bch_ioctl
