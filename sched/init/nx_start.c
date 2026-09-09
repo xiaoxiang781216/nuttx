@@ -421,7 +421,7 @@ static void idle_task_initialize(void)
   atomic_set(&tcb->refs, 1);
 
 #if CONFIG_TASK_NAME_SIZE >= 12
-  snprintf(tcb->name, CONFIG_TASK_NAME_SIZE, "CPU%d IDLE", up_cpu_index());
+  snprintf(tcb->name, CONFIG_TASK_NAME_SIZE, "CPU%d IDLE", this_cpu());
 #elif CONFIG_TASK_NAME_SIZE > 0
   strlcpy(tcb->name, "Idle_Task", CONFIG_TASK_NAME_SIZE);
 #endif

@@ -752,7 +752,7 @@ static void dump_assert_info(FAR struct tcb_s *rtcb,
          msg ? msg : "",
          filename ? filename : "", linenum,
 #ifndef CONFIG_UP
-         up_cpu_index(),
+         this_cpu(),
 #endif
          get_task_name(rtcb),
          ptcb ? get_task_name(ptcb) : "Kernel",
@@ -830,7 +830,7 @@ static void dump_core_info(FAR struct tcb_s *rtcb, FAR const char *filename,
                            int linenum, FAR const char *msg, FAR void *regs)
 {
 #if defined(CONFIG_BOARD_COREDUMP_CPUID) && CONFIG_BOARD_COREDUMP_CPUID >= 0
-  if (up_cpu_index() == CONFIG_BOARD_COREDUMP_CPUID)
+  if (this_cpu() == CONFIG_BOARD_COREDUMP_CPUID)
 #endif
     {
 #ifdef CONFIG_BOARD_CRASHDUMP_CUSTOM

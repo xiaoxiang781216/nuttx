@@ -111,7 +111,7 @@ int weak_function up_cpu_start(int cpu)
 {
   sinfo("Starting CPU%d\n", cpu);
 
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_NCPUS && cpu != up_cpu_index());
+  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_NCPUS && cpu != this_cpu());
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */

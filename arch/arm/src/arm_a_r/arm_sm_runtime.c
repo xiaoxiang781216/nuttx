@@ -464,7 +464,7 @@ uint32_t arm_sm_from_sec(void)
 
           if (g_ap_entry == 0)
             {
-              if (up_cpu_index() == 0)
+              if (this_cpu() == 0)
                 {
                   sec->r0 = 0;
                   return SM_EXIT_TO_SECURE;

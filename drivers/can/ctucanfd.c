@@ -2199,7 +2199,7 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
   devid = PCI_SLOT(dev->devfn) - 1;
 
   if (devid >= nitems(g_ctucanfd_pci_map) ||
-       g_ctucanfd_pci_map[devid] != up_cpu_index())
+       g_ctucanfd_pci_map[devid] != this_cpu())
     {
       return -ENODEV;
     }

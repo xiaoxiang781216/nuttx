@@ -136,7 +136,7 @@ void weak_function up_allocate_heap(void **heap_start, size_t *heap_size)
 
 #ifdef CONFIG_BMP
   *heap_size  = (end - base) / CONFIG_NCPUS;
-  *heap_start = (void *)((uintptr_t)base + *heap_size * up_cpu_index());
+  *heap_start = (void *)((uintptr_t)base + *heap_size * this_cpu());
 #else
   *heap_size  = end - base;
   *heap_start = (void *)base;

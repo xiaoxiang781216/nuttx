@@ -61,7 +61,7 @@ static bool ctucanfd_enable_on_this_cpu(FAR const void *fdt, int offset)
       return true;
     }
 
-  return fdt32_to_cpu(*prop) == up_cpu_index();
+  return fdt32_to_cpu(*prop) == this_cpu();
 }
 
 /****************************************************************************

@@ -299,7 +299,7 @@ static int ramlog_panic_notifier(FAR struct notifier_block *nb,
 
   if (action == PANIC_KERNEL_FINAL
 #if defined(CONFIG_RAMLOG_DUMP_ON_PANIC_CPUID) && CONFIG_RAMLOG_DUMP_ON_PANIC_CPUID >= 0
-      && up_cpu_index() == CONFIG_RAMLOG_DUMP_ON_PANIC_CPUID
+      && this_cpu() == CONFIG_RAMLOG_DUMP_ON_PANIC_CPUID
 #endif
   )
     {
