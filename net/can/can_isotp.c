@@ -832,6 +832,34 @@ static uint32_t isotp_tx_eventhandler(FAR struct net_driver_s *dev,
 
       isotp_tx_wait_fc(isotp);
     }
+#ifdef CONFIG_NET_CAN_WRITE_BUFFERS
+  else if (isotp->tx_stmin_ms == 0)
+    {
+      /* STmin == 0: batch the remaining CFs of this block into d_txq
+       * so devif_poll_connections() drains them back-to-back.
+       */
+
+      while (iob_peek_queue(&isotp->tx_q) != NULL)
+        {
+          iob = iob_remove_queue(&isotp->tx_q);
+          IOB_SET_OWNER(iob, "can txq");
+          iob_add_queue(iob, &dev->d_txq);
+
+          if (iob_peek_queue(&isotp->tx_q) == NULL)
+            {
+              isotp_tx_finish(isotp, OK);
+              return flags;
+            }
+
+          if (isotp->tx_bs_remaining > 0 &&
+              --isotp->tx_bs_remaining == 0)
+            {
+              isotp_tx_wait_fc(isotp);
+              return flags;
+            }
+        }
+    }
+#endif
 
   /* Otherwise more consecutive frames remain in this block; the driver's TX
    * poll loop calls this handler again for the next one (no self-notify, to
