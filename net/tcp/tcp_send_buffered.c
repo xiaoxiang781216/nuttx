@@ -504,7 +504,7 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 #endif
                     {
 #ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
-                      /* Do fast retransmit */
+                      /* Do fast retransmit via retransmit_segment path */
 
                       rexmitno = ackno;
 #endif
@@ -581,78 +581,28 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
     {
       FAR struct tcp_wrbuffer_s *wrb;
       FAR sq_entry_t *entry;
-      FAR sq_entry_t *next;
-      size_t sndlen;
-      int ret;
 
-      /* According to RFC 6298 (5.4), retransmit the earliest segment
-       * that has not been acknowledged by the TCP receiver.
+      /* Find the earliest unacknowledged segment (SND.UNA) and move it
+       * back to write_q via retransmit_segment.  Fast retransmit does
+       * not count toward nrtx since it is a proactive recovery.
        */
 
-      for (entry = sq_peek(&conn->unacked_q); entry; entry = next)
+      entry = sq_peek(&conn->unacked_q);
+      if (entry != NULL)
         {
           wrb = (FAR struct tcp_wrbuffer_s *)entry;
-          next = sq_next(entry);
 
-          if (rexmitno != TCP_WBSEQNO(wrb))
-            {
-              continue;
-            }
+          /* The fast-retransmit target must be SND.UNA (unacked_q head) */
 
-          /* Reconstruct the length of the earliest segment to be
-           * retransmitted.
-           */
+          DEBUGASSERT(rexmitno == TCP_WBSEQNO(wrb));
 
-          sndlen = TCP_WBPKTLEN(wrb);
-
-          if (sndlen > conn->mss)
-            {
-              sndlen = conn->mss;
-            }
-
-          /* As we are retransmitting, the sequence number is expected
-           * already set for this write buffer.
-           */
-
-          DEBUGASSERT(TCP_WBSEQNO(wrb) != (unsigned)-1);
-
-#ifdef NEED_IPDOMAIN_SUPPORT
-          /* If both IPv4 and IPv6 support are enabled, then we will need to
-           * select which one to use when generating the outgoing packet.
-           * If only one domain is selected, then the setup is already in
-           * place and we need do nothing.
-           */
-
-          tcp_ip_select(conn);
-#endif
-          /* Then set-up to send that amount of data. (this won't actually
-           * happen until the polling cycle completes).
-           */
-
-          tcp_setsequence(conn->sndseq, TCP_WBSEQNO(wrb));
-
-#ifdef CONFIG_NET_JUMBO_FRAME
-          if (sndlen <= conn->mss)
-            {
-              /* alloc iob */
-
-              netdev_iob_prepare_with_size(dev,
-                                           sndlen + tcpip_hdrsize(conn));
-            }
-#endif
-
-          ret = devif_iob_send(dev, TCP_WBIOB(wrb), sndlen,
-                               0, tcpip_hdrsize(conn));
-          if (ret <= 0)
-            {
-              return flags;
-            }
+          sq_rem(entry, &conn->unacked_q);
+          retransmit_segment(conn, wrb, false);
 
 #ifdef CONFIG_NET_TCP_CC_NEWRENO
-          /* After Fast retransmitted, set ssthresh to the maximum of
-           * the unacked and the 2*SMSS, and enter to Fast Recovery.
-           * ssthresh = max (FlightSize / 2, 2*SMSS) referring to rfc5681
-           * cwnd=ssthresh + 3*SMSS  referring to rfc5681
+          /* Enter Fast Recovery: set ssthresh and inflate cwnd.
+           * ssthresh = max(FlightSize / 2, 2*SMSS) (RFC 5681)
+           * cwnd = ssthresh + 3*SMSS (RFC 5681)
            */
 
           if (conn->flags & TCP_INFT)
@@ -664,10 +614,6 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           /* Reset the retransmission timer. */
 
           tcp_update_retrantimer(conn, conn->rto);
-
-          /* Continue waiting */
-
-          return flags;
         }
     }
 #endif
