@@ -500,37 +500,61 @@
 
 #define SENSOR_TYPE_LIGHT_UNCALIBRATED              54
 
+/* Voltage
+ * A sensor of this type returns the measured voltage between two points.
+ * The value is in SI units volt(V).
+ */
+
+#define SENSOR_TYPE_VOLTAGE                         55
+
+/* Current
+ * A sensor of this type returns the measured current flowing through a
+ * path. The value is in SI units ampere(A) and is signed: a negative value
+ * indicates that the current flows in the opposite direction.
+ */
+
+#define SENSOR_TYPE_CURRENT                         56
+
+/* Power
+ * A sensor of this type returns the measured instantaneous active power.
+ * The value is in SI units watt(W). The accumulated energy and the AC
+ * power components (reactive, apparent and power factor) are not covered
+ * by this type.
+ */
+
+#define SENSOR_TYPE_POWER                           57
+
 /* GNSS
  * A sensor of this type returns GNSS data. Include latitude, longitude,
  * altitude, horizontal position accuracy, vertical position accuracy,
  * horizontal dilution of precision, vertical dilution of precision...
  */
 
-#define SENSOR_TYPE_GNSS                            55
+#define SENSOR_TYPE_GNSS                            58
 
 /* Sensor of GNSS satellite
  * A sensor of this type returns the GNSS satellite information.
  */
 
-#define SENSOR_TYPE_GNSS_SATELLITE                  56
+#define SENSOR_TYPE_GNSS_SATELLITE                  59
 
 /* GNSS Measurement */
 
-#define SENSOR_TYPE_GNSS_MEASUREMENT                57
+#define SENSOR_TYPE_GNSS_MEASUREMENT                60
 
 /* GNSS Clock */
 
-#define SENSOR_TYPE_GNSS_CLOCK                      58
+#define SENSOR_TYPE_GNSS_CLOCK                      61
 
 /* GNSS Geofence */
 
-#define SENSOR_TYPE_GNSS_GEOFENCE                   59
+#define SENSOR_TYPE_GNSS_GEOFENCE                   62
 
 /* The total number of sensor
  * please increase it if you added a new sensor type!
  */
 
-#define SENSOR_TYPE_COUNT                           60
+#define SENSOR_TYPE_COUNT                           63
 
 /* The additional sensor open flags */
 
@@ -968,6 +992,24 @@ struct sensor_eng           /* Type: ENG */
   uint64_t timestamp;       /* Unit is microseconds */
   float voltage[4];         /* Voltage unit in mV */
   uint32_t stat;            /* Status. bit3:0 - value 3:0 is valid or not */
+};
+
+struct sensor_voltage       /* Type: Voltage */
+{
+  uint64_t timestamp;       /* Unit is microseconds */
+  float voltage;            /* in SI units V */
+};
+
+struct sensor_current       /* Type: Current */
+{
+  uint64_t timestamp;       /* Unit is microseconds */
+  float current;            /* in SI units A, signed */
+};
+
+struct sensor_power         /* Type: Power */
+{
+  uint64_t timestamp;       /* Unit is microseconds */
+  float power;              /* Instantaneous active power in SI units W */
 };
 
 /* Used to indicate the accuracy of sensor data. The type is consistent
