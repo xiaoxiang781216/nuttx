@@ -29,6 +29,8 @@
 #include <nuttx/rptun/rptun.h>
 #include <nuttx/list.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/virtio/virtio.h>
+#include <nuttx/virtio/virtio-ping.h>
 #include <nuttx/virtio/virtio-serial.h>
 
 #include "sim_internal.h"
@@ -46,7 +48,8 @@
 #define SIM_RPTUN_STATUS_OK          0x02
 #define SIM_RPTUN_STATUS_NEED_RESET  0x04
 
-#define SIM_RPTUN_VIRTIO_NUM         4
+#define SIM_RPTUN_VIRTIO_NUM         5
+
 #define SIM_RPTUN_RSC_NUM            (2 * SIM_RPTUN_VIRTIO_NUM)
 
 /****************************************************************************
@@ -77,6 +80,15 @@ struct aligned_data(8) sim_rptun_rsc_s
   struct vhost_serial_config_s serial0_config;
   struct fw_rsc_carveout       serial0_carveout;
   char                         serial0_shm[SIM_RPTUN_SHMEM_SIZE];
+
+  /* Appended last, so pre-existing offsets do not depend on ping */
+
+  struct fw_rsc_vdev           ping0;
+  struct fw_rsc_vdev_vring     ping0_vring0;
+  struct fw_rsc_vdev_vring     ping0_vring1;
+  struct virtio_ping_config_s  ping0_config;
+  struct fw_rsc_carveout       ping0_carveout;
+  char                         ping0_shm[SIM_RPTUN_SHMEM_SIZE];
 };
 
 struct sim_rptun_shmem_s
@@ -276,6 +288,44 @@ sim_rptun_get_resource(struct rptun_dev_s *dev)
       rsc->serial0_carveout.pa    = FW_RSC_U32_ADDR_ANY;
       rsc->serial0_carveout.len   = sizeof(priv->shmem->rsc.serial0_shm);
       memcpy(rsc->serial0_carveout.name, "vdev3buffer", 12);
+
+      /* Virtio Driver 4, VIRTIO_ID_PING.  Two vrings so either side can
+       * initiate, see include/nuttx/virtio/virtio-ping.h.
+       */
+
+      rsc->offset[8]                  = offsetof(struct sim_rptun_rsc_s,
+                                                 ping0);
+      rsc->ping0.type                 = RSC_VDEV;
+      rsc->ping0.id                   = VIRTIO_ID_PING;
+      rsc->ping0.notifyid             = RSC_NOTIFY_ID_ANY;
+      rsc->ping0.dfeatures            = 0;
+      rsc->ping0.config_len           = sizeof(struct virtio_ping_config_s);
+      rsc->ping0.num_of_vrings        = VIRTIO_PING_VQ_NUM;
+      rsc->ping0.reserved[0]          = VIRTIO_DEV_DRIVER;
+      rsc->ping0.reserved[1]          = 0;
+      rsc->ping0_vring0.align         = 8;
+      rsc->ping0_vring0.num           = 8;
+      rsc->ping0_vring0.notifyid      = RSC_NOTIFY_ID_ANY;
+      rsc->ping0_vring0.da            = 0;
+      rsc->ping0_vring1.align         = 8;
+      rsc->ping0_vring1.num           = 8;
+      rsc->ping0_vring1.notifyid      = RSC_NOTIFY_ID_ANY;
+      rsc->ping0_vring1.da            = 0;
+
+      /* The instance name the ping command takes to pick this device */
+
+      strlcpy(rsc->ping0_config.name, "ping0", VIRTIO_PING_NAMELEN);
+
+      /* Virtio Ping0 share memory buffer */
+
+      rsc->offset[9]                  = offsetof(struct sim_rptun_rsc_s,
+                                                 ping0_carveout);
+      rsc->ping0_carveout.type        = RSC_CARVEOUT;
+      rsc->ping0_carveout.da          = offsetof(struct sim_rptun_shmem_s,
+                                                 rsc.ping0_shm);
+      rsc->ping0_carveout.pa          = FW_RSC_U32_ADDR_ANY;
+      rsc->ping0_carveout.len         = sizeof(priv->shmem->rsc.ping0_shm);
+      memcpy(rsc->ping0_carveout.name, "vdev4buffer", 12);
 
       priv->shmem->base           = (uintptr_t)priv->shmem;
 

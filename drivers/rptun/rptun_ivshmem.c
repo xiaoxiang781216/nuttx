@@ -37,7 +37,9 @@
 #include <nuttx/rptun/rptun.h>
 #include <nuttx/rptun/rptun_ivshmem.h>
 #include <nuttx/virtio/virtio-can.h>
+#include <nuttx/virtio/virtio.h>
 #include <nuttx/virtio/virtio-config.h>
+#include <nuttx/virtio/virtio-ping.h>
 #include <nuttx/virtio/virtio-rpmb.h>
 #include <nuttx/virtio/virtio-spi.h>
 #include <nuttx/virtio/virtio-vsock.h>
@@ -102,6 +104,11 @@
 #else
 #  define RPTUN_IVSHMEM_CAN       0
 #endif
+#ifdef CONFIG_DRIVERS_VHOST_PING
+#  define RPTUN_IVSHMEM_PING      1
+#else
+#  define RPTUN_IVSHMEM_PING      0
+#endif
 
 #define RPTUN_IVSHMEM_VIRTIO_NUM  (RPTUN_IVSHMEM_RNG + \
                                    RPTUN_IVSHMEM_RPMSG + \
@@ -110,7 +117,8 @@
                                    RPTUN_IVSHMEM_I2C + \
                                    RPTUN_IVSHMEM_SPI + \
                                    RPTUN_IVSHMEM_RPMB + \
-                                   RPTUN_IVSHMEM_CAN)
+                                   RPTUN_IVSHMEM_CAN + \
+                                   RPTUN_IVSHMEM_PING)
 
 #define RPTUN_IVSHMEM_RSC_NUM     (RPTUN_IVSHMEM_VIRTIO_NUM + \
                                    RPTUN_IVSHMEM_RNG + \
@@ -170,6 +178,15 @@ struct aligned_data(8) rptun_ivshmem_rsc_s
   struct fw_rsc_vdev_vring     can_vring1;
   struct fw_rsc_vdev_vring     can_vring2;
   struct vhost_can_config_s    can_config;
+#endif
+#if RPTUN_IVSHMEM_PING
+
+  /* Placed after the other vdevs, so their offsets do not depend on ping */
+
+  struct fw_rsc_vdev           ping;
+  struct fw_rsc_vdev_vring     ping_vring0;
+  struct fw_rsc_vdev_vring     ping_vring1;
+  struct virtio_ping_config_s  ping_config;
 #endif
   struct fw_rsc_carveout       carveout;
 };
@@ -279,6 +296,9 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
 #endif
 #if RPTUN_IVSHMEM_CAN
       offsetof(struct rptun_ivshmem_rsc_s, can),
+#endif
+#if RPTUN_IVSHMEM_PING
+      offsetof(struct rptun_ivshmem_rsc_s, ping),
 #endif
       offsetof(struct rptun_ivshmem_rsc_s, carveout),
     },
@@ -546,6 +566,41 @@ static const struct rptun_ivshmem_rsc_s g_rsc_table =
   .can_config =
     {
       .ifname = "vcan0",
+    },
+#endif
+#if RPTUN_IVSHMEM_PING
+  .ping =
+    {
+      .type          = RSC_VDEV,
+      .id            = VIRTIO_ID_PING,
+      .notifyid      = RSC_NOTIFY_ID_ANY,
+      .dfeatures     = 0,
+      .config_len    = sizeof(struct virtio_ping_config_s),
+      .num_of_vrings = VIRTIO_PING_VQ_NUM,
+      .reserved      =
+        {
+          VIRTIO_DEV_DRIVER, 0
+        },
+    },
+  .ping_vring0 =
+    {
+      .align     = 8,
+      .num       = 8,
+      .notifyid  = RSC_NOTIFY_ID_ANY,
+      .da        = FW_RSC_U32_ADDR_ANY,
+    },
+  .ping_vring1 =
+    {
+      .align     = 8,
+      .num       = 8,
+      .notifyid  = RSC_NOTIFY_ID_ANY,
+      .da        = FW_RSC_U32_ADDR_ANY,
+    },
+  .ping_config =
+    {
+      /* The instance name the ping command takes to pick this device */
+
+      .name = "ping0",
     },
 #endif
   .carveout =
