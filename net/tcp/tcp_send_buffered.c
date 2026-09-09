@@ -174,11 +174,17 @@ static void psock_writebuffer_notify(FAR struct tcp_conn_s *conn)
 #endif
 
 static void retransmit_segment(FAR struct tcp_conn_s *conn,
-                               FAR struct tcp_wrbuffer_s *wrb)
+                               FAR struct tcp_wrbuffer_s *wrb,
+                               bool update_nrtx)
 {
-  /* Free any write buffers that have exceed the retry count */
+  /* Free any write buffers that have exceed the retry count.
+   * Only count retransmissions triggered by RTO timeout.
+   * Fast retransmit and SACK-based retransmit should not increment
+   * nrtx since they are proactive recovery mechanisms, not indicators
+   * of persistent connectivity failure.
+   */
 
-  if (TCP_WBNRTX(wrb)++ >= TCP_MAXRTX)
+  if (update_nrtx && TCP_WBNRTX(wrb)++ >= TCP_MAXRTX)
     {
       nwarn("WARNING: Expiring wrb=%p nrtx=%u\n",
             wrb, TCP_WBNRTX(wrb));
@@ -724,7 +730,7 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                         TCP_SEQ_ADD(TCP_WBSEQNO(wrb), TCP_WBPKTLEN(wrb)),
                         TCP_WBPKTLEN(wrb));
                   sq_rem(entry, &conn->unacked_q);
-                  retransmit_segment(conn, (FAR void *)entry);
+                  retransmit_segment(conn, (FAR void *)entry, false);
                   break;
                 }
 
@@ -841,7 +847,7 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
       while ((entry = sq_remlast(&conn->unacked_q)) != NULL)
         {
-          retransmit_segment(conn, (FAR void *)entry);
+          retransmit_segment(conn, (FAR void *)entry, true);
         }
     }
 
@@ -1373,7 +1379,8 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
           max_wrb_size = tcp_max_wrb_size(conn);
           wrb = (FAR struct tcp_wrbuffer_s *)sq_tail(&conn->write_q);
-          if (wrb != NULL && TCP_WBSENT(wrb) == 0 && TCP_WBNRTX(wrb) == 0 &&
+          if (wrb != NULL && TCP_WBSEQNO(wrb) == (unsigned)-1 &&
+              TCP_WBSENT(wrb) == 0 && TCP_WBNRTX(wrb) == 0 &&
               TCP_WBPKTLEN(wrb) < max_wrb_size &&
               (TCP_WBPKTLEN(wrb) % conn->mss) != 0)
             {
