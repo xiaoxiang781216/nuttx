@@ -294,7 +294,8 @@ static FAR sigpendq_t *nxsig_alloc_pendingsignal(void)
  ****************************************************************************/
 
 static FAR sigpendq_t *
-nxsig_find_pendingsignal(FAR struct task_group_s *group, int signo)
+nxsig_find_pendingsignal(FAR struct task_group_s *group, int signo,
+                         FAR struct tcb_s *stcb)
 {
   FAR sigpendq_t *sigpend = NULL;
   irqstate_t flags;
@@ -312,10 +313,15 @@ nxsig_find_pendingsignal(FAR struct task_group_s *group, int signo)
 
   flags = spin_lock_irqsave(&group->tg_lock);
 
-  /* Search the list for a action pending on this signal */
+  /* Search the list for a pending signal of the same number directed to
+   * the same target.  A process-directed pending (tcb == NULL) and a
+   * thread-directed pending (tcb == stcb) are distinct entries and must
+   * not be coalesced.
+   */
 
   for (sigpend = (FAR sigpendq_t *)group->tg_sigpendingq.head;
-       (sigpend && sigpend->info.si_signo != signo);
+       (sigpend && (sigpend->info.si_signo != signo ||
+                    sigpend->tcb != stcb));
        sigpend = sigpend->flink)
     {
     }
@@ -369,7 +375,8 @@ static FAR sigpendq_t *nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
 
   /* Check if the signal is already pending for the group */
 
-  sigpend = nxsig_find_pendingsignal(group, info->si_signo);
+  sigpend = nxsig_find_pendingsignal(group, info->si_signo,
+                                     group_dispatch ? NULL : stcb);
   if (sigpend != NULL)
     {
       /* The signal is already pending... retain only one copy */
