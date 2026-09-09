@@ -346,16 +346,11 @@ static ssize_t lib_bsprintf_args(FAR void *buffer, size_t size,
                   return -ENOMEM;
                 }
 
-#  ifdef va_copy
               va_list copy;
               va_copy(copy, *vaf->va);
               ret = lib_bsprintf_args(buff + next, length - next,
                                       0, vaf->fmt, copy);
               va_end(copy);
-#  else
-              ret = lib_bsprintf_args(buff + next, length - next,
-                                      0, vaf->fmt, vaf->va);
-#  endif
               if (ret < 0)
                 {
                   return ret;

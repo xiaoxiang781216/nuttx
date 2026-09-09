@@ -84,15 +84,11 @@ void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
 {
   if (syslog_is_enabled(priority))
     {
-#ifdef va_copy
       va_list copy;
 
       va_copy(copy, ap);
       nx_vsyslog(priority, fmt, &copy);
       va_end(copy);
-#else
-      nx_vsyslog(priority, fmt, &ap);
-#endif
     }
 }
 

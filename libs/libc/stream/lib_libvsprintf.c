@@ -1213,15 +1213,11 @@ str_lpad:
                   case 'V':
                     {
                       FAR struct va_format *vaf = (FAR void *)(uintptr_t)x;
-#  ifdef va_copy
                       va_list copy;
 
                       va_copy(copy, *vaf->va);
                       lib_vsprintf(stream, vaf->fmt, copy);
                       va_end(copy);
-#  else
-                      lib_vsprintf(stream, vaf->fmt, *vaf->va);
-#  endif
                       continue;
                     }
 

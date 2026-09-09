@@ -67,17 +67,13 @@ int nx_vasprintf(FAR char **ptr, FAR const IPTR char *fmt, va_list ap)
    * fail. This is a known issue with x86_64.
    */
 
-#ifdef va_copy
   va_list ap2;
-#endif
   FAR char *buf;
   int nbytes;
 
   DEBUGASSERT(ptr != NULL && fmt != NULL);
 
-#ifdef va_copy
   va_copy(ap2, ap);
-#endif
 
   /* First, use a nullstream to get the size of the buffer.  The number
    * of bytes returned may or may not include the null terminator.
@@ -93,9 +89,7 @@ int nx_vasprintf(FAR char **ptr, FAR const IPTR char *fmt, va_list ap)
   buf = kmm_malloc(nulloutstream.nput + 1);
   if (buf == NULL)
     {
-#ifdef va_copy
       va_end(ap2);
-#endif
       return ERROR;
     }
 
@@ -108,12 +102,8 @@ int nx_vasprintf(FAR char **ptr, FAR const IPTR char *fmt, va_list ap)
 
   /* Then let lib_vsprintf do it's real thing */
 
-#ifdef va_copy
   nbytes = lib_vsprintf(&memoutstream.common, fmt, ap2);
   va_end(ap2);
-#else
-  nbytes = lib_vsprintf(&memoutstream.common, fmt, ap);
-#endif
 
   /* Return a pointer to the string to the caller.  NOTE: the memstream put()
    * method has already added the NUL terminator to the end of the string
@@ -163,17 +153,13 @@ int vasprintf(FAR char **ptr, FAR const IPTR char *fmt, va_list ap)
    * fail. This is a known issue with x86_64.
    */
 
-#ifdef va_copy
   va_list ap2;
-#endif
   FAR char *buf;
   int nbytes;
 
   DEBUGASSERT(ptr && fmt);
 
-#ifdef va_copy
   va_copy(ap2, ap);
-#endif
 
   /* First, use a nullstream to get the size of the buffer.  The number
    * of bytes returned may or may not include the null terminator.
@@ -189,9 +175,7 @@ int vasprintf(FAR char **ptr, FAR const IPTR char *fmt, va_list ap)
   buf = lib_malloc(nulloutstream.nput + 1);
   if (!buf)
     {
-#ifdef va_copy
       va_end(ap2);
-#endif
       return ERROR;
     }
 
@@ -204,12 +188,8 @@ int vasprintf(FAR char **ptr, FAR const IPTR char *fmt, va_list ap)
 
   /* Then let lib_vsprintf do it's real thing */
 
-#ifdef va_copy
   nbytes = lib_vsprintf(&memoutstream.common, fmt, ap2);
   va_end(ap2);
-#else
-  nbytes = lib_vsprintf(&memoutstream.common, fmt, ap);
-#endif
 
   /* Return a pointer to the string to the caller.  NOTE: the memstream put()
    * method has already added the NUL terminator to the end of the string
