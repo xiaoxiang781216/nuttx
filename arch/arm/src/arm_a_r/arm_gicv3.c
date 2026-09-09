@@ -26,8 +26,10 @@
 #include <debug.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/pci/pci.h>
 #include <arch/barriers.h>
 #include <arch/irq.h>
 #include <arch/chip/chip.h>
@@ -764,6 +766,47 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
 
 int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
 {
+#ifdef CONFIG_ARM_GICV3_LEGACY_IRQ
+  uint8_t slot;
+  uint8_t tmp;
+  uint16_t domain;
+  const char *ptr = CONFIG_ARM_GICV3_LEGACY_IRQ;
+  int i = 0;
+
+  /* Bare-metal has no firmware to program PCI_INTERRUPT_LINE, so the line
+   * argument is unused; derive the IRQ from the interrupt pin and the INTx
+   * swizzle instead.  A pin of 0 means the device does not use INTx, and
+   * pin - 1 would underflow.
+   */
+
+  UNUSED(line);
+
+  if (pin < 1 || pin > 4)
+    {
+      return -ENOTSUP;
+    }
+
+  slot = PCI_SLOT(devfn);
+  tmp = (pin - 1 + slot) % 4;
+  domain = PCI_DOMAIN(devfn);
+
+  while (i != domain && ptr[0])
+    {
+      ptr++;
+      if (':' == ptr[0])
+        {
+          ptr++;
+          i++;
+        }
+    }
+
+  if (ptr[0])
+    {
+      i = strtol(ptr, NULL, 0);
+      return i >= 0 ? i + tmp : -ENOTSUP;
+    }
+#endif
+
   return -ENOTSUP;
 }
 

@@ -1683,6 +1683,20 @@ config ARM_GICV2_LEGACY_IRQ
 		Default value "35" is for QEMU arm/virt. Use -1 if a domain
 		doesn't need legacy IRQ.
 
+config ARM_GICV3_LEGACY_IRQ
+	string "Legacy IRQ bases list for PCI domains"
+	default "35"
+	depends on PCI && ARM_GIC_VERSION = 3
+	---help---
+		Colon separated list of legacy IRQ bases for PCI domains, the
+		GICv3 counterpart of ARM_GICV2_LEGACY_IRQ. Each base is the GIC
+		INTID for that domain's INTA; INTB/INTC/INTD follow at +1/+2/+3
+		after the usual INTx swizzle. The INTID is GIC_SPI_INT_BASE (32)
+		plus the SPI offset the PCIe host bridge's device-tree
+		interrupt-map assigns to INTA. QEMU's "virt" machine wires
+		INTA..INTD to SPI 3..6, hence the default "35". Use -1 if a
+		domain doesn't need legacy IRQ.
+
 config ARM_HAVE_GTM
 	bool
 	default n
