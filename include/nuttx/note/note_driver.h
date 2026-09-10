@@ -252,7 +252,7 @@
             { \
               static_assert(GET_ARG_COUNT(__VA_ARGS__) <= NOTE_META_MAX_ARGS, \
                             "too many printf args for note meta"); \
-              locate_data("note_format") used_data \
+              locate_data("note_format." STRINGIFY(__COUNTER__)) used_data \
               static const char _fmt[] = fmt; \
               note_driver_printf_ip(driver, NOTE_META_PACK(tag, level, \
                                     PRINTF_TAG(__VA_ARGS__)), up_getpc(), \

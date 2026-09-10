@@ -498,7 +498,7 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
             { \
               static_assert(GET_ARG_COUNT(__VA_ARGS__) <= NOTE_META_MAX_ARGS, \
                             "too many printf args for note meta"); \
-              locate_data("note_format") used_data \
+              locate_data("note_format." STRINGIFY(__COUNTER__)) used_data \
               static const char fmt[] = f; \
               note_printf_ip(NOTE_META_PACK(t,l,PRINTF_TAG(__VA_ARGS__)), \
                              i,fmt,##__VA_ARGS__); \
