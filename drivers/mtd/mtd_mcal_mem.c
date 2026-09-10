@@ -981,7 +981,7 @@ bool mtd_mcal_mem_geo_from_area(uint32_t area_id, size_t nsaa,
           base = info.PhysicalStartAddress;
         }
 
-      total  += info.MaxOffset;
+      total  += (info.MaxOffset + 1);
       logical = info.LogicalStartAddress + info.MaxOffset;
       count++;
     }
