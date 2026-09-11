@@ -48,6 +48,9 @@
 
 #endif /* CONFIG_ARM_GIC_VERSION */
 
+#define CONFIG_SHMEM_BASEADDR      0x45000000
+#define CONFIG_SHMEM_SIZE          0x100000
+
 #define MPID_TO_CLUSTER_ID(mpid)  ((mpid) & ~0xff)
 
 /****************************************************************************
