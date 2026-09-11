@@ -27,92 +27,13 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <sys/stat.h>
 
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/lib/lib.h>
 #include <nuttx/mtd/mtd.h>
-#include <nuttx/mutex.h>
 
 #include "driver/driver.h"
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static DEFINE_PER_CPU_BSS_BMP(uint32_t, g_devno);
-static DEFINE_PER_CPU_BMP(mutex_t, g_devno_lock) = NXMUTEX_INITIALIZER;
-#define g_devno this_cpu_var_bmp(g_devno)
-#define g_devno_lock this_cpu_var_bmp(g_devno_lock)
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: unique_blkdev
- *
- * Description:
- *   Create a unique temporary device name in the /dev/ directory of the
- *   pseudo-file system.  We cannot use mktemp for this because it will
- *   attempt to open() the file.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   The allocated path to the device.  This must be released by the caller
- *   to prevent memory links.  NULL will be returned only the case where
- *   we fail to allocate memory.
- *
- ****************************************************************************/
-
-static FAR int unique_blkdev(FAR char *devbuf, size_t len)
-{
-  struct stat statbuf;
-  uint32_t devno;
-  int ret;
-
-  /* Loop until we get a unique device name */
-
-  for (; ; )
-    {
-      /* Get the mutex protecting the path number */
-
-      ret = nxmutex_lock(&g_devno_lock);
-      if (ret < 0)
-        {
-          ferr("ERROR: nxmutex_lock failed: %d\n", ret);
-          return ret;
-        }
-
-      /* Get the next device number and release the semaphore */
-
-      devno = ++g_devno;
-      nxmutex_unlock(&g_devno_lock);
-
-      /* Construct the full device number */
-
-      devno &= 0xffffff;
-      snprintf(devbuf, len, "/dev/tmpb%06lx", (unsigned long)devno);
-
-      /* Make sure that file name is not in use */
-
-      ret = nx_stat(devbuf, &statbuf, 1);
-      if (ret < 0)
-        {
-          DEBUGASSERT(ret == -ENOENT);
-          return OK;
-        }
-
-      /* It is in use, try again */
-    }
-}
 
 /****************************************************************************
  * Public Functions
@@ -148,7 +69,7 @@ int mtd_proxy(FAR const char *mtddev, int mountflags,
 
   /* Create a unique temporary file name for the block device */
 
-  ret = unique_blkdev(blkdev, sizeof(blkdev));
+  ret = unique_devname('b', blkdev, sizeof(blkdev));
   if (ret != OK)
     {
       ferr("ERROR: Failed to create temporary device name\n");

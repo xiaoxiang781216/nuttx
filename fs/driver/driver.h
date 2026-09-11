@@ -80,6 +80,28 @@ int register_partition_with_inode(FAR const char *partition,
 #endif
 
 /****************************************************************************
+ * Name: unique_devname
+ *
+ * Description:
+ *   Build a unique temporary device name "/dev/tmp<prefix><6 hex>" for the
+ *   throwaway intermediate device that block_proxy() (prefix 'c') and
+ *   mtd_proxy() (prefix 'b') chain through before unlinking it.
+ *
+ * Input Parameters:
+ *   prefix - Device-class tag: 'b' block, 'c' character.
+ *   devbuf - Caller-provided buffer receiving the name.
+ *   len    - Size of devbuf in bytes.
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_BLOCK_DRIVER
+int unique_devname(char prefix, FAR char *devbuf, size_t len);
+#endif
+
+/****************************************************************************
  * Name: block_proxy
  *
  * Description:
