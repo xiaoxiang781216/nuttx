@@ -244,6 +244,10 @@ static int vhost_crypto_create_session_sym(
                 thash = CRYPTO_AES_256_GMAC;
               }
           }
+        else if (txform == CRYPTO_CHACHA20_POLY1305)
+          {
+            thash = CRYPTO_CHACHA20_POLY1305_MAC;
+          }
 
         break;
 
@@ -714,6 +718,7 @@ static int vhost_crypto_process_mac(
 
   crp->crp_sid = sess->tid;
   crp->crp_desc = crda;
+  crp->crp_iter = data->op_flf.mac.hdr.iterations;
 
   /* Get src data buffer if present */
 
