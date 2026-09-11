@@ -793,6 +793,20 @@ config USBHOST_UVC_ISO_PIPELINE_DEPTH
 		buffer whose size depends on the negotiated max packet size.
 		Default value of 2 is sufficient for most USB cameras.
 
+config USBHOST_UVC_PACKETS_PER_SLOT
+	int "UVC ISO packets per slot"
+	default 32
+	range 8 256
+	---help---
+		How many ISO packets one transfer slot carries. A slot is not a
+		frame: frame boundaries come from the UVC payload header, so a
+		frame spans as many slots as it needs.
+
+		Each slot costs packets_per_slot * wMaxPacketSize of heap, times
+		USBHOST_UVC_ISO_PIPELINE_DEPTH. Must be at least the number of
+		packets the host controller driver delivers per callback, or
+		packets are dropped whenever the pending queue runs shallow.
+
 config USBHOST_UVC_THREAD_PRIORITY
 	int "UVC capture thread priority"
 	default 100

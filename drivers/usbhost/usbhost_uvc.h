@@ -57,6 +57,7 @@
 /* ISO pipeline depth (number of concurrent transfers) */
 
 #define UVC_ISO_PIPELINE_DEPTH  CONFIG_USBHOST_UVC_ISO_PIPELINE_DEPTH
+#define UVC_PACKETS_PER_SLOT    CONFIG_USBHOST_UVC_PACKETS_PER_SLOT
 
 /****************************************************************************
  * Name: struct uvc_frame_info_s

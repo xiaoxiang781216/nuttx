@@ -1685,8 +1685,7 @@ static int uvc_iso_pipe_init(FAR struct uvc_dev_s *dev)
     }
 
   pipe->num_slots = UVC_ISO_PIPELINE_DEPTH;
-  pipe->packets_per_xfer =
-    (dev->buffer_size + pipe->max_packet - 1) / pipe->max_packet;
+  pipe->packets_per_xfer = UVC_PACKETS_PER_SLOT;
   xfer_buf_size = pipe->packets_per_xfer * pipe->max_packet;
 
   for (i = 0; i < pipe->num_slots; i++)
