@@ -1195,27 +1195,24 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
           netdev_iob_release(&priv->dev);
           ret = netdev_iob_prepare(&priv->dev, false, 0);
           priv->dev.d_buf = NULL;
-          if (ret < 0)
+          if (ret >= 0)
             {
-              netdev_unlock(&priv->dev);
-              break;
+              ret = iob_trycopyin(priv->dev.d_iob,
+                                  (FAR const uint8_t *)buffer,
+                                  buflen, -llhdrlen, false);
+              if (ret >= 0)
+                {
+                  priv->dev.d_len = buflen;
+
+                  tun_net_receive(priv);
+                  netdev_unlock(&priv->dev);
+
+                  ret = buflen;
+                  break;
+                }
             }
 
-          ret = iob_trycopyin(priv->dev.d_iob, (FAR const uint8_t *)buffer,
-                              buflen, -llhdrlen, false);
-          if (ret < 0)
-            {
-              netdev_unlock(&priv->dev);
-              break;
-            }
-
-          priv->dev.d_len = buflen;
-
-          tun_net_receive(priv);
           netdev_unlock(&priv->dev);
-
-          ret = buflen;
-          break;
         }
 
       /* Wait if there are no free space to write */
@@ -1229,6 +1226,32 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
       flags = spin_lock_irqsave(&priv->spinlock);
       priv->write_wait = true;
       spin_unlock_irqrestore(&priv->spinlock, flags);
+
+      /* A negative ret at this point means the wait is for an IOB rather
+       * than for the write buffer: every other outcome above either left the
+       * loop or left ret at zero.  Only the IOB pool can end that wait, and
+       * only tun_poll() arms that notification, so a blocking write would
+       * otherwise sleep with nothing to wake it.  Arm it here, after
+       * publishing write_wait so that a callback firing in between still
+       * finds the flag set and posts the semaphore.  When no notification
+       * can be armed there is no wakeup source at all, so report a retryable
+       * error rather than sleep forever.
+       */
+
+      if (ret < 0)
+        {
+#ifdef CONFIG_IOB_NOTIFIER
+          if (tun_iob_notify_setup(priv))
+#endif
+            {
+              flags = spin_lock_irqsave(&priv->spinlock);
+              priv->write_wait = false;
+              spin_unlock_irqrestore(&priv->spinlock, flags);
+
+              ret = -EAGAIN;
+              break;
+            }
+        }
 
       nxmutex_unlock(&priv->lock);
       nxsem_wait(&priv->write_wait_sem);
