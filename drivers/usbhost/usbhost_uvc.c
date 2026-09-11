@@ -1315,7 +1315,7 @@ static bool uvc_deliver_frame(FAR struct uvc_dev_s *dev,
 {
   FAR struct uvc_priv_s *priv = dev->device;
 
-  if (data_size == 0 || data_size > dev->buffer_size)
+  if (data_size == 0 || data_size > dev->iso_frame_dest_size)
     {
       return false;
     }
@@ -1330,7 +1330,7 @@ static bool uvc_deliver_frame(FAR struct uvc_dev_s *dev,
             priv->format_list.formats[dev->current_format_idx].
               pixel_format_fourcc))
         {
-          uint8_t   *data = dev->buffer_addr;
+          uint8_t   *data = dev->iso_frame_dest;
           size_t    sz    = data_size;
 
           /* Must start with JPEG SOI (FF D8) */
@@ -1392,13 +1392,13 @@ static void uvc_iso_complete_frame(FAR struct uvc_dev_s *dev)
 
   if (is_compressed ||
       dev->iso_frame_offset >=
-        (dev->iso_frame_buffer_size * UVC_FRAME_COMPLETE_THRESHOLD / 100))
+        (dev->iso_frame_dest_size * UVC_FRAME_COMPLETE_THRESHOLD / 100))
     {
       /* For compressed formats, validate JPEG SOI marker */
 
       if (is_compressed && dev->iso_frame_offset >= 2)
         {
-          FAR uint8_t *buf = dev->iso_frame_buffer;
+          FAR uint8_t *buf = dev->iso_frame_dest;
           if (buf[0] != 0xff || buf[1] != 0xd8)
             {
               return;
@@ -1413,46 +1413,54 @@ static void uvc_iso_complete_frame(FAR struct uvc_dev_s *dev)
  * Name: uvc_iso_deliver_completed_frame
  *
  * Description:
- *   Copy a completed ISO frame from the assembly buffer to the
- *   user buffer and deliver it via the capture callback.
- *   If no user buffer is set, notify drop-frame mode instead.
+ *   Deliver the assembled frame, or report the drop when no buffer was
+ *   latched. The drop report is what asks the upper half for the next
+ *   buffer, so it must not be skipped.
  *
  ****************************************************************************/
 
 static void uvc_iso_deliver_completed_frame(FAR struct uvc_dev_s *dev)
 {
   struct timeval ts;
-  FAR uint8_t    *buf_addr;
-  size_t          buf_size;
-  irqstate_t      flags;
-
-  if (dev->iso_frame_complete_size == 0)
-    {
-      return;
-    }
 
   gettimeofday(&ts, NULL);
 
-  flags = spin_lock_irqsave(&dev->buffer_lock);
-  buf_addr = dev->buffer_addr;
-  buf_size = dev->buffer_size;
-  spin_unlock_irqrestore(&dev->buffer_lock, flags);
-
-  if (buf_addr && dev->iso_frame_complete_size <= buf_size)
-    {
-      memcpy(buf_addr, dev->iso_frame_buffer,
-             dev->iso_frame_complete_size);
-      uvc_deliver_frame(dev, dev->iso_frame_complete_size, &ts);
-    }
-  else if (!buf_addr)
+  if (dev->iso_frame_dest == NULL)
     {
       if (dev->capture_callback)
         {
           dev->capture_callback(0, 0, &ts, dev->capture_arg);
         }
     }
+  else if (dev->iso_frame_complete_size != 0)
+    {
+      uvc_deliver_frame(dev, dev->iso_frame_complete_size, &ts);
+    }
 
   dev->iso_frame_complete_size = 0;
+}
+
+/****************************************************************************
+ * Name: uvc_iso_frame_begin
+ *
+ * Description:
+ *   Latch the buffer the next frame assembles into, binding one frame to
+ *   one buffer. A NULL latch means none was free.
+ *
+ ****************************************************************************/
+
+static void uvc_iso_frame_begin(FAR struct uvc_dev_s *dev)
+{
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&dev->buffer_lock);
+  dev->iso_frame_dest      = dev->buffer_addr;
+  dev->iso_frame_dest_size = dev->buffer_size;
+  spin_unlock_irqrestore(&dev->buffer_lock, flags);
+
+  dev->iso_frame_offset  = 0;
+  dev->iso_frame_started = true;
+  dev->iso_frame_error   = false;
 }
 
 /****************************************************************************
@@ -1509,14 +1517,11 @@ static void uvc_iso_decode_packet(FAR struct uvc_dev_s *dev,
     {
       dev->iso_prev_fid = fid;
       dev->iso_have_prev_fid = true;
-      dev->iso_frame_offset = 0;
-      dev->iso_frame_started = true;
-      dev->iso_frame_error = false;
+      uvc_iso_frame_begin(dev);
     }
   else if (fid != dev->iso_prev_fid)
     {
-      if (dev->iso_frame_started && dev->iso_frame_offset > 0 &&
-          !dev->iso_frame_error)
+      if (dev->iso_frame_started && dev->iso_frame_offset > 0)
         {
           /* Complete the previous frame on FID flip.
            * For uncompressed: deliver partial frame (few missing lines).
@@ -1525,15 +1530,16 @@ static void uvc_iso_decode_packet(FAR struct uvc_dev_s *dev,
            * This matches Linux UVC behavior (uvc_video_decode_start).
            */
 
-          uvc_iso_complete_frame(dev);
+          if (!dev->iso_frame_error && dev->iso_frame_dest != NULL)
+            {
+              uvc_iso_complete_frame(dev);
+            }
+
+          uvc_iso_deliver_completed_frame(dev);
         }
 
-      uvc_iso_deliver_completed_frame(dev);
-
       dev->iso_prev_fid = fid;
-      dev->iso_frame_offset = 0;
-      dev->iso_frame_started = true;
-      dev->iso_frame_error = false;
+      uvc_iso_frame_begin(dev);
     }
 
   if (!dev->iso_frame_started)
@@ -1541,27 +1547,32 @@ static void uvc_iso_decode_packet(FAR struct uvc_dev_s *dev,
       return;
     }
 
-  /* Copy payload data to frame buffer */
-
   data_len = actual_len - header_len;
-  if (data_len > 0 &&
-      dev->iso_frame_offset + data_len <= dev->iso_frame_buffer_size)
+  if (data_len > 0)
     {
-      memcpy(dev->iso_frame_buffer + dev->iso_frame_offset,
-             pkt_buf + header_len, data_len);
-      dev->iso_frame_offset += data_len;
-    }
-  else if (data_len > 0)
-    {
-      dev->iso_frame_error = true;
-      dev->iso_frame_started = false;
+      if (dev->iso_frame_dest == NULL)
+        {
+          dev->iso_frame_offset += data_len;
+        }
+      else if (dev->iso_frame_offset + data_len <=
+               dev->iso_frame_dest_size)
+        {
+          memcpy(dev->iso_frame_dest + dev->iso_frame_offset,
+                 pkt_buf + header_len, data_len);
+          dev->iso_frame_offset += data_len;
+        }
+      else
+        {
+          dev->iso_frame_error = true;
+          dev->iso_frame_started = false;
+        }
     }
 
   /* EOF handling */
 
   if (eof && dev->iso_frame_started && dev->iso_frame_offset > 0)
     {
-      if (!dev->iso_frame_error)
+      if (!dev->iso_frame_error && dev->iso_frame_dest != NULL)
         {
           uvc_iso_complete_frame(dev);
         }
@@ -1768,6 +1779,8 @@ static int uvc_capture_thread(int argc, FAR char *argv[])
 
   /* Initialize frame assembly state */
 
+  dev->iso_frame_dest = NULL;
+  dev->iso_frame_dest_size = 0;
   dev->iso_frame_offset = 0;
   dev->iso_frame_started = false;
   dev->iso_have_prev_fid = false;
@@ -1786,21 +1799,8 @@ static int uvc_capture_thread(int argc, FAR char *argv[])
       return ret;
     }
 
-  /* Allocate frame assembly buffer */
-
-  dev->iso_frame_buffer_size = dev->buffer_size;
-  dev->iso_frame_buffer = kmm_malloc(dev->iso_frame_buffer_size);
-  if (!dev->iso_frame_buffer)
-    {
-      uerr("UVC: frame buf alloc failed\n");
-      uvc_iso_pipe_destroy(dev);
-      atomic_set(&dev->thread_running, false);
-      nxsem_post(&dev->capture_exit_sem);
-      return -ENOMEM;
-    }
-
-  uinfo("UVC: pipe ready slots=%d frame_buf=%zu\n",
-        pipe->num_slots, dev->iso_frame_buffer_size);
+  uinfo("UVC: pipe ready slots=%d pkts=%u maxpkt=%u\n",
+        pipe->num_slots, pipe->packets_per_xfer, pipe->max_packet);
 
   /* Submit all slots */
 
@@ -1944,9 +1944,8 @@ cleanup:
 
   uvc_iso_pipe_destroy(dev);
 
-  kmm_free(dev->iso_frame_buffer);
-  dev->iso_frame_buffer = NULL;
-  dev->iso_frame_buffer_size = 0;
+  dev->iso_frame_dest = NULL;
+  dev->iso_frame_dest_size = 0;
 
   nxsem_post(&dev->capture_exit_sem);
   return OK;

@@ -232,8 +232,8 @@ struct uvc_dev_s
 
   struct uvc_iso_pipe_s iso_pipe;
 
-  FAR uint8_t *iso_frame_buffer;
-  size_t iso_frame_buffer_size;
+  FAR uint8_t *iso_frame_dest;
+  size_t iso_frame_dest_size;
   size_t iso_frame_offset;
   bool iso_frame_started;
   bool iso_have_prev_fid;
