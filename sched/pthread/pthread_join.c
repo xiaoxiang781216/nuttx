@@ -284,14 +284,11 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
 #ifdef CONFIG_DEBUG_FEATURES
   if (is_thread_deadlook_for_join(rtcb, tcb))
     {
-      sq_rem(&rtcb->join_entry, &tcb->join_queue);
-      nxsched_put_tcb(tcb);
       ret = EDEADLK;
-      goto errout;
+      goto errout_remove;
     }
 #endif
 
-  nxsched_put_tcb(tcb);
   nxrmutex_unlock(&group->tg_mutex);
 
   /* Take the thread's thread exit semaphore.  We will sleep here
@@ -310,6 +307,18 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
     {
       *pexit_value = rtcb->join_val;
     }
+
+#ifdef CONFIG_DEBUG_FEATURES
+errout_remove:
+#endif
+  /* Normally unlinked by pthread_completejoin().  Remove the entry here if
+   * that has not happened yet, so that it is not dereferenced later as a
+   * live TCB.  sq_rem() does nothing when the entry is no longer queued.
+   */
+
+  sq_rem(&rtcb->join_entry, &tcb->join_queue);
+
+  nxsched_put_tcb(tcb);
 
 errout:
   nxrmutex_unlock(&group->tg_mutex);
