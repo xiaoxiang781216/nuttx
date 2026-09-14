@@ -235,8 +235,15 @@ int nxsched_cpu_call_handler(int irq, FAR void *context,
                      &g_cpu_call_queue[cookie->cpu]);
           up_send_cpu_call(1 << cookie->cpu);
 #else
+          /* Release g_cpu_call_lock (formerly g_smp_call_lock) before waking
+           * the caller.  Reacquire it before the next CPU call to preserve
+           * the g_schedlock -> g_cpu_call_lock lock order.
+           */
+
+          spin_unlock_irqrestore(&g_cpu_call_lock, flags);
           nxsem_post(&cookie->sem);
           UP_SEV();
+          flags = spin_lock_irqsave(&g_cpu_call_lock);
 #endif
         }
     }
