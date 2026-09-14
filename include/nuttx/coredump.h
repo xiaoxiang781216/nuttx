@@ -89,6 +89,18 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
 int coredump_remove_memory_region(FAR const void *ptr, size_t size);
 
 /****************************************************************************
+ * Name: coredump_get_info
+ *
+ * Description:
+ *   Read a stored coredump's metadata from the info note.
+ *
+ ****************************************************************************/
+
+int coredump_get_info(FAR struct lib_sistream_s *stream, off_t base,
+                      FAR struct coredump_info_s *info,
+                      FAR bool *compressed);
+
+/****************************************************************************
  * Name: coredump
  *
  * Description:

@@ -1168,269 +1168,7 @@ static int coredump_initialize_memory_region(void)
   return OK;
 }
 
-/****************************************************************************
- * Name: coredump_add_memory_region
- *
- * Description:
- *   Use coredump to dump the memory of the specified area.
- *
- ****************************************************************************/
-
-int coredump_add_memory_region(FAR const void *ptr, size_t size,
-                               uint32_t flags)
-{
-  FAR struct memory_region_s *region;
-  size_t count = 1; /* 1 for end flag */
-  int ret;
-
-  ret = coredump_initialize_memory_region();
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  nxmutex_lock(&g_coredump.regions_lock);
-
-  if (g_coredump.regions != NULL)
-    {
-      region = (FAR struct memory_region_s *)g_coredump.regions;
-
-      while (region->start < region->end)
-        {
-          if ((uintptr_t)ptr >= region->start &&
-              (uintptr_t)ptr + size < region->end)
-            {
-              /* Already watched */
-
-              goto out;
-            }
-          else if ((uintptr_t)ptr < region->start &&
-                   (uintptr_t)ptr + size >= region->end)
-            {
-              /* start out of region, end out of region */
-
-              region->start = (uintptr_t)ptr;
-              region->end = (uintptr_t)ptr + size;
-              goto out;
-            }
-          else if ((uintptr_t)ptr < region->start &&
-                   (uintptr_t)ptr + size >= region->start)
-            {
-              /* start out of region, end in region */
-
-              region->start = (uintptr_t)ptr;
-              goto out;
-            }
-          else if ((uintptr_t)ptr < region->end &&
-                   (uintptr_t)ptr + size >= region->end)
-            {
-              /* start in region, end out of region */
-
-              region->end = (uintptr_t)ptr + size;
-              goto out;
-            }
-
-          count++;
-          region++;
-        }
-
-      /* Need a new region */
-    }
-
-  region = lib_malloc(sizeof(struct memory_region_s) * (count + 1));
-  if (region == NULL)
-    {
-      ret = -ENOMEM;
-      goto out;
-    }
-
-  if (g_coredump.regions != NULL)
-    {
-      memcpy(region, g_coredump.regions,
-             sizeof(struct memory_region_s) * count);
-    }
-
-  if (g_coredump.regions != NULL
-#ifdef CONFIG_BOARD_MEMORY_RANGE
-    && g_coredump.regions != g_memory_region
-#endif
-    )
-    {
-      lib_free((FAR void *)g_coredump.regions);
-    }
-
-  region[count - 1].start = (uintptr_t)ptr;
-  region[count - 1].end = (uintptr_t)ptr + size;
-  region[count - 1].flags = flags;
-  region[count].start = 0;
-  region[count].end = 0;
-  region[count].flags = 0;
-
-  g_coredump.regions = region;
-
-out:
-  nxmutex_unlock(&g_coredump.regions_lock);
-  return ret;
-}
-
-/****************************************************************************
- * Name: coredump_remove_memory_region
- *
- * Description:
- *   Remove a previously registered memory region from the coredump list.
- *
- ****************************************************************************/
-
-int coredump_remove_memory_region(FAR const void *ptr, size_t size)
-{
-  FAR struct memory_region_s *region;
-  size_t i;
-
-  nxmutex_lock(&g_coredump.regions_lock);
-
-  if (g_coredump.regions == NULL)
-    {
-      nxmutex_unlock(&g_coredump.regions_lock);
-      return -ENOENT;
-    }
-
-  region = (FAR struct memory_region_s *)g_coredump.regions;
-
-  for (i = 0; region[i].start < region[i].end; i++)
-    {
-      if (region[i].start == (uintptr_t)ptr &&
-          region[i].end == (uintptr_t)ptr + size)
-        {
-          /* Copy each subsequent entry forward, including terminator */
-
-          do
-            {
-              region[i] = region[i + 1];
-            }
-          while (region[i++].start != 0);
-
-          nxmutex_unlock(&g_coredump.regions_lock);
-          return 0;
-        }
-    }
-
-  nxmutex_unlock(&g_coredump.regions_lock);
-  return -ENOENT;
-}
-
 #if defined(CONFIG_FS_PROCFS_REGISTER) && defined(CONFIG_BOARD_COREDUMP_DEVPATH)
-/****************************************************************************
- * Name: coredump_get_info
- *
- * Description:
- *   Read a stored coredump's metadata (size/time/uname) from the info
- *   note.  base points at the payload, right after the plaintext head.
- *
- ****************************************************************************/
-
-static int coredump_get_info(FAR struct lib_sistream_s *stream,
-                             off_t base,
-                             FAR struct coredump_info_s *info,
-                             FAR bool *compressed)
-{
-#ifdef CONFIG_LIBC_LZF
-  struct lib_lzfsistream_s lzfstream;
-#endif
-  char name[COREDUMP_INFONAME_SIZE];
-  char magic[2];
-  Elf_Ehdr ehdr;
-  Elf_Phdr phdr;
-  Elf_Nhdr nhdr;
-  int ret;
-
-  lib_stream_seek(stream, base, SEEK_SET);
-  ret = lib_stream_gets(stream, magic, sizeof(magic));
-  if (ret != sizeof(magic))
-    {
-      return ret < 0 ? ret : -EIO;
-    }
-
-  lib_stream_seek(stream, base, SEEK_SET);
-
-  *compressed = false;
-  if (magic[0] == 'Z' && magic[1] == 'V')
-    {
-      *compressed = true;
-#ifdef CONFIG_LIBC_LZF
-      base = 0;
-      lib_lzfsistream(&lzfstream, stream);
-      stream = (FAR struct lib_sistream_s *)&lzfstream;
-#else
-      return -ENOTSUP;
-#endif
-    }
-
-  ret = lib_stream_gets(stream, &ehdr, sizeof(ehdr));
-  if (ret != sizeof(ehdr))
-    {
-      return ret < 0 ? ret : -EIO;
-    }
-
-  if (memcmp(ehdr.e_ident, ELFMAG, EI_MAGIC_SIZE) != 0)
-    {
-      return -EINVAL;
-    }
-
-  /* The last program header contains the info note. */
-
-  ret = lib_stream_seek(stream, base + ehdr.e_phoff +
-                        ehdr.e_phentsize * (ehdr.e_phnum - 1),
-                        SEEK_SET);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  ret = lib_stream_gets(stream, &phdr, sizeof(phdr));
-  if (ret != sizeof(phdr))
-    {
-      return ret < 0 ? ret : -EIO;
-    }
-
-  ret = lib_stream_seek(stream, base + phdr.p_offset, SEEK_SET);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  ret = lib_stream_gets(stream, &nhdr, sizeof(nhdr));
-  if (ret != sizeof(nhdr))
-    {
-      return ret < 0 ? ret : -EIO;
-    }
-
-  if (nhdr.n_type != COREDUMP_MAGIC ||
-      nhdr.n_namesz != COREDUMP_INFONAME_SIZE ||
-      nhdr.n_descsz != sizeof(struct coredump_info_s))
-    {
-      return -EINVAL;
-    }
-
-  ret = lib_stream_gets(stream, name, nhdr.n_namesz);
-  if (ret != nhdr.n_namesz)
-    {
-      return ret < 0 ? ret : -EIO;
-    }
-
-  if (strncmp(name, "NuttX", 6) != 0)
-    {
-      return -EINVAL;
-    }
-
-  ret = lib_stream_gets(stream, info, sizeof(*info));
-  if (ret != sizeof(*info))
-    {
-      return ret < 0 ? ret : -EIO;
-    }
-
-  return OK;
-}
-
 /****************************************************************************
  * Name: coredump_procfs_read
  *
@@ -1760,6 +1498,156 @@ static void coredump_boot_scan(void)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: coredump_add_memory_region
+ *
+ * Description:
+ *   Use coredump to dump the memory of the specified area.
+ *
+ ****************************************************************************/
+
+int coredump_add_memory_region(FAR const void *ptr, size_t size,
+                               uint32_t flags)
+{
+  FAR struct memory_region_s *region;
+  size_t count = 1; /* 1 for end flag */
+  int ret;
+
+  ret = coredump_initialize_memory_region();
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  nxmutex_lock(&g_coredump.regions_lock);
+
+  if (g_coredump.regions != NULL)
+    {
+      region = (FAR struct memory_region_s *)g_coredump.regions;
+
+      while (region->start < region->end)
+        {
+          if ((uintptr_t)ptr >= region->start &&
+              (uintptr_t)ptr + size < region->end)
+            {
+              /* Already watched */
+
+              goto out;
+            }
+          else if ((uintptr_t)ptr < region->start &&
+                   (uintptr_t)ptr + size >= region->end)
+            {
+              /* start out of region, end out of region */
+
+              region->start = (uintptr_t)ptr;
+              region->end = (uintptr_t)ptr + size;
+              goto out;
+            }
+          else if ((uintptr_t)ptr < region->start &&
+                   (uintptr_t)ptr + size >= region->start)
+            {
+              /* start out of region, end in region */
+
+              region->start = (uintptr_t)ptr;
+              goto out;
+            }
+          else if ((uintptr_t)ptr < region->end &&
+                   (uintptr_t)ptr + size >= region->end)
+            {
+              /* start in region, end out of region */
+
+              region->end = (uintptr_t)ptr + size;
+              goto out;
+            }
+
+          count++;
+          region++;
+        }
+
+      /* Need a new region */
+    }
+
+  region = lib_malloc(sizeof(struct memory_region_s) * (count + 1));
+  if (region == NULL)
+    {
+      ret = -ENOMEM;
+      goto out;
+    }
+
+  if (g_coredump.regions != NULL)
+    {
+      memcpy(region, g_coredump.regions,
+             sizeof(struct memory_region_s) * count);
+    }
+
+  if (g_coredump.regions != NULL
+#ifdef CONFIG_BOARD_MEMORY_RANGE
+    && g_coredump.regions != g_memory_region
+#endif
+    )
+    {
+      lib_free((FAR void *)g_coredump.regions);
+    }
+
+  region[count - 1].start = (uintptr_t)ptr;
+  region[count - 1].end = (uintptr_t)ptr + size;
+  region[count - 1].flags = flags;
+  region[count].start = 0;
+  region[count].end = 0;
+  region[count].flags = 0;
+
+  g_coredump.regions = region;
+
+out:
+  nxmutex_unlock(&g_coredump.regions_lock);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: coredump_remove_memory_region
+ *
+ * Description:
+ *   Remove a previously registered memory region from the coredump list.
+ *
+ ****************************************************************************/
+
+int coredump_remove_memory_region(FAR const void *ptr, size_t size)
+{
+  FAR struct memory_region_s *region;
+  size_t i;
+
+  nxmutex_lock(&g_coredump.regions_lock);
+
+  if (g_coredump.regions == NULL)
+    {
+      nxmutex_unlock(&g_coredump.regions_lock);
+      return -ENOENT;
+    }
+
+  region = (FAR struct memory_region_s *)g_coredump.regions;
+
+  for (i = 0; region[i].start < region[i].end; i++)
+    {
+      if (region[i].start == (uintptr_t)ptr &&
+          region[i].end == (uintptr_t)ptr + size)
+        {
+          /* Copy each subsequent entry forward, including terminator */
+
+          do
+            {
+              region[i] = region[i + 1];
+            }
+          while (region[i++].start != 0);
+
+          nxmutex_unlock(&g_coredump.regions_lock);
+          return 0;
+        }
+    }
+
+  nxmutex_unlock(&g_coredump.regions_lock);
+  return -ENOENT;
+}
+
+/****************************************************************************
  * Name: coredump_initialize
  *
  * Description:
@@ -1894,4 +1782,116 @@ int coredump(FAR const struct memory_region_s *regions,
   nxsched_put_tcb(tcb);
 
   return ret;
+}
+
+/****************************************************************************
+ * Name: coredump_get_info
+ *
+ * Description:
+ *   Read a stored coredump's metadata (size/time/uname) from the info
+ *   note.  base points at the payload, right after the plaintext head.
+ *
+ ****************************************************************************/
+
+int coredump_get_info(FAR struct lib_sistream_s *stream,
+                      off_t base,
+                      FAR struct coredump_info_s *info,
+                      FAR bool *compressed)
+{
+#ifdef CONFIG_LIBC_LZF
+  struct lib_lzfsistream_s lzfstream;
+#endif
+  char name[COREDUMP_INFONAME_SIZE];
+  char magic[2];
+  Elf_Ehdr ehdr;
+  Elf_Phdr phdr;
+  Elf_Nhdr nhdr;
+  int ret;
+
+  lib_stream_seek(stream, base, SEEK_SET);
+  ret = lib_stream_gets(stream, magic, sizeof(magic));
+  if (ret != sizeof(magic))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  lib_stream_seek(stream, base, SEEK_SET);
+
+  *compressed = false;
+  if (magic[0] == 'Z' && magic[1] == 'V')
+    {
+      *compressed = true;
+#ifdef CONFIG_LIBC_LZF
+      base = 0;
+      lib_lzfsistream(&lzfstream, stream);
+      stream = (FAR struct lib_sistream_s *)&lzfstream;
+#else
+      return -ENOTSUP;
+#endif
+    }
+
+  ret = lib_stream_gets(stream, &ehdr, sizeof(ehdr));
+  if (ret != sizeof(ehdr))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  if (memcmp(ehdr.e_ident, ELFMAG, EI_MAGIC_SIZE) != 0)
+    {
+      return -EINVAL;
+    }
+
+  /* The last program header contains the info note. */
+
+  ret = lib_stream_seek(stream, base + ehdr.e_phoff +
+                        ehdr.e_phentsize * (ehdr.e_phnum - 1),
+                        SEEK_SET);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = lib_stream_gets(stream, &phdr, sizeof(phdr));
+  if (ret != sizeof(phdr))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  ret = lib_stream_seek(stream, base + phdr.p_offset, SEEK_SET);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = lib_stream_gets(stream, &nhdr, sizeof(nhdr));
+  if (ret != sizeof(nhdr))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  if (nhdr.n_type != COREDUMP_MAGIC ||
+      nhdr.n_namesz != COREDUMP_INFONAME_SIZE ||
+      nhdr.n_descsz != sizeof(struct coredump_info_s))
+    {
+      return -EINVAL;
+    }
+
+  ret = lib_stream_gets(stream, name, nhdr.n_namesz);
+  if (ret != nhdr.n_namesz)
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  if (strncmp(name, "NuttX", 6) != 0)
+    {
+      return -EINVAL;
+    }
+
+  ret = lib_stream_gets(stream, info, sizeof(*info));
+  if (ret != sizeof(*info))
+    {
+      return ret < 0 ? ret : -EIO;
+    }
+
+  return OK;
 }
