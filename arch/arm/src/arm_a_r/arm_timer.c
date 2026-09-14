@@ -198,7 +198,5 @@ struct oneshot_lowerhalf_s *arm_timer_initialize(unsigned int freq)
 
 void arm_timer_secondary_init(unsigned int freq)
 {
-#ifdef CONFIG_SCHED_TICKLESS
   arm_timer_initialize_per_cpu(freq);
-#endif
 }
