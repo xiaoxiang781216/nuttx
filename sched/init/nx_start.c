@@ -884,23 +884,6 @@ void nx_start(void)
 
   sched_unlock();
 
-#ifdef CONFIG_MM_HEAP_FORBID_BEFORE_IDLE_LOOP
-  /* All tasks created by nx_bringup() have now run and blocked (the
-   * sched_unlock() above schedules them until they settle), so start-up
-   * allocations are complete. Forbid further dynamic allocation on the
-   * general-purpose heaps before entering the idle loop; any later
-   * malloc/free is then caught by the configured forbid action
-   * (MM_HEAP_FORBID_PANIC or MM_HEAP_FORBID_HOOK). The filesystem heap is
-   * a separate heap and is unaffected. On AMP targets each core runs
-   * nx_start() and seals its own heaps independently.
-   */
-
-  mm_heap_forbid(USR_HEAP, true);
-#ifdef CONFIG_MM_KERNEL_HEAP
-  mm_heap_forbid(KNR_HEAP, true);
-#endif
-#endif
-
   /* The IDLE Loop **********************************************************/
 
   /* When control is return to this point, the system is idle. */
