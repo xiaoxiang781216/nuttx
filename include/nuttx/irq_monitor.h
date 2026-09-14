@@ -130,6 +130,32 @@ void irq_monitor_disable_all(void);
 int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
                          FAR unsigned long *fracfreq);
 
+#ifdef CONFIG_PM
+/****************************************************************************
+ * Name: irq_monitor_get_wakeup_latency
+ *
+ * Description:
+ *   Get the wakeup latency attributed to a specific IRQ (WFI return to that
+ *   IRQ's dispatch), for the wakeup where this IRQ woke the system.  Reports
+ *   the most recent value ('lat') and the per-PM-state running maximum
+ *   ('lat_max').  This is a pure read.
+ *
+ * Input Parameters:
+ *   irq     - The IRQ number to query.
+ *   lat     - Location to store the most-recent wakeup latency, or NULL.
+ *   lat_max - Caller array of PM_COUNT entries for the maximum wakeup
+ *             latency of each PM state, or NULL.
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int irq_monitor_get_wakeup_latency(int irq,
+                                   FAR clock_t *lat,
+                                   FAR clock_t *lat_max);
+#endif /* CONFIG_PM */
+
 /****************************************************************************
  * Name: irq_monitor_info
  *

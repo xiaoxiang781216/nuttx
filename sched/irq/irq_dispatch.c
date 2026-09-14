@@ -76,14 +76,20 @@
 #  endif
 
 #  ifdef CONFIG_PM
-#    define WAKEUP_COUNT(ndx) \
+#    define WAKEUP_COUNT(ndx, ts) \
        if (g_wakeup_state != PM_NORMAL) \
          { \
+           clock_t elapsed = ts - g_wakeup_ts; \
            atomic_add(&g_irqvector[ndx].nwakeup[g_wakeup_state], 1); \
+           g_irqvector[ndx].wakeup_lat = elapsed; \
+           if (elapsed > g_irqvector[ndx].wakeup_lat_max[g_wakeup_state]) \
+             { \
+               g_irqvector[ndx].wakeup_lat_max[g_wakeup_state] = elapsed; \
+             } \
            g_wakeup_state = PM_NORMAL; \
          }
 #  else
-#    define WAKEUP_COUNT(ndx)
+#    define WAKEUP_COUNT(ndx, ts)
 #  endif
 
 #  if CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0
@@ -118,14 +124,14 @@
        { \
          if ((unsigned int)(ndx) < NUSER_IRQS) \
            { \
+             clock_t start; \
              INC_NESTLEVEL(); \
-             WAKEUP_COUNT(ndx); \
+             start = perf_gettime_raw(); \
+             WAKEUP_COUNT(ndx, start); \
              atomic_add(&g_irqvector[ndx].count, 1); \
              if (g_irqvector[ndx].monitor) \
                { \
-                 clock_t start; \
                  clock_t elapsed; \
-                 start = perf_gettime_raw(); \
                  vector(irq, context, arg); \
                  elapsed = perf_gettime_raw() - start; \
                  if (elapsed > g_irqvector[ndx].time) \
@@ -164,22 +170,54 @@ static DEFINE_PER_CPU_BSS(atomic_t, g_irq_level);
 static DEFINE_PER_CPU_BSS(enum pm_state_e, g_wakeup_state);
 #  define g_wakeup_state this_cpu_var(g_wakeup_state)
 
-static void irq_wakeup_notify(FAR struct pm_callback_s *cb, int domain,
-                              enum pm_state_e pmstate)
+static struct pm_callback_s g_wakeup_cb[CONFIG_PM_NDOMAINS];
+
+static DEFINE_PER_CPU_BSS(clock_t, g_wakeup_ts);
+#  define g_wakeup_ts this_cpu_var(g_wakeup_ts)
+
+/****************************************************************************
+ * Name: irq_wakeup_notify_timestamp
+ *
+ * Description:
+ *   PM notify_timestamp callback.  On the wakeup/restore transition
+ *   (pmstate == PM_RESTORE) it arms the wakeup tag with the low-power state
+ *   the system woke from (lastpmstate) and records the wakeup start point
+ *   (timestamp, t0), so the first IRQ dispatched afterwards is attributed as
+ *   the wakeup source and consumes the tag in WAKEUP_COUNT().  Transitions
+ *   whose lastpmstate is not a low-power state leave the tag untouched.
+ *
+ * Input Parameters:
+ *   cb          - The registered PM callback structure (unused).
+ *   domain      - The PM domain (unused).
+ *   pmstate     - The new PM state (PM_RESTORE on the wakeup path).
+ *   lastpmstate - The PM state the system woke from (the low-power state).
+ *   timestamp   - Wakeup start point (t0); stored as the pending wakeup
+ *                 start that WAKEUP_COUNT() consumes on the first IRQ
+ *                 dispatch.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+static void irq_wakeup_notify_timestamp(FAR struct pm_callback_s *cb,
+                                        int domain, enum pm_state_e pmstate,
+                                        enum pm_state_e lastpmstate,
+                                        clock_t timestamp)
 {
-  /* Arm the wakeup tag when entering a low-power state.  The first IRQ
-   * dispatched after this point is the one that woke the system, so it
-   * consumes the tag in WAKEUP_COUNT().  PM_RESTORE and PM_NORMAL leave
-   * the tag untouched.
+  /* Arm the wakeup tag with the low-power state we woke from.  The first
+   * IRQ dispatched after this point is the one that woke the system, so it
+   * consumes the tag in WAKEUP_COUNT().  Transitions that are not a wakeup
+   * from a low-power state leave the tag untouched.
    */
 
-  if (pmstate >= PM_IDLE && pmstate < PM_COUNT)
+  if (lastpmstate >= PM_IDLE && lastpmstate < PM_COUNT)
     {
-      g_wakeup_state = pmstate;
+      g_wakeup_state = lastpmstate;
     }
-}
 
-static struct pm_callback_s g_wakeup_cb[CONFIG_PM_NDOMAINS];
+  g_wakeup_ts = timestamp;
+}
 #endif
 
 /****************************************************************************
@@ -193,9 +231,63 @@ void irq_wakeup_initialize(void)
 
   for (i = 0; i < CONFIG_PM_NDOMAINS; i++)
     {
-      g_wakeup_cb[i].notify = irq_wakeup_notify;
+      g_wakeup_cb[i].notify_timestamp = irq_wakeup_notify_timestamp;
       pm_domain_register(i, &g_wakeup_cb[i]);
     }
+}
+
+/****************************************************************************
+ * Name: irq_monitor_get_wakeup_latency
+ *
+ * Description:
+ *   Return the wakeup latency attributed to a specific IRQ, i.e. the time
+ *   from WFI return to that IRQ's dispatch, but only for the wakeup where
+ *   this IRQ was the one that woke the system.  Two values are reported: the
+ *   most recent wakeup ('lat') and the per-PM-state running maximum
+ *   ('lat_max').
+ *
+ *   A driver typically reads 'lat' from its own handler to compensate the
+ *   interrupt timestamp.  This is a pure read.
+ *
+ * Input Parameters:
+ *   irq     - The IRQ number to query.
+ *   lat     - Location to store the most-recent wakeup latency, or NULL.
+ *             Zero means this IRQ has not woken the system yet.
+ *   lat_max - Caller-provided array of PM_COUNT entries to receive the
+ *             maximum wakeup latency for each PM state (indexed by enum
+ *             pm_state_e, like nwakeup), or NULL.
+ *
+ * Returned Value:
+ *   OK on success, -EINVAL on bad IRQ.
+ *
+ ****************************************************************************/
+
+int irq_monitor_get_wakeup_latency(int irq,
+                                   FAR clock_t *lat,
+                                   FAR clock_t *lat_max)
+{
+  int ndx = IRQ_TO_NDX(irq);
+  int i;
+
+  if (ndx < 0 || ndx >= NUSER_IRQS)
+    {
+      return -EINVAL;
+    }
+
+  if (lat != NULL)
+    {
+      *lat = g_irqvector[ndx].wakeup_lat;
+    }
+
+  if (lat_max != NULL)
+    {
+      for (i = 0; i < PM_COUNT; i++)
+        {
+          lat_max[i] = g_irqvector[ndx].wakeup_lat_max[i];
+        }
+    }
+
+  return OK;
 }
 #endif
 

@@ -63,7 +63,9 @@ struct irq_info_s
   atomic_t nests;    /* Number of preemptions by this IRQ */
 #  endif
 #  ifdef CONFIG_PM
-  atomic_t nwakeup[PM_COUNT]; /* Wakeups indexed by PM state */
+  atomic_t nwakeup[PM_COUNT];       /* Wakeups indexed by PM state */
+  clock_t wakeup_lat_max[PM_COUNT]; /* Wakeup max latency */
+  clock_t wakeup_lat;               /* The most recent wakeup latency */
 #  endif
 #endif
 };
