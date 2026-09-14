@@ -204,7 +204,7 @@ static inline_function int tricore_trevt_add(int type, uint32_t addr,
         {
           TREVT_SET_ADDR_REG(i, addr);
           TREVT_SET_CFG_REG(i, tricore_convert_type(type) |
-                               TREVT_CFG_REG_EN_VALUE);
+                               TREVT_CFG_REG_EN_VALUE | TREVT_DEBUG_BBM);
           return i;
         }
     }
@@ -245,6 +245,16 @@ static inline_function int tricore_trevt_remove(uint32_t addr)
 
 /****************************************************************************
  * Name: tricore_dbgmonitor
+ ****************************************************************************/
+
+static void tricore_dbgmonitor(void)
+{
+  __asm__ __volatile__ ("call  tricore_trevt_match\n\t");
+  __asm__ __volatile__ ("rfm\n\t");
+}
+
+/****************************************************************************
+ * Name: tricore_trevt_match
  *
  * Description:
  *   This is Debug Monitor exception handler.  This function is entered when
@@ -253,37 +263,83 @@ static inline_function int tricore_trevt_remove(uint32_t addr)
  *
  ****************************************************************************/
 
-static inline_function void tricore_dbgmonitor(void)
+used_code static void tricore_trevt_match(void)
 {
-  __asm__ __volatile__ (
-    "svlcx\n\t"
-    "call  tricore_trevt_match\n\t"
-    "rslcx\n\t"
-    "rfm\n\t"
-  );
+  uintptr_t context[XCPTCONTEXT_REGS];
+  uintptr_t saved_fcx;
+  uintptr_t saved_lcx;
+  uintptr_t *regs;
+  bool switch_csa;
+  int evtsrc;
+
+  /* Save lower csa context. */
+
+  __asm__ __volatile__ ("svlcx\n\t");
+
+  /* Switch to istack csa list. */
+
+  switch_csa = !(g_trevt_debug.dcx[1] & PSW_IS);
+  if (switch_csa)
+    {
+      uintptr_t istackbase = up_get_intstackbase(up_cpu_index());
+
+      saved_fcx = tricore_mfcr(CPU_FCX);
+      saved_lcx = tricore_mfcr(CPU_LCX);
+
+      tricore_mtcr(CPU_FCX, tricore_addr2csa(istackbase));
+      tricore_mtcr(CPU_LCX, tricore_addr2csa(istackbase - FCD_RESERVE_SIZE +
+                                             CONFIG_ARCH_INTERRUPTSTACK));
+      UP_ISB();
+    }
+
+  /* Save regs by software due to separate hardware process of debug trap */
+
+  regs = tricore_csa2addr(tricore_csa2addr(tricore_mfcr(CPU_PCXI))[0]);
+  memcpy(context, regs, XCPTCONTEXT_SIZE);
+
+  context[REG_UPCXI]                 = g_trevt_debug.dcx[0];
+  context[REG_PSW]                   = g_trevt_debug.dcx[1];
+  context[REG_A10]                   = g_trevt_debug.dcx[2];
+  context[TC_CONTEXT_REGS + REG_LPC] = context[REG_UPC];
+  context[REG_RA]                    = g_trevt_debug.dcx[3];
+
+  /* Debug trap hander. */
+
+  regs = g_running_task->xcp.regs;
+  g_running_task->xcp.regs = context;
+
+  evtsrc = ((tricore_mfcr(CPU_DBGSR) >> TC_DBGSR_EVTSRC_OFF) &
+            TC_DBGSR_EVTSRC_MSK) - TREVT_DEBUG_EVTSRC_BASE;
+
+  g_trevt_debug.dp[evtsrc].callback(g_trevt_debug.dp[evtsrc].type,
+                                    g_trevt_debug.dp[evtsrc].addr,
+                                    g_trevt_debug.dp[evtsrc].size,
+                                    g_trevt_debug.dp[evtsrc].arg);
+
+  g_running_task->xcp.regs = regs;
+
+  /* Switch to thread csa list. */
+
+  if (switch_csa)
+    {
+      tricore_mtcr(CPU_FCX, saved_fcx);
+      tricore_mtcr(CPU_LCX, saved_lcx);
+      UP_ISB();
+    }
+
+  /* Disable PSW.CDC. */
+
+  tricore_mtcr(CPU_PSW, tricore_mfcr(CPU_PSW) & ~PSW_CDE);
+  UP_ISB();
+
+  /* Return from debug monitor model. */
+
+  __asm__ __volatile__("rslcx\n\t");
 }
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: tricore_trevt_match
- ****************************************************************************/
-
-void tricore_trevt_match(void)
-{
-  struct tricore_debugpoint_s *dp;
-  int evtsrc;
-
-  dp = g_trevt_debug.dp;
-
-  evtsrc = ((tricore_mfcr(CPU_DBGSR) >> TC_DBGSR_EVTSRC_OFF) &
-            TC_DBGSR_EVTSRC_MSK) - TREVT_DEBUG_EVTSRC_BASE;
-
-  dp[evtsrc].callback(dp[evtsrc].type, dp[evtsrc].addr,
-                      dp[evtsrc].size, dp[evtsrc].arg);
-}
 
 /****************************************************************************
  * Name: tricore_init_dbgmonitor
@@ -296,6 +352,8 @@ void tricore_trevt_match(void)
 int tricore_init_dbgmonitor(void)
 {
   /* DBGTCR: DTA (bit 0) = 0, all other fields cleared */
+
+  int i;
 
   uint32_t dbgtcr = 0;
 #ifdef CONFIG_ARCH_CHIP_TC4XX
@@ -341,6 +399,14 @@ int tricore_init_dbgmonitor(void)
 
   UP_ISB();
 
+  /* Clear all slots. */
+
+  for (i = 0; i < TREVT_DEBUG_NUM; i++)
+    {
+      TREVT_SET_CFG_REG(i, 0);
+      TREVT_SET_ADDR_REG(i, 0);
+    }
+
   return OK;
 }
 
@@ -372,9 +438,12 @@ int up_debugpoint_add(int type, void *addr, size_t size,
                       debug_callback_t callback, void *arg)
 {
   struct tricore_debugpoint_s *dp;
-  int ret;
+  int ret = -EINVAL;
 
-  ret = tricore_trevt_add(type, (uint32_t)addr, size);
+  if (type != DEBUGPOINT_STEPPOINT)
+    {
+      ret = tricore_trevt_add(type, (uint32_t)addr, size);
+    }
 
   if (ret < 0)
     {
@@ -415,9 +484,12 @@ int up_debugpoint_add(int type, void *addr, size_t size,
 int up_debugpoint_remove(int type, void *addr, size_t size)
 {
   struct tricore_debugpoint_s *dp;
-  int ret;
+  int ret = -EINVAL;
 
-  ret = tricore_trevt_remove((uintptr_t)addr);
+  if (type != DEBUGPOINT_STEPPOINT)
+    {
+      ret = tricore_trevt_remove((uintptr_t)addr);
+    }
 
   if (ret < 0)
     {
