@@ -213,31 +213,6 @@ static inline void note_netdev_copyin(FAR struct notenet_driver_s *drv,
 }
 
 /****************************************************************************
- * Name: note_netdev_dequeue
- *
- * Description:
- *   Move the staged notes from the ring into the packet queue.  The caller
- *   must hold drv->lock and must have checked note_netdev_ready(): the
- *   consumer tail advances as soon as a buffer is handed out, so probing
- *   after the dequeue would discard notes while the link is still down.
- *
- ****************************************************************************/
-
-static inline void note_netdev_dequeue(FAR struct notenet_driver_s *drv)
-{
-  struct ring_buf_s buf;
-  uint32_t count = ring_count(&drv->ring);
-
-  if (count)
-    {
-      ring_mpmc_dequeue_start(&drv->ring, count, 1, &buf);
-      note_netdev_copyin(drv, buf.ptr1, buf.len1);
-      note_netdev_copyin(drv, buf.ptr2, buf.len2);
-      ring_mpmc_dequeue_finish(&drv->ring, &buf);
-    }
-}
-
-/****************************************************************************
  * Name: note_netdev_add
  *
  * Description:
@@ -339,23 +314,60 @@ static ssize_t note_netdev_add(FAR struct note_driver_s *driver,
 }
 #endif
 
+/****************************************************************************
+ * Name: note_netdev_flush
+ *
+ * Description:
+ *   Drain the ring and send it out one frame at a time, taking drv->lock
+ *   per frame instead of for the whole backlog.  Draining under a single
+ *   lock could copy in more frames than the TX quota holds before any is
+ *   sent, deadlocking netpoll_pkt_alloc(); sending after each frame caps
+ *   outstanding quota at one slot and keeps the IRQ-off window short.
+ *
+ ****************************************************************************/
+
 static void note_netdev_flush(FAR struct note_driver_s *driver)
 {
   FAR struct notenet_driver_s *drv =
     (FAR struct notenet_driver_s *)driver;
+#if CONFIG_DRIVERS_NOTENET_FLUSH_TIMEOUT > 0
+  size_t maxlen = netpoll_get_maxlen(&drv->np);
+  struct ring_buf_s buf;
+  uint32_t count;
+#endif
   irqstate_t flags;
 
-  flags = spin_lock_irqsave_notrace(&drv->lock);
-
-  if (note_netdev_ready(drv))
+  do
     {
-#if CONFIG_DRIVERS_NOTENET_FLUSH_TIMEOUT > 0
-      note_netdev_dequeue(drv);
-#endif
-      note_netdev_send(drv, true);
-    }
+      flags = spin_lock_irqsave_notrace(&drv->lock);
 
-  spin_unlock_irqrestore_notrace(&drv->lock, flags);
+      if (!note_netdev_ready(drv))
+        {
+          spin_unlock_irqrestore_notrace(&drv->lock, flags);
+          break;
+        }
+
+#if CONFIG_DRIVERS_NOTENET_FLUSH_TIMEOUT > 0
+      count = ring_count(&drv->ring);
+      if (count == 0)
+        {
+          spin_unlock_irqrestore_notrace(&drv->lock, flags);
+          break;
+        }
+
+      count = MIN(count, maxlen);
+
+      ring_mpmc_dequeue_start(&drv->ring, count, 1, &buf);
+      note_netdev_copyin(drv, buf.ptr1, buf.len1);
+      note_netdev_copyin(drv, buf.ptr2, buf.len2);
+      ring_mpmc_dequeue_finish(&drv->ring, &buf);
+#endif
+
+      note_netdev_send(drv, true);
+
+      spin_unlock_irqrestore_notrace(&drv->lock, flags);
+    }
+  while (CONFIG_DRIVERS_NOTENET_FLUSH_TIMEOUT);
 }
 
 /****************************************************************************
@@ -388,6 +400,9 @@ static int note_netdev_ioctl(FAR struct file *filep, int cmd,
       case NOTE_CLEAR:
         flags = spin_lock_irqsave_notrace(&drv->lock);
 #if CONFIG_DRIVERS_NOTENET_FLUSH_TIMEOUT > 0
+
+        ring_mpmc_init(&drv->ring, g_notenet_blob,
+                       sizeof(g_notenet_blob), 0);
 
         /* Skip rather than reset: producers run without drv->lock, so
          * clearing the indices outright would race with an in-flight
