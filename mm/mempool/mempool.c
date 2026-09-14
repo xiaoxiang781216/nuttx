@@ -44,6 +44,17 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* procfs registration pulls in fs/procfs, a kernel-only library.  Enable it
+ * only where that code links: the kernel side of a protected build, or a
+ * flat build's single address space.  A protected build's user side keeps
+ * the procfs field but never registers, avoiding an undefined reference.
+ */
+
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL) && \
+    (defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT))
+#  define MEMPOOL_HAVE_PROCFS 1
+#endif
+
 #ifdef CONFIG_MM_RECORD
 #define MEMPOOL_MAGIC_FREE  0x55555555
 #define MEMPOOL_MAGIC_ALLOC 0xAAAAAAAA
@@ -206,7 +217,7 @@ static inline void mempool_record(FAR struct mempool_s *pool,
   stack = (magic == MEMPOOL_MAGIC_ALLOC ?
            &record->stack : &record->freestack);
   backtrace_remove(*stack);
-#    if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
+#    ifdef MEMPOOL_HAVE_PROCFS
   if (pool->procfs.backtrace)
     {
       *stack = backtrace_record(
@@ -470,7 +481,7 @@ int mempool_init(FAR struct mempool_s *pool)
               nxsem_init(&pool->waitsem, 0, 0);
             }
 
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
+#ifdef MEMPOOL_HAVE_PROCFS
           mempool_procfs_register(&pool->procfs, pool->name);
 #  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
           pool->procfs.backtrace = true;
@@ -1250,7 +1261,7 @@ int mempool_deinit(FAR struct mempool_s *pool)
             }
         }
 
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
+#ifdef MEMPOOL_HAVE_PROCFS
       mempool_procfs_unregister(&pool->procfs);
 #endif
 
