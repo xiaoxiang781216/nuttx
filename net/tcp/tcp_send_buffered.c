@@ -665,13 +665,11 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
               continue;
             }
 
-          /* Skip segments already retransmitted in this cycle */
-
-          if (conn->highrxt != 0 &&
-              TCP_SEQ_LTE(seqno, conn->highrxt))
-            {
-              continue;
-            }
+          /* NOTE: Do NOT skip segments below highrxt.
+           * If the retransmitted packet itself was lost, the segment
+           * remains in the "lost" state and must be eligible for
+           * retransmission again.
+           */
 
           ninfo("TCP SACK REXMIT "
                 "[%" PRIu32 " : %" PRIu32 " : %d]\n",
