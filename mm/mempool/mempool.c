@@ -838,6 +838,73 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 }
 
 /****************************************************************************
+ * Name: mempool_member
+ *
+ * Description:
+ *   Test whether 'blk' was handed out by this pool: it lies within the
+ *   initial static region or, for an expandable pool, within one of the
+ *   heap chunks recorded on expansion.  Lets a caller tell a pool block
+ *   from memory obtained elsewhere using only the pointer.
+ *
+ * Input Parameters:
+ *   pool - Address of the memory pool to be used.
+ *   blk  - The pointer to test.
+ *
+ * Returned Value:
+ *   true if 'blk' belongs to the pool, false otherwise.
+ *
+ ****************************************************************************/
+
+bool mempool_member(FAR struct mempool_s *pool, FAR void *blk)
+{
+  FAR char *addr = blk;
+  FAR sq_entry_t *entry;
+  irqstate_t flags;
+  size_t blocksize;
+  FAR char *base;
+  bool ret = false;
+
+  if (pool == NULL || blk == NULL)
+    {
+      return false;
+    }
+
+  /* The initial static region is fixed after init, so needs no lock. */
+
+  base = pool->initialbase;
+  if (addr >= base && addr < base + pool->initialsize)
+    {
+      return true;
+    }
+
+  /* Only an expandable pool records heap chunks in equeue; a pool that
+   * never expands returns here without taking the lock.
+   */
+
+  blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
+  if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
+    {
+      size_t nblks = (pool->expandsize - MEMPOOL_HEADER_SIZE) / blocksize;
+
+      flags = spin_lock_irqsave_notrace(&pool->lock);
+      sq_for_every(&pool->equeue, entry)
+        {
+          base = (FAR char *)entry - nblks * blocksize;
+
+          if (addr >= base && addr < base + nblks * blocksize)
+            {
+              ret = true;
+              break;
+            }
+        }
+
+      spin_unlock_irqrestore_notrace(&pool->lock, flags);
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: mempool_navail_throttled
  *
  * Description:

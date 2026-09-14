@@ -503,6 +503,26 @@ FAR void *mempool_zallocate(FAR struct mempool_s *pool,
 void mempool_release(FAR struct mempool_s *pool, FAR void *blk);
 
 /****************************************************************************
+ * Name: mempool_member
+ *
+ * Description:
+ *   Test whether 'blk' was handed out by this pool: it lies within the
+ *   initial static region or, for an expandable pool, within one of the
+ *   heap chunks recorded on expansion.  Lets a caller tell a pool block
+ *   from memory obtained elsewhere using only the pointer.
+ *
+ * Input Parameters:
+ *   pool - Address of the memory pool to be used.
+ *   blk  - The pointer to test.
+ *
+ * Returned Value:
+ *   true if 'blk' belongs to the pool, false otherwise.
+ *
+ ****************************************************************************/
+
+bool mempool_member(FAR struct mempool_s *pool, FAR void *blk);
+
+/****************************************************************************
  * Name: mempool_navail_throttled
  *
  * Description:
