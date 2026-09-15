@@ -228,7 +228,8 @@ static int pm_prepall(int domain, enum pm_state_e newstate, bool restore)
  *
  ****************************************************************************/
 
-static inline void pm_changeall(int domain, enum pm_state_e newstate)
+static inline void pm_changeall(int domain, enum pm_state_e newstate,
+                                enum pm_state_e laststate, clock_t timestamp)
 {
   FAR struct pm_domain_s *pdom;
   FAR struct pm_callback_s *cb;
@@ -245,7 +246,12 @@ static inline void pm_changeall(int domain, enum pm_state_e newstate)
           /* Is the notification callback supported? */
 
           cb = (FAR struct pm_callback_s *)entry;
-          if (cb->notify)
+          if (cb->notify_timestamp)
+            {
+              cb->notify_timestamp(cb, domain, newstate, laststate,
+                                   timestamp);
+            }
+          else if (cb->notify)
             {
               /* Yes.. notify the driver */
 
@@ -263,7 +269,12 @@ static inline void pm_changeall(int domain, enum pm_state_e newstate)
           /* Is the notification callback supported? */
 
           cb = (FAR struct pm_callback_s *)entry;
-          if (cb->notify)
+          if (cb->notify_timestamp)
+            {
+              cb->notify_timestamp(cb, domain, newstate, laststate,
+                                   timestamp);
+            }
+          else if (cb->notify)
             {
               /* Yes.. notify the driver */
 
@@ -307,6 +318,45 @@ static inline void pm_changeall(int domain, enum pm_state_e newstate)
 
 int pm_changestate(int domain, enum pm_state_e newstate)
 {
+  return pm_changestate_timestamp(domain, newstate, PM_NORMAL, 0);
+}
+
+/****************************************************************************
+ * Name: pm_changestate_timestamp
+ *
+ * Description:
+ *   Timestamped variant of pm_changestate().  In addition to announcing the
+ *   new PM state to all registered drivers, it forwards the previous PM
+ *   state and a wakeup timestamp to any driver that registered a
+ *   notify_timestamp() callback.  On the wakeup path it is called with
+ *   newstate == PM_RESTORE and laststate set to the low-power state the
+ *   system woke from.
+ *
+ * Input Parameters:
+ *   domain    - Identifies the domain of the new PM state
+ *   newstate  - Identifies the new PM state
+ *   laststate - The previous PM state, forwarded to notify_timestamp()
+ *               callbacks
+ *   timestamp - Wakeup timestamp (perf ticks) forwarded to
+ *               notify_timestamp() callbacks, or 0 when not applicable
+ *
+ * Returned Value:
+ *   0 (OK) means that the callback function for all registered drivers
+ *   returned OK (meaning that they accept the state change).  Non-zero
+ *   means that one of the drivers refused the state change.  In this case,
+ *   the system will revert to the preceding state.
+ *
+ * Assumptions:
+ *   This function takes the domain lock (disabling interrupts) around the
+ *   whole state change.  It is typically called from the IDLE loop.
+ *
+ ****************************************************************************/
+
+int pm_changestate_timestamp(int domain,
+                             enum pm_state_e newstate,
+                             enum pm_state_e laststate,
+                             clock_t timestamp)
+{
   irqstate_t flags;
   int ret = OK;
 
@@ -347,7 +397,7 @@ int pm_changestate(int domain, enum pm_state_e newstate)
    * disagreed and the state has been reverted).  Set the new state.
    */
 
-  pm_changeall(domain, newstate);
+  pm_changeall(domain, newstate, laststate, timestamp);
 
   /* Notify governor of (possible) state change */
 
@@ -379,8 +429,7 @@ int pm_changestate(int domain, enum pm_state_e newstate)
  *   in one function and use lock only once.
  *
  * Input Parameters:
- *   domain   - Identifies the domain of the new PM state
- *   newstate - Identifies the new PM state
+ *   domain - Identifies the domain to update
  *
  * Returned Value:
  *   0 (OK) means that the callback function for all registered drivers
@@ -391,6 +440,38 @@ int pm_changestate(int domain, enum pm_state_e newstate)
  ****************************************************************************/
 
 int pm_updatestate(int domain)
+{
+  return pm_updatestate_timestamp(domain, PM_NORMAL, 0);
+}
+
+/****************************************************************************
+ * Name: pm_updatestate_timestamp
+ *
+ * Description:
+ *   Timestamped variant of pm_updatestate(): it checks the governor for the
+ *   next state and applies it under a single domain lock, additionally
+ *   forwarding the previous PM state and a wakeup timestamp to drivers that
+ *   provide a notify_timestamp() callback.  pm_updatestate() is the plain
+ *   wrapper that calls it with laststate == PM_NORMAL and timestamp == 0.
+ *
+ * Input Parameters:
+ *   domain    - Identifies the domain of the new PM state
+ *   laststate - The previous PM state, forwarded to notify_timestamp()
+ *               callbacks
+ *   timestamp - Wakeup timestamp (perf ticks) forwarded to
+ *               notify_timestamp() callbacks, or 0 when not applicable
+ *
+ * Returned Value:
+ *   0 (OK) means that the callback function for all registered drivers
+ *   returned OK (meaning that they accept the state change).  Non-zero
+ *   means that one of the drivers refused the state change.  In this case,
+ *   the system will revert to the preceding state.
+ *
+ ****************************************************************************/
+
+int pm_updatestate_timestamp(int domain,
+                             enum pm_state_e laststate,
+                             clock_t timestamp)
 {
   int ret = OK;
   irqstate_t flags;
@@ -436,7 +517,7 @@ int pm_updatestate(int domain)
    * disagreed and the state has been reverted).  Set the new state.
    */
 
-  pm_changeall(domain, newstate);
+  pm_changeall(domain, newstate, laststate, timestamp);
 
   /* Notify governor of (possible) state change */
 

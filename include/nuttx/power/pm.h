@@ -291,6 +291,39 @@ struct pm_callback_s
   CODE void (*notify)(FAR struct pm_callback_s *cb, int domain,
                       enum pm_state_e pmstate);
 
+  /**************************************************************************
+   * Name: notify_timestamp
+   *
+   * Description:
+   *   Timestamped variant of notify().  When set, pm_changeall() calls this
+   *   instead of notify() for every state change, additionally passing the
+   *   previous PM state and a wakeup timestamp.  It is primarily used on the
+   *   restore/wakeup path (pmstate == PM_RESTORE, lastpmstate == the
+   *   low-power state woken from) so a driver can measure how long the
+   *   wakeup took.  Drivers that do not need the timestamp may leave this
+   *   NULL and use notify() instead.
+   *
+   * Input Parameters:
+   *   cb          - Returned to the driver.  The driver version of the
+   *                 callback structure may include additional,
+   *                 driver-specific state data at the end of the structure.
+   *   domain      - Identifies the activity domain of the state change
+   *   pmstate     - The new PM state being entered
+   *   lastpmstate - The previous PM state (the low-power state woken from on
+   *                 the restore path)
+   *   timestamp   - Wakeup timestamp (perf ticks) captured by the platform,
+   *                 or 0 for a normal state change
+   *
+   * Returned Value:
+   *   None.
+   *
+   **************************************************************************/
+
+  CODE void (*notify_timestamp)(FAR struct pm_callback_s *cb,
+                                int domain,
+                                enum pm_state_e pmstate,
+                                enum pm_state_e lastpmstate,
+                                clock_t timestamp);
 #ifdef CONFIG_PM_STAT
   struct pm_preparefail_s preparefail;
 #endif
@@ -861,6 +894,33 @@ enum pm_state_e pm_checkstate(int domain);
 int pm_changestate(int domain, enum pm_state_e newstate);
 
 /****************************************************************************
+ * Name: pm_changestate_timestamp
+ *
+ * Description:
+ *   Timestamped variant of pm_changestate().  In addition to announcing the
+ *   new PM state to all registered drivers, it forwards the previous PM
+ *   state and a wakeup timestamp to any driver that registered a
+ *   notify_timestamp() callback.  On the wakeup path it is called with
+ *   newstate == PM_RESTORE and laststate set to the low-power state the
+ *   system woke from.
+ *
+ * Input Parameters:
+ *   domain    - Identifies the domain of the new PM state
+ *   newstate  - Identifies the new PM state
+ *   laststate - The previous PM state, forwarded to notify_timestamp()
+ *               callbacks
+ *   timestamp - Wakeup timestamp (perf ticks) forwarded to
+ *               notify_timestamp() callbacks, or 0 when not applicable
+ *
+ * Returned Value:
+ *   Same as pm_changestate().
+ *
+ ****************************************************************************/
+
+int pm_changestate_timestamp(int domain, enum pm_state_e newstate,
+                             enum pm_state_e laststate, clock_t timestamp);
+
+/****************************************************************************
  * Name: pm_updatestate
  *
  * Description:
@@ -870,8 +930,7 @@ int pm_changestate(int domain, enum pm_state_e newstate);
  *   in one function and use lock only once.
  *
  * Input Parameters:
- *   domain   - Identifies the domain of the new PM state
- *   newstate - Identifies the new PM state
+ *   domain - Identifies the domain to update
  *
  * Returned Value:
  *   0 (OK) means that the callback function for all registered drivers
@@ -882,6 +941,35 @@ int pm_changestate(int domain, enum pm_state_e newstate);
  ****************************************************************************/
 
 int pm_updatestate(int domain);
+
+/****************************************************************************
+ * Name: pm_updatestate_timestamp
+ *
+ * Description:
+ *   Timestamped variant of pm_updatestate(): it checks the governor for the
+ *   next state and applies it under a single domain lock, additionally
+ *   forwarding the previous PM state and a wakeup timestamp to drivers that
+ *   provide a notify_timestamp() callback.  pm_updatestate() is the plain
+ *   wrapper that calls it with laststate == PM_NORMAL and timestamp == 0.
+ *
+ * Input Parameters:
+ *   domain    - Identifies the domain of the new PM state
+ *   laststate - The previous PM state, forwarded to notify_timestamp()
+ *               callbacks
+ *   timestamp - Wakeup timestamp (perf ticks) forwarded to
+ *               notify_timestamp() callbacks, or 0 when not applicable
+ *
+ * Returned Value:
+ *   0 (OK) means that the callback function for all registered drivers
+ *   returned OK (meaning that they accept the state change).  Non-zero
+ *   means that one of the drivers refused the state change.  In this case,
+ *   the system will revert to the preceding state.
+ *
+ ****************************************************************************/
+
+int pm_updatestate_timestamp(int domain,
+                             enum pm_state_e laststate,
+                             clock_t timestamp);
 
 /****************************************************************************
  * Name: pm_querystate
@@ -1065,28 +1153,29 @@ ssize_t pm_state_info(FAR const char *core, int domain,
 #  define PM_WAKELOCK_DECLARE(v,n,d,s)
 #  define PM_WAKELOCK_DECLARE_STATIC(v,n,d,s)
 #  define pm_initialize()
-#  define pm_domain_register(domain,cb)       (0)
-#  define pm_register(cb)                     (0)
-#  define pm_domain_unregister(domain,cb)     (0)
-#  define pm_unregister(cb)                   (0)
+#  define pm_domain_register(domain,cb)                  (0)
+#  define pm_register(cb)                                (0)
+#  define pm_domain_unregister(domain,cb)                (0)
+#  define pm_unregister(cb)                              (0)
 #  define pm_activity(domain,prio)
 #  define pm_stay(domain,state)
 #  define pm_relax(domain,state)
 #  define pm_staytimeout(d,state,ms)
-#  define pm_staycount(domain, state)         (0)
+#  define pm_staycount(domain, state)                    (0)
 #  define pm_wakelock_init(w,n,d,s)
 #  define pm_wakelock_uninit(w)
 #  define pm_wakelock_stay(w)
 #  define pm_wakelock_relax(w)
 #  define pm_wakelock_staytimeout(w,m)
-#  define pm_wakelock_staycount(w)            (0)
-#  define pm_checkstate(domain)               (0)
-#  define pm_changestate(domain,state)        (0)
-#  define pm_querystate(domain)               (0)
+#  define pm_wakelock_staycount(w)                       (0)
+#  define pm_checkstate(domain)                          (0)
+#  define pm_changestate(domain,state)                   (0)
+#  define pm_changestate_timestamp(domain,state,last,ts) (0)
+#  define pm_querystate(domain)                          (0)
 #  define pm_auto_updatestate(domain)
 #  define pm_idle(handler)
 #  define pm_idle_unlock()
-#  define pm_idle_lock(cpu)                   (0)
+#  define pm_idle_lock(cpu)                              (0)
 
 #endif /* CONFIG_PM */
 #endif /* __INCLUDE_NUTTX_POWER_PM_H */
