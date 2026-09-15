@@ -66,7 +66,8 @@ static int lzf_header_foreach(FAR struct lib_lzfsistream_s *lzfstream,
 
   for (; ; )
     {
-      ret = lib_stream_seek(stream, lzfstream->blkcoff, SEEK_SET);
+      ret = lib_stream_seek(stream, lzfstream->base + lzfstream->blkcoff,
+                            SEEK_SET);
       if (ret < 0)
         {
           return ret;
@@ -246,16 +247,15 @@ static off_t lzfsistream_seek(FAR struct lib_sistream_s *self, off_t offset,
  * Name: lib_lzfsistream
  *
  * Description:
- *   Initializes a stream for use with a fixed-size memory buffer.
+ *   Initializes an LZF decompression input stream over a backend stream.
  *
  * Input Parameters:
- *   instream    - User allocated, uninitialized instance of struct
- *                 lib_lzfsistream_s to be initialized.
- *   bufstart    - Address of the beginning of the fixed-size memory buffer
- *   buflen      - Size of the fixed-sized memory buffer in bytes
+ *   sistream - User allocated, uninitialized instance of struct
+ *              lib_lzfsistream_s to be initialized.
+ *   backend  - Backend input stream that holds the compressed data.
  *
  * Returned Value:
- *   None (instream initialized).
+ *   None (sistream initialized).
  *
  ****************************************************************************/
 
@@ -268,4 +268,5 @@ void lib_lzfsistream(FAR struct lib_lzfsistream_s *sistream,
   sistream->common.gets = lzfsistream_gets;
   sistream->common.seek = lzfsistream_seek;
   sistream->backend = backend;
+  sistream->base = lib_stream_seek(backend, 0, SEEK_CUR);
 }
