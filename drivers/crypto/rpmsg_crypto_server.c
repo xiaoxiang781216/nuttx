@@ -782,11 +782,11 @@ static int rpmsg_crypto_process_aead_update(
   crp->crp_iv = NULL;
   crp->crp_aadlen = 0;
   crp->crp_aad = NULL;
-  crp->crp_ilen = datalen;
+  crp->crp_ilen = msg->data.op_flf.aead.dst_data_len;
   crda->crd_len = datalen;
   crde->crd_len = datalen;
   crp->crp_buf = buf;
-  crp->crp_olen = datalen;
+  crp->crp_olen = msg->data.op_flf.aead.dst_data_len;
   crp->crp_dst = rsp->buf;
   crp->crp_mac = NULL;
   crda->crd_flags |= CRD_F_UPDATE;
@@ -795,7 +795,7 @@ static int rpmsg_crypto_process_aead_update(
   rsp->header = msg->header;
   rsp->data = msg->data;
   return rpmsg_crypto_dispatch(rcsdata, ept, msg, rsp,
-                               sizeof(*rsp) + crp->crp_olen);
+                               sizeof(*rsp) + datalen);
 }
 
 static int

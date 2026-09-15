@@ -568,7 +568,17 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
           msg->data.op_flf.sym.op_type_flf.cipher.iv_len = 0;
         }
 
-      data_size = ALIGN_DOWN(MIN(data_size, remaining), blksize);
+      data_size = MIN(data_size, remaining);
+      if (data_size < remaining)
+        {
+          data_size = ALIGN_DOWN(data_size, blksize);
+        }
+
+      if (data_size == 0)
+        {
+          rpmsg_release_tx_buffer(&rdev->ept, msg);
+          return -ENOMEM;
+        }
 
       memcpy(buf, crp->crp_buf + offset, data_size);
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
@@ -755,7 +765,14 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
   uint32_t datalen;
   uint32_t len;
   bool async = crp->crp_flags & CRYPTO_F_CBIMM;
+  int blksize;
   int ret;
+
+  blksize = virtio_crypto_get_blocksize(crp->crp_desc->crd_next->crd_alg);
+  if (blksize < 0)
+    {
+      return blksize;
+    }
 
   /* Process data in packets if needed */
 
@@ -782,13 +799,21 @@ rpmsg_crypto_process_aead_update(FAR struct rpmsg_crypto_s *rdev,
         }
 
       datalen = MIN(space - len, remaining);
-      if (datalen > 0)
+      if (datalen < remaining)
         {
-          memcpy(buf, crp->crp_buf + offset, datalen);
-          len += datalen;
-          offset += datalen;
-          remaining -= datalen;
+          datalen = ALIGN_DOWN(datalen, blksize);
         }
+
+      if (datalen == 0)
+        {
+          rpmsg_release_tx_buffer(&rdev->ept, msg);
+          return -ENOMEM;
+        }
+
+      memcpy(buf, crp->crp_buf + offset, datalen);
+      len += datalen;
+      offset += datalen;
+      remaining -= datalen;
 
       msg->data.op_flf.aead.src_data_len = datalen;
 
@@ -2037,7 +2062,8 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
 
   /* Register NuttX driver for key management */
 
-  rdev->keydevid = crypto_get_driverid(CRYPTOCAP_F_KEY_MGMT);
+  rdev->keydevid = crypto_get_driverid(CRYPTOCAP_F_KEY_MGMT |
+                                       CRYPTOCAP_F_REMOTE);
 
   crypto_driver_set_priv(rdev->keydevid, rdev);
 

@@ -326,6 +326,7 @@ int virtio_crypto_get_blocksize(int alg)
       case CRYPTO_AES_OFB:
       case CRYPTO_AES_CFB_8:
       case CRYPTO_AES_CFB_128:
+      case CRYPTO_AES_GCM_16:
         return VIRTIO_CRYPTO_AES_BLOCK_LEN;
       case CRYPTO_CHACHA20:
       case CRYPTO_CHACHA20_POLY1305:
