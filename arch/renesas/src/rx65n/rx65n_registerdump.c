@@ -49,22 +49,22 @@ void up_dump_register(void *dumpregs)
 
   /* Dump the interrupt registers */
 
-  _alert("PC: %08" PRIx32 " PSW=%08" PRIx32 "\n",
+  _emerg("PC: %08" PRIx32 " PSW=%08" PRIx32 "\n",
          regs[REG_PC], regs[REG_PSW]);
 
-  _alert("FPSW: %08" PRIx32 " ACC0LO: %08" PRIx32 " ACC0HI: %08" PRIx32
+  _emerg("FPSW: %08" PRIx32 " ACC0LO: %08" PRIx32 " ACC0HI: %08" PRIx32
          " ACC0GU: %08" PRIx32 "ACC1LO: %08" PRIx32 " ACC1HI: %08" PRIx32
          " ACC1GU: %08" PRIx32 "\n",
          regs[REG_FPSW], regs[REG_ACC0LO], regs[REG_ACC0HI],
          regs[REG_ACC0GU], regs[REG_ACC1LO],
          regs[REG_ACC1HI], regs[REG_ACC1GU]);
 
-  _alert("R%d:%08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+  _emerg("R%d:%08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
          " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n", 0,
          regs[REG_R1], regs[REG_R2], regs[REG_R3],
          regs[REG_R4], regs[REG_R5], regs[REG_R6], regs[REG_R7]);
 
-  _alert("R%d: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+  _emerg("R%d: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
          " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n", 8,
          regs[REG_R8], regs[REG_R9], regs[REG_R10], regs[REG_R11],
          regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);

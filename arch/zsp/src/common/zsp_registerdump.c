@@ -56,21 +56,21 @@ void up_dump_register(void *dumpregs)
       return;
     }
 
-  _alert("PC:  %08" PRIx32 "  SP:  %08" PRIx32 "\n",
+  _emerg("PC:  %08" PRIx32 "  SP:  %08" PRIx32 "\n",
          regs[REG_PC], regs[REG_SP]);
-  _alert("R0:  %08" PRIx32 "  R2:  %08" PRIx32
+  _emerg("R0:  %08" PRIx32 "  R2:  %08" PRIx32
          "  R4:  %08" PRIx32 "  R6:  %08" PRIx32 "\n",
          regs[REG_R0R1], regs[REG_R2R3],
          regs[REG_R4R5], regs[REG_R6R7]);
-  _alert("R8:  %08" PRIx32 "  R10: %08" PRIx32
+  _emerg("R8:  %08" PRIx32 "  R10: %08" PRIx32
          "  R12: %08" PRIx32 "  R14: %08" PRIx32 "\n",
          regs[REG_R8R9], regs[REG_R10R11],
          regs[REG_R12R13], regs[REG_R14R15]);
-  _alert("A0:  %08" PRIx32 "  A1:  %08" PRIx32
+  _emerg("A0:  %08" PRIx32 "  A1:  %08" PRIx32
          "  A2:  %08" PRIx32 "  A3:  %08" PRIx32 "\n",
          regs[REG_A0], regs[REG_A1], regs[REG_A2], regs[REG_A3]);
-  _alert("A4:  %08" PRIx32 "  A5:  %08" PRIx32
+  _emerg("A4:  %08" PRIx32 "  A5:  %08" PRIx32
          "  A6:  %08" PRIx32 "  A7:  %08" PRIx32 "\n",
          regs[REG_A4], regs[REG_A5], regs[REG_A6], regs[REG_A7]);
-  _alert("IMASK: %08" PRIx32 "\n", regs[REG_IMASK]);
+  _emerg("IMASK: %08" PRIx32 "\n", regs[REG_IMASK]);
 }

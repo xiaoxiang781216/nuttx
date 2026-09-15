@@ -48,7 +48,7 @@ void up_dump_register(void *dumpregs)
 
   for (rx = 0; rx < XCPTCONTEXT_REGS; rx += 8)
     {
-      _alert("R%03d: %08x %08x %08x %08x %08x %08x %08x %08x\n",
+      _emerg("R%03d: %08x %08x %08x %08x %08x %08x %08x %08x\n",
              rx, regs[rx], regs[rx + 1], regs[rx + 2], regs[rx + 3],
              regs[rx + 4], regs[rx + 5], regs[rx + 6], regs[rx + 7]);
     }

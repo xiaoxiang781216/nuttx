@@ -84,19 +84,19 @@ void sched_dumpstack(pid_t tid)
                           format, DUMP_WIDTH, address[i]);
           if (i == size - 1 || ret % DUMP_LINESZ == 0)
             {
-              _alert("backtrace|%2d:%s\n", tid, line);
+              _emerg("backtrace|%2d:%s\n", tid, line);
               ret = 0;
             }
         }
 #else
       if (skip == 0)
         {
-          _alert("backtrace:\n");
+          _emerg("backtrace:\n");
         }
 
       for (i = 0; i < size; i++)
         {
-          _alert("[%2d] [<%p>] %pS\n", tid, address[i], address[i]);
+          _emerg("[%2d] [<%p>] %pS\n", tid, address[i], address[i]);
         }
 #endif
     }

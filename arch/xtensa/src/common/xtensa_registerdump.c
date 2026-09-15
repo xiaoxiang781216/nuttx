@@ -45,25 +45,25 @@ void up_dump_register(void *dumpregs)
 {
   volatile uintptr_t *regs = dumpregs ? dumpregs : running_regs();
 
-  _alert("   PC: %08lx    PS: %08lx\n",
+  _emerg("   PC: %08lx    PS: %08lx\n",
          (unsigned long)regs[REG_PC], (unsigned long)regs[REG_PS]);
-  _alert("   A0: %08lx    A1: %08lx    A2: %08lx    A3: %08lx\n",
+  _emerg("   A0: %08lx    A1: %08lx    A2: %08lx    A3: %08lx\n",
          (unsigned long)regs[REG_A0], (unsigned long)regs[REG_A1],
          (unsigned long)regs[REG_A2], (unsigned long)regs[REG_A3]);
-  _alert("   A4: %08lx    A5: %08lx    A6: %08lx    A7: %08lx\n",
+  _emerg("   A4: %08lx    A5: %08lx    A6: %08lx    A7: %08lx\n",
          (unsigned long)regs[REG_A4], (unsigned long)regs[REG_A5],
          (unsigned long)regs[REG_A6], (unsigned long)regs[REG_A7]);
-  _alert("   A8: %08lx    A9: %08lx   A10: %08lx   A11: %08lx\n",
+  _emerg("   A8: %08lx    A9: %08lx   A10: %08lx   A11: %08lx\n",
          (unsigned long)regs[REG_A8], (unsigned long)regs[REG_A9],
          (unsigned long)regs[REG_A10], (unsigned long)regs[REG_A11]);
-  _alert("  A12: %08lx   A13: %08lx   A14: %08lx   A15: %08lx\n",
+  _emerg("  A12: %08lx   A13: %08lx   A14: %08lx   A15: %08lx\n",
          (unsigned long)regs[REG_A12], (unsigned long)regs[REG_A13],
          (unsigned long)regs[REG_A14], (unsigned long)regs[REG_A15]);
-  _alert("  SAR: %08lx CAUSE: %08lx VADDR: %08lx\n",
+  _emerg("  SAR: %08lx CAUSE: %08lx VADDR: %08lx\n",
          (unsigned long)regs[REG_SAR], (unsigned long)regs[REG_EXCCAUSE],
          (unsigned long)regs[REG_EXCVADDR]);
 #if XCHAL_HAVE_LOOPS != 0
-  _alert(" LBEG: %08lx  LEND: %08lx  LCNT: %08lx\n",
+  _emerg(" LBEG: %08lx  LEND: %08lx  LCNT: %08lx\n",
          (unsigned long)regs[REG_LBEG], (unsigned long)regs[REG_LEND],
          (unsigned long)regs[REG_LCOUNT]);
 #endif

@@ -44,11 +44,11 @@ void up_dump_register(void *dumpregs)
 {
   volatile uint8_t *regs = dumpregs ? dumpregs : up_current_regs();
 
-  _alert("A:%02x B:%02x X:%02x%02x Y:%02x%02x PC:%02x%02x CCR:%02x\n",
+  _emerg("A:%02x B:%02x X:%02x%02x Y:%02x%02x PC:%02x%02x CCR:%02x\n",
          regs[REG_A],  regs[REG_B],  regs[REG_XH],  regs[REG_XL],
          regs[REG_YH], regs[REG_YL], regs[REG_PCH], regs[REG_PCL],
          regs[REG_CCR]);
-  _alert("SP:%02x%02x FRAME:%02x%02x TMP:%02x%02x Z:%02x%02x XY:%02x\n",
+  _emerg("SP:%02x%02x FRAME:%02x%02x TMP:%02x%02x Z:%02x%02x XY:%02x\n",
          regs[REG_SPH],  regs[REG_SPL],  regs[REG_FRAMEH], regs[REG_FRAMEL],
          regs[REG_TMPL], regs[REG_TMPH], regs[REG_ZL],     regs[REG_ZH],
          regs[REG_XY],   regs[REG_XY + 1]);
@@ -56,15 +56,15 @@ void up_dump_register(void *dumpregs)
 #if CONFIG_HCS12_MSOFTREGS > 2
 #  error "Need to save more registers"
 #elif CONFIG_HCS12_MSOFTREGS == 2
-  _alert("SOFTREGS: %02x%02x :%02x%02x\n",
+  _emerg("SOFTREGS: %02x%02x :%02x%02x\n",
          regs[REG_SOFTREG1], regs[REG_SOFTREG1 + 1],
          regs[REG_SOFTREG2], regs[REG_SOFTREG2 + 1]);
 #elif CONFIG_HCS12_MSOFTREGS == 1
-  _alert("SOFTREGS: %02x%02x\n",
+  _emerg("SOFTREGS: %02x%02x\n",
          regs[REG_SOFTREG1], regs[REG_SOFTREG1 + 1]);
 #endif
 
 #ifndef CONFIG_HCS12_NONBANKED
-  _alert("PPAGE: %02x\n", regs[REG_PPAGE]);
+  _emerg("PPAGE: %02x\n", regs[REG_PPAGE]);
 #endif
 }

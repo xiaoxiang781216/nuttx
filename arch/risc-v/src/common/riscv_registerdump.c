@@ -47,34 +47,34 @@ void up_dump_register(void *dumpregs)
 
   /* Are user registers available from interrupt processing? */
 
-  _alert("PC: %" PRIxREG "\n", regs[REG_EPC]);
-  _alert("A0: %" PRIxREG " A1: %" PRIxREG " A2: %" PRIxREG
+  _emerg("PC: %" PRIxREG "\n", regs[REG_EPC]);
+  _emerg("A0: %" PRIxREG " A1: %" PRIxREG " A2: %" PRIxREG
          " A3: %" PRIxREG "\n",
          regs[REG_A0], regs[REG_A1], regs[REG_A2], regs[REG_A3]);
-  _alert("A4: %" PRIxREG " A5: %" PRIxREG " A6: %" PRIxREG
+  _emerg("A4: %" PRIxREG " A5: %" PRIxREG " A6: %" PRIxREG
          " A7: %" PRIxREG "\n",
          regs[REG_A4], regs[REG_A5], regs[REG_A6], regs[REG_A7]);
-  _alert("T0: %" PRIxREG " T1: %" PRIxREG " T2: %" PRIxREG
+  _emerg("T0: %" PRIxREG " T1: %" PRIxREG " T2: %" PRIxREG
          " T3: %" PRIxREG "\n",
          regs[REG_T0], regs[REG_T1], regs[REG_T2], regs[REG_T3]);
-  _alert("T4: %" PRIxREG " T5: %" PRIxREG " T6: %" PRIxREG "\n",
+  _emerg("T4: %" PRIxREG " T5: %" PRIxREG " T6: %" PRIxREG "\n",
          regs[REG_T4], regs[REG_T5], regs[REG_T6]);
-  _alert("S0: %" PRIxREG " S1: %" PRIxREG " S2: %" PRIxREG
+  _emerg("S0: %" PRIxREG " S1: %" PRIxREG " S2: %" PRIxREG
          " S3: %" PRIxREG "\n",
          regs[REG_S0], regs[REG_S1], regs[REG_S2], regs[REG_S3]);
-  _alert("S4: %" PRIxREG " S5: %" PRIxREG " S6: %" PRIxREG
+  _emerg("S4: %" PRIxREG " S5: %" PRIxREG " S6: %" PRIxREG
          " S7: %" PRIxREG "\n",
          regs[REG_S4], regs[REG_S5], regs[REG_S6], regs[REG_S7]);
-  _alert("S8: %" PRIxREG " S9: %" PRIxREG " S10: %" PRIxREG
+  _emerg("S8: %" PRIxREG " S9: %" PRIxREG " S10: %" PRIxREG
          " S11: %" PRIxREG "\n",
          regs[REG_S8], regs[REG_S9], regs[REG_S10], regs[REG_S11]);
 #ifdef RISCV_SAVE_GP
-  _alert("GP: %" PRIxREG " SP: %" PRIxREG " FP: %" PRIxREG
+  _emerg("GP: %" PRIxREG " SP: %" PRIxREG " FP: %" PRIxREG
          " TP: %" PRIxREG " RA: %" PRIxREG "\n",
          regs[REG_GP], regs[REG_SP], regs[REG_FP], regs[REG_TP],
          regs[REG_RA]);
 #else
-  _alert("SP: %" PRIxREG " FP: %" PRIxREG " TP: %" PRIxREG
+  _emerg("SP: %" PRIxREG " FP: %" PRIxREG " TP: %" PRIxREG
          " RA: %" PRIxREG "\n",
          regs[REG_SP], regs[REG_FP], regs[REG_TP], regs[REG_RA]);
 #endif

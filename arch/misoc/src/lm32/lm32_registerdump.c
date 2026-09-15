@@ -49,32 +49,32 @@ void up_dump_register(void *dumpregs)
 
   if (regs)
     {
-      _alert("EPC:%08x\n",
+      _emerg("EPC:%08x\n",
              regs[REG_EPC]);
-      _alert(" X0:%08x  A0:%08x  A1:%08x  A2:%08x "
+      _emerg(" X0:%08x  A0:%08x  A1:%08x  A2:%08x "
              " A3:%08x  A4:%08x  A5:%08x  A6:%08x\n",
              regs[REG_X0_NDX], regs[REG_X1_NDX],
              regs[REG_X2_NDX], regs[REG_X3_NDX],
              regs[REG_X4_NDX], regs[REG_X5_NDX],
              regs[REG_X6_NDX], regs[REG_X7_NDX]);
-      _alert(" A7:%08x  X9:%08x X10:%08x X11:%08x "
+      _emerg(" A7:%08x  X9:%08x X10:%08x X11:%08x "
              "X12:%08x X13:%08x X14:%08x X15:%08x\n",
              regs[REG_X8_NDX], regs[REG_X9_NDX],
              regs[REG_X10_NDX], regs[REG_X11_NDX],
              regs[REG_X12_NDX], regs[REG_X13_NDX],
              regs[REG_X14_NDX], regs[REG_X15_NDX]);
-      _alert("X16:%08x X17:%08x X18:%08x X19:%08x "
+      _emerg("X16:%08x X17:%08x X18:%08x X19:%08x "
              "X20:%08x X21:%08x X22:%08x X23:%08x\n",
              regs[REG_X16_NDX], regs[REG_X17_NDX],
              regs[REG_X18_NDX], regs[REG_X19_NDX],
              regs[REG_X20_NDX], regs[REG_X21_NDX],
              regs[REG_X22_NDX], regs[REG_X23_NDX]);
-      _alert("X24:%08x X25:%08x  GP:%08x  FP:%08x "
+      _emerg("X24:%08x X25:%08x  GP:%08x  FP:%08x "
              " SP:%08x  RA:%08x  EA:%08x  BA:%08x\n",
              regs[REG_X24_NDX], regs[REG_X25_NDX],
              regs[REG_X26_NDX], regs[REG_X27_NDX],
              regs[REG_X28_NDX], regs[REG_X29_NDX],
              regs[REG_X30_NDX], regs[REG_X31_NDX]);
-      _alert(" IE:%08x\n", regs[REG_X32_NDX]);
+      _emerg(" IE:%08x\n", regs[REG_X32_NDX]);
     }
 }

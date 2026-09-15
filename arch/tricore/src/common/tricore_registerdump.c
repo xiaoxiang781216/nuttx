@@ -43,16 +43,16 @@
 
 static void tricore_dump_upcsa(volatile uint32_t *regs)
 {
-  _alert("UPCXI:%-13.8" PRIX32 "PSW:%-15.8" PRIX32
+  _emerg("UPCXI:%-13.8" PRIX32 "PSW:%-15.8" PRIX32
          "SP:%-16.8" PRIX32 "A11:%-15.8" PRIX32 "\n",
          regs[REG_UPCXI], regs[REG_PSW], regs[REG_A10], regs[REG_UA11]);
-  _alert("D8:%-16.8" PRIX32 "D9:%-16.8" PRIX32
+  _emerg("D8:%-16.8" PRIX32 "D9:%-16.8" PRIX32
          "D10:%-15.8" PRIX32 "D11:%-15.8" PRIX32 "\n",
          regs[REG_D8], regs[REG_D9], regs[REG_D10], regs[REG_D11]);
-  _alert("A12:%-15.8" PRIX32 "A13:%-15.8" PRIX32
+  _emerg("A12:%-15.8" PRIX32 "A13:%-15.8" PRIX32
          "A14:%-15.8" PRIX32 "A15:%-15.8" PRIX32 "\n",
          regs[REG_A12], regs[REG_A13], regs[REG_A14], regs[REG_A15]);
-  _alert("D12:%-15.8" PRIX32 "D13:%-15.8" PRIX32
+  _emerg("D12:%-15.8" PRIX32 "D13:%-15.8" PRIX32
          "D14:%-15.8" PRIX32 "D15:%-15.8" PRIX32 "\n\n",
          regs[REG_D12], regs[REG_D13], regs[REG_D14], regs[REG_D15]);
 }
@@ -63,17 +63,17 @@ static void tricore_dump_upcsa(volatile uint32_t *regs)
 
 static void tricore_dump_lowcsa(volatile uint32_t *regs)
 {
-  _alert("LPCXI:%-13.8" PRIX32 "PC:%-16.8" PRIX32
+  _emerg("LPCXI:%-13.8" PRIX32 "PC:%-16.8" PRIX32
          "A2:%-16.8" PRIX32 "A3:%-16.8" PRIX32 "\n",
          regs[REG_LPCXI] | PCXI_UL, regs[REG_LA11],
          regs[REG_A2], regs[REG_A3]);
-  _alert("D0:%-16.8" PRIX32 "D1:%-16.8" PRIX32
+  _emerg("D0:%-16.8" PRIX32 "D1:%-16.8" PRIX32
          "D2:%-16.8" PRIX32 "D3:%-16.8" PRIX32 "\n",
          regs[REG_D0], regs[REG_D1], regs[REG_D2], regs[REG_D3]);
-  _alert("A4:%-16.8" PRIX32 "A5:%-16.8" PRIX32
+  _emerg("A4:%-16.8" PRIX32 "A5:%-16.8" PRIX32
          "A6:%-16.8" PRIX32 "A7:%-16.8" PRIX32 "\n",
          regs[REG_A4], regs[REG_A5], regs[REG_A6], regs[REG_A7]);
-  _alert("D4:%-16.8" PRIX32 "D5:%-16.8" PRIX32
+  _emerg("D4:%-16.8" PRIX32 "D5:%-16.8" PRIX32
          "D6:%-16.8" PRIX32 "D7:%-16.8" PRIX32 "\n\n",
          regs[REG_D4], regs[REG_D5], regs[REG_D6], regs[REG_D7]);
 }
@@ -84,7 +84,7 @@ static void tricore_dump_lowcsa(volatile uint32_t *regs)
 
 static void tricore_dump_trapctrl(void)
 {
-  _alert("PSTR:%-14.8" PRIX32 "DSTR:%-14.8" PRIX32
+  _emerg("PSTR:%-14.8" PRIX32 "DSTR:%-14.8" PRIX32
          "DATR:%-14.8" PRIX32 "DEADD:%-13.8" PRIX32 "\n\n",
          tricore_mfcr(CPU_PSTR), tricore_mfcr(CPU_DSTR),
          tricore_mfcr(CPU_DATR), tricore_mfcr(CPU_DEADD));

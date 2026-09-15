@@ -45,7 +45,7 @@ void print_mem(void *sp, size_t size)
   int i;
   int j;
 
-  _alert("Memory Dump (%zu bytes):\n", size);
+  _emerg("Memory Dump (%zu bytes):\n", size);
 
   for (i = 0; i < size / 8; i++)
     {
@@ -59,7 +59,7 @@ void print_mem(void *sp, size_t size)
         }
 
     buf[8] = '\0';
-    _alert(" %016" PRIxPTR "\t%02x %02x %02x %02x %02x %02x %02x %02x\t%s\n",
+    _emerg(" %016" PRIxPTR "\t%02x %02x %02x %02x %02x %02x %02x %02x\t%s\n",
             (uintptr_t)(sp + i * 8),
             *((uint8_t *)(sp + i * 8 + 0)),
             *((uint8_t *)(sp + i * 8 + 1)),
@@ -77,7 +77,7 @@ void backtrace(uint64_t rbp)
 {
   int i;
 
-  _alert("Frame Dump (64 bytes):\n");
+  _emerg("Frame Dump (64 bytes):\n");
 
   for (i = 0; i < 16; i++)
     {
@@ -86,7 +86,7 @@ void backtrace(uint64_t rbp)
           break;
         }
 
-      _alert("  %016" PRIx64 "\t%016" PRIx64 "\n",
+      _emerg("  %016" PRIx64 "\t%016" PRIx64 "\n",
              *((uint64_t *)(rbp)), *((uint64_t *)(rbp + 1 * 8)));
 
       if ((rbp) && *((uint64_t *)(rbp + 1 * 8)))
@@ -110,40 +110,40 @@ void up_dump_register(void *dumpregs)
   __asm__ volatile ("mov %%cr2, %%rax; mov %%rax, %0"
                     ::"m"(cr2):"memory", "rax");
 
-  _alert("----------------CUT HERE-----------------\n");
-  _alert("Gerneral Informations:\n");
-  _alert("CPL: %" PRId64 ", RPL: %" PRId64 "\n",
+  _emerg("----------------CUT HERE-----------------\n");
+  _emerg("Gerneral Informations:\n");
+  _emerg("CPL: %" PRId64 ", RPL: %" PRId64 "\n",
          regs[REG_CS] & 0x3, regs[REG_DS] & 0x3);
-  _alert("RIP: %016" PRIx64 ", RSP: %016" PRIx64 "\n",
+  _emerg("RIP: %016" PRIx64 ", RSP: %016" PRIx64 "\n",
          regs[REG_RIP], regs[REG_RSP]);
-  _alert("RBP: %016" PRIx64 ", RFLAGS: %016" PRIx64 "\n",
+  _emerg("RBP: %016" PRIx64 ", RFLAGS: %016" PRIx64 "\n",
          regs[REG_RBP], regs[REG_RFLAGS]);
-  _alert("MSR_STAR: %016" PRIx64 ", MSR_LSTAR: %016" PRIx64 "\n",
+  _emerg("MSR_STAR: %016" PRIx64 ", MSR_LSTAR: %016" PRIx64 "\n",
          read_msr(0xc0000081), read_msr(0xc0000082));
-  _alert("MXCSR: %016" PRIx64 ", MSR_FS_BASE: %016" PRIx64 "\n",
+  _emerg("MXCSR: %016" PRIx64 ", MSR_FS_BASE: %016" PRIx64 "\n",
          mxcsr, read_msr(MSR_FS_BASE));
-  _alert("CR2: %016" PRIx64 "\n", cr2);
-  _alert("Selector Dump:\n");
-  _alert("CS: %016" PRIx64 ", DS: %016" PRIx64 ", SS: %016" PRIx64 "\n",
+  _emerg("CR2: %016" PRIx64 "\n", cr2);
+  _emerg("Selector Dump:\n");
+  _emerg("CS: %016" PRIx64 ", DS: %016" PRIx64 ", SS: %016" PRIx64 "\n",
          regs[REG_CS], regs[REG_DS], regs[REG_SS]);
-  _alert("ES: %016" PRIx64 ", FS: %016" PRIx64 ", GS: %016" PRIx64 "\n",
+  _emerg("ES: %016" PRIx64 ", FS: %016" PRIx64 ", GS: %016" PRIx64 "\n",
          regs[REG_ES], regs[REG_FS], regs[REG_GS]);
-  _alert("Register Dump:\n");
-  _alert("RAX: %016" PRIx64 ", RBX: %016" PRIx64 "\n",
+  _emerg("Register Dump:\n");
+  _emerg("RAX: %016" PRIx64 ", RBX: %016" PRIx64 "\n",
          regs[REG_RAX], regs[REG_RBX]);
-  _alert("RCX: %016" PRIx64 ", RDX: %016" PRIx64 "\n",
+  _emerg("RCX: %016" PRIx64 ", RDX: %016" PRIx64 "\n",
          regs[REG_RCX], regs[REG_RDX]);
-  _alert("RDI: %016" PRIx64 ", RSI: %016" PRIx64 "\n",
+  _emerg("RDI: %016" PRIx64 ", RSI: %016" PRIx64 "\n",
          regs[REG_RDI], regs[REG_RSI]);
-  _alert(" R8: %016" PRIx64 ",  R9: %016" PRIx64 "\n",
+  _emerg(" R8: %016" PRIx64 ",  R9: %016" PRIx64 "\n",
          regs[REG_R8] , regs[REG_R9]);
-  _alert("R10: %016" PRIx64 ", R11: %016" PRIx64 "\n",
+  _emerg("R10: %016" PRIx64 ", R11: %016" PRIx64 "\n",
          regs[REG_R10], regs[REG_R11]);
-  _alert("R12: %016" PRIx64 ", R13: %016" PRIx64 "\n",
+  _emerg("R12: %016" PRIx64 ", R13: %016" PRIx64 "\n",
          regs[REG_R12], regs[REG_R13]);
-  _alert("R14: %016" PRIx64 ", R15: %016" PRIx64 "\n",
+  _emerg("R14: %016" PRIx64 ", R15: %016" PRIx64 "\n",
          regs[REG_R14], regs[REG_R15]);
-  _alert("Dumping Stack (+-64 bytes):\n");
+  _emerg("Dumping Stack (+-64 bytes):\n");
 
-  _alert("-----------------------------------------\n");
+  _emerg("-----------------------------------------\n");
 }

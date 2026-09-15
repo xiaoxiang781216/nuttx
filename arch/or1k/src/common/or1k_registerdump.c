@@ -46,17 +46,17 @@ void up_dump_register(void *dumpregs)
 
   /* Dump the interrupt registers */
 
-  _alert("R0: %08x %08x %08x %08x %08x %08x %08x %08x\n",
+  _emerg("R0: %08x %08x %08x %08x %08x %08x %08x %08x\n",
          regs[REG_R0], regs[REG_R1], regs[REG_R2], regs[REG_R3],
          regs[REG_R4], regs[REG_R5], regs[REG_R6], regs[REG_R7]);
-  _alert("R8: %08x %08x %08x %08x %08x %08x %08x %08x\n",
+  _emerg("R8: %08x %08x %08x %08x %08x %08x %08x %08x\n",
          regs[REG_R8],  regs[REG_R9],  regs[REG_R10], regs[REG_R11],
          regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
 #ifdef CONFIG_BUILD_PROTECTED
-  _alert("xPSR: %08x PRIMASK: %08x EXEC_RETURN: %08x\n",
+  _emerg("xPSR: %08x PRIMASK: %08x EXEC_RETURN: %08x\n",
          regs[REG_XPSR], regs[REG_PRIMASK], regs[REG_EXC_RETURN]);
 #else
-  _alert("xPSR: %08x PRIMASK: %08x\n",
+  _emerg("xPSR: %08x PRIMASK: %08x\n",
          regs[REG_XPSR], regs[REG_PRIMASK]);
 #endif
 }

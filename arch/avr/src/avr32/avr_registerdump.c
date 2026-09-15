@@ -50,20 +50,20 @@ void up_dump_register(void *dumpregs)
 
   if (regs)
     {
-      _alert("R%d: %08x %08x %08x %08x %08x %08x %08x %08x\n",
+      _emerg("R%d: %08x %08x %08x %08x %08x %08x %08x %08x\n",
              0,
              regs[REG_R0], regs[REG_R1],
              regs[REG_R2], regs[REG_R3],
              regs[REG_R4], regs[REG_R5],
              regs[REG_R6], regs[REG_R7]);
 
-      _alert("R%d: %08x %08x %08x %08x %08x %08x %08x %08x\n",
+      _emerg("R%d: %08x %08x %08x %08x %08x %08x %08x %08x\n",
              8,
              regs[REG_R8],  regs[REG_R9],
              regs[REG_R10], regs[REG_R11],
              regs[REG_R12], regs[REG_R13],
              regs[REG_R14], regs[REG_R15]);
 
-      _alert("SR: %08x\n", regs[REG_SR]);
+      _emerg("SR: %08x\n", regs[REG_SR]);
     }
 }

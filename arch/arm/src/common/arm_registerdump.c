@@ -84,37 +84,37 @@ void up_dump_register(void *dumpregs)
 
   /* Dump the interrupt registers */
 
-  _alert("R0: %08" PRIx32 " R1: %08" PRIx32
+  _emerg("R0: %08" PRIx32 " R1: %08" PRIx32
          " R2: %08" PRIx32 "  R3: %08" PRIx32 "\n",
          regs[REG_R0], regs[REG_R1], regs[REG_R2], regs[REG_R3]);
-  _alert("R4: %08" PRIx32 " R5: %08" PRIx32
+  _emerg("R4: %08" PRIx32 " R5: %08" PRIx32
          " R6: %08" PRIx32 "  R7: %08" PRIx32 "\n",
          regs[REG_R4], regs[REG_R5], regs[REG_R6], regs[REG_R7]);
-  _alert("R8: %08" PRIx32 " R9: %08" PRIx32
+  _emerg("R8: %08" PRIx32 " R9: %08" PRIx32
          " R10: %08" PRIx32 " R11: %08" PRIx32 "\n",
          regs[REG_R8], regs[REG_R9], regs[REG_R10], regs[REG_R11]);
-  _alert("R12: %08" PRIx32 " SP: %08" PRIx32
+  _emerg("R12: %08" PRIx32 " SP: %08" PRIx32
          " LR: %08" PRIx32 "  PC: %08" PRIx32 "\n",
          regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
 
 #if defined(REG_BASEPRI)
-  _alert("xPSR: %08" PRIx32 " BASEPRI: %08" PRIx32
+  _emerg("xPSR: %08" PRIx32 " BASEPRI: %08" PRIx32
          " CONTROL: %08" PRIx32 "\n",
          regs[REG_XPSR], regs[REG_BASEPRI], getcontrol());
 #elif defined(REG_PRIMASK)
-  _alert("xPSR: %08" PRIx32 " PRIMASK: %08" PRIx32
+  _emerg("xPSR: %08" PRIx32 " PRIMASK: %08" PRIx32
          " CONTROL: %08" PRIx32 "\n",
          regs[REG_XPSR], regs[REG_PRIMASK], getcontrol());
 #elif defined(REG_CPSR)
-  _alert("CPSR: %08" PRIx32 "\n", regs[REG_CPSR]);
+  _emerg("CPSR: %08" PRIx32 "\n", regs[REG_CPSR]);
 #endif
 
 #ifdef REG_EXC_RETURN
-  _alert("EXC_RETURN: %08" PRIx32 "\n", regs[REG_EXC_RETURN]);
+  _emerg("EXC_RETURN: %08" PRIx32 "\n", regs[REG_EXC_RETURN]);
 #endif
 
 #ifdef CONFIG_ARCH_ARM_M
   g_psp = arm_getpsp();
-  _alert("PSP: %08" PRIx32 "\n", g_psp);
+  _emerg("PSP: %08" PRIx32 "\n", g_psp);
 #endif
 }

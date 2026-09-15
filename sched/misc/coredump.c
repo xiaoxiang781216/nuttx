@@ -868,14 +868,14 @@ coredump_print_memory_regions(FAR const struct memory_region_s *regions)
 
   if (regions == NULL)
     {
-      _alert("No memory regions defined.\n");
+      _emerg("No memory regions defined.\n");
       return;
     }
 
-  _alert("Memory regions will be printed:\n");
+  _emerg("Memory regions will be printed:\n");
   for (i = 0; regions[i].start < regions[i].end; i++)
     {
-      _alert("Region[%d] start=0x%" PRIxPTR ", end=0x%" PRIxPTR,
+      _emerg("Region[%d] start=0x%" PRIxPTR ", end=0x%" PRIxPTR,
              i, regions[i].start, regions[i].end);
       *(volatile int *)regions[i].start;
       *(volatile int *)(regions[i].end - sizeof(int));
@@ -1019,11 +1019,11 @@ static void coredump_dump_netpoll(FAR struct tcb_s *tcb)
   ret = coredump_with_tcb(g_coredump.regions, stream, tcb);
   if (ret < 0)
     {
-      _alert("Coredump fail %d\n", ret);
+      _emerg("Coredump fail %d\n", ret);
       return;
     }
 
-  _alert("Finish coredump, send %" PRIuOFF " bytes over netpoll\n",
+  _emerg("Finish coredump, send %" PRIuOFF " bytes over netpoll\n",
          netstream->common.nput);
 }
 #endif
@@ -1045,7 +1045,7 @@ static void coredump_dump_syslog(FAR struct tcb_s *tcb)
 
   logmask = nx_setlogmask(LOG_UPTO(LOG_ALERT));
 
-  _alert("Start coredump:\n");
+  _emerg("Start coredump:\n");
 
   /* Initialize hex output stream */
 
@@ -1074,10 +1074,10 @@ static void coredump_dump_syslog(FAR struct tcb_s *tcb)
   coredump_with_tcb(g_coredump.regions, stream, tcb);
 
 #  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  _alert("Coredump finish (Compression Enabled). %s formatted\n",
+  _emerg("Coredump finish (Compression Enabled). %s formatted\n",
          streamname);
 #  else
-  _alert("Coredump finish. %s formatted\n", streamname);
+  _emerg("Coredump finish. %s formatted\n", streamname);
 #  endif
 
   nx_setlogmask(logmask);
@@ -1117,7 +1117,7 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
   ret = coredump_with_tcb(g_coredump.regions, stream, tcb);
   if (ret < 0)
     {
-      _alert("Coredump fail %d\n", ret);
+      _emerg("Coredump fail %d\n", ret);
       return;
     }
 
@@ -1126,7 +1126,7 @@ static void coredump_dump_dev(FAR struct tcb_s *tcb)
   g_coredump.next = ALIGN_UP(lib_stream_nput(&wrapstream),
                              g_coredump.align) % g_coredump.devsize;
 
-  _alert("Coredump finish, write %" PRIuOFF " bytes to %s\n",
+  _emerg("Coredump finish, write %" PRIuOFF " bytes to %s\n",
          lib_stream_nput(stream), CONFIG_BOARD_COREDUMP_DEVPATH);
 }
 #endif
@@ -1810,7 +1810,7 @@ int coredump_initialize(void)
                                   CONFIG_BOARD_COREDUMP_NETPOLL_MAC);
   if (ret < 0)
     {
-      _alert("%s Coredump netpoll init failed:%d\n",
+      _emerg("%s Coredump netpoll init failed:%d\n",
              CONFIG_BOARD_COREDUMP_NETPOLL_INTF, ret);
       return ret;
     }
@@ -1819,7 +1819,7 @@ int coredump_initialize(void)
 #ifdef CONFIG_BOARD_COREDUMP_DEV
   if (ret < 0)
     {
-      _alert("%s Coredump device init failed:%d\n",
+      _emerg("%s Coredump device init failed:%d\n",
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
     }
   else
@@ -1849,7 +1849,7 @@ void coredump_dump(FAR struct tcb_s *tcb)
 {
   if (!g_coredump.enabled)
     {
-      _alert("Coredump is disabled.\n");
+      _emerg("Coredump is disabled.\n");
       return;
     }
 

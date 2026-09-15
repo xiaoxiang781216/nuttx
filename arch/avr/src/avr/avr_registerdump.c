@@ -50,28 +50,28 @@ void up_dump_register(void *dumpregs)
 
   if (regs)
     {
-      _alert("R%02d: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+      _emerg("R%02d: %02x %02x %02x %02x %02x %02x %02x %02x\n",
              0,
              regs[REG_R0],  regs[REG_R1],
              regs[REG_R2],  regs[REG_R3],
              regs[REG_R4],  regs[REG_R5],
              regs[REG_R6],  regs[REG_R7]);
 
-      _alert("R%02d: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+      _emerg("R%02d: %02x %02x %02x %02x %02x %02x %02x %02x\n",
              8,
              regs[REG_R8],  regs[REG_R9],
              regs[REG_R10], regs[REG_R11],
              regs[REG_R12], regs[REG_R13],
              regs[REG_R14], regs[REG_R15]);
 
-      _alert("R%02d: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+      _emerg("R%02d: %02x %02x %02x %02x %02x %02x %02x %02x\n",
              16,
              regs[REG_R16], regs[REG_R17],
              regs[REG_R18], regs[REG_R19],
              regs[REG_R20], regs[REG_R21],
              regs[REG_R22], regs[REG_R23]);
 
-      _alert("R%02d: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+      _emerg("R%02d: %02x %02x %02x %02x %02x %02x %02x %02x\n",
              24,
              regs[REG_R24], regs[REG_R25],
              regs[REG_R26], regs[REG_R27],
@@ -79,12 +79,12 @@ void up_dump_register(void *dumpregs)
              regs[REG_R30], regs[REG_R31]);
 
 #if !defined(REG_PC2)
-      _alert("PC:  %02x%02x  SP: %02x%02x SREG: %02x\n",
+      _emerg("PC:  %02x%02x  SP: %02x%02x SREG: %02x\n",
              regs[REG_PC0], regs[REG_PC1],
              regs[REG_SPH], regs[REG_SPL],
              regs[REG_SREG]);
 #else
-      _alert("PC:  %02x%02x%02x  SP: %02x%02x SREG: %02x\n",
+      _emerg("PC:  %02x%02x%02x  SP: %02x%02x SREG: %02x\n",
              regs[REG_PC0], regs[REG_PC1],
              regs[REG_PC2], regs[REG_SPH],
              regs[REG_SPL], regs[REG_SREG]);
