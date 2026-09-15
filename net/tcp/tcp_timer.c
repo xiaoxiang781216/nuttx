@@ -540,13 +540,22 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
       /* Flush pending delayed ACKs before checking the connection timer.
        * The timer expiry (hsec) may have been driven by rx_acktimer
        * rather than conn->timer, so we must handle delayed ACKs first.
-       * This matches Linux behavior where tcp_delack_timer_handler()
-       * fires regardless of TCP state.
+       * Only FIN_WAIT_2 can have one pending here: rx_unackseg is set
+       * solely in ESTABLISHED, FIN_WAIT_1 and FIN_WAIT_2, and every path
+       * into TIME_WAIT sends an ACK first, which clears it.  Like
+       * tcp_delack_timer_handler() in Linux, this keeps a pending delayed
+       * ACK from being dropped during teardown.
        */
 
       if (conn->rx_unackseg > 0)
         {
-          conn->rx_unackseg = 0;
+          /* Do not pre-clear rx_unackseg here: tcp_sendcommon() clears both
+           * rx_unackseg and rx_acktimer, but only when rx_unackseg is still
+           * set.  Clearing it first would leave rx_acktimer armed, and
+           * tcp_get_timeout() would then keep re-arming the work queue at
+           * the delayed-ACK interval until FIN_WAIT_2 ends.
+           */
+
           tcp_send(dev, conn, TCP_ACK, hdrlen);
           goto done;
         }
@@ -897,11 +906,11 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 
 #ifdef CONFIG_NET_TCP_DELAYED_ACK
       /* Flush pending delayed ACKs for connections that have transitioned
-       * out of ESTABLISHED/CLOSE_WAIT state (e.g., to FIN_WAIT_1/FIN_WAIT_2)
-       * while a delayed ACK was still pending.  This matches Linux behavior
-       * where tcp_delack_timer_handler() fires regardless of TCP state,
-       * ensuring delayed ACKs are never silently dropped during connection
-       * teardown.
+       * out of ESTABLISHED/CLOSE_WAIT state (e.g., to FIN_WAIT_1) while a
+       * delayed ACK was still pending.  FIN_WAIT_2 does not reach here; it
+       * is served by the TIME_WAIT/FIN_WAIT_2 branch above.  Like
+       * tcp_delack_timer_handler() in Linux, this keeps delayed ACKs from
+       * being silently dropped during connection teardown.
        */
 
       if (conn->rx_unackseg > 0)
