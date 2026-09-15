@@ -569,12 +569,6 @@ static void tasklist_initialize(void)
 
   /* Initialize RTOS facilities *********************************************/
 
-  /* Initialize the semaphore facility.  This has to be done very early
-   * because many subsystems depend upon fully functional semaphores.
-   */
-
-  nxsem_initialize();
-
   /* Task lists are initialized */
 
   set_initstate(OSINIT_TASKLISTS);

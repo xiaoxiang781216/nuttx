@@ -126,14 +126,7 @@ int nxsem_trywait_slow(FAR sem_t *sem)
               atomic_add(NXSEM_COUNT(sem), 1);
             }
         }
-      else
 #endif
-        {
-          if (!mutex)
-            {
-              nxsem_add_holder(sem);
-            }
-        }
     }
 
   /* Interrupts may now be enabled. */

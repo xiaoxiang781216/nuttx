@@ -113,15 +113,12 @@ int nxsem_trywait(FAR sem_t *sem)
   DEBUGASSERT(sem != NULL);
   DEBUGASSERT(!NXSEM_IS_MUTEX(sem));
 
-  /* Disable fast path if the semaphore was destroyed, or if priority
-   * protection is enabled on the semaphore
+  /* A counting semaphore never carries a priority protocol (those are
+   * supported only for mutexes), so the only reason to skip the fast path
+   * is a destroyed semaphore.
    */
 
-  if ((sem->flags & SEM_FLAG_DESTROYED) == 0
-#if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-      && (sem->flags & SEM_PRIO_MASK) == SEM_PRIO_NONE
-#endif
-     )
+  if ((sem->flags & SEM_FLAG_DESTROYED) == 0)
     {
       for (; ; )
         {

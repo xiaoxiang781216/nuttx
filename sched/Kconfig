@@ -1715,22 +1715,6 @@ menuconfig PRIORITY_INHERITANCE
 
 			int ret = pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_NONE);
 
-if PRIORITY_INHERITANCE
-
-config SEM_PREALLOCHOLDERS
-	int "Number of pre-allocated holders"
-	default 4 if DEFAULT_SMALL
-	default 8 if !DEFAULT_SMALL
-	---help---
-		This setting is only used if priority inheritance is enabled.
-		It defines the maximum number of different threads (minus one) that
-		can take counts on a semaphore with priority inheritance support.
-		This may be set to zero if priority inheritance is disabled OR if you
-		are only using semaphores as mutexes (only one holder) OR if no more
-		than two threads participate using a counting semaphore.
-
-endif # PRIORITY_INHERITANCE
-
 config PRIORITY_PROTECT
 	bool "Enable priority protect"
 	default n

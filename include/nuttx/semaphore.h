@@ -644,15 +644,15 @@ SEMAPHORE_INLINE int nxsem_wait(FAR sem_t *sem)
 {
   int ret = -EINVAL;
 
-  /* Disable fast path if the semaphore was destroyed, or if priority
-   * protection is enabled on the semaphore
+  /* Priority inheritance and protection are supported only for mutexes,
+   * which use nxmutex_wait().  A counting semaphore never carries a priority
+   * protocol, so the only reason to skip the fast path is a destroyed
+   * semaphore.
    */
 
-  if ((sem->flags & SEM_FLAG_DESTROYED) == 0
-#if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-      && (sem->flags & SEM_PRIO_MASK) == SEM_PRIO_NONE
-#endif
-     )
+  DEBUGASSERT(!NXSEM_IS_MUTEX(sem));
+
+  if ((sem->flags & SEM_FLAG_DESTROYED) == 0)
     {
       FAR atomic_t *val = NXSEM_COUNT(sem);
       int32_t old = atomic_read(val);
@@ -715,15 +715,15 @@ SEMAPHORE_INLINE int nxsem_post(FAR sem_t *sem)
 {
   int ret = -EINVAL;
 
-  /* Disable fast path if the semaphore was destroyed, or if priority
-   * protection is enabled on the semaphore
+  /* Priority inheritance and protection are supported only for mutexes,
+   * which use nxmutex_post().  A counting semaphore never carries a priority
+   * protocol, so the only reason to skip the fast path is a destroyed
+   * semaphore.
    */
 
-  if ((sem->flags & SEM_FLAG_DESTROYED) == 0
-#if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-      && (sem->flags & SEM_PRIO_MASK) == SEM_PRIO_NONE
-#endif
-     )
+  DEBUGASSERT(!NXSEM_IS_MUTEX(sem));
+
+  if ((sem->flags & SEM_FLAG_DESTROYED) == 0)
     {
       FAR atomic_t *val = NXSEM_COUNT(sem);
       int32_t old = atomic_read(val);

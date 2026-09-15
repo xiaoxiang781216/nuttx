@@ -162,10 +162,6 @@ int nxsem_wait_slow(FAR sem_t *sem)
 
               atomic_set(NXSEM_MHOLDER(sem), mholder);
             }
-          else
-            {
-              nxsem_add_holder(sem);
-            }
         }
     }
 
@@ -263,8 +259,8 @@ int nxsem_wait_slow(FAR sem_t *sem)
        * sem_timedwait().
        *
        * If we were not awakened by a signal or a timeout, then
-       * nxsem_add_holder() was called by logic in sem_wait() fore this
-       * thread was restarted.
+       * nxsem_add_holder_tcb() was called by logic in sem_post() before
+       * this thread was restarted.
        */
 
       ret = rtcb->errcode != OK ? -rtcb->errcode : OK;
