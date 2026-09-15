@@ -62,6 +62,7 @@ struct irq_work_info_s
 };
 
 typedef FAR struct kwork_wqueue_s *irq_nworkq_t[CONFIG_IRQ_NWORKS];
+typedef FAR void *irq_nstack_t[CONFIG_IRQ_NWORKS];
 
 /****************************************************************************
  * Private Data
@@ -79,9 +80,11 @@ g_irq_work_vector[NR_IRQS]);
 static
 DEFINE_PER_CPU_BMP(mutex_t, g_irq_wqueue_lock) = NXMUTEX_INITIALIZER;
 static DEFINE_PER_CPU_BSS_BMP(irq_nworkq_t, g_irq_wqueue);
+static DEFINE_PER_CPU_BSS_BMP(irq_nstack_t, g_irq_wqueue_stack);
 
 #define g_irq_wqueue_lock this_cpu_var_bmp(g_irq_wqueue_lock)
 #define g_irq_wqueue this_cpu_var_bmp(g_irq_wqueue)
+#define g_irq_wqueue_stack this_cpu_var_bmp(g_irq_wqueue_stack)
 
 /****************************************************************************
  * Private Functions
@@ -103,9 +106,13 @@ static DEFINE_PER_CPU_BSS_BMP(irq_nworkq_t, g_irq_wqueue);
  *
  *   Because queues are shared per priority, a caller-provided stack can
  *   only take effect when a new queue is created. If a queue with the same
- *   priority already exists, the caller-provided stack cannot be honored;
- *   in that case -EEXIST is returned and the caller retains ownership of
- *   the stack buffer (it is not referenced by the work queue).
+ *   priority already exists, the caller-provided stack can still be honored
+ *   when it is exactly the same buffer that was used when that queue was
+ *   first created (nothing new needs to be owned, so the queue is simply
+ *   reused). If a different stack buffer is provided, it cannot be adopted
+ *   by the existing shared queue; -EEXIST is returned and the caller
+ *   retains ownership of the stack buffer (it is not referenced by the work
+ *   queue), so the caller can free or reuse it and avoid a memory leak.
  *
  * Input Parameters:
  *   priority   - Work queue thread priority
@@ -119,7 +126,8 @@ static DEFINE_PER_CPU_BSS_BMP(irq_nworkq_t, g_irq_wqueue);
  *   Zero (OK) on success. On failure a negated errno value:
  *     -EINVAL - stack_addr is non-NULL but stack_size is not positive
  *     -EEXIST - a queue with the same priority already exists and the
- *               caller-provided stack cannot be used
+ *               caller-provided stack differs from the one used to create
+ *               that queue, so it cannot be used
  *     -ENOMEM - no free queue slot, heap allocation failed, or work queue
  *               creation failed
  *
@@ -152,12 +160,17 @@ static int irq_get_wqueue(int priority, FAR void *stack_addr,
 
       if (wqueue_priority == priority)
         {
-          /* A queue with this priority already exists. It can be reused
-           * only when the caller does not require its own stack, since
-           * the queue's stack was fixed at creation time.
+          /* A queue with this priority already exists and is shared. If
+           * the caller provided a stack, it can only be honored when it is
+           * exactly the same buffer used when this queue was first created
+           * (in which case there is nothing new to own, so reuse is safe).
+           * A different stack buffer cannot be adopted by the existing
+           * shared queue; returning -EEXIST lets the caller know its
+           * buffer was not taken, so it can free/reuse it and avoid a
+           * memory leak.
            */
 
-          if (stack_addr != NULL)
+          if (stack_addr != NULL && stack_addr != g_irq_wqueue_stack[i])
             {
               ret = -EEXIST;
             }
@@ -209,6 +222,7 @@ static int irq_get_wqueue(int priority, FAR void *stack_addr,
     }
 
   g_irq_wqueue[i] = queue;
+  g_irq_wqueue_stack[i] = stack_addr;
   *wqueue = queue;
 
   nxmutex_unlock(&g_irq_wqueue_lock);
