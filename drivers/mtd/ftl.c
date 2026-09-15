@@ -250,18 +250,20 @@ static ssize_t ftl_mtd_erase(FAR struct ftl_struct_s *dev, off_t startblock)
  * Name: ftl_mtd_bwrite
  *
  * Description:
- *   Write one full erase block.  Bad block handling, if any, is performed
- *   by the underlying MTD device (see CONFIG_FTL_BBM).
+ *   Write the given number of R/W blocks to the MTD device.  All FTL writes
+ *   funnel through here.  Bad block handling, if any, is performed by the
+ *   underlying MTD device (see CONFIG_FTL_BBM).
  *
  ****************************************************************************/
 
-static ssize_t ftl_mtd_bwrite(FAR struct ftl_struct_s *dev, off_t startblock,
-                              FAR const uint8_t *buffer)
+static ssize_t ftl_mtd_bwrite(FAR struct ftl_struct_s *dev,
+                              FAR const uint8_t *buffer,
+                              off_t startblock, size_t nblocks)
 {
   ssize_t ret;
 
-  ret = MTD_BWRITE(dev->mtd, startblock, dev->blkper, buffer);
-  if (ret != dev->blkper)
+  ret = MTD_BWRITE(dev->mtd, startblock, nblocks, buffer);
+  if (ret != nblocks)
     {
       ferr("ERROR: Write block %" PRIdOFF " failed: %zd\n",
            startblock, ret);
@@ -342,13 +344,15 @@ static ssize_t ftl_flush_direct(FAR struct ftl_struct_s *dev,
   off_t starteraseblock;
   off_t offset;
   ssize_t ret;
+  size_t remaining;
   size_t count;
 
-  while (nblocks)
+  remaining = nblocks;
+  while (remaining)
     {
       starteraseblock = startblock / dev->blkper;
       offset = startblock & (dev->blkper - 1);
-      count = MIN(dev->blkper - offset, nblocks);
+      count = MIN(dev->blkper - offset, remaining);
 
       if (offset == 0 && dev->mtd->erase != NULL && !(dev->oflags & O_SYNC))
         {
@@ -359,15 +363,13 @@ static ssize_t ftl_flush_direct(FAR struct ftl_struct_s *dev,
             }
         }
 
-      ret = MTD_BWRITE(dev->mtd, startblock, count, buffer);
+      ret = ftl_mtd_bwrite(dev, buffer, startblock, count);
       if (ret != count)
         {
-          ferr("ERROR: Write block %"PRIdOFF" failed: %zd\n",
-               startblock, ret);
           return ret;
         }
 
-      nblocks -= count;
+      remaining -= count;
       startblock += count;
       buffer += count * blocksize;
     }
@@ -391,14 +393,7 @@ static ssize_t ftl_flush(FAR void *priv, FAR const uint8_t *buffer,
 
   if (dev->mtd->erase == NULL)
     {
-      ret = MTD_BWRITE(dev->mtd, startblock, nblocks, buffer);
-      if (ret != nblocks)
-        {
-          ferr("ERROR: Direct write block %" PRIdOFF " failed: %d\n",
-               startblock, ret);
-        }
-
-      return ret;
+      return ftl_mtd_bwrite(dev, buffer, startblock, nblocks);
     }
 
   if (dev->oflags & O_DIRECT)
@@ -470,7 +465,7 @@ static ssize_t ftl_flush(FAR void *priv, FAR const uint8_t *buffer,
 
       /* And write the erase block back to flash */
 
-      nxfrd = ftl_mtd_bwrite(dev, rwblock, dev->eblock);
+      nxfrd = ftl_mtd_bwrite(dev, dev->eblock, rwblock, dev->blkper);
       if (nxfrd != dev->blkper)
         {
           return -EIO;
@@ -508,7 +503,7 @@ static ssize_t ftl_flush(FAR void *priv, FAR const uint8_t *buffer,
       finfo("Write %" PRId32 " bytes into erase block=%" PRIdOFF
             " at offset=0\n", dev->geo.erasesize, alignedblock);
 
-      nxfrd = ftl_mtd_bwrite(dev, alignedblock, buffer);
+      nxfrd = ftl_mtd_bwrite(dev, buffer, alignedblock, dev->blkper);
       if (nxfrd != dev->blkper)
         {
           return -EIO;
@@ -558,7 +553,7 @@ static ssize_t ftl_flush(FAR void *priv, FAR const uint8_t *buffer,
 
       /* And write the erase back to flash */
 
-      nxfrd = ftl_mtd_bwrite(dev, alignedblock, dev->eblock);
+      nxfrd = ftl_mtd_bwrite(dev, dev->eblock, alignedblock, dev->blkper);
       if (nxfrd != dev->blkper)
         {
           return -EIO;
