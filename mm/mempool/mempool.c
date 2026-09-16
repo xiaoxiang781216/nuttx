@@ -417,7 +417,7 @@ int mempool_init(FAR struct mempool_s *pool)
 
   flags = spin_lock_irqsave_notrace(&g_mempool_init_lock);
 #ifdef CONFIG_PERCPU_SECTION
-  if (strcmp(pool->name, "bmp_") == 0)
+  if (strncmp(pool->name, "bmp_", 4) == 0)
     {
       pool->initialbase += PERCPU_OFFSET * this_cpu();
     }
