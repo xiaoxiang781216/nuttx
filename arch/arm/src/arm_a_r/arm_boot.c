@@ -172,14 +172,14 @@ void arm_boot_secondary(int cpu)
   up_perf_init(0);
 #endif
 
+#undef g_nx_initstate
+  while (!OSINIT_MM_READY());
+
   arm_enable_smp(cpu);
 
   /* Chip-specific secondary CPU initialization */
 
   arm_cpu_boot(cpu);
-
-#undef g_nx_initstate
-  while (!OSINIT_MM_READY());
 
   up_irqinitialize();
 
