@@ -247,7 +247,8 @@ void irq_wakeup_initialize(void)
  *   ('lat_max').
  *
  *   A driver typically reads 'lat' from its own handler to compensate the
- *   interrupt timestamp.  This is a pure read.
+ *   interrupt timestamp.  This is a pure read; use irq_monitor_reset() to
+ *   clear the statistics.
  *
  * Input Parameters:
  *   irq     - The IRQ number to query.
@@ -443,12 +444,11 @@ void irq_monitor_disable_all(void)
  * Name: irq_monitor_get_freq
  *
  * Description:
- *   Query the interrupt frequency (rate) for a specific IRQ.
- *   Optionally reset the counters to restart the measurement window.
+ *   Query the interrupt frequency (rate) for a specific IRQ.  This is a pure
+ *   read; use irq_monitor_reset() to restart the measurement window.
  *
  * Input Parameters:
  *   irq      - The IRQ number to query
- *   reset    - If true, reset counters after reading
  *   freq     - Pointer to store the integer part of frequency
  *              (interrupts/sec). Must not be NULL.
  *   fracfreq - Pointer to store the fractional part (*1000) of
@@ -459,14 +459,11 @@ void irq_monitor_disable_all(void)
  *
  ****************************************************************************/
 
-int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
+int irq_monitor_get_freq(int irq, FAR unsigned long *freq,
                          FAR unsigned long *fracfreq)
 {
   int ndx = IRQ_TO_NDX(irq);
   clock_t elapsed;
-#ifdef CONFIG_PM
-  int i;
-#endif
 #ifdef CONFIG_HAVE_LONG_LONG
   unsigned long long intcount;
 #else
@@ -501,24 +498,52 @@ int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
       *fracfreq = (intcount - *freq * elapsed) * 1000 / elapsed;
     }
 
-  /* Optionally restart the measurement window */
+  return OK;
+}
 
-  if (reset)
+/****************************************************************************
+ * Name: irq_monitor_reset
+ *
+ * Description:
+ *   Reset all monitor statistics for a specific IRQ: the frequency window
+ *   (start time and interrupt count), the maximum handler execution time,
+ *   the preemption count and, when PM is enabled, the per-PM-state wakeup
+ *   counters and the wakeup latencies (most recent and per-state maximum).
+ *
+ * Input Parameters:
+ *   irq - The IRQ number to reset.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void irq_monitor_reset(int irq)
+{
+  int ndx = IRQ_TO_NDX(irq);
+#ifdef CONFIG_PM
+  int i;
+#endif
+
+  if (ndx < 0 || ndx >= NUSER_IRQS)
     {
-      g_irqvector[ndx].start = perf_gettime_raw();
-      g_irqvector[ndx].time  = 0;
-      atomic_set(&g_irqvector[ndx].count, 0);
-#ifdef CONFIG_ARCH_IRQPRIO
-      atomic_set(&g_irqvector[ndx].nests, 0);
-#endif
-#if defined(CONFIG_PM)
-      for (i = 0; i < PM_COUNT; i++)
-        {
-          atomic_set(&g_irqvector[ndx].nwakeup[i], 0);
-        }
-#endif
+      return;
     }
 
-  return OK;
+  g_irqvector[ndx].start = perf_gettime_raw();
+  g_irqvector[ndx].time  = 0;
+  atomic_set(&g_irqvector[ndx].count, 0);
+#ifdef CONFIG_ARCH_IRQPRIO
+  atomic_set(&g_irqvector[ndx].nests, 0);
+#endif
+#ifdef CONFIG_PM
+  for (i = 0; i < PM_COUNT; i++)
+    {
+      atomic_set(&g_irqvector[ndx].nwakeup[i], 0);
+      g_irqvector[ndx].wakeup_lat_max[i] = 0;
+    }
+
+  g_irqvector[ndx].wakeup_lat = 0;
+#endif
 }
 #endif

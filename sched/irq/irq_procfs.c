@@ -210,7 +210,8 @@ static int irq_callback(int ndx, FAR struct irq_info_s *info,
 
   /* Get the interrupt frequency and reset the counters */
 
-  irq_monitor_get_freq(NDX_TO_IRQ(ndx), true, &intpart, &fracpart);
+  irq_monitor_get_freq(NDX_TO_IRQ(ndx), &intpart, &fracpart);
+  irq_monitor_reset(NDX_TO_IRQ(ndx));
   perf_convert(copy.time, &delta);
 
   /* Output information about this interrupt */

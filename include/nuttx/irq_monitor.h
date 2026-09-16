@@ -113,11 +113,11 @@ void irq_monitor_disable_all(void);
  *
  * Description:
  *   Get the interrupt frequency (interrupts per second) for the specified
- *   IRQ. Optionally reset the counter after reading.
+ *   IRQ.  This is a pure read; use irq_monitor_reset() to restart the
+ *   measurement window.
  *
  * Input Parameters:
  *   irq      - The IRQ number to query.
- *   reset    - If true, reset the interrupt counter after reading.
  *   freq     - Pointer to store the integer part of frequency.
  *   fracfreq - Pointer to store the fractional part (*1000) of frequency.
  *              Can be NULL if not needed.
@@ -127,8 +127,23 @@ void irq_monitor_disable_all(void);
  *
  ****************************************************************************/
 
-int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
+int irq_monitor_get_freq(int irq, FAR unsigned long *freq,
                          FAR unsigned long *fracfreq);
+
+/****************************************************************************
+ * Name: irq_monitor_reset
+ *
+ * Description:
+ *   Reset all monitor statistics for the specified IRQ: the frequency
+ *   window, the maximum handler time, the preemption count and, when PM is
+ *   enabled, the per-PM-state wakeup counters and wakeup latencies.
+ *
+ * Input Parameters:
+ *   irq - The IRQ number to reset.
+ *
+ ****************************************************************************/
+
+void irq_monitor_reset(int irq);
 
 #ifdef CONFIG_PM
 /****************************************************************************
@@ -138,7 +153,8 @@ int irq_monitor_get_freq(int irq, bool reset, FAR unsigned long *freq,
  *   Get the wakeup latency attributed to a specific IRQ (WFI return to that
  *   IRQ's dispatch), for the wakeup where this IRQ woke the system.  Reports
  *   the most recent value ('lat') and the per-PM-state running maximum
- *   ('lat_max').  This is a pure read.
+ *   ('lat_max').  This is a pure read; use irq_monitor_reset() to clear the
+ *   statistics.
  *
  * Input Parameters:
  *   irq     - The IRQ number to query.
