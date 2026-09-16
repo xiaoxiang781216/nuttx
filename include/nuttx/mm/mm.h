@@ -51,6 +51,50 @@ typedef CODE void (*mm_delaycb_t)(FAR void *mem);
 #  define CONFIG_MM_HEAP_MEMPOOL
 #endif
 
+/* Heap forbid mask bits. The mm_forbid state of a heap is a bitmask of the
+ * operation types that are currently forbidden. See mm_heap_forbid().
+ */
+
+#define MM_FORBID_NONE   0
+#define MM_FORBID_ALLOC  (1 << 0)   /* malloc / memalign / realloc */
+#define MM_FORBID_FREE   (1 << 1)   /* free */
+#define MM_FORBID_BOTH   (MM_FORBID_ALLOC | MM_FORBID_FREE)
+
+/* Classify a (mem, size) operation by its encoding:
+ *   free:    (mem != NULL && size == 0)
+ *   alloc:   (mem == NULL && size != 0)
+ *   realloc: (mem != NULL && size != 0)
+ */
+
+#define MM_FORBID_IS_FREE(mem, size)    ((mem) != NULL && (size) == 0)
+#define MM_FORBID_IS_ALLOC(mem, size)   ((mem) == NULL && (size) != 0)
+#define MM_FORBID_IS_REALLOC(mem, size) ((mem) != NULL && (size) != 0)
+
+/* Map a (mem, size) operation to the forbid mask bit(s) it must respect.
+ * realloc may both allocate and free internally, so it is forbidden when
+ * either alloc or free is forbidden (MM_FORBID_BOTH). Free maps to
+ * MM_FORBID_FREE; alloc maps to MM_FORBID_ALLOC.
+ */
+
+#define MM_FORBID_TYPE(mem, size)                     \
+  (MM_FORBID_IS_REALLOC(mem, size) ? MM_FORBID_BOTH : \
+   MM_FORBID_IS_FREE(mem, size)    ? MM_FORBID_FREE : \
+                                     MM_FORBID_ALLOC)
+
+/* The initial forbid mask applied when a heap is created, derived from the
+ * MM_HEAP_FORBID_INIT_* choice. Shared by all heap backends.
+ */
+
+#ifdef CONFIG_MM_HEAP_FORBID_INIT_ALLOC
+#  define MM_FORBID_INIT  MM_FORBID_ALLOC
+#elif defined(CONFIG_MM_HEAP_FORBID_INIT_FREE)
+#  define MM_FORBID_INIT  MM_FORBID_FREE
+#elif defined(CONFIG_MM_HEAP_FORBID_INIT_BOTH)
+#  define MM_FORBID_INIT  MM_FORBID_BOTH
+#else
+#  define MM_FORBID_INIT  MM_FORBID_NONE
+#endif
+
 #if defined(CONFIG_MM_RECORD_PID) || defined(CONFIG_MM_RECORD_SEQNO) || \
     defined(CONFIG_MM_RECORD_STACK)
 #  define CONFIG_MM_RECORD
@@ -369,9 +413,9 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
   mm_delayfreecb(heap, mem, NULL);
 }
 
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
-bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid);
-bool mm_heap_is_forbid(FAR struct mm_heap_s *heap);
+#ifdef CONFIG_MM_HEAP_FORBID
+int mm_heap_forbid(FAR struct mm_heap_s *heap, int mask);
+int mm_heap_is_forbid(FAR struct mm_heap_s *heap);
 #endif
 
 /* Functions contained in kmm_free.c ****************************************/

@@ -304,7 +304,7 @@ struct mm_heap_s
   FAR struct procfs_meminfo_entry_s *mm_procfs;
 #endif
 
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
+#ifdef CONFIG_MM_HEAP_FORBID
   atomic_t mm_forbid;
 #endif
 
@@ -344,25 +344,34 @@ void mm_free_delaylist(FAR struct mm_heap_s *heap);
  * Inline Functions
  ****************************************************************************/
 
-#ifdef CONFIG_MM_HEAP_FORBID_NONE
+#ifndef CONFIG_MM_HEAP_FORBID
 #  define mm_skip_operation(heap, mem, size) false
 #else
 static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap,
                                               FAR void *mem, size_t size)
 {
-  if (atomic_read(&heap->mm_forbid) == 0)
+  int mask = atomic_read(&heap->mm_forbid);
+  int type;
+
+  if (mask == MM_FORBID_NONE)
     {
       return false;
     }
 
-#  if defined(CONFIG_MM_HEAP_FORBID_PANIC)
-  PANIC();
-  return true;
-#  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
+  /* Classify the operation by its (mem, size) encoding:
+   *   free:     (mem != NULL && size == 0)     -> MM_FORBID_FREE
+   *   alloc:    (mem == NULL && size != 0)     -> MM_FORBID_ALLOC
+   *   realloc:  (mem != NULL && size != 0)     -> MM_FORBID_BOTH
+   */
+
+  type = MM_FORBID_TYPE(mem, size);
+
+  if ((mask & type) == 0)
+    {
+      return false;
+    }
+
   return board_heap_forbid_hook(heap, mem, size);
-#  else
-#    error "Invalid MM_HEAP_FORBID config"
-#  endif
 }
 #endif
 

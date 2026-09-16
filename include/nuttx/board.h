@@ -901,17 +901,18 @@ int board_start_cpu(int cpuid);
  *   The board layer decides whether to skip the operation or not.
  *
  *   Support for this function is required by board-level logic if
- *   CONFIG_MM_HEAP_FORBID_HOOK is selected.
+ *   CONFIG_MM_HEAP_FORBID is selected.
  *
  * Input Parameters:
  *   heap    - The heap instance
  *   mem     - Memory pointer (non-NULL for free/realloc, NULL for alloc)
  *   size    - Requested size (0 for free, non-zero for alloc/realloc)
  *
- *   Use the helper macros below to determine the operation type:
- *     BOARD_HEAP_IS_FREE(mem, size)    - true when the operation is free
- *     BOARD_HEAP_IS_ALLOC(mem, size)   - true when the operation is alloc
- *     BOARD_HEAP_IS_REALLOC(mem, size) - true when the operation is realloc
+ *   Use the helper macros in <nuttx/mm/mm.h> to determine the operation
+ *   type:
+ *     MM_FORBID_IS_FREE(mem, size)    - true when the operation is free
+ *     MM_FORBID_IS_ALLOC(mem, size)   - true when the operation is alloc
+ *     MM_FORBID_IS_REALLOC(mem, size) - true when the operation is realloc
  *
  * Returned Value:
  *   true  - skip (abort) the operation
@@ -919,11 +920,7 @@ int board_start_cpu(int cpuid);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_HEAP_FORBID_HOOK
-#define BOARD_HEAP_IS_FREE(mem, size)    ((mem) != NULL && (size) == 0)
-#define BOARD_HEAP_IS_ALLOC(mem, size)   ((mem) == NULL && (size) != 0)
-#define BOARD_HEAP_IS_REALLOC(mem, size) ((mem) != NULL && (size) != 0)
-
+#ifdef CONFIG_MM_HEAP_FORBID
 struct mm_heap_s; /* Forward reference */
 bool board_heap_forbid_hook(FAR struct mm_heap_s *heap, FAR void *mem,
                             size_t size);

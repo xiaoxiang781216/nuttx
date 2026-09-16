@@ -150,7 +150,7 @@ struct mm_heap_s
   struct procfs_meminfo_entry_s *procfs;
 #endif
 
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
+#ifdef CONFIG_MM_HEAP_FORBID
   atomic_t forbid;
 #endif
 
@@ -392,25 +392,28 @@ static bool free_delaylist(struct mm_heap_s *heap, bool force)
   return ret;
 }
 
-#ifdef CONFIG_MM_HEAP_FORBID_NONE
+#ifndef CONFIG_MM_HEAP_FORBID
 #  define skip_operation(heap, mem, size) false
 #else
 static inline_function bool skip_operation(FAR struct mm_heap_s *heap,
                                            FAR void *mem, size_t size)
 {
-  if (atomic_read(&heap->forbid) == 0)
+  int mask = atomic_read(&heap->forbid);
+  int type;
+
+  if (mask == MM_FORBID_NONE)
     {
       return false;
     }
 
-#  if defined(CONFIG_MM_HEAP_FORBID_PANIC)
-  PANIC();
-  return true;
-#  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
+  type = MM_FORBID_TYPE(mem, size);
+
+  if ((mask & type) == 0)
+    {
+      return false;
+    }
+
   return board_heap_forbid_hook(heap, mem, size);
-#  else
-#    error "Invalid MM_HEAP_FORBID config"
-#  endif
 }
 #endif
 
@@ -903,6 +906,10 @@ void umm_initialize(void *heap_start, size_t heap_size)
   list_initialize(&g_mmheap->alloclist);
   spin_lock_init(&g_mmheap->lock);
 
+#ifdef CONFIG_MM_HEAP_FORBID
+  atomic_set(&g_mmheap->forbid, MM_FORBID_INIT);
+#endif
+
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   g_mmheap->procfs = procfs_register_meminfo("Umem", g_mmheap,
                                              mallinfo_callback,
@@ -918,19 +925,19 @@ void umm_initialize(void *heap_start, size_t heap_size)
  *
  ****************************************************************************/
 
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
-bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
+#ifdef CONFIG_MM_HEAP_FORBID
+int mm_heap_forbid(FAR struct mm_heap_s *heap, int mask)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_xchg(&heap->forbid, forbid) != 0;
+  return atomic_xchg(&heap->forbid, mask);
 }
 
-bool mm_heap_is_forbid(FAR struct mm_heap_s *heap)
+int mm_heap_is_forbid(FAR struct mm_heap_s *heap)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_read(&heap->forbid) != 0;
+  return atomic_read(&heap->forbid);
 }
 #endif
 

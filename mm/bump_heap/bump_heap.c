@@ -42,7 +42,7 @@
 #  include <nuttx/fs/procfs.h>
 #endif
 
-#ifdef CONFIG_MM_HEAP_FORBID_HOOK
+#ifdef CONFIG_MM_HEAP_FORBID
 #  include <nuttx/board.h>
 #endif
 
@@ -66,8 +66,8 @@ struct mm_heap_s
   int              nregions;    /* Number of registered regions */
   int              region;      /* Currently active region index */
 #endif
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
-  atomic_t         forbid;      /* Non-zero forbids allocation */
+#ifdef CONFIG_MM_HEAP_FORBID
+  atomic_t         forbid;      /* Current forbid mask (MM_FORBID_*) */
 #endif
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   FAR struct procfs_meminfo_entry_s *procfs; /* procfs meminfo handle */
@@ -84,36 +84,30 @@ struct mm_heap_s
  *
  * Description:
  *   Check if the current heap operation should be skipped due to forbid
- *   state. Dispatches to the configured policy (PANIC / HOOK).
+ *   state. When enforced, dispatches to board_heap_forbid_hook().
  *
  *   For free/realloc (mem != NULL), the forbid is structural —
- *   bump-allocated memory is inherently non-freeable, so the policy is
- *   always enforced regardless of the forbid runtime flag.
+ *   bump-allocated memory is inherently non-freeable, so the hook is
+ *   always consulted regardless of the runtime forbid mask.
  *
- *   For malloc (mem == NULL), the policy is only enforced when
- *   forbid has been set at runtime.
+ *   For malloc (mem == NULL), the hook is consulted only when the
+ *   MM_FORBID_ALLOC bit is set in the runtime forbid mask.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_HEAP_FORBID_NONE
+#ifndef CONFIG_MM_HEAP_FORBID
 #  define mm_skip_operation(heap, mem, size) false
 #else
 static inline_function bool mm_skip_operation(FAR struct mm_heap_s *heap,
                                               FAR void *mem, size_t size)
 {
-  if (mem == NULL && atomic_read(&heap->forbid) == 0)
+  if (mem == NULL &&
+      (atomic_read(&heap->forbid) & MM_FORBID_ALLOC) == 0)
     {
       return false;
     }
 
-#  if defined(CONFIG_MM_HEAP_FORBID_PANIC)
-  PANIC();
-  return true;
-#  elif defined(CONFIG_MM_HEAP_FORBID_HOOK)
   return board_heap_forbid_hook(heap, mem, size);
-#  else
-#    error "Invalid MM_HEAP_FORBID config for bump allocator"
-#  endif
 }
 #endif
 
@@ -169,6 +163,10 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
   h->name = config->name;
   h->next = region_start;
   spin_lock_init(&h->lock);
+
+#ifdef CONFIG_MM_HEAP_FORBID
+  atomic_set(&h->forbid, MM_FORBID_INIT);
+#endif
 
   *heap = h;
 
@@ -911,18 +909,18 @@ void mm_notify_pressure(FAR struct mm_heap_s *heap)
  *
  ****************************************************************************/
 
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
-bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
+#ifdef CONFIG_MM_HEAP_FORBID
+int mm_heap_forbid(FAR struct mm_heap_s *heap, int mask)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_xchg(&heap->forbid, forbid) != 0;
+  return atomic_xchg(&heap->forbid, mask);
 }
 
-bool mm_heap_is_forbid(FAR struct mm_heap_s *heap)
+int mm_heap_is_forbid(FAR struct mm_heap_s *heap)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_read(&heap->forbid) != 0;
+  return atomic_read(&heap->forbid);
 }
 #endif

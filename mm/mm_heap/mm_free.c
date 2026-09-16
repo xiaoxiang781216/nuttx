@@ -317,30 +317,32 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
  * Name: mm_heap_forbid
  *
  * Description:
- *   Forbid or allow dynamic memory allocation and free.
+ *   Set the forbid mask for a heap. Any alloc/free whose type is in the
+ *   mask will invoke board_heap_forbid_hook() when attempted.
  *
  * Parameters:
- *   heap   - The heap to control.
- *   forbid - true to forbid malloc/free, false to allow.
+ *   heap - The heap to control.
+ *   mask - Bitmask of MM_FORBID_ALLOC / MM_FORBID_FREE (MM_FORBID_NONE
+ *          to allow all).
  *
  * Return:
- *   The previous forbid status.
+ *   The previous forbid mask.
  *
  ****************************************************************************/
 
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
-bool mm_heap_forbid(FAR struct mm_heap_s *heap, bool forbid)
+#ifdef CONFIG_MM_HEAP_FORBID
+int mm_heap_forbid(FAR struct mm_heap_s *heap, int mask)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_xchg(&heap->mm_forbid, forbid) != 0;
+  return atomic_xchg(&heap->mm_forbid, mask);
 }
 
-bool mm_heap_is_forbid(FAR struct mm_heap_s *heap)
+int mm_heap_is_forbid(FAR struct mm_heap_s *heap)
 {
   DEBUGASSERT(heap != NULL);
 
-  return atomic_read(&heap->mm_forbid) != 0;
+  return atomic_read(&heap->mm_forbid);
 }
 #endif
 

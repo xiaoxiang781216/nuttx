@@ -228,29 +228,46 @@ config MM_HEAP_BIGGEST_COUNT
 		If too big, should take care of stack usage.
 		Define 0 to disable largest allocated element dump feature.
 
+config MM_HEAP_FORBID
+	bool "Enable heap alloc/free forbid feature"
+	default n
+	---help---
+		When enabled, a heap can be put into a "forbid" state via
+		mm_heap_forbid(). Any alloc/free that hits the forbid state
+		invokes the board hook board_heap_forbid_hook(), whose return
+		value decides whether to skip (true) or allow (false) the
+		operation. Board layer implements this weak function.
+
+		When disabled, mm_heap_forbid() API is not available and there
+		is zero runtime/footprint overhead.
+
 choice
-	prompt "Heap alloc/free forbid action"
-	default MM_HEAP_FORBID_NONE
-
-config MM_HEAP_FORBID_NONE
-	bool "Allow malloc/free normally"
+	prompt "Heap forbid initial state"
+	default MM_HEAP_FORBID_INIT_NONE
+	depends on MM_HEAP_FORBID
 	---help---
-		Dynamic memory allocation and free are always allowed.
-		mm_heap_forbid() API is not available.
+		Selects the initial forbid mask applied when a heap is created.
+		The mask can still be changed at runtime via mm_heap_forbid().
 
-config MM_HEAP_FORBID_PANIC
-	bool "Panic when forbidden malloc/free is called"
+config MM_HEAP_FORBID_INIT_NONE
+	bool "No forbid initially"
 	---help---
-		After mm_heap_forbid(heap, true), any malloc() or free()
-		call will trigger PANIC().
+		Neither alloc nor free is forbidden when the heap is created.
 
-config MM_HEAP_FORBID_HOOK
-	bool "Board hook decides whether to allow malloc/free"
+config MM_HEAP_FORBID_INIT_ALLOC
+	bool "Forbid alloc initially"
 	---help---
-		After mm_heap_forbid(heap, true), any malloc() or free()
-		call invokes board_heap_forbid_hook(). The hook return
-		value decides whether to proceed (true = skip, false = allow).
-		Board layer implements this weak function.
+		malloc/memalign/realloc are forbidden when the heap is created.
+
+config MM_HEAP_FORBID_INIT_FREE
+	bool "Forbid free initially"
+	---help---
+		free is forbidden when the heap is created.
+
+config MM_HEAP_FORBID_INIT_BOTH
+	bool "Forbid both alloc and free initially"
+	---help---
+		Both alloc and free are forbidden when the heap is created.
 
 endchoice
 

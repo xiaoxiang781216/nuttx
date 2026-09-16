@@ -112,7 +112,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
                             size_t buflen);
 
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
+#ifdef CONFIG_MM_HEAP_FORBID
 static int     mmforbid_open(FAR struct file *filep,
                              FAR const char *relpath, int oflags,
                              mode_t mode);
@@ -149,7 +149,7 @@ const struct procfs_operations g_memdump_operations =
 };
 #endif
 
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
+#ifdef CONFIG_MM_HEAP_FORBID
 const struct procfs_operations g_mmforbid_operations =
 {
   mmforbid_open,   /* open */
@@ -878,13 +878,13 @@ void procfs_unregister_meminfo(FAR struct procfs_meminfo_entry_s *entry)
  *
  ****************************************************************************/
 
-#ifndef CONFIG_MM_HEAP_FORBID_NONE
+#ifdef CONFIG_MM_HEAP_FORBID
 static int mmforbid_open(FAR struct file *filep,
                          FAR const char *relpath,
                          int oflags, mode_t mode)
 {
   FAR struct meminfo_file_s *procfile;
-  bool allforbid;
+  int mask;
 
   procfile = fs_heap_zalloc(sizeof(struct meminfo_file_s));
   if (procfile == NULL)
@@ -892,19 +892,22 @@ static int mmforbid_open(FAR struct file *filep,
       return -ENOMEM;
     }
 
-  /* Report the forbid state of the general-purpose heaps only. These are
+  /* Report the forbid mask of the general-purpose heaps only. These are
    * the fixed USR_HEAP and, when a separate kernel heap exists, KNR_HEAP.
    * Dedicated heaps (filesystem, loadable modules, device-specific, ...)
    * are never sealed by mmforbid_write and so are not considered here.
+   *
+   * When both heaps exist the reported mask is the intersection (bits set
+   * only when forbidden on both heaps).
    */
 
-  allforbid = mm_heap_is_forbid(USR_HEAP);
+  mask = mm_heap_is_forbid(USR_HEAP);
 #ifdef CONFIG_MM_KERNEL_HEAP
-  allforbid = allforbid && mm_heap_is_forbid(KNR_HEAP);
+  mask &= mm_heap_is_forbid(KNR_HEAP);
 #endif
 
   procfile->linesize = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                                       "%d\n", allforbid ? 1 : 0);
+                                       "%d\n", mask);
 
   filep->f_priv = procfile;
   return OK;
@@ -960,11 +963,16 @@ static ssize_t mmforbid_read(FAR struct file *filep,
  * Name: mmforbid_write
  *
  * Description:
- *   Write "1" to forbid dynamic memory operations, "0" to allow them
- *   again. Only the general-purpose user/kernel heaps are affected;
- *   dedicated heaps (filesystem, loadable modules, device-specific, ...)
- *   are left untouched so that procfs/file operations and other
- *   subsystems keep working while the general heap is sealed.
+ *   Write a forbid mask value to seal/unseal dynamic memory operations on
+ *   the general-purpose heaps. Accepts a single decimal digit:
+ *     0 = allow all (MM_FORBID_NONE)
+ *     1 = forbid alloc (MM_FORBID_ALLOC)
+ *     2 = forbid free  (MM_FORBID_FREE)
+ *     3 = forbid both  (MM_FORBID_BOTH)
+ *   Only the general-purpose user/kernel heaps are affected; dedicated
+ *   heaps (filesystem, loadable modules, device-specific, ...) are left
+ *   untouched so that procfs/file operations and other subsystems keep
+ *   working while the general heap is sealed.
  *
  ****************************************************************************/
 
@@ -972,7 +980,7 @@ static ssize_t mmforbid_write(FAR struct file *filep,
                               FAR const char *buffer, size_t buflen)
 {
   size_t i;
-  bool forbid;
+  int mask;
 
   /* Skip leading whitespace/newlines. Shell redirection (e.g.
    * "echo 1 > /proc/mmforbid") may split the payload into multiple writes,
@@ -995,20 +1003,29 @@ static ssize_t mmforbid_write(FAR struct file *filep,
       return buflen;
     }
 
-  forbid = (buffer[i] == '1');
+  /* Parse a single decimal digit into a forbid mask. */
+
+  if (buffer[i] >= '0' && buffer[i] <= '3')
+    {
+      mask = buffer[i] - '0';
+    }
+  else
+    {
+      return -EINVAL;
+    }
 
   /* Seal only the general-purpose heaps: the fixed USR_HEAP and, when a
    * separate kernel heap exists, KNR_HEAP. Dedicated heaps (filesystem,
    * loadable modules, device-specific, ...) are left untouched.
    */
 
-  mm_heap_forbid(USR_HEAP, forbid);
+  mm_heap_forbid(USR_HEAP, mask);
 #ifdef CONFIG_MM_KERNEL_HEAP
-  mm_heap_forbid(KNR_HEAP, forbid);
+  mm_heap_forbid(KNR_HEAP, mask);
 #endif
 
   return buflen;
 }
-#endif /* !CONFIG_MM_HEAP_FORBID_NONE */
+#endif /* CONFIG_MM_HEAP_FORBID */
 
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_MEMINFO */
