@@ -66,14 +66,14 @@
 #  define IRQ_FMT "%3d %08lx %08lx %10lu %6lu.%03lu %5ld %5lu\n"
 #elif !defined(CONFIG_ARCH_IRQPRIO) && defined(CONFIG_PM)
 #  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT       RATE  TIME" \
-                  "   IDLE STANDBY   SLEEP\n"
+                  "   IDLE STANDBY   SLEEP  IDLE_L  STBY_L  SLEP_L    WLAT\n"
 #  define IRQ_FMT "%3d %08lx %08lx %10lu %6lu.%03lu %5ld %6" PRId32 \
-                  " %7" PRId32 " %7" PRId32 "\n"
+                  " %7" PRId32 " %7" PRId32 " %7ld %7ld %7ld %7ld\n"
 #else
 #  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT       RATE  TIME  NEST" \
-                  "   IDLE STANDBY   SLEEP\n"
+                  "   IDLE STANDBY   SLEEP  IDLE_L  STBY_L  SLEP_L    WLAT\n"
 #  define IRQ_FMT "%3d %08lx %08lx %10lu %6lu.%03lu %5ld %5lu %6" PRId32 \
-                  " %7" PRId32 " %7" PRId32 "\n"
+                  " %7" PRId32 " %7" PRId32 " %7ld %7ld %7ld %7ld\n"
 #endif
 
 /* Determines the size of an intermediate buffer that must be large enough
@@ -86,9 +86,9 @@
 #elif defined(CONFIG_ARCH_IRQPRIO) && !defined(CONFIG_PM)
 #  define IRQ_LINELEN 58
 #elif !defined(CONFIG_ARCH_IRQPRIO) && defined(CONFIG_PM)
-#  define IRQ_LINELEN 90
+#  define IRQ_LINELEN 128
 #else
-#  define IRQ_LINELEN 96
+#  define IRQ_LINELEN 136
 #endif
 
 /* This is the number of entries in the interrupt vector table */
@@ -170,6 +170,12 @@ static int irq_callback(int ndx, FAR struct irq_info_s *info,
   unsigned long intpart;
   unsigned long fracpart;
   unsigned long count;
+#ifdef CONFIG_PM
+  struct timespec latidle;
+  struct timespec latstby;
+  struct timespec latsleep;
+  struct timespec latnow;
+#endif
 
   DEBUGASSERT(irqfile != NULL);
 
@@ -213,6 +219,12 @@ static int irq_callback(int ndx, FAR struct irq_info_s *info,
   irq_monitor_get_freq(NDX_TO_IRQ(ndx), &intpart, &fracpart);
   irq_monitor_reset(NDX_TO_IRQ(ndx));
   perf_convert(copy.time, &delta);
+#ifdef CONFIG_PM
+  perf_convert(copy.wakeup_lat_max[PM_IDLE], &latidle);
+  perf_convert(copy.wakeup_lat_max[PM_STANDBY], &latstby);
+  perf_convert(copy.wakeup_lat_max[PM_SLEEP], &latsleep);
+  perf_convert(copy.wakeup_lat, &latnow);
+#endif
 
   /* Output information about this interrupt */
 
@@ -228,6 +240,10 @@ static int irq_callback(int ndx, FAR struct irq_info_s *info,
                       , atomic_read(&copy.nwakeup[PM_IDLE])
                       , atomic_read(&copy.nwakeup[PM_STANDBY])
                       , atomic_read(&copy.nwakeup[PM_SLEEP])
+                      , latidle.tv_nsec / 1000
+                      , latstby.tv_nsec / 1000
+                      , latsleep.tv_nsec / 1000
+                      , latnow.tv_nsec / 1000
 #endif
                       );
 

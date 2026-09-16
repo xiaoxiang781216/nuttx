@@ -44,7 +44,7 @@ ssize_t irq_monitor_info(FAR const char *core,
 {
   size_t count = 0;
   char path[64];
-  char line[80];
+  char line[136];
   FILE *fp;
 
   if (core == NULL)
@@ -77,6 +77,7 @@ ssize_t irq_monitor_info(FAR const char *core,
                    " %" SCNu32 ".%" SCNu32 " %" SCNu32
 #ifdef CONFIG_PM
                    " %" SCNu32 " %" SCNu32 " %" SCNu32
+                   " %" SCNu32 " %" SCNu32 " %" SCNu32 " %" SCNu32
 #endif
                    ,
                    &buf[count].irq, &buf[count].handler, &buf[count].arg,
@@ -85,7 +86,11 @@ ssize_t irq_monitor_info(FAR const char *core,
 #ifdef CONFIG_PM
                    , &buf[count].nwakeup[PM_IDLE],
                    &buf[count].nwakeup[PM_STANDBY],
-                   &buf[count].nwakeup[PM_SLEEP]
+                   &buf[count].nwakeup[PM_SLEEP],
+                   &buf[count].wakeup_lat_max[PM_IDLE],
+                   &buf[count].wakeup_lat_max[PM_STANDBY],
+                   &buf[count].wakeup_lat_max[PM_SLEEP],
+                   &buf[count].wakeup_lat
 #endif
                    );
       if (ret >= 7)

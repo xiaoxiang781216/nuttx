@@ -58,7 +58,10 @@ struct irq_monitor_info_s
   uint32_t      rate_frac;
   uint32_t      time;
 #ifdef CONFIG_PM
-  uint32_t      nwakeup[PM_COUNT]; /* Wakeups indexed by PM state */
+  uint32_t      nwakeup[PM_COUNT];        /* Wakeups indexed by PM state */
+  uint32_t      wakeup_lat_max[PM_COUNT]; /* Max wakeup latency (us) per
+                                           * PM state */
+  uint32_t      wakeup_lat;               /* Most recent wakeup latency (us) */
 #endif
 };
 #endif
