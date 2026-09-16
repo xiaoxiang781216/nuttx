@@ -90,6 +90,9 @@ struct mmcsd_state_s
   uint8_t wrprotect:1;             /* true: Card is write protected (from CSD) */
   uint8_t locked:1;                /* true: Media is locked (from R1) */
   uint8_t dsrimp:1;                /* true: card supports CMD4/DSR setting (from CSD) */
+#ifdef CONFIG_MMCSD_MMCSUPPORT
+  uint8_t cache_en:1;              /* true: eMMC device cache present and enabled (from EXT_CSD) */
+#endif
 #ifdef CONFIG_SDIO_DMA
   uint8_t dma:1;                   /* true: hardware supports DMA */
 #endif

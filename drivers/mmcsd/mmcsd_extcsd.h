@@ -46,6 +46,10 @@
 #define MMCSD_PART_SETTING_COMPLETED               0x1
 #define MMCSD_PART_SUPPORT_PART_EN                 0x1
 
+/* CACHE_CTRL (byte 33) bit definitions */
+
+#define MMCSD_CACHE_CTRL_CACHE_EN                  0x1
+
 #define MMCSD_EXTCSD_GP_SIZE_MULT                  143  /* R/W */
 #define MMCSD_EXTCSD_PARTITION_SETTING_COMPLETED   155  /* R/W */
 #define MMCSD_EXTCSD_PARTITION_SUPPORT             160  /* RO */
@@ -53,6 +57,7 @@
 #define MMCSD_EXTCSD_HC_WP_GRP_SIZE                221  /* RO */
 #define MMCSD_EXTCSD_HC_ERASE_GRP_SIZE             224  /* RO */
 #define MMCSD_EXTCSD_BOOT_SIZE_MULT                226  /* RO */
+#define MMCSD_EXTCSD_CACHE_SIZE                    249  /* RO, 4 bytes */
 
 /****************************************************************************
  * Public Types

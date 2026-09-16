@@ -1178,6 +1178,14 @@ static int mmcsd_flush_cache(FAR struct mmcsd_state_s *priv)
       return IS_EMPTY(priv) ? -ENODEV : OK;
     }
 
+  /* Flushing a disabled cache is rejected with R1 SWITCH_ERROR */
+
+  if (!priv->cache_en)
+    {
+      finfo("Device cache not enabled, skipping flush\n");
+      return OK;
+    }
+
   ret = mmcsd_switch(priv, MMC_CMD6_FLUSH_CACHE());
   if (ret != OK)
     {
@@ -2991,6 +2999,7 @@ static void mmcsd_decode_extcsd(FAR struct mmcsd_state_s *priv,
 {
   uint8_t hc_erase_grp_sz;
   uint8_t hc_wp_grp_sz;
+  uint32_t cache_size;
   int idx;
 
   /* User data partition size = SEC_COUNT x 512B for densities greater
@@ -3001,6 +3010,20 @@ static void mmcsd_decode_extcsd(FAR struct mmcsd_state_s *priv,
                           (extcsd[213] << 8) | extcsd[212];
   finfo("MMC ext CSD read succsesfully, number of block %" PRIuOFF "\n",
                                                 priv->part[0].nblocks);
+
+  /* CACHE_SIZE is little endian in kbit units, zero means no cache */
+
+  cache_size = ((uint32_t)extcsd[MMCSD_EXTCSD_CACHE_SIZE + 3] << 24) |
+               ((uint32_t)extcsd[MMCSD_EXTCSD_CACHE_SIZE + 2] << 16) |
+               ((uint32_t)extcsd[MMCSD_EXTCSD_CACHE_SIZE + 1] << 8) |
+               (uint32_t)extcsd[MMCSD_EXTCSD_CACHE_SIZE];
+
+  priv->cache_en = cache_size != 0 &&
+                   (extcsd[EXT_CSD_CACHE_CTRL] &
+                    MMCSD_CACHE_CTRL_CACHE_EN) != 0;
+
+  finfo("MMC cache size %" PRIu32 "kbit, cache enabled: %d\n",
+        cache_size, priv->cache_en);
 
   if (extcsd[MMCSD_EXTCSD_PARTITION_SUPPORT] & MMCSD_PART_SUPPORT_PART_EN)
     {
@@ -4514,6 +4537,9 @@ static int mmcsd_removed(FAR struct mmcsd_state_s *priv)
   priv->type         = MMCSD_CARDTYPE_UNKNOWN;
   priv->rca          = 0;
   priv->selblocklen  = 0;
+#ifdef CONFIG_MMCSD_MMCSUPPORT
+  priv->cache_en     = false;
+#endif
 
   /* Go back to the default 1-bit data bus. */
 
