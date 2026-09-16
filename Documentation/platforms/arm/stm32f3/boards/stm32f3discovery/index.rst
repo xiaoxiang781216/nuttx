@@ -273,8 +273,8 @@ NOTES:
        the system logging device:
 
        Device Drivers -> System Logging Device Options::
-         CONFIG_SYSLOG_CHAR=y               : Use a character device for system logging
-         CONFIG_SYSLOG_DEVPATH="/dev/ttyS0" : USART2 will be /dev/ttyS0
+         CONFIG_SYSLOG_CHAR=y                    : Use a character device for system logging
+         CONFIG_SYSLOG_CHAR_DEVPATH="/dev/ttyS0" : USART2 will be /dev/ttyS0
 
        However, there is nothing to generate SYSLOG output in the default
        configuration so nothing should appear on USART2 unless you enable

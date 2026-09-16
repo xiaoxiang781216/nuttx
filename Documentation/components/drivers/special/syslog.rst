@@ -382,7 +382,7 @@ This SYSLOG device channel is selected with ``CONFIG_SYSLOG_CHAR``
 and has no other dependencies. Differences from the SYSLOG console
 channel include:
 
-  -  ``CONFIG_SYSLOG_DEVPATH``. This configuration option string
+  -  ``CONFIG_SYSLOG_CHAR_DEVPATH``. This configuration option string
      must be set provide the full path to the character device to be
      used.
 

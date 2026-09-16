@@ -824,7 +824,7 @@ Where <subdir> is one of the following:
 
         Device Drivers -> System Logging Device Options:
           CONFIG_SYSLOG_CHAR=y
-          CONFIG_SYSLOG_DEVPATH="/dev/ttyS0"
+          CONFIG_SYSLOG_CHAR_DEVPATH="/dev/ttyS0"
 
         System Type -> PIC32MX Peripheral Support:
           CONFIG_PIC32MX_UART2=y      : Enable UART2

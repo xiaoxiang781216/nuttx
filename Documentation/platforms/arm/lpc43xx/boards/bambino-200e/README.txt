@@ -475,8 +475,8 @@ Where <subdir> is one of the following:
     1. This configuration does have UART1 output enabled and set up as
        the system logging device:
 
-       CONFIG_SYSLOG_CHAR=y               : Use a character device for system logging
-       CONFIG_SYSLOG_DEVPATH="/dev/ttyS0" : UART1 will be /dev/ttyS0
+       CONFIG_SYSLOG_CHAR=y                    : Use a character device for system logging
+       CONFIG_SYSLOG_CHAR_DEVPATH="/dev/ttyS0" : UART1 will be /dev/ttyS0
 
        However, there is nothing to generate SYSLOG output in the default
        configuration so nothing should appear on UART1 unless you enable

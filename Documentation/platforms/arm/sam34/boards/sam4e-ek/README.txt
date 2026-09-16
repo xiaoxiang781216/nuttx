@@ -1342,8 +1342,8 @@ Configurations
        the system logging device:
 
            File Systems -> Advanced SYSLOG Features
-             CONFIG_SYSLOG_CHAR=y          : Use a character device for system logging
-             CONFIG_SYSLOG_DEVPATH="/dev/ttyS0" : UART0 will be /dev/ttyS0
+             CONFIG_SYSLOG_CHAR=y                    : Use a character device for system logging
+             CONFIG_SYSLOG_CHAR_DEVPATH="/dev/ttyS0" : UART0 will be /dev/ttyS0
 
        However, there is nothing to generate SYSLOG output in the default
        configuration so nothing should appear on UART0 unless you enable
