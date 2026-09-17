@@ -1615,4 +1615,28 @@ void procfs_unregister(FAR struct procfs_entry_s *entry)
       dq_rem(&entry->node, &g_procfs_dynentries);
     }
 }
+
+/****************************************************************************
+ * Name: procfs_foreach
+ *
+ * Description:
+ *   Invoke callback for each dynamically registered entry.  The callback
+ *   itself decides whether an entry is of interest.  Uses the safe
+ *   iterator so the callback may unregister the entry.
+ *
+ ****************************************************************************/
+
+void procfs_foreach(CODE void (*callback)(FAR struct procfs_entry_s *entry,
+                                          FAR void *arg),
+                    FAR void *arg)
+{
+  FAR struct procfs_entry_s *entry;
+  FAR struct procfs_entry_s *tmp;
+
+  dq_for_every_entry_safe(&g_procfs_dynentries, entry, tmp,
+                          struct procfs_entry_s, node)
+    {
+      callback(entry, arg);
+    }
+}
 #endif

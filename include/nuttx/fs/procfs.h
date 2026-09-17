@@ -306,6 +306,9 @@ void procfs_sprintf(FAR char *buf, size_t size, FAR off_t *offset,
 #ifdef CONFIG_FS_PROCFS_REGISTER
 int procfs_register(FAR struct procfs_entry_s *entry);
 void procfs_unregister(FAR struct procfs_entry_s *entry);
+void procfs_foreach(CODE void (*callback)(FAR struct procfs_entry_s *entry,
+                                          FAR void *arg),
+                    FAR void *arg);
 #endif
 
 /****************************************************************************
