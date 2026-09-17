@@ -489,13 +489,18 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
 
       rtcb->sigwaitmask = *set;
 
-      leave_critical_section(flags);
+      /* Keep the critical section until the wait has actually been entered.
+       * Releasing it here would let one of the awaited signals be dispatched
+       * while this task is still running, and nxsig_tcbdispatch() only
+       * unblocks a task that already sits in TSTATE_WAIT_SIG.  The signal
+       * would just be queued as pending, or dropped when it is unmasked and
+       * has no action, and nothing rechecks that before the task blocks
+       * below, so the wakeup would be lost for good.
+       */
 
       ret = nxsig_clockwait(CLOCK_REALTIME, 0, timeout, NULL);
       if (ret >= 0)
         {
-          flags = enter_critical_section();
-
           /* We are running again, clear the sigwaitmask */
 
           sigemptyset(&rtcb->sigwaitmask);
@@ -551,10 +556,10 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
                   ret = -EAGAIN;
                 }
             }
-
-          leave_critical_section(flags);
         }
     }
+
+  leave_critical_section(flags);
 
   rtcb->sigunbinfo = NULL;
   return ret;
