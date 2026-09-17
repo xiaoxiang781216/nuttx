@@ -37,8 +37,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define IDLE_STACK_SIZE CONFIG_IDLETHREAD_STACKSIZE
-
 #if CONFIG_IDLETHREAD_STACKSIZE % 16 != 0
 #  error CONFIG_IDLETHREAD_STACKSIZE must be aligned to 16
 #endif
@@ -55,27 +53,12 @@
  * Public Functions
  ****************************************************************************/
 
-static const uintptr_t g_idle_stackalloc = (uintptr_t)_ebss;
+/* The CPU0 idle stack starts at _ebss.  The remaining CPU idle stacks are
+ * contiguous, see x86_64_idle_topstack().
+ */
 
-const uintptr_t g_idle_topstack[CONFIG_SMP_NCPUS] =
-{
-  (uintptr_t)g_idle_stackalloc + (1 * IDLE_STACK_SIZE),
-#if CONFIG_SMP_NCPUS > 1
-  (uintptr_t)g_idle_stackalloc + (2 * IDLE_STACK_SIZE),
-#endif
-#if CONFIG_SMP_NCPUS > 2
-  (uintptr_t)g_idle_stackalloc + (3 * IDLE_STACK_SIZE),
-#endif
-#if CONFIG_SMP_NCPUS > 3
-  (uintptr_t)g_idle_stackalloc + (4 * IDLE_STACK_SIZE),
-#endif
-#if CONFIG_SMP_NCPUS > 4
-  (uintptr_t)g_idle_stackalloc + (5 * IDLE_STACK_SIZE),
-#endif
-#if CONFIG_SMP_NCPUS > 5
-#  error missing logic
-#endif
-};
+const uintptr_t g_idle_topstack = (uintptr_t)_ebss +
+                                  CONFIG_IDLETHREAD_STACKSIZE;
 
 /****************************************************************************
  * Name: up_allocate_heap
@@ -103,7 +86,7 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   board_autoled_on(LED_HEAPALLOCATE);
 
-  topstack = g_idle_topstack[CONFIG_SMP_NCPUS - 1];
+  topstack = x86_64_idle_topstack(CONFIG_SMP_NCPUS - 1);
 
   /* Calculate the end of .bss section */
 

@@ -153,7 +153,7 @@ void x86_64_ap_boot(void)
   x86_64_tp_boot(cpu);
 #endif
 #ifdef CONFIG_ARCH_SAFE_STACK
-  __safestack_unsafe_stack_ptr = g_idle_topstack[cpu];
+  __safestack_unsafe_stack_ptr = (void *)x86_64_idle_topstack(cpu);
 #endif
 
   /* Configure interrupts */

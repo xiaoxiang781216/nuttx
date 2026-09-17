@@ -81,7 +81,7 @@ void up_initial_state(struct tcb_s *tcb)
 
   if (tcb->pid == IDLE_PROCESS_ID)
     {
-      char *stack_ptr = (char *)(g_idle_topstack[0] -
+      char *stack_ptr = (char *)(x86_64_idle_topstack(0) -
                                  CONFIG_IDLETHREAD_STACKSIZE);
       tcb->stack_alloc_ptr = stack_ptr;
       tcb->stack_base_ptr  = stack_ptr;
@@ -93,7 +93,7 @@ void up_initial_state(struct tcb_s *tcb)
       tcb->adj_stack_size -= unsafe_size;
       tcb->shadow_base_ptr = (uintptr_t)stack_ptr + tcb->adj_stack_size;
       tcb->shadow_top_ptr  = tcb->shadow_base_ptr + unsafe_size;
-      DEBUGASSERT(tcb->shadow_top_ptr == (uintptr_t)g_idle_topstack[0]);
+      DEBUGASSERT(tcb->shadow_top_ptr == x86_64_idle_topstack(0));
 #endif
 
 #ifdef CONFIG_STACK_COLORATION

@@ -170,7 +170,7 @@ void __nxstart(void)
 #endif
 
 #ifdef CONFIG_ARCH_SAFE_STACK
-  __safestack_unsafe_stack_ptr = (void *)g_idle_topstack[0];
+  __safestack_unsafe_stack_ptr = (void *)x86_64_idle_topstack(0);
 #endif
 
   /* Low-level, pre-OS initialization */
