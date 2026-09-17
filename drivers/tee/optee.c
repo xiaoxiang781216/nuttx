@@ -646,9 +646,17 @@ static int optee_close(FAR struct file *filep)
         }
       else
         {
-          /* The content recorded in priv is about to become invalid;
-           * we set shm->priv = NULL here
+          /* Still mapped, so optee_shm_munmap() will release the shm later.
+           * Unregister it here, while priv is still valid, and clear the
+           * flag to keep the late optee_shm_free() from doing it again.
            */
+
+          if (!(shm->flags & TEE_SHM_SUPP) &&
+              (shm->flags & TEE_SHM_REGISTER))
+            {
+              optee_shm_unregister(priv, shm);
+              shm->flags &= ~TEE_SHM_REGISTER;
+            }
 
           shm->priv = NULL;
         }
@@ -1553,14 +1561,24 @@ err:
 
 void optee_shm_free(FAR struct optee_shm *shm)
 {
-  if (!shm || !shm->priv)
+  if (shm == NULL)
     {
       return;
     }
 
-  if (!(shm->flags & TEE_SHM_SUPP) && (shm->flags & TEE_SHM_REGISTER))
+  /* The shm may outlive the context which created it: only the priv
+   * dependent bookkeeping has to be skipped then, the object itself is
+   * always returned to the heap.
+   */
+
+  if (shm->priv != NULL)
     {
-      optee_shm_unregister(shm->priv, shm);
+      if (!(shm->flags & TEE_SHM_SUPP) && (shm->flags & TEE_SHM_REGISTER))
+        {
+          optee_shm_unregister(shm->priv, shm);
+        }
+
+      idr_remove(shm->priv->shms, shm->id);
     }
 
   if (shm->flags & TEE_SHM_ALLOC)
@@ -1568,7 +1586,6 @@ void optee_shm_free(FAR struct optee_shm *shm)
       kmm_free((FAR void *)(uintptr_t)shm->vaddr);
     }
 
-  idr_remove(shm->priv->shms, shm->id);
   kmm_free(shm);
 }
 
