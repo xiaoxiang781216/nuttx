@@ -206,6 +206,7 @@
 "ntohl","arpa/inet.h","","uint32_t","uint32_t"
 "ntohq","arpa/inet.h","","uint64_t","uint64_t"
 "ntohs","arpa/inet.h","","uint16_t","uint16_t"
+"nx_syslog","nuttx/syslog/syslog.h","!defined(CONFIG_SYSLOG_NONE)","void","uint64_t","FAR const IPTR char *","..."
 "opendir","dirent.h","","FAR DIR *","FAR const char *"
 "perror","stdio.h","defined(CONFIG_FILE_STREAM)","void","FAR const char *"
 "pipe","unistd.h","defined(CONFIG_PIPES) && CONFIG_DEV_PIPE_SIZE > 0","int","int [2]|FAR int *"
