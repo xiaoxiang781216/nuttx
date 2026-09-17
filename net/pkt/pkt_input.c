@@ -164,9 +164,11 @@ static int pkt_in_(FAR struct net_driver_s *dev, bool loopback)
     {
       if (loopback && conn->pendiob == dev->d_iob)
         {
-          /* Do not read back the packet sent by oneself */
+          /* Do not read back the packet sent by oneself.  pendiob is
+           * released by devif_poll_pkt_connections() once this tap run
+           * completes, so it is always a live reference here.
+           */
 
-          conn->pendiob = NULL;
           continue;
         }
 
