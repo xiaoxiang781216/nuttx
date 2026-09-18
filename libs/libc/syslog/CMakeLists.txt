@@ -20,7 +20,7 @@
 #
 # ##############################################################################
 
-if(NOT CONFIG_SYSLOG_NONE)
+if(NOT CONFIG_NONE_SYSLOG)
   list(APPEND SRCS lib_syslog.c lib_setlogmask.c)
   target_sources(c PRIVATE ${SRCS})
 endif()

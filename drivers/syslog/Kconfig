@@ -30,7 +30,7 @@ config BINARY_SYSLOG
 		into compact binary frames (note_printf_s format) and
 		written through syslog channel dispatch.
 
-config SYSLOG_NONE
+config NONE_SYSLOG
 	bool "Disable system logging completely"
 	---help---
 		Select it will disable system logging completely

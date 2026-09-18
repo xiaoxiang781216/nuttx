@@ -22,7 +22,7 @@
 
 # Add the internal C files to the build
 
-ifneq ($(CONFIG_SYSLOG_NONE),y)
+ifneq ($(CONFIG_NONE_SYSLOG),y)
 CSRCS += lib_syslog.c lib_setlogmask.c
 endif
 

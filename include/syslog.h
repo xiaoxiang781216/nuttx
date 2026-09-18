@@ -229,7 +229,7 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG_NONE
+#ifdef CONFIG_NONE_SYSLOG
 
 static inline_function void syslog_like(2, 3)
 syslog(int priority, FAR const char *fmt, ...)
