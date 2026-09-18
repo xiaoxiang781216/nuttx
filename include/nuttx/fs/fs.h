@@ -35,6 +35,7 @@
 
 #include <sys/uio.h>
 #include <sys/types.h>
+#include <sys/poll.h>
 
 #include <stdarg.h>
 #include <stdint.h>
@@ -1844,6 +1845,37 @@ int file_fcntl(FAR struct file *filep, int cmd, ...);
  ****************************************************************************/
 
 int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup);
+
+/****************************************************************************
+ * Name: nx_poll
+ *
+ * Description:
+ *   nx_poll() is an internal OS interface.  It is functionally similar to
+ *   the standard poll() interface except:
+ *
+ *    - It does not modify the errno variable, and
+ *    - It optionally replaces the calling thread's signal mask while
+ *      waiting, which is what ppoll() needs.
+ *
+ *   The signal mask is installed only once the descriptors have been set up
+ *   and the wait is about to be entered, so that the swap and the wait are
+ *   atomic with respect to signal dispatch.
+ *
+ * Input Parameters:
+ *   fds     - List of structures describing file descriptors to be monitored
+ *   nfds    - The number of entries in the list
+ *   timeout - Upper limit on the time to block in milliseconds.  A negative
+ *             value means an infinite timeout.
+ *   sigmask - If non-NULL, the signal mask to install while waiting
+ *
+ * Returned Value:
+ *   On success, the number of structures that have non-zero revents fields
+ *   is returned.  On failure, a negated errno value is returned.
+ *
+ ****************************************************************************/
+
+int nx_poll(FAR struct pollfd *fds, nfds_t nfds, int timeout,
+            FAR const sigset_t *sigmask);
 
 /****************************************************************************
  * Name: file_fstat

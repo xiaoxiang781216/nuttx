@@ -42,6 +42,8 @@
 #include <arch/irq.h>
 
 #include "inode/inode.h"
+#include "sched/sched.h"
+#include "signal/signal.h"
 
 /****************************************************************************
  * Private Types
@@ -382,42 +384,43 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 }
 
 /****************************************************************************
- * Name: poll
+ * Name: nx_poll
  *
  * Description:
- *   poll() waits for one of a set of file descriptors to become ready to
- *   perform I/O.  If none of the events requested (and no error) has
- *   occurred for any of  the  file  descriptors,  then  poll() blocks until
- *   one of the events occurs.
+ *   nx_poll() is the internal implementation of both poll() and ppoll().
+ *   It is identical to poll() except that it optionally replaces the
+ *   calling thread's signal mask for the duration of the wait and that it
+ *   does not modify the errno variable.
  *
  * Input Parameters:
  *   fds  - List of structures describing file descriptors to be monitored
  *   nfds - The number of entries in the list
- *   timeout - Specifies an upper limit on the time for which poll() will
+ *   timeout - Specifies an upper limit on the time for which nx_poll() will
  *     block in milliseconds.  A negative value of timeout means an infinite
  *     timeout.
+ *   sigmask - If non-NULL, replace the calling thread's signal mask while
+ *     waiting for one of the events to occur.  The original mask is
+ *     restored before returning.
  *
  * Returned Value:
- *   On success, the number of structures that have non-zero revents fields.
- *   A value of 0 indicates that the call timed out and no file descriptors
- *   were ready.  On error, -1 is returned, and errno is set appropriately:
- *
- *   EBADF  - An invalid file descriptor was given in one of the sets.
- *   EFAULT - The fds address is invalid
- *   EINTR  - A signal occurred before any requested event.
- *   EINVAL - The nfds value exceeds a system limit.
- *   ENOMEM - There was no space to allocate internal data structures.
- *   ENOSYS - One or more of the drivers supporting the file descriptor
- *     does not support the poll method.
+ *   On success, the number of structures that have non-zero revents fields
+ *   is returned.  A value of 0 indicates that the call timed out and no
+ *   file descriptors were ready.  On failure, a negated errno value is
+ *   returned.
  *
  ****************************************************************************/
 
-int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
+int nx_poll(FAR struct pollfd *fds, nfds_t nfds, int timeout,
+            FAR const sigset_t *sigmask)
 {
+  FAR struct tcb_s *rtcb = this_task();
   FAR struct pollfd *kfds;
   FAR struct file **fileps;
   FAR void *tempbuf;
   FAR sem_t *sem;
+  sigset_t saved_sigprocmask;
+  irqstate_t flags;
+  bool intr = false;
   int count = 0;
   int ret = OK;
 
@@ -488,7 +491,40 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
       fdsinfo.nfds   = nfds;
       tls_cleanup_push(tls_get_info(), poll_cleanup, &fdsinfo);
 
-      if (timeout > 0)
+      /* ppoll() has to run the wait below with the caller's temporary
+       * signal mask installed.  Install it here, and not before the set up
+       * above, because the set up can block on driver locks: a signal
+       * dispatched to a task that is runnable rather than blocked, and that
+       * has no handler installed for it, is simply ignored, so the wakeup
+       * it was meant to deliver would be lost for good.  Until the mask is
+       * replaced such a signal stays masked and is safely queued as
+       * pending, which nxsig_unmask_pendingsignal() below then picks up.
+       *
+       * Nothing between the mask swap and the task being queued on the
+       * semaphore wait list can block, so holding the critical section
+       * across both keeps them atomic with respect to signal dispatch.
+       */
+
+      flags = enter_critical_section();
+      sched_lock();
+      if (sigmask != NULL)
+        {
+          saved_sigprocmask = rtcb->sigprocmask;
+          rtcb->sigprocmask = *sigmask;
+          sigemptyset(&rtcb->sigwaitmask);
+
+          /* Dispatching a signal that the new mask unblocks is sufficient
+           * to cause us to not wait.
+           */
+
+          intr = nxsig_unmask_pendingsignal();
+        }
+
+      if (intr)
+        {
+          ret = -EINTR;
+        }
+      else if (timeout > 0)
         {
           /* "Implementations may place limitations on the granularity of
            * timeout intervals. If the requested timeout interval requires
@@ -527,6 +563,26 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
           ret = nxsem_wait(sem);
         }
 
+      /* We are running again, restore the original sigprocmask */
+
+      if (sigmask != NULL)
+        {
+          rtcb->sigprocmask = saved_sigprocmask;
+        }
+
+      sched_unlock();
+      leave_critical_section(flags);
+
+      /* Now, handle the (rare?) case where (a) a blocked signal was
+       * received while the task was suspended but (b) restoring the
+       * original sigprocmask will unblock the signal.
+       */
+
+      if (sigmask != NULL)
+        {
+          nxsig_unmask_pendingsignal();
+        }
+
       /* Teardown the poll operation and get the count of events.  Zero will
        * be returned in the case of a timeout.
        *
@@ -538,6 +594,22 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
       /* Pop the cancellation point */
 
       tls_cleanup_pop(tls_get_info(), 0);
+    }
+  else if (sigmask != NULL)
+    {
+      flags = enter_critical_section();
+      saved_sigprocmask = rtcb->sigprocmask;
+      rtcb->sigprocmask = *sigmask;
+      sigemptyset(&rtcb->sigwaitmask);
+      intr = nxsig_unmask_pendingsignal();
+      rtcb->sigprocmask = saved_sigprocmask;
+      leave_critical_section(flags);
+
+      if (intr)
+        {
+          ret = -EINTR;
+          poll_teardown(kfds, nfds, fileps, &count);
+        }
     }
 
   nxsem_destroy(sem);
@@ -562,13 +634,49 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
 out_with_cancelpt:
   leave_cancellation_point();
 
+  return ret < 0 ? ret : count;
+}
+
+/****************************************************************************
+ * Name: poll
+ *
+ * Description:
+ *   poll() waits for one of a set of file descriptors to become ready to
+ *   perform I/O.  If none of the events requested (and no error) has
+ *   occurred for any of  the  file  descriptors,  then  poll() blocks until
+ *   one of the events occurs.
+ *
+ * Input Parameters:
+ *   fds  - List of structures describing file descriptors to be monitored
+ *   nfds - The number of entries in the list
+ *   timeout - Specifies an upper limit on the time for which poll() will
+ *     block in milliseconds.  A negative value of timeout means an infinite
+ *     timeout.
+ *
+ * Returned Value:
+ *   On success, the number of structures that have non-zero revents fields.
+ *   A value of 0 indicates that the call timed out and no file descriptors
+ *   were ready.  On error, -1 is returned, and errno is set appropriately:
+ *
+ *   EBADF  - An invalid file descriptor was given in one of the sets.
+ *   EFAULT - The fds address is invalid
+ *   EINTR  - A signal occurred before any requested event.
+ *   EINVAL - The nfds value exceeds a system limit.
+ *   ENOMEM - There was no space to allocate internal data structures.
+ *   ENOSYS - One or more of the drivers supporting the file descriptor
+ *     does not support the poll method.
+ *
+ ****************************************************************************/
+
+int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
+{
+  int ret = nx_poll(fds, nfds, timeout, NULL);
+
   if (ret < 0)
     {
       set_errno(-ret);
       return ERROR;
     }
-  else
-    {
-      return count;
-    }
+
+  return ret;
 }
