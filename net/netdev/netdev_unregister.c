@@ -121,6 +121,16 @@ int netdev_unregister(FAR struct net_driver_s *dev)
 
   if (dev)
     {
+      /* Notify clients that the network has been taken down, so that they
+       * give up whatever they hold on this device.  This has to come first
+       * of all:  a callback released once the device is off the device list
+       * is no longer unlinked from d_devcb, which is the list this very
+       * notification walks, and the lock both it and those releases take is
+       * destroyed further down.
+       */
+
+      devif_dev_event(dev, NETDEV_DOWN);
+
       netdev_list_lock();
 
       /* Find the device in the list of known network devices */
@@ -198,7 +208,6 @@ int netdev_unregister(FAR struct net_driver_s *dev)
 #else
       ninfo("Unregistered dev: %s\n", dev->d_ifname);
 #endif
-      devif_dev_event(dev, NETDEV_DOWN);
       return OK;
     }
 
