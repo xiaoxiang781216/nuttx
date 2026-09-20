@@ -171,11 +171,7 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
   /* Make sure that a non-NULL name is supplied */
 
-  if (!mq || !mq_name || *mq_name == '\0'
-#ifdef CONFIG_FS_MQUEUE_NAME_INITIAL_SLASH
-      || *mq_name != '/'
-#endif
-  )
+  if (!mq || !mq_name || *mq_name == '\0')
     {
       ret = -EINVAL;
       goto errout;
