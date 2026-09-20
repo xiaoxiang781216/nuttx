@@ -372,6 +372,7 @@ int virtio_crypto_get_service(int alg)
       case CRYPTO_SHA2_512_HMAC:
       case CRYPTO_AES_CMAC:
       case CRYPTO_AES_128_CMAC:
+      case CRYPTO_AES_256_CMAC:
       case CRYPTO_PBKDF2_HMAC_SHA1:
       case CRYPTO_PBKDF2_HMAC_SHA256:
         return VIRTIO_CRYPTO_SERVICE_MAC;
@@ -460,6 +461,7 @@ int virtio_crypto_get_alg(int alg)
         return VIRTIO_CRYPTO_MAC_GMAC_AES;
       case CRYPTO_AES_CMAC:
       case CRYPTO_AES_128_CMAC:
+      case CRYPTO_AES_256_CMAC:
         return VIRTIO_CRYPTO_MAC_CMAC_AES;
       case CRYPTO_AES_GCM_16:
         return VIRTIO_CRYPTO_AEAD_GCM;

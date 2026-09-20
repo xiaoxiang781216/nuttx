@@ -414,6 +414,8 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
     }
   else if (msg->ctrl.header.opcode == VIRTIO_CRYPTO_MAC_CREATE_SESSION)
     {
+      keylen = msg->ctrl.op_flf.mac.auth_key_len;
+
       thash = virtio_crypto_get_mac_alg(msg->ctrl.header.algo);
       if (thash < 0)
         {
@@ -424,9 +426,15 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
       else if (thash == CRYPTO_AES_128_CMAC)
         {
           txform = CRYPTO_AES_CMAC;
+          if (keylen == 16)
+            {
+              thash = CRYPTO_AES_128_CMAC;
+            }
+          else if (keylen == 32)
+            {
+              thash = CRYPTO_AES_256_CMAC;
+            }
         }
-
-      keylen = msg->ctrl.op_flf.mac.auth_key_len;
     }
   else if (msg->ctrl.header.opcode == VIRTIO_CRYPTO_AEAD_CREATE_SESSION)
     {
