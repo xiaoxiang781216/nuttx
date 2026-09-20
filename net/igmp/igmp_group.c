@@ -217,7 +217,16 @@ void igmp_grpfree(FAR struct net_driver_s *dev,
 
   grpinfo("Free: %p flags: %02x\n", group, group->flags);
 
-  /* Cancel the workqueue */
+  /* Remove from the group list while still holding the lock, so that
+   * concurrent igmp_grpfind() cannot discover this group during the
+   * breaklock window below.
+   */
+
+  sq_rem((FAR sq_entry_t *)group, &dev->d_igmp_grplist);
+
+  /* Cancel the workqueue — must break the lock because
+   * work_cancel_sync may block waiting for a running callback.
+   */
 
   blresult = netdev_breaklock(dev, &count);
   work_cancel_sync(LPWORK, &group->work);
@@ -225,10 +234,6 @@ void igmp_grpfree(FAR struct net_driver_s *dev,
     {
       netdev_restorelock(dev, count);
     }
-
-  /* Remove the group structure from the group list in the device structure */
-
-  sq_rem((FAR sq_entry_t *)group, &dev->d_igmp_grplist);
 
   /* Destroy the wait semaphore */
 
