@@ -35,6 +35,7 @@
 #include <nuttx/wqueue.h>
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "sim_internal.h"
 #include "sim_hostusrsock.h"
@@ -90,12 +91,21 @@ struct kwork_wqueue_s *g_work_queue;
 static void sim_init_cmdline(void)
 {
   char cmdline[ARG_MAX] = "";
+  char *sep;
   int i;
 
   for (i = 1; i < g_argc; i++)
     {
       strlcat(cmdline, g_argv[i], sizeof(cmdline));
       strlcat(cmdline, " ", sizeof(cmdline));
+
+      sep = strchr(g_argv[i], '=');
+      if (sep != NULL && sep != g_argv[i])
+        {
+          *sep = '\0';
+          setenv(g_argv[i], sep + 1, true);
+          *sep = '=';
+        }
     }
 
   setenv("CMDLINE", cmdline, true);
