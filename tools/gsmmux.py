@@ -719,6 +719,13 @@ class VirtualSerialPort:
         # Get slave device name
         self.slave_name = os.ttyname(self.slave_fd)
 
+        # World-accessible so non-root clients can open the port when the mux
+        # runs under sudo (to create /dev symlinks); matches kernel-mode 0o666.
+        try:
+            os.chmod(self.slave_name, 0o666)
+        except OSError:
+            pass
+
         # Set master fd to non-blocking to avoid stalling the event loop
         _set_nonblocking(self.master_fd)
 
@@ -1173,9 +1180,9 @@ class GSMMultiplexer:
             slave_name = vport.open()
             self.virtual_ports[dlci] = vport
 
-            # Create symlink for fixed device name if prefix is specified
+            # dlci-1: align host node with device-side ttyGSM (DLCI1=ttyGSM0)
             if self.symlink_prefix:
-                symlink_path = f"{self.symlink_prefix}{dlci}"
+                symlink_path = f"{self.symlink_prefix}{dlci - 1}"
                 try:
                     if os.path.lexists(symlink_path):
                         os.unlink(symlink_path)
@@ -1414,7 +1421,8 @@ class GSMMultiplexer:
         print("Virtual ports:")
         for dlci, vport in self.virtual_ports.items():
             if self.symlink_prefix:
-                symlink_path = f"{self.symlink_prefix}{dlci}"
+                # dlci-1: align host node with device-side ttyGSM (DLCI1=ttyGSM0)
+                symlink_path = f"{self.symlink_prefix}{dlci - 1}"
                 print(f"  DLCI {dlci}: {vport.slave_name} -> {symlink_path}")
             else:
                 print(f"  DLCI {dlci}: {vport.slave_name}")
