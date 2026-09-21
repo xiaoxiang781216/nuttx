@@ -34,6 +34,8 @@
 
 #include <nuttx/sched.h>
 #include <nuttx/clock.h>
+#include <nuttx/percpu.h>
+#include <nuttx/atomic.h>
 
 #include "sched/sched.h"
 
@@ -43,7 +45,14 @@
  * Private Data
  ****************************************************************************/
 
-static struct cpu_call_data_s g_call_data;
+struct roundrobin_call_s
+{
+  struct cpu_call_data_s data;
+  pid_t                  pid;
+  atomic_t               pending;
+};
+
+static DEFINE_PER_CPU_SMP(struct roundrobin_call_s, g_call_data);
 
 /****************************************************************************
  * Private Type Declarations
@@ -60,9 +69,12 @@ struct roundrobin_arg_s
 
 static int nxsched_roundrobin_handler(FAR void *cookie)
 {
-  pid_t pid = (uintptr_t)cookie;
+  FAR struct roundrobin_call_s *call = cookie;
+  pid_t pid = call->pid;
   FAR struct tcb_s *tcb;
   irqstate_t flags;
+
+  atomic_set_release(&call->pending, false);
 
   flags = enter_critical_section();
   tcb = nxsched_get_tcb(pid);
@@ -198,10 +210,19 @@ clock_t nxsched_process_roundrobin(FAR struct tcb_s *tcb, clock_t ticks,
               DEBUGASSERT(tcb->task_state == TSTATE_TASK_RUNNING);
               if (tcb->cpu != this_cpu())
                 {
-                  nxsched_cpu_call_init(&g_call_data,
+                  FAR struct roundrobin_call_s *call =
+                    &per_cpu_var_smp(g_call_data, tcb->cpu);
+
+                  if (atomic_xchg(&call->pending, true))
+                    {
+                      return ret;
+                    }
+
+                  call->pid = tcb->pid;
+                  nxsched_cpu_call_init(&call->data,
                                         nxsched_roundrobin_handler,
-                                        (FAR void *)(uintptr_t)tcb->pid);
-                  nxsched_cpu_call_single_async(tcb->cpu, &g_call_data);
+                                        call);
+                  nxsched_cpu_call_single_async(tcb->cpu, &call->data);
                 }
               else if (nxsched_switch_running(tcb->cpu, true))
 #else
