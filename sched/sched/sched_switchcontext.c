@@ -217,7 +217,8 @@ __jumpfunc__ void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
 #ifdef CONFIG_SCHED_SPORADIC
   /* Perform sporadic schedule operations */
 
-  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)
+  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC &&
+      tcb->sporadic != NULL)
     {
       DEBUGVERIFY(nxsched_suspend_sporadic(tcb));
     }
@@ -268,7 +269,8 @@ __jumpfunc__ void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
 __jumpfunc__ void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
 {
 #ifdef CONFIG_SCHED_SPORADIC
-  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)
+  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC &&
+      tcb->sporadic != NULL)
     {
       /* Reset the replenishment cycle if it is appropriate to do so */
 
