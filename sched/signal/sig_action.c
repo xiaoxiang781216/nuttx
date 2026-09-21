@@ -316,9 +316,9 @@ int nxsig_action(int signo, FAR const struct sigaction *act,
         }
       else
         {
-          /* There isn't an old value */
+          /* No explicit action set; POSIX default disposition is SIG_DFL */
 
-          oact->sa_handler = NULL;
+          oact->sa_handler = SIG_DFL;
           oact->sa_flags   = 0;
           sigemptyset(&oact->sa_mask);
         }
