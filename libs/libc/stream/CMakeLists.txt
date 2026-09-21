@@ -54,7 +54,7 @@ if(CONFIG_NET_NETPOLL)
   list(APPEND SRCS lib_netpolloutstream.c)
 endif()
 
-if(CONFIG_SYSLOG)
+if(CONFIG_SYSLOG OR CONFIG_BINARY_SYSLOG)
   list(APPEND SRCS lib_syslograwstream.c)
 endif()
 

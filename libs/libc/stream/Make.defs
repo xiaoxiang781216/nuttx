@@ -37,7 +37,7 @@ ifeq ($(CONFIG_NET_NETPOLL),y)
 CSRCS += lib_netpolloutstream.c
 endif
 
-ifeq ($(CONFIG_SYSLOG),y)
+ifneq ($(CONFIG_SYSLOG)$(CONFIG_BINARY_SYSLOG),)
 CSRCS += lib_syslograwstream.c
 endif
 

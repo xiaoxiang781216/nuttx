@@ -50,20 +50,6 @@ config BINARY_SYSLOG_STRIP_FORMAT
 		Only the fmt address and meta travel in the binary frame;
 		there is no resident format string in the firmware image.
 
-config SYSLOG_CHARDEV
-	bool "SYSLOG character device"
-	depends on SYSLOG
-	default n
-	---help---
-		Enables support for a simple character driver at /dev/log whose
-		write() method will transfer data to the SYSLOG device.  This can be
-		useful if, for example, you want to redirect the output of a program
-		to the SYSLOG.
-
-		NOTE that unlike other syslog output, this data is unformatted raw
-		byte output with no time-stamping or any other SYSLOG features
-		supported.
-
 config SYSLOG_DEFAULT_MASK
 	hex "syslog mask default value"
 	default 0xff
