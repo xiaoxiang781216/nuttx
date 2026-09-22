@@ -574,6 +574,16 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info,
             {
               sigpend = nxsig_add_pendingsignal(stcb, info,
                                                 group_dispatch);
+
+              /* The pending entry may be released as soon as the critical
+               * section is left (see nxsig_unmask_pendingsignal()), so the
+               * kernel action must run while it is still owned.
+               */
+
+              if (sigpend != NULL)
+                {
+                  nxsig_dispatch_kernel_action(stcb, &sigpend->info);
+                }
             }
 #endif
 
@@ -680,17 +690,6 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info,
 
           leave_critical_section(flags);
         }
-
-#ifndef CONFIG_DISABLE_SIGNALS
-      /* Dispatch kernel action, if needed,
-       * in case a pending signal was added
-       */
-
-      if (sigpend != NULL)
-        {
-          nxsig_dispatch_kernel_action(stcb, &sigpend->info);
-        }
-#endif
 
       /* In case nxsig_ismember failed due to an invalid signal number */
 
