@@ -28,7 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#if !defined(CONFIG_BUILD_FLAT) && defined(__KERNEL__)
+#if defined(CONFIG_MM_KERNEL_HEAP) && defined(__KERNEL__)
 #  include <nuttx/kmalloc.h>
 #else
 #  include <stdlib.h>
@@ -51,7 +51,7 @@
  * then only the first mode is supported.
  */
 
-#if !defined(CONFIG_BUILD_FLAT) && defined(__KERNEL__)
+#if defined(CONFIG_MM_KERNEL_HEAP) && defined(__KERNEL__)
 
   /* Domain-specific allocations */
 
