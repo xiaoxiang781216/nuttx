@@ -302,5 +302,10 @@ void nxtask_uninit(FAR struct tcb_s *tcb)
    * itself.
    */
 
+  /* nxsched_release_tcb does not release group resources;
+   * group_leave is needed to free env/files allocated by nxtask_init.
+   */
+
+  group_leave(tcb);
   nxsched_release_tcb(tcb, atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK);
 }
