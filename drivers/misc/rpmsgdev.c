@@ -1076,12 +1076,16 @@ static int rpmsgdev_ioctl_handler(FAR struct rpmsg_endpoint *ept,
   cookie->result = header->result;
   if (cookie->result >= 0 && rsp->arglen > 0)
     {
+      /* MTDIOC_SWITCH_BOOT takes a const arg that may be in read-only
+       * memory, so don't write the echoed argument back.
+       */
+
       if (rsp->request >= CFGDIOC_GETCONFIG &&
           rsp->request <= CFGDIOC_NEXTCONFIG)
         {
           rpmsgdev_unmarshal_cfgdata(rsp->buf, cookie->data);
         }
-      else
+      else if (rsp->request != MTDIOC_SWITCH_BOOT)
         {
           memcpy(cookie->data, rsp->buf, rsp->arglen);
         }
