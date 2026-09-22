@@ -193,31 +193,7 @@ int                nxsig_dispatch(pid_t pid, FAR siginfo_t *info,
 #ifndef CONFIG_DISABLE_SIGNALS
 
 void               nxsig_release_pendingsigaction(FAR sigq_t *sigq);
-
-static inline_function void nxsig_cleanup(FAR struct tcb_s *stcb)
-{
-  FAR sigq_t *sigq;
-
-  /* Deallocate all entries in the list of pending signal actions */
-
-  while ((sigq = (FAR sigq_t *)sq_remfirst(&stcb->sigpendactionq)) != NULL)
-    {
-      nxsig_release_pendingsigaction(sigq);
-    }
-
-  /* Deallocate all entries in the list of posted signal actions */
-
-  while ((sigq = (FAR sigq_t *)sq_remfirst(&stcb->sigpostedq)) != NULL)
-    {
-      nxsig_release_pendingsigaction(sigq);
-    }
-
-  /* Misc. signal-related clean-up */
-
-  sigfillset(&stcb->sigprocmask);
-  sigemptyset(&stcb->sigwaitmask);
-}
-
+void               nxsig_cleanup(FAR struct tcb_s *stcb);
 void               nxsig_release(FAR struct task_group_s *group);
 #else
 #  define          nxsig_cleanup(stcb)

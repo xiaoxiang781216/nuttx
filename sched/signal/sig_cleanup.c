@@ -35,6 +35,76 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: nxsig_cleanup
+ *
+ * Description:
+ *   Deallocate the signal-related lists of a task that is leaving the
+ *   system, either because it exits or because it is restarted.  This
+ *   covers the queues owned by the TCB itself as well as the group
+ *   pending signals that are directed to this task.
+ *
+ ****************************************************************************/
+
+void nxsig_cleanup(FAR struct tcb_s *stcb)
+{
+  FAR struct task_group_s *group = stcb->group;
+  FAR sigpendq_t *sigpend;
+  FAR sigpendq_t *next;
+  FAR sigq_t *sigq;
+  sq_queue_t pendingsig;
+  irqstate_t flags;
+
+  DEBUGASSERT(group != NULL);
+
+  /* Deallocate all entries in the list of pending signal actions */
+
+  while ((sigq = (FAR sigq_t *)sq_remfirst(&stcb->sigpendactionq)) != NULL)
+    {
+      nxsig_release_pendingsigaction(sigq);
+    }
+
+  /* Deallocate all entries in the list of posted signal actions */
+
+  while ((sigq = (FAR sigq_t *)sq_remfirst(&stcb->sigpostedq)) != NULL)
+    {
+      nxsig_release_pendingsigaction(sigq);
+    }
+
+  /* Unlink the group pending signals that are directed to this task.  They
+   * cannot be released while tg_lock is held because
+   * nxsig_release_pendingsignal() may call kmm_free().
+   */
+
+  sq_init(&pendingsig);
+
+  flags = spin_lock_irqsave(&group->tg_lock);
+
+  for (sigpend = (FAR sigpendq_t *)group->tg_sigpendingq.head;
+       sigpend != NULL; sigpend = next)
+    {
+      next = sigpend->flink;
+
+      if (sigpend->tcb == stcb)
+        {
+          sq_rem((FAR sq_entry_t *)sigpend, &group->tg_sigpendingq);
+          sq_addlast((FAR sq_entry_t *)sigpend, &pendingsig);
+        }
+    }
+
+  spin_unlock_irqrestore(&group->tg_lock, flags);
+
+  while ((sigpend = (FAR sigpendq_t *)sq_remfirst(&pendingsig)) != NULL)
+    {
+      nxsig_release_pendingsignal(sigpend);
+    }
+
+  /* Misc. signal-related clean-up */
+
+  sigfillset(&stcb->sigprocmask);
+  sigemptyset(&stcb->sigwaitmask);
+}
+
+/****************************************************************************
  * Name: nxsig_release
  *
  * Description:
