@@ -32,7 +32,6 @@
 
 #include <unistd.h>
 
-#include "mount/mount.h"
 #include "fs_reboot.h"
 
 /****************************************************************************
@@ -43,15 +42,10 @@
  * Name: fs_reboot_handler
  *
  * Description:
- *   Unified filesystem reboot notifier.  On power-off/restart it first
- *   flushes all open descriptors and pseudo filesystems via sync(), then
- *   force-unmounts every mountpoint.  The unmount step drives each
- *   filesystem's unbind() path (e.g. yaffs flush_whole_cache +
- *   checkpoint_save + deinitialise), which sync() alone does not reach.
- *
- *   The per-mountpoint work is delegated to umount_all(), which drives
- *   foreach_mountpoint() to flush and force-unmount each mountpoint with no
- *   dynamic allocation on the reboot path.
+ *   Unified filesystem reboot notifier.  On power-off/restart it flushes
+ *   all open descriptors, pseudo filesystems and mounted filesystems via
+ *   sync(), which persists cached file data and filesystem-level state
+ *   (e.g. a yaffs checkpoint) before the system goes down.
  *
  ****************************************************************************/
 
@@ -61,17 +55,11 @@ static int fs_reboot_handler(FAR struct notifier_block *nb,
   if (!up_interrupt_context() &&
       (action == SYS_POWER_OFF || action == SYS_RESTART))
     {
-      /* Flush all cached file data of open descriptors and pseudo
-       * filesystems first.
+      /* Flush all cached file data of open descriptors, pseudo
+       * filesystems and mounted filesystems.
        */
 
       sync();
-
-#ifndef CONFIG_DISABLE_MOUNTPOINT
-      /* Then flush and force-unmount every mountpoint. */
-
-      umount_all();
-#endif
     }
 
   return 0;
