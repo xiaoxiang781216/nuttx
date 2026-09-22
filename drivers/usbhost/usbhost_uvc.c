@@ -94,6 +94,7 @@ static int uvc_imgdata_start_capture(FAR struct imgdata_s *data,
                                      FAR imgdata_capture_t callback,
                                      FAR void *arg);
 static int uvc_imgdata_stop_capture(FAR struct imgdata_s *data);
+static void uvc_iso_restart(FAR struct uvc_dev_s *dev);
 static bool uvc_imgsensor_is_available(FAR struct imgsensor_s *sensor);
 static int uvc_imgsensor_init(FAR struct imgsensor_s *sensor);
 static int uvc_imgsensor_uninit(FAR struct imgsensor_s *sensor);
@@ -1620,6 +1621,15 @@ static void uvc_iso_slot_callback(FAR void *arg, ssize_t result)
   dev = slot->dev;
   pipe = &dev->iso_pipe;
 
+  /* Ignore late/duplicate completions after the slot was already
+   * retired (error short-circuit or stream stop).
+   */
+
+  if (atomic_read(&slot->state) != UVC_ISO_SLOT_SUBMITTED)
+    {
+      return;
+    }
+
   if (result < 0)
     {
       slot->result = result;
@@ -1655,6 +1665,7 @@ static int uvc_iso_submit_slot(FAR struct uvc_dev_s *dev,
   int                           ret;
 
   slot->pkt_idx = 0;
+  slot->result = 0;
 
   ret = DRVR_ASYNCH(hport->drvr,
                     priv->isoin,
@@ -1863,6 +1874,34 @@ static int uvc_capture_thread(int argc, FAR char *argv[])
               goto cleanup;
             }
 
+          /* Transport error (NO_FREE_QTD, TIMEOUT, STALL, ...).
+           * The HAL has already stopped the EP.  -ESHUTDOWN/-ENODEV
+           * outside of a restart means the stream is gone for good;
+           * anything else is recoverable — drop the frame and
+           * restart the stream automatically.
+           */
+
+          if (slot->result < 0)
+            {
+              if (slot->result == -ESHUTDOWN || slot->result == -ENODEV)
+                {
+                  goto cleanup;
+                }
+
+              uwarn("UVC: xfer error %d, restarting\n",
+                    (int)slot->result);
+
+              if (dev->capture_callback)
+                {
+                  struct timeval tv;
+                  gettimeofday(&tv, NULL);
+                  dev->capture_callback(0, 0, &tv, dev->capture_arg);
+                }
+
+              uvc_iso_restart(dev);
+              break;
+            }
+
           /* Resubmit slot */
 
           atomic_set(&slot->state, UVC_ISO_SLOT_FREE);
@@ -1949,6 +1988,77 @@ cleanup:
 
   nxsem_post(&dev->capture_exit_sem);
   return OK;
+}
+
+/****************************************************************************
+ * Name: uvc_iso_restart
+ *
+ * Description:
+ *   Recover from a transport error (NO_FREE_QTD, TIMEOUT, STALL, ...).
+ *   The HAL has already stopped the EP, so cancel the in-flight slots,
+ *   reset frame assembly, and resubmit — bes_asynch() restarts the
+ *   BES stream (and thus hal_usbhost_sg_isoc_start_xfer) on the first
+ *   submission after the stop.  Called from capture_tid only.
+ *
+ ****************************************************************************/
+
+static void uvc_iso_restart(FAR struct uvc_dev_s *dev)
+{
+  FAR struct uvc_priv_s *priv = dev->device;
+  FAR struct uvc_iso_pipe_s *pipe = &dev->iso_pipe;
+  int ret;
+  int i;
+
+  uinfo("UVC: restarting ISO stream\n");
+
+  /* Stop the stream.  Completes all in-flight slots with -ESHUTDOWN. */
+
+  if (priv->isoin && priv->usbclass.hport &&
+      priv->usbclass.hport->drvr)
+    {
+      DRVR_CANCEL(priv->usbclass.hport->drvr, priv->isoin);
+    }
+
+  for (i = 0; i < pipe->num_slots; i++)
+    {
+      struct timespec cts;
+      clock_gettime(CLOCK_REALTIME, &cts);
+      cts.tv_sec += UVC_SLOT_WAIT_TIMEOUT_SEC;
+
+      while (atomic_read(&pipe->slots[i].state) == UVC_ISO_SLOT_SUBMITTED)
+        {
+          ret = nxsem_timedwait(&pipe->completion_sem, &cts);
+          if (ret == -ETIMEDOUT)
+            {
+              uerr("UVC: restart slot %d stuck, defer free\n", i);
+              pipe->slots[i].dev = NULL;
+              break;
+            }
+        }
+    }
+
+  dev->iso_frame_dest = NULL;
+  dev->iso_frame_dest_size = 0;
+  dev->iso_frame_offset = 0;
+  dev->iso_frame_started = false;
+  dev->iso_have_prev_fid = false;
+  dev->iso_frame_error = false;
+  dev->iso_frame_complete_size = 0;
+
+  for (i = 0; i < pipe->num_slots; i++)
+    {
+      if (!pipe->slots[i].dev || !pipe->slots[i].buffer)
+        {
+          continue;
+        }
+
+      atomic_set(&pipe->slots[i].state, UVC_ISO_SLOT_FREE);
+      ret = uvc_iso_submit_slot(dev, &pipe->slots[i]);
+      if (ret < 0)
+        {
+          uerr("UVC: restart slot %d submit failed: %d\n", i, ret);
+        }
+    }
 }
 
 static int uvc_imgdata_start_capture(FAR struct imgdata_s *data,
