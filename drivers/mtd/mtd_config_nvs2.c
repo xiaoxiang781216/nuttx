@@ -68,6 +68,10 @@
 
 #define NVS_HASH_INITIAL_VALUE          2166136261
 
+#define NVS_GC_NONE                     0  /* No recovery needed */
+#define NVS_GC_ERASE                    1  /* GC done, erase old block */
+#define NVS_GC_REDO                     2  /* GC incomplete, redo GC */
+
 #if defined(CONFIG_MTD_CONFIG_CACHE_SIZE) && CONFIG_MTD_CONFIG_CACHE_SIZE > 0
 #  define NVS_CACHE_ENABLED             1
 #else
@@ -128,6 +132,7 @@ struct nvs_fs
   uint32_t              write_cnt;     /* Block write counter */
   bool                  initialized;   /* NVS initialization flag */
   bool                  gcing;         /* True while nvs_gc runs */
+  uint8_t               gc_state;      /* Power-loss GC recovery state */
 #if NVS_CACHE_ENABLED
   struct nvs_cache      cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
 #endif
@@ -1455,7 +1460,11 @@ static int nvs_recover_last_ate(FAR struct nvs_fs *fs, FAR uint64_t *addr,
 
       if (nvs_ate_valid(fs, end_ate))
         {
-          /* Found a valid ate, update data_end_addr and *addr */
+          /* Lowest valid ATE is the most recently written one
+           * (incl. gc_done).
+           */
+
+          *addr = ate_end_addr;
 
           if (!(nvs_data_in_ate(fs, end_ate)) &&
               end_ate->offset >= (data_end_addr & NVS_ADDR_OFFSET_MASK))
@@ -1471,8 +1480,6 @@ static int nvs_recover_last_ate(FAR struct nvs_fs *fs, FAR uint64_t *addr,
                   data_end_addr += nvs_align_up(fs, end_ate->ate_key_len +
                                    end_ate->ate_len);
                 }
-
-              *addr = ate_end_addr;
             }
 
           found = true;
@@ -1923,7 +1930,11 @@ static int nvs_rebuild_cache(FAR struct nvs_fs *fs)
 
       if (nvs_is_different_block(addr, ate_addr))
         {
-          if (++block_count > fs->nblocks)
+          /* Deferred GC recovery leaves the old block unreclaimed, so a full
+           * traversal may span nblocks + 1 blocks before wrapping around.
+           */
+
+          if (block_count++ > fs->nblocks)
             {
               return -ERANGE;
             }
@@ -2004,7 +2015,11 @@ static int nvs_find_ate_with_key(FAR struct nvs_fs *fs,
 
       if (nvs_is_different_block(start_addr, prev_addr))
         {
-          if (++block_count > fs->nblocks)
+          /* Deferred GC recovery leaves the old block unreclaimed, so a full
+           * traversal may span nblocks + 1 blocks before wrapping around.
+           */
+
+          if (block_count++ > fs->nblocks)
             {
               return -ERANGE;
             }
@@ -2224,6 +2239,62 @@ gc_done:
 out:
   fs->gcing = false;
   return rc;
+}
+
+/****************************************************************************
+ * Name: nvs_gc_recover
+ *
+ * Description:
+ *   Complete deferred power-loss GC recovery. Called once at the beginning
+ *   of the first nvs_write after nvs_init detected an interrupted GC.
+ *   Cache is already built so nvs_gc can use cache lookup.
+ *
+ ****************************************************************************/
+
+static int nvs_gc_recover(FAR struct nvs_fs *fs)
+{
+  size_t ate_size = nvs_ate_size(fs);
+  uint64_t addr;
+  int rc;
+
+  if (fs->gc_state == NVS_GC_ERASE)
+    {
+      /* GC done ate written, just erase old block */
+
+      addr = fs->ate_wra & NVS_ADDR_BLOCK_MASK;
+      nvs_block_advance(fs, &addr);
+      rc = nvs_flash_block_reset(fs, addr);
+      if (rc)
+        {
+          return rc;
+        }
+
+      fs->gc_state = NVS_GC_NONE;
+    }
+  else if (fs->gc_state == NVS_GC_REDO)
+    {
+      /* GC incomplete, redo with cache */
+
+      rc = nvs_flash_block_reset(fs, fs->ate_wra);
+      if (rc)
+        {
+          return rc;
+        }
+
+      fs->ate_wra &= NVS_ADDR_BLOCK_MASK;
+      fs->ate_wra += fs->blocksize - 3 * ate_size;
+      fs->data_wra = fs->ate_wra & NVS_ADDR_BLOCK_MASK;
+
+      rc = nvs_gc(fs);
+      if (rc)
+        {
+          return rc;
+        }
+
+      fs->gc_state = NVS_GC_NONE;
+    }
+
+  return 0;
 }
 
 /****************************************************************************
@@ -2515,38 +2586,20 @@ static int nvs_init(FAR struct nvs_fs *fs)
 
       if (gc_done_marker)
         {
-          /* Erase the next block */
-
           fwarn("GC Done marker found\n");
-          addr = fs->ate_wra & NVS_ADDR_BLOCK_MASK;
-          nvs_block_advance(fs, &addr);
-          rc = nvs_flash_block_reset(fs, addr);
-          if (rc)
-            {
-              return rc;
-            }
+          fs->gc_state = NVS_GC_ERASE;
         }
       else
         {
-          fwarn("No GC Done marker found: restarting gc\n");
-          rc = nvs_flash_block_reset(fs, fs->ate_wra);
-          if (rc)
-            {
-              return rc;
-            }
+          fwarn("No GC Done marker found, need to restart gc\n");
+          fs->gc_state = NVS_GC_REDO;
 
-          fs->ate_wra &= NVS_ADDR_BLOCK_MASK;
-          fs->ate_wra += (fs->blocksize - 3 * ate_size);
-          fs->data_wra = (fs->ate_wra & NVS_ADDR_BLOCK_MASK);
-#if NVS_CACHE_ENABLED
-          memset(fs->cache, 0xff, sizeof(fs->cache));
-#endif
+          /* Reset ate_wra to close_ate position so rebuild_cache
+           * skips half-written ATEs in the write block.
+           */
 
-          rc = nvs_gc(fs);
-          if (rc)
-            {
-              return rc;
-            }
+          fs->ate_wra = nvs_close_ate_addr(fs, fs->ate_wra);
+          fs->data_wra = fs->ate_wra & NVS_ADDR_BLOCK_MASK;
         }
     }
 
@@ -2677,6 +2730,14 @@ static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata,
   uint32_t gc_count;
   uint32_t hash_id;
   int rc = 0;
+
+  /* Complete any deferred power-loss GC recovery before writing */
+
+  rc = nvs_gc_recover(fs);
+  if (rc)
+    {
+      return rc;
+    }
 
 #ifdef CONFIG_MTD_CONFIG_NAMED
   FAR const uint8_t *key = (FAR const uint8_t *)pdata->name;
