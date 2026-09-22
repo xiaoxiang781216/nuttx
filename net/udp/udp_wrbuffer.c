@@ -72,7 +72,9 @@ MEMPOOL_DEFINE(g_wrbuffer, sizeof(struct udp_wrbuffer_s),
  *   this wait will be terminated when the specified timeout expires.
  *
  * Input Parameters:
- *   dev       - The egress device selected for this transfer (may be NULL).
+ *   dev       - The egress device selected for this transfer.  The caller
+ *               (psock_udp_sendto) must resolve a non-NULL device before
+ *               calling here; it returns -ENETUNREACH otherwise.
  *   timeout   - The relative time to wait until a timeout is declared.
  *
  * Assumptions:
@@ -103,8 +105,8 @@ udp_wrbuffer_timedalloc(FAR struct net_driver_s *dev, uint16_t len,
   /* Now get the first I/O buffer for the write buffer structure.  Prefer the
    * egress device's own allocator (d_alloc) via netdev_iob_alloc so the
    * staged payload originates from the device's (DMA) memory;
-   * netdev_iob_alloc falls back to the global pool when dev is NULL or has
-   * no d_alloc.
+   * netdev_iob_alloc falls back to the global pool when the device has no
+   * d_alloc callback.
    */
 
 #ifndef CONFIG_NET_JUMBO_FRAME

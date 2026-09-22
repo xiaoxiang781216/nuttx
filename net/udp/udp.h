@@ -534,7 +534,9 @@ int udp_setsockopt(FAR struct socket *psock, int option,
  *   this wait will be terminated when the specified timeout expires.
  *
  * Input Parameters:
- *   dev       - The egress device selected for this transfer (may be NULL).
+ *   dev       - The egress device selected for this transfer.  The caller
+ *               (psock_udp_sendto) must resolve a non-NULL device before
+ *               calling here; it returns -ENETUNREACH otherwise.
  *   timeout   - The relative time to wait until a timeout is declared.
  *
  * Assumptions:
@@ -559,7 +561,8 @@ udp_wrbuffer_timedalloc(FAR struct net_driver_s *dev, uint16_t len,
  *   immediately if allocation fails.
  *
  * Input parameters:
- *   dev - The egress device selected for this transfer (may be NULL).
+ *   dev - The egress device selected for this transfer.  See the note on
+ *         udp_wrbuffer_timedalloc; must not be NULL.
  *
  * Assumptions:
  *   Called from user logic with the network locked.

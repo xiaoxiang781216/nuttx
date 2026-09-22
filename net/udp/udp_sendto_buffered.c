@@ -692,11 +692,10 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
    * NULL); for an unconnected socket build a sockaddr_storage from the 'to'
    * argument, mirroring how sendto_next_transfer() resolves it.
    *
-   * The device list lookup requires the network lock.  This is only an
-   * optimization hint: the authoritative device is re-resolved at poll time
-   * in sendto_next_transfer().  If the lookup fails here, dev stays NULL and
-   * netdev_iob_alloc() falls back to the global IOB pool, preserving the
-   * previous behavior.
+   * If the route lookup fails, bail out with -ENETUNREACH so we neither
+   * queue an undeliverable buffer nor forward a NULL device to
+   * udp_wrbuffer_timedalloc / netdev_iob_alloc.  This mirrors the equivalent
+   * check in the unbuffered send path and in sendto_next_transfer().
    */
 
   if (_SS_ISCONNECTED(conn->sconn.s_flags))
@@ -706,6 +705,12 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
   else
     {
       dev = udp_find_raddr_device(conn, (FAR struct sockaddr_storage *)to);
+    }
+
+  if (dev == NULL)
+    {
+      nerr("ERROR: udp_find_raddr_device failed\n");
+      return -ENETUNREACH;
     }
 
 #if CONFIG_NET_SEND_BUFSIZE > 0
