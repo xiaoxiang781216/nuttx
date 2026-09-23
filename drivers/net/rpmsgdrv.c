@@ -1117,11 +1117,12 @@ static int net_rpmsg_bridge_devioctl_handler(FAR struct rpmsg_endpoint *ept,
 #ifdef CONFIG_NETDEV_IOCTL
   FAR struct net_rpmsg_bridge_s *br =
     container_of(priv, struct net_rpmsg_bridge_s, base);
+  FAR void *arg = msg->arg;
 
   if (br->ifdev->d_ioctl != NULL)
     {
       ret = br->ifdev->d_ioctl(br->ifdev, msg->code,
-                               (unsigned long)(uintptr_t)msg->arg);
+                               (unsigned long)(uintptr_t)arg);
     }
 #endif
 
