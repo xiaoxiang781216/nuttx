@@ -33,6 +33,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/tls.h>
 
 #include "task/task.h"
 #include "group/group.h"
@@ -100,6 +101,19 @@ void _exit(int status)
           usleep(1000);
         }
     }
+
+#if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
+  /* A kernel thread exits through _exit() without passing through libc
+   * exit(), so run its per-thread TLS destructors here (a user task has
+   * already run them in exit()).
+   */
+
+  if ((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+      TCB_FLAG_TTYPE_KERNEL)
+    {
+      tls_destruct();
+    }
+#endif
 
   nxtask_exithook(tcb, status);
 
