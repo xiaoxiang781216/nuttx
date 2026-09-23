@@ -191,11 +191,11 @@ int igmp_leavegroup(struct net_driver_s *dev,
       return OK;
     }
 
-  /* Return ENOENT if the address is not a member of the group */
+  /* Not a member: EADDRNOTAVAIL matches the ip_mc_leave contract. */
 
-  ninfo("Return -ENOENT\n");
+  ninfo("Return -EADDRNOTAVAIL\n");
   netdev_unlock(dev);
-  return -ENOENT;
+  return -EADDRNOTAVAIL;
 }
 
 #endif /* CONFIG_NET_IGMP */
