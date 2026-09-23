@@ -125,6 +125,7 @@ static int     fatfs_unbind(FAR void *handle, FAR struct inode **driver,
                             unsigned int flags);
 static int     fatfs_statfs(FAR struct inode *mountpt,
                             FAR struct statfs *buf);
+static int     fatfs_syncfs(FAR struct inode *mountpt);
 
 static int     fatfs_unlink(FAR struct inode *mountpt,
                             FAR const char *relpath);
@@ -195,7 +196,8 @@ const struct mountpt_operations g_fatfs_operations =
   fatfs_rmdir,         /* rmdir */
   fatfs_rename,        /* rename */
   fatfs_stat,          /* stat */
-  fatfs_chstat         /* chstat */
+  fatfs_chstat,        /* chstat */
+  fatfs_syncfs         /* syncfs */
 };
 
 /****************************************************************************
@@ -1440,6 +1442,30 @@ static int fatfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   buf->f_bavail  = nclst;
 
 errsem:
+  nxmutex_unlock(&fs->lock);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: fatfs_syncfs
+ *
+ * Description: Flush volume-level cached data (FAT window, FSInfo) to media
+ *
+ ****************************************************************************/
+
+static int fatfs_syncfs(FAR struct inode *mountpt)
+{
+  FAR struct fatfs_mountpt_s *fs;
+  int ret;
+
+  fs = mountpt->i_private;
+  ret = nxmutex_lock(&fs->lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = fatfs_convert_result(f_syncfs(&fs->fat));
   nxmutex_unlock(&fs->lock);
   return ret;
 }
