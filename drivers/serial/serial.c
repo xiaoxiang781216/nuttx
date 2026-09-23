@@ -131,9 +131,9 @@ static int     uart_putxmitchar(FAR uart_dev_t *dev, int ch,
                                 bool oktoblock);
 static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev,
                                     FAR const char *buffer,
-                                    size_t buflen);
+                                    size_t buflen, bool oktoblock);
 static inline ssize_t uart_irqwritev(FAR uart_dev_t *dev,
-                                     FAR struct uio *uio);
+                                     FAR struct uio *uio, bool oktoblock);
 static int     uart_tcdrain(FAR uart_dev_t *dev,
                             bool cancelable, clock_t timeout);
 
@@ -473,32 +473,55 @@ int uart_putxmitchar(FAR uart_dev_t *dev, int ch, bool oktoblock)
  * Name: uart_putc
  ****************************************************************************/
 
-static inline void uart_putchars(FAR uart_dev_t *dev,
-                                 FAR const void *buf, size_t len)
+static inline size_t uart_putchars(FAR uart_dev_t *dev,
+                                   FAR const void *buf, size_t len,
+                                   bool oktoblock)
 {
   FAR const char *pbuf = buf;
+  size_t remaining = len;
 
-  while (len > 0)
+  while (remaining > 0)
     {
-      while (!uart_txready(dev))
+      if (!uart_txready(dev))
         {
+          /* Not ready.  When the caller cannot block (a non-blocking
+           * drain, e.g. from a wdog callback), stop and report the short
+           * write rather than busy-poll with interrupts masked.
+           */
+
+          if (!oktoblock)
+            {
+              break;
+            }
+
+          continue;
         }
 
       if (dev->ops->sendbuf)
         {
-          ssize_t ret = uart_sendbuf(dev, pbuf, len);
+          ssize_t ret = uart_sendbuf(dev, pbuf, remaining);
           if (ret > 0)
             {
               pbuf += ret;
-              len -= ret;
+              remaining -= ret;
+            }
+          else if (!oktoblock)
+            {
+              /* txready raced and sendbuf took nothing; stop rather than
+               * spin, since !oktoblock means a bounded call.
+               */
+
+              break;
             }
         }
       else
         {
           uart_send(dev, *pbuf++);
-          len--;
+          remaining--;
         }
     }
+
+  return len - remaining;
 }
 
 /****************************************************************************
@@ -507,9 +530,10 @@ static inline void uart_putchars(FAR uart_dev_t *dev,
 
 static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev,
                                     FAR const char *buffer,
-                                    size_t buflen)
+                                    size_t buflen, bool oktoblock)
 {
   size_t offset = 0;
+  size_t nput;
 
   /* OPOST is the POSIX master switch for output post-processing: when it
    * is clear no O_* sub-flag applies and the payload must go out
@@ -518,8 +542,8 @@ static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev,
 
   if ((dev->tc_oflag & OPOST) == 0)
     {
-      uart_putchars(dev, buffer, buflen);
-      return buflen;
+      nput = uart_putchars(dev, buffer, buflen, oktoblock);
+      return (nput == 0 && buflen > 0) ? -EAGAIN : nput;
     }
 
   /* Do output post-processing: locate the next character that requires
@@ -551,8 +575,14 @@ static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev,
           nsent = special - &buffer[offset];
         }
 
-      uart_putchars(dev, &buffer[offset], nsent);
-      offset += nsent;
+      nput = uart_putchars(dev, &buffer[offset], nsent, oktoblock);
+      offset += nput;
+      if (nput < nsent)
+        {
+          /* !oktoblock stall partway; report what got out. */
+
+          return offset > 0 ? offset : -EAGAIN;
+        }
 
       if (special == NULL)
         {
@@ -563,19 +593,30 @@ static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev,
         {
           /* OCRNL: map CR to NL (the CR itself is dropped). */
 
-          uart_putchars(dev, "\n", 1);
+          if (uart_putchars(dev, "\n", 1, oktoblock) == 0)
+            {
+              return offset > 0 ? offset : -EAGAIN;
+            }
         }
       else
         {
           /* ONLCR/ONLRET: prepend CR before the NL. */
 
-          uart_putchars(dev, "\r\n", 2);
+          if (uart_putchars(dev, "\r\n", 2, oktoblock) != 2)
+            {
+              return offset > 0 ? offset : -EAGAIN;
+            }
         }
 
       offset += 1;
     }
 
-  return buflen;
+  if (offset == 0 && buflen > 0)
+    {
+      return -EAGAIN;
+    }
+
+  return offset;
 }
 
 /****************************************************************************
@@ -583,7 +624,7 @@ static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev,
  ****************************************************************************/
 
 static inline ssize_t uart_irqwritev(FAR uart_dev_t *dev,
-                                     FAR struct uio *uio)
+                                     FAR struct uio *uio, bool oktoblock)
 {
   ssize_t error = 0;
   ssize_t total = 0;
@@ -593,12 +634,14 @@ static inline ssize_t uart_irqwritev(FAR uart_dev_t *dev,
   for (i = 0; i < iovcnt; i++)
     {
       const struct iovec *iov = &uio->uio_iov[i];
+      ssize_t written;
+
       if (iov->iov_len == 0)
         {
           continue;
         }
 
-      ssize_t written = uart_irqwrite(dev, iov->iov_base, iov->iov_len);
+      written = uart_irqwrite(dev, iov->iov_base, iov->iov_len, oktoblock);
       if (written < 0)
         {
           error = written;
@@ -612,6 +655,13 @@ static inline ssize_t uart_irqwritev(FAR uart_dev_t *dev,
         }
 
       total += written;
+
+      if (written < iov->iov_len)
+        {
+          /* !oktoblock stall; stop rather than reorder later iovecs. */
+
+          break;
+        }
     }
 
   if (error != 0 && total == 0)
@@ -1615,6 +1665,13 @@ static ssize_t uart_writev(FAR struct file *filep, FAR struct uio *uio)
   int               ret;
   char              ch;
 
+  /* Can the caller block waiting for TX space?  Computed here because the
+   * interrupt-context branch below needs it too: an O_NONBLOCK note sink
+   * must not spin in a wdog drain with interrupts masked.
+   */
+
+  oktoblock = ((filep->f_oflags & O_NONBLOCK) == 0);
+
   /* We may receive serial writes through this path from interrupt handlers
    * and from debug output in the IDLE task!  In these cases, we will need to
    * do things a little differently.
@@ -1638,6 +1695,8 @@ static ssize_t uart_writev(FAR struct file *filep, FAR struct uio *uio)
       /* In panic state, drain xmit buffer first to preserve log order.
        * Earlier buffered output must appear before new direct-write data.
        * Skip in normal interrupt context to avoid excessive latency.
+       * This is a best-effort attempt to get the last logs out before a
+       * crash, so it always blocks regardless of oktoblock.
        */
 
       if (OSINIT_IS_PANIC())
@@ -1656,7 +1715,7 @@ static ssize_t uart_writev(FAR struct file *filep, FAR struct uio *uio)
             }
         }
 
-      ret = uart_irqwritev(dev, uio);
+      ret = uart_irqwritev(dev, uio, oktoblock);
       uart_spinunlock(dev, false, flags);
 
       return ret;
@@ -1690,12 +1749,6 @@ static ssize_t uart_writev(FAR struct file *filep, FAR struct uio *uio)
       return -ENOTCONN;
     }
 #endif
-
-  /* Can the following loop block, waiting for space in the TX
-   * buffer?
-   */
-
-  oktoblock = ((filep->f_oflags & O_NONBLOCK) == 0);
 
   /* Loop while we still have data to copy to the transmit buffer.
    * we add data to the head of the buffer; uart_xmitchars takes the
