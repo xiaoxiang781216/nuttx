@@ -1667,6 +1667,12 @@ static int uvc_iso_submit_slot(FAR struct uvc_dev_s *dev,
   slot->pkt_idx = 0;
   slot->result = 0;
 
+  /* Arm before submit: a completion that lands before the SUBMITTED mark
+   * is dropped and the slot never finishes.
+   */
+
+  atomic_set_release(&slot->state, UVC_ISO_SLOT_SUBMITTED);
+
   ret = DRVR_ASYNCH(hport->drvr,
                     priv->isoin,
                     slot->buffer,
@@ -1675,10 +1681,10 @@ static int uvc_iso_submit_slot(FAR struct uvc_dev_s *dev,
                     slot);
   if (ret < 0)
     {
+      atomic_set(&slot->state, UVC_ISO_SLOT_FREE);
       return ret;
     }
 
-  atomic_set(&slot->state, UVC_ISO_SLOT_SUBMITTED);
   return OK;
 }
 
