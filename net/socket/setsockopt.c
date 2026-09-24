@@ -301,9 +301,12 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
           if (option == SO_RCVBUF)
             {
 #if CONFIG_NET_RECV_BUFSIZE > 0
-              /* Clamp to configured max if enabled */
 #if CONFIG_NET_MAX_RECV_BUFSIZE > 0
               buffersize = MIN(buffersize, CONFIG_NET_MAX_RECV_BUFSIZE);
+#else
+              buffersize = MIN(buffersize,
+                               (CONFIG_IOB_NBUFFERS *
+                                CONFIG_IOB_BUFSIZE) / 2);
 #endif
               conn_lock(conn);
               conn->s_rcvbufs = buffersize;
@@ -316,9 +319,12 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
           else /* SO_SNDBUF */
             {
 #if CONFIG_NET_SEND_BUFSIZE > 0
-              /* Clamp to configured max if enabled */
 #if CONFIG_NET_MAX_SEND_BUFSIZE > 0
               buffersize = MIN(buffersize, CONFIG_NET_MAX_SEND_BUFSIZE);
+#else
+              buffersize = MIN(buffersize,
+                               (CONFIG_IOB_NBUFFERS *
+                                CONFIG_IOB_BUFSIZE) / 2);
 #endif
               conn_lock(conn);
               conn->s_sndbufs = buffersize;
