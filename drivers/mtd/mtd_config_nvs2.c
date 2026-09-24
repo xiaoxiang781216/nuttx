@@ -846,21 +846,16 @@ static int nvs_rd_data(FAR struct nvs_fs *fs,
                        FAR void *data, size_t len)
 {
   FAR uint8_t *data8 = (FAR uint8_t *)data;
-  uint8_t data_crc8 = 0;
+  uint8_t data_crc8;
   int rc = 0;
 
   len = MIN(len, entry->ate_len);
   if (nvs_data_in_ate(fs, entry))
     {
-      data_crc8 = crc8part(entry->data + entry->ate_key_len, len, data_crc8);
       memcpy(data8, entry->data + entry->ate_key_len, len);
     }
   else
     {
-      uint8_t buf[NVS_BUFFER_SIZE(fs)];
-      size_t buf_size = nvs_align_down(fs, sizeof(buf));
-      size_t left = entry->ate_len;
-
       addr &= NVS_ADDR_BLOCK_MASK;
       addr += entry->offset;
       if (!nvs_key_in_ate(fs, entry))
@@ -868,39 +863,26 @@ static int nvs_rd_data(FAR struct nvs_fs *fs,
           addr += entry->ate_key_len;
         }
 
-      while (left > 0)
+      if (len > 0)
         {
-          size_t bytes_rd;
-
-          bytes_rd = MIN(buf_size, left);
-          rc = nvs_flash_rd(fs, addr, buf, bytes_rd);
+          rc = nvs_flash_rd(fs, addr, data8, len);
           if (rc)
             {
               ferr("Data read failed, rc=%d\n", rc);
               return rc;
             }
-
-          data_crc8 = crc8part(buf, bytes_rd, data_crc8);
-
-          if (len > 0)
-            {
-              size_t bytes_cp;
-
-              bytes_cp = MIN(len, bytes_rd);
-              memcpy(data8, buf, bytes_cp);
-              len -= bytes_cp;
-              data8 += bytes_cp;
-            }
-
-          left -= bytes_rd;
-          addr += bytes_rd;
         }
     }
 
-  if (data_crc8 != entry->data_crc8)
+  if (len >= entry->ate_len)
     {
-      ferr("Data crc8 mismatch\n");
-      return -EIO;
+      data_crc8 = crc8part(data8, entry->ate_len, 0);
+
+      if (data_crc8 != entry->data_crc8)
+        {
+          ferr("Data crc8 mismatch\n");
+          return -EIO;
+        }
     }
 
   return 0;
