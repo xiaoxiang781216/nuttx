@@ -50,6 +50,7 @@ set(SRCS
     fs_dir.c
     fs_fsync.c
     fs_syncfs.c
+    fs_sync.c
     fs_truncate.c)
 
 # Unlink support: needed when either mountpoint or pseudofs operations exist
