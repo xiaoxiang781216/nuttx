@@ -210,6 +210,13 @@ struct mtd_mcal_mem_dev_s
 
   CODE bool (*is_busy)(FAR void *priv, uint32_t area_id);
 
+  /* Write-protect hook for MTDIOC_PROTECT / MTDIOC_UNPROTECT.
+   * Returns 0 on success, negated errno on failure.  NULL => -ENOTTY.
+   */
+
+  CODE int  (*protect)(FAR struct mtd_mcal_mem_dev_s *dev,
+                       FAR struct mtd_protect_s *prot, bool enable);
+
   CODE int  (*hwsvc)(FAR void *priv,
                      FAR struct mtd_mcal_mem_hwsvc_s *req);
 };

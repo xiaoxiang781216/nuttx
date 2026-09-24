@@ -791,6 +791,28 @@ static int mtd_mcal_mem_ioctl(FAR struct mtd_dev_s *dev, int cmd,
         }
         break;
 
+      case MTDIOC_PROTECT:
+      case MTDIOC_UNPROTECT:
+        {
+          FAR struct mtd_protect_s *prot =
+              (FAR struct mtd_protect_s *)arg;
+
+          if (priv->protect == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+          else if (prot == NULL)
+            {
+              ret = -EINVAL;
+              break;
+            }
+
+          ret = priv->protect(priv, prot,
+                              cmd == MTDIOC_PROTECT);
+        }
+        break;
+
       case MTDIOC_MCAL_MEM_HWSVC:
         {
           FAR struct mtd_mcal_mem_hwsvc_s *req =
