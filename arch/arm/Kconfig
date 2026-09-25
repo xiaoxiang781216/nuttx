@@ -1321,15 +1321,15 @@ config ARM_FPU_ABI_SOFT
 		Pass float value via integer register (-mfloat-abi=softfp)
 
 config ARM_BUSY_WAIT
-	bool "Busy wait when boot"
+	bool "Wait for the boot SGI before starting secondaries"
 	default n
 	depends on ARCH_HAVE_MULTICPU
 	---help---
-		Enables busy wait when SMP boot
-
-config ARM_BUSY_WAIT_FLAG_ADDR
-	hex "Busy wait flag address"
-	depends on ARM_BUSY_WAIT
+		Release secondaries with an SGI from CPU0's interrupt
+		initialization; they poll the distributor pending bit before they
+		start.  Enable on SMP/BMP boards whose secondaries boot through
+		arm_head.S; leave off for cores that start secondaries via a PM
+		hardware trigger.
 
 config ARM_DPFPU32
 	bool "FPU with 32 double-precision register"

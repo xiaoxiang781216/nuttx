@@ -937,6 +937,8 @@
 /* Linux owns SGI0-7 for its architectural SMP IPIs, which is why the secure
  * group is limited to SGI12-15. SGI12 is reserved for the rptun doorbell the
  * non-secure world rings, so the secure IPIs take the ids above it.
+ * GIC_CPU_CALL is reused at boot to release the secondaries waiting at the
+ * boot gate.
  */
 
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE

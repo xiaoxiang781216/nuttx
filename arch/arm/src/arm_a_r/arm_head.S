@@ -38,6 +38,11 @@
 #  include "chip.h"
 #endif
 
+#ifdef CONFIG_ARM_BUSY_WAIT
+#  include "mpcore.h"
+#  include "gic.h"
+#endif
+
 #if __ARM_ARCH < 7
 /* ARMv5 does not have the isb instruction, define as empty */
 
@@ -245,16 +250,24 @@ __start:
 	beq		__cpu0_start
 
 #ifdef CONFIG_ARM_BUSY_WAIT
-	ldr		r2, =CONFIG_ARM_BUSY_WAIT_FLAG_ADDR
+
+	/* Wait until the boot SGI is pending on this CPU; the pending state is
+	 * kept per CPU, so a release signalled earlier is still observed here.
+	 */
+
+	cpsid		if
+	ldr		r2, =(CHIP_MPCORE_VBASE + MPCORE_ICD_OFFSET)
 1:
-	ldr		r1, [r2, #0]
-	cmp		r1, #0
+	ldr		r1, [r2, #0x200]
+	tst		r1, #(1 << GIC_CPU_CALL)
 	beq		1b
+
+	mov		r1, #0xff
+	strb		r1, [r2, #(0xf10 + GIC_CPU_CALL)]
 #else
 	wfe
 #endif
 
-	cpsid		if			/* Disable IRQs and FIQs */
 	mov		fp, #0			/* Clear frame pointer */
 	ldr		r1, =cpu1_start
 	ldr		r1, [r1]

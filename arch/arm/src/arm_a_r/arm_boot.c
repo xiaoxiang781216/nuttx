@@ -123,8 +123,6 @@ void arm_boot_primary(void)
   arm_earlyserialinit();
 #endif
 
-  arm_finish_busy_wait();
-
 #ifdef CONFIG_BUILD_PROTECTED
   arm_userspace();
 #endif

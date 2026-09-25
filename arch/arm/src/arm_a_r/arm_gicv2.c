@@ -198,6 +198,9 @@ void arm_gic0_initialize(void)
 {
   unsigned int nlines = arm_gic_nlines();
   unsigned int irq;
+#ifdef CONFIG_ARM_BUSY_WAIT
+  uint32_t regval;
+#endif
 
   arm_gic_dump("Entry arm_gic0_initialize", true, 0);
 
@@ -278,6 +281,20 @@ void arm_gic0_initialize(void)
 
   DEBUGVERIFY(irq_attach(GIC_SMP_SCHED, arm_smp_sched_handler, NULL));
   DEBUGVERIFY(irq_attach(GIC_CPU_CALL, nxsched_cpu_call_handler, NULL));
+#endif
+
+#ifdef CONFIG_ARM_BUSY_WAIT
+  /* Release the secondaries waiting for the boot SGI.  The gate polls the
+   * distributor pending bit, so the SGI does not have to be enabled.
+   */
+
+  regval = GIC_ICDSGIR_INTID(GIC_CPU_CALL) |
+           GIC_ICDSGIR_CPUTARGET(((1 << CONFIG_NCPUS) - 1) & ~(1 << 0)) |
+           GIC_ICDSGIR_TGTFILTER_LIST;
+#ifdef CONFIG_ARCH_TRUSTZONE_NONSECURE
+  regval |= GIC_ICDSGIR_NSATT_GRP1;
+#endif
+  putreg32(regval, GIC_ICDSGIR);
 #endif
 
   arm_gic_dump("Exit arm_gic0_initialize", true, 0);
