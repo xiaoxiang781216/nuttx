@@ -57,6 +57,11 @@
 #define DT_LNK                    10
 #define DT_SOCK                   12
 
+/* Convert between stat structure types and directory types.  */
+
+#define IFTODT(mode)              (((mode) & 0170000) >> 12)
+#define DTTOIF(dirtype)           ((dirtype) << 12)
+
 /* File type code for the d_type field in dirent structure.
  * Note that because of the simplified filesystem organization of the NuttX,
  * top-level, pseudo-file system, an inode can be BOTH a file and a directory
