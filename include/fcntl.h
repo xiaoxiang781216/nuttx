@@ -60,10 +60,10 @@
 #define __O_SYNC     (1U << 20)      /* Synchronize file (data+metadata) */
 #define O_PATH       (1U << 21)      /* Obtain a path-only fd (no I/O) */
 #define __O_TMPFILE  (1U << 22)      /* Create an unnamed temporary file */
+#define O_RSYNC      (1U << 23)      /* Synchronize input on read */
 
 #define O_NDELAY     O_NONBLOCK                  /* Synonym for O_NONBLOCK */
 #define O_SYNC       (__O_SYNC | O_DSYNC)        /* Synchronize output on write */
-#define O_RSYNC      O_SYNC                      /* Synchronize input on read */
 #define O_TMPFILE    (__O_TMPFILE | O_DIRECTORY) /* Create a temporary file */
 #define O_BINARY     0                           /* Open the file in binary mode */
 
@@ -71,7 +71,7 @@
  * this bit number may be used within NuttX for other, internal purposes.
  */
 
-#define _O_MAXBIT   22
+#define _O_MAXBIT   23
 
 /* Synonyms historically used as F_SETFL flags (BSD). */
 
@@ -80,10 +80,11 @@
 #define FAPPEND     O_APPEND         /* Keep contents, append to end */
 #define FSYNC       O_SYNC           /* Synchronize output on write */
 #define FASYNC      O_ASYNC          /* No counterpart in NuttX */
+#define FRSYNC      O_RSYNC          /* Synchronize input on read */
 
 /* FFCNTL is all the bits that may be set via fcntl. */
 
-#define FFCNTL      (FNONBLOCK | FNDELAY | FAPPEND | FSYNC | FASYNC)
+#define FFCNTL      (FNONBLOCK | FNDELAY | FAPPEND | FSYNC | FASYNC | FRSYNC)
 
 /* fcntl() commands */
 

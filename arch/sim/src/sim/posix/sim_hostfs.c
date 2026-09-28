@@ -285,6 +285,11 @@ int host_open(const char *pathname, int flags, int mode)
       mapflags |= O_SYNC;
     }
 
+  if (flags & NUTTX_O_RSYNC)
+    {
+      mapflags |= O_RSYNC;
+    }
+
 #ifdef O_DIRECT
   if (flags & NUTTX_O_DIRECT)
     {
