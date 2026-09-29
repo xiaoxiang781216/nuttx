@@ -52,7 +52,7 @@ if(CONFIG_LIBC_NETDB)
 
   # Add async getaddrinfo (getaddrinfo_a) support
 
-  if(NOT CONFIG_DISABLE_PTHREAD)
+  if(NOT CONFIG_DISABLE_PTHREAD AND CONFIG_CANCELLATION_POINTS)
     list(APPEND SRCS lib_getaddrinfo_a.c)
   endif()
 

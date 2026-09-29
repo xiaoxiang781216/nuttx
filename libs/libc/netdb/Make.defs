@@ -37,7 +37,9 @@ CSRCS += lib_proto.c lib_protor.c
 # Add async getaddrinfo (getaddrinfo_a) support
 
 ifneq ($(CONFIG_DISABLE_PTHREAD),y)
+ifeq ($(CONFIG_CANCELLATION_POINTS),y)
 CSRCS += lib_getaddrinfo_a.c
+endif
 endif
 
 # Add host file support
