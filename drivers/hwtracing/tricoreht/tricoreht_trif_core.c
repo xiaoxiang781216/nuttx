@@ -162,7 +162,7 @@ void trif_disable(FAR struct hwtracing_dev_s *trifdev)
   TRIF_TSR.U = 0;
   TRIF_ISR.U = 0;
   TRIF_TBUF0FLV.U &= ~TRIF_TBUFFLV_MAXLVL_MASK;
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
   TRIF_TBUF1FLV.U &= ~TRIF_TBUFFLV_MAXLVL_MASK;
 #endif
   /* clsoe clk */
@@ -190,7 +190,7 @@ int trif_enable(FAR struct hwtracing_dev_s *trifdev)
     }
 
   /* session */
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
   if (hwtracing_timeout(TRIF_TSR_TRCON0 | TRIF_TSR_TRCON1,
                         TRIF_TSR_TRCON0 | TRIF_TSR_TRCON1,
                         (uintptr_t)&TRIF_TSR) < 0)

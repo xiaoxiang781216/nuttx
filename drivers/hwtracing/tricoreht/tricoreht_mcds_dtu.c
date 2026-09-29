@@ -546,7 +546,7 @@ static inline void mcds_dtu_set_pob(enum mcds_pob_e pob,
         MCDS4P_TCZDTUFLV.U = 0;
         break;
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
       case MCDS_MCDS2P_POBX:
 
         /* ---- TCZ: EA ---- */
@@ -694,7 +694,7 @@ static inline void mcds_dtu_set_tc(uint32_t cpuset,
       mcds_dtu_set_pob(MCDS_MCDS4P_POBZ, &dev->cfg.dtu_tc[3]);
     }
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
   if (cpuset & (1U << 4))
     {
       mcds_dtu_set_pob(MCDS_MCDS2P_POBX, &dev->cfg.dtu_tc[4]);
@@ -740,7 +740,7 @@ static inline void mcds_dtu_evt_settrigger(FAR
     (uint32_t *)&MCDS4P_TCYEVT0.U,
     (uint32_t *)&MCDS4P_TCWEVT0.U,
     (uint32_t *)&MCDS4P_TCZEVT0.U,
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
     (uintptr_t)(&MCDS2P_TCXEVT0.U),
     (uintptr_t)(&MCDS2P_TCWEVT0.U),
 #endif
@@ -792,7 +792,7 @@ static inline void mcds_dtu_act_setevt(FAR struct tricoreht_mcds_dtu_dev_s
       (uintptr_t)(&MCDS4P_TCYACT0.U + action),
       (uintptr_t)(&MCDS4P_TCWACT0.U + action),
       (uintptr_t)(&MCDS4P_TCZACT0.U + action),
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
       (uintptr_t)(&MCDS2P_TCXACT0.U + action),
       (uintptr_t)(&MCDS2P_TCWACT0.U + action),
 #endif

@@ -172,7 +172,7 @@ int tricoreht_init(void)
   cfg.dtu_tc[3].msg_type = MCDS_DTU_MSG_DTW;
 
   cfg.cpuset = 0xf;
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
   cfg.dtu_tc[4].ea_bnd[0] = &g_hwtracing_trigger;
   cfg.dtu_tc[4].ea_rng[0] = sizeof(g_hwtracing_trigger);
   cfg.dtu_tc[4].easet = 1;

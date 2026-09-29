@@ -60,7 +60,7 @@ void mcds_tbuf_init(enum mcds_tubf_trigger_mode_e type)
       MCDS4P_FIFOPRE.U = MCDS_MCDS4P_PRE_TRIGGER_DEFAULT;
     }
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
   MCDS2P_FIFOBOT.B.BOTTOM = 0;
   MCDS2P_FIFOTOP.B.TOP = MCDS_MCDS2P_TBUF_SIZE - 1;
 
@@ -95,7 +95,7 @@ void mcds_tbuf_stop(void)
       hterr("timeout mcds_tbuf_stop MCDS4P\n");
     }
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
   MCDS2P_FIFOCTL.U |= MCDS_MCDS4P2P_FIFOCTL_SET;
 
   if (hwtracing_timeout(MCDS_MCDS4P2P_FIFOCTL_FLSH_READY,
@@ -121,7 +121,7 @@ void mcds_tbuf_start(void)
       hterr("timeout mcds_tbuf_start MCDS4P\n");
     }
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
   MCDS2P_FIFOCTL.U |= MCDS_MCDS4P2P_FIFOCTL_CLR;
 
   if (hwtracing_timeout(0x0, MCDS_MCDS4P2P_FIFOCTL_FLSH_MASK,
@@ -152,7 +152,7 @@ void mcds_disable(FAR struct hwtracing_dev_s *mcdsdev)
       return;
     }
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
   MCDS2P_TBUFFLV.U = 0;
 
   /* close clk */
@@ -227,7 +227,7 @@ int mcds_enable(FAR struct hwtracing_dev_s *mcdsdev)
                      MCDS_MCDS4P2P_FIFOCTL_CLR,
                      &MCDS4P_FIFOCTL.U);
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
 
   /* The default data source for TMUX X/W is selected as CPUZ */
 
@@ -306,7 +306,7 @@ int mcds_init(FAR struct hwtracing_dev_s *mcdsdev)
                      MCDS_MCDS4P2P_FIFOCTL_CLR,
                      &MCDS4P_FIFOCTL.U);
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
 
   /* reset */
 

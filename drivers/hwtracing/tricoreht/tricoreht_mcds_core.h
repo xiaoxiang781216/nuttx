@@ -34,9 +34,9 @@
  ****************************************************************************/
 
 #define MCDS_MCDS4P_TBUF_SIZE                 0x8000
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
 #  define MCDS_MCDS2P_TBUF_SIZE               0x4000
-#elif defined(CONFIG_ARCH_CHIP_AURIX_TC48X)
+#elif defined(CONFIG_ARCH_CHIP_TC48X)
 #  define MCDS_MCDS2P_TBUF_SIZE               0
 #endif
 #define MCDS_TBUF_SIZE                        MCDS_MCDS4P_TBUF_SIZE + MCDS_MCDS2P_TBUF_SIZE
@@ -213,7 +213,7 @@ enum mcds_pob_e
   MCDS_MCDS4P_POBY = 1,                       /* (cpu1) */
   MCDS_MCDS4P_POBW = 2,                       /* (cpu2) */
   MCDS_MCDS4P_POBZ = 3,                       /* (cpu3) */
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+#ifdef CONFIG_ARCH_CHIP_TC4DX
   MCDS_MCDS2P_POBX = 4,                       /* (cpu4) */
   MCDS_MCDS2P_POBW = 5,                       /* (cpu5) */
 #endif
