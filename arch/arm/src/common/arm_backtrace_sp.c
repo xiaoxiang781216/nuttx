@@ -113,8 +113,9 @@ static bool in_code_region(unsigned long pc)
  ****************************************************************************/
 
 nosanitize_address
-static int backtrace_branch(unsigned long top, unsigned long sp,
-                            void **buffer, int size, int *skip)
+static int backtrace_branch(unsigned long base, unsigned long top,
+                            unsigned long sp, void **buffer, int size,
+                            int *skip)
 {
   unsigned long addr;
 #ifdef CONFIG_ARM_UNWINDER_STACK_POINTER_INSTRUCTION_CHECK
@@ -122,6 +123,17 @@ static int backtrace_branch(unsigned long top, unsigned long sp,
 #endif
   int i;
   irqstate_t flags;
+
+  /* Reject an sp outside [base, top) rather than scan up to top: doing so
+   * would parse unrelated memory as stack, or fault on an unmapped address
+   * while dumping a crash.  Stack overflow puts sp below base; a nested
+   * interrupt puts it on the interrupt stack instead of the task stack.
+   */
+
+  if (sp < base || sp >= top)
+    {
+      return 0;
+    }
 
   flags = enter_critical_section();
 
@@ -261,6 +273,8 @@ int up_backtrace(struct tcb_s *tcb,
                  void **buffer, int size, int skip)
 {
   struct tcb_s *rtcb = running_task();
+  unsigned long base;
+  unsigned long top;
   unsigned long sp;
   int ret;
 
@@ -274,6 +288,9 @@ int up_backtrace(struct tcb_s *tcb,
       tcb = rtcb;
     }
 
+  base = (unsigned long)tcb->stack_base_ptr;
+  top  = base + tcb->adj_stack_size;
+
   if (tcb == rtcb)
     {
       sp = up_getsp();
@@ -281,30 +298,27 @@ int up_backtrace(struct tcb_s *tcb,
       if (up_interrupt_context())
         {
           unsigned long usp = up_getusrsp(running_regs());
-          unsigned long top =
+
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
-            up_get_intstackbase(this_cpu()) + INTSTACK_SIZE;
+          ret = backtrace_branch(up_get_intstackbase(this_cpu()),
+                                 up_get_intstackbase(this_cpu()) +
+                                 INTSTACK_SIZE, sp, buffer, size, &skip);
 #else
-            (unsigned long)rtcb->stack_base_ptr +
-                           rtcb->adj_stack_size;
+          /* Without a dedicated interrupt stack the handler runs on the
+           * interrupted task's stack.
+           */
+
+          ret = backtrace_branch(base, top, sp, buffer, size, &skip);
 #endif
-          ret = backtrace_branch(top, sp, buffer, size, &skip);
           if (ret < size && usp != 0)
             {
-              ret += backtrace_branch((unsigned long)
-                                      rtcb->stack_base_ptr +
-                                      rtcb->adj_stack_size,
-                                      usp,
-                                      &buffer[ret],
+              ret += backtrace_branch(base, top, usp, &buffer[ret],
                                       size - ret, &skip);
             }
         }
       else
         {
-          ret = backtrace_branch((unsigned long)
-                                 rtcb->stack_base_ptr +
-                                 rtcb->adj_stack_size, sp,
-                                 buffer, size, &skip);
+          ret = backtrace_branch(base, top, sp, buffer, size, &skip);
         }
     }
   else
@@ -324,9 +338,7 @@ int up_backtrace(struct tcb_s *tcb,
         }
 
       sp = regs[REG_SP];
-      ret += backtrace_branch((unsigned long)
-                              tcb->stack_base_ptr +
-                              tcb->adj_stack_size, sp,
+      ret += backtrace_branch(base, top, sp,
                               &buffer[ret], size - ret, &skip);
     }
 
