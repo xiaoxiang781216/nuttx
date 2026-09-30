@@ -178,6 +178,19 @@ int igmp_leavegroup(struct net_driver_s *dev,
             {
               nerr("ERROR: Failed to schedule message: %d\n", ret);
             }
+
+          /* igmp_waitmsg() releases the dev lock while waiting for the
+           * message to be sent.  During that window, a concurrent
+           * netdev_ifdown -> igmp_grpfree_all may have already freed
+           * this group.  Re-check the list before touching group again.
+           */
+
+          if (!igmp_grpfind(dev, &grpaddr->s_addr))
+            {
+              ninfo("Group already freed during waitmsg\n");
+              netdev_unlock(dev);
+              return OK;
+            }
         }
 
       /* Free the group structure (state is now Non-Member */

@@ -152,6 +152,21 @@ int igmp_joingroup(struct net_driver_s *dev,
 
       IGMP_STATINCR(g_netstats.igmp.report_sched);
       ret = igmp_waitmsg(dev, group, IGMPv2_MEMBERSHIP_REPORT);
+
+      /* igmp_waitmsg() releases the dev lock while waiting.  During
+       * that window, netdev_ifdown -> igmp_grpfree_all may have
+       * already freed this group.  Re-check the list.
+       */
+
+      group = igmp_grpfind(dev, &grpaddr->s_addr);
+
+      if (!group)
+        {
+          ninfo("Group already freed during waitmsg\n");
+          netdev_unlock(dev);
+          return -EADDRNOTAVAIL;
+        }
+
       if (ret < 0)
         {
           nerr("ERROR: Failed to schedule message: %d\n", ret);

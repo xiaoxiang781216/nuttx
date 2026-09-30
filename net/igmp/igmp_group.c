@@ -258,17 +258,18 @@ void igmp_grpfree(FAR struct net_driver_s *dev,
 
 void igmp_grpfree_all(FAR struct net_driver_s *dev)
 {
-  FAR struct igmp_group_s *group =
-                         (FAR struct igmp_group_s *)dev->d_igmp_grplist.head;
-  FAR struct igmp_group_s *next;
+  FAR struct igmp_group_s *group;
 
-  /* Free all group structures in the device structure's group list */
+  /* Always re-read head after each igmp_grpfree(), because the
+   * netdev_breaklock window inside igmp_grpfree() may allow a
+   * concurrent igmp_leavegroup to remove and free other groups
+   * from the list, invalidating any cached next pointer.
+   */
 
-  while (group != NULL)
+  while ((group = (FAR struct igmp_group_s *)
+                  dev->d_igmp_grplist.head) != NULL)
     {
-      next = group->next;
       igmp_grpfree(dev, group);
-      group = next;
     }
 }
 
