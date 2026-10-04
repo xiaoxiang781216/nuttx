@@ -123,7 +123,6 @@ static ssize_t rpmsgdev_write(FAR struct file *filep, FAR const char *buffer,
                               size_t buflen);
 static off_t   rpmsgdev_seek(FAR struct file *filep, off_t offset,
                              int whence);
-static ssize_t rpmsgdev_ioctl_arglen(int cmd, unsigned long arg);
 static int     rpmsgdev_ioctl(FAR struct file *filep, int cmd,
                               unsigned long arg);
 static int     rpmsgdev_poll(FAR struct file *filep, FAR struct pollfd *fds,
@@ -653,71 +652,6 @@ static void rpmsgdev_unmarshal_cfgdata(FAR void *buf, FAR void *cfg)
 }
 
 /****************************************************************************
- * Name: rpmsgdev_ioctl_arglen
- *
- * Description:
- *   Get rpmsg device ioctl argument length according to the command
- *
- * Parameters:
- *   cmd - the ioctl command
- *   arg - the ioctl arguments
- *
- * Returned Values:
- *   0        - ioctl command not support
- *   positive - the argument length
- *
- ****************************************************************************/
-
-static ssize_t rpmsgdev_ioctl_arglen(int cmd, unsigned long arg)
-{
-  switch (cmd)
-    {
-      case FIONWRITE:
-      case FIONREAD:
-      case FIONSPACE:
-      case FBIOSET_POWER:
-      case FBIOGET_POWER:
-      case BATIOC_CURRENT:
-      case BATIOC_VOLTAGE:
-      case BATIOC_TEMPERATURE:
-      case BATIOC_INPUT_CURRENT:
-      case BATIOC_STATE:
-      case BATIOC_ONLINE:
-      case BATIOC_CAPACITY:
-      case BATIOC_CHIPID:
-        return sizeof(int);
-      case TUNSETIFF:
-      case TUNGETIFF:
-        return sizeof(struct ifreq);
-      case FIOC_FILEPATH:
-        return PATH_MAX;
-      case BATIOC_GET_PROTOCOL:
-      case BATIOC_OPERATE:
-        return sizeof(struct batio_operate_msg_s);
-      case MSIOC_VENDOR:
-        return sizeof(struct mouse_vendor_cmd_s) +
-               ((FAR struct mouse_vendor_cmd_s *)(uintptr_t)arg)->len;
-      case MSIOC_GRAB:
-        return 0;
-      case CFGDIOC_GETCONFIG:
-      case CFGDIOC_SETCONFIG:
-      case CFGDIOC_FIRSTCONFIG:
-      case CFGDIOC_NEXTCONFIG:
-        return sizeof(struct config_data_s) +
-               ((FAR struct config_data_s *)(uintptr_t)arg)->len;
-      case CFGDIOC_DELCONFIG:
-        return sizeof(struct config_data_s);
-      case MTDIOC_SWITCH_BOOT:
-        return strlen((FAR const char *)(uintptr_t)arg) + 1;
-      case RPMSGDEV_PRIVATE_IOCTL:
-        return sizeof(struct rpmsgdev_private_ioctl) +
-               ((FAR struct rpmsgdev_private_ioctl *)(uintptr_t)arg)->len;
-      default:
-        return -ENOTTY;
-    }
-}
-
-/****************************************************************************
  * Name: rpmsgdev_ioctl
  *
  * Description:
@@ -763,7 +697,38 @@ static int rpmsgdev_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Call our internal routine to perform the ioctl */
 
-  arglen = rpmsgdev_ioctl_arglen(cmd, arg);
+  switch (cmd)
+    {
+      case CFGDIOC_GETCONFIG:
+      case CFGDIOC_SETCONFIG:
+      case CFGDIOC_FIRSTCONFIG:
+      case CFGDIOC_NEXTCONFIG:
+        {
+          FAR struct config_data_s *cfg = argp;
+
+          if (cfg == NULL)
+            {
+              return -EINVAL;
+            }
+
+          if (cfg->len > SSIZE_MAX - sizeof(*cfg))
+            {
+              return -EOVERFLOW;
+            }
+
+          arglen = sizeof(*cfg) + cfg->len;
+        }
+        break;
+
+      case CFGDIOC_DELCONFIG:
+        arglen = sizeof(struct config_data_s);
+        break;
+
+      default:
+        arglen = ioctl_arglen(cmd, arg);
+        break;
+    }
+
   if (arglen < 0)
     {
       return arglen;
@@ -775,12 +740,14 @@ static int rpmsgdev_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       return -ENOMEM;
     }
 
-  msglen = sizeof(*msg) + arglen - 1;
-  if (space < msglen)
+  if (space < sizeof(*msg) - 1 ||
+      arglen > space - (sizeof(*msg) - 1))
     {
       rpmsg_release_tx_buffer(&dev->ept, msg);
       return -EMSGSIZE;
     }
+
+  msglen = sizeof(*msg) - 1 + arglen;
 
   msg->filep   = priv->filep;
   msg->request = cmd;
@@ -1418,4 +1385,3 @@ int rpmsgdev_unregister(FAR const char *localpath)
   kmm_free(dev);
   return ret;
 }
-

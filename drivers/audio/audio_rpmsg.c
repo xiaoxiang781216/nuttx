@@ -31,6 +31,7 @@
 #include <stdio.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/fs/ioctl.h>
 #include <nuttx/rpmsg/rpmsg.h>
 #include <sys/param.h>
 
@@ -1646,40 +1647,6 @@ static int audio_rpmsg_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
 }
 
 /****************************************************************************
- * Name: audio_rpmsg_ioctl_arglen
- *
- * Description:
- *   Get audio rpmsg device ioctl argument length according to the command
- *
- * Parameters:
- *   cmd - the ioctl command
- *   arg - the ioctl arguments
- *
- * Returned Values:
- *   negativate - ioctl command not support
- *   positive   - the argument length
- *
- ****************************************************************************/
-
-static ssize_t audio_rpmsg_ioctl_arglen(int cmd, unsigned long arg)
-{
-  switch (cmd)
-    {
-      case AUDIOIOC_HWRESET:
-        return 0;
-      case AUDIOIOC_GETBUFFERINFO:
-      case AUDIOIOC_SETBUFFERINFO:
-        return sizeof(struct ap_buffer_info_s);
-      case AUDIOIOC_GETAUDIOINFO:
-        return sizeof(struct audio_info_s);
-      case AUDIOIOC_SETPARAMTER:
-        return strlen((FAR const char *)(uintptr_t)arg) + 1;
-      default:
-        return -ENOTTY;
-    }
-}
-
-/****************************************************************************
  * Name: audio_rpmsg_ioctl
  *
  * Description: Perform a device ioctl
@@ -1704,7 +1671,7 @@ static int audio_rpmsg_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
       return ret;
     }
 
-  arglen = audio_rpmsg_ioctl_arglen(cmd, arg);
+  arglen = ioctl_arglen(cmd, arg);
   if (arglen < 0)
     {
       return arglen;
@@ -1712,15 +1679,19 @@ static int audio_rpmsg_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
 
   /* Deal with ioctls passed from the upper-half driver */
 
-  reqlen = sizeof(*req) + arglen;
-
   req = audio_rpmsg_get_tx_buffer(aud, &space);
   if (req == NULL)
     {
       return -ENOMEM;
     }
 
-  DEBUGASSERT(reqlen <= space);
+  if (space < sizeof(*req) || arglen > space - sizeof(*req))
+    {
+      rpmsg_release_tx_buffer(&aud->ept, req);
+      return -EMSGSIZE;
+    }
+
+  reqlen = sizeof(*req) + arglen;
 
   req->request = cmd;
   req->arg = arg;
