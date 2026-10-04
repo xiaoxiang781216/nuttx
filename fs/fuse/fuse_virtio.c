@@ -59,7 +59,7 @@ struct fuse_virtio_s
 {
   FAR struct virtio_device *vdev;
   struct virtio_driver      vdrv;
-  char                      tag[36];
+  char                      tag[VIRTIO_FS_TAG_LEN];
 };
 
 /****************************************************************************
@@ -269,9 +269,9 @@ static int fuse_virtio_probe(FAR struct virtio_device *vdev)
 {
   FAR struct fuse_virtio_s *fs = container_of(vdev->priv,
                                  struct fuse_virtio_s, vdrv);
-  struct virtio_fs_config_s config;
   FAR const char *vqnames[VIRTIOFS_NUM_VQS];
   vq_callback callbacks[VIRTIOFS_NUM_VQS];
+  char tag[VIRTIO_FS_TAG_LEN];
   int ret;
 
   virtio_set_status(vdev, VIRTIO_CONFIG_STATUS_DRIVER);
@@ -280,10 +280,9 @@ static int fuse_virtio_probe(FAR struct virtio_device *vdev)
 
   /* Read and match the device tag */
 
-  virtio_read_config_member(vdev, struct virtio_fs_config_s, tag,
-                            &config.tag);
-  config.tag[sizeof(config.tag) - 1] = '\0';
-  if (strcmp(config.tag, fs->tag) != 0)
+  virtio_read_config_member(vdev, struct virtio_fs_config_s, tag, tag);
+  tag[sizeof(tag) - 1] = '\0';
+  if (strcmp(tag, fs->tag) != 0)
     {
       virtio_reset_device(vdev);
       return -ENOENT;

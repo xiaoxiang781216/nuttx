@@ -36,6 +36,7 @@
  ****************************************************************************/
 
 #define VIRTIO_FS_F_NOTIFICATION 0
+#define VIRTIO_FS_TAG_LEN        36
 
 /****************************************************************************
  * Public Types
@@ -43,7 +44,7 @@
 
 begin_packed_struct struct virtio_fs_config_s
 {
-  char     tag[36];
+  char     tag[VIRTIO_FS_TAG_LEN];
   uint32_t num_request_queues;
   uint32_t notify_buf_size;
 } end_packed_struct;
