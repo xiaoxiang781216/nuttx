@@ -82,13 +82,12 @@ struct fuse_req_s
 struct fuse_conn_s
 {
   FAR const struct fuse_transport_ops_s *transport;
-  FAR void  *priv;          /* Transport private data */
-  spinlock_t lock;          /* Protects unique and transport queues */
-  uint64_t   unique;        /* Monotonic request id generator */
-  uint32_t   max_write;     /* Negotiated maximum write size */
-  uint32_t   max_readahead; /* Negotiated maximum readahead */
-  mutex_t    initlock;      /* Serializes the lazy FUSE_INIT */
-  atomic_t   initialized;   /* FUSE_INIT handshake completed */
+  FAR void  *priv;        /* Transport private data */
+  spinlock_t lock;        /* Protects unique and transport queues */
+  uint64_t   unique;      /* Monotonic request id generator */
+  uint32_t   max_write;   /* Negotiated maximum write size */
+  mutex_t    initlock;    /* Serializes the lazy FUSE_INIT */
+  atomic_t   initialized; /* FUSE_INIT handshake completed */
 };
 
 /****************************************************************************

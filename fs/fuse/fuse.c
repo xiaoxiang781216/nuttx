@@ -509,9 +509,8 @@ static int fuse_init(FAR struct fuse_conn_s *conn)
   req.hin.opcode = FUSE_INIT;
   req.hin.nodeid = FUSE_ROOT_ID;
 
-  fin.major         = FUSE_KERNEL_VERSION;
-  fin.minor         = FUSE_KERNEL_MINOR_VERSION;
-  fin.max_readahead = FUSE_MIN_READ_BUFFER;
+  fin.major = FUSE_KERNEL_VERSION;
+  fin.minor = FUSE_KERNEL_MINOR_VERSION;
 
   vin[0].iov_base = &fin;
   vin[0].iov_len  = sizeof(fin);
@@ -530,9 +529,8 @@ static int fuse_init(FAR struct fuse_conn_s *conn)
       return -EPROTO;
     }
 
-  conn->max_write     = fout.max_write > 0 ?
-                        fout.max_write : FUSE_MAX_WRITE_BUFFER;
-  conn->max_readahead = fout.max_readahead;
+  conn->max_write = fout.max_write > 0 ?
+                    fout.max_write : FUSE_MAX_WRITE_BUFFER;
 
   return 0;
 }
