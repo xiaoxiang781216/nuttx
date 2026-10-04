@@ -590,6 +590,7 @@ static int fuse_open(FAR struct file *filep, FAR const char *relpath,
 
       cin.flags = oflags & ~O_CREAT;
       cin.mode  = mode;
+      cin.umask = getumask();
 
       vin[0].iov_base = &cin;
       vin[0].iov_len  = sizeof(cin);
@@ -1764,7 +1765,8 @@ static int fuse_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
   req.hin.opcode = FUSE_MKDIR;
   req.hin.nodeid = parent;
 
-  min.mode = mode;
+  min.mode  = mode;
+  min.umask = getumask();
 
   vin[0].iov_base = &min;
   vin[0].iov_len  = sizeof(min);
