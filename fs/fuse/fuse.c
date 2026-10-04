@@ -1390,6 +1390,13 @@ static int fuse_fchstat(FAR const struct file *filep,
       sin.mtimensec = buf->st_mtim.tv_nsec;
     }
 
+  if (flags & CH_STAT_CTIME)
+    {
+      sin.valid    |= FATTR_CTIME;
+      sin.ctime     = buf->st_ctim.tv_sec;
+      sin.ctimensec = buf->st_ctim.tv_nsec;
+    }
+
   vin[0].iov_base = &sin;
   vin[0].iov_len  = sizeof(sin);
 
@@ -1943,6 +1950,13 @@ static int fuse_chstat(FAR struct inode *mountpt, FAR const char *relpath,
       sin.valid    |= FATTR_MTIME;
       sin.mtime     = buf->st_mtim.tv_sec;
       sin.mtimensec = buf->st_mtim.tv_nsec;
+    }
+
+  if (flags & CH_STAT_CTIME)
+    {
+      sin.valid    |= FATTR_CTIME;
+      sin.ctime     = buf->st_ctim.tv_sec;
+      sin.ctimensec = buf->st_ctim.tv_nsec;
     }
 
   vin[0].iov_base = &sin;
