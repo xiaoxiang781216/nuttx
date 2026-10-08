@@ -300,10 +300,6 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
   memset(*heap, 0, sizeof(struct mm_heap_s));
   (*heap)->name = config->name;
 
-#ifdef CONFIG_MM_HEAP_FORBID
-  atomic_set(&(*heap)->mm_forbid, MM_FORBID_INIT);
-#endif
-
   /* Initialize the malloc mutex (to support one-at-
    * a-time access to private data sets).
    */

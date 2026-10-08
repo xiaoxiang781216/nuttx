@@ -1171,10 +1171,6 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
 
   (*heap)->mm_nokasan = config->nokasan;
 
-#ifdef CONFIG_MM_HEAP_FORBID
-  atomic_set(&(*heap)->mm_forbid, MM_FORBID_INIT);
-#endif
-
   /* Allocate and create TLSF context */
 
   DEBUGASSERT(heapsize > tlsf_size());

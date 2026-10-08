@@ -127,6 +127,15 @@ void umm_initialize(FAR void *heap_start, size_t heap_size)
 #else
   mm_initialize_pool(&config, NULL, heap);
 #endif
+
+#ifdef CONFIG_MM_HEAP_FORBID
+  /* Apply the configured initial forbid mask to the user heap. Heaps are
+   * created in the "allow all" state, so the MM_HEAP_FORBID_INIT_* default
+   * only takes effect on the system heaps that opt in here.
+   */
+
+  mm_heap_forbid(*heap, MM_FORBID_INIT);
+#endif
 }
 
 /****************************************************************************

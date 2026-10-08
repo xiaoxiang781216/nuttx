@@ -164,10 +164,6 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
   h->next = region_start;
   spin_lock_init(&h->lock);
 
-#ifdef CONFIG_MM_HEAP_FORBID
-  atomic_set(&h->forbid, MM_FORBID_INIT);
-#endif
-
   *heap = h;
 
   /* Register the initial usable region */

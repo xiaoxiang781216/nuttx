@@ -246,28 +246,33 @@ choice
 	default MM_HEAP_FORBID_INIT_NONE
 	depends on MM_HEAP_FORBID
 	---help---
-		Selects the initial forbid mask applied when a heap is created.
-		The mask can still be changed at runtime via mm_heap_forbid().
+		Selects the initial forbid mask applied to the system heaps
+		(the user heap in umm_initialize() and the kernel heap in
+		kmm_initialize()). All heaps are created in the "allow all"
+		state; this mask is only applied to those two system heaps.
+		Other heaps (FS heap, custom heaps) always start as
+		MM_FORBID_NONE. The mask can still be changed at runtime via
+		mm_heap_forbid().
 
 config MM_HEAP_FORBID_INIT_NONE
 	bool "No forbid initially"
 	---help---
-		Neither alloc nor free is forbidden when the heap is created.
+		Neither alloc nor free is forbidden for the system heaps.
 
 config MM_HEAP_FORBID_INIT_ALLOC
 	bool "Forbid alloc initially"
 	---help---
-		malloc/memalign/realloc are forbidden when the heap is created.
+		malloc/memalign/realloc are forbidden for the system heaps.
 
 config MM_HEAP_FORBID_INIT_FREE
 	bool "Forbid free initially"
 	---help---
-		free is forbidden when the heap is created.
+		free is forbidden for the system heaps.
 
 config MM_HEAP_FORBID_INIT_BOTH
 	bool "Forbid both alloc and free initially"
 	---help---
-		Both alloc and free are forbidden when the heap is created.
+		Both alloc and free are forbidden for the system heaps.
 
 endchoice
 

@@ -287,10 +287,6 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
 
   (*heap)->mm_nokasan = config->nokasan;
 
-#ifdef CONFIG_MM_HEAP_FORBID
-  atomic_set(&(*heap)->mm_forbid, MM_FORBID_INIT);
-#endif
-
   /* Initialize the node array */
 
   for (i = 1; i < MM_NNODES; i++)
