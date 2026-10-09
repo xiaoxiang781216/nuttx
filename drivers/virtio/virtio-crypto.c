@@ -1322,6 +1322,179 @@ out:
 }
 
 static int
+virtio_crypto_ecdh_get_session(FAR struct virtio_crypto_s *vcrypto,
+                               FAR struct cryptkop *krp,
+                               FAR uint32_t *sid)
+{
+  struct virtio_crypto_create_session_input_s input;
+  struct virtio_crypto_op_ctrl_req_s ctrl;
+  struct virtio_crypto_req_s req;
+  FAR struct virtio_device *vdev = vcrypto->vdev;
+  FAR struct virtqueue *vq;
+  int32_t curve_id;
+  int ret;
+
+  vq = vdev->vrings_info[vcrypto->max_data_queues].vq;
+
+  curve_id = virtio_crypto_ecdsa_get_curve(krp->krp_op);
+  if (curve_id < 0)
+    {
+      return curve_id;
+    }
+
+  /* ECDH keys travel with each request; the session only fixes the curve */
+
+  memset(&ctrl, 0, sizeof(ctrl));
+  ctrl.header.algo = VIRTIO_CRYPTO_AKCIPHER_ECDH;
+  ctrl.header.opcode = VIRTIO_CRYPTO_AKCIPHER_CREATE_SESSION;
+  ctrl.op_flf.akcipher.algo = VIRTIO_CRYPTO_AKCIPHER_ECDH;
+  ctrl.op_flf.akcipher.key_type = VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PRIVATE;
+  ctrl.op_flf.akcipher.algo_flf.ecdsa.curve_id = curve_id;
+  input.status = VIRTIO_CRYPTO_ERR;
+
+  virtio_crypto_req_init(&req, vdev);
+  virtio_crypto_req_out(&req, &ctrl, sizeof(ctrl));
+  virtio_crypto_req_in(&req, &input, sizeof(input));
+
+  ret = virtio_crypto_req_map(&req);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = virtio_crypto_send_recv(vcrypto, vq, req.vb, req.nout, req.nin);
+
+  virtio_crypto_req_unmap(&req);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  if (input.status != VIRTIO_CRYPTO_OK)
+    {
+      return virtio_crypto_get_errcode(input.status);
+    }
+
+  *sid = input.session_id;
+  return OK;
+}
+
+static int
+virtio_crypto_ecdh_process(FAR struct virtio_crypto_s *vcrypto,
+                           FAR struct cryptkop *krp,
+                           uint32_t session_id)
+{
+  struct virtio_crypto_op_data_req_s data;
+  struct virtio_crypto_inhdr_s inhdr;
+  struct virtio_crypto_req_s req;
+  FAR struct virtio_device *vdev = vcrypto->vdev;
+  FAR struct virtqueue *vq = vdev->vrings_info[0].vq;
+  FAR struct crparam *d = &krp->krp_param[0];
+  FAR struct crparam *x = &krp->krp_param[1];
+  FAR struct crparam *y = &krp->krp_param[2];
+  FAR uint8_t *buf;
+  uint32_t dlen = d->crp_nbits / 8;
+  uint32_t xlen = x->crp_nbits / 8;
+  uint32_t ylen = y->crp_nbits / 8;
+  uint32_t klen = 0;
+  int curve_len;
+  int ret;
+
+  curve_len = virtio_crypto_curve_get_len(
+                virtio_crypto_ecdsa_get_curve(krp->krp_op));
+  if (curve_len < 0)
+    {
+      return curve_len;
+    }
+
+  if (krp->krp_op == CRK_ECDH_COMPUTE_SHARED)
+    {
+      klen = krp->krp_param[3].crp_nbits / 8;
+      if (klen != curve_len)
+        {
+          return -EINVAL;
+        }
+    }
+
+  if (dlen != curve_len || xlen != curve_len || ylen != curve_len)
+    {
+      return -EINVAL;
+    }
+
+  /* d || x || y: GEN_PUBLIC output, COMPUTE_SHARED input */
+
+  buf = kmm_malloc(dlen + xlen + ylen);
+  if (buf == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  memset(&data, 0, sizeof(data));
+  data.header.algo = VIRTIO_CRYPTO_AKCIPHER_ECDH;
+  data.header.session_id = session_id & 0xffffffff;
+  data.header.flag = krp->krp_flags;
+  inhdr.status = VIRTIO_CRYPTO_ERR;
+
+  virtio_crypto_req_init(&req, vdev);
+  virtio_crypto_req_out(&req, &data, sizeof(data));
+
+  switch (krp->krp_op)
+    {
+      case CRK_ECDH_GEN_PUBLIC:
+        data.header.opcode = VIRTIO_CRYPTO_AKCIPHER_GENKEY;
+        data.op_flf.akcipher.dst_data_len = dlen + xlen + ylen;
+        virtio_crypto_req_in(&req, buf, dlen + xlen + ylen);
+        break;
+      case CRK_ECDH_COMPUTE_SHARED:
+        memcpy(buf, d->crp_p, dlen);
+        memcpy(buf + dlen, x->crp_p, xlen);
+        memcpy(buf + dlen + xlen, y->crp_p, ylen);
+        data.header.opcode = VIRTIO_CRYPTO_AKCIPHER_DERIVE;
+        data.op_flf.akcipher.src_data_len = dlen + xlen + ylen;
+        data.op_flf.akcipher.dst_data_len = klen;
+        virtio_crypto_req_out(&req, buf, dlen + xlen + ylen);
+        virtio_crypto_req_in(&req, krp->krp_param[3].crp_p, klen);
+        break;
+      default:
+        ret = -EINVAL;
+        goto out;
+    }
+
+  virtio_crypto_req_in(&req, &inhdr, sizeof(inhdr));
+
+  ret = virtio_crypto_req_map(&req);
+  if (ret < 0)
+    {
+      goto out;
+    }
+
+  ret = virtio_crypto_send_recv(vcrypto, vq, req.vb, req.nout, req.nin);
+
+  virtio_crypto_req_unmap(&req);
+  if (ret < 0)
+    {
+      goto out;
+    }
+
+  if (inhdr.status != VIRTIO_CRYPTO_OK)
+    {
+      ret = virtio_crypto_get_errcode(inhdr.status);
+      goto out;
+    }
+
+  if (krp->krp_op == CRK_ECDH_GEN_PUBLIC)
+    {
+      memcpy(d->crp_p, buf, dlen);
+      memcpy(x->crp_p, buf + dlen, xlen);
+      memcpy(y->crp_p, buf + dlen + xlen, ylen);
+    }
+
+out:
+  kmm_free(buf);
+  return ret;
+}
+
+static int
 virtio_crypto_asym_get_session(FAR struct virtio_crypto_s *vcrypto,
                                FAR struct cryptkop *krp,
                                FAR uint32_t *sid)
@@ -1332,6 +1505,8 @@ virtio_crypto_asym_get_session(FAR struct virtio_crypto_s *vcrypto,
         return virtio_crypto_rsa_get_session(vcrypto, krp, sid);
       case VIRTIO_CRYPTO_AKCIPHER_ECDSA:
         return virtio_crypto_ecdsa_get_session(vcrypto, krp, sid);
+      case VIRTIO_CRYPTO_AKCIPHER_ECDH:
+        return virtio_crypto_ecdh_get_session(vcrypto, krp, sid);
     }
 
   return -EINVAL;
@@ -1468,6 +1643,8 @@ static int virtio_crypto_asym_process(FAR struct virtio_crypto_s *vcrypto,
         return virtio_crypto_rsa_process(vcrypto, krp, session_id);
       case VIRTIO_CRYPTO_AKCIPHER_ECDSA:
         return virtio_crypto_ecdsa_process(vcrypto, krp, session_id);
+      case VIRTIO_CRYPTO_AKCIPHER_ECDH:
+        return virtio_crypto_ecdh_process(vcrypto, krp, session_id);
     }
 
   return -EINVAL;
@@ -1659,7 +1836,7 @@ static int virtio_crypto_probe(FAR struct virtio_device *vdev)
 
   /* All algorithms are supported by default, handled by the host. */
 
-  for (i = 0; i < CRYPTO_ALGORITHM_MAX; i++)
+  for (i = 0; i <= CRYPTO_ALGORITHM_MAX; i++)
     {
       algs[i] = CRYPTO_ALG_FLAG_SUPPORTED;
     }
@@ -1671,7 +1848,7 @@ static int virtio_crypto_probe(FAR struct virtio_device *vdev)
       goto err;
     }
 
-  for (i = 0; i < CRK_ALGORITHM_MAX; i++)
+  for (i = 0; i <= CRK_ALGORITHM_MAX; i++)
     {
       kalgs[i] = CRYPTO_ALG_FLAG_SUPPORTED;
     }
@@ -1679,7 +1856,7 @@ static int virtio_crypto_probe(FAR struct virtio_device *vdev)
   ret = crypto_kregister(vcrypto->dev_id, kalgs, virtio_crypto_kprocess);
   if (ret < 0)
     {
-      for (i = 0; i < CRYPTO_ALGORITHM_MAX; i++)
+      for (i = 0; i <= CRYPTO_ALGORITHM_MAX; i++)
         {
           crypto_unregister(vcrypto->dev_id, i);
         }

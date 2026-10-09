@@ -305,7 +305,8 @@ static int vhost_crypto_create_session_akcipher(
     VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PRIVATE ?
     CRYPTO_KEY_TYPE_PRIVATE : CRYPTO_KEY_TYPE_PUBLIC;
 
-  if (ctrl->header.algo == VIRTIO_CRYPTO_AKCIPHER_ECDSA)
+  if (ctrl->header.algo == VIRTIO_CRYPTO_AKCIPHER_ECDSA ||
+      ctrl->header.algo == VIRTIO_CRYPTO_AKCIPHER_ECDH)
     {
       sess->u.ak.curve_id = ctrl->op_flf.akcipher.algo_flf.ecdsa.curve_id;
       if (virtio_crypto_curve_get_len(sess->u.ak.curve_id) < 0)
@@ -1467,6 +1468,111 @@ static int vhost_crypto_process_ecdsa(
 }
 
 /****************************************************************************
+ * Name: vhost_crypto_process_ecdh
+ *
+ * Description:
+ *   Process ECDH GENKEY (dst = d || x || y) and DERIVE
+ *   (src = d || peer.x || peer.y, dst = shared secret).
+ *
+ ****************************************************************************/
+
+static int vhost_crypto_process_ecdh(
+    FAR struct vhost_crypto_session_s *sess,
+    FAR struct virtio_crypto_op_data_req_s *data,
+    FAR struct vhost_crypto_req_s *req)
+{
+  FAR struct cryptkop *krp = &sess->u.ak.krp;
+  FAR uint8_t *src_buf;
+  FAR uint8_t *dst_buf;
+  uint32_t src_len = data->op_flf.akcipher.src_data_len;
+  uint32_t dst_len = data->op_flf.akcipher.dst_data_len;
+  uint32_t len;
+  int curve_len;
+  int ret;
+
+  curve_len = virtio_crypto_curve_get_len(sess->u.ak.curve_id);
+  if (curve_len < 0)
+    {
+      return curve_len;
+    }
+
+  if (sess->u.ak.curve_id != VIRTIO_CRYPTO_CURVE_NIST_P256)
+    {
+      return -ENOTSUP;
+    }
+
+  memset(krp->krp_param, 0, sizeof(krp->krp_param));
+
+  switch (data->header.opcode)
+    {
+      case VIRTIO_CRYPTO_AKCIPHER_GENKEY:
+        if (dst_len != curve_len * 3)
+          {
+            return -EINVAL;
+          }
+
+        dst_buf = vhost_crypto_next_buf(req, &len);
+        if (dst_buf == NULL || len < dst_len)
+          {
+            return -EINVAL;
+          }
+
+        krp->krp_op = CRK_ECDH_GEN_PUBLIC;
+        krp->krp_iparams = 0;
+        krp->krp_oparams = 3;
+        krp->krp_param[0].crp_p = (caddr_t)dst_buf;
+        krp->krp_param[0].crp_nbits = curve_len * 8;
+        krp->krp_param[1].crp_p = (caddr_t)(dst_buf + curve_len);
+        krp->krp_param[1].crp_nbits = curve_len * 8;
+        krp->krp_param[2].crp_p = (caddr_t)(dst_buf + curve_len * 2);
+        krp->krp_param[2].crp_nbits = curve_len * 8;
+        break;
+
+      case VIRTIO_CRYPTO_AKCIPHER_DERIVE:
+        if (src_len != curve_len * 3 || dst_len != curve_len)
+          {
+            return -EINVAL;
+          }
+
+        src_buf = vhost_crypto_next_buf(req, &len);
+        if (src_buf == NULL || len < src_len)
+          {
+            return -EINVAL;
+          }
+
+        dst_buf = vhost_crypto_next_buf(req, &len);
+        if (dst_buf == NULL || len < dst_len)
+          {
+            return -EINVAL;
+          }
+
+        krp->krp_op = CRK_ECDH_COMPUTE_SHARED;
+        krp->krp_iparams = 3;
+        krp->krp_oparams = 1;
+        krp->krp_param[0].crp_p = (caddr_t)src_buf;
+        krp->krp_param[0].crp_nbits = curve_len * 8;
+        krp->krp_param[1].crp_p = (caddr_t)(src_buf + curve_len);
+        krp->krp_param[1].crp_nbits = curve_len * 8;
+        krp->krp_param[2].crp_p = (caddr_t)(src_buf + curve_len * 2);
+        krp->krp_param[2].crp_nbits = curve_len * 8;
+        krp->krp_param[3].crp_p = (caddr_t)dst_buf;
+        krp->krp_param[3].crp_nbits = curve_len * 8;
+        break;
+
+      default:
+        return -ENOTSUP;
+    }
+
+  ret = crypto_kinvoke(krp);
+  if (ret == 0)
+    {
+      ret = krp->krp_status;
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: vhost_crypto_process_akcipher
  *
  * Description:
@@ -1485,6 +1591,8 @@ static int vhost_crypto_process_akcipher(
         return vhost_crypto_process_rsa(sess, data, req);
       case VIRTIO_CRYPTO_AKCIPHER_ECDSA:
         return vhost_crypto_process_ecdsa(sess, data, req);
+      case VIRTIO_CRYPTO_AKCIPHER_ECDH:
+        return vhost_crypto_process_ecdh(sess, data, req);
       default:
         return -ENOTSUP;
     }
