@@ -79,6 +79,7 @@
 #define VIRTIO_CRYPTO_CIPHER_AES_F8                         12
 #define VIRTIO_CRYPTO_CIPHER_AES_XTS                        13
 #define VIRTIO_CRYPTO_CIPHER_ZUC_EEA3                       14
+#define VIRTIO_CRYPTO_CIPHER_CHACHA20                       15
 
 /* HASH services */
 

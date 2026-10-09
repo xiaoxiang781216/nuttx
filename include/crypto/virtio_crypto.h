@@ -415,6 +415,7 @@ int virtio_crypto_get_service(int alg)
       case CRYPTO_AES_OFB:
       case CRYPTO_AES_CFB_8:
       case CRYPTO_AES_CFB_128:
+      case CRYPTO_CHACHA20:
         return VIRTIO_CRYPTO_SERVICE_CIPHER;
       case CRYPTO_MD5:
       case CRYPTO_POLY1305:
@@ -506,6 +507,8 @@ int virtio_crypto_get_alg(int alg)
         return VIRTIO_CRYPTO_CIPHER_AES_CTR;
       case CRYPTO_AES_XTS:
         return VIRTIO_CRYPTO_CIPHER_AES_XTS;
+      case CRYPTO_CHACHA20:
+        return VIRTIO_CRYPTO_CIPHER_CHACHA20;
       case CRYPTO_MD5_HMAC:
         return VIRTIO_CRYPTO_MAC_HMAC_MD5;
       case CRYPTO_SHA1_HMAC:
@@ -565,6 +568,8 @@ int virtio_crypto_get_cipher_alg(int alg)
       return CRYPTO_AES_CTR;
     case VIRTIO_CRYPTO_CIPHER_AES_XTS:
       return CRYPTO_AES_XTS;
+    case VIRTIO_CRYPTO_CIPHER_CHACHA20:
+      return CRYPTO_CHACHA20;
   }
 
   return -EINVAL;
